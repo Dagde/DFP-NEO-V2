@@ -166,8 +166,10 @@ const buildNeoBuildDiagnosticExport = (): { report: any; filename: string } | nu
     try {
         const timingRaw = window.localStorage?.getItem('neo_build_timing_report');
         const runtimeRaw = window.localStorage?.getItem('neo_build_runtime_error_report');
+        const dfpDataRaw = window.localStorage?.getItem('neo_dfp_data_diag');
         if (timingRaw) report.timingReport = JSON.parse(timingRaw);
         if (runtimeRaw) report.runtimeErrorReport = JSON.parse(runtimeRaw);
+        if (dfpDataRaw) report.dfpDisplayTrace = JSON.parse(dfpDataRaw);
     } catch (error) {
         console.warn('[NEO-BUILD-DIAG] Failed to merge timing/runtime diagnostic context:', error);
     }
@@ -24280,6 +24282,24 @@ const App: React.FC = () => {
 
         const buildEventsWithDate: ScheduleEvent[] = nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}));
         console.log('🚀 [NEO-Build] buildEventsWithDate.length:', buildEventsWithDate.length);
+        pushDfpDataDiag('render:next-day-build-segments-input', {
+            buildDate: buildDfpDate,
+            isBuildingDfp,
+            nextDayBuildEvents: nextDayBuildEvents.length,
+            sampleEvents: buildEventsWithDate.slice(0, 12).map(event => ({
+                id: event.id,
+                date: event.date,
+                type: event.type,
+                resourceId: event.resourceId,
+                startTime: event.startTime,
+                duration: event.duration,
+                flightNumber: event.flightNumber,
+                pilot: event.pilot,
+                crew: event.crew,
+                fixedCrewGroup: event.fixedCrewGroup,
+                source: (event as any)._source || (event as any).source || null,
+            })),
+        });
 
         const allEvents = buildEventsWithDate;
 
@@ -24326,8 +24346,32 @@ const App: React.FC = () => {
             return true;
         });
         console.log('🚀 [NEO-Build] Final segments.length:', segments.length, '→ after dedup:', uniqueSegments.length);
+        pushDfpDataDiag('render:next-day-build-segments-output', {
+            buildDate: buildDfpDate,
+            isBuildingDfp,
+            inputEvents: buildEventsWithDate.length,
+            segments: segments.length,
+            uniqueSegments: uniqueSegments.length,
+            duplicateIds: segments
+                .map(segment => segment.id)
+                .filter((id, index, ids) => ids.indexOf(id) !== index)
+                .slice(0, 20),
+            sampleSegments: uniqueSegments.slice(0, 12).map(segment => ({
+                id: segment.id,
+                type: segment.type,
+                resourceId: segment.resourceId,
+                startTime: segment.startTime,
+                segmentStartTime: segment.segmentStartTime,
+                duration: segment.duration,
+                segmentDuration: segment.segmentDuration,
+                flightNumber: segment.flightNumber,
+                pilot: segment.pilot,
+                crew: segment.crew,
+                fixedCrewGroup: segment.fixedCrewGroup,
+            })),
+        });
         return uniqueSegments;
-    }, [buildDfpDate, nextDayBuildEvents, publishedSchedules]);
+    }, [buildDfpDate, isBuildingDfp, nextDayBuildEvents]);
 
     useEffect(() => {
         // Initialize baselineSchedules when viewing published Daily DFP
@@ -29400,6 +29444,7 @@ const App: React.FC = () => {
                 .filter(Boolean)
         );
         localStorage.removeItem('neo_build_runtime_error_report');
+        localStorage.removeItem('neo_dfp_data_diag');
         const timingReport = createNeoBuildTimingReport(buildDfpDate, {
             preservedEvents: preservedEvents?.length || 0,
             highestPriorityEvents: highestPriorityEvents.length,
@@ -29425,11 +29470,32 @@ const App: React.FC = () => {
         };
 
         setIsBuildingDfp(true);
-        setNextDayBuildEvents([]); // Clear previous build
+        pushDfpDataDiag('build:start-visible-draft-state', {
+            buildDate: buildDfpDate,
+            existingDraftEvents: nextDayBuildEvents.length,
+            publishedEventsForBuildDate: (buildPublishedSchedules[buildDfpDate] || []).length,
+            preservedEvents: preservedEvents?.length || 0,
+            highestPriorityEvents: highestPriorityEvents.length,
+            note: 'Previous draft remains visible while the new build runs; generated events replace it atomically at build completion.',
+            sampleDraftEvents: nextDayBuildEvents.slice(0, 12).map(event => ({
+                id: event.id,
+                type: event.type,
+                resourceId: event.resourceId,
+                startTime: event.startTime,
+                duration: event.duration,
+                flightNumber: event.flightNumber,
+                pilot: event.pilot,
+                crew: event.crew,
+                fixedCrewGroup: event.fixedCrewGroup,
+            })),
+        });
 
         // Use preserved events if provided, otherwise use state
         const eventsToUse = preservedEvents || highestPriorityEvents;
-        markNeoBuildTiming(timingReport, 'state:clear-previous-build', { eventsToUse: eventsToUse.length });
+        markNeoBuildTiming(timingReport, 'state:preserve-visible-draft-during-build', {
+            eventsToUse: eventsToUse.length,
+            visibleDraftEvents: nextDayBuildEvents.length,
+        });
 
         // ── Fetch DB-backed ELCE for all active trainees ──────────────────────
         // This gives the build algorithm real DCO tracking data written the moment
@@ -29741,6 +29807,23 @@ const App: React.FC = () => {
                 console.log('🚀 [NEO-Build] DFP build completed, generated', generated.length, 'events');
                 console.log('🚀 [NEO-Build] Generated events sample:', generated.slice(0, 3));
 
+                pushDfpDataDiag('build:replace-visible-draft-with-generated', {
+                    buildDate: buildDfpDate,
+                    previousDraftEvents: nextDayBuildEvents.length,
+                    generatedEvents: generated.length,
+                    generatedSample: generated.slice(0, 12).map(event => ({
+                        id: event.id,
+                        type: event.type,
+                        resourceId: event.resourceId,
+                        startTime: event.startTime,
+                        duration: event.duration,
+                        flightNumber: event.flightNumber,
+                        pilot: event.pilot,
+                        crew: event.crew,
+                        fixedCrewGroup: event.fixedCrewGroup,
+                        source: (event as any)._source || (event as any).source || null,
+                    })),
+                });
                 setNextDayBuildEvents(generated);
                 setAircraftConfigStateByDate(prev => ({
                     ...prev,
