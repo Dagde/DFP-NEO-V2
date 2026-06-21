@@ -146,6 +146,67 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
     return formatDate(buildDfpDate);
   }, [buildDfpDate]);
 
+  const renderDiagnostics = useMemo(() => {
+    const inputIdCounts = new Map<string, number>();
+    events.forEach(event => {
+      const id = String(event.id || '');
+      if (id) inputIdCounts.set(id, (inputIdCounts.get(id) || 0) + 1);
+    });
+    const uniqueEvents = events.filter((event, index, source) => source.findIndex(candidate => candidate.id === event.id) === index);
+    const tileRows = uniqueEvents.flatMap(event => {
+      const personnel = getPersonnel(event);
+      return instructors
+        .filter(instructor => personnel.includes(instructor.name))
+        .map(instructor => ({
+          tileKey: `${event.id}-${instructor.name}`,
+          eventId: event.id,
+          instructor: instructor.name,
+          unit: instructor.unit || '',
+          rowIndex: instructors.findIndex(candidate => candidate.name === instructor.name),
+          startTime: event.startTime,
+          duration: event.duration,
+          resourceId: event.resourceId,
+          flightNumber: event.flightNumber,
+          pilot: event.pilot || '',
+          crew: event.crew || '',
+          fixedCrewGroup: event.fixedCrewGroup || '',
+          attendees: event.attendees || [],
+        }));
+    });
+    const tileKeyCounts = new Map<string, number>();
+    tileRows.forEach(row => tileKeyCounts.set(row.tileKey, (tileKeyCounts.get(row.tileKey) || 0) + 1));
+    const duplicatedTileKeys = Array.from(tileKeyCounts.entries())
+      .filter(([, count]) => count > 1)
+      .map(([key, count]) => ({ key, count }));
+    const duplicateInputEventIds = Array.from(inputIdCounts.entries())
+      .filter(([, count]) => count > 1)
+      .map(([id, count]) => ({ id, count }));
+    return {
+      timestamp: new Date().toISOString(),
+      view: 'NextDayInstructorSchedule',
+      buildDfpDate,
+      operationalModel: operationalModel || '',
+      eventCount: events.length,
+      uniqueEventCount: uniqueEvents.length,
+      instructorCount: instructors.length,
+      tileCount: tileRows.length,
+      duplicateInputEventIds,
+      duplicatedTileKeys,
+      sampleTiles: tileRows.slice(0, 80),
+    };
+  }, [buildDfpDate, events, instructors, operationalModel]);
+
+  useEffect(() => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('neo_staff_schedule_render_diag') || '[]');
+      const next = [...(Array.isArray(existing) ? existing : []), renderDiagnostics].slice(-40);
+      localStorage.setItem('neo_staff_schedule_render_diag', JSON.stringify(next));
+      (window as any).neoStaffScheduleRenderDiag = next;
+    } catch (error) {
+      console.warn('[StaffScheduleDiag] Failed to store render diagnostic:', error);
+    }
+  }, [renderDiagnostics]);
+
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (scrollContainer) {
@@ -574,6 +635,7 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
                     isDraggable={true}
                     currentTime={currentTime}
                     aircraftNumberSettings={aircraftNumberSettings}
+                    disableLayoutTransition
                   />
                 );
               });

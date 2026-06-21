@@ -167,9 +167,11 @@ const buildNeoBuildDiagnosticExport = (): { report: any; filename: string } | nu
         const timingRaw = window.localStorage?.getItem('neo_build_timing_report');
         const runtimeRaw = window.localStorage?.getItem('neo_build_runtime_error_report');
         const dfpDataRaw = window.localStorage?.getItem('neo_dfp_data_diag');
+        const staffScheduleRaw = window.localStorage?.getItem('neo_staff_schedule_render_diag');
         if (timingRaw) report.timingReport = JSON.parse(timingRaw);
         if (runtimeRaw) report.runtimeErrorReport = JSON.parse(runtimeRaw);
         if (dfpDataRaw) report.dfpDisplayTrace = JSON.parse(dfpDataRaw);
+        if (staffScheduleRaw) report.staffScheduleRenderTrace = JSON.parse(staffScheduleRaw);
     } catch (error) {
         console.warn('[NEO-BUILD-DIAG] Failed to merge timing/runtime diagnostic context:', error);
     }
@@ -29445,6 +29447,7 @@ const App: React.FC = () => {
         );
         localStorage.removeItem('neo_build_runtime_error_report');
         localStorage.removeItem('neo_dfp_data_diag');
+        localStorage.removeItem('neo_staff_schedule_render_diag');
         const timingReport = createNeoBuildTimingReport(buildDfpDate, {
             preservedEvents: preservedEvents?.length || 0,
             highestPriorityEvents: highestPriorityEvents.length,

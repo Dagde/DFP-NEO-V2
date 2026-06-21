@@ -41,6 +41,7 @@ interface FlightTileProps {
   isDiagnosticHighlighted?: boolean;
   alertStatus?: 'pending' | 'accepted' | 'rejected' | null;
   aircraftNumberSettings?: AircraftNumberSettings;
+  disableLayoutTransition?: boolean;
 }
 
 const formatTime = (time: number): string => {
@@ -168,7 +169,7 @@ const getAuthorizationTextColorClass = (
 };
 
 
-const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false }) => {
   // ERROR TRACKING: Log props to identify missing seatConfigs
 
   // Removed unit color logic - colors are now handled in PersonnelColumn only
@@ -834,7 +835,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     : event.type === 'deployment'
     ? 'z-[6]'
     : 'z-[12]';
-  const commonClasses = `absolute rounded-sm ${isDraggable ? 'cursor-grab' : 'cursor-pointer'} transition-all duration-200 ${stackClass} ${shadowClass}`;
+  const transitionClass = disableLayoutTransition ? 'transition-colors duration-150' : 'transition-all duration-200';
+  const commonClasses = `absolute rounded-sm ${isDraggable ? 'cursor-grab' : 'cursor-pointer'} ${transitionClass} ${stackClass} ${shadowClass}`;
 
   // Use isHexColorEarly (defined above) for hex color detection
   const isHexColor = isHexColorEarly;

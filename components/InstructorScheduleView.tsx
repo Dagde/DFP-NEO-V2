@@ -787,6 +787,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                     isDraggable={event.type !== 'unavailability'}
                     currentTime={currentTime}
                     aircraftNumberSettings={aircraftNumberSettings}
+                    disableLayoutTransition
                   />
                 );
               });

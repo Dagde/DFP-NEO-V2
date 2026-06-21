@@ -7278,7 +7278,7 @@ const getAuthorizationTextColorClass = (event, currentTime, settings) => {
   }
   return "";
 };
-const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
+const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false }) => {
   try {
     const testAccess = seatConfigs;
   } catch (error) {
@@ -7805,7 +7805,8 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   };
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
   const stackClass = isDragging ? "opacity-80 z-50" : event.type === "unavailability" ? "z-[4]" : event.type === "deployment" ? "z-[6]" : "z-[12]";
-  const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${stackClass} ${shadowClass}`;
+  const transitionClass = disableLayoutTransition ? "transition-colors duration-150" : "transition-all duration-200";
+  const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} ${transitionClass} ${stackClass} ${shadowClass}`;
   isHexColorEarly(event.color || "");
   const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : resolvedBgColor ? "" : event.color;
   const ringClass = getDynamicRingClass();
@@ -10551,7 +10552,8 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                       seatConfigs,
                       isDraggable: event.type !== "unavailability",
                       currentTime,
-                      aircraftNumberSettings
+                      aircraftNumberSettings,
+                      disableLayoutTransition: true
                     },
                     `${event.id}-${instructor.name}`
                   );
@@ -67722,6 +67724,59 @@ const NextDayInstructorScheduleView = ({
   const formattedDate = reactExports.useMemo(() => {
     return formatDate2(buildDfpDate);
   }, [buildDfpDate]);
+  const renderDiagnostics = reactExports.useMemo(() => {
+    const inputIdCounts = /* @__PURE__ */ new Map();
+    events.forEach((event) => {
+      const id = String(event.id || "");
+      if (id) inputIdCounts.set(id, (inputIdCounts.get(id) || 0) + 1);
+    });
+    const uniqueEvents = events.filter((event, index, source) => source.findIndex((candidate) => candidate.id === event.id) === index);
+    const tileRows = uniqueEvents.flatMap((event) => {
+      const personnel = getPersonnel$2(event);
+      return instructors.filter((instructor) => personnel.includes(instructor.name)).map((instructor) => ({
+        tileKey: `${event.id}-${instructor.name}`,
+        eventId: event.id,
+        instructor: instructor.name,
+        unit: instructor.unit || "",
+        rowIndex: instructors.findIndex((candidate) => candidate.name === instructor.name),
+        startTime: event.startTime,
+        duration: event.duration,
+        resourceId: event.resourceId,
+        flightNumber: event.flightNumber,
+        pilot: event.pilot || "",
+        crew: event.crew || "",
+        fixedCrewGroup: event.fixedCrewGroup || "",
+        attendees: event.attendees || []
+      }));
+    });
+    const tileKeyCounts = /* @__PURE__ */ new Map();
+    tileRows.forEach((row) => tileKeyCounts.set(row.tileKey, (tileKeyCounts.get(row.tileKey) || 0) + 1));
+    const duplicatedTileKeys = Array.from(tileKeyCounts.entries()).filter(([, count]) => count > 1).map(([key, count]) => ({ key, count }));
+    const duplicateInputEventIds = Array.from(inputIdCounts.entries()).filter(([, count]) => count > 1).map(([id, count]) => ({ id, count }));
+    return {
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      view: "NextDayInstructorSchedule",
+      buildDfpDate,
+      operationalModel: operationalModel2 || "",
+      eventCount: events.length,
+      uniqueEventCount: uniqueEvents.length,
+      instructorCount: instructors.length,
+      tileCount: tileRows.length,
+      duplicateInputEventIds,
+      duplicatedTileKeys,
+      sampleTiles: tileRows.slice(0, 80)
+    };
+  }, [buildDfpDate, events, instructors, operationalModel2]);
+  reactExports.useEffect(() => {
+    try {
+      const existing = JSON.parse(localStorage.getItem("neo_staff_schedule_render_diag") || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], renderDiagnostics].slice(-40);
+      localStorage.setItem("neo_staff_schedule_render_diag", JSON.stringify(next));
+      window.neoStaffScheduleRenderDiag = next;
+    } catch (error) {
+      console.warn("[StaffScheduleDiag] Failed to store render diagnostic:", error);
+    }
+  }, [renderDiagnostics]);
   reactExports.useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (scrollContainer) {
@@ -68093,7 +68148,8 @@ const NextDayInstructorScheduleView = ({
                         seatConfigs,
                         isDraggable: true,
                         currentTime,
-                        aircraftNumberSettings
+                        aircraftNumberSettings,
+                        disableLayoutTransition: true
                       },
                       `${event.id}-${instructor.name}`
                     );
@@ -69678,9 +69734,11 @@ const buildNeoBuildDiagnosticExport = () => {
     const timingRaw = window.localStorage?.getItem("neo_build_timing_report");
     const runtimeRaw = window.localStorage?.getItem("neo_build_runtime_error_report");
     const dfpDataRaw = window.localStorage?.getItem("neo_dfp_data_diag");
+    const staffScheduleRaw = window.localStorage?.getItem("neo_staff_schedule_render_diag");
     if (timingRaw) report.timingReport = JSON.parse(timingRaw);
     if (runtimeRaw) report.runtimeErrorReport = JSON.parse(runtimeRaw);
     if (dfpDataRaw) report.dfpDisplayTrace = JSON.parse(dfpDataRaw);
+    if (staffScheduleRaw) report.staffScheduleRenderTrace = JSON.parse(staffScheduleRaw);
   } catch (error) {
     console.warn("[NEO-BUILD-DIAG] Failed to merge timing/runtime diagnostic context:", error);
   }
@@ -93321,6 +93379,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     );
     localStorage.removeItem("neo_build_runtime_error_report");
     localStorage.removeItem("neo_dfp_data_diag");
+    localStorage.removeItem("neo_staff_schedule_render_diag");
     const timingReport = createNeoBuildTimingReport(buildDfpDate, {
       preservedEvents: preservedEvents?.length || 0,
       highestPriorityEvents: highestPriorityEvents.length,
