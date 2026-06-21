@@ -18258,9 +18258,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       const aRank = String(a.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
       const bRank = String(b.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
       if (aRank !== bRank) return aRank - bRank;
+      const seniorityComparison = comparePeopleByConfiguredRank(a.members[0]?.staff, b.members[0]?.staff, personnelDisplaySettings, "staff");
+      if (seniorityComparison !== 0) return seniorityComparison;
       return a.role.localeCompare(b.role);
     });
   }, [event.fixedCrewPic, event.pilot, fixedCrewPic, fixedCrewRosterStatus, personnelDisplaySettings]);
+  const activeCrewConflict = reactExports.useMemo(() => fixedCrewRosterStatus.find((status) => status.staff.name === activeCrewConflictName && !status.isClear) || null, [activeCrewConflictName, fixedCrewRosterStatus]);
   const renderFixedCrewRosterStatus = () => {
     if (!isFixedCrewCrewedEvent) return null;
     const bookingWindow = getEventBookingWindow2(event);
@@ -18274,50 +18277,43 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           formatTime$4(Math.min(24, bookingWindow.end))
         ] })
       ] }),
-      fixedCrewRosterByRole.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: fixedCrewRosterByRole.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500", children: group.role }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: group.members.map(({ staff, conflicts, isClear, alternatives }) => {
-          const isPic = staff.name === String(fixedCrewPic || event.fixedCrewPic || event.pilot || "").trim();
-          const isFlyoutOpen = activeCrewConflictName === staff.name;
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex items-baseline gap-2 text-left", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                disabled: isClear,
-                onClick: () => setActiveCrewConflictName(isFlyoutOpen ? null : staff.name),
-                onMouseEnter: () => !isClear && setActiveCrewConflictName(staff.name),
-                onMouseLeave: () => !isClear && setActiveCrewConflictName((current) => current === staff.name ? null : current),
-                className: `min-w-0 truncate text-xs font-semibold ${isClear ? "cursor-default text-emerald-300" : "cursor-help text-red-300 underline decoration-red-300/40 underline-offset-2"}`,
-                children: [staff.rank, staff.name].filter(Boolean).join(" ")
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 text-[11px] text-gray-400", children: [
-              staff.role || "Crew",
-              isPic ? " / PIC" : ""
+      fixedCrewRosterByRole.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid gap-3 ${activeCrewConflict ? "grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)]" : "grid-cols-1"}`, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: fixedCrewRosterByRole.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500", children: group.role }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: group.members.map(({ staff, isClear }) => {
+            const isPic = staff.name === String(fixedCrewPic || event.fixedCrewPic || event.pilot || "").trim();
+            const isSelected = activeCrewConflictName === staff.name && !isClear;
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-baseline gap-2 text-left", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  disabled: isClear,
+                  onClick: () => setActiveCrewConflictName(isSelected ? null : staff.name),
+                  className: `min-w-0 truncate text-xs font-semibold ${isClear ? "cursor-default text-emerald-300" : isSelected ? "cursor-pointer text-red-200 underline decoration-red-200/70 underline-offset-2" : "cursor-pointer text-red-300 underline decoration-red-300/40 underline-offset-2"}`,
+                  children: [staff.rank, staff.name].filter(Boolean).join(" ")
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 text-[11px] text-gray-400", children: [
+                staff.role || "Crew",
+                isPic ? " / PIC" : ""
+              ] })
+            ] }, staff.id || staff.name);
+          }) })
+        ] }, group.role)) }),
+        activeCrewConflict && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-400/40 bg-gray-950/80 p-3 text-left", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-xs font-bold uppercase tracking-wider text-red-300", children: "Unavailability" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-red-100", children: [activeCrewConflict.staff.rank, activeCrewConflict.staff.name].filter(Boolean).join(" ") }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-1", children: activeCrewConflict.conflicts.map((conflict, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-snug text-red-100", children: conflict.label }, `${activeCrewConflict.staff.name}-conflict-detail-${index}`)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 border-t border-gray-800 pt-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300", children: [
+              "Available same-unit ",
+              activeCrewConflict.staff.role || "crew"
             ] }),
-            !isClear && isFlyoutOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "div",
-              {
-                className: "absolute left-0 top-5 z-[300] w-80 rounded-lg border border-red-400/40 bg-gray-950 p-3 text-left shadow-2xl",
-                onMouseEnter: () => setActiveCrewConflictName(staff.name),
-                onMouseLeave: () => setActiveCrewConflictName((current) => current === staff.name ? null : current),
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-bold uppercase tracking-wider text-red-300", children: "Conflict details" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: conflicts.map((conflict, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-snug text-red-100", children: conflict.label }, `${staff.name}-conflict-detail-${index}`)) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 border-t border-gray-800 pt-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300", children: [
-                      "Available same-unit ",
-                      staff.role || "crew"
-                    ] }),
-                    alternatives.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-0.5", children: alternatives.slice(0, 8).map((candidate) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-emerald-100", children: [candidate.rank, candidate.name].filter(Boolean).join(" ") }, candidate.id || candidate.name)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "No same-unit crew with this role are available for the full event window." })
-                  ] })
-                ]
-              }
-            )
-          ] }, staff.id || staff.name);
-        }) })
-      ] }, group.role)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: "No crew roster is assigned to this event." })
+            activeCrewConflict.alternatives.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-0.5", children: activeCrewConflict.alternatives.slice(0, 10).map((candidate) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-emerald-100", children: [candidate.rank, candidate.name].filter(Boolean).join(" ") }, candidate.id || candidate.name)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "No same-unit crew with this role are available for the full event window." })
+          ] })
+        ] })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: "No crew roster is assigned to this event." })
     ] });
   };
   const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map((t) => t.trainee.fullName) : trainees;

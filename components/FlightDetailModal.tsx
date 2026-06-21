@@ -890,9 +890,14 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 const aRank = String(a.role || '').trim().toLowerCase() === 'pilot' ? 0 : 1;
                 const bRank = String(b.role || '').trim().toLowerCase() === 'pilot' ? 0 : 1;
                 if (aRank !== bRank) return aRank - bRank;
+                const seniorityComparison = comparePeopleByConfiguredRank(a.members[0]?.staff, b.members[0]?.staff, personnelDisplaySettings, 'staff');
+                if (seniorityComparison !== 0) return seniorityComparison;
                 return a.role.localeCompare(b.role);
             });
     }, [event.fixedCrewPic, event.pilot, fixedCrewPic, fixedCrewRosterStatus, personnelDisplaySettings]);
+    const activeCrewConflict = useMemo(() => (
+        fixedCrewRosterStatus.find(status => status.staff.name === activeCrewConflictName && !status.isClear) || null
+    ), [activeCrewConflictName, fixedCrewRosterStatus]);
     const renderFixedCrewRosterStatus = () => {
         if (!isFixedCrewCrewedEvent) return null;
         const bookingWindow = getEventBookingWindow(event);
@@ -907,65 +912,64 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     </span>
                 </div>
                 {fixedCrewRosterByRole.length > 0 ? (
-                    <div className="space-y-2">
-                        {fixedCrewRosterByRole.map(group => (
-                            <div key={group.role}>
-                                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{group.role}</div>
-                                <div className="space-y-1">
-                                    {group.members.map(({ staff, conflicts, isClear, alternatives }) => {
-                                        const isPic = staff.name === String(fixedCrewPic || event.fixedCrewPic || event.pilot || '').trim();
-                                        const isFlyoutOpen = activeCrewConflictName === staff.name;
-                                        return (
-                                            <div key={staff.id || staff.name} className="relative flex items-baseline gap-2 text-left">
-                                                <button
-                                                    type="button"
-                                                    disabled={isClear}
-                                                    onClick={() => setActiveCrewConflictName(isFlyoutOpen ? null : staff.name)}
-                                                    onMouseEnter={() => !isClear && setActiveCrewConflictName(staff.name)}
-                                                    onMouseLeave={() => !isClear && setActiveCrewConflictName(current => current === staff.name ? null : current)}
-                                                    className={`min-w-0 truncate text-xs font-semibold ${isClear ? 'cursor-default text-emerald-300' : 'cursor-help text-red-300 underline decoration-red-300/40 underline-offset-2'}`}
-                                                >
-                                                    {[staff.rank, staff.name].filter(Boolean).join(' ')}
-                                                </button>
-                                                <span className="shrink-0 text-[11px] text-gray-400">{staff.role || 'Crew'}{isPic ? ' / PIC' : ''}</span>
-                                                {!isClear && isFlyoutOpen && (
-                                                    <div
-                                                        className="absolute left-0 top-5 z-[300] w-80 rounded-lg border border-red-400/40 bg-gray-950 p-3 text-left shadow-2xl"
-                                                        onMouseEnter={() => setActiveCrewConflictName(staff.name)}
-                                                        onMouseLeave={() => setActiveCrewConflictName(current => current === staff.name ? null : current)}
+                    <div className={`grid gap-3 ${activeCrewConflict ? 'grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)]' : 'grid-cols-1'}`}>
+                        <div className="space-y-2">
+                            {fixedCrewRosterByRole.map(group => (
+                                <div key={group.role}>
+                                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{group.role}</div>
+                                    <div className="space-y-1">
+                                        {group.members.map(({ staff, isClear }) => {
+                                            const isPic = staff.name === String(fixedCrewPic || event.fixedCrewPic || event.pilot || '').trim();
+                                            const isSelected = activeCrewConflictName === staff.name && !isClear;
+                                            return (
+                                                <div key={staff.id || staff.name} className="flex items-baseline gap-2 text-left">
+                                                    <button
+                                                        type="button"
+                                                        disabled={isClear}
+                                                        onClick={() => setActiveCrewConflictName(isSelected ? null : staff.name)}
+                                                        className={`min-w-0 truncate text-xs font-semibold ${isClear ? 'cursor-default text-emerald-300' : isSelected ? 'cursor-pointer text-red-200 underline decoration-red-200/70 underline-offset-2' : 'cursor-pointer text-red-300 underline decoration-red-300/40 underline-offset-2'}`}
                                                     >
-                                                        <div className="mb-2 text-xs font-bold uppercase tracking-wider text-red-300">Conflict details</div>
-                                                        <div className="space-y-1">
-                                                            {conflicts.map((conflict, index) => (
-                                                                <p key={`${staff.name}-conflict-detail-${index}`} className="text-xs leading-snug text-red-100">
-                                                                    {conflict.label}
-                                                                </p>
-                                                            ))}
-                                                        </div>
-                                                        <div className="mt-3 border-t border-gray-800 pt-2">
-                                                            <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300">
-                                                                Available same-unit {staff.role || 'crew'}
-                                                            </div>
-                                                            {alternatives.length > 0 ? (
-                                                                <div className="space-y-0.5">
-                                                                    {alternatives.slice(0, 8).map(candidate => (
-                                                                        <div key={candidate.id || candidate.name} className="text-xs text-emerald-100">
-                                                                            {[candidate.rank, candidate.name].filter(Boolean).join(' ')}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            ) : (
-                                                                <div className="text-xs text-gray-400">No same-unit crew with this role are available for the full event window.</div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                                                        {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                                                    </button>
+                                                    <span className="shrink-0 text-[11px] text-gray-400">{staff.role || 'Crew'}{isPic ? ' / PIC' : ''}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {activeCrewConflict && (
+                            <div className="rounded-lg border border-red-400/40 bg-gray-950/80 p-3 text-left">
+                                <div className="mb-1 text-xs font-bold uppercase tracking-wider text-red-300">Unavailability</div>
+                                <div className="text-sm font-semibold text-red-100">
+                                    {[activeCrewConflict.staff.rank, activeCrewConflict.staff.name].filter(Boolean).join(' ')}
+                                </div>
+                                <div className="mt-2 space-y-1">
+                                    {activeCrewConflict.conflicts.map((conflict, index) => (
+                                        <p key={`${activeCrewConflict.staff.name}-conflict-detail-${index}`} className="text-xs leading-snug text-red-100">
+                                            {conflict.label}
+                                        </p>
+                                    ))}
+                                </div>
+                                <div className="mt-3 border-t border-gray-800 pt-2">
+                                    <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300">
+                                        Available same-unit {activeCrewConflict.staff.role || 'crew'}
+                                    </div>
+                                    {activeCrewConflict.alternatives.length > 0 ? (
+                                        <div className="space-y-0.5">
+                                            {activeCrewConflict.alternatives.slice(0, 10).map(candidate => (
+                                                <div key={candidate.id || candidate.name} className="text-xs text-emerald-100">
+                                                    {[candidate.rank, candidate.name].filter(Boolean).join(' ')}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-xs text-gray-400">No same-unit crew with this role are available for the full event window.</div>
+                                    )}
                                 </div>
                             </div>
-                        ))}
+                        )}
                     </div>
                 ) : (
                     <div className="text-sm text-gray-500 italic">No crew roster is assigned to this event.</div>
