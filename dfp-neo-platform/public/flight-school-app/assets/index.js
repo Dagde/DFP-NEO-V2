@@ -17636,6 +17636,25 @@ const formatFixedCrewDisplayGroup$2 = (crew) => {
   const crewLabel = parts.slice(1).join("::").trim();
   return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
 };
+const normaliseFixedCrewUnitCode = (value) => String(value || "").trim().toUpperCase();
+const splitFixedCrewGroupKey = (value) => {
+  const cleaned = String(value || "").replace(/^CREW\s*/i, "").trim();
+  if (!cleaned) return { unit: "", crew: "", key: "" };
+  const parts = cleaned.split("::");
+  if (parts.length > 1) {
+    const unit = normaliseFixedCrewUnitCode(parts[0]);
+    const crew2 = parts.slice(1).join("::").replace(/^CREW\s*/i, "").trim().toUpperCase();
+    return { unit, crew: crew2, key: unit && crew2 ? `${unit}::${crew2}` : cleaned.toUpperCase() };
+  }
+  const displayMatch = cleaned.match(/^(.+?)\/([A-Z0-9_-]+)$/i);
+  if (displayMatch) {
+    const crew2 = displayMatch[1].replace(/^CREW\s*/i, "").trim().toUpperCase();
+    const unit = normaliseFixedCrewUnitCode(displayMatch[2]);
+    return { unit, crew: crew2, key: unit && crew2 ? `${unit}::${crew2}` : cleaned.toUpperCase() };
+  }
+  const crew = cleaned.toUpperCase();
+  return { unit: "", crew, key: crew };
+};
 const gradeColor$1 = (v) => {
   if (v >= 4.5) return "text-emerald-400";
   if (v >= 3.5) return "text-green-400";
@@ -18089,10 +18108,143 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const normalisedEventType = String(eventType || "").trim().toLowerCase();
   const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === "flight" || normalisedEventType === "ftd");
   const activeUnitNormalised = String(activeUnitCode || "").trim().toUpperCase();
-  const fixedCrewGroups = reactExports.useMemo(() => Array.from(new Set(instructorsData.filter((staff) => !activeUnitNormalised || String(staff.unit || "").trim().toUpperCase() === activeUnitNormalised).map((staff) => String(staff.crew || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true })), [activeUnitNormalised, instructorsData]);
-  const fixedCrewMembers = reactExports.useMemo(() => fixedCrewGroup ? instructorsData.filter((staff) => !activeUnitNormalised || String(staff.unit || "").trim().toUpperCase() === activeUnitNormalised).filter((staff) => String(staff.crew || "").trim().toUpperCase() === String(fixedCrewGroup || "").trim().toUpperCase()).filter((staff) => !staff.isAdminStaff).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), void 0, { sensitivity: "base" })) : [], [activeUnitNormalised, fixedCrewGroup, instructorsData]);
+  const activeUnitMemberCodes = reactExports.useMemo(() => activeUnitNormalised.split("+").map((unit) => normaliseFixedCrewUnitCode(unit)).filter(Boolean), [activeUnitNormalised]);
+  const staffMatchesActiveFixedCrewUnit = (staff, crewKey) => {
+    const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
+    const crewUnit = splitFixedCrewGroupKey(crewKey).unit;
+    if (crewUnit) return staffUnit === crewUnit;
+    if (activeUnitMemberCodes.length === 0) return true;
+    return activeUnitMemberCodes.includes(staffUnit);
+  };
+  const fixedCrewGroups = reactExports.useMemo(() => Array.from(new Set(instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff)).map((staff) => {
+    const staffCrew = String(staff.crew || "").trim();
+    const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
+    return staffCrew && activeUnitMemberCodes.length > 1 && staffUnit ? `${staffUnit}::${staffCrew}` : staffCrew;
+  }).filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true })), [activeUnitMemberCodes, instructorsData]);
+  const fixedCrewMembers = reactExports.useMemo(() => fixedCrewGroup ? instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff, fixedCrewGroup)).filter((staff) => String(staff.crew || "").trim().toUpperCase() === splitFixedCrewGroupKey(fixedCrewGroup).crew).filter((staff) => !staff.isAdminStaff).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), void 0, { sensitivity: "base" })) : [], [activeUnitMemberCodes, fixedCrewGroup, instructorsData]);
   const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
   const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
+  const getEventSyllabusDetail = (targetEvent) => syllabusDetails.find((item) => item.id === targetEvent.flightNumber || item.code === targetEvent.flightNumber);
+  const getEventBookingWindow2 = (targetEvent) => {
+    const detail = getEventSyllabusDetail(targetEvent);
+    const preFlight = Number(targetEvent.preFlightTime ?? detail?.preFlightTime ?? 0) || 0;
+    const postFlight = Number(targetEvent.postFlightTime ?? detail?.postFlightTime ?? 0) || 0;
+    const startTimeValue = Number(targetEvent.startTime ?? 0) || 0;
+    const durationValue = Number(targetEvent.duration ?? detail?.duration ?? 0) || 0;
+    return {
+      start: startTimeValue - preFlight,
+      end: startTimeValue + durationValue + postFlight,
+      preFlight,
+      postFlight
+    };
+  };
+  const normaliseTimeFieldToHour = (value, fallback = 0) => {
+    if (value === void 0 || value === null || value === "") return fallback;
+    if (typeof value === "number") return Number.isFinite(value) ? value : fallback;
+    const text = String(value).trim();
+    if (!text) return fallback;
+    if (text.includes(":")) {
+      const [hours, minutes = "0"] = text.split(":");
+      const hourNumber = Number(hours);
+      const minuteNumber = Number(minutes);
+      return Number.isFinite(hourNumber) && Number.isFinite(minuteNumber) ? hourNumber + minuteNumber / 60 : fallback;
+    }
+    const rawNumber = Number(text);
+    if (!Number.isFinite(rawNumber)) return fallback;
+    if (rawNumber > 24) {
+      const hours = Math.floor(rawNumber / 100);
+      const minutes = rawNumber % 100;
+      return hours + minutes / 60;
+    }
+    return rawNumber;
+  };
+  const getPersonnelForConflictCheck = (targetEvent) => Array.from(new Set([
+    targetEvent.instructor,
+    targetEvent.student,
+    targetEvent.pilot,
+    targetEvent.group,
+    ...targetEvent.attendees || []
+  ].map((value) => String(value || "").trim()).filter(Boolean)));
+  const rosteredFixedCrewMembers = reactExports.useMemo(() => {
+    if (!isFixedCrewCrewedEvent) return [];
+    const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || "";
+    const eventRosterNames = new Set(String(event.fixedCrewPic || event.pilot || event.instructor || "") ? [String(event.fixedCrewPic || event.pilot || event.instructor || "").trim()] : []);
+    (event.attendees || []).forEach((name) => {
+      const cleaned = String(name || "").trim();
+      if (cleaned) eventRosterNames.add(cleaned);
+    });
+    const rosterFromAttendees = Array.from(eventRosterNames).map((name) => instructorsData.find((staff) => staff.name === name)).filter(Boolean);
+    if (rosterFromAttendees.length > 0) {
+      return rosterFromAttendees.sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+    }
+    if (!eventCrewKey) return [];
+    const crewParts = splitFixedCrewGroupKey(eventCrewKey);
+    return instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)).filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewParts.crew).filter((staff) => !staff.isAdminStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+  }, [event, fixedCrewGroup, instructorsData, isFixedCrewCrewedEvent, activeUnitMemberCodes, personnelDisplaySettings]);
+  const fixedCrewRosterStatus = reactExports.useMemo(() => {
+    const bookingWindow = getEventBookingWindow2(event);
+    const eventDate = event.date;
+    return rosteredFixedCrewMembers.map((staff) => {
+      const unavailabilityConflicts = (staff.unavailability || []).filter((period) => {
+        if (!eventDate) return false;
+        const periodStartDate = String(period.startDate || "");
+        const periodEndDate = String(period.endDate || period.startDate || "");
+        if (eventDate < periodStartDate || eventDate > periodEndDate) return false;
+        if (period.allDay) return true;
+        const unavailableStart = periodStartDate === eventDate ? normaliseTimeFieldToHour(period.startTime, 0) : 0;
+        const unavailableEnd = periodEndDate === eventDate ? normaliseTimeFieldToHour(period.endTime, 24) : 24;
+        return unavailableStart < bookingWindow.end && bookingWindow.start < unavailableEnd;
+      }).map((period) => ({
+        type: "unavailability",
+        label: period.allDay ? `${period.reason || "Unavailable"} all day` : `${period.reason || "Unavailable"} ${formatTime$4(normaliseTimeFieldToHour(period.startTime, 0))}-${formatTime$4(normaliseTimeFieldToHour(period.endTime, 24))}`
+      }));
+      const eventConflicts = (eventsForDate || []).filter((otherEvent) => otherEvent.id !== event.id).filter((otherEvent) => getPersonnelForConflictCheck(otherEvent).includes(staff.name)).filter((otherEvent) => {
+        const otherWindow = getEventBookingWindow2(otherEvent);
+        return otherWindow.start < bookingWindow.end && bookingWindow.start < otherWindow.end;
+      }).map((otherEvent) => ({
+        type: "event",
+        label: `${otherEvent.flightNumber || "Event"} ${formatTime$4(otherEvent.startTime)}-${formatTime$4((otherEvent.startTime || 0) + (otherEvent.duration || 0))}`
+      }));
+      const conflicts = [...unavailabilityConflicts, ...eventConflicts];
+      return {
+        staff,
+        conflicts,
+        isClear: conflicts.length === 0
+      };
+    });
+  }, [event, eventsForDate, rosteredFixedCrewMembers, syllabusDetails]);
+  const renderFixedCrewRosterStatus = () => {
+    if (!isFixedCrewCrewedEvent) return null;
+    const bookingWindow = getEventBookingWindow2(event);
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-gray-700 bg-gray-900/50 p-3 space-y-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-emerald-200", children: "Crew Roster" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+          "Availability window ",
+          formatTime$4(Math.max(0, bookingWindow.start)),
+          "-",
+          formatTime$4(Math.min(24, bookingWindow.end))
+        ] })
+      ] }),
+      fixedCrewRosterStatus.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-2", children: fixedCrewRosterStatus.map(({ staff, conflicts, isClear }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: `rounded border px-3 py-2 ${isClear ? "border-emerald-500/30 bg-emerald-950/20" : "border-red-500/40 bg-red-950/20"}`,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-sm font-semibold text-gray-100", children: [staff.rank, staff.name].filter(Boolean).join(" ") }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: staff.role || "Crew" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex-shrink-0 text-xs font-bold uppercase tracking-wider ${isClear ? "text-emerald-300" : "text-red-300"}`, children: isClear ? "No conflict" : "Conflict" })
+            ] }),
+            !isClear && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-1", children: conflicts.map((conflict, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-red-200", children: conflict.label }, `${staff.name}-conflict-${index}`)) })
+          ]
+        },
+        staff.id || staff.name
+      )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: "No crew roster is assigned to this event." })
+    ] });
+  };
   const formatFixedCrewAssignmentStatus = (status) => {
     switch (status) {
       case "complete":
@@ -19083,6 +19235,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     setShowMassBriefConfirmation(true);
   };
   const renderCrewFields = (crewMember, index) => {
+    if (isFixedCrewCrewedEvent) return null;
     const isSctForm = flightNumber === "SCT FORM";
     flightNumber.startsWith("SCT");
     const formationCallsign = isSctForm && formationType ? `${formationType}${index + 1}` : `Aircraft ${index + 1}`;
@@ -19734,7 +19887,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Aircraft Count" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: aircraftCount, onChange: (e) => setAircraftCount(parseInt(e.target.value)), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: Array.from({ length: 7 }, (_, i) => i + 2).map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) })
               ] })
-            ] })
+            ] }),
+            renderFixedCrewRosterStatus()
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Notes" }),
@@ -19943,44 +20097,47 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             event.fixedCrewManifestNotes && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2 text-sm", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500 mb-1", children: "Swap / Manifest Notes" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-pre-wrap text-gray-200", children: event.fixedCrewManifestNotes })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Dual/Solo:" }),
-            " ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: event.flightType })
-          ] }),
-          event.flightType === "Dual" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            event.eventCategory === "sct" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Instructor:" }),
-              " ",
-              event.instructor || event.pilot
-            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Instructor:" }),
-              " ",
-              event.instructor
             ] }),
-            event.type === "ground" && event.attendees && event.attendees.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
-                "Attendees (",
-                event.attendees.length,
-                "):"
-              ] }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 bg-gray-700/50 p-2 rounded-md max-h-32 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1", children: event.attendees.map((attendee) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-sm text-gray-300", children: attendee.split(" – ")[0] }, attendee)) }) })
-            ] }) : event.eventCategory === "sct" ? null : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Student:" }),
-              " ",
-              event.student || event.group
-            ] })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            renderFixedCrewRosterStatus()
+          ] }),
+          !isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "PIC:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Dual/Solo:" }),
               " ",
-              event.pilot
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: event.flightType })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "flex items-center gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Second Position:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 rounded text-sm font-semibold", children: "SOLO" })
+            event.flightType === "Dual" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              event.eventCategory === "sct" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Instructor:" }),
+                " ",
+                event.instructor || event.pilot
+              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Instructor:" }),
+                " ",
+                event.instructor
+              ] }),
+              event.type === "ground" && event.attendees && event.attendees.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
+                  "Attendees (",
+                  event.attendees.length,
+                  "):"
+                ] }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 bg-gray-700/50 p-2 rounded-md max-h-32 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1", children: event.attendees.map((attendee) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-sm text-gray-300", children: attendee.split(" – ")[0] }, attendee)) }) })
+              ] }) : event.eventCategory === "sct" ? null : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Student:" }),
+                " ",
+                event.student || event.group
+              ] })
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "PIC:" }),
+                " ",
+                event.pilot
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "flex items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Second Position:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 rounded text-sm font-semibold", children: "SOLO" })
+              ] })
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
@@ -75042,9 +75199,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const fixedCrewTileColourMode = normaliseFixedCrewTileColourMode(config.fixedCrewTileColourMode);
     const normaliseCrewValue2 = (value) => String(value || "").trim();
     const normaliseCrewKey = (value) => normaliseCrewValue2(value).toUpperCase();
-    const normaliseFixedCrewUnitCode = (value) => String(value || "").trim().toUpperCase();
+    const normaliseFixedCrewUnitCode2 = (value) => String(value || "").trim().toUpperCase();
     const fixedCrewMatchesContextUnit = (unit) => {
-      const unitCode = normaliseFixedCrewUnitCode(unit);
+      const unitCode = normaliseFixedCrewUnitCode2(unit);
       if (fixedCrewContextUnitSet.size === 0) return true;
       return Boolean(unitCode) && fixedCrewContextUnitSet.has(unitCode);
     };
@@ -75191,7 +75348,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     originalInstructors.filter(isActiveFixedCrewStaff).forEach((staff) => {
       const crewKey = normaliseCrewKey(staff.crew);
       if (!crewKey) return;
-      const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
+      const staffUnit = normaliseFixedCrewUnitCode2(staff.unit);
       const scopedCrewKey = fixedCrewUsesSharedUnitContext && staffUnit ? `${staffUnit}::${crewKey}` : crewKey;
       if (!crewGroups.has(scopedCrewKey)) crewGroups.set(scopedCrewKey, []);
       crewGroups.get(scopedCrewKey).push(staff);
@@ -75511,7 +75668,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       fixedCrewStaticAvailabilityCache.set(key, unavailable);
       return unavailable;
     };
-    const getFixedCrewEventOwnerUnit = (event) => normaliseFixedCrewUnitCode(event.fixedCrewUnit || event.unit);
+    const getFixedCrewEventOwnerUnit = (event) => normaliseFixedCrewUnitCode2(event.fixedCrewUnit || event.unit);
     const crewMatchesFixedCrewEventOwnerUnit = (crew, eventOwnerUnit) => {
       if (!fixedCrewUsesSharedUnitContext || !eventOwnerUnit) return true;
       return getFixedCrewCrewUnit(crew) === eventOwnerUnit;

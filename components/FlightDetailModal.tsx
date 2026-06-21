@@ -82,6 +82,27 @@ const formatFixedCrewDisplayGroup = (crew?: string | null): string => {
   return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
 };
 
+const normaliseFixedCrewUnitCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
+
+const splitFixedCrewGroupKey = (value?: string | null): { unit: string; crew: string; key: string } => {
+  const cleaned = String(value || '').replace(/^CREW\s*/i, '').trim();
+  if (!cleaned) return { unit: '', crew: '', key: '' };
+  const parts = cleaned.split('::');
+  if (parts.length > 1) {
+    const unit = normaliseFixedCrewUnitCode(parts[0]);
+    const crew = parts.slice(1).join('::').replace(/^CREW\s*/i, '').trim().toUpperCase();
+    return { unit, crew, key: unit && crew ? `${unit}::${crew}` : cleaned.toUpperCase() };
+  }
+  const displayMatch = cleaned.match(/^(.+?)\/([A-Z0-9_-]+)$/i);
+  if (displayMatch) {
+    const crew = displayMatch[1].replace(/^CREW\s*/i, '').trim().toUpperCase();
+    const unit = normaliseFixedCrewUnitCode(displayMatch[2]);
+    return { unit, crew, key: unit && crew ? `${unit}::${crew}` : cleaned.toUpperCase() };
+  }
+  const crew = cleaned.toUpperCase();
+  return { unit: '', crew, key: crew };
+};
+
 const gradeColor = (v: number): string => {
   if (v >= 4.5) return 'text-emerald-400';
   if (v >= 3.5) return 'text-green-400';
@@ -651,18 +672,33 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const normalisedEventType = String(eventType || '').trim().toLowerCase();
     const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === 'flight' || normalisedEventType === 'ftd');
     const activeUnitNormalised = String(activeUnitCode || '').trim().toUpperCase();
+    const activeUnitMemberCodes = useMemo(() => activeUnitNormalised
+        .split('+')
+        .map(unit => normaliseFixedCrewUnitCode(unit))
+        .filter(Boolean), [activeUnitNormalised]);
+    const staffMatchesActiveFixedCrewUnit = (staff: Instructor, crewKey?: string | null): boolean => {
+        const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
+        const crewUnit = splitFixedCrewGroupKey(crewKey).unit;
+        if (crewUnit) return staffUnit === crewUnit;
+        if (activeUnitMemberCodes.length === 0) return true;
+        return activeUnitMemberCodes.includes(staffUnit);
+    };
     const fixedCrewGroups = useMemo(() => Array.from(new Set(instructorsData
-        .filter(staff => !activeUnitNormalised || String(staff.unit || '').trim().toUpperCase() === activeUnitNormalised)
-        .map(staff => String(staff.crew || '').trim())
+        .filter(staff => staffMatchesActiveFixedCrewUnit(staff))
+        .map(staff => {
+            const staffCrew = String(staff.crew || '').trim();
+            const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
+            return staffCrew && activeUnitMemberCodes.length > 1 && staffUnit ? `${staffUnit}::${staffCrew}` : staffCrew;
+        })
         .filter(Boolean)))
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [activeUnitNormalised, instructorsData]);
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [activeUnitMemberCodes, instructorsData]);
     const fixedCrewMembers = useMemo(() => fixedCrewGroup
         ? instructorsData
-            .filter(staff => !activeUnitNormalised || String(staff.unit || '').trim().toUpperCase() === activeUnitNormalised)
-            .filter(staff => String(staff.crew || '').trim().toUpperCase() === String(fixedCrewGroup || '').trim().toUpperCase())
+            .filter(staff => staffMatchesActiveFixedCrewUnit(staff, fixedCrewGroup))
+            .filter(staff => String(staff.crew || '').trim().toUpperCase() === splitFixedCrewGroupKey(fixedCrewGroup).crew)
             .filter(staff => !staff.isAdminStaff)
             .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }))
-        : [], [activeUnitNormalised, fixedCrewGroup, instructorsData]);
+        : [], [activeUnitMemberCodes, fixedCrewGroup, instructorsData]);
     const fixedCrewPicQualification = useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, 'fixed_crew')
         .find(qualification => (
             normaliseQualificationToken(qualification.id) === 'pic'
@@ -672,6 +708,164 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const fixedCrewPicCandidates = useMemo(() => fixedCrewPicQualification
         ? fixedCrewMembers.filter(staff => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id))
         : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
+    const getEventSyllabusDetail = (targetEvent: Partial<ScheduleEvent>): SyllabusItemDetail | undefined => (
+        syllabusDetails.find(item => item.id === targetEvent.flightNumber || item.code === targetEvent.flightNumber)
+    );
+    const getEventBookingWindow = (targetEvent: Partial<ScheduleEvent>): { start: number; end: number; preFlight: number; postFlight: number } => {
+        const detail = getEventSyllabusDetail(targetEvent);
+        const preFlight = Number((targetEvent as any).preFlightTime ?? detail?.preFlightTime ?? 0) || 0;
+        const postFlight = Number((targetEvent as any).postFlightTime ?? detail?.postFlightTime ?? 0) || 0;
+        const startTimeValue = Number(targetEvent.startTime ?? 0) || 0;
+        const durationValue = Number(targetEvent.duration ?? detail?.duration ?? 0) || 0;
+        return {
+            start: startTimeValue - preFlight,
+            end: startTimeValue + durationValue + postFlight,
+            preFlight,
+            postFlight,
+        };
+    };
+    const normaliseTimeFieldToHour = (value?: string | number | null, fallback = 0): number => {
+        if (value === undefined || value === null || value === '') return fallback;
+        if (typeof value === 'number') return Number.isFinite(value) ? value : fallback;
+        const text = String(value).trim();
+        if (!text) return fallback;
+        if (text.includes(':')) {
+            const [hours, minutes = '0'] = text.split(':');
+            const hourNumber = Number(hours);
+            const minuteNumber = Number(minutes);
+            return Number.isFinite(hourNumber) && Number.isFinite(minuteNumber)
+                ? hourNumber + (minuteNumber / 60)
+                : fallback;
+        }
+        const rawNumber = Number(text);
+        if (!Number.isFinite(rawNumber)) return fallback;
+        if (rawNumber > 24) {
+            const hours = Math.floor(rawNumber / 100);
+            const minutes = rawNumber % 100;
+            return hours + (minutes / 60);
+        }
+        return rawNumber;
+    };
+    const getPersonnelForConflictCheck = (targetEvent: Partial<ScheduleEvent>): string[] => Array.from(new Set([
+        targetEvent.instructor,
+        targetEvent.student,
+        targetEvent.pilot,
+        targetEvent.group,
+        ...((targetEvent.attendees || []) as string[]),
+    ].map(value => String(value || '').trim()).filter(Boolean)));
+    const rosteredFixedCrewMembers = useMemo(() => {
+        if (!isFixedCrewCrewedEvent) return [] as Instructor[];
+        const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || '';
+        const eventRosterNames = new Set(String(event.fixedCrewPic || event.pilot || event.instructor || '')
+            ? [String(event.fixedCrewPic || event.pilot || event.instructor || '').trim()]
+            : []);
+        (event.attendees || []).forEach(name => {
+            const cleaned = String(name || '').trim();
+            if (cleaned) eventRosterNames.add(cleaned);
+        });
+        const rosterFromAttendees = Array.from(eventRosterNames)
+            .map(name => instructorsData.find(staff => staff.name === name))
+            .filter(Boolean) as Instructor[];
+        if (rosterFromAttendees.length > 0) {
+            return rosterFromAttendees.sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
+        }
+        if (!eventCrewKey) return [] as Instructor[];
+        const crewParts = splitFixedCrewGroupKey(eventCrewKey);
+        return instructorsData
+            .filter(staff => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey))
+            .filter(staff => String(staff.crew || '').trim().toUpperCase() === crewParts.crew)
+            .filter(staff => !staff.isAdminStaff)
+            .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
+    }, [event, fixedCrewGroup, instructorsData, isFixedCrewCrewedEvent, activeUnitMemberCodes, personnelDisplaySettings]);
+    const fixedCrewRosterStatus = useMemo(() => {
+        const bookingWindow = getEventBookingWindow(event);
+        const eventDate = event.date;
+        return rosteredFixedCrewMembers.map(staff => {
+            const unavailabilityConflicts = (staff.unavailability || [])
+                .filter(period => {
+                    if (!eventDate) return false;
+                    const periodStartDate = String(period.startDate || '');
+                    const periodEndDate = String(period.endDate || period.startDate || '');
+                    if (eventDate < periodStartDate || eventDate > periodEndDate) return false;
+                    if (period.allDay) return true;
+                    const unavailableStart = periodStartDate === eventDate
+                        ? normaliseTimeFieldToHour(period.startTime, 0)
+                        : 0;
+                    const unavailableEnd = periodEndDate === eventDate
+                        ? normaliseTimeFieldToHour(period.endTime, 24)
+                        : 24;
+                    return unavailableStart < bookingWindow.end && bookingWindow.start < unavailableEnd;
+                })
+                .map(period => ({
+                    type: 'unavailability' as const,
+                    label: period.allDay
+                        ? `${period.reason || 'Unavailable'} all day`
+                        : `${period.reason || 'Unavailable'} ${formatTime(normaliseTimeFieldToHour(period.startTime, 0))}-${formatTime(normaliseTimeFieldToHour(period.endTime, 24))}`,
+                }));
+            const eventConflicts = (eventsForDate || [])
+                .filter(otherEvent => otherEvent.id !== event.id)
+                .filter(otherEvent => getPersonnelForConflictCheck(otherEvent).includes(staff.name))
+                .filter(otherEvent => {
+                    const otherWindow = getEventBookingWindow(otherEvent);
+                    return otherWindow.start < bookingWindow.end && bookingWindow.start < otherWindow.end;
+                })
+                .map(otherEvent => ({
+                    type: 'event' as const,
+                    label: `${otherEvent.flightNumber || 'Event'} ${formatTime(otherEvent.startTime)}-${formatTime((otherEvent.startTime || 0) + (otherEvent.duration || 0))}`,
+                }));
+            const conflicts = [...unavailabilityConflicts, ...eventConflicts];
+            return {
+                staff,
+                conflicts,
+                isClear: conflicts.length === 0,
+            };
+        });
+    }, [event, eventsForDate, rosteredFixedCrewMembers, syllabusDetails]);
+    const renderFixedCrewRosterStatus = () => {
+        if (!isFixedCrewCrewedEvent) return null;
+        const bookingWindow = getEventBookingWindow(event);
+        return (
+            <div className="mt-3 rounded-lg border border-gray-700 bg-gray-900/50 p-3 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <strong className="text-emerald-200">Crew Roster</strong>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                        Availability window {formatTime(Math.max(0, bookingWindow.start))}-{formatTime(Math.min(24, bookingWindow.end))}
+                    </span>
+                </div>
+                {fixedCrewRosterStatus.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {fixedCrewRosterStatus.map(({ staff, conflicts, isClear }) => (
+                            <div
+                                key={staff.id || staff.name}
+                                className={`rounded border px-3 py-2 ${isClear ? 'border-emerald-500/30 bg-emerald-950/20' : 'border-red-500/40 bg-red-950/20'}`}
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <div className="truncate text-sm font-semibold text-gray-100">{[staff.rank, staff.name].filter(Boolean).join(' ')}</div>
+                                        <div className="text-xs text-gray-400">{staff.role || 'Crew'}</div>
+                                    </div>
+                                    <div className={`flex-shrink-0 text-xs font-bold uppercase tracking-wider ${isClear ? 'text-emerald-300' : 'text-red-300'}`}>
+                                        {isClear ? 'No conflict' : 'Conflict'}
+                                    </div>
+                                </div>
+                                {!isClear && (
+                                    <div className="mt-2 space-y-1">
+                                        {conflicts.map((conflict, index) => (
+                                            <div key={`${staff.name}-conflict-${index}`} className="text-xs text-red-200">
+                                                {conflict.label}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-sm text-gray-500 italic">No crew roster is assigned to this event.</div>
+                )}
+            </div>
+        );
+    };
     const formatFixedCrewAssignmentStatus = (status?: ScheduleEvent['fixedCrewManifestStatus']): string => {
         switch (status) {
             case 'complete':
@@ -1973,6 +2167,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     
 
 const renderCrewFields = (crewMember: CrewMember, index: number) => {
+    if (isFixedCrewCrewedEvent) return null;
     const isSctForm = flightNumber === 'SCT FORM';
     const isSctGeneric = flightNumber.startsWith('SCT');
     
@@ -2737,6 +2932,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     </select>
                                                 </div>
                                             </div>
+                                            {renderFixedCrewRosterStatus()}
                                         </div>
                                     )}
                                     <div>
@@ -2961,40 +3157,45 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     <span className="whitespace-pre-wrap text-gray-200">{event.fixedCrewManifestNotes}</span>
                                                 </div>
                                             )}
+                                            {renderFixedCrewRosterStatus()}
                                         </div>
                                     )}
-                                    <p><strong>Dual/Solo:</strong> <span className="font-semibold">{event.flightType}</span></p>
-                                    {event.flightType === 'Dual' ? (
+                                    {!isFixedCrewCrewedEvent && (
                                         <>
-                                            {event.eventCategory === 'sct' ? (
-                                                <p><strong>Instructor:</strong> {event.instructor || event.pilot}</p>
+                                            <p><strong>Dual/Solo:</strong> <span className="font-semibold">{event.flightType}</span></p>
+                                            {event.flightType === 'Dual' ? (
+                                                <>
+                                                    {event.eventCategory === 'sct' ? (
+                                                        <p><strong>Instructor:</strong> {event.instructor || event.pilot}</p>
+                                                    ) : (
+                                                        <p><strong>Instructor:</strong> {event.instructor}</p>
+                                                    )}
+                                                    {(event.type === 'ground' && event.attendees && event.attendees.length > 0) ? (
+                                                        <div>
+                                                            <p><strong>Attendees ({event.attendees.length}):</strong></p>
+                                                            <div className="mt-1 bg-gray-700/50 p-2 rounded-md max-h-32 overflow-y-auto">
+                                                                <ul className="space-y-1">
+                                                                    {event.attendees.map(attendee => (
+                                                                        <li key={attendee} className="text-sm text-gray-300">{attendee.split(' – ')[0]}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    ) : event.eventCategory === 'sct' ? null : (
+                                                        <p><strong>Student:</strong> {event.student || event.group}</p>
+                                                    )}
+                                                </>
                                             ) : (
-                                                <p><strong>Instructor:</strong> {event.instructor}</p>
+                                                <>
+                                                    <p><strong>PIC:</strong> {event.pilot}</p>
+                                                    <p className="flex items-center gap-2">
+                                                        <strong>Second Position:</strong>
+                                                        <span className="inline-block px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 rounded text-sm font-semibold">
+                                                            SOLO
+                                                        </span>
+                                                    </p>
+                                                </>
                                             )}
-                                            {(event.type === 'ground' && event.attendees && event.attendees.length > 0) ? (
-                                                <div>
-                                                    <p><strong>Attendees ({event.attendees.length}):</strong></p>
-                                                    <div className="mt-1 bg-gray-700/50 p-2 rounded-md max-h-32 overflow-y-auto">
-                                                        <ul className="space-y-1">
-                                                            {event.attendees.map(attendee => (
-                                                                <li key={attendee} className="text-sm text-gray-300">{attendee.split(' – ')[0]}</li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                            ) : event.eventCategory === 'sct' ? null : (
-                                                <p><strong>Student:</strong> {event.student || event.group}</p>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <p><strong>PIC:</strong> {event.pilot}</p>
-                                            <p className="flex items-center gap-2">
-                                                <strong>Second Position:</strong>
-                                                <span className="inline-block px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 rounded text-sm font-semibold">
-                                                    SOLO
-                                                </span>
-                                            </p>
                                         </>
                                     )}
                                     <p><strong>Duration:</strong> {event.duration.toFixed(1)} hours</p>
