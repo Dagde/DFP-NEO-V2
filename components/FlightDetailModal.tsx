@@ -812,8 +812,13 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         const crewUnit = splitFixedCrewGroupKey(eventCrewKey).unit || normaliseFixedCrewUnitCode(staff.unit);
         const role = String(staff.role || '').trim().toUpperCase();
         if (!crewUnit || !role) return [];
+        const assignedToCurrentEvent = new Set([
+            ...getPersonnelForConflictCheck(event),
+            ...rosteredFixedCrewMembers.map(member => member.name),
+        ].map(name => String(name || '').trim()).filter(Boolean));
         return instructorsData
             .filter(candidate => candidate.name !== staff.name)
+            .filter(candidate => !assignedToCurrentEvent.has(candidate.name))
             .filter(candidate => !candidate.isAdminStaff)
             .filter(candidate => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit)
             .filter(candidate => String(candidate.role || '').trim().toUpperCase() === role)

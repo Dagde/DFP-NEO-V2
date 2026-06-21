@@ -18203,7 +18203,11 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     const crewUnit = splitFixedCrewGroupKey(eventCrewKey).unit || normaliseFixedCrewUnitCode(staff.unit);
     const role = String(staff.role || "").trim().toUpperCase();
     if (!crewUnit || !role) return [];
-    return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => String(candidate.role || "").trim().toUpperCase() === role).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+    const assignedToCurrentEvent = new Set([
+      ...getPersonnelForConflictCheck(event),
+      ...rosteredFixedCrewMembers.map((member) => member.name)
+    ].map((name) => String(name || "").trim()).filter(Boolean));
+    return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !assignedToCurrentEvent.has(candidate.name)).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => String(candidate.role || "").trim().toUpperCase() === role).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
   };
   const fixedCrewRosterStatus = reactExports.useMemo(() => {
     const bookingWindow = getEventBookingWindow2(event);
