@@ -18264,6 +18264,71 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     });
   }, [event.fixedCrewPic, event.pilot, fixedCrewPic, fixedCrewRosterStatus, personnelDisplaySettings]);
   const activeCrewConflict = reactExports.useMemo(() => fixedCrewRosterStatus.find((status) => status.staff.name === activeCrewConflictName && !status.isClear) || null, [activeCrewConflictName, fixedCrewRosterStatus]);
+  const handleFixedCrewSubstituteSelect = async (unavailableStaff, substitute) => {
+    if (isReadOnly) {
+      await showDarkAlert("Past DFPs are locked. Crew substitutions cannot be amended.", "Past DFP Locked", "warning");
+      return;
+    }
+    const _freezeRaw = localStorage.getItem("systemFreezeState");
+    if (_freezeRaw) {
+      const _freeze = JSON.parse(_freezeRaw);
+      if (_freeze.isFrozen) {
+        await showDarkAlert("System is currently frozen. No modifications are allowed during a system freeze.", "System Frozen", "error");
+        return;
+      }
+    }
+    const bookingWindow = getEventBookingWindow2(event);
+    const unavailableUnit = normaliseFixedCrewUnitCode(unavailableStaff.unit);
+    const substituteUnit = normaliseFixedCrewUnitCode(substitute.unit);
+    const unavailableRole = String(unavailableStaff.role || "").trim().toUpperCase();
+    const substituteRole = String(substitute.role || "").trim().toUpperCase();
+    const reasons = [];
+    if (!substituteUnit || substituteUnit !== unavailableUnit) {
+      reasons.push(`${[substitute.rank, substitute.name].filter(Boolean).join(" ")} is not from the same unit as ${unavailableStaff.name}.`);
+    }
+    if (!substituteRole || substituteRole !== unavailableRole) {
+      reasons.push(`${[substitute.rank, substitute.name].filter(Boolean).join(" ")} is not assigned to the same role as ${unavailableStaff.name}.`);
+    }
+    if (staffHasAvailabilityConflict(substitute, bookingWindow, event.date)) {
+      reasons.push(`${[substitute.rank, substitute.name].filter(Boolean).join(" ")} is unavailable during the event booking window, including pre-flight and post-flight.`);
+    }
+    if (staffHasEventConflict(substitute, bookingWindow)) {
+      reasons.push(`${[substitute.rank, substitute.name].filter(Boolean).join(" ")} is already assigned to another event during the event booking window, including pre-flight and post-flight.`);
+    }
+    if (getPersonnelForConflictCheck(event).includes(substitute.name)) {
+      reasons.push(`${[substitute.rank, substitute.name].filter(Boolean).join(" ")} is already assigned to this event.`);
+    }
+    if (reasons.length > 0) {
+      await showDarkAlert(`${reasons.join("\n")}
+
+Please select another substitute.`, "Substitution Not Available", "warning");
+      return;
+    }
+    const originalPic = String(event.fixedCrewPic || event.pilot || event.instructor || "").trim();
+    const substituteDisplayName = substitute.name;
+    const updatedAttendees = Array.from(new Set([
+      ...event.attendees || [],
+      ...rosteredFixedCrewMembers.map((staff) => staff.name)
+    ].map((name) => String(name || "").trim()).filter(Boolean))).map((name) => name === unavailableStaff.name ? substituteDisplayName : name);
+    const nextPic = originalPic === unavailableStaff.name ? substituteDisplayName : originalPic;
+    const existingNotes = String(event.fixedCrewManifestNotes || fixedCrewManifestNotes || "").trim();
+    const swapNote = `${formatTime$4(event.startTime)}: ${[unavailableStaff.rank, unavailableStaff.name].filter(Boolean).join(" ")} replaced by ${[substitute.rank, substitute.name].filter(Boolean).join(" ")}.`;
+    const updatedEvent = {
+      ...event,
+      attendees: updatedAttendees,
+      fixedCrewPic: nextPic || event.fixedCrewPic,
+      pilot: nextPic || event.pilot,
+      instructor: nextPic || event.instructor,
+      fixedCrewManifestStatus: "swapped",
+      fixedCrewManifestNotes: existingNotes ? `${existingNotes}
+${swapNote}` : swapNote
+    };
+    setFixedCrewPic(nextPic);
+    setFixedCrewManifestStatus("swapped");
+    setFixedCrewManifestNotes(updatedEvent.fixedCrewManifestNotes || "");
+    setActiveCrewConflictName(null);
+    onSave([updatedEvent]);
+  };
   const renderFixedCrewRosterStatus = () => {
     if (!isFixedCrewCrewedEvent) return null;
     const bookingWindow = getEventBookingWindow2(event);
@@ -18277,7 +18342,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           formatTime$4(Math.min(24, bookingWindow.end))
         ] })
       ] }),
-      fixedCrewRosterByRole.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid gap-3 ${activeCrewConflict ? "grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)]" : "grid-cols-1"}`, children: [
+      fixedCrewRosterByRole.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid gap-3 ${activeCrewConflict ? "grid-cols-[minmax(0,1fr)_12rem]" : "grid-cols-1"}`, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: fixedCrewRosterByRole.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500", children: group.role }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: group.members.map(({ staff, isClear }) => {
@@ -18310,7 +18375,17 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               "Available same-unit ",
               activeCrewConflict.staff.role || "crew"
             ] }),
-            activeCrewConflict.alternatives.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-0.5", children: activeCrewConflict.alternatives.slice(0, 10).map((candidate) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-emerald-100", children: [candidate.rank, candidate.name].filter(Boolean).join(" ") }, candidate.id || candidate.name)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "No same-unit crew with this role are available for the full event window." })
+            activeCrewConflict.alternatives.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-0.5", children: activeCrewConflict.alternatives.slice(0, 10).map((candidate) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => handleFixedCrewSubstituteSelect(activeCrewConflict.staff, candidate),
+                className: "block w-full truncate rounded px-1 py-0.5 text-left text-xs text-emerald-100 hover:bg-emerald-500/15 hover:text-emerald-50",
+                title: [candidate.rank, candidate.name].filter(Boolean).join(" "),
+                children: [candidate.rank, candidate.name].filter(Boolean).join(" ")
+              },
+              candidate.id || candidate.name
+            )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "No same-unit crew with this role are available for the full event window." })
           ] })
         ] })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: "No crew roster is assigned to this event." })

@@ -898,6 +898,70 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const activeCrewConflict = useMemo(() => (
         fixedCrewRosterStatus.find(status => status.staff.name === activeCrewConflictName && !status.isClear) || null
     ), [activeCrewConflictName, fixedCrewRosterStatus]);
+    const handleFixedCrewSubstituteSelect = async (unavailableStaff: Instructor, substitute: Instructor) => {
+        if (isReadOnly) {
+            await showDarkAlert('Past DFPs are locked. Crew substitutions cannot be amended.', 'Past DFP Locked', 'warning');
+            return;
+        }
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                await showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
+        const bookingWindow = getEventBookingWindow(event);
+        const unavailableUnit = normaliseFixedCrewUnitCode(unavailableStaff.unit);
+        const substituteUnit = normaliseFixedCrewUnitCode(substitute.unit);
+        const unavailableRole = String(unavailableStaff.role || '').trim().toUpperCase();
+        const substituteRole = String(substitute.role || '').trim().toUpperCase();
+        const reasons: string[] = [];
+        if (!substituteUnit || substituteUnit !== unavailableUnit) {
+            reasons.push(`${[substitute.rank, substitute.name].filter(Boolean).join(' ')} is not from the same unit as ${unavailableStaff.name}.`);
+        }
+        if (!substituteRole || substituteRole !== unavailableRole) {
+            reasons.push(`${[substitute.rank, substitute.name].filter(Boolean).join(' ')} is not assigned to the same role as ${unavailableStaff.name}.`);
+        }
+        if (staffHasAvailabilityConflict(substitute, bookingWindow, event.date)) {
+            reasons.push(`${[substitute.rank, substitute.name].filter(Boolean).join(' ')} is unavailable during the event booking window, including pre-flight and post-flight.`);
+        }
+        if (staffHasEventConflict(substitute, bookingWindow)) {
+            reasons.push(`${[substitute.rank, substitute.name].filter(Boolean).join(' ')} is already assigned to another event during the event booking window, including pre-flight and post-flight.`);
+        }
+        if (getPersonnelForConflictCheck(event).includes(substitute.name)) {
+            reasons.push(`${[substitute.rank, substitute.name].filter(Boolean).join(' ')} is already assigned to this event.`);
+        }
+        if (reasons.length > 0) {
+            await showDarkAlert(`${reasons.join('\n')}\n\nPlease select another substitute.`, 'Substitution Not Available', 'warning');
+            return;
+        }
+
+        const originalPic = String(event.fixedCrewPic || event.pilot || event.instructor || '').trim();
+        const substituteDisplayName = substitute.name;
+        const updatedAttendees = Array.from(new Set([
+            ...(event.attendees || []),
+            ...rosteredFixedCrewMembers.map(staff => staff.name),
+        ].map(name => String(name || '').trim()).filter(Boolean)))
+            .map(name => name === unavailableStaff.name ? substituteDisplayName : name);
+        const nextPic = originalPic === unavailableStaff.name ? substituteDisplayName : originalPic;
+        const existingNotes = String(event.fixedCrewManifestNotes || fixedCrewManifestNotes || '').trim();
+        const swapNote = `${formatTime(event.startTime)}: ${[unavailableStaff.rank, unavailableStaff.name].filter(Boolean).join(' ')} replaced by ${[substitute.rank, substitute.name].filter(Boolean).join(' ')}.`;
+        const updatedEvent: ScheduleEvent = {
+            ...event,
+            attendees: updatedAttendees,
+            fixedCrewPic: nextPic || event.fixedCrewPic,
+            pilot: nextPic || event.pilot,
+            instructor: nextPic || event.instructor,
+            fixedCrewManifestStatus: 'swapped',
+            fixedCrewManifestNotes: existingNotes ? `${existingNotes}\n${swapNote}` : swapNote,
+        };
+        setFixedCrewPic(nextPic);
+        setFixedCrewManifestStatus('swapped');
+        setFixedCrewManifestNotes(updatedEvent.fixedCrewManifestNotes || '');
+        setActiveCrewConflictName(null);
+        onSave([updatedEvent]);
+    };
     const renderFixedCrewRosterStatus = () => {
         if (!isFixedCrewCrewedEvent) return null;
         const bookingWindow = getEventBookingWindow(event);
@@ -912,7 +976,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     </span>
                 </div>
                 {fixedCrewRosterByRole.length > 0 ? (
-                    <div className={`grid gap-3 ${activeCrewConflict ? 'grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)]' : 'grid-cols-1'}`}>
+                    <div className={`grid gap-3 ${activeCrewConflict ? 'grid-cols-[minmax(0,1fr)_12rem]' : 'grid-cols-1'}`}>
                         <div className="space-y-2">
                             {fixedCrewRosterByRole.map(group => (
                                 <div key={group.role}>
@@ -959,9 +1023,15 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                                     {activeCrewConflict.alternatives.length > 0 ? (
                                         <div className="space-y-0.5">
                                             {activeCrewConflict.alternatives.slice(0, 10).map(candidate => (
-                                                <div key={candidate.id || candidate.name} className="text-xs text-emerald-100">
+                                                <button
+                                                    key={candidate.id || candidate.name}
+                                                    type="button"
+                                                    onClick={() => handleFixedCrewSubstituteSelect(activeCrewConflict.staff, candidate)}
+                                                    className="block w-full truncate rounded px-1 py-0.5 text-left text-xs text-emerald-100 hover:bg-emerald-500/15 hover:text-emerald-50"
+                                                    title={[candidate.rank, candidate.name].filter(Boolean).join(' ')}
+                                                >
                                                     {[candidate.rank, candidate.name].filter(Boolean).join(' ')}
-                                                </div>
+                                                </button>
                                             ))}
                                         </div>
                                     ) : (
