@@ -75197,9 +75197,57 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     addFixedCrewPerfTiming("crewGroupBuild", crewGroupBuildStart);
     const fixedCrewUsage = /* @__PURE__ */ new Map();
+    const fixedCrewCrewDecisionSummary = /* @__PURE__ */ new Map();
+    const getFixedCrewDecisionSummary = (crew, members = crewGroups.get(crew) || []) => {
+      const existing = fixedCrewCrewDecisionSummary.get(crew);
+      if (existing) return existing;
+      const picCandidates = members.filter(staffHasPicQualification).map((staff) => staff.name);
+      const summary = {
+        crew,
+        crewLabel: getFixedCrewCrewLabel(crew),
+        crewUnit: getFixedCrewCrewUnit(crew) || null,
+        memberCount: members.length,
+        picCandidates,
+        candidateEvents: 0,
+        acceptedAttempts: 0,
+        placedEvents: 0,
+        prefilterRejections: {},
+        placementRejections: {},
+        sampleEvents: []
+      };
+      fixedCrewCrewDecisionSummary.set(crew, summary);
+      return summary;
+    };
+    const recordFixedCrewDecision = (crew, members, phase, reason, event) => {
+      const summary = getFixedCrewDecisionSummary(crew, members);
+      if (phase === "prefilter") {
+        summary.prefilterRejections[reason] = (summary.prefilterRejections[reason] || 0) + 1;
+      } else if (phase === "placement") {
+        summary.candidateEvents += 1;
+        summary.placementRejections[reason] = (summary.placementRejections[reason] || 0) + 1;
+      } else if (phase === "accepted") {
+        summary.candidateEvents += 1;
+        summary.acceptedAttempts += 1;
+      } else if (phase === "placed") {
+        summary.placedEvents += 1;
+      }
+      if (event && summary.sampleEvents.length < 8) {
+        summary.sampleEvents.push({
+          event: event.flightNumber || null,
+          eventId: event.id || null,
+          type: event.type || null,
+          ownerUnit: getFixedCrewEventOwnerUnit(event) || null,
+          startTime: event.startTime ?? null,
+          resourceId: event.resourceId || null,
+          phase,
+          reason
+        });
+      }
+    };
     const crewGroupSummaries = Array.from(crewGroups.entries()).sort(([left], [right]) => left.localeCompare(right, void 0, { numeric: true })).map(([crew, members]) => {
       const picMembers = members.filter(staffHasPicQualification);
       fixedCrewUsage.set(crew, 0);
+      getFixedCrewDecisionSummary(crew, members);
       return {
         crew,
         crewLabel: getFixedCrewCrewLabel(crew),
@@ -75529,6 +75577,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (!pic) {
           prefilter.noPic += 1;
           fixedCrewPerf.counters.crewPreFilterNoPic += 1;
+          recordFixedCrewDecision(crew, members, "prefilter", "NO_PIC_IN_CREW", event);
           return;
         }
         fixedCrewPerf.counters.roleShortfallChecks += 1;
@@ -75536,6 +75585,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (shortfalls.length > 0) {
           prefilter.roleShortfall += 1;
           fixedCrewPerf.counters.crewPreFilterRoleShortfall += 1;
+          recordFixedCrewDecision(crew, members, "prefilter", "CREW_ROLE_SHORTFALL", event);
           return;
         }
         fixedCrewPerf.counters.staffLimitChecks += members.length;
@@ -75543,6 +75593,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (staffLimitViolations.length > 0) {
           prefilter.staffLimit += 1;
           fixedCrewPerf.counters.crewPreFilterStaffLimit += 1;
+          recordFixedCrewDecision(crew, members, "prefilter", staffLimitViolations[0]?.reason || "STAFF_EVENT_LIMIT", event);
           return;
         }
         eligible.push([crew, members]);
@@ -75592,6 +75643,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (!pic) {
           fixedCrewPerf.counters.noPicFastRejects += 1;
           incrementFixedCrewRejection("NO_PIC_IN_CREW");
+          recordFixedCrewDecision(crew, members, "placement", "NO_PIC_IN_CREW", event);
           pushFixedCrewAttempt({ ...attemptBase, outcome: "rejected", reason: "NO_PIC_IN_CREW" });
           continue;
         }
@@ -75607,12 +75659,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         };
         if (shortfalls.length > 0) {
           incrementFixedCrewRejection("CREW_ROLE_SHORTFALL");
+          recordFixedCrewDecision(crew, members, "placement", "CREW_ROLE_SHORTFALL", event);
           pushFixedCrewAttempt({ ...attemptWithLimits, unavailableMembers: [], hasExistingConflict: false, fixedCrewGroupConflict: null, outcome: "rejected", reason: "CREW_ROLE_SHORTFALL" });
           continue;
         }
         if (staffLimitViolations.length > 0) {
           const reason = staffLimitViolations[0]?.reason || "STAFF_EVENT_LIMIT";
           incrementFixedCrewRejection(reason);
+          recordFixedCrewDecision(crew, members, "placement", reason, event);
           pushFixedCrewAttempt({ ...attemptWithLimits, unavailableMembers: [], hasExistingConflict: false, fixedCrewGroupConflict: null, outcome: "rejected", reason });
           continue;
         }
@@ -75649,19 +75703,23 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         };
         if (unavailableMembers.length > 0) {
           incrementFixedCrewRejection("CREW_MEMBER_UNAVAILABLE");
+          recordFixedCrewDecision(crew, members, "placement", "CREW_MEMBER_UNAVAILABLE", event);
           pushFixedCrewAttempt({ ...attempt, outcome: "rejected", reason: "CREW_MEMBER_UNAVAILABLE" });
           continue;
         }
         if (hasExistingConflict) {
           incrementFixedCrewRejection("CREW_MEMBER_CONFLICT");
+          recordFixedCrewDecision(crew, members, "placement", "CREW_MEMBER_CONFLICT", event);
           pushFixedCrewAttempt({ ...attempt, outcome: "rejected", reason: "CREW_MEMBER_CONFLICT" });
           continue;
         }
         if (fixedCrewGroupConflict) {
           incrementFixedCrewRejection("CREW_GROUP_CONFLICT");
+          recordFixedCrewDecision(crew, members, "placement", "CREW_GROUP_CONFLICT", event);
           pushFixedCrewAttempt({ ...attempt, outcome: "rejected", reason: "CREW_GROUP_CONFLICT" });
           continue;
         }
+        recordFixedCrewDecision(crew, members, "accepted", "ACCEPTED", event);
         pushFixedCrewAttempt({ ...attempt, outcome: "accepted" });
         return { crew, members, pic };
       }
@@ -75755,11 +75813,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             const dispatchViolation = getAirCombatHourlyDispatchLimitViolation(candidate.startTime);
             if (dispatchViolation) {
               incrementFixedCrewRejection("HOURLY_DISPATCH_LIMIT");
+              eligibleCrewEntries.forEach(([crew, members]) => recordFixedCrewDecision(crew, members, "placement", "HOURLY_DISPATCH_LIMIT", candidate));
               pushFixedCrewAttempt({ event: candidate.flightNumber, source, startTime, resourceId, outcome: "rejected", ...dispatchViolation });
               continue;
             }
             if (hasDispatchStaggerConflict("flight", candidate.startTime, generatedEvents)) {
               incrementFixedCrewRejection("TAKEOFF_SEPARATION_VIOLATION");
+              eligibleCrewEntries.forEach(([crew, members]) => recordFixedCrewDecision(crew, members, "placement", "TAKEOFF_SEPARATION_VIOLATION", candidate));
               pushFixedCrewAttempt({
                 event: candidate.flightNumber,
                 source,
@@ -75773,6 +75833,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             }
           } else if (hasDispatchStaggerConflict(candidate.type, candidate.startTime, generatedEvents)) {
             incrementFixedCrewRejection("SIMULATOR_STAGGER_VIOLATION");
+            eligibleCrewEntries.forEach(([crew, members]) => recordFixedCrewDecision(crew, members, "placement", "SIMULATOR_STAGGER_VIOLATION", candidate));
             pushFixedCrewAttempt({
               event: candidate.flightNumber,
               source,
@@ -75795,6 +75856,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (resourceConflict) {
             const reason = resourceConflictDetail?.reason || "RESOURCE_CONFLICT";
             incrementFixedCrewRejection(reason);
+            eligibleCrewEntries.forEach(([crew, members]) => recordFixedCrewDecision(crew, members, "placement", reason, candidate));
             pushFixedCrewAttempt({
               event: candidate.flightNumber,
               source,
@@ -75898,6 +75960,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           fixedCrewPerf.counters.staffDailyCountCacheClears += 1;
           fixedCrewStaffDailyCountCache.clear();
           fixedCrewUsage.set(assignment.crew, (fixedCrewUsage.get(assignment.crew) || 0) + 1);
+          recordFixedCrewDecision(assignment.crew, assignment.members, "placed", "PLACED", placed);
           pushFixedCrewPlacement({
             event: placed.flightNumber,
             eventId: placed.id || null,
@@ -76167,6 +76230,32 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       tryPlaceFixedCrewEvent(item.event, item.source, item.fixedStartTime);
     });
     addFixedCrewPerfTiming("scheduling", schedulingStart);
+    const queuedEventsByOwnerUnit = fixedCrewQueue.reduce((counts, item) => {
+      const ownerUnit = getFixedCrewEventOwnerUnit(item.event) || "UNSPECIFIED";
+      counts[ownerUnit] = (counts[ownerUnit] || 0) + 1;
+      return counts;
+    }, {});
+    const placementsByCrew = Array.from(fixedCrewCrewDecisionSummary.values()).sort((left, right) => left.crew.localeCompare(right.crew, void 0, { numeric: true }));
+    const idleCrewAnalysis = placementsByCrew.filter((summary) => summary.placedEvents === 0).map((summary) => {
+      const rejectionTotals = Object.entries(summary.placementRejections).reduce((acc, [reason, count]) => {
+        acc[reason] = (acc[reason] || 0) + count;
+        return acc;
+      }, { ...summary.prefilterRejections });
+      const dominantReason = Object.entries(rejectionTotals).sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0]?.[0] || null;
+      const ownedQueueEvents = summary.crewUnit ? queuedEventsByOwnerUnit[summary.crewUnit] || 0 : 0;
+      const likelyReason = summary.picCandidates.length === 0 ? "Crew has no PIC-qualified member." : ownedQueueEvents === 0 ? "No queued Fixed Crew training events were owned by this crew unit." : summary.acceptedAttempts === 0 && dominantReason ? `Crew was considered but rejected mostly for ${dominantReason}.` : summary.candidateEvents === 0 ? "Crew was not reached by the allocator before all queued events were placed or rejected." : "Crew was eligible for at least one attempt but another lower-usage/earlier candidate crew was selected first.";
+      return {
+        ...summary,
+        ownedQueueEvents,
+        dominantReason,
+        likelyReason
+      };
+    });
+    diag.crewUtilisation = {
+      queuedEventsByOwnerUnit,
+      placementsByCrew,
+      idleCrewAnalysis
+    };
     const timelineStart = fixedCrewPerfNow();
     buildFixedCrewMinuteTimeline(fixedCrewQueue);
     addFixedCrewPerfTiming("minuteTimeline", timelineStart);
