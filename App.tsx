@@ -822,13 +822,32 @@ const DfpSidePanelTimeline: React.FC<{
         setSelectedCrewNames([]);
     };
     const activeAssistUnitCode = String(activeUnitCode || '').trim().toUpperCase();
+    const activeAssistCallsignUnitCodes = useMemo(() => {
+        const directCodes = activeAssistUnitCode
+            .split(/[+\/,]/)
+            .map(code => code.trim().toUpperCase())
+            .filter(Boolean);
+        return directCodes.length > 0 ? directCodes : [String(locationCode || '').trim().toUpperCase()].filter(Boolean);
+    }, [activeAssistUnitCode, locationCode]);
     const assistUnitCallsignEntries = useMemo(
-        () => getUnitCallsignEntries(unitCallsignSettings, activeAssistUnitCode),
-        [activeAssistUnitCode, unitCallsignSettings],
+        () => {
+            const seen = new Set<string>();
+            return activeAssistCallsignUnitCodes
+                .flatMap(unitCode => getUnitCallsignEntries(unitCallsignSettings, unitCode))
+                .filter(entry => {
+                    const key = `${entry.unitCode}::${entry.callsign.toUpperCase()}`;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+        },
+        [activeAssistCallsignUnitCodes, unitCallsignSettings],
     );
     const defaultAssistUnitCallsign = useMemo(
-        () => getDefaultUnitCallsign(unitCallsignSettings, activeAssistUnitCode),
-        [activeAssistUnitCode, unitCallsignSettings],
+        () => activeAssistCallsignUnitCodes
+            .map(unitCode => getDefaultUnitCallsign(unitCallsignSettings, unitCode))
+            .find(Boolean) || '',
+        [activeAssistCallsignUnitCodes, unitCallsignSettings],
     );
     const assistCallsignNumberOptions = useMemo(
         () => Array.from({ length: 101 }, (_, value) => ({ value, label: formatUnitCallsignNumber(value) })),
@@ -2320,7 +2339,9 @@ const DfpSidePanelTimeline: React.FC<{
                                             {assistUnitCallsignEntries.length === 0 ? (
                                                 <option value="">Configure unit callsigns in Settings</option>
                                             ) : assistUnitCallsignEntries.map(entry => (
-                                                <option key={entry.id} value={entry.callsign}>{entry.callsign}</option>
+                                                <option key={entry.id} value={entry.callsign}>
+                                                    {activeAssistCallsignUnitCodes.length > 1 ? `${entry.callsign} (${entry.unitCode})` : entry.callsign}
+                                                </option>
                                             ))}
                                         </select>
                                         <select
@@ -2953,7 +2974,9 @@ const DfpSidePanelTimeline: React.FC<{
                                                 className={fieldClass}
                                             >
                                                 {assistUnitCallsignEntries.map(entry => (
-                                                    <option key={`assist-currency-callsign-${entry.id}`} value={entry.callsign}>{entry.callsign}</option>
+                                                    <option key={`assist-currency-callsign-${entry.id}`} value={entry.callsign}>
+                                                        {activeAssistCallsignUnitCodes.length > 1 ? `${entry.callsign} (${entry.unitCode})` : entry.callsign}
+                                                    </option>
                                                 ))}
                                             </select>
                                             <select

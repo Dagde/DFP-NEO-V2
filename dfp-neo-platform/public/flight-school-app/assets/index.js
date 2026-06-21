@@ -70062,13 +70062,25 @@ const DfpSidePanelTimeline = ({
     setSelectedCrewNames([]);
   };
   const activeAssistUnitCode = String(activeUnitCode || "").trim().toUpperCase();
+  const activeAssistCallsignUnitCodes = reactExports.useMemo(() => {
+    const directCodes = activeAssistUnitCode.split(/[+\/,]/).map((code) => code.trim().toUpperCase()).filter(Boolean);
+    return directCodes.length > 0 ? directCodes : [String(locationCode || "").trim().toUpperCase()].filter(Boolean);
+  }, [activeAssistUnitCode, locationCode]);
   const assistUnitCallsignEntries = reactExports.useMemo(
-    () => getUnitCallsignEntries(unitCallsignSettings, activeAssistUnitCode),
-    [activeAssistUnitCode, unitCallsignSettings]
+    () => {
+      const seen = /* @__PURE__ */ new Set();
+      return activeAssistCallsignUnitCodes.flatMap((unitCode) => getUnitCallsignEntries(unitCallsignSettings, unitCode)).filter((entry) => {
+        const key = `${entry.unitCode}::${entry.callsign.toUpperCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    },
+    [activeAssistCallsignUnitCodes, unitCallsignSettings]
   );
   const defaultAssistUnitCallsign = reactExports.useMemo(
-    () => getDefaultUnitCallsign(unitCallsignSettings, activeAssistUnitCode),
-    [activeAssistUnitCode, unitCallsignSettings]
+    () => activeAssistCallsignUnitCodes.map((unitCode) => getDefaultUnitCallsign(unitCallsignSettings, unitCode)).find(Boolean) || "",
+    [activeAssistCallsignUnitCodes, unitCallsignSettings]
   );
   const assistCallsignNumberOptions = reactExports.useMemo(
     () => Array.from({ length: 101 }, (_, value) => ({ value, label: formatUnitCallsignNumber(value) })),
@@ -71331,7 +71343,7 @@ const DfpSidePanelTimeline = ({
                   },
                   className: "w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100 disabled:cursor-not-allowed disabled:opacity-60",
                   disabled: assistUnitCallsignEntries.length === 0,
-                  children: assistUnitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Configure unit callsigns in Settings" }) : assistUnitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: entry.callsign }, entry.id))
+                  children: assistUnitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Configure unit callsigns in Settings" }) : assistUnitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: activeAssistCallsignUnitCodes.length > 1 ? `${entry.callsign} (${entry.unitCode})` : entry.callsign }, entry.id))
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -71948,7 +71960,7 @@ const DfpSidePanelTimeline = ({
                     setAssistCallsign(buildUnitEventCallsign(event.target.value, assistUnitCallsignNumber));
                   },
                   className: fieldClass2,
-                  children: assistUnitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: entry.callsign }, `assist-currency-callsign-${entry.id}`))
+                  children: assistUnitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: activeAssistCallsignUnitCodes.length > 1 ? `${entry.callsign} (${entry.unitCode})` : entry.callsign }, `assist-currency-callsign-${entry.id}`))
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
