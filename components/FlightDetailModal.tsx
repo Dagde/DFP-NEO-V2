@@ -2686,18 +2686,20 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                             <div className="flex-grow" /> {/* Spacer */}
                             {!isEditing && (
                                 <>
-                                    <div className="relative w-[75px]">
-                                        {isFrozen && (
-                                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
-                                        )}
-                                        <button
-                                            onClick={handleTraineeScoresClick}
-                                            disabled={!traineeObject}
-                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <span className="text-center leading-tight">Trainee<br/>Scores</span>
-                                        </button>
-                                    </div>
+                                    {!isFixedCrewModel && (
+                                        <div className="relative w-[75px]">
+                                            {isFrozen && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
+                                            <button
+                                                onClick={handleTraineeScoresClick}
+                                                disabled={!traineeObject}
+                                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <span className="text-center leading-tight">Trainee<br/>Scores</span>
+                                            </button>
+                                        </div>
+                                    )}
                                     
                                     <div className="relative w-[75px]">
                                         {isFrozen && (
