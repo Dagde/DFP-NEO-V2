@@ -815,8 +815,8 @@ const DfpSidePanelTimeline: React.FC<{
     const isAirCombatNeoAssist = normalisedAssistOperationalModel === 'air_combat';
     const isFixedCrewNeoAssist = normalisedAssistOperationalModel === 'fixed_crew';
     const usesNeoAssistModeHeader = isAirCombatNeoAssist || isFixedCrewNeoAssist;
+    const isNeoAssistWizardMode = usesNeoAssistModeHeader && airCombatAssistMode === 'wizard';
     const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === 'tile';
-    const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === 'wizard';
     const isSingleSeatFlightResource = selectedResourceKind === 'flight' && aircraftCrewComposition.crewCount === 1;
     const requiredAssistCrewRoles = useMemo(() => (
         isAirCombatTileMode && selectedResourceKind === 'flight'
@@ -2076,6 +2076,7 @@ const DfpSidePanelTimeline: React.FC<{
         onUpdateAircraftConfigCapacities(nextCapacities);
     };
     const renderWizardStep = () => {
+        const assistWizardModelLabel = isFixedCrewNeoAssist ? 'Fixed Crew' : 'Air Combat';
         const savedTaskRequests = assistTaskRequests.filter(request => request.saved && !request.ignored);
         const savedCurrencyRequests = [
             ...sctFlights,
@@ -2116,7 +2117,7 @@ const DfpSidePanelTimeline: React.FC<{
         if (wizardStep === 0) {
             return questionShell(
                 'What sort of flying should NEO plan?',
-                <p>I will set up the Air Combat build one decision at a time. Start with the operating period you want the build to use.</p>,
+                <p>I will set up the {assistWizardModelLabel} build one decision at a time. Start with the operating period you want the build to use.</p>,
                 <>
                     <button type="button" className={wizardCenteredChoiceClass} onClick={() => { onUpdateAllowNightFlying(false); advanceWizard(); }}>Day only</button>
                     <button type="button" className={wizardCenteredChoiceClass} onClick={() => { onUpdateAllowNightFlying(true); advanceWizard(); }}>Day and night</button>
@@ -2316,6 +2317,84 @@ const DfpSidePanelTimeline: React.FC<{
             );
         }
         if (wizardStep === 10) {
+            if (isFixedCrewNeoAssist) {
+                const enabledStreams = sortedAssistFixedCrewPriorityStreams.filter(stream => stream.enabled && stream.weight > 0);
+                const disableRoutineTraining = () => {
+                    onUpdateFixedCrewTrainingPriorities?.(
+                        assistFixedCrewPriorityStreams.map(({ eventCount: _eventCount, ...stream }) => ({
+                            ...stream,
+                            enabled: false,
+                            weight: 0,
+                        }))
+                    );
+                    advanceWizard();
+                };
+                const useRoutineTraining = () => {
+                    if (assistFixedCrewPriorityStreams.length > 0) {
+                        persistAssistFixedCrewPriorityStreams(equaliseAssistFixedCrewPriorities(assistFixedCrewPriorityStreams));
+                    }
+                    advanceWizard();
+                };
+                return questionShell(
+                    'Should normal Fixed Crew training be included?',
+                    enabledStreams.length
+                        ? <p>Current routine training allocation has <strong>{enabledStreams.length}</strong> active course/package streams and totals <strong>100%</strong>.</p>
+                        : <p>Routine Fixed Crew course/package training is currently off, so directed tasking and currency events will drive the build.</p>,
+                    <>
+                        <button type="button" className={wizardChoiceClass} onClick={useRoutineTraining}>Yes, use normal training</button>
+                        <button type="button" className={wizardChoiceClass} onClick={disableRoutineTraining}>No, directed events only</button>
+                        <div className="sm:col-span-2 rounded-xl border border-slate-300 bg-white/70 p-4">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-bold text-slate-800">Fixed Crew course/package priority</p>
+                                    <p className="text-xs text-slate-600">This is the same live allocation used by NEO Tile and Build Priorities.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => persistAssistFixedCrewPriorityStreams(equaliseAssistFixedCrewPriorities(assistFixedCrewPriorityStreams))}
+                                    disabled={assistFixedCrewPriorityStreams.length < 2}
+                                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-orange-300 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Reset Evenly
+                                </button>
+                            </div>
+                            {assistFixedCrewPriorityStreams.length === 0 ? (
+                                <p className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                                    No Fixed Crew course or training package events found for this unit.
+                                </p>
+                            ) : (
+                                <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                                    {sortedAssistFixedCrewPriorityStreams.map((stream, index) => {
+                                        const colour = assistFixedCrewColourByKey.get(stream.key) || ASSIST_PRIORITY_COLOURS[index % ASSIST_PRIORITY_COLOURS.length];
+                                        return (
+                                            <div key={stream.key} className={`grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 ${stream.enabled ? '' : 'opacity-60'}`}>
+                                                <div className="min-w-0">
+                                                    <div className="flex min-w-0 items-center gap-2">
+                                                        <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: colour }} />
+                                                        <span className="truncate text-sm font-bold text-slate-900">{stream.title || stream.code}</span>
+                                                    </div>
+                                                    <p className="truncate text-xs text-slate-500">
+                                                        {stream.kind === 'course' ? 'Course' : 'Package'} - {stream.code}{stream.unitCode ? ` - ${stream.unitCode}` : ''}
+                                                    </p>
+                                                </div>
+                                                <span className="font-mono text-sm font-black text-slate-900">{stream.enabled ? `${stream.weight}%` : '0%'}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleAssistFixedCrewStreamToggle(stream.key)}
+                                                    className={`rounded-md border px-2 py-1 text-xs font-bold ${stream.enabled ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-300 bg-slate-100 text-slate-500'}`}
+                                                >
+                                                    {stream.enabled ? 'On' : 'Off'}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            <p className="mt-3 text-right text-xs font-bold text-emerald-700">Total: 100%</p>
+                        </div>
+                    </>,
+                );
+            }
             return questionShell(
                 'Should normal training be included?',
                 <p>Current routine training mix is <strong>{airCombatSchedulingWeights.courses}% course events</strong> and <strong>{airCombatSchedulingWeights.trainingPackages}% package events</strong>.</p>,
@@ -2349,7 +2428,7 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                     <h4 className="mt-1 text-xl font-bold text-slate-950">Ready to build?</h4>
                     <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-700">
-                        I have updated the Air Combat NEO Build settings from your answers. Press NEO Build when you are ready to generate the schedule.
+                        I have updated the {assistWizardModelLabel} NEO Build settings from your answers. Press NEO Build when you are ready to generate the schedule.
                     </p>
                 </div>
                 <div className="mt-24 flex justify-center">
@@ -3678,9 +3757,9 @@ const DfpSidePanelTimeline: React.FC<{
                     <button
                         type="button"
                         onClick={() => {
-                            if (isAirCombatNeoAssist) setAirCombatAssistMode('tile');
+                            if (usesNeoAssistModeHeader) setAirCombatAssistMode('tile');
                         }}
-                        className={`justify-self-start rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${airCombatAssistMode === 'tile' || isFixedCrewNeoAssist ? 'border-orange-300 bg-orange-500/20 text-orange-50' : 'border-orange-400/55 bg-orange-500/10 text-orange-100/80'}`}
+                        className={`justify-self-start rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${airCombatAssistMode === 'tile' ? 'border-orange-300 bg-orange-500/20 text-orange-50' : 'border-orange-400/55 bg-orange-500/10 text-orange-100/80'}`}
                     >
                         NEO - Tile
                     </button>
@@ -3693,11 +3772,10 @@ const DfpSidePanelTimeline: React.FC<{
                     <button
                         type="button"
                         onClick={() => {
-                            if (isAirCombatNeoAssist) setAirCombatAssistMode('wizard');
+                            if (usesNeoAssistModeHeader) setAirCombatAssistMode('wizard');
                         }}
-                        aria-disabled={isFixedCrewNeoAssist}
-                        title={isFixedCrewNeoAssist ? 'NEO - Wizard is not available for the Fixed Crew Model yet.' : 'NEO - Wizard'}
-                        className={`justify-self-end rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${isAirCombatNeoAssist && airCombatAssistMode === 'wizard' ? 'border-orange-300 bg-orange-500/20 text-orange-50' : 'border-orange-400/55 bg-orange-500/10 text-orange-100/80'} ${isFixedCrewNeoAssist ? 'cursor-not-allowed' : ''}`}
+                        title="NEO - Wizard"
+                        className={`justify-self-end rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${isNeoAssistWizardMode ? 'border-orange-300 bg-orange-500/20 text-orange-50' : 'border-orange-400/55 bg-orange-500/10 text-orange-100/80'}`}
                     >
                         NEO - Wizard
                     </button>
@@ -3820,7 +3898,7 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                 </div>
             </div>
-            {isAirCombatWizardMode ? (
+            {isNeoAssistWizardMode ? (
                 <div
                     className="mt-3 min-h-[520px] bg-[#fb923c] p-5 text-slate-900"
                     style={{

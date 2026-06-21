@@ -70057,8 +70057,8 @@ const DfpSidePanelTimeline = ({
   const isAirCombatNeoAssist = normalisedAssistOperationalModel === "air_combat";
   const isFixedCrewNeoAssist = normalisedAssistOperationalModel === "fixed_crew";
   const usesNeoAssistModeHeader = isAirCombatNeoAssist || isFixedCrewNeoAssist;
+  const isNeoAssistWizardMode = usesNeoAssistModeHeader && airCombatAssistMode === "wizard";
   const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === "tile";
-  const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === "wizard";
   const isSingleSeatFlightResource = selectedResourceKind === "flight" && aircraftCrewComposition.crewCount === 1;
   const requiredAssistCrewRoles = reactExports.useMemo(() => isAirCombatTileMode && selectedResourceKind === "flight" ? aircraftCrewComposition.seats.flatMap((seat) => getAircraftSeatEligibleRoles(seat)).filter(Boolean) : [], [aircraftCrewComposition.seats, isAirCombatTileMode, selectedResourceKind]);
   const assistCrewSelectionLimit = isAirCombatTileMode && selectedResourceKind === "flight" ? Math.max(1, assistFormationSize) * Math.max(1, aircraftCrewComposition.crewCount || 1) : 1;
@@ -71048,6 +71048,7 @@ const DfpSidePanelTimeline = ({
     onUpdateAircraftConfigCapacities(nextCapacities);
   };
   const renderWizardStep = () => {
+    const assistWizardModelLabel = isFixedCrewNeoAssist ? "Fixed Crew" : "Air Combat";
     const savedTaskRequests = assistTaskRequests.filter((request) => request.saved && !request.ignored);
     const savedCurrencyRequests = [
       ...sctFlights,
@@ -71080,7 +71081,11 @@ const DfpSidePanelTimeline = ({
     if (wizardStep === 0) {
       return questionShell(
         "What sort of flying should NEO plan?",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "I will set up the Air Combat build one decision at a time. Start with the operating period you want the build to use." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "I will set up the ",
+          assistWizardModelLabel,
+          " build one decision at a time. Start with the operating period you want the build to use."
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardCenteredChoiceClass, onClick: () => {
             onUpdateAllowNightFlying(false);
@@ -71315,6 +71320,85 @@ const DfpSidePanelTimeline = ({
       );
     }
     if (wizardStep === 10) {
+      if (isFixedCrewNeoAssist) {
+        const enabledStreams = sortedAssistFixedCrewPriorityStreams.filter((stream) => stream.enabled && stream.weight > 0);
+        const disableRoutineTraining = () => {
+          onUpdateFixedCrewTrainingPriorities?.(
+            assistFixedCrewPriorityStreams.map(({ eventCount: _eventCount, ...stream }) => ({
+              ...stream,
+              enabled: false,
+              weight: 0
+            }))
+          );
+          advanceWizard();
+        };
+        const useRoutineTraining = () => {
+          if (assistFixedCrewPriorityStreams.length > 0) {
+            persistAssistFixedCrewPriorityStreams(equaliseAssistFixedCrewPriorities(assistFixedCrewPriorityStreams));
+          }
+          advanceWizard();
+        };
+        return questionShell(
+          "Should normal Fixed Crew training be included?",
+          enabledStreams.length ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+            "Current routine training allocation has ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: enabledStreams.length }),
+            " active course/package streams and totals ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "100%" }),
+            "."
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so directed tasking and currency events will drive the build." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: useRoutineTraining, children: "Yes, use normal training" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: disableRoutineTraining, children: "No, directed events only" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sm:col-span-2 rounded-xl border border-slate-300 bg-white/70 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-800", children: "Fixed Crew course/package priority" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-600", children: "This is the same live allocation used by NEO Tile and Build Priorities." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => persistAssistFixedCrewPriorityStreams(equaliseAssistFixedCrewPriorities(assistFixedCrewPriorityStreams)),
+                    disabled: assistFixedCrewPriorityStreams.length < 2,
+                    className: "rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-orange-300 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50",
+                    children: "Reset Evenly"
+                  }
+                )
+              ] }),
+              assistFixedCrewPriorityStreams.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded-lg border border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-600", children: "No Fixed Crew course or training package events found for this unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-56 space-y-2 overflow-y-auto pr-1", children: sortedAssistFixedCrewPriorityStreams.map((stream, index) => {
+                const colour = assistFixedCrewColourByKey.get(stream.key) || ASSIST_PRIORITY_COLOURS[index % ASSIST_PRIORITY_COLOURS.length];
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 ${stream.enabled ? "" : "opacity-60"}`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 items-center gap-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-3 w-3 shrink-0 rounded-full", style: { backgroundColor: colour } }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-sm font-bold text-slate-900", children: stream.title || stream.code })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "truncate text-xs text-slate-500", children: [
+                      stream.kind === "course" ? "Course" : "Package",
+                      " - ",
+                      stream.code,
+                      stream.unitCode ? ` - ${stream.unitCode}` : ""
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-sm font-black text-slate-900", children: stream.enabled ? `${stream.weight}%` : "0%" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => handleAssistFixedCrewStreamToggle(stream.key),
+                      className: `rounded-md border px-2 py-1 text-xs font-bold ${stream.enabled ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-slate-300 bg-slate-100 text-slate-500"}`,
+                      children: stream.enabled ? "On" : "Off"
+                    }
+                  )
+                ] }, stream.key);
+              }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-right text-xs font-bold text-emerald-700", children: "Total: 100%" })
+            ] })
+          ] })
+        );
+      }
       return questionShell(
         "Should normal training be included?",
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
@@ -71375,7 +71459,11 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: retreatWizard, className: "rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100", children: "Back" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-xl font-bold text-slate-950", children: "Ready to build?" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mx-auto mt-3 max-w-md text-sm leading-6 text-slate-700", children: "I have updated the Air Combat NEO Build settings from your answers. Press NEO Build when you are ready to generate the schedule." })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mx-auto mt-3 max-w-md text-sm leading-6 text-slate-700", children: [
+          "I have updated the ",
+          assistWizardModelLabel,
+          " NEO Build settings from your answers. Press NEO Build when you are ready to generate the schedule."
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-24 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
@@ -72597,9 +72685,9 @@ const DfpSidePanelTimeline = ({
         {
           type: "button",
           onClick: () => {
-            if (isAirCombatNeoAssist) setAirCombatAssistMode("tile");
+            if (usesNeoAssistModeHeader) setAirCombatAssistMode("tile");
           },
-          className: `justify-self-start rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${airCombatAssistMode === "tile" || isFixedCrewNeoAssist ? "border-orange-300 bg-orange-500/20 text-orange-50" : "border-orange-400/55 bg-orange-500/10 text-orange-100/80"}`,
+          className: `justify-self-start rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${airCombatAssistMode === "tile" ? "border-orange-300 bg-orange-500/20 text-orange-50" : "border-orange-400/55 bg-orange-500/10 text-orange-100/80"}`,
           children: "NEO - Tile"
         }
       ),
@@ -72612,11 +72700,10 @@ const DfpSidePanelTimeline = ({
         {
           type: "button",
           onClick: () => {
-            if (isAirCombatNeoAssist) setAirCombatAssistMode("wizard");
+            if (usesNeoAssistModeHeader) setAirCombatAssistMode("wizard");
           },
-          "aria-disabled": isFixedCrewNeoAssist,
-          title: isFixedCrewNeoAssist ? "NEO - Wizard is not available for the Fixed Crew Model yet." : "NEO - Wizard",
-          className: `justify-self-end rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${isAirCombatNeoAssist && airCombatAssistMode === "wizard" ? "border-orange-300 bg-orange-500/20 text-orange-50" : "border-orange-400/55 bg-orange-500/10 text-orange-100/80"} ${isFixedCrewNeoAssist ? "cursor-not-allowed" : ""}`,
+          title: "NEO - Wizard",
+          className: `justify-self-end rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${isNeoAssistWizardMode ? "border-orange-300 bg-orange-500/20 text-orange-50" : "border-orange-400/55 bg-orange-500/10 text-orange-100/80"}`,
           children: "NEO - Wizard"
         }
       )
@@ -72756,7 +72843,7 @@ const DfpSidePanelTimeline = ({
         )
       }
     ),
-    isAirCombatWizardMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    isNeoAssistWizardMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
         className: "mt-3 min-h-[520px] bg-[#fb923c] p-5 text-slate-900",
