@@ -2962,13 +2962,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
      return (
        <>
            <div className="section-course-demand space-y-6">
-            <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">
+            <div className="course-demand-intro-card rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Third Input</p>
                 <h2 className="mt-1 text-xl font-semibold text-white">Course Demand</h2>
                 <p className="mt-1 text-sm text-slate-300">Set the relative course weighting after time windows, resources and people rules are known.</p>
             </div>
 
-            <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg h-fit">
+            <div className="course-priority-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg h-fit">
                 <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4 flex justify-between items-center">
                     <div>
                         <h2 className="text-lg font-semibold text-gray-200">Course Priority</h2>
@@ -2980,7 +2980,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 </div>
                 <div className="p-4 border-t border-gray-700">
                     {(
-                        <div className="mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
+                        <div className="fixed-crew-course-package-priority-card mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
                             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                                 <div>
                                     <h3 className="text-sm font-bold text-emerald-100">
@@ -3150,7 +3150,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
            </div>
 
            <div className="section-build-timeline space-y-6">
-                <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
+                <div className="flying-windows-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Time Input</p>
                         <h2 className="mt-1 text-xl font-semibold text-white">Flying Windows</h2>
@@ -3379,7 +3379,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </div>
                 </div>
 
-                <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
+                <div className="resource-capacity-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Capacity Input</p>
                         <h2 className="mt-1 text-xl font-semibold text-white">Resource Capacity</h2>

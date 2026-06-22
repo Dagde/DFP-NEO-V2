@@ -28498,12 +28498,12 @@ const PrioritiesView = ({
   ];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-course-demand space-y-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "course-demand-intro-card rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Third Input" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Course Demand" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Set the relative course weighting after time windows, resources and people rules are known." })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg h-fit", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "course-priority-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg h-fit", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4 flex justify-between items-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Course Priority" }),
@@ -28517,7 +28517,7 @@ const PrioritiesView = ({
             courseTimestamp
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed-crew-course-package-priority-card mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-emerald-100", children: priorityAllocationModel === "air_combat" ? "Air Combat Course & Package Priority" : priorityAllocationModel === "fixed_crew" ? "Fixed Crew Course & Package Priority" : "Flight School Course Priority" }),
@@ -28646,7 +28646,7 @@ const PrioritiesView = ({
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-build-timeline space-y-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flying-windows-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Time Input" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Flying Windows" }),
@@ -28903,7 +28903,7 @@ const PrioritiesView = ({
           ] })
         ] }) }) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "resource-capacity-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Capacity Input" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Resource Capacity" }),
@@ -29662,6 +29662,7 @@ const stopEditableKeyPropagation = (event) => {
 const PrioritiesViewWithMenu = (props) => {
   const [activeSection, setActiveSection] = reactExports.useState("build-timeline");
   const [activeFixedCrewTab, setActiveFixedCrewTab] = reactExports.useState("events-builder");
+  const mainScrollRef = reactExports.useRef(null);
   const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const locationDisplayName = props.school === "ESL" ? "East Sale" : props.school === "PEA" ? "Pearce" : props.school;
   const isFixedCrewModel = String(props.operationalModel || "").trim().toLowerCase() === "fixed_crew";
@@ -29701,6 +29702,29 @@ const PrioritiesViewWithMenu = (props) => {
     { id: "events-builder", label: "Events Builder" },
     { id: "build-priorities", label: "Build Priorities" }
   ];
+  const fixedCrewPlannerSections = {
+    "events-builder": [
+      { label: "Highest Priority", target: ".highest-priority-events-card" },
+      { label: "Tasking", target: ".tasking-events-card" },
+      { label: "Consolidated Currency Event Build", target: ".consolidated-currency-card" },
+      { label: "Specific Currency Requests", target: ".specific-currency-card" },
+      { label: "Flights", target: ".specific-currency-card" },
+      { label: `${resourceLabels.ftd} / FTD`, target: ".specific-currency-card" },
+      { label: "Bulk Currency Builder", target: ".bulk-currency-card" },
+      { label: "Optional Currency Events", target: ".optional-currency-card" },
+      { label: "Currency Flights", target: ".optional-currency-card" },
+      { label: `Currency ${resourceLabels.ftd} / FTDs`, target: ".optional-currency-card" },
+      { label: "Remedial Priority Queue", target: ".remedial-priority-card" }
+    ],
+    "build-priorities": [
+      { label: "Flying Windows & Capacity", target: ".section-build-timeline" },
+      { label: "Flying Windows", target: ".flying-windows-card" },
+      { label: "Resource Capacity", target: ".resource-capacity-card" },
+      { label: "Course Demand", target: ".section-course-demand" },
+      { label: "Course Priority", target: ".course-priority-card" },
+      { label: "Fixed Crew Course & Package Priority", target: ".fixed-crew-course-package-priority-card" }
+    ]
+  };
   const fixedCrewTabItems = activeFixedCrewTab === "events-builder" ? [
     {
       id: "directed-events",
@@ -29729,41 +29753,88 @@ const PrioritiesViewWithMenu = (props) => {
   }, [activeFixedCrewTab, isFixedCrewModel]);
   const activeWorkflowItem = visibleWorkflowItems.find((item) => item.id === activeSection) ?? visibleWorkflowItems[0] ?? workflowItems[0];
   const fixedCrewPlannerMode = isFixedCrewModel ? activeFixedCrewTab : null;
+  const scrollPlannerToTop = () => {
+    window.requestAnimationFrame(() => {
+      mainScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  };
+  const handleFixedCrewTabClick = (tabId) => {
+    setActiveFixedCrewTab(tabId);
+    setActiveSection(tabId === "events-builder" ? "directed-events" : "build-timeline");
+    scrollPlannerToTop();
+  };
+  const handleFixedCrewSectionClick = (target) => {
+    const targetSection = activeFixedCrewTab === "events-builder" ? "directed-events" : target.includes("course") ? "course-demand" : "build-timeline";
+    setActiveSection(targetSection);
+    window.setTimeout(() => {
+      const scrollRoot = mainScrollRef.current;
+      const element = scrollRoot?.querySelector(target);
+      if (!scrollRoot || !element) {
+        scrollPlannerToTop();
+        return;
+      }
+      const rootTop = scrollRoot.getBoundingClientRect().top;
+      const elementTop = element.getBoundingClientRect().top;
+      scrollRoot.scrollTo({
+        top: scrollRoot.scrollTop + elementTop - rootTop - 16,
+        behavior: "smooth"
+      });
+    }, 80);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priorities-view": "true", className: "flex-1 flex overflow-hidden bg-slate-950 text-slate-100", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: `${isFixedCrewModel ? "w-64" : "w-80"} bg-slate-950/95 border-r border-slate-700/60 flex flex-col flex-shrink-0`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: `${isFixedCrewModel ? "w-[220px]" : "w-80"} bg-slate-950/95 border-r border-slate-700/60 flex flex-col flex-shrink-0`, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${isFixedCrewModel ? "p-4" : "p-5"} border-b border-slate-700/60`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border border-cyan-500/20 bg-cyan-500/10 ${isFixedCrewModel ? "p-3" : "p-4"}`, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] uppercase tracking-[0.2em] text-cyan-200/70", children: "NEO Build" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: `${isFixedCrewModel ? "mt-1 text-xl" : "mt-1 text-2xl"} font-bold text-white`, children: isFixedCrewModel ? "Build Planner" : "Build Priorities" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `${isFixedCrewModel ? "mt-1 text-xs leading-5" : "mt-2 text-sm"} text-slate-300`, children: isFixedCrewModel ? "Plan directed events and build weighting for the Fixed Crew model." : "Configure the build in the same order a supervisor would plan the DFP by hand." })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: `flex-1 overflow-y-auto ${isFixedCrewModel ? "p-3 space-y-2" : "p-4 space-y-3"}`, children: [
-        isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2", children: fixedCrewTabs.map((tab) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: `flex-1 overflow-y-auto ${isFixedCrewModel ? "p-0" : "p-4 space-y-3"}`, children: [
+        isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex w-[220px] border-b border-slate-700/60", children: fixedCrewTabs.map((tab) => {
           const isActive = activeFixedCrewTab === tab.id;
           return /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
-              onClick: () => setActiveFixedCrewTab(tab.id),
-              className: `rounded-md border px-3 py-2 text-left text-xs font-bold transition ${isActive ? "border-cyan-400/70 bg-cyan-500/15 text-cyan-50 shadow shadow-cyan-950/30" : "border-slate-700/60 bg-slate-900/70 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80"}`,
+              onClick: () => handleFixedCrewTabClick(tab.id),
+              className: `flex h-[41px] w-[110px] items-center justify-center border-b px-2 text-center text-[11px] font-bold leading-tight transition ${isActive ? "border-cyan-300 bg-cyan-500/15 text-cyan-50 shadow shadow-cyan-950/30" : "border-transparent bg-slate-900/70 text-slate-300 hover:bg-slate-800/80"}`,
               children: tab.label
             },
             tab.id
           );
         }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "px-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500", children: isFixedCrewModel ? "Page Order" : "Build Flow" }),
-        visibleWorkflowItems.map((item) => {
+        isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "mx-3 mt-3 overflow-hidden rounded-lg border border-slate-700/60 bg-slate-900/55 animate-[fixedCrewPlannerDrop_220ms_ease-out]",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-slate-700/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: "Sections" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1 p-2", children: fixedCrewPlannerSections[activeFixedCrewTab].map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => handleFixedCrewSectionClick(section.target),
+                  className: "block w-full rounded-md px-2 py-1.5 text-left text-[11px] font-semibold leading-snug text-slate-300 transition hover:bg-cyan-500/10 hover:text-cyan-100",
+                  children: section.label
+                },
+                `${activeFixedCrewTab}-${section.label}`
+              )) })
+            ]
+          },
+          activeFixedCrewTab
+        ),
+        !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "px-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500", children: "Build Flow" }),
+        !isFixedCrewModel && visibleWorkflowItems.map((item) => {
           const isActive = activeSection === item.id;
           return /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: () => setActiveSection(item.id),
-              disabled: isFixedCrewModel && activeFixedCrewTab === "events-builder",
-              className: `w-full rounded-lg border text-left transition-all ${isFixedCrewModel ? "p-3" : "p-4"} ${isActive ? "border-cyan-400/70 bg-cyan-500/15 text-white shadow-lg shadow-cyan-950/30" : "border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80"}`,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex items-start ${isFixedCrewModel ? "gap-2" : "gap-3"}`, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-0.5 flex shrink-0 items-center justify-center rounded-md border text-xs font-bold ${isFixedCrewModel ? "h-7 w-7" : "h-8 w-8"} ${isActive ? "border-cyan-300/70 bg-cyan-300/15 text-cyan-100" : "border-slate-600 bg-slate-800 text-slate-400"}`, children: item.step }),
+              className: `w-full rounded-lg border p-4 text-left transition-all ${isActive ? "border-cyan-400/70 bg-cyan-500/15 text-white shadow-lg shadow-cyan-950/30" : "border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80"}`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${isActive ? "border-cyan-300/70 bg-cyan-300/15 text-cyan-100" : "border-slate-600 bg-slate-800 text-slate-400"}`, children: item.step }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${isFixedCrewModel ? "text-sm" : "text-base"} block font-semibold`, children: item.label }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${isFixedCrewModel ? "mt-0.5 text-[11px] leading-4" : "mt-1 text-xs leading-5"} block text-slate-400`, children: item.description })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-semibold", children: item.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs leading-5 text-slate-400", children: item.description })
                 ] })
               ] })
             },
@@ -29773,8 +29844,28 @@ const PrioritiesViewWithMenu = (props) => {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-slate-700/60 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Priorities" }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("main", { className: "flex-1 overflow-y-auto bg-slate-950", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("main", { ref: mainScrollRef, className: "flex-1 overflow-y-auto bg-slate-950", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
+                    @keyframes fixedCrewPlannerDrop {
+                        from { max-height: 0; opacity: 0; transform: translateY(-6px); }
+                        to { max-height: 520px; opacity: 1; transform: translateY(0); }
+                    }
+                    .priorities-content .section-build-timeline,
+                    .priorities-content .section-course-demand,
+                    .priorities-content .section-directed-events,
+                    .priorities-content .flying-windows-card,
+                    .priorities-content .resource-capacity-card,
+                    .priorities-content .course-priority-card,
+                    .priorities-content .fixed-crew-course-package-priority-card,
+                    .priorities-content .tasking-events-card,
+                    .priorities-content .specific-currency-card,
+                    .priorities-content .bulk-currency-card,
+                    .priorities-content .consolidated-currency-card,
+                    .priorities-content .highest-priority-events-card,
+                    .priorities-content .optional-currency-card,
+                    .priorities-content .remedial-priority-card {
+                        scroll-margin-top: 16px;
+                    }
                     ${isFixedCrewModel && fixedCrewPlannerMode === "events-builder" ? `
                     .priorities-content > div {
                         display: none !important;
@@ -29817,7 +29908,7 @@ const PrioritiesViewWithMenu = (props) => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-6 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-cyan-300/60 bg-cyan-300/10 text-sm font-bold text-cyan-100", children: activeWorkflowItem.step }),
+            !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-cyan-300/60 bg-cyan-300/10 text-sm font-bold text-cyan-100", children: activeWorkflowItem.step }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: activeWorkflowItem.shortLabel }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-3xl font-bold text-white", children: activeWorkflowItem.label }),
