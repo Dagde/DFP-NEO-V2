@@ -28411,32 +28411,56 @@ const PrioritiesView = ({
       } : request));
     }
   };
-  const PriorityEventTable = ({ events }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Date" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Crew Required" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Scheduler" })
+  const getPriorityEventLabel = (event) => {
+    if (event.isTaskingRequest) {
+      const taskingName = String(event.taskingName || "").trim();
+      const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => profile.trim().toLowerCase() === taskingName.toLowerCase())?.[1]?.trim();
+      if (abbreviation) return abbreviation;
+      const displayLabel = String(event.taskingDisplayLabel || event.flightNumber || taskingName || "Task").trim();
+      return displayLabel.replace(/^Task\s*-\s*/i, "") || "Task";
+    }
+    return String(event.flightNumber || event.eventCode || "N/A").trim() || "N/A";
+  };
+  const PriorityEventTable = ({ events }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed border-collapse text-[11px] leading-tight", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[14%]" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[10%]" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[12%]" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[22%]" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[13%]" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[13%]" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Name" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Event" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Date" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Crew Required" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Currency" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Config" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Priority" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Scheduler" })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: events.map((event) => {
-      const personName = event.isTaskingRequest ? event.group || "Tasking" : event.instructor || event.pilot || event.student || "N/A";
+    /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: events.map((event) => {
+      const personName = event.isTaskingRequest ? "Tasking" : event.instructor || event.pilot || event.student || "N/A";
       const isPublishedInActiveSchedule = activeScheduleEvents.some(
         (activeEvent) => activeEvent.id === event.id || !!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId
       );
-      const rowText = isPublishedInActiveSchedule ? "text-green-300" : "text-gray-300";
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { onClick: () => onSelectEvent(event), className: "hover:bg-sky-900/50 transition-colors cursor-pointer", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: personName }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-semibold`, children: event.flightNumber }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-mono`, children: formatPriorityDate(event.date) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: getPriorityEventCrewRequirementName(event) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: event.currency || "N/A" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-semibold`, children: getAircraftConfigSummary(event) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 font-semibold ${event.priority === "Medium" ? "text-amber-300" : event.priority === "Low" ? "text-green-300" : "text-red-300"}`, children: event.priority || "High" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      const rowText = isPublishedInActiveSchedule ? "text-green-300" : "text-slate-100";
+      const eventLabel = getPriorityEventLabel(event);
+      const crewRequirementName = getPriorityEventCrewRequirementName(event);
+      const aircraftConfigSummary = getAircraftConfigSummary(event);
+      const eventDateLabel = formatPriorityDate(event.date);
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { onClick: () => onSelectEvent(event), className: "cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-semibold ${rowText}`, title: personName, children: personName }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`, title: eventLabel, children: eventLabel }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`, title: eventDateLabel, children: eventDateLabel }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 ${rowText}`, title: crewRequirementName, children: crewRequirementName }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 ${rowText}`, title: event.currency || "N/A", children: event.currency || "N/A" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-semibold ${rowText}`, title: aircraftConfigSummary, children: aircraftConfigSummary }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-2 font-black ${event.priority === "Medium" ? "text-amber-300" : event.priority === "Low" ? "text-green-300" : "text-red-300"}`, children: event.priority || "High" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-1.5 py-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "select",
           {
             value: getPriorityEventSchedulerValue(event),
@@ -28445,7 +28469,7 @@ const PrioritiesView = ({
               e.stopPropagation();
               updatePriorityEventScheduler(event, e.target.value);
             },
-            className: "h-8 rounded-md border border-slate-600 bg-slate-900 px-2 text-xs font-semibold text-white focus:ring-cyan-500",
+            className: "h-7 w-full rounded border border-slate-600 bg-slate-950 px-1.5 text-[11px] font-bold text-white focus:ring-cyan-500",
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Mandatory", children: "Mandatory" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Desirable", children: "Desirable" }),

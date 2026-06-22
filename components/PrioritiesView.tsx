@@ -2897,47 +2897,74 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     }
   };
 
+  const getPriorityEventLabel = (event: ScheduleEvent): string => {
+    if (event.isTaskingRequest) {
+      const taskingName = String(event.taskingName || '').trim();
+      const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => (
+        profile.trim().toLowerCase() === taskingName.toLowerCase()
+      ))?.[1]?.trim();
+      if (abbreviation) return abbreviation;
+      const displayLabel = String(event.taskingDisplayLabel || event.flightNumber || taskingName || 'Task').trim();
+      return displayLabel.replace(/^Task\s*-\s*/i, '') || 'Task';
+    }
+    return String(event.flightNumber || event.eventCode || 'N/A').trim() || 'N/A';
+  };
+
   const PriorityEventTable: React.FC<{ events: ScheduleEvent[] }> = ({ events }) => (
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-            <thead className="text-xs text-gray-400 uppercase">
+      <div className="overflow-hidden rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20">
+        <table className="w-full table-fixed border-collapse text-[11px] leading-tight">
+            <colgroup>
+                <col className="w-[14%]" />
+                <col className="w-[10%]" />
+                <col className="w-[12%]" />
+                <col className="w-[22%]" />
+                <col className="w-[8%]" />
+                <col className="w-[13%]" />
+                <col className="w-[8%]" />
+                <col className="w-[13%]" />
+            </colgroup>
+            <thead className="bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300">
                 <tr>
-                    <th className="py-2 px-2 text-left">Name</th>
-                    <th className="py-2 px-2 text-left">Event</th>
-                    <th className="py-2 px-2 text-left">Date</th>
-                    <th className="py-2 px-2 text-left">Crew Required</th>
-                    <th className="py-2 px-2 text-left">Currency</th>
-                    <th className="py-2 px-2 text-left">Config</th>
-                    <th className="py-2 px-2 text-left">Priority</th>
-                    <th className="py-2 px-2 text-left">Scheduler</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Name</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Event</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Date</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Crew Required</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Currency</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Config</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Priority</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Scheduler</th>
                 </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700/50">
+            <tbody>
                 {events.map(event => {
                     const personName = event.isTaskingRequest
-                        ? event.group || 'Tasking'
+                        ? 'Tasking'
                         : event.instructor || event.pilot || event.student || 'N/A';
                         const isPublishedInActiveSchedule = activeScheduleEvents.some(activeEvent =>
                             activeEvent.id === event.id ||
                             (!!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId)
                         );
-                        const rowText = isPublishedInActiveSchedule ? 'text-green-300' : 'text-gray-300';
+                        const rowText = isPublishedInActiveSchedule ? 'text-green-300' : 'text-slate-100';
+                        const eventLabel = getPriorityEventLabel(event);
+                        const crewRequirementName = getPriorityEventCrewRequirementName(event);
+                        const aircraftConfigSummary = getAircraftConfigSummary(event);
+                        const eventDateLabel = formatPriorityDate(event.date);
                     return (
-                    <tr key={event.id} onClick={() => onSelectEvent(event)} className="hover:bg-sky-900/50 transition-colors cursor-pointer">
-                        <td className={`py-2 px-2 ${rowText}`}>{personName}</td>
-                        <td className={`py-2 px-2 ${rowText} font-semibold`}>{event.flightNumber}</td>
-                        <td className={`py-2 px-2 ${rowText} font-mono`}>{formatPriorityDate(event.date)}</td>
-                        <td className={`py-2 px-2 ${rowText}`}>{getPriorityEventCrewRequirementName(event)}</td>
-                        <td className={`py-2 px-2 ${rowText}`}>{event.currency || 'N/A'}</td>
-                        <td className={`py-2 px-2 ${rowText} font-semibold`}>{getAircraftConfigSummary(event)}</td>
-                        <td className={`py-2 px-2 font-semibold ${
+                    <tr key={event.id} onClick={() => onSelectEvent(event)} className="cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50">
+                        <td className={`truncate border border-slate-700/80 px-2 py-2 font-semibold ${rowText}`} title={personName}>{personName}</td>
+                        <td className={`truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`} title={eventLabel}>{eventLabel}</td>
+                        <td className={`truncate border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`} title={eventDateLabel}>{eventDateLabel}</td>
+                        <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={crewRequirementName}>{crewRequirementName}</td>
+                        <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={event.currency || 'N/A'}>{event.currency || 'N/A'}</td>
+                        <td className={`truncate border border-slate-700/80 px-2 py-2 font-semibold ${rowText}`} title={aircraftConfigSummary}>{aircraftConfigSummary}</td>
+                        <td className={`border border-slate-700/80 px-2 py-2 font-black ${
                             event.priority === 'Medium'
                                 ? 'text-amber-300'
                                 : event.priority === 'Low'
                                     ? 'text-green-300'
                                     : 'text-red-300'
                         }`}>{event.priority || 'High'}</td>
-                        <td className="py-2 px-2">
+                        <td className="border border-slate-700/80 px-1.5 py-1.5">
                             <select
                                 value={getPriorityEventSchedulerValue(event)}
                                 onClick={(e) => e.stopPropagation()}
@@ -2945,7 +2972,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   e.stopPropagation();
                                   updatePriorityEventScheduler(event, e.target.value as 'Mandatory' | 'Desirable' | 'Ignore');
                                 }}
-                                className="h-8 rounded-md border border-slate-600 bg-slate-900 px-2 text-xs font-semibold text-white focus:ring-cyan-500"
+                                className="h-7 w-full rounded border border-slate-600 bg-slate-950 px-1.5 text-[11px] font-bold text-white focus:ring-cyan-500"
                             >
                                 <option value="Mandatory">Mandatory</option>
                                 <option value="Desirable">Desirable</option>
