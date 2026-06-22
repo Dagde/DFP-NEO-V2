@@ -97,6 +97,7 @@ type FixedCrewPlannerTab = 'events-builder' | 'build-priorities';
 export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<PrioritiesSection>('build-timeline');
     const [activeFixedCrewTab, setActiveFixedCrewTab] = useState<FixedCrewPlannerTab>('events-builder');
+    const [expandedFixedCrewTab, setExpandedFixedCrewTab] = useState<FixedCrewPlannerTab | null>(null);
     const mainScrollRef = useRef<HTMLElement | null>(null);
     const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
     const locationDisplayName = props.school === 'ESL' ? 'East Sale' : props.school === 'PEA' ? 'Pearce' : props.school;
@@ -208,6 +209,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     };
     const handleFixedCrewTabClick = (tabId: FixedCrewPlannerTab) => {
         setActiveFixedCrewTab(tabId);
+        setExpandedFixedCrewTab(tabId);
         setActiveSection(tabId === 'events-builder' ? 'directed-events' : 'build-timeline');
         scrollPlannerToTop();
     };
@@ -249,21 +251,22 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                         <div className="space-y-2 border-b border-slate-700/60 p-3">
                             {fixedCrewTabs.map(tab => {
                                 const isActive = activeFixedCrewTab === tab.id;
+                                const isExpanded = expandedFixedCrewTab === tab.id;
                                 return (
                                     <div key={tab.id}>
                                         <button
                                             type="button"
                                             onClick={() => handleFixedCrewTabClick(tab.id)}
-                                            className={`relative flex h-[41px] w-full items-center justify-between rounded-l-lg border px-3 text-left text-sm font-bold leading-tight transition ${
+                                            className={`relative flex h-[41px] w-full items-center justify-between rounded-md border px-3 text-left text-sm font-bold leading-tight transition ${
                                                 isActive
-                                                    ? 'translate-x-3 rounded-r-none border-cyan-300/70 border-r-slate-950 bg-cyan-500/18 text-cyan-50 shadow-[-10px_0_22px_rgba(8,145,178,0.16)]'
-                                                    : 'rounded-r-lg border-slate-700/70 bg-slate-900/70 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80'
+                                                    ? 'border-cyan-300/70 border-r-cyan-300/30 bg-cyan-500/18 text-cyan-50 shadow-[inset_-8px_0_18px_rgba(8,145,178,0.12),0_8px_20px_rgba(8,145,178,0.12)]'
+                                                    : 'border-slate-700/70 bg-cyan-950/20 text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] hover:border-slate-500 hover:bg-cyan-900/25'
                                             }`}
                                         >
                                             <span>{tab.label}</span>
-                                            <span className={`text-base transition ${isActive ? 'text-cyan-200' : 'text-slate-500'}`}>v</span>
+                                            <span className={`text-base transition ${isExpanded ? 'rotate-180 text-cyan-200' : 'text-slate-500'}`}>v</span>
                                         </button>
-                                        {isActive && (
+                                        {isExpanded && (
                                             <div
                                                 key={`${tab.id}-sections`}
                                                 className="mt-2 overflow-hidden rounded-lg border border-slate-700/60 bg-slate-900/55 animate-[fixedCrewPlannerDrop_240ms_ease-out]"
