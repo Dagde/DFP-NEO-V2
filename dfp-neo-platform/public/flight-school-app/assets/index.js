@@ -27891,7 +27891,7 @@ const PrioritiesView = ({
   const buildTaskingPriorityEvents = (request) => {
     const tasking = request.tasking.trim();
     const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => profile.trim().toLowerCase() === tasking.toLowerCase())?.[1]?.trim();
-    const taskingDisplayLabel = abbreviation ? `Task - ${abbreviation}` : "Task";
+    const taskingDisplayLabel = abbreviation || tasking || "Task";
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -28420,7 +28420,7 @@ const PrioritiesView = ({
       const taskingName = String(event.taskingName || "").trim();
       const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => profile.trim().toLowerCase() === taskingName.toLowerCase())?.[1]?.trim();
       if (abbreviation) return abbreviation;
-      const displayLabel = String(event.taskingDisplayLabel || event.flightNumber || taskingName || "Task").trim();
+      const displayLabel = String(taskingName || event.taskingDisplayLabel || event.flightNumber || "Task").trim();
       return displayLabel.replace(/^Task\s*-\s*/i, "") || "Task";
     }
     return String(event.flightNumber || event.eventCode || "N/A").trim() || "N/A";
