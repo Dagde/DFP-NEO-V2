@@ -28357,6 +28357,10 @@ const PrioritiesView = ({
       ] }) })
     ] });
   };
+  const isRemedialEvent = (event) => {
+    const item = syllabusDetails.find((s) => s.code === event.flightNumber);
+    return item?.isRemedial || event.flightNumber.includes("REM") || event.flightNumber.endsWith("RF") || event.isRemedial;
+  };
   const standardPriorityEvents = highestPriorityEvents;
   reactExports.useMemo(() => {
     const list = [];
@@ -28421,29 +28425,38 @@ const PrioritiesView = ({
     }
     return String(event.flightNumber || event.eventCode || "N/A").trim() || "N/A";
   };
-  const PriorityEventTable = ({ events }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed border-collapse text-[11px] leading-tight", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[14%]" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[10%]" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[12%]" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[22%]" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[13%]" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[13%]" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Name" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Event" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Date" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Crew Required" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Currency" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Config" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Priority" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Scheduler" })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: events.map((event) => {
-      const personName = event.isTaskingRequest ? "Tasking" : event.instructor || event.pilot || event.student || "N/A";
+  const getPriorityEventGroup = (event) => {
+    if (isRemedialEvent(event) || event.isRemedialForceSchedule) return "remedial";
+    if (event.isTaskingRequest) return "tasking";
+    return "currency";
+  };
+  const priorityEventGroupStyles = {
+    tasking: "bg-cyan-900 text-cyan-50",
+    currency: "bg-indigo-900 text-indigo-50",
+    remedial: "bg-amber-900 text-amber-50"
+  };
+  const PriorityEventTable = ({ events }) => {
+    const groupedEvents = {
+      tasking: events.filter((event) => getPriorityEventGroup(event) === "tasking"),
+      currency: events.filter((event) => getPriorityEventGroup(event) === "currency"),
+      remedial: events.filter((event) => getPriorityEventGroup(event) === "remedial")
+    };
+    const groups = [
+      { key: "tasking", label: "Tasks", events: groupedEvents.tasking },
+      { key: "currency", label: "Currency", events: groupedEvents.currency },
+      { key: "remedial", label: "Remedial", events: groupedEvents.remedial }
+    ];
+    const renderEmptyGroupRow = (group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "bg-slate-900/55", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "td",
+        {
+          className: `border border-slate-700/80 px-2 py-3 text-center align-middle text-sm font-black ${priorityEventGroupStyles[group.key]}`,
+          children: group.label
+        }
+      ),
+      Array.from({ length: 7 }).map((_, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-2 py-3 text-slate-600", children: " " }, `${group.key}-empty-${index}`))
+    ] }, `${group.key}-empty`);
+    const renderEventRow = (event, group, index) => {
       const isPublishedInActiveSchedule = activeScheduleEvents.some(
         (activeEvent) => activeEvent.id === event.id || !!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId
       );
@@ -28453,7 +28466,14 @@ const PrioritiesView = ({
       const aircraftConfigSummary = getAircraftConfigSummary(event);
       const eventDateLabel = formatPriorityDate(event.date);
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { onClick: () => onSelectEvent(event), className: "cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-semibold ${rowText}`, title: personName, children: personName }),
+        index === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "td",
+          {
+            rowSpan: group.events.length,
+            className: `border border-slate-700/80 px-2 py-3 text-center align-middle text-sm font-black ${priorityEventGroupStyles[group.key]}`,
+            children: group.label
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`, title: eventLabel, children: eventLabel }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`, title: eventDateLabel, children: eventDateLabel }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 ${rowText}`, title: crewRequirementName, children: crewRequirementName }),
@@ -28478,8 +28498,31 @@ const PrioritiesView = ({
           }
         ) })
       ] }, event.id);
-    }) })
-  ] }) });
+    };
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed border-collapse text-[11px] leading-tight", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[14%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[10%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[12%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[22%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[13%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[13%]" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Name" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Event" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Date" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Crew Required" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Currency" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Config" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Priority" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Scheduler" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: groups.flatMap((group) => group.events.length > 0 ? group.events.map((event, index) => renderEventRow(event, group, index)) : [renderEmptyGroupRow(group)]) })
+    ] }) });
+  };
   const timelineBoundaryMarkers = [
     { key: "day-start", time: flyingStartTime, label: "Day start", color: "bg-sky-100", text: "text-sky-100", target: { kind: "day", edge: "start" } },
     { key: "day-end", time: flyingEndTime, label: "Day end", color: "bg-sky-100", text: "text-sky-100", target: { kind: "day", edge: "end" } },

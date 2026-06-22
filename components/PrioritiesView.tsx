@@ -2910,7 +2910,96 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return String(event.flightNumber || event.eventCode || 'N/A').trim() || 'N/A';
   };
 
-  const PriorityEventTable: React.FC<{ events: ScheduleEvent[] }> = ({ events }) => (
+  const getPriorityEventGroup = (event: ScheduleEvent): 'tasking' | 'currency' | 'remedial' => {
+    if (isRemedialEvent(event) || event.isRemedialForceSchedule) return 'remedial';
+    if (event.isTaskingRequest) return 'tasking';
+    return 'currency';
+  };
+
+  const priorityEventGroupStyles: Record<'tasking' | 'currency' | 'remedial', string> = {
+    tasking: 'bg-cyan-900 text-cyan-50',
+    currency: 'bg-indigo-900 text-indigo-50',
+    remedial: 'bg-amber-900 text-amber-50',
+  };
+
+  const PriorityEventTable: React.FC<{ events: ScheduleEvent[] }> = ({ events }) => {
+    const groupedEvents = {
+      tasking: events.filter(event => getPriorityEventGroup(event) === 'tasking'),
+      currency: events.filter(event => getPriorityEventGroup(event) === 'currency'),
+      remedial: events.filter(event => getPriorityEventGroup(event) === 'remedial'),
+    };
+    const groups: Array<{ key: 'tasking' | 'currency' | 'remedial'; label: string; events: ScheduleEvent[] }> = [
+      { key: 'tasking', label: 'Tasks', events: groupedEvents.tasking },
+      { key: 'currency', label: 'Currency', events: groupedEvents.currency },
+      { key: 'remedial', label: 'Remedial', events: groupedEvents.remedial },
+    ];
+
+    const renderEmptyGroupRow = (group: typeof groups[number]) => (
+      <tr key={`${group.key}-empty`} className="bg-slate-900/55">
+        <td
+          className={`border border-slate-700/80 px-2 py-3 text-center align-middle text-sm font-black ${priorityEventGroupStyles[group.key]}`}
+        >
+          {group.label}
+        </td>
+        {Array.from({ length: 7 }).map((_, index) => (
+          <td key={`${group.key}-empty-${index}`} className="border border-slate-700/80 px-2 py-3 text-slate-600">&nbsp;</td>
+        ))}
+      </tr>
+    );
+
+    const renderEventRow = (event: ScheduleEvent, group: typeof groups[number], index: number) => {
+      const isPublishedInActiveSchedule = activeScheduleEvents.some(activeEvent =>
+        activeEvent.id === event.id ||
+        (!!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId)
+      );
+      const rowText = isPublishedInActiveSchedule ? 'text-green-300' : 'text-slate-100';
+      const eventLabel = getPriorityEventLabel(event);
+      const crewRequirementName = getPriorityEventCrewRequirementName(event);
+      const aircraftConfigSummary = getAircraftConfigSummary(event);
+      const eventDateLabel = formatPriorityDate(event.date);
+
+      return (
+        <tr key={event.id} onClick={() => onSelectEvent(event)} className="cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50">
+          {index === 0 && (
+            <td
+              rowSpan={group.events.length}
+              className={`border border-slate-700/80 px-2 py-3 text-center align-middle text-sm font-black ${priorityEventGroupStyles[group.key]}`}
+            >
+              {group.label}
+            </td>
+          )}
+          <td className={`truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`} title={eventLabel}>{eventLabel}</td>
+          <td className={`truncate border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`} title={eventDateLabel}>{eventDateLabel}</td>
+          <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={crewRequirementName}>{crewRequirementName}</td>
+          <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={event.currency || 'N/A'}>{event.currency || 'N/A'}</td>
+          <td className={`truncate border border-slate-700/80 px-2 py-2 font-semibold ${rowText}`} title={aircraftConfigSummary}>{aircraftConfigSummary}</td>
+          <td className={`border border-slate-700/80 px-2 py-2 font-black ${
+            event.priority === 'Medium'
+              ? 'text-amber-300'
+              : event.priority === 'Low'
+                ? 'text-green-300'
+                : 'text-red-300'
+          }`}>{event.priority || 'High'}</td>
+          <td className="border border-slate-700/80 px-1.5 py-1.5">
+            <select
+              value={getPriorityEventSchedulerValue(event)}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                e.stopPropagation();
+                updatePriorityEventScheduler(event, e.target.value as 'Mandatory' | 'Desirable' | 'Ignore');
+              }}
+              className="h-7 w-full rounded border border-slate-600 bg-slate-950 px-1.5 text-[11px] font-bold text-white focus:ring-cyan-500"
+            >
+              <option value="Mandatory">Mandatory</option>
+              <option value="Desirable">Desirable</option>
+              <option value="Ignore">Ignore</option>
+            </select>
+          </td>
+        </tr>
+      );
+    };
+
+    return (
       <div className="overflow-hidden rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20">
         <table className="w-full table-fixed border-collapse text-[11px] leading-tight">
             <colgroup>
@@ -2936,56 +3025,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 </tr>
             </thead>
             <tbody>
-                {events.map(event => {
-                    const personName = event.isTaskingRequest
-                        ? 'Tasking'
-                        : event.instructor || event.pilot || event.student || 'N/A';
-                        const isPublishedInActiveSchedule = activeScheduleEvents.some(activeEvent =>
-                            activeEvent.id === event.id ||
-                            (!!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId)
-                        );
-                        const rowText = isPublishedInActiveSchedule ? 'text-green-300' : 'text-slate-100';
-                        const eventLabel = getPriorityEventLabel(event);
-                        const crewRequirementName = getPriorityEventCrewRequirementName(event);
-                        const aircraftConfigSummary = getAircraftConfigSummary(event);
-                        const eventDateLabel = formatPriorityDate(event.date);
-                    return (
-                    <tr key={event.id} onClick={() => onSelectEvent(event)} className="cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50">
-                        <td className={`truncate border border-slate-700/80 px-2 py-2 font-semibold ${rowText}`} title={personName}>{personName}</td>
-                        <td className={`truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`} title={eventLabel}>{eventLabel}</td>
-                        <td className={`truncate border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`} title={eventDateLabel}>{eventDateLabel}</td>
-                        <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={crewRequirementName}>{crewRequirementName}</td>
-                        <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={event.currency || 'N/A'}>{event.currency || 'N/A'}</td>
-                        <td className={`truncate border border-slate-700/80 px-2 py-2 font-semibold ${rowText}`} title={aircraftConfigSummary}>{aircraftConfigSummary}</td>
-                        <td className={`border border-slate-700/80 px-2 py-2 font-black ${
-                            event.priority === 'Medium'
-                                ? 'text-amber-300'
-                                : event.priority === 'Low'
-                                    ? 'text-green-300'
-                                    : 'text-red-300'
-                        }`}>{event.priority || 'High'}</td>
-                        <td className="border border-slate-700/80 px-1.5 py-1.5">
-                            <select
-                                value={getPriorityEventSchedulerValue(event)}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  updatePriorityEventScheduler(event, e.target.value as 'Mandatory' | 'Desirable' | 'Ignore');
-                                }}
-                                className="h-7 w-full rounded border border-slate-600 bg-slate-950 px-1.5 text-[11px] font-bold text-white focus:ring-cyan-500"
-                            >
-                                <option value="Mandatory">Mandatory</option>
-                                <option value="Desirable">Desirable</option>
-                                <option value="Ignore">Ignore</option>
-                            </select>
-                        </td>
-                    </tr>
-                    );
-                })}
+                {groups.flatMap(group => (
+                  group.events.length > 0
+                    ? group.events.map((event, index) => renderEventRow(event, group, index))
+                    : [renderEmptyGroupRow(group)]
+                ))}
             </tbody>
         </table>
       </div>
-  );
+    );
+  };
   
   const timelineBoundaryMarkers: Array<{
     key: string;
