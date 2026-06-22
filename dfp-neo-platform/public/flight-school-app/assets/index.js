@@ -6630,8 +6630,10 @@ const RightSidebar = ({
   canAccessView,
   canRunNeoBuild = true,
   canPublishDfp = true,
-  modelUnavailableViews = []
+  modelUnavailableViews = [],
+  operationalModel: operationalModel2
 }) => {
+  const isFixedCrewModel = String(operationalModel2 || "").trim().toLowerCase() === "fixed_crew";
   const { isFrozen } = useSystemFreeze();
   const canOpen = (view2) => canAccessView ? canAccessView(view2) : true;
   const isModelUnavailable = (view2) => modelUnavailableViews.includes(view2);
@@ -6719,7 +6721,11 @@ const RightSidebar = ({
           onClick: () => navigateIfAllowed("Priorities"),
           disabled: !canOpen("Priorities"),
           className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Priorities" ? "active" : ""} ${accessButtonClass("Priorities")}`,
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Priorities" })
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            "Build",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            "Planner"
+          ] }) : "Priorities" })
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29120,12 +29126,12 @@ const PrioritiesView = ({
       ] })
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-directed-events space-y-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "directed-events-intro-card rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Fourth Input" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Directed Events" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Review hard requests and build exceptions after the normal course weighting is set." })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "tasking-events-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Tasking" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           TaskingRequestTable,
@@ -29152,7 +29158,7 @@ const PrioritiesView = ({
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "specific-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Specific Currency Requests" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
           renderSctRequestTable("flight", sctFlights),
@@ -29294,7 +29300,7 @@ const PrioritiesView = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bulk-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Bulk Currency Builder" }),
@@ -29377,7 +29383,7 @@ const PrioritiesView = ({
           ] }) })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "consolidated-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-start justify-between gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Consolidated Currency Event Build" }),
@@ -29548,11 +29554,11 @@ const PrioritiesView = ({
           ] })
         ] }) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "highest-priority-events-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Highest Priority Events" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(PriorityEventTable, { events: standardPriorityEvents })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "optional-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-amber-400 mb-2", children: "Optional Currency Events" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-4", children: 'MEDIUM and LOW priority currency events can be manually included in the NEO Build. Check the "Include" box to add to the build.' }),
         sctFlights.filter((r) => r.priority !== "High").length === 0 && sctFtds.filter((r) => r.priority !== "High").length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm italic", children: "No MEDIUM or LOW priority currency events. Add specific currency requests with MEDIUM or LOW priority in the Specific Currency Requests section above." }),
@@ -29655,6 +29661,7 @@ const stopEditableKeyPropagation = (event) => {
 };
 const PrioritiesViewWithMenu = (props) => {
   const [activeSection, setActiveSection] = reactExports.useState("build-timeline");
+  const [activeFixedCrewTab, setActiveFixedCrewTab] = reactExports.useState("events-builder");
   const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const locationDisplayName = props.school === "ESL" ? "East Sale" : props.school === "PEA" ? "Pearce" : props.school;
   const isFixedCrewModel = String(props.operationalModel || "").trim().toLowerCase() === "fixed_crew";
@@ -29690,33 +29697,73 @@ const PrioritiesViewWithMenu = (props) => {
       description: "Manage currency requests, high-priority events and optional currency queues."
     }
   ].filter((item) => !item.hidden);
+  const fixedCrewTabs = [
+    { id: "events-builder", label: "Events Builder" },
+    { id: "build-priorities", label: "Build Priorities" }
+  ];
+  const fixedCrewTabItems = activeFixedCrewTab === "events-builder" ? [
+    {
+      id: "directed-events",
+      step: "01",
+      label: "Events Builder",
+      shortLabel: "Events",
+      description: "Manage priority events, tasking, currency requests and optional queues."
+    }
+  ] : [
+    workflowItems.find((item) => item.id === "build-timeline"),
+    workflowItems.find((item) => item.id === "course-demand")
+  ].filter(Boolean);
+  const visibleWorkflowItems = isFixedCrewModel ? fixedCrewTabItems : workflowItems;
   reactExports.useEffect(() => {
     if (isFixedCrewModel && activeSection === "people-rules") {
       setActiveSection("build-timeline");
     }
   }, [activeSection, isFixedCrewModel]);
-  const activeWorkflowItem = workflowItems.find((item) => item.id === activeSection) ?? workflowItems[0];
+  reactExports.useEffect(() => {
+    if (!isFixedCrewModel) return;
+    if (activeFixedCrewTab === "events-builder") {
+      setActiveSection("directed-events");
+      return;
+    }
+    setActiveSection((current) => current === "course-demand" ? current : "build-timeline");
+  }, [activeFixedCrewTab, isFixedCrewModel]);
+  const activeWorkflowItem = visibleWorkflowItems.find((item) => item.id === activeSection) ?? visibleWorkflowItems[0] ?? workflowItems[0];
+  const fixedCrewPlannerMode = isFixedCrewModel ? activeFixedCrewTab : null;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priorities-view": "true", className: "flex-1 flex overflow-hidden bg-slate-950 text-slate-100", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-80 bg-slate-950/95 border-r border-slate-700/60 flex flex-col flex-shrink-0", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5 border-b border-slate-700/60", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] uppercase tracking-[0.22em] text-cyan-200/70", children: "NEO Build" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "mt-1 text-2xl font-bold text-white", children: "Build Priorities" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-slate-300", children: "Configure the build in the same order a supervisor would plan the DFP by hand." })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: `${isFixedCrewModel ? "w-64" : "w-80"} bg-slate-950/95 border-r border-slate-700/60 flex flex-col flex-shrink-0`, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${isFixedCrewModel ? "p-4" : "p-5"} border-b border-slate-700/60`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border border-cyan-500/20 bg-cyan-500/10 ${isFixedCrewModel ? "p-3" : "p-4"}`, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] uppercase tracking-[0.2em] text-cyan-200/70", children: "NEO Build" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: `${isFixedCrewModel ? "mt-1 text-xl" : "mt-1 text-2xl"} font-bold text-white`, children: isFixedCrewModel ? "Build Planner" : "Build Priorities" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `${isFixedCrewModel ? "mt-1 text-xs leading-5" : "mt-2 text-sm"} text-slate-300`, children: isFixedCrewModel ? "Plan directed events and build weighting for the Fixed Crew model." : "Configure the build in the same order a supervisor would plan the DFP by hand." })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 overflow-y-auto p-4 space-y-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "px-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500", children: "Build Flow" }),
-        workflowItems.map((item) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: `flex-1 overflow-y-auto ${isFixedCrewModel ? "p-3 space-y-2" : "p-4 space-y-3"}`, children: [
+        isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2", children: fixedCrewTabs.map((tab) => {
+          const isActive = activeFixedCrewTab === tab.id;
+          return /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setActiveFixedCrewTab(tab.id),
+              className: `rounded-md border px-3 py-2 text-left text-xs font-bold transition ${isActive ? "border-cyan-400/70 bg-cyan-500/15 text-cyan-50 shadow shadow-cyan-950/30" : "border-slate-700/60 bg-slate-900/70 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80"}`,
+              children: tab.label
+            },
+            tab.id
+          );
+        }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "px-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500", children: isFixedCrewModel ? "Page Order" : "Build Flow" }),
+        visibleWorkflowItems.map((item) => {
           const isActive = activeSection === item.id;
           return /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: () => setActiveSection(item.id),
-              className: `w-full rounded-lg border p-4 text-left transition-all ${isActive ? "border-cyan-400/70 bg-cyan-500/15 text-white shadow-lg shadow-cyan-950/30" : "border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80"}`,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${isActive ? "border-cyan-300/70 bg-cyan-300/15 text-cyan-100" : "border-slate-600 bg-slate-800 text-slate-400"}`, children: item.step }),
+              disabled: isFixedCrewModel && activeFixedCrewTab === "events-builder",
+              className: `w-full rounded-lg border text-left transition-all ${isFixedCrewModel ? "p-3" : "p-4"} ${isActive ? "border-cyan-400/70 bg-cyan-500/15 text-white shadow-lg shadow-cyan-950/30" : "border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80"}`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex items-start ${isFixedCrewModel ? "gap-2" : "gap-3"}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-0.5 flex shrink-0 items-center justify-center rounded-md border text-xs font-bold ${isFixedCrewModel ? "h-7 w-7" : "h-8 w-8"} ${isActive ? "border-cyan-300/70 bg-cyan-300/15 text-cyan-100" : "border-slate-600 bg-slate-800 text-slate-400"}`, children: item.step }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-semibold", children: item.label }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs leading-5 text-slate-400", children: item.description })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${isFixedCrewModel ? "text-sm" : "text-base"} block font-semibold`, children: item.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${isFixedCrewModel ? "mt-0.5 text-[11px] leading-4" : "mt-1 text-xs leading-5"} block text-slate-400`, children: item.description })
                 ] })
               ] })
             },
@@ -29728,12 +29775,44 @@ const PrioritiesViewWithMenu = (props) => {
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("main", { className: "flex-1 overflow-y-auto bg-slate-950", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
+                    ${isFixedCrewModel && fixedCrewPlannerMode === "events-builder" ? `
+                    .priorities-content > div {
+                        display: none !important;
+                    }
+                    .priorities-content > div.section-directed-events {
+                        display: flex !important;
+                        flex-direction: column;
+                    }
+                    .section-directed-events > .directed-events-intro-card { display: none !important; }
+                    .section-directed-events > .highest-priority-events-card { order: 1; }
+                    .section-directed-events > .tasking-events-card { order: 2; }
+                    .section-directed-events > .consolidated-currency-card { order: 3; }
+                    .section-directed-events > .specific-currency-card { order: 4; }
+                    .section-directed-events > .bulk-currency-card { order: 5; }
+                    .section-directed-events > .optional-currency-card { order: 6; }
+                    .section-directed-events > .remedial-priority-card { order: 7; }
+                    ` : isFixedCrewModel && fixedCrewPlannerMode === "build-priorities" ? `
+                    .priorities-content {
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    .priorities-content > div {
+                        display: none !important;
+                    }
+                    .priorities-content > div.section-build-timeline,
+                    .priorities-content > div.section-course-demand {
+                        display: block !important;
+                    }
+                    .priorities-content > div.section-build-timeline { order: 1; }
+                    .priorities-content > div.section-course-demand { order: 2; }
+                    ` : `
                     .priorities-content > div:not(.section-${activeSection}) {
                         display: none !important;
                     }
                     .priorities-content > div.section-${activeSection} {
                         display: block !important;
                     }
+                    `}
                 ` }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-6 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
@@ -100221,7 +100300,8 @@ Do you want to replace the existing entry?`,
           canAccessView,
           canRunNeoBuild: canRunNeoBuildForActiveModel,
           canPublishDfp,
-          modelUnavailableViews: modelUnavailableRightViews
+          modelUnavailableViews: modelUnavailableRightViews,
+          operationalModel: activeOperationalModel
         }
       ),
       isMagnifierEnabled && /* @__PURE__ */ jsxRuntimeExports.jsx(Magnifier, { isEnabled: isMagnifierEnabled }),

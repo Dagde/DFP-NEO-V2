@@ -3595,13 +3595,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
            )}
                    
         <div className="section-directed-events space-y-6">
-        <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">
+        <div className="directed-events-intro-card rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Fourth Input</p>
             <h2 className="mt-1 text-xl font-semibold text-white">Directed Events</h2>
             <p className="mt-1 text-sm text-slate-300">Review hard requests and build exceptions after the normal course weighting is set.</p>
         </div>
 
-        <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
+        <div className="tasking-events-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <h2 className="text-xl font-semibold text-sky-400 mb-4">Tasking</h2>
             <TaskingRequestTable
               taskingRequests={taskingRequests}
@@ -3626,7 +3626,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             />
         </div>
 
-        <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
+        <div className="specific-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <h2 className="text-xl font-semibold text-sky-400 mb-4">Specific Currency Requests</h2>
             <div className="space-y-6">
                 {renderSctRequestTable('flight', sctFlights)}
@@ -3768,7 +3768,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>}
         </div>}
 
-        <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
+        <div className="bulk-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
                     <h2 className="text-xl font-semibold text-sky-400">Bulk Currency Builder</h2>
@@ -3851,7 +3851,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </>}
         </div>
 
-        <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
+        <div className="consolidated-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                     <h2 className="text-xl font-semibold text-sky-400">Consolidated Currency Event Build</h2>
@@ -4027,13 +4027,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>
         </div>
 
-        <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
+        <div className="highest-priority-events-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <h2 className="text-xl font-semibold text-sky-400 mb-4">Highest Priority Events</h2>
             <PriorityEventTable events={standardPriorityEvents} />
         </div>
 
         {/* MEDIUM/LOW Priority Currency Events - User can manually include in build */}
-        <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
+        <div className="optional-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <h2 className="text-xl font-semibold text-amber-400 mb-2">Optional Currency Events</h2>
             <p className="text-xs text-gray-400 mb-4">MEDIUM and LOW priority currency events can be manually included in the NEO Build. Check the "Include" box to add to the build.</p>
             {sctFlights.filter(r => r.priority !== 'High').length === 0 && sctFtds.filter(r => r.priority !== 'High').length === 0 && (
@@ -4139,7 +4139,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           </div>
 
         {showRemedialPriorityQueue && (
-        <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
+        <div className="remedial-priority-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <h2 className="text-xl font-semibold text-sky-400 mb-4">Remedial Priority Queue</h2>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">

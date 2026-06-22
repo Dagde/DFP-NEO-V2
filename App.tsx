@@ -37163,6 +37163,7 @@ appliedUpdates.forEach(update => {
                 canRunNeoBuild={canRunNeoBuildForActiveModel}
                 canPublishDfp={canPublishDfp}
                 modelUnavailableViews={modelUnavailableRightViews}
+                operationalModel={activeOperationalModel}
             />
             {isMagnifierEnabled && <Magnifier isEnabled={isMagnifierEnabled} />}
 

@@ -92,9 +92,11 @@ interface PrioritiesViewWithMenuProps {
 }
 
 type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
+type FixedCrewPlannerTab = 'events-builder' | 'build-priorities';
 
 export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<PrioritiesSection>('build-timeline');
+    const [activeFixedCrewTab, setActiveFixedCrewTab] = useState<FixedCrewPlannerTab>('events-builder');
     const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
     const locationDisplayName = props.school === 'ESL' ? 'East Sale' : props.school === 'PEA' ? 'Pearce' : props.school;
     const isFixedCrewModel = String(props.operationalModel || '').trim().toLowerCase() === 'fixed_crew';
@@ -134,49 +136,105 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         },
     ].filter(item => !item.hidden);
 
+    const fixedCrewTabs = [
+        { id: 'events-builder' as const, label: 'Events Builder' },
+        { id: 'build-priorities' as const, label: 'Build Priorities' },
+    ];
+
+    const fixedCrewTabItems = activeFixedCrewTab === 'events-builder'
+        ? [
+            {
+                id: 'directed-events' as const,
+                step: '01',
+                label: 'Events Builder',
+                shortLabel: 'Events',
+                description: 'Manage priority events, tasking, currency requests and optional queues.',
+            },
+        ]
+        : [
+            workflowItems.find(item => item.id === 'build-timeline'),
+            workflowItems.find(item => item.id === 'course-demand'),
+        ].filter(Boolean) as typeof workflowItems;
+
+    const visibleWorkflowItems = isFixedCrewModel ? fixedCrewTabItems : workflowItems;
+
     useEffect(() => {
         if (isFixedCrewModel && activeSection === 'people-rules') {
             setActiveSection('build-timeline');
         }
     }, [activeSection, isFixedCrewModel]);
 
-    const activeWorkflowItem = workflowItems.find((item) => item.id === activeSection) ?? workflowItems[0];
+    useEffect(() => {
+        if (!isFixedCrewModel) return;
+        if (activeFixedCrewTab === 'events-builder') {
+            setActiveSection('directed-events');
+            return;
+        }
+        setActiveSection(current => current === 'course-demand' ? current : 'build-timeline');
+    }, [activeFixedCrewTab, isFixedCrewModel]);
+
+    const activeWorkflowItem = visibleWorkflowItems.find((item) => item.id === activeSection) ?? visibleWorkflowItems[0] ?? workflowItems[0];
+    const fixedCrewPlannerMode = isFixedCrewModel ? activeFixedCrewTab : null;
 
     return (
         <div data-priorities-view="true" className="flex-1 flex overflow-hidden bg-slate-950 text-slate-100">
-            <aside className="w-80 bg-slate-950/95 border-r border-slate-700/60 flex flex-col flex-shrink-0">
-                <div className="p-5 border-b border-slate-700/60">
-                    <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-4">
-                        <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-200/70">NEO Build</p>
-                        <h1 className="mt-1 text-2xl font-bold text-white">Build Priorities</h1>
-                        <p className="mt-2 text-sm text-slate-300">
-                            Configure the build in the same order a supervisor would plan the DFP by hand.
+            <aside className={`${isFixedCrewModel ? 'w-64' : 'w-80'} bg-slate-950/95 border-r border-slate-700/60 flex flex-col flex-shrink-0`}>
+                <div className={`${isFixedCrewModel ? 'p-4' : 'p-5'} border-b border-slate-700/60`}>
+                    <div className={`rounded-lg border border-cyan-500/20 bg-cyan-500/10 ${isFixedCrewModel ? 'p-3' : 'p-4'}`}>
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/70">NEO Build</p>
+                        <h1 className={`${isFixedCrewModel ? 'mt-1 text-xl' : 'mt-1 text-2xl'} font-bold text-white`}>{isFixedCrewModel ? 'Build Planner' : 'Build Priorities'}</h1>
+                        <p className={`${isFixedCrewModel ? 'mt-1 text-xs leading-5' : 'mt-2 text-sm'} text-slate-300`}>
+                            {isFixedCrewModel
+                                ? 'Plan directed events and build weighting for the Fixed Crew model.'
+                                : 'Configure the build in the same order a supervisor would plan the DFP by hand.'}
                         </p>
                     </div>
                 </div>
-                <nav className="flex-1 overflow-y-auto p-4 space-y-3">
-                    <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Build Flow</p>
-                    {workflowItems.map((item) => {
+                <nav className={`flex-1 overflow-y-auto ${isFixedCrewModel ? 'p-3 space-y-2' : 'p-4 space-y-3'}`}>
+                    {isFixedCrewModel && (
+                        <div className="grid grid-cols-1 gap-2">
+                            {fixedCrewTabs.map(tab => {
+                                const isActive = activeFixedCrewTab === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        onClick={() => setActiveFixedCrewTab(tab.id)}
+                                        className={`rounded-md border px-3 py-2 text-left text-xs font-bold transition ${
+                                            isActive
+                                                ? 'border-cyan-400/70 bg-cyan-500/15 text-cyan-50 shadow shadow-cyan-950/30'
+                                                : 'border-slate-700/60 bg-slate-900/70 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80'
+                                        }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                    <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">{isFixedCrewModel ? 'Page Order' : 'Build Flow'}</p>
+                    {visibleWorkflowItems.map((item) => {
                         const isActive = activeSection === item.id;
                         return (
                         <button
                             key={item.id}
                             onClick={() => setActiveSection(item.id)}
-                            className={`w-full rounded-lg border p-4 text-left transition-all ${
+                            disabled={isFixedCrewModel && activeFixedCrewTab === 'events-builder'}
+                            className={`w-full rounded-lg border text-left transition-all ${isFixedCrewModel ? 'p-3' : 'p-4'} ${
                                 isActive
                                     ? 'border-cyan-400/70 bg-cyan-500/15 text-white shadow-lg shadow-cyan-950/30'
                                     : 'border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80'
                             }`}
                         >
-                            <div className="flex items-start gap-3">
-                                <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${
+                            <div className={`flex items-start ${isFixedCrewModel ? 'gap-2' : 'gap-3'}`}>
+                                <span className={`mt-0.5 flex shrink-0 items-center justify-center rounded-md border text-xs font-bold ${isFixedCrewModel ? 'h-7 w-7' : 'h-8 w-8'} ${
                                     isActive ? 'border-cyan-300/70 bg-cyan-300/15 text-cyan-100' : 'border-slate-600 bg-slate-800 text-slate-400'
                                 }`}>
                                     {item.step}
                                 </span>
                                 <span className="min-w-0">
-                                    <span className="block text-base font-semibold">{item.label}</span>
-                                    <span className="mt-1 block text-xs leading-5 text-slate-400">{item.description}</span>
+                                    <span className={`${isFixedCrewModel ? 'text-sm' : 'text-base'} block font-semibold`}>{item.label}</span>
+                                    <span className={`${isFixedCrewModel ? 'mt-0.5 text-[11px] leading-4' : 'mt-1 text-xs leading-5'} block text-slate-400`}>{item.description}</span>
                                 </span>
                             </div>
                         </button>
@@ -189,12 +247,44 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
 
             <main className="flex-1 overflow-y-auto bg-slate-950">
                 <style>{`
+                    ${isFixedCrewModel && fixedCrewPlannerMode === 'events-builder' ? `
+                    .priorities-content > div {
+                        display: none !important;
+                    }
+                    .priorities-content > div.section-directed-events {
+                        display: flex !important;
+                        flex-direction: column;
+                    }
+                    .section-directed-events > .directed-events-intro-card { display: none !important; }
+                    .section-directed-events > .highest-priority-events-card { order: 1; }
+                    .section-directed-events > .tasking-events-card { order: 2; }
+                    .section-directed-events > .consolidated-currency-card { order: 3; }
+                    .section-directed-events > .specific-currency-card { order: 4; }
+                    .section-directed-events > .bulk-currency-card { order: 5; }
+                    .section-directed-events > .optional-currency-card { order: 6; }
+                    .section-directed-events > .remedial-priority-card { order: 7; }
+                    ` : isFixedCrewModel && fixedCrewPlannerMode === 'build-priorities' ? `
+                    .priorities-content {
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    .priorities-content > div {
+                        display: none !important;
+                    }
+                    .priorities-content > div.section-build-timeline,
+                    .priorities-content > div.section-course-demand {
+                        display: block !important;
+                    }
+                    .priorities-content > div.section-build-timeline { order: 1; }
+                    .priorities-content > div.section-course-demand { order: 2; }
+                    ` : `
                     .priorities-content > div:not(.section-${activeSection}) {
                         display: none !important;
                     }
                     .priorities-content > div.section-${activeSection} {
                         display: block !important;
                     }
+                    `}
                 `}</style>
                 <div className="p-6">
                     <div className="mb-6 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">

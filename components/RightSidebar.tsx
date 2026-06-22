@@ -16,6 +16,7 @@ interface RightSidebarProps {
     canRunNeoBuild?: boolean;
     canPublishDfp?: boolean;
     modelUnavailableViews?: string[];
+    operationalModel?: string;
 }
 
 const RightSidebar: React.FC<RightSidebarProps> = ({
@@ -33,9 +34,11 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     canRunNeoBuild = true,
     canPublishDfp = true,
     modelUnavailableViews = [],
+    operationalModel,
 }) => {
   const nextDayBuildSubViews = ['NextDayBuild', 'Priorities', 'ProgramData', 'BuildAnalysis', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'];
   const isNextDayBuildSectionActive = nextDayBuildSubViews.includes(activeView);
+  const isFixedCrewModel = String(operationalModel || '').trim().toLowerCase() === 'fixed_crew';
 
   const dashboardViews = ['MyDashboard', 'SupervisorDashboard'];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
@@ -126,7 +129,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           disabled={!canOpen('Priorities')}
           className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Priorities' ? 'active' : ''} ${accessButtonClass('Priorities')}`}
         >
-          <span className="text-center leading-tight">Priorities</span>
+          <span className="text-center leading-tight">{isFixedCrewModel ? <>Build<br/>Planner</> : 'Priorities'}</span>
         </button>
 
         <button
