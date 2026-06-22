@@ -29707,24 +29707,13 @@ const PrioritiesViewWithMenu = (props) => {
     "events-builder": [
       { label: "Highest Priority Table", target: ".highest-priority-events-card" },
       { label: "Tasking Section", target: ".tasking-events-card" },
-      { label: "Currency", heading: true },
-      { label: "Consolidated Currency Event Build", target: ".consolidated-currency-card" },
-      { label: "Specific Currency Requests", target: ".specific-currency-card" },
-      { label: "Flights", target: ".specific-currency-card" },
-      { label: "Sim / FTD", target: ".specific-currency-card" },
-      { label: "Bulk Currency Builder", target: ".bulk-currency-card" },
-      { label: "Optional Currency Events", target: ".optional-currency-card" },
-      { label: "Currency Flights", target: ".optional-currency-card" },
-      { label: "Currency Sim / FTDs", target: ".optional-currency-card" },
-      { label: "Remedial Priority Queue", target: ".remedial-priority-card" }
+      { label: "Currency Section", target: ".consolidated-currency-card" }
     ],
     "build-priorities": [
       { label: "Flying Windows & Capacity", target: ".section-build-timeline" },
       { label: "Flying Windows", target: ".flying-windows-card" },
       { label: "Resource Capacity", target: ".resource-capacity-card" },
-      { label: "Course Demand", target: ".section-course-demand" },
-      { label: "Course Priority", target: ".course-priority-card" },
-      { label: "Fixed Crew Course & Package Priority", target: ".fixed-crew-course-package-priority-card" }
+      { label: "Course Priority", target: ".course-priority-card" }
     ]
   };
   const fixedCrewTabItems = activeFixedCrewTab === "events-builder" ? [
@@ -29801,7 +29790,7 @@ const PrioritiesViewWithMenu = (props) => {
               {
                 type: "button",
                 onClick: () => handleFixedCrewTabClick(tab.id),
-                className: `relative flex h-[41px] w-full items-center justify-between rounded-md border px-3 text-left text-sm font-bold leading-tight transition ${isActive ? "border-cyan-300/70 border-r-cyan-300/30 bg-cyan-500/18 text-cyan-50 shadow-[inset_-8px_0_18px_rgba(8,145,178,0.12),0_8px_20px_rgba(8,145,178,0.12)]" : "border-slate-700/70 bg-cyan-950/20 text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] hover:border-slate-500 hover:bg-cyan-900/25"}`,
+                className: `relative flex h-[41px] w-full items-center justify-between rounded-md border px-3 text-left text-sm font-bold leading-tight transition ${isActive ? "border-cyan-300/80 border-r-cyan-300/40 bg-cyan-700/55 text-cyan-50 shadow-[inset_-8px_0_18px_rgba(8,145,178,0.18),0_8px_20px_rgba(8,145,178,0.16)]" : "border-slate-600/80 bg-slate-700/70 text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-cyan-500/50 hover:bg-slate-600/75"}`,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: tab.label }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-base transition ${isExpanded ? "rotate-180 text-cyan-200" : "text-slate-500"}`, children: "v" })
