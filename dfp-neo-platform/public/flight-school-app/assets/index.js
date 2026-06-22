@@ -26579,9 +26579,7 @@ const TaskingRequestTable = ({
   onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
-  onSaveTaskingRequest,
-  onSubmitTaskingRequest,
-  onIgnoreTaskingRequest
+  onSetTaskingSchedulerPriority
 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 pb-24", children: [
   taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No tasking requests configured." }),
   taskingRequests.map((request) => {
@@ -26590,8 +26588,9 @@ const TaskingRequestTable = ({
     const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
     const selectedConfig = aircraftConfigOptions.find((definition) => definition.id === request.aircraftConfigId);
     const showCallsignUnitLabels = new Set(unitCallsignEntries.map((entry) => entry.unitCode)).size > 1;
+    const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-700/80 bg-slate-900/45 p-3 shadow-lg shadow-black/10", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Tasking", hint: request.tasking || "Select or type task", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           TaskingProfileInput,
           {
@@ -26630,29 +26629,9 @@ const TaskingRequestTable = ({
             onChange: (event) => onUpdateTaskingRequest(request.id, { duration: Math.max(0.1, parseFloat(event.target.value) || 0.1), submitted: false, saved: false }),
             className: taskingControlClass
           }
-        ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Crew Mode", hint: isSingleSeatAircraft ? "Single seat" : request.flightType || "Dual", children: isSingleSeatAircraft ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-10 items-center rounded-md border border-amber-400/40 bg-amber-500/10 px-3 text-sm font-semibold text-amber-100", children: "Solo" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "select",
-          {
-            value: request.flightType || "Dual",
-            onChange: (event) => {
-              const flightType = event.target.value;
-              onUpdateTaskingRequest(request.id, {
-                flightType,
-                crewRequirement: flightType === "Solo" ? { mode: "custom", roles: [{ role: "Pilot", count: 1 }] } : { mode: "aircraft_default" },
-                submitted: false,
-                saved: false
-              });
-            },
-            className: taskingControlClass,
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
-            ]
-          }
         ) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.52fr)_minmax(0,0.8fr)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.5fr)_minmax(0,1.3fr)_minmax(0,0.52fr)_minmax(0,0.8fr)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Route", hint: `${request.depPoint || "Departure"} -> ${request.arrivalPoint || "Arrival"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-1.5 [&_input]:h-7 [&_input]:px-2 [&_input]:text-[11px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[8px] font-black uppercase tracking-[0.12em] text-slate-600", children: "Dep" }),
@@ -26771,57 +26750,22 @@ const TaskingRequestTable = ({
           TaskingFieldPanel,
           {
             label: "Actions",
-            hint: request.saved ? request.submitted && !request.ignored ? "Will be scheduled" : "Will be ignored" : "Save before scheduling",
+            hint: request.submitted && !request.ignored ? `${schedulerPriority} scheduler priority` : "Select scheduler priority",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex h-8 items-center justify-between gap-2 rounded-md border border-slate-600 bg-slate-800 px-2 text-xs font-semibold text-white", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Mandatory" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1.5", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "checkbox",
-                      checked: request.isMandatory !== false,
-                      onChange: (event) => onUpdateTaskingRequest(request.id, { isMandatory: event.target.checked, submitted: false, saved: false }),
-                      className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                    }
-                  ),
-                  request.isMandatory !== false ? "Yes" : "No"
-                ] })
-              ] }),
-              !request.saved ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => onSaveTaskingRequest(request.id),
-                  disabled: !canSubmit,
-                  className: `h-9 w-full rounded-md px-2 text-xs font-bold ${canSubmit ? "bg-green-600 text-white hover:bg-green-700" : "cursor-not-allowed bg-slate-700 text-slate-400"}`,
-                  children: "Save request"
-                }
-              ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "grid gap-1.5 text-[11px]", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex h-8 items-center justify-between gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 text-emerald-200", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Schedule" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "radio",
-                      name: `tasking-schedule-${request.id}`,
-                      checked: request.submitted && !request.ignored,
-                      onChange: () => onSubmitTaskingRequest(request.id)
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex h-8 items-center justify-between gap-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 text-rose-200", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Ignore" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "radio",
-                      name: `tasking-schedule-${request.id}`,
-                      checked: request.ignored || !request.submitted,
-                      onChange: () => onIgnoreTaskingRequest(request.id)
-                    }
-                  )
-                ] })
-              ] }),
+              ["High", "Medium", "Low"].map((priority) => {
+                const selected = schedulerPriority === priority && request.submitted && !request.ignored;
+                return /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    disabled: !canSubmit,
+                    onClick: () => onSetTaskingSchedulerPriority(request.id, priority),
+                    className: `h-8 rounded-md border px-2 text-xs font-bold transition ${selected ? priority === "High" ? "border-red-300/70 bg-red-500/25 text-red-100" : priority === "Medium" ? "border-amber-300/70 bg-amber-500/25 text-amber-100" : "border-green-300/70 bg-green-500/25 text-green-100" : canSubmit ? "border-slate-600 bg-slate-800 text-slate-200 hover:border-cyan-300/70 hover:bg-cyan-500/10" : "cursor-not-allowed border-slate-700 bg-slate-800/60 text-slate-500"}`,
+                    children: priority
+                  },
+                  `${request.id}-${priority}`
+                );
+              }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
@@ -27781,6 +27725,7 @@ const PrioritiesView = ({
     callsignBase: request.callsignBase || defaultUnitCallsign || "",
     callsignNumber: Number.isFinite(Number(request.callsignNumber)) ? Math.max(0, Math.min(100, Math.floor(Number(request.callsignNumber)))) : 0,
     callsign: request.callsign || (request.callsignBase || defaultUnitCallsign ? buildUnitEventCallsign(request.callsignBase || defaultUnitCallsign, request.callsignNumber || 0) : ""),
+    schedulerPriority: request.schedulerPriority === "Medium" || request.schedulerPriority === "Low" ? request.schedulerPriority : request.isMandatory === false ? "Medium" : "High",
     isMandatory: request.isMandatory !== false,
     saved: Boolean(request.saved || request.submitted),
     submitted: Boolean(request.submitted),
@@ -27903,6 +27848,7 @@ const PrioritiesView = ({
       callsignBase: defaultUnitCallsign,
       callsignNumber: 0,
       callsign: defaultUnitCallsign ? buildUnitEventCallsign(defaultUnitCallsign, 0) : "",
+      schedulerPriority: "High",
       isMandatory: true,
       saved: false,
       submitted: false,
@@ -27955,12 +27901,13 @@ const PrioritiesView = ({
     const eventCallsign = request.callsign || (callsignBase ? buildUnitEventCallsign(callsignBase, callsignNumber) : "");
     const startTime = Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime;
     const flightType = isSingleSeatAircraft || request.flightType === "Solo" ? "Solo" : "Dual";
+    const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
     const notes = [
       `Tasking request: ${tasking}`,
       `Date: ${request.date || "Any build date"}`,
       `Takeoff: ${formatTimeLabel(startTime)}`,
       `Duration: ${request.duration.toFixed(1)}`,
-      `Solo/Dual: ${flightType}`,
+      `Scheduler priority: ${schedulerPriority}`,
       `Dep Point: ${depPoint}`,
       `Arrival Point: ${arrivalPoint}`,
       `Aircraft requested: ${aircraftCount}`,
@@ -27987,7 +27934,7 @@ const PrioritiesView = ({
       destination: arrivalPoint,
       isTimeFixed: true,
       isTaskingRequest: true,
-      isMandatoryTasking: request.isMandatory !== false,
+      isMandatoryTasking: schedulerPriority === "High",
       taskingName: tasking,
       taskingDisplayLabel,
       taskingRequestId: request.id,
@@ -27995,42 +27942,34 @@ const PrioritiesView = ({
       taskingAircraftCount: aircraftCount,
       dateCreated: (/* @__PURE__ */ new Date()).toISOString(),
       notes,
-      priority: "High",
+      priority: schedulerPriority,
       aircraftConfigId,
       acceptableAircraftConfigs: [aircraftConfigId],
       crewRequirement: request.crewRequirement || { mode: "aircraft_default" }
     }));
+  };
+  const setTaskingSchedulerPriority = (id, schedulerPriority) => {
+    const request = taskingRequests.find((item) => item.id === id);
+    if (!request) return;
+    const nextRequest = {
+      ...request,
+      schedulerPriority,
+      isMandatory: schedulerPriority === "High",
+      saved: true,
+      submitted: true,
+      ignored: false
+    };
+    removeTaskingPriorityEvents(id);
+    const priorityEvents = buildTaskingPriorityEvents(nextRequest);
+    onAddPriorityEvents(priorityEvents);
+    setTaskingRequests((prev) => prev.map((item) => item.id === id ? nextRequest : item));
+    logAudit("Priorities", "Edit", "Set tasking scheduler priority", `${request.tasking || "Untitled tasking"}: ${schedulerPriority}`);
   };
   const removeTaskingRequest = (id) => {
     const removed = taskingRequests.find((request) => request.id === id);
     removeTaskingPriorityEvents(id);
     setTaskingRequests((prev) => prev.filter((request) => request.id !== id));
     logAudit("Priorities", "Delete", "Removed tasking request", removed?.tasking || id);
-  };
-  const saveTaskingRequest = (id) => {
-    const request = taskingRequests.find((item) => item.id === id);
-    if (!request) return;
-    updateTaskingRequest(id, { saved: true, submitted: false, ignored: false });
-    logAudit("Priorities", "Save", "Saved tasking request", `${request.tasking || "Untitled tasking"} on ${request.date || "any build date"}`);
-  };
-  const submitTaskingRequest = (id) => {
-    const request = taskingRequests.find((item) => item.id === id);
-    if (!request) return;
-    if (isTaskingRequestInHighestPriority(id)) {
-      window.alert("Already added to Highest Priority Events list");
-      return;
-    }
-    const priorityEvents = buildTaskingPriorityEvents(request);
-    onAddPriorityEvents(priorityEvents);
-    updateTaskingRequest(id, { saved: true, submitted: true, ignored: false });
-    logAudit("Priorities", "Submit", "Submitted tasking request", `${request.tasking || "Untitled tasking"} on ${request.date || "any build date"} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? "" : "s"})`);
-  };
-  const ignoreTaskingRequest = (id) => {
-    const request = taskingRequests.find((item) => item.id === id);
-    if (!request) return;
-    removeTaskingPriorityEvents(id);
-    updateTaskingRequest(id, { saved: true, submitted: false, ignored: true });
-    logAudit("Priorities", "Ignore", "Ignored tasking request", `${request.tasking || "Untitled tasking"} on ${request.date || "any build date"}`);
   };
   reactExports.useEffect(() => {
     setTraineeCurrencySelection((prev) => {
@@ -28435,16 +28374,53 @@ const PrioritiesView = ({
     return list.sort((a, b) => a.trainee.name.localeCompare(b.trainee.name));
   }, [traineesData, traineeLMPs, scores, syllabusDetails]);
   const showRemedialPriorityQueue = false;
+  const getCrewRequirementSignature = (requirement) => (normaliseCrewRequirement(requirement).roles || []).map((role) => [
+    String(role.role || "").trim().toUpperCase(),
+    Math.max(0, Math.min(20, Math.round(Number(role.count) || 0))),
+    (Array.isArray(role.eligibleRoles) ? role.eligibleRoles : []).map((value) => String(value || "").trim().toUpperCase()).filter(Boolean).sort().join("|")
+  ].join(":")).sort().join(";");
+  const getPriorityEventCrewRequirementName = (event) => {
+    if (!event.crewRequirement) return "N/A";
+    const normalised = normaliseCrewRequirement(event.crewRequirement);
+    if (normalised.mode === "aircraft_default") {
+      return crewRequirementPresets.find((preset) => preset.kind === "standard")?.label || "Standard Crew";
+    }
+    const eventSignature = getCrewRequirementSignature(event.crewRequirement);
+    const matchingPreset = crewRequirementPresets.find((preset) => preset.kind === "alternate" && getCrewRequirementSignature({ mode: "custom", roles: preset.roles || [] }) === eventSignature);
+    return matchingPreset?.label || formatCrewRequirementSummary(event.crewRequirement, aircraftCrewComposition, crewPositionTerminology);
+  };
+  const getPriorityEventSchedulerValue = (event) => event.isMandatoryTasking || event.priority === "High" ? "Mandatory" : "Desirable";
+  const updatePriorityEventScheduler = (event, schedulerValue) => {
+    if (schedulerValue === "Ignore") {
+      onDeletePriorityEvent(event.id);
+      return;
+    }
+    const schedulerPriority = schedulerValue === "Mandatory" ? "High" : "Medium";
+    onUpdatePriorityEvent(event.id, {
+      priority: schedulerPriority,
+      isMandatoryTasking: schedulerValue === "Mandatory"
+    });
+    if (event.taskingRequestId) {
+      setTaskingRequests((prev) => prev.map((request) => request.id === event.taskingRequestId ? {
+        ...request,
+        schedulerPriority,
+        isMandatory: schedulerValue === "Mandatory",
+        saved: true,
+        submitted: true,
+        ignored: false
+      } : request));
+    }
+  };
   const PriorityEventTable = ({ events }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Date" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Solo/Dual" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Crew Required" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Action" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Scheduler" })
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: events.map((event) => {
       const personName = event.isTaskingRequest ? event.group || "Tasking" : event.instructor || event.pilot || event.student || "N/A";
@@ -28456,20 +28432,25 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: personName }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-semibold`, children: event.flightNumber }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-mono`, children: formatPriorityDate(event.date) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: event.soloOrDual || event.flightType || "N/A" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: getPriorityEventCrewRequirementName(event) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: event.currency || "N/A" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-semibold`, children: getAircraftConfigSummary(event) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 font-semibold ${event.priority === "Medium" ? "text-amber-300" : event.priority === "Low" ? "text-green-300" : "text-red-300"}`, children: event.priority || "High" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "select",
           {
-            onClick: (e) => {
+            value: getPriorityEventSchedulerValue(event),
+            onClick: (e) => e.stopPropagation(),
+            onChange: (e) => {
               e.stopPropagation();
-              onDeletePriorityEvent(event.id);
+              updatePriorityEventScheduler(event, e.target.value);
             },
-            className: "p-1 text-gray-400 hover:text-red-400",
-            title: "Delete event",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) })
+            className: "h-8 rounded-md border border-slate-600 bg-slate-900 px-2 text-xs font-semibold text-white focus:ring-cyan-500",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Mandatory", children: "Mandatory" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Desirable", children: "Desirable" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ignore", children: "Ignore" })
+            ]
           }
         ) })
       ] }, event.id);
@@ -29152,9 +29133,7 @@ const PrioritiesView = ({
             onAddTaskingRequest: addTaskingRequest,
             onUpdateTaskingRequest: updateTaskingRequest,
             onRemoveTaskingRequest: removeTaskingRequest,
-            onSaveTaskingRequest: saveTaskingRequest,
-            onSubmitTaskingRequest: submitTaskingRequest,
-            onIgnoreTaskingRequest: ignoreTaskingRequest
+            onSetTaskingSchedulerPriority: setTaskingSchedulerPriority
           }
         )
       ] }),

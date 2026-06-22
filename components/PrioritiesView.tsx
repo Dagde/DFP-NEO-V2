@@ -28,7 +28,7 @@ import {
 import { isSyllabusCourseShell } from '../utils/syllabusCourseShell';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
-import { formatCrewRequirementSummary } from '../utils/crewRequirements';
+import { formatCrewRequirementSummary, normaliseCrewRequirement } from '../utils/crewRequirements';
 import {
   normaliseCrewCompositionSettings,
   type CrewCompositionSettings,
@@ -345,11 +345,14 @@ interface TaskingRequest {
   callsignBase?: string;
   callsignNumber?: number;
   callsign?: string;
+  schedulerPriority?: 'High' | 'Medium' | 'Low';
   isMandatory: boolean;
   saved: boolean;
   submitted: boolean;
   ignored?: boolean;
 }
+
+type TaskingSchedulerPriority = NonNullable<TaskingRequest['schedulerPriority']>;
 
 type TimeOption = {
   label: string;
@@ -639,9 +642,7 @@ interface TaskingRequestTableProps {
   onAddTaskingRequest: () => void;
   onUpdateTaskingRequest: (id: string, updates: Partial<TaskingRequest>) => void;
   onRemoveTaskingRequest: (id: string) => void;
-  onSaveTaskingRequest: (id: string) => void;
-  onSubmitTaskingRequest: (id: string) => void;
-  onIgnoreTaskingRequest: (id: string) => void;
+  onSetTaskingSchedulerPriority: (id: string, priority: TaskingSchedulerPriority) => void;
 }
 
 const taskingPanelClass = 'flex min-h-[8rem] min-w-0 flex-col justify-between rounded-lg border border-slate-700/80 bg-slate-950/55 p-3 shadow-inner shadow-black/20';
@@ -682,9 +683,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
-  onSaveTaskingRequest,
-  onSubmitTaskingRequest,
-  onIgnoreTaskingRequest,
+  onSetTaskingSchedulerPriority,
 }) => (
   <div className="space-y-4 pb-24">
     {taskingRequests.length === 0 && (
@@ -698,9 +697,10 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
       const selectedConfig = aircraftConfigOptions.find(definition => definition.id === request.aircraftConfigId);
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map(entry => entry.unitCode)).size > 1;
+      const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
       return (
         <div key={request.id} className="rounded-xl border border-slate-700/80 bg-slate-900/45 p-3 shadow-lg shadow-black/10">
-          <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]">
+          <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]">
             <TaskingFieldPanel label="Tasking" hint={request.tasking || 'Select or type task'}>
               <TaskingProfileInput
                 value={request.tasking}
@@ -737,35 +737,9 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 className={taskingControlClass}
               />
             </TaskingFieldPanel>
-            <TaskingFieldPanel label="Crew Mode" hint={isSingleSeatAircraft ? 'Single seat' : request.flightType || 'Dual'}>
-              {isSingleSeatAircraft ? (
-                <div className="flex h-10 items-center rounded-md border border-amber-400/40 bg-amber-500/10 px-3 text-sm font-semibold text-amber-100">
-                  Solo
-                </div>
-              ) : (
-                <select
-                  value={request.flightType || 'Dual'}
-                  onChange={event => {
-                    const flightType = event.target.value as 'Solo' | 'Dual';
-                    onUpdateTaskingRequest(request.id, {
-                      flightType,
-                      crewRequirement: flightType === 'Solo'
-                        ? { mode: 'custom', roles: [{ role: 'Pilot', count: 1 }] }
-                        : { mode: 'aircraft_default' },
-                      submitted: false,
-                      saved: false,
-                    });
-                  }}
-                  className={taskingControlClass}
-                >
-                  <option value="Solo">Solo</option>
-                  <option value="Dual">Dual</option>
-                </select>
-              )}
-            </TaskingFieldPanel>
           </div>
 
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.52fr)_minmax(0,0.8fr)]">
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.5fr)_minmax(0,1.3fr)_minmax(0,0.52fr)_minmax(0,0.8fr)]">
             <TaskingFieldPanel label="Route" hint={`${request.depPoint || 'Departure'} -> ${request.arrivalPoint || 'Arrival'}`}>
               <div className="grid gap-1.5 [&_input]:h-7 [&_input]:px-2 [&_input]:text-[11px]">
                 <div className="min-w-0">
@@ -878,55 +852,33 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             </div>
             <TaskingFieldPanel
               label="Actions"
-              hint={request.saved ? (request.submitted && !request.ignored ? 'Will be scheduled' : 'Will be ignored') : 'Save before scheduling'}
+              hint={request.submitted && !request.ignored ? `${schedulerPriority} scheduler priority` : 'Select scheduler priority'}
             >
               <div className="grid gap-2">
-                <label className="flex h-8 items-center justify-between gap-2 rounded-md border border-slate-600 bg-slate-800 px-2 text-xs font-semibold text-white">
-                  <span>Mandatory</span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <input
-                      type="checkbox"
-                      checked={request.isMandatory !== false}
-                      onChange={event => onUpdateTaskingRequest(request.id, { isMandatory: event.target.checked, submitted: false, saved: false })}
-                      className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                    />
-                    {request.isMandatory !== false ? 'Yes' : 'No'}
-                  </span>
-                </label>
-                {!request.saved ? (
-                  <button
-                    onClick={() => onSaveTaskingRequest(request.id)}
-                    disabled={!canSubmit}
-                    className={`h-9 w-full rounded-md px-2 text-xs font-bold ${
-                      canSubmit
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'cursor-not-allowed bg-slate-700 text-slate-400'
-                    }`}
-                  >
-                    Save request
-                  </button>
-                ) : (
-                  <span className="grid gap-1.5 text-[11px]">
-                    <label className="inline-flex h-8 items-center justify-between gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 text-emerald-200">
-                      <span>Schedule</span>
-                      <input
-                        type="radio"
-                        name={`tasking-schedule-${request.id}`}
-                        checked={request.submitted && !request.ignored}
-                        onChange={() => onSubmitTaskingRequest(request.id)}
-                      />
-                    </label>
-                    <label className="inline-flex h-8 items-center justify-between gap-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 text-rose-200">
-                      <span>Ignore</span>
-                      <input
-                        type="radio"
-                        name={`tasking-schedule-${request.id}`}
-                        checked={request.ignored || !request.submitted}
-                        onChange={() => onIgnoreTaskingRequest(request.id)}
-                      />
-                    </label>
-                  </span>
-                )}
+                {(['High', 'Medium', 'Low'] as const).map(priority => {
+                  const selected = schedulerPriority === priority && request.submitted && !request.ignored;
+                  return (
+                    <button
+                      key={`${request.id}-${priority}`}
+                      type="button"
+                      disabled={!canSubmit}
+                      onClick={() => onSetTaskingSchedulerPriority(request.id, priority)}
+                      className={`h-8 rounded-md border px-2 text-xs font-bold transition ${
+                        selected
+                          ? priority === 'High'
+                            ? 'border-red-300/70 bg-red-500/25 text-red-100'
+                            : priority === 'Medium'
+                              ? 'border-amber-300/70 bg-amber-500/25 text-amber-100'
+                              : 'border-green-300/70 bg-green-500/25 text-green-100'
+                          : canSubmit
+                            ? 'border-slate-600 bg-slate-800 text-slate-200 hover:border-cyan-300/70 hover:bg-cyan-500/10'
+                            : 'cursor-not-allowed border-slate-700 bg-slate-800/60 text-slate-500'
+                      }`}
+                    >
+                      {priority}
+                    </button>
+                  );
+                })}
                 <button
                   onClick={() => onRemoveTaskingRequest(request.id)}
                   className="h-8 rounded-md border border-red-500/30 bg-red-500/10 px-2 text-xs font-semibold text-red-200 hover:border-red-400/60 hover:bg-red-500/20"
@@ -2038,6 +1990,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     callsignBase: request.callsignBase || defaultUnitCallsign || '',
     callsignNumber: Number.isFinite(Number(request.callsignNumber)) ? Math.max(0, Math.min(100, Math.floor(Number(request.callsignNumber)))) : 0,
     callsign: request.callsign || (request.callsignBase || defaultUnitCallsign ? buildUnitEventCallsign(request.callsignBase || defaultUnitCallsign, request.callsignNumber || 0) : ''),
+    schedulerPriority: request.schedulerPriority === 'Medium' || request.schedulerPriority === 'Low'
+      ? request.schedulerPriority
+      : request.isMandatory === false
+        ? 'Medium'
+        : 'High',
     isMandatory: request.isMandatory !== false,
     saved: Boolean(request.saved || request.submitted),
     submitted: Boolean(request.submitted),
@@ -2210,6 +2167,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       callsignBase: defaultUnitCallsign,
       callsignNumber: 0,
       callsign: defaultUnitCallsign ? buildUnitEventCallsign(defaultUnitCallsign, 0) : '',
+      schedulerPriority: 'High',
       isMandatory: true,
       saved: false,
       submitted: false,
@@ -2295,12 +2253,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const eventCallsign = request.callsign || (callsignBase ? buildUnitEventCallsign(callsignBase, callsignNumber) : '');
     const startTime = Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime;
     const flightType = isSingleSeatAircraft || request.flightType === 'Solo' ? 'Solo' : 'Dual';
+    const schedulerPriority: TaskingSchedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
     const notes = [
       `Tasking request: ${tasking}`,
       `Date: ${request.date || 'Any build date'}`,
       `Takeoff: ${formatTimeLabel(startTime)}`,
       `Duration: ${request.duration.toFixed(1)}`,
-      `Solo/Dual: ${flightType}`,
+      `Scheduler priority: ${schedulerPriority}`,
       `Dep Point: ${depPoint}`,
       `Arrival Point: ${arrivalPoint}`,
       `Aircraft requested: ${aircraftCount}`,
@@ -2328,7 +2287,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       destination: arrivalPoint,
       isTimeFixed: true,
       isTaskingRequest: true,
-      isMandatoryTasking: request.isMandatory !== false,
+      isMandatoryTasking: schedulerPriority === 'High',
       taskingName: tasking,
       taskingDisplayLabel,
       taskingRequestId: request.id,
@@ -2336,11 +2295,29 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       taskingAircraftCount: aircraftCount,
       dateCreated: new Date().toISOString(),
       notes,
-      priority: 'High',
+      priority: schedulerPriority,
       aircraftConfigId,
       acceptableAircraftConfigs: [aircraftConfigId],
       crewRequirement: request.crewRequirement || { mode: 'aircraft_default' },
     }));
+  };
+
+  const setTaskingSchedulerPriority = (id: string, schedulerPriority: TaskingSchedulerPriority) => {
+    const request = taskingRequests.find(item => item.id === id);
+    if (!request) return;
+    const nextRequest: TaskingRequest = {
+      ...request,
+      schedulerPriority,
+      isMandatory: schedulerPriority === 'High',
+      saved: true,
+      submitted: true,
+      ignored: false,
+    };
+    removeTaskingPriorityEvents(id);
+    const priorityEvents = buildTaskingPriorityEvents(nextRequest);
+    onAddPriorityEvents(priorityEvents);
+    setTaskingRequests(prev => prev.map(item => item.id === id ? nextRequest : item));
+    logAudit('Priorities', 'Edit', 'Set tasking scheduler priority', `${request.tasking || 'Untitled tasking'}: ${schedulerPriority}`);
   };
 
   const removeTaskingRequest = (id: string) => {
@@ -2861,6 +2838,64 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     }, [traineesData, traineeLMPs, scores, syllabusDetails]);
   const showRemedialPriorityQueue = false;
 
+  const getCrewRequirementSignature = (requirement?: CrewRequirement | null): string => (
+    (normaliseCrewRequirement(requirement).roles || [])
+      .map((role) => [
+        String(role.role || '').trim().toUpperCase(),
+        Math.max(0, Math.min(20, Math.round(Number(role.count) || 0))),
+        (Array.isArray(role.eligibleRoles) ? role.eligibleRoles : [])
+          .map(value => String(value || '').trim().toUpperCase())
+          .filter(Boolean)
+          .sort()
+          .join('|'),
+      ].join(':'))
+      .sort()
+      .join(';')
+  );
+
+  const getPriorityEventCrewRequirementName = (event: ScheduleEvent): string => {
+    if (!event.crewRequirement) return 'N/A';
+    const normalised = normaliseCrewRequirement(event.crewRequirement);
+    if (normalised.mode === 'aircraft_default') {
+      return crewRequirementPresets.find(preset => preset.kind === 'standard')?.label || 'Standard Crew';
+    }
+    const eventSignature = getCrewRequirementSignature(event.crewRequirement);
+    const matchingPreset = crewRequirementPresets.find(preset => (
+      preset.kind === 'alternate' &&
+      getCrewRequirementSignature({ mode: 'custom', roles: preset.roles || [] }) === eventSignature
+    ));
+    return matchingPreset?.label || formatCrewRequirementSummary(event.crewRequirement, aircraftCrewComposition, crewPositionTerminology);
+  };
+
+  const getPriorityEventSchedulerValue = (event: ScheduleEvent): 'Mandatory' | 'Desirable' => (
+    event.isMandatoryTasking || event.priority === 'High' ? 'Mandatory' : 'Desirable'
+  );
+
+  const updatePriorityEventScheduler = (event: ScheduleEvent, schedulerValue: 'Mandatory' | 'Desirable' | 'Ignore') => {
+    if (schedulerValue === 'Ignore') {
+      onDeletePriorityEvent(event.id);
+      return;
+    }
+    const schedulerPriority: TaskingSchedulerPriority = schedulerValue === 'Mandatory' ? 'High' : 'Medium';
+    onUpdatePriorityEvent(event.id, {
+      priority: schedulerPriority,
+      isMandatoryTasking: schedulerValue === 'Mandatory',
+    });
+    if (event.taskingRequestId) {
+      setTaskingRequests(prev => prev.map(request => (
+        request.id === event.taskingRequestId
+          ? {
+              ...request,
+              schedulerPriority,
+              isMandatory: schedulerValue === 'Mandatory',
+              saved: true,
+              submitted: true,
+              ignored: false,
+            }
+          : request
+      )));
+    }
+  };
 
   const PriorityEventTable: React.FC<{ events: ScheduleEvent[] }> = ({ events }) => (
       <div className="overflow-x-auto">
@@ -2870,11 +2905,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <th className="py-2 px-2 text-left">Name</th>
                     <th className="py-2 px-2 text-left">Event</th>
                     <th className="py-2 px-2 text-left">Date</th>
-                    <th className="py-2 px-2 text-left">Solo/Dual</th>
+                    <th className="py-2 px-2 text-left">Crew Required</th>
                     <th className="py-2 px-2 text-left">Currency</th>
                     <th className="py-2 px-2 text-left">Config</th>
                     <th className="py-2 px-2 text-left">Priority</th>
-                    <th className="py-2 px-2 text-left">Action</th>
+                    <th className="py-2 px-2 text-left">Scheduler</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
@@ -2892,7 +2927,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         <td className={`py-2 px-2 ${rowText}`}>{personName}</td>
                         <td className={`py-2 px-2 ${rowText} font-semibold`}>{event.flightNumber}</td>
                         <td className={`py-2 px-2 ${rowText} font-mono`}>{formatPriorityDate(event.date)}</td>
-                        <td className={`py-2 px-2 ${rowText}`}>{event.soloOrDual || event.flightType || 'N/A'}</td>
+                        <td className={`py-2 px-2 ${rowText}`}>{getPriorityEventCrewRequirementName(event)}</td>
                         <td className={`py-2 px-2 ${rowText}`}>{event.currency || 'N/A'}</td>
                         <td className={`py-2 px-2 ${rowText} font-semibold`}>{getAircraftConfigSummary(event)}</td>
                         <td className={`py-2 px-2 font-semibold ${
@@ -2903,15 +2938,19 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     : 'text-red-300'
                         }`}>{event.priority || 'High'}</td>
                         <td className="py-2 px-2">
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onDeletePriorityEvent(event.id); }} 
-                                className="p-1 text-gray-400 hover:text-red-400"
-                                title="Delete event"
+                            <select
+                                value={getPriorityEventSchedulerValue(event)}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  updatePriorityEventScheduler(event, e.target.value as 'Mandatory' | 'Desirable' | 'Ignore');
+                                }}
+                                className="h-8 rounded-md border border-slate-600 bg-slate-900 px-2 text-xs font-semibold text-white focus:ring-cyan-500"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                </svg>
-                            </button>
+                                <option value="Mandatory">Mandatory</option>
+                                <option value="Desirable">Desirable</option>
+                                <option value="Ignore">Ignore</option>
+                            </select>
                         </td>
                     </tr>
                     );
@@ -3620,9 +3659,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               onAddTaskingRequest={addTaskingRequest}
               onUpdateTaskingRequest={updateTaskingRequest}
               onRemoveTaskingRequest={removeTaskingRequest}
-              onSaveTaskingRequest={saveTaskingRequest}
-              onSubmitTaskingRequest={submitTaskingRequest}
-              onIgnoreTaskingRequest={ignoreTaskingRequest}
+              onSetTaskingSchedulerPriority={setTaskingSchedulerPriority}
             />
         </div>
 
