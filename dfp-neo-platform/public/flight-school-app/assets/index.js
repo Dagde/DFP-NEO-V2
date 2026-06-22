@@ -29750,6 +29750,10 @@ const PrioritiesViewWithMenu = (props) => {
     });
   };
   const handleFixedCrewTabClick = (tabId) => {
+    if (expandedFixedCrewTab === tabId) {
+      setExpandedFixedCrewTab(null);
+      return;
+    }
     setActiveFixedCrewTab(tabId);
     setExpandedFixedCrewTab(tabId);
     setActiveSection(tabId === "events-builder" ? "directed-events" : "build-timeline");

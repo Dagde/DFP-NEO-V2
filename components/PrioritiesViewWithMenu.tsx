@@ -197,6 +197,10 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         });
     };
     const handleFixedCrewTabClick = (tabId: FixedCrewPlannerTab) => {
+        if (expandedFixedCrewTab === tabId) {
+            setExpandedFixedCrewTab(null);
+            return;
+        }
         setActiveFixedCrewTab(tabId);
         setExpandedFixedCrewTab(tabId);
         setActiveSection(tabId === 'events-builder' ? 'directed-events' : 'build-timeline');
