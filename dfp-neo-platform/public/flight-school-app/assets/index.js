@@ -29704,16 +29704,17 @@ const PrioritiesViewWithMenu = (props) => {
   ];
   const fixedCrewPlannerSections = {
     "events-builder": [
-      { label: "Highest Priority", target: ".highest-priority-events-card" },
-      { label: "Tasking", target: ".tasking-events-card" },
+      { label: "Highest Priority Table", target: ".highest-priority-events-card" },
+      { label: "Tasking Section", target: ".tasking-events-card" },
+      { label: "Currency", heading: true },
       { label: "Consolidated Currency Event Build", target: ".consolidated-currency-card" },
       { label: "Specific Currency Requests", target: ".specific-currency-card" },
       { label: "Flights", target: ".specific-currency-card" },
-      { label: `${resourceLabels.ftd} / FTD`, target: ".specific-currency-card" },
+      { label: "Sim / FTD", target: ".specific-currency-card" },
       { label: "Bulk Currency Builder", target: ".bulk-currency-card" },
       { label: "Optional Currency Events", target: ".optional-currency-card" },
       { label: "Currency Flights", target: ".optional-currency-card" },
-      { label: `Currency ${resourceLabels.ftd} / FTDs`, target: ".optional-currency-card" },
+      { label: "Currency Sim / FTDs", target: ".optional-currency-card" },
       { label: "Remedial Priority Queue", target: ".remedial-priority-card" }
     ],
     "build-priorities": [
@@ -29789,39 +29790,50 @@ const PrioritiesViewWithMenu = (props) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `${isFixedCrewModel ? "mt-1 text-xs leading-5" : "mt-2 text-sm"} text-slate-300`, children: isFixedCrewModel ? "Plan directed events and build weighting for the Fixed Crew model." : "Configure the build in the same order a supervisor would plan the DFP by hand." })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: `flex-1 overflow-y-auto ${isFixedCrewModel ? "p-0" : "p-4 space-y-3"}`, children: [
-        isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col items-center gap-2 border-b border-slate-700/60 p-3", children: fixedCrewTabs.map((tab) => {
+        isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 border-b border-slate-700/60 p-3", children: fixedCrewTabs.map((tab) => {
           const isActive = activeFixedCrewTab === tab.id;
-          return /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: () => handleFixedCrewTabClick(tab.id),
-              className: `flex h-[41px] w-[110px] items-center justify-center rounded-md border px-2 text-center text-[11px] font-bold leading-tight transition ${isActive ? "border-cyan-300 bg-cyan-500/15 text-cyan-50 shadow shadow-cyan-950/30" : "border-slate-700/70 bg-slate-900/70 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80"}`,
-              children: tab.label
-            },
-            tab.id
-          );
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                type: "button",
+                onClick: () => handleFixedCrewTabClick(tab.id),
+                className: `relative flex h-[41px] w-full items-center justify-between rounded-l-lg border px-3 text-left text-sm font-bold leading-tight transition ${isActive ? "translate-x-3 rounded-r-none border-cyan-300/70 border-r-slate-950 bg-cyan-500/18 text-cyan-50 shadow-[-10px_0_22px_rgba(8,145,178,0.16)]" : "rounded-r-lg border-slate-700/70 bg-slate-900/70 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80"}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: tab.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-base transition ${isActive ? "text-cyan-200" : "text-slate-500"}`, children: "v" })
+                ]
+              }
+            ),
+            isActive && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "mt-2 overflow-hidden rounded-lg border border-slate-700/60 bg-slate-900/55 animate-[fixedCrewPlannerDrop_240ms_ease-out]",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-slate-700/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: tab.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1 p-2", children: fixedCrewPlannerSections[tab.id].map((section) => section.heading ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "div",
+                    {
+                      className: "px-2 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-200/70",
+                      children: section.label
+                    },
+                    `${tab.id}-${section.label}`
+                  ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => section.target && handleFixedCrewSectionClick(section.target),
+                      className: "block w-full rounded-md px-2 py-1.5 text-left text-[11px] font-semibold leading-snug text-slate-300 transition hover:bg-cyan-500/10 hover:text-cyan-100",
+                      children: section.label
+                    },
+                    `${tab.id}-${section.label}`
+                  )) })
+                ]
+              },
+              `${tab.id}-sections`
+            )
+          ] }, tab.id);
         }) }),
-        isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            className: "mx-3 mt-3 overflow-hidden rounded-lg border border-slate-700/60 bg-slate-900/55 animate-[fixedCrewPlannerDrop_220ms_ease-out]",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-slate-700/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: "Sections" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1 p-2", children: fixedCrewPlannerSections[activeFixedCrewTab].map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => handleFixedCrewSectionClick(section.target),
-                  className: "block w-full rounded-md px-2 py-1.5 text-left text-[11px] font-semibold leading-snug text-slate-300 transition hover:bg-cyan-500/10 hover:text-cyan-100",
-                  children: section.label
-                },
-                `${activeFixedCrewTab}-${section.label}`
-              )) })
-            ]
-          },
-          activeFixedCrewTab
-        ),
         !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "px-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500", children: "Build Flow" }),
         !isFixedCrewModel && visibleWorkflowItems.map((item) => {
           const isActive = activeSection === item.id;
