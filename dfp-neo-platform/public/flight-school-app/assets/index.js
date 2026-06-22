@@ -29789,14 +29789,14 @@ const PrioritiesViewWithMenu = (props) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `${isFixedCrewModel ? "mt-1 text-xs leading-5" : "mt-2 text-sm"} text-slate-300`, children: isFixedCrewModel ? "Plan directed events and build weighting for the Fixed Crew model." : "Configure the build in the same order a supervisor would plan the DFP by hand." })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: `flex-1 overflow-y-auto ${isFixedCrewModel ? "p-0" : "p-4 space-y-3"}`, children: [
-        isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex w-[220px] border-b border-slate-700/60", children: fixedCrewTabs.map((tab) => {
+        isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col items-center gap-2 border-b border-slate-700/60 p-3", children: fixedCrewTabs.map((tab) => {
           const isActive = activeFixedCrewTab === tab.id;
           return /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
               onClick: () => handleFixedCrewTabClick(tab.id),
-              className: `flex h-[41px] w-[110px] items-center justify-center border-b px-2 text-center text-[11px] font-bold leading-tight transition ${isActive ? "border-cyan-300 bg-cyan-500/15 text-cyan-50 shadow shadow-cyan-950/30" : "border-transparent bg-slate-900/70 text-slate-300 hover:bg-slate-800/80"}`,
+              className: `flex h-[41px] w-[110px] items-center justify-center rounded-md border px-2 text-center text-[11px] font-bold leading-tight transition ${isActive ? "border-cyan-300 bg-cyan-500/15 text-cyan-50 shadow shadow-cyan-950/30" : "border-slate-700/70 bg-slate-900/70 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80"}`,
               children: tab.label
             },
             tab.id

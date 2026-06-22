@@ -245,7 +245,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                 </div>
                 <nav className={`flex-1 overflow-y-auto ${isFixedCrewModel ? 'p-0' : 'p-4 space-y-3'}`}>
                     {isFixedCrewModel && (
-                        <div className="flex w-[220px] border-b border-slate-700/60">
+                        <div className="flex flex-col items-center gap-2 border-b border-slate-700/60 p-3">
                             {fixedCrewTabs.map(tab => {
                                 const isActive = activeFixedCrewTab === tab.id;
                                 return (
@@ -253,10 +253,10 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                                         key={tab.id}
                                         type="button"
                                         onClick={() => handleFixedCrewTabClick(tab.id)}
-                                        className={`flex h-[41px] w-[110px] items-center justify-center border-b px-2 text-center text-[11px] font-bold leading-tight transition ${
+                                        className={`flex h-[41px] w-[110px] items-center justify-center rounded-md border px-2 text-center text-[11px] font-bold leading-tight transition ${
                                             isActive
                                                 ? 'border-cyan-300 bg-cyan-500/15 text-cyan-50 shadow shadow-cyan-950/30'
-                                                : 'border-transparent bg-slate-900/70 text-slate-300 hover:bg-slate-800/80'
+                                                : 'border-slate-700/70 bg-slate-900/70 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80'
                                         }`}
                                     >
                                         {tab.label}
