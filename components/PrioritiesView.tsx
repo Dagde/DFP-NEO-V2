@@ -3003,10 +3003,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       <div className="overflow-hidden rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20">
         <table className="w-full table-fixed border-collapse text-[11px] leading-tight">
             <colgroup>
-                <col className="w-[14%]" />
                 <col className="w-[10%]" />
-                <col className="w-[12%]" />
-                <col className="w-[22%]" />
+                <col className="w-[21%]" />
+                <col className="w-[9%]" />
+                <col className="w-[18%]" />
                 <col className="w-[8%]" />
                 <col className="w-[13%]" />
                 <col className="w-[8%]" />

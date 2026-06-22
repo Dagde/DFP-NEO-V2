@@ -28501,10 +28501,10 @@ const PrioritiesView = ({
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed border-collapse text-[11px] leading-tight", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[14%]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[10%]" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[12%]" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[22%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[21%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[9%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[18%]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[13%]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" }),
