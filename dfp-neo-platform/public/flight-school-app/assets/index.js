@@ -29570,14 +29570,13 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-center", children: "Push" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Person" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Event" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Crew" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Config" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Crew Required" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Currencies" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-right", children: "Action" })
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-700/60", children: [
-            currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 8, className: "px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }) }),
+            currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, className: "px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }) }),
             currencyDraftEvents.map((draft) => {
               const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: `align-top hover:bg-sky-900/40 ${isPublishedInActiveSchedule ? "text-green-300" : ""}`, children: [
@@ -29605,7 +29604,6 @@ const PrioritiesView = ({
                     ]
                   }
                 ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${isPublishedInActiveSchedule ? "text-green-300" : "text-slate-300"}`, children: draft.crewMode === "solo" ? "Solo" : draft.audience === "trainee" ? "Dual" : "With other pilot" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   AircraftConfigSelect,
                   {

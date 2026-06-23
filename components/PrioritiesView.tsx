@@ -4105,7 +4105,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                             <th className="px-2 py-2 text-center">Push</th>
                             <th className="px-2 py-2 text-left">Person</th>
                             <th className="px-2 py-2 text-left">Event</th>
-                            <th className="px-2 py-2 text-left">Crew</th>
                             <th className="px-2 py-2 text-left">Config</th>
                             <th className="px-2 py-2 text-left">Crew Required</th>
                             <th className="px-2 py-2 text-left">Currencies</th>
@@ -4114,7 +4113,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </thead>
                     <tbody className="divide-y divide-slate-700/60">
                         {currencyDraftEvents.length === 0 && (
-                            <tr><td colSpan={8} className="px-3 py-6 text-center text-sm text-slate-500">No Currency events built yet. Open a trainee or staff builder above to create the review list.</td></tr>
+                            <tr><td colSpan={7} className="px-3 py-6 text-center text-sm text-slate-500">No Currency events built yet. Open a trainee or staff builder above to create the review list.</td></tr>
                         )}
                         {currencyDraftEvents.map(draft => {
                             const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
@@ -4143,7 +4142,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         ))}
                                     </select>
                                 </td>
-                                <td className={`px-2 py-2 ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-slate-300'}`}>{draft.crewMode === 'solo' ? 'Solo' : draft.audience === 'trainee' ? 'Dual' : 'With other pilot'}</td>
                                 <td className="px-2 py-2">
                                     <AircraftConfigSelect
                                         value={draft.aircraftConfigId}
