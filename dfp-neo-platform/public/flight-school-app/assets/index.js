@@ -5042,7 +5042,9 @@ const CrewRequirementEditor = ({
   operationalModel: operationalModel2,
   crewRequirementPresets = [],
   onChange,
-  compact = false
+  compact = false,
+  showSummary = true,
+  showAircraftDefaultSummary = true
 }) => {
   const normalised = normaliseCrewRequirement(value);
   const effectiveSummary = formatCrewRequirementSummary(value, aircraftCrewComposition, crewPositionTerminology);
@@ -5130,12 +5132,12 @@ const CrewRequirementEditor = ({
           ]
         }
       ),
-      compact && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 break-words text-slate-400", children: effectiveSummary })
+      compact && showSummary && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 break-words text-slate-400", children: effectiveSummary })
     ] }),
-    normalised.mode === "aircraft_default" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-2 text-[11px] leading-5 text-slate-500", children: [
+    normalised.mode === "aircraft_default" ? showAircraftDefaultSummary ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-2 text-[11px] leading-5 text-slate-500", children: [
       "Aircraft default: ",
       aircraftDefaultSummary
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2", children: [
+    ] }) : null : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2", children: [
       customRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_4.5rem_2rem] items-center gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "select",
@@ -29565,104 +29567,123 @@ const PrioritiesView = ({
             )
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-950/80 text-xs uppercase text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-center", children: "Push" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Person" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Event" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Config" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Crew Required" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Currencies" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-right", children: "Action" })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-700/60", children: [
-            currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, className: "px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }) }),
-            currencyDraftEvents.map((draft) => {
-              const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: `align-top hover:bg-sky-900/40 ${isPublishedInActiveSchedule ? "text-green-300" : ""}`, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "checkbox",
-                    checked: draft.selected,
-                    disabled: isPublishedInActiveSchedule,
-                    onChange: () => setCurrencyDraftEvents((prev) => prev.map((event) => event.id === draft.id ? { ...event, selected: !event.selected } : event)),
-                    className: "h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
-                  }
-                ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 font-semibold ${isPublishedInActiveSchedule ? "text-green-300" : "text-white"}`, children: draft.personName }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "select",
-                  {
-                    value: draft.currencyProfileName,
-                    disabled: isPublishedInActiveSchedule,
-                    onChange: (event) => applyCurrencyProfileToDraftEvent(draft.id, event.target.value),
-                    className: "w-full min-w-[11rem] rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-60",
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: draft.eventType === "flight" ? "CURR Flight" : `CURR ${ftdLabel}` }),
-                      sctEvents.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: currencyProfileNameLabels[name] || name }, `${draft.id}-${name}`))
-                    ]
-                  }
-                ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  AircraftConfigSelect,
-                  {
-                    value: draft.aircraftConfigId,
-                    definitions: aircraftConfigOptions,
-                    includeAny: true,
-                    disabled: isPublishedInActiveSchedule || draft.eventType !== "flight",
-                    onChange: (aircraftConfigId) => setCurrencyDraftEvents((prev) => prev.map(
-                      (event) => event.id === draft.id ? { ...event, aircraftConfigId } : event
-                    ))
-                  }
-                ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "min-w-[260px] px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  CrewRequirementEditor,
-                  {
-                    value: draft.crewRequirement,
-                    aircraftCrewComposition,
-                    crewPositionTerminology,
-                    operationalModel: operationalModel2,
-                    compact: true,
-                    onChange: (crewRequirement) => setCurrencyDraftEvents((prev) => prev.map(
-                      (event) => event.id === draft.id ? { ...event, crewRequirement } : event
-                    ))
-                  }
-                ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      onClick: () => setOpenCurrencyDraftId((prev) => prev === draft.id ? null : draft.id),
-                      className: "rounded-md border border-slate-600 bg-slate-950 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:border-cyan-500/60",
-                      children: draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : "Select currencies"
-                    }
-                  ),
-                  openCurrencyDraftId === draft.id && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-20 mt-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-slate-600 bg-slate-950 p-3 shadow-xl", children: draft.dueCurrencies.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-500", children: "No due currencies listed." }) : draft.dueCurrencies.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-2 flex cursor-pointer items-start gap-2 text-xs text-slate-200 last:mb-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+          currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }),
+          currencyDraftEvents.map((draft) => {
+            const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
+            const tileBaseClass = `h-[170px] w-[100px] shrink-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? "border-green-400/40 bg-green-950/20" : "border-slate-700 bg-slate-950/70"}`;
+            const tileLabelClass = "mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
+            return /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "div",
+              {
+                className: `overflow-x-auto rounded-lg border border-slate-700/80 bg-slate-950/35 p-3 ${isPublishedInActiveSchedule ? "text-green-300" : ""}`,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-max gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col items-center justify-between text-center`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Push" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "input",
                       {
                         type: "checkbox",
-                        checked: draft.selectedCurrencies.includes(currency),
-                        onChange: () => toggleDraftCurrency(draft.id, currency),
-                        className: "mt-0.5 h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                        checked: draft.selected,
+                        disabled: isPublishedInActiveSchedule,
+                        onChange: () => setCurrencyDraftEvents((prev) => prev.map((event) => event.id === draft.id ? { ...event, selected: !event.selected } : event)),
+                        className: "h-5 w-5 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
                       }
                     ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: currency })
-                  ] }, currency)) })
-                ] }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: () => setCurrencyDraftEvents((prev) => prev.filter((event) => event.id !== draft.id)),
-                    className: "rounded-md border border-red-500/30 px-2 py-1 text-xs font-semibold text-red-300 hover:bg-red-500/10",
-                    children: "Remove"
-                  }
-                ) })
-              ] }, draft.id);
-            })
-          ] })
-        ] }) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold text-slate-500", children: isPublishedInActiveSchedule ? "Published" : "Queue" })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Person" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `min-w-0 text-sm font-semibold leading-snug ${isPublishedInActiveSchedule ? "text-green-300" : "text-white"}`, children: draft.personName })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Event" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        value: draft.currencyProfileName,
+                        disabled: isPublishedInActiveSchedule,
+                        onChange: (event) => applyCurrencyProfileToDraftEvent(draft.id, event.target.value),
+                        className: "w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-60",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: draft.eventType === "flight" ? "CURR Flight" : `CURR ${ftdLabel}` }),
+                          sctEvents.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: currencyProfileNameLabels[name] || name }, `${draft.id}-${name}`))
+                        ]
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "CONFIG" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      AircraftConfigSelect,
+                      {
+                        value: draft.aircraftConfigId,
+                        definitions: aircraftConfigOptions,
+                        includeAny: true,
+                        disabled: isPublishedInActiveSchedule || draft.eventType !== "flight",
+                        onChange: (aircraftConfigId) => setCurrencyDraftEvents((prev) => prev.map(
+                          (event) => event.id === draft.id ? { ...event, aircraftConfigId } : event
+                        ))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${tileBaseClass} overflow-hidden`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    CrewRequirementEditor,
+                    {
+                      value: draft.crewRequirement,
+                      aircraftCrewComposition,
+                      crewPositionTerminology,
+                      operationalModel: operationalModel2,
+                      compact: true,
+                      showSummary: false,
+                      showAircraftDefaultSummary: false,
+                      onChange: (crewRequirement) => setCurrencyDraftEvents((prev) => prev.map(
+                        (event) => event.id === draft.id ? { ...event, crewRequirement } : event
+                      ))
+                    }
+                  ) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Currencies" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          onClick: () => setOpenCurrencyDraftId((prev) => prev === draft.id ? null : draft.id),
+                          className: "w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 hover:border-cyan-500/60",
+                          children: draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : "Select"
+                        }
+                      ),
+                      openCurrencyDraftId === draft.id && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-20 mt-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-slate-600 bg-slate-950 p-3 shadow-xl", children: draft.dueCurrencies.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-500", children: "No due currencies listed." }) : draft.dueCurrencies.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-2 flex cursor-pointer items-start gap-2 text-xs text-slate-200 last:mb-0", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "checkbox",
+                            checked: draft.selectedCurrencies.includes(currency),
+                            onChange: () => toggleDraftCurrency(draft.id, currency),
+                            className: "mt-0.5 h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: currency })
+                      ] }, currency)) })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col justify-between text-right`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Action" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        onClick: () => setCurrencyDraftEvents((prev) => prev.filter((event) => event.id !== draft.id)),
+                        className: "rounded-md border border-red-500/30 px-2 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10",
+                        children: "Remove"
+                      }
+                    )
+                  ] })
+                ] })
+              },
+              draft.id
+            );
+          })
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "highest-priority-events-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Highest Priority Events" }),

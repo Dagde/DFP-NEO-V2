@@ -26,6 +26,8 @@ interface CrewRequirementEditorProps {
   crewRequirementPresets?: CrewRequirementPreset[];
   onChange: (value: CrewRequirement) => void;
   compact?: boolean;
+  showSummary?: boolean;
+  showAircraftDefaultSummary?: boolean;
 }
 
 const makeRoleId = (): string => `crew-role-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -65,6 +67,8 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
   crewRequirementPresets = [],
   onChange,
   compact = false,
+  showSummary = true,
+  showAircraftDefaultSummary = true,
 }) => {
   const normalised = normaliseCrewRequirement(value);
   const effectiveSummary = formatCrewRequirementSummary(value, aircraftCrewComposition, crewPositionTerminology);
@@ -170,14 +174,14 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
             <option value="custom">Custom crew</option>
           </select>
         )}
-        {compact && <div className="min-w-0 break-words text-slate-400">{effectiveSummary}</div>}
+        {compact && showSummary && <div className="min-w-0 break-words text-slate-400">{effectiveSummary}</div>}
       </div>
 
-      {normalised.mode === 'aircraft_default' ? (
+      {normalised.mode === 'aircraft_default' ? showAircraftDefaultSummary ? (
         <p className="mt-2 text-[11px] leading-5 text-slate-500">
           Aircraft default: {aircraftDefaultSummary}
         </p>
-      ) : (
+      ) : null : (
         <div className="mt-3 space-y-2">
           {customRows.map((row, index) => (
             <div key={`${row.crewPositionId || row.role}-${index}`} className="grid grid-cols-[1fr_4.5rem_2rem] items-center gap-2">

@@ -4098,51 +4098,55 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </button>
                 </div>
             </div>
-            <div className="overflow-x-auto rounded-lg border border-slate-700">
-                <table className="min-w-full text-sm">
-                    <thead className="bg-slate-950/80 text-xs uppercase text-slate-400">
-                        <tr>
-                            <th className="px-2 py-2 text-center">Push</th>
-                            <th className="px-2 py-2 text-left">Person</th>
-                            <th className="px-2 py-2 text-left">Event</th>
-                            <th className="px-2 py-2 text-left">Config</th>
-                            <th className="px-2 py-2 text-left">Crew Required</th>
-                            <th className="px-2 py-2 text-left">Currencies</th>
-                            <th className="px-2 py-2 text-right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-700/60">
-                        {currencyDraftEvents.length === 0 && (
-                            <tr><td colSpan={7} className="px-3 py-6 text-center text-sm text-slate-500">No Currency events built yet. Open a trainee or staff builder above to create the review list.</td></tr>
-                        )}
-                        {currencyDraftEvents.map(draft => {
-                            const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
-                            return (
-                            <tr key={draft.id} className={`align-top hover:bg-sky-900/40 ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}>
-                                <td className="px-2 py-2 text-center">
+            <div className="space-y-3">
+                {currencyDraftEvents.length === 0 && (
+                    <div className="rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
+                        No Currency events built yet. Open a trainee or staff builder above to create the review list.
+                    </div>
+                )}
+                {currencyDraftEvents.map(draft => {
+                    const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
+                    const tileBaseClass = `h-[170px] w-[100px] shrink-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? 'border-green-400/40 bg-green-950/20' : 'border-slate-700 bg-slate-950/70'}`;
+                    const tileLabelClass = "mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
+                    return (
+                        <div
+                            key={draft.id}
+                            className={`overflow-x-auto rounded-lg border border-slate-700/80 bg-slate-950/35 p-3 ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}
+                        >
+                            <div className="flex min-w-max gap-2">
+                                <div className={`${tileBaseClass} flex flex-col items-center justify-between text-center`}>
+                                    <div className={tileLabelClass}>Push</div>
                                     <input
                                         type="checkbox"
                                         checked={draft.selected}
                                         disabled={isPublishedInActiveSchedule}
                                         onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: !event.selected } : event))}
-                                        className="h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
+                                        className="h-5 w-5 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
                                     />
-                                </td>
-                                <td className={`px-2 py-2 font-semibold ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-white'}`}>{draft.personName}</td>
-                                <td className="px-2 py-2">
+                                    <div className="text-[10px] font-semibold text-slate-500">{isPublishedInActiveSchedule ? 'Published' : 'Queue'}</div>
+                                </div>
+                                <div className={`${tileBaseClass} flex flex-col`}>
+                                    <div className={tileLabelClass}>Person</div>
+                                    <div className={`min-w-0 text-sm font-semibold leading-snug ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-white'}`}>
+                                        {draft.personName}
+                                    </div>
+                                </div>
+                                <div className={`${tileBaseClass} flex flex-col`}>
+                                    <div className={tileLabelClass}>Event</div>
                                     <select
                                         value={draft.currencyProfileName}
                                         disabled={isPublishedInActiveSchedule}
                                         onChange={(event) => applyCurrencyProfileToDraftEvent(draft.id, event.target.value)}
-                                        className="w-full min-w-[11rem] rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         <option value="">{draft.eventType === 'flight' ? 'CURR Flight' : `CURR ${ftdLabel}`}</option>
                                         {sctEvents.map(name => (
                                             <option key={`${draft.id}-${name}`} value={name}>{currencyProfileNameLabels[name] || name}</option>
                                         ))}
                                     </select>
-                                </td>
-                                <td className="px-2 py-2">
+                                </div>
+                                <div className={`${tileBaseClass} flex flex-col`}>
+                                    <div className={tileLabelClass}>CONFIG</div>
                                     <AircraftConfigSelect
                                         value={draft.aircraftConfigId}
                                         definitions={aircraftConfigOptions}
@@ -4152,26 +4156,29 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                             event.id === draft.id ? { ...event, aircraftConfigId } : event
                                         ))}
                                     />
-                                </td>
-                                <td className="min-w-[260px] px-2 py-2">
+                                </div>
+                                <div className={`${tileBaseClass} overflow-hidden`}>
                                     <CrewRequirementEditor
                                         value={draft.crewRequirement}
                                         aircraftCrewComposition={aircraftCrewComposition}
                                         crewPositionTerminology={crewPositionTerminology}
                                         operationalModel={operationalModel}
                                         compact
+                                        showSummary={false}
+                                        showAircraftDefaultSummary={false}
                                         onChange={(crewRequirement) => setCurrencyDraftEvents(prev => prev.map(event =>
                                             event.id === draft.id ? { ...event, crewRequirement } : event
                                         ))}
                                     />
-                                </td>
-                                <td className="px-2 py-2">
+                                </div>
+                                <div className={`${tileBaseClass} flex flex-col`}>
+                                    <div className={tileLabelClass}>Currencies</div>
                                     <div className="relative">
                                         <button
                                             onClick={() => setOpenCurrencyDraftId(prev => prev === draft.id ? null : draft.id)}
-                                            className="rounded-md border border-slate-600 bg-slate-950 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:border-cyan-500/60"
+                                            className="w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 hover:border-cyan-500/60"
                                         >
-                                            {draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : 'Select currencies'}
+                                            {draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : 'Select'}
                                         </button>
                                         {openCurrencyDraftId === draft.id && (
                                             <div className="absolute z-20 mt-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-slate-600 bg-slate-950 p-3 shadow-xl">
@@ -4191,19 +4198,20 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                             </div>
                                         )}
                                     </div>
-                                </td>
-                                <td className="px-2 py-2 text-right">
+                                </div>
+                                <div className={`${tileBaseClass} flex flex-col justify-between text-right`}>
+                                    <div className={tileLabelClass}>Action</div>
                                     <button
                                         onClick={() => setCurrencyDraftEvents(prev => prev.filter(event => event.id !== draft.id))}
-                                        className="rounded-md border border-red-500/30 px-2 py-1 text-xs font-semibold text-red-300 hover:bg-red-500/10"
+                                        className="rounded-md border border-red-500/30 px-2 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10"
                                     >
                                         Remove
                                     </button>
-                                </td>
-                            </tr>
-                        )})}
-                    </tbody>
-                </table>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
 
