@@ -2678,7 +2678,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         }
     };
 
-    const addRequestButtonClass = 'btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight';
     const statusButtonClass = 'btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed';
     const applyCurrencyProfile = (requestId: string, eventValue: string) => {
       const profile = currencyProfilesForContext.find(candidate => (
@@ -2865,9 +2864,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   );
               })}
           </div>
-          <button onClick={() => onAddSctRequest(type)} className={`mt-2 ${addRequestButtonClass}`}>
-              <span>+ Add<br />Request</span>
-          </button>
       </div>
   )};
 
@@ -3808,7 +3804,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         </div>
 
         <div className="specific-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-sky-400 mb-4">Specific Currency Requests</h2>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-sky-400">Specific Currency Requests</h2>
+              <button onClick={() => onAddSctRequest('flight')} className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight">
+                <span>+ Add<br />Request</span>
+              </button>
+            </div>
             <div className="space-y-6">
                 {renderSctRequestTable('flight', sctFlights)}
                 {renderSctRequestTable('ftd', sctFtds)}

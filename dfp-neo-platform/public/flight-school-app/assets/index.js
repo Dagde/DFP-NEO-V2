@@ -28241,7 +28241,6 @@ const PrioritiesView = ({
         return null;
       }
     };
-    const addRequestButtonClass = "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight";
     const statusButtonClass = "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed";
     const applyCurrencyProfile = (requestId, eventValue) => {
       const profile = currencyProfilesForContext.find((candidate) => String(candidate.name || candidate.currency || "").trim() === eventValue || String(candidate.currency || "").trim() === eventValue);
@@ -28398,12 +28397,7 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onRemoveSctRequest(req.id, type), className: `${statusButtonClass} text-red-500`, "aria-label": "Delete crew currency request", children: "Delete" })
           ] })
         ] }, req.id);
-      }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddSctRequest(type), className: `mt-2 ${addRequestButtonClass}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-        "+ Add",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-        "Request"
-      ] }) })
+      }) })
     ] });
   };
   const isRemedialEvent = (event) => {
@@ -29260,7 +29254,14 @@ const PrioritiesView = ({
         )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "specific-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Specific Currency Requests" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Specific Currency Requests" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddSctRequest("flight"), className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            "+ Add",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            "Request"
+          ] }) })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
           renderSctRequestTable("flight", sctFlights),
           renderSctRequestTable("ftd", sctFtds)
