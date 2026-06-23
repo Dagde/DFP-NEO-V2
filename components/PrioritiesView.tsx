@@ -2700,7 +2700,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     
       return (
       <div>
-          <h3 className="text-lg font-semibold text-sky-400 mb-2">{type === 'flight' ? 'Flights' : ftdLabel}</h3>
           <div className="space-y-3">
               {requests.map(req => {
                   const expiryInfo = calculateDaysToExpire(req.currencyExpire);
