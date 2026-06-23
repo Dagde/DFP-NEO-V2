@@ -5044,7 +5044,8 @@ const CrewRequirementEditor = ({
   onChange,
   compact = false,
   showSummary = true,
-  showAircraftDefaultSummary = true
+  showAircraftDefaultSummary = true,
+  headerClassName = ""
 }) => {
   const normalised = normaliseCrewRequirement(value);
   const effectiveSummary = formatCrewRequirementSummary(value, aircraftCrewComposition, crewPositionTerminology);
@@ -5106,7 +5107,7 @@ const CrewRequirementEditor = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? "flex h-full min-h-[8rem] flex-col p-2" : "p-3"} text-xs text-slate-200`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${compact ? "grid" : "flex flex-wrap"} items-center justify-between gap-2`, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-slate-100", children: "Crew Required" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `font-semibold text-slate-100 ${headerClassName}`, children: "Crew Required" }),
         !compact && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 break-words text-slate-400", children: effectiveSummary })
       ] }),
       crewRequirementPresets.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -29571,8 +29572,8 @@ const PrioritiesView = ({
           currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }),
           currencyDraftEvents.map((draft) => {
             const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
-            const tileBaseClass = `h-[170px] w-[100px] shrink-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? "border-green-400/40 bg-green-950/20" : "border-slate-700 bg-slate-950/70"}`;
-            const tileLabelClass = "mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
+            const tileBaseClass = `h-[170px] w-[120px] shrink-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? "border-green-400/40 bg-green-950/20" : "border-slate-700 bg-slate-950/70"}`;
+            const tileLabelClass = "mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
             return /* @__PURE__ */ jsxRuntimeExports.jsx(
               "div",
               {
@@ -29637,6 +29638,7 @@ const PrioritiesView = ({
                       compact: true,
                       showSummary: false,
                       showAircraftDefaultSummary: false,
+                      headerClassName: "text-center",
                       onChange: (crewRequirement) => setCurrencyDraftEvents((prev) => prev.map(
                         (event) => event.id === draft.id ? { ...event, crewRequirement } : event
                       ))
@@ -29667,16 +29669,16 @@ const PrioritiesView = ({
                       ] }, currency)) })
                     ] })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col justify-between text-right`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col text-center`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Action" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-1 items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "button",
                       {
                         onClick: () => setCurrencyDraftEvents((prev) => prev.filter((event) => event.id !== draft.id)),
                         className: "rounded-md border border-red-500/30 px-2 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10",
                         children: "Remove"
                       }
-                    )
+                    ) })
                   ] })
                 ] })
               },

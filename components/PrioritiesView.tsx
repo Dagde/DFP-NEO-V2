@@ -4106,8 +4106,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 )}
                 {currencyDraftEvents.map(draft => {
                     const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
-                    const tileBaseClass = `h-[170px] w-[100px] shrink-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? 'border-green-400/40 bg-green-950/20' : 'border-slate-700 bg-slate-950/70'}`;
-                    const tileLabelClass = "mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
+                    const tileBaseClass = `h-[170px] w-[120px] shrink-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? 'border-green-400/40 bg-green-950/20' : 'border-slate-700 bg-slate-950/70'}`;
+                    const tileLabelClass = "mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
                     return (
                         <div
                             key={draft.id}
@@ -4166,6 +4166,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         compact
                                         showSummary={false}
                                         showAircraftDefaultSummary={false}
+                                        headerClassName="text-center"
                                         onChange={(crewRequirement) => setCurrencyDraftEvents(prev => prev.map(event =>
                                             event.id === draft.id ? { ...event, crewRequirement } : event
                                         ))}
@@ -4199,14 +4200,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         )}
                                     </div>
                                 </div>
-                                <div className={`${tileBaseClass} flex flex-col justify-between text-right`}>
+                                <div className={`${tileBaseClass} flex flex-col text-center`}>
                                     <div className={tileLabelClass}>Action</div>
+                                    <div className="flex flex-1 items-center justify-center">
                                     <button
                                         onClick={() => setCurrencyDraftEvents(prev => prev.filter(event => event.id !== draft.id))}
                                         className="rounded-md border border-red-500/30 px-2 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10"
                                     >
                                         Remove
                                     </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

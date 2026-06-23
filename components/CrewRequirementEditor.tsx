@@ -28,6 +28,7 @@ interface CrewRequirementEditorProps {
   compact?: boolean;
   showSummary?: boolean;
   showAircraftDefaultSummary?: boolean;
+  headerClassName?: string;
 }
 
 const makeRoleId = (): string => `crew-role-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -69,6 +70,7 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
   compact = false,
   showSummary = true,
   showAircraftDefaultSummary = true,
+  headerClassName = '',
 }) => {
   const normalised = normaliseCrewRequirement(value);
   const effectiveSummary = formatCrewRequirementSummary(value, aircraftCrewComposition, crewPositionTerminology);
@@ -150,7 +152,7 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
     <div className={`min-w-0 rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? 'flex h-full min-h-[8rem] flex-col p-2' : 'p-3'} text-xs text-slate-200`}>
       <div className={`${compact ? 'grid' : 'flex flex-wrap'} items-center justify-between gap-2`}>
         <div className="min-w-0">
-          <div className="font-semibold text-slate-100">Crew Required</div>
+          <div className={`font-semibold text-slate-100 ${headerClassName}`}>Crew Required</div>
           {!compact && <div className="mt-0.5 break-words text-slate-400">{effectiveSummary}</div>}
         </div>
         {crewRequirementPresets.length > 0 ? (
