@@ -26,8 +26,8 @@ import {
   type FixedCrewTrainingStreamPriority,
 } from '../utils/fixedCrewTraining';
 import { isSyllabusCourseShell } from '../utils/syllabusCourseShell';
-import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
-import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { getAircraftSeatEligibleRoles, type AircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import { crewPositionValuesMatch, findCrewPositionEntry, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { formatCrewRequirementSummary, normaliseCrewRequirement } from '../utils/crewRequirements';
 import {
   normaliseCrewCompositionSettings,
@@ -2006,6 +2006,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [staffCurrencyIncludeFlights, setStaffCurrencyIncludeFlights] = useState(true);
   const [staffCurrencyIncludeSims, setStaffCurrencyIncludeSims] = useState(true);
   const [staffCurrencyCrewMode, setStaffCurrencyCrewMode] = useState<'withOtherPilot' | 'solo'>('withOtherPilot');
+  const [staffCurrencyRoleFilter, setStaffCurrencyRoleFilter] = useState('Pilot');
   const [isStaffCurrencyBuilderOpen, setIsStaffCurrencyBuilderOpen] = useState(false);
   const [openCurrencyDraftId, setOpenCurrencyDraftId] = useState<string | null>(null);
   const [isCurrencyConfigApplyOpen, setIsCurrencyConfigApplyOpen] = useState(false);
@@ -2120,15 +2121,39 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       .sort((a, b) => a.trainee.course.localeCompare(b.trainee.course) || a.trainee.name.localeCompare(b.trainee.name));
   }, [traineesData, traineeCurrencyCourseSelection, currencyNames, buildDfpDate]);
 
+  const staffCurrencyRoleOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const roles = (aircraftCrewComposition?.seats || [])
+      .flatMap(seat => getAircraftSeatEligibleRoles(seat))
+      .map(role => String(role || '').trim())
+      .filter(Boolean)
+      .filter(role => {
+        const key = role.toUpperCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    return roles.length > 0 ? roles : ['Pilot'];
+  }, [aircraftCrewComposition]);
+
+  const selectedStaffCurrencyRole = staffCurrencyRoleOptions.find(role => (
+    crewPositionValuesMatch(role, staffCurrencyRoleFilter, crewPositionTerminology)
+  )) || staffCurrencyRoleOptions[0] || 'Pilot';
+
+  const getStaffCurrencyRoleLabel = (role: string): string => (
+    findCrewPositionEntry(role, crewPositionTerminology)?.label || role
+  );
+
   const staffCurrencyRows = useMemo(() => {
     return instructorsData
       .map(instructor => ({ instructor, personKey: String(instructor.id || instructor.idNumber || instructor.name), dueCurrencies: getDueCurrencies(instructor) }))
       .filter(row => row.dueCurrencies.length > 0)
+      .filter(row => crewPositionValuesMatch(selectedStaffCurrencyRole, row.instructor.role, crewPositionTerminology))
       .sort((a, b) => {
         const rankDiff = staffRankOrder.indexOf(a.instructor.rank) - staffRankOrder.indexOf(b.instructor.rank);
         return rankDiff !== 0 ? rankDiff : a.instructor.name.localeCompare(b.instructor.name);
       });
-  }, [instructorsData, currencyNames, buildDfpDate]);
+  }, [instructorsData, currencyNames, buildDfpDate, selectedStaffCurrencyRole, crewPositionTerminology]);
 
   useEffect(() => {
     localStorage.setItem(currencyDraftStorageKey, JSON.stringify(currencyDraftEvents));
@@ -3932,9 +3957,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 </div>
                 <button
                     onClick={() => setIsStaffCurrencyBuilderOpen(prev => !prev)}
-                    className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20"
+                    className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]"
                 >
-                    {isStaffCurrencyBuilderOpen ? 'Hide Builder' : 'Build Bulk Currency'}
+                    {isStaffCurrencyBuilderOpen ? <span>Hide<br />Bulk<br />Builder</span> : <span>Build<br />Bulk<br />Currency</span>}
                 </button>
             </div>
             {isStaffCurrencyBuilderOpen && <>
@@ -3960,10 +3985,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     {ftdLabel}
                 </label>
                 <label className="text-sm text-slate-300">
-                    <span className="mr-2 text-xs uppercase tracking-[0.16em] text-slate-500">Crew Mode</span>
-                    <select value={staffCurrencyCrewMode} onChange={e => setStaffCurrencyCrewMode(e.target.value as any)} className="rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white">
-                        <option value="withOtherPilot">With other pilot</option>
-                        <option value="solo">Solo</option>
+                    <span className="mr-2 text-xs uppercase tracking-[0.16em] text-slate-500">Role Filter</span>
+                    <select value={selectedStaffCurrencyRole} onChange={e => setStaffCurrencyRoleFilter(e.target.value)} className="rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white">
+                        {staffCurrencyRoleOptions.map(role => (
+                            <option key={`staff-currency-role-${role}`} value={role}>{getStaffCurrencyRoleLabel(role)}</option>
+                        ))}
                     </select>
                 </label>
                 <button
@@ -3977,16 +4003,17 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <div className="overflow-x-auto rounded-lg border border-slate-700">
                 <table className="min-w-full text-sm">
                     <thead className="bg-slate-950/80 text-xs uppercase text-slate-400">
-                        <tr>
-                            <th className="px-2 py-2 text-center">Add</th>
-                            <th className="px-2 py-2 text-left">Rank</th>
-                            <th className="px-2 py-2 text-left">Staff</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-700/60">
-                        {staffCurrencyRows.length === 0 && (
-                            <tr><td colSpan={3} className="px-3 py-6 text-center text-sm text-slate-500">No staff currently require Currency events.</td></tr>
-                        )}
+                            <tr>
+                                <th className="px-2 py-2 text-center">Add</th>
+                                <th className="px-2 py-2 text-left">Rank</th>
+                                <th className="px-2 py-2 text-left">Role</th>
+                                <th className="px-2 py-2 text-left">Staff</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700/60">
+                            {staffCurrencyRows.length === 0 && (
+                                <tr><td colSpan={4} className="px-3 py-6 text-center text-sm text-slate-500">No {getStaffCurrencyRoleLabel(selectedStaffCurrencyRole)} staff currently require Currency events.</td></tr>
+                            )}
                         {staffCurrencyRows.map(row => (
                             <tr key={row.personKey} className="hover:bg-sky-900/40">
                                 <td className="px-2 py-2 text-center">
@@ -3998,6 +4025,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     />
                                 </td>
                                 <td className="px-2 py-2 text-slate-300">{row.instructor.rank}</td>
+                                <td className="px-2 py-2 text-slate-300">{getStaffCurrencyRoleLabel(row.instructor.role || selectedStaffCurrencyRole)}</td>
                                 <td className="px-2 py-2 font-semibold text-white">{row.instructor.name}</td>
                             </tr>
                         ))}

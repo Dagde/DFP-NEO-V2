@@ -27738,6 +27738,7 @@ const PrioritiesView = ({
   const [staffCurrencyIncludeFlights, setStaffCurrencyIncludeFlights] = reactExports.useState(true);
   const [staffCurrencyIncludeSims, setStaffCurrencyIncludeSims] = reactExports.useState(true);
   const [staffCurrencyCrewMode, setStaffCurrencyCrewMode] = reactExports.useState("withOtherPilot");
+  const [staffCurrencyRoleFilter, setStaffCurrencyRoleFilter] = reactExports.useState("Pilot");
   const [isStaffCurrencyBuilderOpen, setIsStaffCurrencyBuilderOpen] = reactExports.useState(false);
   const [openCurrencyDraftId, setOpenCurrencyDraftId] = reactExports.useState(null);
   const [isCurrencyConfigApplyOpen, setIsCurrencyConfigApplyOpen] = reactExports.useState(false);
@@ -27816,12 +27817,24 @@ const PrioritiesView = ({
   const traineeCurrencyRows = reactExports.useMemo(() => {
     return traineesData.filter((t) => !t.isPaused && traineeCurrencyCourseSelection.has(t.course)).map((trainee) => ({ trainee, dueCurrencies: getDueCurrencies(trainee) })).filter((row) => row.dueCurrencies.length > 0).sort((a, b) => a.trainee.course.localeCompare(b.trainee.course) || a.trainee.name.localeCompare(b.trainee.name));
   }, [traineesData, traineeCurrencyCourseSelection, currencyNames, buildDfpDate]);
+  const staffCurrencyRoleOptions = reactExports.useMemo(() => {
+    const seen = /* @__PURE__ */ new Set();
+    const roles = (aircraftCrewComposition?.seats || []).flatMap((seat) => getAircraftSeatEligibleRoles(seat)).map((role) => String(role || "").trim()).filter(Boolean).filter((role) => {
+      const key = role.toUpperCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return roles.length > 0 ? roles : ["Pilot"];
+  }, [aircraftCrewComposition]);
+  const selectedStaffCurrencyRole = staffCurrencyRoleOptions.find((role) => crewPositionValuesMatch(role, staffCurrencyRoleFilter, crewPositionTerminology)) || staffCurrencyRoleOptions[0] || "Pilot";
+  const getStaffCurrencyRoleLabel = (role) => findCrewPositionEntry(role, crewPositionTerminology)?.label || role;
   const staffCurrencyRows = reactExports.useMemo(() => {
-    return instructorsData.map((instructor) => ({ instructor, personKey: String(instructor.id || instructor.idNumber || instructor.name), dueCurrencies: getDueCurrencies(instructor) })).filter((row) => row.dueCurrencies.length > 0).sort((a, b) => {
+    return instructorsData.map((instructor) => ({ instructor, personKey: String(instructor.id || instructor.idNumber || instructor.name), dueCurrencies: getDueCurrencies(instructor) })).filter((row) => row.dueCurrencies.length > 0).filter((row) => crewPositionValuesMatch(selectedStaffCurrencyRole, row.instructor.role, crewPositionTerminology)).sort((a, b) => {
       const rankDiff = staffRankOrder.indexOf(a.instructor.rank) - staffRankOrder.indexOf(b.instructor.rank);
       return rankDiff !== 0 ? rankDiff : a.instructor.name.localeCompare(b.instructor.name);
     });
-  }, [instructorsData, currencyNames, buildDfpDate]);
+  }, [instructorsData, currencyNames, buildDfpDate, selectedStaffCurrencyRole, crewPositionTerminology]);
   reactExports.useEffect(() => {
     localStorage.setItem(currencyDraftStorageKey, JSON.stringify(currencyDraftEvents));
   }, [currencyDraftEvents]);
@@ -29398,8 +29411,20 @@ const PrioritiesView = ({
             "button",
             {
               onClick: () => setIsStaffCurrencyBuilderOpen((prev) => !prev),
-              className: "rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20",
-              children: isStaffCurrencyBuilderOpen ? "Hide Builder" : "Build Bulk Currency"
+              className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]",
+              children: isStaffCurrencyBuilderOpen ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                "Hide",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                "Bulk",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                "Builder"
+              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                "Build",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                "Bulk",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                "Currency"
+              ] })
             }
           )
         ] }),
@@ -29430,11 +29455,8 @@ const PrioritiesView = ({
               ftdLabel
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-slate-300", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mr-2 text-xs uppercase tracking-[0.16em] text-slate-500", children: "Crew Mode" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: staffCurrencyCrewMode, onChange: (e) => setStaffCurrencyCrewMode(e.target.value), className: "rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "withOtherPilot", children: "With other pilot" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "solo", children: "Solo" })
-              ] })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mr-2 text-xs uppercase tracking-[0.16em] text-slate-500", children: "Role Filter" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: selectedStaffCurrencyRole, onChange: (e) => setStaffCurrencyRoleFilter(e.target.value), className: "rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white", children: staffCurrencyRoleOptions.map((role) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: role, children: getStaffCurrencyRoleLabel(role) }, `staff-currency-role-${role}`)) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
@@ -29450,10 +29472,15 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-950/80 text-xs uppercase text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-center", children: "Add" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Rank" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Role" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Staff" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-700/60", children: [
-              staffCurrencyRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 3, className: "px-3 py-6 text-center text-sm text-slate-500", children: "No staff currently require Currency events." }) }),
+              staffCurrencyRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { colSpan: 4, className: "px-3 py-6 text-center text-sm text-slate-500", children: [
+                "No ",
+                getStaffCurrencyRoleLabel(selectedStaffCurrencyRole),
+                " staff currently require Currency events."
+              ] }) }),
               staffCurrencyRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/40", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
@@ -29465,6 +29492,7 @@ const PrioritiesView = ({
                   }
                 ) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: row.instructor.rank }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: getStaffCurrencyRoleLabel(row.instructor.role || selectedStaffCurrencyRole) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-semibold text-white", children: row.instructor.name })
               ] }, row.personKey))
             ] })
