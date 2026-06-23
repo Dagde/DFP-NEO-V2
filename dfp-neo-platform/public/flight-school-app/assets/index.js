@@ -26576,7 +26576,6 @@ const TaskingRequestTable = ({
   crewPositionTerminology,
   unitCallsignEntries,
   callsignNumberOptions,
-  onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
   onSetTaskingSchedulerPriority
@@ -26818,12 +26817,7 @@ const TaskingRequestTable = ({
           ] })
         ] }) }) })
       ] }, request.id);
-    }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onAddTaskingRequest, className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-      "+ Add",
-      /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-      "Request"
-    ] }) })
+    })
   ] });
 };
 const PrioritiesView = ({
@@ -29220,7 +29214,14 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Review hard requests and build exceptions after the normal course weighting is set." })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "tasking-events-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Tasking" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Tasking" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: addTaskingRequest, className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            "+ Add",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            "Request"
+          ] }) })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           TaskingRequestTable,
           {
@@ -29237,7 +29238,6 @@ const PrioritiesView = ({
             crewPositionTerminology,
             unitCallsignEntries,
             callsignNumberOptions,
-            onAddTaskingRequest: addTaskingRequest,
             onUpdateTaskingRequest: updateTaskingRequest,
             onRemoveTaskingRequest: removeTaskingRequest,
             onSetTaskingSchedulerPriority: setTaskingSchedulerPriority

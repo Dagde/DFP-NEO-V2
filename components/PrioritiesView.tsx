@@ -639,7 +639,6 @@ interface TaskingRequestTableProps {
   crewPositionTerminology?: CrewPositionTerminology;
   unitCallsignEntries: UnitCallsignEntry[];
   callsignNumberOptions: Array<{ value: number; label: string }>;
-  onAddTaskingRequest: () => void;
   onUpdateTaskingRequest: (id: string, updates: Partial<TaskingRequest>) => void;
   onRemoveTaskingRequest: (id: string) => void;
   onSetTaskingSchedulerPriority: (id: string, priority: TaskingSchedulerPriority) => void;
@@ -680,7 +679,6 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   crewPositionTerminology,
   unitCallsignEntries,
   callsignNumberOptions,
-  onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
   onSetTaskingSchedulerPriority,
@@ -932,9 +930,6 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
         </div>
       );
     })}
-    <button onClick={onAddTaskingRequest} className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight">
-      <span>+ Add<br />Request</span>
-    </button>
   </div>
   );
 };
@@ -3759,7 +3754,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         </div>
 
         <div className="tasking-events-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-sky-400 mb-4">Tasking</h2>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-sky-400">Tasking</h2>
+              <button onClick={addTaskingRequest} className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight">
+                <span>+ Add<br />Request</span>
+              </button>
+            </div>
             <TaskingRequestTable
               taskingRequests={taskingRequests}
               timeOptions={timeOptions}
@@ -3774,7 +3774,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               crewPositionTerminology={crewPositionTerminology}
               unitCallsignEntries={unitCallsignEntries}
               callsignNumberOptions={callsignNumberOptions}
-              onAddTaskingRequest={addTaskingRequest}
               onUpdateTaskingRequest={updateTaskingRequest}
               onRemoveTaskingRequest={removeTaskingRequest}
               onSetTaskingSchedulerPriority={setTaskingSchedulerPriority}
