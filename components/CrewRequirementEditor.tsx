@@ -29,6 +29,7 @@ interface CrewRequirementEditorProps {
   showSummary?: boolean;
   showAircraftDefaultSummary?: boolean;
   headerClassName?: string;
+  aircraftDefaultOptionLabel?: string;
 }
 
 const makeRoleId = (): string => `crew-role-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -71,6 +72,7 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
   showSummary = true,
   showAircraftDefaultSummary = true,
   headerClassName = '',
+  aircraftDefaultOptionLabel = 'Use aircraft default',
 }) => {
   const normalised = normaliseCrewRequirement(value);
   const effectiveSummary = formatCrewRequirementSummary(value, aircraftCrewComposition, crewPositionTerminology);
@@ -172,7 +174,7 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
             onChange={(event) => setMode(event.target.value as CrewRequirement['mode'])}
             className={`${compact ? 'w-full max-w-[10.5rem]' : ''} rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500`}
           >
-            <option value="aircraft_default">Use aircraft default</option>
+            <option value="aircraft_default">{aircraftDefaultOptionLabel}</option>
             <option value="custom">Custom crew</option>
           </select>
         )}

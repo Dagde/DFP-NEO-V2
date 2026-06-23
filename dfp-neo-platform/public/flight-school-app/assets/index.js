@@ -5045,7 +5045,8 @@ const CrewRequirementEditor = ({
   compact = false,
   showSummary = true,
   showAircraftDefaultSummary = true,
-  headerClassName = ""
+  headerClassName = "",
+  aircraftDefaultOptionLabel = "Use aircraft default"
 }) => {
   const normalised = normaliseCrewRequirement(value);
   const effectiveSummary = formatCrewRequirementSummary(value, aircraftCrewComposition, crewPositionTerminology);
@@ -5128,7 +5129,7 @@ const CrewRequirementEditor = ({
           onChange: (event) => setMode(event.target.value),
           className: `${compact ? "w-full max-w-[10.5rem]" : ""} rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500`,
           children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "aircraft_default", children: "Use aircraft default" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "aircraft_default", children: aircraftDefaultOptionLabel }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "custom", children: "Custom crew" })
           ]
         }
@@ -29639,6 +29640,7 @@ const PrioritiesView = ({
                       showSummary: false,
                       showAircraftDefaultSummary: false,
                       headerClassName: "text-center",
+                      aircraftDefaultOptionLabel: "A/C default",
                       onChange: (crewRequirement) => setCurrencyDraftEvents((prev) => prev.map(
                         (event) => event.id === draft.id ? { ...event, crewRequirement } : event
                       ))

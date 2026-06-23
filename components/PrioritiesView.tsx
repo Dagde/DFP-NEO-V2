@@ -4167,6 +4167,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         showSummary={false}
                                         showAircraftDefaultSummary={false}
                                         headerClassName="text-center"
+                                        aircraftDefaultOptionLabel="A/C default"
                                         onChange={(crewRequirement) => setCurrencyDraftEvents(prev => prev.map(event =>
                                             event.id === draft.id ? { ...event, crewRequirement } : event
                                         ))}
