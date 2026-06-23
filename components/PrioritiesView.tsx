@@ -2010,7 +2010,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [openCurrencyDraftId, setOpenCurrencyDraftId] = useState<string | null>(null);
   const [isCurrencyConfigApplyOpen, setIsCurrencyConfigApplyOpen] = useState(false);
   const [bulkCurrencyAircraftConfigId, setBulkCurrencyAircraftConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
-  const currencyDraftStorageKey = 'neoCurrencyDraftEvents';
+  const legacyCurrencyDraftStorageKey = 'neoCurrencyDraftEvents';
+  const currencyDraftStorageKey = 'neoCurrencyDraftEvents.v2';
   const [taskingAirfieldCatalogue, setTaskingAirfieldCatalogue] = useState<TaskingAirfieldCatalogueEntry[]>([]);
   const normaliseTaskingRequest = (request: any): TaskingRequest => ({
     id: request.id || uuidv4(),
@@ -2069,6 +2070,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     pushed: boolean;
   }>>(() => {
     try {
+      localStorage.removeItem(legacyCurrencyDraftStorageKey);
       const stored = localStorage.getItem(currencyDraftStorageKey);
       const parsed = stored ? JSON.parse(stored) : [];
       return Array.isArray(parsed)
