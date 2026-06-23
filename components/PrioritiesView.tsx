@@ -4103,7 +4103,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <thead className="bg-slate-950/80 text-xs uppercase text-slate-400">
                         <tr>
                             <th className="px-2 py-2 text-center">Push</th>
-                            <th className="px-2 py-2 text-left">Group</th>
                             <th className="px-2 py-2 text-left">Person</th>
                             <th className="px-2 py-2 text-left">Event</th>
                             <th className="px-2 py-2 text-left">Crew</th>
@@ -4115,7 +4114,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </thead>
                     <tbody className="divide-y divide-slate-700/60">
                         {currencyDraftEvents.length === 0 && (
-                            <tr><td colSpan={9} className="px-3 py-6 text-center text-sm text-slate-500">No Currency events built yet. Open a trainee or staff builder above to create the review list.</td></tr>
+                            <tr><td colSpan={8} className="px-3 py-6 text-center text-sm text-slate-500">No Currency events built yet. Open a trainee or staff builder above to create the review list.</td></tr>
                         )}
                         {currencyDraftEvents.map(draft => {
                             const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
@@ -4130,7 +4129,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         className="h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
                                     />
                                 </td>
-                                <td className={`px-2 py-2 ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-slate-300'}`}>{draft.audience === 'trainee' ? (draft.course || 'Trainee') : (draft.rank || 'Staff')}</td>
                                 <td className={`px-2 py-2 font-semibold ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-white'}`}>{draft.personName}</td>
                                 <td className="px-2 py-2">
                                     <select

@@ -29568,7 +29568,6 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-950/80 text-xs uppercase text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-center", children: "Push" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Group" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Person" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Event" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Crew" }),
@@ -29578,7 +29577,7 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-right", children: "Action" })
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-700/60", children: [
-            currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, className: "px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }) }),
+            currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 8, className: "px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }) }),
             currencyDraftEvents.map((draft) => {
               const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: `align-top hover:bg-sky-900/40 ${isPublishedInActiveSchedule ? "text-green-300" : ""}`, children: [
@@ -29592,7 +29591,6 @@ const PrioritiesView = ({
                     className: "h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
                   }
                 ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${isPublishedInActiveSchedule ? "text-green-300" : "text-slate-300"}`, children: draft.audience === "trainee" ? draft.course || "Trainee" : draft.rank || "Staff" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 font-semibold ${isPublishedInActiveSchedule ? "text-green-300" : "text-white"}`, children: draft.personName }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "select",
