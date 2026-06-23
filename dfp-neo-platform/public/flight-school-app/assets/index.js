@@ -29573,7 +29573,7 @@ const PrioritiesView = ({
           currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }),
           currencyDraftEvents.map((draft) => {
             const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
-            const tileBaseClass = `h-[170px] w-[120px] shrink-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? "border-green-400/40 bg-green-950/20" : "border-slate-700 bg-slate-950/70"}`;
+            const tileBaseClass = `h-[140px] w-[120px] shrink-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? "border-green-400/40 bg-green-950/20" : "border-slate-700 bg-slate-950/70"}`;
             const tileLabelClass = "mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
             return /* @__PURE__ */ jsxRuntimeExports.jsx(
               "div",

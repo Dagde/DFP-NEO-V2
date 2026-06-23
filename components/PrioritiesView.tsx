@@ -4106,7 +4106,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 )}
                 {currencyDraftEvents.map(draft => {
                     const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
-                    const tileBaseClass = `h-[170px] w-[120px] shrink-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? 'border-green-400/40 bg-green-950/20' : 'border-slate-700 bg-slate-950/70'}`;
+                    const tileBaseClass = `h-[140px] w-[120px] shrink-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? 'border-green-400/40 bg-green-950/20' : 'border-slate-700 bg-slate-950/70'}`;
                     const tileLabelClass = "mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
                     return (
                         <div
