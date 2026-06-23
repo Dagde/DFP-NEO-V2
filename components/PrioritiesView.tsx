@@ -684,8 +684,22 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
   onSetTaskingSchedulerPriority,
-}) => (
-  <div className="space-y-4 pb-24">
+}) => {
+  const [expandedTaskingIds, setExpandedTaskingIds] = useState<Set<string>>(new Set());
+  const toggleTaskingExpanded = (id: string) => {
+    setExpandedTaskingIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  return (
+  <div className="space-y-3 pb-24">
     {taskingRequests.length === 0 && (
       <div className="rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500">
         No tasking requests configured.
@@ -698,8 +712,32 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       const selectedConfig = aircraftConfigOptions.find(definition => definition.id === request.aircraftConfigId);
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map(entry => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
+      const isExpanded = expandedTaskingIds.has(request.id) || !request.saved;
+      const taskingHeaderTitle = request.tasking.trim() || 'New tasking request';
+      const taskingHeaderDate = request.date || 'Date TBA';
+      const taskingHeaderTime = timeOptions.find(opt => opt.value === request.takeoff)?.label || 'Time TBA';
       return (
-        <div key={request.id} className="rounded-xl border border-slate-700/80 bg-slate-900/45 p-3 shadow-lg shadow-black/10">
+        <div key={request.id} className="overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10">
+          <button
+            type="button"
+            onClick={() => toggleTaskingExpanded(request.id)}
+            className="flex w-full items-center justify-between gap-3 bg-cyan-950/80 px-4 py-3 text-left transition hover:bg-cyan-900/80"
+            aria-expanded={isExpanded}
+          >
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-black text-cyan-50">{taskingHeaderTitle}</span>
+              <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">Tasking</span>
+            </span>
+            <span className="flex shrink-0 items-center gap-2 text-right">
+              <span className="rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white">{taskingHeaderDate}</span>
+              <span className="rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white">{taskingHeaderTime}</span>
+              <span className={`text-sm font-black text-cyan-100 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>v</span>
+            </span>
+          </button>
+
+          <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+            <div className="min-h-0 overflow-hidden">
+              <div className="p-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]">
             <TaskingFieldPanel label="Tasking" hint={request.tasking || 'Select or type task'}>
               <TaskingProfileInput
@@ -888,6 +926,9 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
               </div>
             </TaskingFieldPanel>
           </div>
+              </div>
+            </div>
+          </div>
         </div>
       );
     })}
@@ -895,7 +936,8 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       <span>+ Add<br />Request</span>
     </button>
   </div>
-);
+  );
+};
 
 // FIX: Export component as a named const to fix module import error.
 export const PrioritiesView: React.FC<PrioritiesViewProps> = ({ 
