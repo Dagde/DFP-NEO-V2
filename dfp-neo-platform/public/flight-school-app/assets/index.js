@@ -26602,7 +26602,7 @@ const TaskingRequestTable = ({
       const selectedConfig = aircraftConfigOptions.find((definition) => definition.id === request.aircraftConfigId);
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map((entry) => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
-      const isExpanded = expandedTaskingIds.has(request.id) || !request.saved;
+      const isExpanded = expandedTaskingIds.has(request.id);
       const taskingHeaderTitle = request.tasking.trim() || "New tasking request";
       const taskingHeaderDate = request.date || "Date TBA";
       const taskingHeaderTime = timeOptions.find((opt) => opt.value === request.takeoff)?.label || "Time TBA";
