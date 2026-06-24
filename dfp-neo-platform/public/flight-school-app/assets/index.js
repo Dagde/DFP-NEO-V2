@@ -29850,7 +29850,7 @@ const PrioritiesView = ({
           currencyDraftEvents.map((draft) => {
             const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
             const isCurrencyMenuOpen = openCurrencyDraftId === draft.id;
-            const tileBaseClass = `h-[140px] w-full min-w-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? "border-green-400/40 bg-green-950/20" : "border-slate-700 bg-slate-950/70"}`;
+            const tileBaseClass = `h-[80px] w-full min-w-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? "border-green-400/40 bg-green-950/20" : "border-slate-700 bg-slate-950/70"}`;
             const tileLabelClass = "mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
             return /* @__PURE__ */ jsxRuntimeExports.jsx(
               "div",
@@ -29934,7 +29934,7 @@ const PrioritiesView = ({
                       ))
                     }
                   ) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[140px] w-8 flex-col items-center justify-between pb-1 pt-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[80px] w-8 flex-col items-center justify-between pb-1 pt-2", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center gap-2", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: "Push" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
