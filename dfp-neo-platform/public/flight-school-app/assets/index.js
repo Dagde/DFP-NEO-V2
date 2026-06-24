@@ -29844,7 +29844,7 @@ const PrioritiesView = ({
               "div",
               {
                 className: `overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/35 p-3 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? "pb-64" : ""} ${isPublishedInActiveSchedule ? "text-green-300" : ""}`,
-                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid w-full min-w-[640px] max-w-[790px] grid-cols-[repeat(5,minmax(0,1fr))_2rem] gap-2", children: [
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid w-full min-w-[680px] max-w-[1280px] grid-cols-[repeat(5,minmax(0,1fr))_2rem] gap-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Person" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `min-w-0 text-sm font-semibold leading-snug ${isPublishedInActiveSchedule ? "text-green-300" : "text-white"}`, children: draft.personName })
