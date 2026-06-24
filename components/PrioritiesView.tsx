@@ -4192,15 +4192,18 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         ))}
                                     />
                                 </div>
-                                <div className="flex h-[140px] w-8 flex-col items-center justify-center gap-3">
-                                    <input
-                                        type="checkbox"
-                                        checked={draft.selected}
-                                        disabled={isPublishedInActiveSchedule}
-                                        onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: !event.selected } : event))}
-                                        className="h-5 w-5 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
-                                        aria-label="Select currency event for Higher Priority"
-                                    />
+                                <div className="flex h-[140px] w-8 flex-col items-center justify-between pb-1 pt-2">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Push</div>
+                                        <input
+                                            type="checkbox"
+                                            checked={draft.selected}
+                                            disabled={isPublishedInActiveSchedule}
+                                            onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: !event.selected } : event))}
+                                            className="h-5 w-5 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
+                                            aria-label="Select currency event for Higher Priority"
+                                        />
+                                    </div>
                                     <button
                                         type="button"
                                         onClick={() => setCurrencyDraftEvents(prev => prev.filter(event => event.id !== draft.id))}
