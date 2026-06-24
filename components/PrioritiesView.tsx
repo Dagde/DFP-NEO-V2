@@ -2943,6 +2943,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return matchingPreset?.label || formatCrewRequirementSummary(event.crewRequirement, aircraftCrewComposition, crewPositionTerminology);
   };
 
+  const getPriorityEventPicName = (event: ScheduleEvent): string => (
+    String(event.fixedCrewPic || event.pilot || event.instructor || '').trim() || 'N/A'
+  );
+
   const getPriorityEventSchedulerValue = (event: ScheduleEvent): 'Mandatory' | 'Desirable' => (
     event.isMandatoryTasking || event.priority === 'High' ? 'Mandatory' : 'Desirable'
   );
@@ -3017,7 +3021,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         >
           {group.label}
         </td>
-        {Array.from({ length: 7 }).map((_, index) => (
+        {Array.from({ length: 8 }).map((_, index) => (
           <td key={`${group.key}-empty-${index}`} className="border border-slate-700/80 px-2 py-3 text-slate-600">&nbsp;</td>
         ))}
       </tr>
@@ -3031,6 +3035,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       const rowText = isPublishedInActiveSchedule ? 'text-green-300' : 'text-slate-100';
       const eventLabel = getPriorityEventLabel(event);
       const crewRequirementName = getPriorityEventCrewRequirementName(event);
+      const picName = getPriorityEventPicName(event);
       const aircraftConfigSummary = getAircraftConfigSummary(event);
       const eventDateLabel = formatPriorityDate(event.date);
 
@@ -3046,6 +3051,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           )}
           <td className={`truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`} title={eventLabel}>{eventLabel}</td>
           <td className={`truncate border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`} title={eventDateLabel}>{eventDateLabel}</td>
+          <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={picName}>{picName}</td>
           <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={crewRequirementName}>{crewRequirementName}</td>
           <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={event.currency || 'N/A'}>{event.currency || 'N/A'}</td>
           <td className={`truncate border border-slate-700/80 px-2 py-2 font-semibold ${rowText}`} title={aircraftConfigSummary}>{aircraftConfigSummary}</td>
@@ -3080,19 +3086,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         <table className="w-full table-fixed border-collapse text-[11px] leading-tight">
             <colgroup>
                 <col className="w-[10%]" />
-                <col className="w-[21%]" />
-                <col className="w-[9%]" />
-                <col className="w-[18%]" />
+                <col className="w-[20%]" />
                 <col className="w-[8%]" />
-                <col className="w-[13%]" />
+                <col className="w-[12%]" />
+                <col className="w-[15%]" />
                 <col className="w-[8%]" />
-                <col className="w-[13%]" />
+                <col className="w-[12%]" />
+                <col className="w-[7%]" />
+                <col className="w-[8%]" />
             </colgroup>
             <thead className="bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300">
                 <tr>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Name</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Event</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Date</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">PIC</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Crew Required</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Currency</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Config</th>

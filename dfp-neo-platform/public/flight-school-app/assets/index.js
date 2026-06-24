@@ -28713,6 +28713,7 @@ const PrioritiesView = ({
     const matchingPreset = crewRequirementPresets.find((preset) => preset.kind === "alternate" && getCrewRequirementSignature({ mode: "custom", roles: preset.roles || [] }) === eventSignature);
     return matchingPreset?.label || formatCrewRequirementSummary(event.crewRequirement, aircraftCrewComposition, crewPositionTerminology);
   };
+  const getPriorityEventPicName = (event) => String(event.fixedCrewPic || event.pilot || event.instructor || "").trim() || "N/A";
   const getPriorityEventSchedulerValue = (event) => event.isMandatoryTasking || event.priority === "High" ? "Mandatory" : "Desirable";
   const updatePriorityEventScheduler = (event, schedulerValue) => {
     if (schedulerValue === "Ignore") {
@@ -28774,7 +28775,7 @@ const PrioritiesView = ({
           children: group.label
         }
       ),
-      Array.from({ length: 7 }).map((_, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-2 py-3 text-slate-600", children: " " }, `${group.key}-empty-${index}`))
+      Array.from({ length: 8 }).map((_, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-2 py-3 text-slate-600", children: " " }, `${group.key}-empty-${index}`))
     ] }, `${group.key}-empty`);
     const renderEventRow = (event, group, index) => {
       const isPublishedInActiveSchedule = activeScheduleEvents.some(
@@ -28783,6 +28784,7 @@ const PrioritiesView = ({
       const rowText = isPublishedInActiveSchedule ? "text-green-300" : "text-slate-100";
       const eventLabel = getPriorityEventLabel(event);
       const crewRequirementName = getPriorityEventCrewRequirementName(event);
+      const picName = getPriorityEventPicName(event);
       const aircraftConfigSummary = getAircraftConfigSummary(event);
       const eventDateLabel = formatPriorityDate(event.date);
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { onClick: () => onSelectEvent(event), className: "cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50", children: [
@@ -28796,6 +28798,7 @@ const PrioritiesView = ({
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`, title: eventLabel, children: eventLabel }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`, title: eventDateLabel, children: eventDateLabel }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 ${rowText}`, title: picName, children: picName }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 ${rowText}`, title: crewRequirementName, children: crewRequirementName }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 ${rowText}`, title: event.currency || "N/A", children: event.currency || "N/A" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-semibold ${rowText}`, title: aircraftConfigSummary, children: aircraftConfigSummary }),
@@ -28822,18 +28825,20 @@ const PrioritiesView = ({
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed border-collapse text-[11px] leading-tight", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[10%]" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[21%]" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[9%]" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[18%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[20%]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[13%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[12%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[15%]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[13%]" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[12%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[7%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Name" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Event" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Date" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "PIC" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Crew Required" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Currency" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Config" }),
