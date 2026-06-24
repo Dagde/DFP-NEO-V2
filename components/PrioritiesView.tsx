@@ -4147,34 +4147,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </select>
                                 </div>
                                 <div className={`${tileBaseClass} flex flex-col`}>
-                                    <div className={tileLabelClass}>CONFIG</div>
-                                    <AircraftConfigSelect
-                                        value={draft.aircraftConfigId}
-                                        definitions={aircraftConfigOptions}
-                                        includeAny
-                                        disabled={isPublishedInActiveSchedule || draft.eventType !== 'flight'}
-                                        onChange={(aircraftConfigId) => setCurrencyDraftEvents(prev => prev.map(event =>
-                                            event.id === draft.id ? { ...event, aircraftConfigId } : event
-                                        ))}
-                                    />
-                                </div>
-                                <div className={`${tileBaseClass} overflow-hidden`}>
-                                    <CrewRequirementEditor
-                                        value={draft.crewRequirement}
-                                        aircraftCrewComposition={aircraftCrewComposition}
-                                        crewPositionTerminology={crewPositionTerminology}
-                                        operationalModel={operationalModel}
-                                        compact
-                                        showSummary={false}
-                                        showAircraftDefaultSummary={false}
-                                        headerClassName="text-center"
-                                        aircraftDefaultOptionLabel="A/C default"
-                                        onChange={(crewRequirement) => setCurrencyDraftEvents(prev => prev.map(event =>
-                                            event.id === draft.id ? { ...event, crewRequirement } : event
-                                        ))}
-                                    />
-                                </div>
-                                <div className={`${tileBaseClass} flex flex-col`}>
                                     <div className={tileLabelClass}>Currencies</div>
                                     <div className="relative">
                                         <button
@@ -4201,6 +4173,34 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                             </div>
                                         )}
                                     </div>
+                                </div>
+                                <div className={`${tileBaseClass} flex flex-col`}>
+                                    <div className={tileLabelClass}>CONFIG</div>
+                                    <AircraftConfigSelect
+                                        value={draft.aircraftConfigId}
+                                        definitions={aircraftConfigOptions}
+                                        includeAny
+                                        disabled={isPublishedInActiveSchedule || draft.eventType !== 'flight'}
+                                        onChange={(aircraftConfigId) => setCurrencyDraftEvents(prev => prev.map(event =>
+                                            event.id === draft.id ? { ...event, aircraftConfigId } : event
+                                        ))}
+                                    />
+                                </div>
+                                <div className={`${tileBaseClass} overflow-hidden`}>
+                                    <CrewRequirementEditor
+                                        value={draft.crewRequirement}
+                                        aircraftCrewComposition={aircraftCrewComposition}
+                                        crewPositionTerminology={crewPositionTerminology}
+                                        operationalModel={operationalModel}
+                                        compact
+                                        showSummary={false}
+                                        showAircraftDefaultSummary={false}
+                                        headerClassName="text-center"
+                                        aircraftDefaultOptionLabel="A/C default"
+                                        onChange={(crewRequirement) => setCurrencyDraftEvents(prev => prev.map(event =>
+                                            event.id === draft.id ? { ...event, crewRequirement } : event
+                                        ))}
+                                    />
                                 </div>
                                 <div className={`${tileBaseClass} flex flex-col text-center`}>
                                     <div className={tileLabelClass}>Action</div>

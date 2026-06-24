@@ -29616,6 +29616,31 @@ const PrioritiesView = ({
                     )
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Currencies" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          onClick: () => setOpenCurrencyDraftId((prev) => prev === draft.id ? null : draft.id),
+                          className: "w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 hover:border-cyan-500/60",
+                          children: draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : "Select"
+                        }
+                      ),
+                      isCurrencyMenuOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-20 mt-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-slate-600 bg-slate-950 p-3 shadow-xl", children: draft.dueCurrencies.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-500", children: "No due currencies listed." }) : draft.dueCurrencies.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-2 flex cursor-pointer items-start gap-2 text-xs text-slate-200 last:mb-0", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "checkbox",
+                            checked: draft.selectedCurrencies.includes(currency),
+                            onChange: () => toggleDraftCurrency(draft.id, currency),
+                            className: "mt-0.5 h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: currency })
+                      ] }, currency)) })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "CONFIG" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       AircraftConfigSelect,
@@ -29647,31 +29672,6 @@ const PrioritiesView = ({
                       ))
                     }
                   ) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Currencies" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "button",
-                        {
-                          onClick: () => setOpenCurrencyDraftId((prev) => prev === draft.id ? null : draft.id),
-                          className: "w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 hover:border-cyan-500/60",
-                          children: draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : "Select"
-                        }
-                      ),
-                      isCurrencyMenuOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-20 mt-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-slate-600 bg-slate-950 p-3 shadow-xl", children: draft.dueCurrencies.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-500", children: "No due currencies listed." }) : draft.dueCurrencies.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-2 flex cursor-pointer items-start gap-2 text-xs text-slate-200 last:mb-0", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "input",
-                          {
-                            type: "checkbox",
-                            checked: draft.selectedCurrencies.includes(currency),
-                            onChange: () => toggleDraftCurrency(draft.id, currency),
-                            className: "mt-0.5 h-4 w-4 rounded bg-slate-800 accent-cyan-500"
-                          }
-                        ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: currency })
-                      ] }, currency)) })
-                    ] })
-                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col text-center`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Action" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-1 items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
