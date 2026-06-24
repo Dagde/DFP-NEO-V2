@@ -28534,6 +28534,37 @@ const PrioritiesView = ({
         const selectedCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === req.crewGroupKey || group.crewValue === String(req.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(req.crewUnitCode || "").trim().toUpperCase());
         const isRequestCurrencyMenuOpen = openCurrencyRequestKey === `${type}:${req.id}`;
         const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? req.crewGroupKey || req.crewDisplayLabel : req.name));
+        const stageSpecificCurrencyRequest = () => {
+          if (!canSubmitRequest) return;
+          const profile = currencyProfilesForContext.find((candidate) => String(candidate.name || candidate.currency || "").trim() === String(req.event || "").trim() || String(candidate.currency || "").trim() === String(req.event || "").trim());
+          const profileCode = String(req.eventCode || profile?.code || "").trim().toUpperCase().slice(0, 8);
+          const requestDraftId = `specific-currency-${type}-${req.id}`;
+          const displayName = isFixedCrewModel ? req.crewIndividual || selectedCrewGroup?.label || req.crewDisplayLabel || req.crewGroup || "Fixed Crew" : req.name || "Currency request";
+          setCurrencyDraftEvents((prev) => {
+            if (prev.some((event) => event.id === requestDraftId)) return prev;
+            return [
+              ...prev,
+              {
+                id: requestDraftId,
+                audience: "staff",
+                personId: 0,
+                personKey: req.id,
+                personName: displayName,
+                eventType: type,
+                currencyProfileName: String(req.event || "").trim(),
+                currencyProfileCode: profileCode,
+                crewMode: req.flightType === "Solo" ? "solo" : "withOtherPilot",
+                dueCurrencies: req.currency ? [req.currency] : currencyNames,
+                selectedCurrencies: req.currency ? [req.currency] : [],
+                aircraftConfigId: req.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+                crewRequirement: req.crewRequirement || { mode: "aircraft_default" },
+                selected: true,
+                pushed: false
+              }
+            ];
+          });
+          onSubmitSctRequest(req.id, type);
+        };
         return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20 transition-[padding-bottom] duration-200 ${isRequestCurrencyMenuOpen ? "pb-64" : ""}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid w-full min-w-[704px] max-w-[1304px] grid-cols-[minmax(632px,1232px)_4rem] gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-5 gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
@@ -28630,14 +28661,10 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileBaseClass, "aria-hidden": "true" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[288px] w-16 flex-col items-center justify-center gap-3", children: [
-            req.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${statusButtonClass} text-green-400`, children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            req.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: statusButtonClass, style: { color: "#22c55e" }, children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
-                onClick: () => {
-                  if (canSubmitRequest) {
-                    onSubmitSctRequest(req.id, type);
-                  }
-                },
+                onClick: stageSpecificCurrencyRequest,
                 disabled: !canSubmitRequest,
                 className: `${statusButtonClass} ${canSubmitRequest ? "text-slate-900" : "text-gray-500"}`,
                 children: "Submit"
