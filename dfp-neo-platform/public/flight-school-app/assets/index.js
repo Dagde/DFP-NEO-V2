@@ -29573,12 +29573,13 @@ const PrioritiesView = ({
           currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }),
           currencyDraftEvents.map((draft) => {
             const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
+            const isCurrencyMenuOpen = openCurrencyDraftId === draft.id;
             const tileBaseClass = `h-[140px] w-full min-w-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? "border-green-400/40 bg-green-950/20" : "border-slate-700 bg-slate-950/70"}`;
             const tileLabelClass = "mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
             return /* @__PURE__ */ jsxRuntimeExports.jsx(
               "div",
               {
-                className: `overflow-x-auto rounded-lg border border-slate-700/80 bg-slate-950/35 p-3 ${isPublishedInActiveSchedule ? "text-green-300" : ""}`,
+                className: `overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/35 p-3 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? "pb-64" : ""} ${isPublishedInActiveSchedule ? "text-green-300" : ""}`,
                 children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid w-full min-w-[888px] max-w-[1098px] grid-cols-7 gap-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col items-center justify-between text-center`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Push" }),
@@ -29657,7 +29658,7 @@ const PrioritiesView = ({
                           children: draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : "Select"
                         }
                       ),
-                      openCurrencyDraftId === draft.id && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-20 mt-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-slate-600 bg-slate-950 p-3 shadow-xl", children: draft.dueCurrencies.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-500", children: "No due currencies listed." }) : draft.dueCurrencies.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-2 flex cursor-pointer items-start gap-2 text-xs text-slate-200 last:mb-0", children: [
+                      isCurrencyMenuOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-20 mt-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-slate-600 bg-slate-950 p-3 shadow-xl", children: draft.dueCurrencies.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-500", children: "No due currencies listed." }) : draft.dueCurrencies.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-2 flex cursor-pointer items-start gap-2 text-xs text-slate-200 last:mb-0", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "input",
                           {

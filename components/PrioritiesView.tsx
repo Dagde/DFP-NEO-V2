@@ -4106,12 +4106,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 )}
                 {currencyDraftEvents.map(draft => {
                     const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
+                    const isCurrencyMenuOpen = openCurrencyDraftId === draft.id;
                     const tileBaseClass = `h-[140px] w-full min-w-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? 'border-green-400/40 bg-green-950/20' : 'border-slate-700 bg-slate-950/70'}`;
                     const tileLabelClass = "mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
                     return (
                         <div
                             key={draft.id}
-                            className={`overflow-x-auto rounded-lg border border-slate-700/80 bg-slate-950/35 p-3 ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}
+                            className={`overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/35 p-3 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? 'pb-64' : ''} ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}
                         >
                             <div className="grid w-full min-w-[888px] max-w-[1098px] grid-cols-7 gap-2">
                                 <div className={`${tileBaseClass} flex flex-col items-center justify-between text-center`}>
@@ -4182,7 +4183,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         >
                                             {draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : 'Select'}
                                         </button>
-                                        {openCurrencyDraftId === draft.id && (
+                                        {isCurrencyMenuOpen && (
                                             <div className="absolute z-20 mt-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-slate-600 bg-slate-950 p-3 shadow-xl">
                                                 {draft.dueCurrencies.length === 0 ? (
                                                     <p className="text-xs text-slate-500">No due currencies listed.</p>
