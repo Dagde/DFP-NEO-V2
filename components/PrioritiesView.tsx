@@ -4012,9 +4012,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <button
                     onClick={addStaffCurrencyEventsToPriority}
                     disabled={staffCurrencySelection.size === 0 || (!staffCurrencyIncludeFlights && !staffCurrencyIncludeSims)}
-                    className="rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                    className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[8px] font-semibold leading-[0.9] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                    Add to Consolidated List
+                    <span>Add to<br />Consol<br />List</span>
                 </button>
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-700">
