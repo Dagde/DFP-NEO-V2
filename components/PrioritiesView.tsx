@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { TrashIcon } from '@heroicons/react/24/outline';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest, FlyingWindowExclusionPeriod, FlyingWindowExclusionRestriction, CrewRequirement } from '../types';
 import UnavailabilitiesWindow from './UnavailabilitiesWindow';
 import AuditButton from './AuditButton';
@@ -4114,18 +4115,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                             key={draft.id}
                             className={`overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/35 p-3 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? 'pb-64' : ''} ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}
                         >
-                            <div className="grid w-full min-w-[888px] max-w-[1098px] grid-cols-7 gap-2">
-                                <div className={`${tileBaseClass} flex flex-col items-center justify-between text-center`}>
-                                    <div className={tileLabelClass}>Push</div>
-                                    <input
-                                        type="checkbox"
-                                        checked={draft.selected}
-                                        disabled={isPublishedInActiveSchedule}
-                                        onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: !event.selected } : event))}
-                                        className="h-5 w-5 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
-                                    />
-                                    <div className="text-[10px] font-semibold text-slate-500">{isPublishedInActiveSchedule ? 'Published' : 'Queue'}</div>
-                                </div>
+                            <div className="grid w-full min-w-[640px] max-w-[790px] grid-cols-[repeat(5,minmax(0,1fr))_2rem] gap-2">
                                 <div className={`${tileBaseClass} flex flex-col`}>
                                     <div className={tileLabelClass}>Person</div>
                                     <div className={`min-w-0 text-sm font-semibold leading-snug ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-white'}`}>
@@ -4202,16 +4192,23 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         ))}
                                     />
                                 </div>
-                                <div className={`${tileBaseClass} flex flex-col text-center`}>
-                                    <div className={tileLabelClass}>Action</div>
-                                    <div className="flex flex-1 items-center justify-center">
+                                <div className="flex h-[140px] w-8 flex-col items-center justify-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={draft.selected}
+                                        disabled={isPublishedInActiveSchedule}
+                                        onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: !event.selected } : event))}
+                                        className="h-5 w-5 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
+                                        aria-label="Select currency event for Higher Priority"
+                                    />
                                     <button
+                                        type="button"
                                         onClick={() => setCurrencyDraftEvents(prev => prev.filter(event => event.id !== draft.id))}
-                                        className="rounded-md border border-red-500/30 px-2 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10"
+                                        className="rounded-md border border-red-500/30 p-1.5 text-red-300 hover:bg-red-500/10"
+                                        aria-label="Remove currency event"
                                     >
-                                        Remove
+                                        <TrashIcon className="h-4 w-4" />
                                     </button>
-                                    </div>
                                 </div>
                             </div>
                         </div>
