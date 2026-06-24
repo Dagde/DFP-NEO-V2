@@ -2704,22 +2704,23 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           <div className="space-y-3">
               {requests.map(req => {
                   const expiryInfo = calculateDaysToExpire(req.currencyExpire);
-                  const fieldLabelClass = 'mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500';
-                  const fieldShellClass = 'min-w-0';
+                  const tileLabelClass = 'mb-2 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
+                  const tileBaseClass = 'h-[140px] w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 p-2 text-left shadow-sm';
                   const controlClass = 'w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500';
                   const selectedCrewGroup = fixedCrewRequestCrewGroups.find(group => (
                     group.key === req.crewGroupKey
                     || (group.crewValue === String(req.crewGroup || '').replace(/^CREW\s*/i, '').trim().toUpperCase()
                       && group.unitCode === String(req.crewUnitCode || '').trim().toUpperCase())
                   ));
+                  const isRequestCurrencyMenuOpen = openCurrencyRequestKey === `${type}:${req.id}`;
                   const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? (req.crewGroupKey || req.crewDisplayLabel) : req.name));
                   return (
-                      <div key={req.id} className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20">
-                          <div className="grid gap-3 lg:grid-cols-[minmax(12rem,1.4fr)_minmax(9rem,1fr)_minmax(7rem,0.7fr)_minmax(10rem,1fr)]">
-                              <div className={fieldShellClass}>
-                                  <div className={fieldLabelClass}>Name</div>
-                                  {isFixedCrewModel ? (
-                                      <div className="grid gap-2">
+                      <div key={req.id} className={`overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20 transition-[padding-bottom] duration-200 ${isRequestCurrencyMenuOpen ? 'pb-64' : ''}`}>
+                          <div className="grid w-full min-w-[704px] max-w-[1304px] grid-cols-[minmax(632px,1232px)_4rem] gap-2">
+                              <div className="grid grid-cols-5 gap-2">
+                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                      <div className={tileLabelClass}>Crew</div>
+                                      {isFixedCrewModel ? (
                                           <select
                                               value={selectedCrewGroup?.key || ''}
                                               onChange={e => {
@@ -2744,6 +2745,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                   </optgroup>
                                               ))}
                                           </select>
+                                      ) : (
+                                          <select value={req.name} onChange={e => onUpdateSctRequest(req.id, 'name', e.target.value, type)} className={controlClass}>
+                                              <option value="">Select Instructor</option>
+                                              {instructorNames.map(name => <option key={name} value={name}>{name}</option>)}
+                                          </select>
+                                      )}
+                                  </div>
+                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                      <div className={tileLabelClass}>PIC</div>
+                                      {isFixedCrewModel ? (
                                           <select
                                               value={req.crewIndividual || ''}
                                               onChange={e => {
@@ -2755,114 +2766,87 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                               disabled={!selectedCrewGroup}
                                               className={controlClass}
                                           >
-                                              <option value="">{selectedCrewGroup ? 'Whole crew' : 'Select crew first'}</option>
+                                              <option value="">{selectedCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
                                               {selectedCrewGroup?.members.map(member => (
                                                   <option key={member.id || member.idNumber || member.name} value={member.name}>{member.name}</option>
                                               ))}
                                           </select>
-                                      </div>
-                                  ) : (
-                                      <select value={req.name} onChange={e => onUpdateSctRequest(req.id, 'name', e.target.value, type)} className={controlClass}>
-                                          <option value="">Select Instructor</option>
-                                          {instructorNames.map(name => <option key={name} value={name}>{name}</option>)}
+                                      ) : (
+                                          <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-500">N/A</div>
+                                      )}
+                                  </div>
+                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                      <div className={tileLabelClass}>Event</div>
+                                      <select value={req.event} onChange={e => applyCurrencyProfile(req.id, e.target.value)} className={controlClass}>
+                                          <option value="">Select profile</option>
+                                          {sctEvents.map(e => <option key={e} value={e}>{currencyProfileNameLabels[e] || e}</option>)}
                                       </select>
-                                  )}
-                              </div>
-                              <div className={fieldShellClass}>
-                                  <div className={fieldLabelClass}>Event</div>
-                                  <select value={req.event} onChange={e => applyCurrencyProfile(req.id, e.target.value)} className={controlClass}>
-                                      <option value="">Select profile</option>
-                                      {sctEvents.map(e => <option key={e} value={e}>{currencyProfileNameLabels[e] || e}</option>)}
-                                  </select>
-                              </div>
-                              <div className={fieldShellClass}>
-                                  <div className={fieldLabelClass}>{isFixedCrewModel ? 'Crew' : 'Solo/Dual'}</div>
-                                  {isFixedCrewModel ? (
-                                      <>
-                                          <input
-                                              type="text"
-                                              list={`currency-crew-options-${type}-${req.id}`}
-                                              value={req.crewMember || ''}
-                                              onChange={e => onUpdateSctRequest(req.id, 'crewMember', e.target.value, type)}
-                                              className={controlClass}
+                                  </div>
+                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                      <div className={tileLabelClass}>CONFIG</div>
+                                      <div className="[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white">
+                                          <AircraftConfigSelect
+                                              value={req.aircraftConfigId}
+                                              definitions={aircraftConfigOptions}
+                                              onChange={(aircraftConfigId) => onUpdateSctRequest(req.id, 'aircraftConfigId', aircraftConfigId, type)}
                                           />
-                                          <datalist id={`currency-crew-options-${type}-${req.id}`}>
-                                              {fixedCrewCurrencyCrewOptions.map(option => <option key={option} value={option} />)}
-                                          </datalist>
-                                      </>
-                                  ) : type === 'flight' && isSingleSeatAircraft ? (
-                                      <div className="rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-100">
-                                          Solo
                                       </div>
-                                  ) : (
-                                      <select value={req.flightType} onChange={e => onUpdateSctRequest(req.id, 'flightType', e.target.value, type)} className={controlClass}>
-                                          <option value="Solo">Solo</option>
-                                          <option value="Dual">Dual</option>
+                                  </div>
+                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                      <div className={tileLabelClass}>Currency</div>
+                                      <CurrencySelect request={req} type={type} />
+                                  </div>
+                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                      <div className={tileLabelClass}>Currency Expire</div>
+                                      <input type="date" value={req.currencyExpire} onChange={e => onUpdateSctRequest(req.id, 'currencyExpire', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />
+                                  </div>
+                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                      <div className={tileLabelClass}>Date Requested</div>
+                                      <input type="date" value={req.dateRequested} onChange={e => onUpdateSctRequest(req.id, 'dateRequested', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />
+                                  </div>
+                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                      <div className={tileLabelClass}>Days to Expire</div>
+                                      <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-xs">
+                                          {expiryInfo ? <span className={`font-bold ${expiryInfo.color}`}>{expiryInfo.days}</span> : <span className="text-gray-500">-</span>}
+                                      </div>
+                                  </div>
+                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                      <div className={tileLabelClass}>Priority</div>
+                                      <select value={req.priority} onChange={e => onUpdateSctRequest(req.id, 'priority', e.target.value, type)} className={controlClass}>
+                                          <option value="High">High</option>
+                                          <option value="Medium">Medium</option>
+                                          <option value="Low">Low</option>
                                       </select>
+                                  </div>
+                                  <div className={tileBaseClass} aria-hidden="true" />
+                              </div>
+                              <div className="flex h-[288px] w-16 flex-col items-center justify-center gap-3">
+                                  {req.submitted ? (
+                                      <span className={`${statusButtonClass} text-green-400`}>Submitted</span>
+                                  ) : (
+                                      <button
+                                          onClick={() => {
+                                              if (canSubmitRequest) {
+                                                  onSubmitSctRequest(req.id, type);
+                                              }
+                                          }}
+                                          disabled={!canSubmitRequest}
+                                          className={`${statusButtonClass} ${canSubmitRequest ? 'text-slate-900' : 'text-gray-500'}`}
+                                      >
+                                          Submit
+                                      </button>
                                   )}
-                              </div>
-                              <div className={fieldShellClass}>
-                                  <div className={fieldLabelClass}>Config</div>
-                                  <div className="[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white">
-                                      <AircraftConfigSelect
-                                          value={req.aircraftConfigId}
-                                          definitions={aircraftConfigOptions}
-                                          onChange={(aircraftConfigId) => onUpdateSctRequest(req.id, 'aircraftConfigId', aircraftConfigId, type)}
-                                      />
-                                  </div>
-                              </div>
-                          </div>
-                          <div className="mt-3 grid items-end gap-3 lg:grid-cols-[minmax(12rem,1.4fr)_minmax(9rem,0.95fr)_minmax(7rem,0.7fr)_minmax(7rem,0.65fr)_minmax(6rem,0.45fr)]">
-                              <div className={fieldShellClass}>
-                                  <div className={fieldLabelClass}>Currency</div>
-                                  <CurrencySelect request={req} type={type} />
-                              </div>
-                              <div className={fieldShellClass}>
-                                  <div className={fieldLabelClass}>Currency Expire</div>
-                                  <input type="date" value={req.currencyExpire} onChange={e => onUpdateSctRequest(req.id, 'currencyExpire', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />
-                              </div>
-                              <div className={fieldShellClass}>
-                                  <div className={fieldLabelClass}>Date Req.</div>
-                                  <input type="date" value={req.dateRequested} onChange={e => onUpdateSctRequest(req.id, 'dateRequested', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />
-                              </div>
-                              <div className={fieldShellClass}>
-                                  <div className={fieldLabelClass}>Days to Expire</div>
-                                  <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-xs">
-                                      {expiryInfo ? <span className={`font-bold ${expiryInfo.color}`}>{expiryInfo.days}</span> : <span className="text-gray-500">-</span>}
-                                  </div>
-                              </div>
-                              <div className={fieldShellClass}>
-                                  <div className={fieldLabelClass}>Priority</div>
-                                  <select value={req.priority} onChange={e => onUpdateSctRequest(req.id, 'priority', e.target.value, type)} className={controlClass}>
-                                      <option value="High">High</option>
-                                      <option value="Medium">Medium</option>
-                                      <option value="Low">Low</option>
-                                  </select>
-                              </div>
-                          </div>
-                          <div className="mt-2 flex justify-end gap-2">
-                              {req.submitted ? (
-                                  <span className={`${statusButtonClass} text-green-400`}>Submitted</span>
-                              ) : (
-                                  <button
-                                      onClick={() => {
-                                          if (canSubmitRequest) {
-                                              onSubmitSctRequest(req.id, type);
-                                          }
-                                      }}
-                                      disabled={!canSubmitRequest}
-                                      className={`${statusButtonClass} ${canSubmitRequest ? 'text-slate-900' : 'text-gray-500'}`}
-                                  >
-                                      Submit
+                                  <button onClick={() => onRemoveSctRequest(req.id, type)} className={`${statusButtonClass} text-red-500`} aria-label="Delete crew currency request">
+                                      Delete
                                   </button>
-                              )}
-                              <button onClick={() => onRemoveSctRequest(req.id, type)} className={`${statusButtonClass} text-red-500`} aria-label="Delete crew currency request">
-                                  Delete
-                              </button>
+                              </div>
                           </div>
                       </div>
                   );
               })}
+              {requests.length === 0 && (
+                  <p className="text-sm text-slate-500">No requests added.</p>
+              )}
           </div>
       </div>
   )};

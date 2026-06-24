@@ -27318,7 +27318,7 @@ const PrioritiesView = ({
       return [name, counts.get(name) > 1 && currency ? `${name} - ${currency}` : name];
     }).filter(([name]) => Boolean(name)));
   }, [currencyProfilesForContext]);
-  const fixedCrewCurrencyCrewOptions = reactExports.useMemo(() => Array.from(/* @__PURE__ */ new Set([
+  reactExports.useMemo(() => Array.from(/* @__PURE__ */ new Set([
     ...currencyProfilesForContext.map((profile) => String(profile.crew || "").trim()).filter(Boolean),
     ...standardMissionCrewOptions.map((option) => String(option || "").trim()).filter(Boolean)
   ])), [currencyProfilesForContext, standardMissionCrewOptions]);
@@ -28525,19 +28525,20 @@ const PrioritiesView = ({
         ...isFixedCrewModel && profile.crew ? { crewMember: profile.crew } : {}
       }, type);
     };
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: requests.map((req) => {
-      const expiryInfo = calculateDaysToExpire(req.currencyExpire);
-      const fieldLabelClass = "mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500";
-      const fieldShellClass = "min-w-0";
-      const controlClass = "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500";
-      const selectedCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === req.crewGroupKey || group.crewValue === String(req.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(req.crewUnitCode || "").trim().toUpperCase());
-      const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? req.crewGroupKey || req.crewDisplayLabel : req.name));
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(12rem,1.4fr)_minmax(9rem,1fr)_minmax(7rem,0.7fr)_minmax(10rem,1fr)]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Name" }),
-            isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+      requests.map((req) => {
+        const expiryInfo = calculateDaysToExpire(req.currencyExpire);
+        const tileLabelClass = "mb-2 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500";
+        const tileBaseClass = "h-[140px] w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 p-2 text-left shadow-sm";
+        const controlClass = "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500";
+        const selectedCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === req.crewGroupKey || group.crewValue === String(req.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(req.crewUnitCode || "").trim().toUpperCase());
+        const isRequestCurrencyMenuOpen = openCurrencyRequestKey === `${type}:${req.id}`;
+        const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? req.crewGroupKey || req.crewDisplayLabel : req.name));
+        return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20 transition-[padding-bottom] duration-200 ${isRequestCurrencyMenuOpen ? "pb-64" : ""}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid w-full min-w-[704px] max-w-[1304px] grid-cols-[minmax(632px,1232px)_4rem] gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-5 gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Crew" }),
+              isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "select",
                 {
                   value: selectedCrewGroup?.key || "",
@@ -28558,8 +28559,14 @@ const PrioritiesView = ({
                     Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unitCode, children: groups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group.key, children: group.label }, group.key)) }, unitCode))
                   ]
                 }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.name, onChange: (e) => onUpdateSctRequest(req.id, "name", e.target.value, type), className: controlClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select Instructor" }),
+                instructorNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "PIC" }),
+              isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "select",
                 {
                   value: req.crewIndividual || "",
@@ -28572,98 +28579,76 @@ const PrioritiesView = ({
                   disabled: !selectedCrewGroup,
                   className: controlClass,
                   children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: selectedCrewGroup ? "Whole crew" : "Select crew first" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: selectedCrewGroup ? "Select PIC" : "Select crew first" }),
                     selectedCrewGroup?.members.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: member.name }, member.id || member.idNumber || member.name))
                   ]
                 }
-              )
-            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.name, onChange: (e) => onUpdateSctRequest(req.id, "name", e.target.value, type), className: controlClass, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select Instructor" }),
-              instructorNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Event" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.event, onChange: (e) => applyCurrencyProfile(req.id, e.target.value), className: controlClass, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select profile" }),
-              sctEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: e, children: currencyProfileNameLabels[e] || e }, e))
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: isFixedCrewModel ? "Crew" : "Solo/Dual" }),
-            isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-500", children: "N/A" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Event" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.event, onChange: (e) => applyCurrencyProfile(req.id, e.target.value), className: controlClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select profile" }),
+                sctEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: e, children: currencyProfileNameLabels[e] || e }, e))
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "CONFIG" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                AircraftConfigSelect,
                 {
-                  type: "text",
-                  list: `currency-crew-options-${type}-${req.id}`,
-                  value: req.crewMember || "",
-                  onChange: (e) => onUpdateSctRequest(req.id, "crewMember", e.target.value, type),
-                  className: controlClass
+                  value: req.aircraftConfigId,
+                  definitions: aircraftConfigOptions,
+                  onChange: (aircraftConfigId) => onUpdateSctRequest(req.id, "aircraftConfigId", aircraftConfigId, type)
                 }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: `currency-crew-options-${type}-${req.id}`, children: fixedCrewCurrencyCrewOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option }, option)) })
-            ] }) : type === "flight" && isSingleSeatAircraft ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-100", children: "Solo" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.flightType, onChange: (e) => onUpdateSctRequest(req.id, "flightType", e.target.value, type), className: controlClass, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
-            ] })
+              ) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Currency" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(CurrencySelect, { request: req, type })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Currency Expire" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: req.currencyExpire, onChange: (e) => onUpdateSctRequest(req.id, "currencyExpire", e.target.value, type), style: { colorScheme: "dark" }, className: controlClass })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Date Requested" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: req.dateRequested, onChange: (e) => onUpdateSctRequest(req.id, "dateRequested", e.target.value, type), style: { colorScheme: "dark" }, className: controlClass })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Days to Expire" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-xs", children: expiryInfo ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-bold ${expiryInfo.color}`, children: expiryInfo.days }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "-" }) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Priority" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.priority, onChange: (e) => onUpdateSctRequest(req.id, "priority", e.target.value, type), className: controlClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileBaseClass, "aria-hidden": "true" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Config" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              AircraftConfigSelect,
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[288px] w-16 flex-col items-center justify-center gap-3", children: [
+            req.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${statusButtonClass} text-green-400`, children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
               {
-                value: req.aircraftConfigId,
-                definitions: aircraftConfigOptions,
-                onChange: (aircraftConfigId) => onUpdateSctRequest(req.id, "aircraftConfigId", aircraftConfigId, type)
+                onClick: () => {
+                  if (canSubmitRequest) {
+                    onSubmitSctRequest(req.id, type);
+                  }
+                },
+                disabled: !canSubmitRequest,
+                className: `${statusButtonClass} ${canSubmitRequest ? "text-slate-900" : "text-gray-500"}`,
+                children: "Submit"
               }
-            ) })
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onRemoveSctRequest(req.id, type), className: `${statusButtonClass} text-red-500`, "aria-label": "Delete crew currency request", children: "Delete" })
           ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid items-end gap-3 lg:grid-cols-[minmax(12rem,1.4fr)_minmax(9rem,0.95fr)_minmax(7rem,0.7fr)_minmax(7rem,0.65fr)_minmax(6rem,0.45fr)]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Currency" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(CurrencySelect, { request: req, type })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Currency Expire" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: req.currencyExpire, onChange: (e) => onUpdateSctRequest(req.id, "currencyExpire", e.target.value, type), style: { colorScheme: "dark" }, className: controlClass })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Date Req." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: req.dateRequested, onChange: (e) => onUpdateSctRequest(req.id, "dateRequested", e.target.value, type), style: { colorScheme: "dark" }, className: controlClass })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Days to Expire" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-xs", children: expiryInfo ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-bold ${expiryInfo.color}`, children: expiryInfo.days }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "-" }) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Priority" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.priority, onChange: (e) => onUpdateSctRequest(req.id, "priority", e.target.value, type), className: controlClass, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
-            ] })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex justify-end gap-2", children: [
-          req.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${statusButtonClass} text-green-400`, children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => {
-                if (canSubmitRequest) {
-                  onSubmitSctRequest(req.id, type);
-                }
-              },
-              disabled: !canSubmitRequest,
-              className: `${statusButtonClass} ${canSubmitRequest ? "text-slate-900" : "text-gray-500"}`,
-              children: "Submit"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onRemoveSctRequest(req.id, type), className: `${statusButtonClass} text-red-500`, "aria-label": "Delete crew currency request", children: "Delete" })
-        ] })
-      ] }, req.id);
-    }) }) });
+        ] }) }, req.id);
+      }),
+      requests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-slate-500", children: "No requests added." })
+    ] }) });
   };
   const isRemedialEvent = (event) => {
     const item = syllabusDetails.find((s) => s.code === event.flightNumber);
