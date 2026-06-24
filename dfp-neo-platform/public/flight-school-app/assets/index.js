@@ -29741,7 +29741,7 @@ const PrioritiesView = ({
               {
                 onClick: addStaffCurrencyEventsToPriority,
                 disabled: staffCurrencySelection.size === 0 || !staffCurrencyIncludeFlights && !staffCurrencyIncludeSims,
-                className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[8px] font-semibold leading-[0.9] disabled:cursor-not-allowed disabled:opacity-60",
+                className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-[0.9] disabled:cursor-not-allowed disabled:opacity-60",
                 children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                   "Add to",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
