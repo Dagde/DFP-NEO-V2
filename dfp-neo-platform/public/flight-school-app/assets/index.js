@@ -28116,6 +28116,13 @@ const PrioritiesView = ({
       activeScheduleEvents.filter((event) => event.date === buildDfpDate && !!event.currencyDraftId).map((event) => event.currencyDraftId)
     );
   }, [activeScheduleEvents, buildDfpDate]);
+  reactExports.useEffect(() => {
+    if (activeCurrencyDraftIds.size === 0) return;
+    setCurrencyDraftEvents((prev) => {
+      const next = prev.filter((draft) => !activeCurrencyDraftIds.has(draft.id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [activeCurrencyDraftIds]);
   const isCurrencyDue = (person, currencyName) => {
     const status = person.currencyStatus?.find((c) => c.currencyName === currencyName);
     if (!status) return true;

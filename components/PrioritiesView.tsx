@@ -2172,6 +2172,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     );
   }, [activeScheduleEvents, buildDfpDate]);
 
+  useEffect(() => {
+    if (activeCurrencyDraftIds.size === 0) return;
+    setCurrencyDraftEvents(prev => {
+      const next = prev.filter(draft => !activeCurrencyDraftIds.has(draft.id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [activeCurrencyDraftIds]);
+
   const isCurrencyDue = (person: { currencyStatus?: any[] }, currencyName: string) => {
     const status = person.currencyStatus?.find(c => c.currencyName === currencyName);
     if (!status) return true;
