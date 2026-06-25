@@ -28775,7 +28775,7 @@ const PrioritiesView = ({
           children: group.label
         }
       ),
-      Array.from({ length: 8 }).map((_, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-2 py-3 text-slate-600", children: " " }, `${group.key}-empty-${index}`))
+      Array.from({ length: 9 }).map((_, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-2 py-3 text-slate-600", children: " " }, `${group.key}-empty-${index}`))
     ] }, `${group.key}-empty`);
     const renderEventRow = (event, group, index) => {
       const isPublishedInActiveSchedule = activeScheduleEvents.some(
@@ -28819,20 +28819,35 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ignore", children: "Ignore" })
             ]
           }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-1.5 py-1.5 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            "aria-label": "Delete priority event",
+            title: "Delete priority event",
+            onClick: (e) => {
+              e.stopPropagation();
+              onDeletePriorityEvent(event.id);
+            },
+            className: "inline-flex h-7 w-7 items-center justify-center rounded border border-red-500/35 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-100",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
+          }
         ) })
       ] }, event.id);
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed border-collapse text-[11px] leading-tight", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[10%]" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[20%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[18%]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[12%]" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[15%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[14%]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[12%]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[7%]" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[8%]" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[7%]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[4%]" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Name" }),
@@ -28843,7 +28858,8 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Currency" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Config" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Priority" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Scheduler" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Scheduler" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-1 py-2 text-center", children: "Del" })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: groups.flatMap((group) => group.events.length > 0 ? group.events.map((event, index) => renderEventRow(event, group, index)) : [renderEmptyGroupRow(group)]) })
     ] }) });

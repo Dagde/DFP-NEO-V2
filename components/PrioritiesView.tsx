@@ -3021,7 +3021,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         >
           {group.label}
         </td>
-        {Array.from({ length: 8 }).map((_, index) => (
+        {Array.from({ length: 9 }).map((_, index) => (
           <td key={`${group.key}-empty-${index}`} className="border border-slate-700/80 px-2 py-3 text-slate-600">&nbsp;</td>
         ))}
       </tr>
@@ -3077,6 +3077,20 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               <option value="Ignore">Ignore</option>
             </select>
           </td>
+          <td className="border border-slate-700/80 px-1.5 py-1.5 text-center">
+            <button
+              type="button"
+              aria-label="Delete priority event"
+              title="Delete priority event"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeletePriorityEvent(event.id);
+              }}
+              className="inline-flex h-7 w-7 items-center justify-center rounded border border-red-500/35 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-100"
+            >
+              <TrashIcon aria-hidden="true" className="h-4 w-4" />
+            </button>
+          </td>
         </tr>
       );
     };
@@ -3086,14 +3100,15 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         <table className="w-full table-fixed border-collapse text-[11px] leading-tight">
             <colgroup>
                 <col className="w-[10%]" />
-                <col className="w-[20%]" />
+                <col className="w-[18%]" />
                 <col className="w-[8%]" />
                 <col className="w-[12%]" />
-                <col className="w-[15%]" />
+                <col className="w-[14%]" />
                 <col className="w-[8%]" />
                 <col className="w-[12%]" />
                 <col className="w-[7%]" />
-                <col className="w-[8%]" />
+                <col className="w-[7%]" />
+                <col className="w-[4%]" />
             </colgroup>
             <thead className="bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300">
                 <tr>
@@ -3106,6 +3121,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Config</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Priority</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Scheduler</th>
+                    <th className="border border-slate-700/90 px-1 py-2 text-center">Del</th>
                 </tr>
             </thead>
             <tbody>
