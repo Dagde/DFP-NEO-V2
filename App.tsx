@@ -7781,9 +7781,18 @@ function generateDfpInternal(
         const getFixedCrewCandidateEntries = (event: Partial<ScheduleEvent>): Array<[string, Instructor[]]> => {
             const eventOwnerUnit = getFixedCrewEventOwnerUnit(event);
             const requestedCrewGroup = normaliseFixedCrewGroupKey(event.fixedCrewGroup);
+            const requestedCurrencyPersonNames = isCurrencyPriorityEvent(event as ScheduleEvent)
+                ? [event.fixedCrewPic, event.pilot, event.student]
+                    .map(name => String(name || '').trim())
+                    .filter(name => name && !isPlaceholderPersonnelName(name) && !/^CREW\b/i.test(name))
+                : [];
+            const requiresRequestedCurrencyPerson = requestedCurrencyPersonNames.length > 0;
             const candidates = Array.from(crewGroups.entries())
                 .filter(([crew]) => crewMatchesFixedCrewEventOwnerUnit(crew, eventOwnerUnit))
                 .filter(([crew]) => !requestedCrewGroup || normaliseFixedCrewGroupKey(crew) === requestedCrewGroup)
+                .filter(([, members]) => !requiresRequestedCurrencyPerson || members.some(staff => (
+                    requestedCurrencyPersonNames.some(name => personnelNamesMatch(staff.name, name))
+                )))
                 .sort(([leftCrew], [rightCrew]) =>
                     (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0)
                     || leftCrew.localeCompare(rightCrew, undefined, { numeric: true })
@@ -7799,6 +7808,15 @@ function generateDfpInternal(
                     ownerUnit: eventOwnerUnit || null,
                     outcome: 'rejected',
                     reason: 'REQUESTED_CREW_GROUP_NOT_AVAILABLE',
+                });
+            }
+            if (!requestedCrewGroup && requiresRequestedCurrencyPerson && candidates.length === 0) {
+                pushFixedCrewAttempt({
+                    event: event.flightNumber,
+                    requestedCurrencyPersonNames,
+                    ownerUnit: eventOwnerUnit || null,
+                    outcome: 'rejected',
+                    reason: 'REQUESTED_CURRENCY_PERSON_NOT_IN_CREW',
                 });
             }
             return candidates;
@@ -7880,7 +7898,11 @@ function generateDfpInternal(
             const candidates = candidateCrewEntries || getFixedCrewCandidateEntries(event);
             for (const [crew, members] of candidates) {
                 fixedCrewPerf.counters.crewCandidateEvaluations += 1;
-                const pic = members.find(staffHasPicQualification);
+                const requestedPicName = String(event.fixedCrewPic || event.pilot || '').trim();
+                const requestedPic = requestedPicName
+                    ? members.find(staff => personnelNamesMatch(staff.name, requestedPicName) && staffHasPicQualification(staff))
+                    : null;
+                const pic = requestedPic || members.find(staffHasPicQualification);
                 const attemptBase = {
                     event: event.flightNumber,
                     eventId: event.id || null,
