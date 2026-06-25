@@ -8275,7 +8275,14 @@ function generateDfpInternal(
         const fixedCrewPriorityQueue = highestPriorityEvents
             .filter(event => priorityEventMatchesBuildDate(event, buildDate))
             .filter(event => isTaskingPriorityEvent(event) || isCurrencyPriorityEvent(event) || event.isTimeFixed)
-            .map(event => ({ source: isTaskingPriorityEvent(event) ? 'fixed-crew-tasking' : isCurrencyPriorityEvent(event) ? 'fixed-crew-currency' : 'fixed-crew-priority', event: buildFixedCrewEventFromPriority(event), fixedStartTime: event.isTimeFixed ? event.startTime : undefined }))
+            .map(event => {
+                const isCurrencyPriority = isCurrencyPriorityEvent(event);
+                return {
+                    source: isTaskingPriorityEvent(event) ? 'fixed-crew-tasking' : isCurrencyPriority ? 'fixed-crew-currency' : 'fixed-crew-priority',
+                    event: buildFixedCrewEventFromPriority(event),
+                    fixedStartTime: event.isTimeFixed && !isCurrencyPriority ? event.startTime : undefined,
+                };
+            })
             .filter((item): item is { source: string; event: Omit<ScheduleEvent, 'date'>; fixedStartTime?: number } => Boolean(item.event));
         const configuredFixedCrewTrainingPriorities = normaliseFixedCrewTrainingPriorityWeights(config.fixedCrewTrainingPriorities);
         const fixedCrewTrainingPriorityByKey = new Map(configuredFixedCrewTrainingPriorities.map(stream => [stream.key, stream]));

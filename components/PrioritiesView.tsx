@@ -2628,7 +2628,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         locationType: 'Local',
         origin: school,
         destination: school,
-        isTimeFixed: true,
+        isTimeFixed: false,
         eventCategory: 'currency',
         currency: selectedCurrencyText || 'Currency',
         priority: 'Medium',

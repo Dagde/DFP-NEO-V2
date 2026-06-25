@@ -28455,7 +28455,7 @@ const PrioritiesView = ({
         locationType: "Local",
         origin: school,
         destination: school,
-        isTimeFixed: true,
+        isTimeFixed: false,
         eventCategory: "currency",
         currency: selectedCurrencyText || "Currency",
         priority: "Medium",
@@ -76883,7 +76883,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return generatedEvents;
     }
     const queueBuildStart = fixedCrewPerfNow();
-    const fixedCrewPriorityQueue = highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate)).filter((event) => isTaskingPriorityEvent(event) || isCurrencyPriorityEvent(event) || event.isTimeFixed).map((event) => ({ source: isTaskingPriorityEvent(event) ? "fixed-crew-tasking" : isCurrencyPriorityEvent(event) ? "fixed-crew-currency" : "fixed-crew-priority", event: buildFixedCrewEventFromPriority(event), fixedStartTime: event.isTimeFixed ? event.startTime : void 0 })).filter((item) => Boolean(item.event));
+    const fixedCrewPriorityQueue = highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate)).filter((event) => isTaskingPriorityEvent(event) || isCurrencyPriorityEvent(event) || event.isTimeFixed).map((event) => {
+      const isCurrencyPriority = isCurrencyPriorityEvent(event);
+      return {
+        source: isTaskingPriorityEvent(event) ? "fixed-crew-tasking" : isCurrencyPriority ? "fixed-crew-currency" : "fixed-crew-priority",
+        event: buildFixedCrewEventFromPriority(event),
+        fixedStartTime: event.isTimeFixed && !isCurrencyPriority ? event.startTime : void 0
+      };
+    }).filter((item) => Boolean(item.event));
     const configuredFixedCrewTrainingPriorities = normaliseFixedCrewTrainingPriorityWeights(config.fixedCrewTrainingPriorities);
     const fixedCrewTrainingPriorityByKey = new Map(configuredFixedCrewTrainingPriorities.map((stream) => [stream.key, stream]));
     configuredFixedCrewTrainingPriorities.length > 0;
