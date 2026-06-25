@@ -27168,7 +27168,8 @@ const PrioritiesView = ({
   crewPositionTerminology,
   crewCompositionSettings,
   standardMissionCrewOptions = [],
-  unitCallsignSettings
+  unitCallsignSettings,
+  staffQualificationCatalogue
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
@@ -27178,6 +27179,11 @@ const PrioritiesView = ({
   const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
   const locationDisplayName = school === "ESL" ? "East Sale (ESL)" : school === "PEA" ? "Pearce (PEA)" : school;
   const staffRankOrder = ["WGCDR", "SQNLDR", "FLTLT", "FLGOFF", "PLTOFF", "Mr"];
+  const normalisedStaffQualificationCatalogue = reactExports.useMemo(
+    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue || null),
+    [staffQualificationCatalogue]
+  );
+  const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(normalisedStaffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [normalisedStaffQualificationCatalogue]);
   const aircraftConfigOptions = reactExports.useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
     return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
@@ -27361,6 +27367,41 @@ const PrioritiesView = ({
     map.get(unitKey).push(group);
     return map;
   }, /* @__PURE__ */ new Map()), [fixedCrewRequestCrewGroups]);
+  const staffHasPicQualification = (staff) => {
+    if (!staff || !fixedCrewPicQualification) return false;
+    return normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], normalisedStaffQualificationCatalogue, false).includes(fixedCrewPicQualification.id);
+  };
+  const allPicQualifiedStaff = reactExports.useMemo(() => instructorsData.filter((staff) => staffHasPicQualification(staff)).filter((staff) => {
+    const unitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+    return activeUnitCodeSet.size === 0 || !unitCode || activeUnitCodeSet.has(unitCode);
+  }).sort((a, b) => a.name.localeCompare(b.name, void 0, { sensitivity: "base" })), [
+    activeUnitCode,
+    activeUnitCodeSet,
+    fixedCrewPicQualification,
+    instructorsData,
+    normalisedStaffQualificationCatalogue,
+    school
+  ]);
+  const getStaffCurrencyPicOptions = (staff) => {
+    if (staffHasPicQualification(staff)) return [staff];
+    const crewValue = String(staff.crew || "").replace(/^CREW\s*/i, "").trim().toUpperCase();
+    const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+    if (!crewValue || staff.isAdminStaff || staff.isDeputyFlightCommander) return allPicQualifiedStaff;
+    const crewGroup = fixedCrewRequestCrewGroups.find((group) => group.crewValue === crewValue && (!staffUnitCode || group.unitCode === staffUnitCode));
+    const crewPicCandidates = (crewGroup?.members || []).filter((candidate) => staffHasPicQualification(candidate));
+    return crewPicCandidates.length > 0 ? crewPicCandidates : allPicQualifiedStaff;
+  };
+  const getDefaultStaffCurrencyPicName = (staff) => {
+    const options = getStaffCurrencyPicOptions(staff);
+    if (staffHasPicQualification(staff)) return staff.name;
+    return options.length === 1 ? options[0].name : "";
+  };
+  const getStaffCurrencyFixedCrewGroup = (staff) => {
+    const crewValue = String(staff.crew || "").replace(/^CREW\s*/i, "").trim().toUpperCase();
+    const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+    if (!crewValue) return void 0;
+    return fixedCrewRequestCrewGroups.find((group) => group.crewValue === crewValue && (!staffUnitCode || group.unitCode === staffUnitCode));
+  };
   const getCurrencyProfileConfigId = (profile) => {
     const profileConfig = String(profile.config || "").trim();
     if (!profileConfig || profileConfig.toUpperCase() === "ANY") return null;
@@ -28003,6 +28044,7 @@ const PrioritiesView = ({
   const [traineeCurrencyCrewMode, setTraineeCurrencyCrewMode] = reactExports.useState("withInstructor");
   const [isTraineeCurrencyBuilderOpen, setIsTraineeCurrencyBuilderOpen] = reactExports.useState(false);
   const [staffCurrencySelection, setStaffCurrencySelection] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [staffCurrencyPicSelections, setStaffCurrencyPicSelections] = reactExports.useState({});
   const [staffCurrencyIncludeFlights, setStaffCurrencyIncludeFlights] = reactExports.useState(true);
   const [staffCurrencyIncludeSims, setStaffCurrencyIncludeSims] = reactExports.useState(false);
   const [staffCurrencyCrewMode, setStaffCurrencyCrewMode] = reactExports.useState("withOtherPilot");
@@ -28057,7 +28099,10 @@ const PrioritiesView = ({
         aircraftConfigId: draft?.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
         currencyProfileName: String(draft?.currencyProfileName || draft?.eventName || "").trim(),
         currencyProfileCode: String(draft?.currencyProfileCode || draft?.eventCode || "").trim().toUpperCase().slice(0, 8),
-        crewRequirement: draft?.crewRequirement || { mode: "aircraft_default" }
+        crewRequirement: draft?.crewRequirement || { mode: "aircraft_default" },
+        picName: String(draft?.picName || "").trim(),
+        fixedCrewGroupKey: String(draft?.fixedCrewGroupKey || "").trim(),
+        fixedCrewDisplayLabel: String(draft?.fixedCrewDisplayLabel || "").trim()
       })) : [];
     } catch {
       return [];
@@ -28302,7 +28347,27 @@ const PrioritiesView = ({
       }
       return prev;
     });
+    setStaffCurrencyPicSelections((prev) => {
+      const validIds = new Set(staffCurrencyRows.map((row) => row.personKey));
+      const next = Object.fromEntries(Object.entries(prev).filter(([personKey2]) => validIds.has(personKey2)));
+      return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
+    });
   }, [staffCurrencyRows]);
+  reactExports.useEffect(() => {
+    setStaffCurrencyPicSelections((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      staffCurrencyRows.forEach((row) => {
+        if (!staffCurrencySelection.has(row.personKey)) return;
+        if (next[row.personKey]) return;
+        const defaultPic = getDefaultStaffCurrencyPicName(row.instructor);
+        if (!defaultPic) return;
+        next[row.personKey] = defaultPic;
+        changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [staffCurrencyRows, staffCurrencySelection, fixedCrewPicQualification, normalisedStaffQualificationCatalogue]);
   const toggleSetValue = (set, value) => {
     const next = new Set(set);
     if (next.has(value)) next.delete(value);
@@ -28353,6 +28418,9 @@ const PrioritiesView = ({
           selectedCurrencies: defaultProfile?.currency ? [defaultProfile.currency] : [],
           aircraftConfigId: defaultProfileConfigId || BASE_AIRCRAFT_CONFIG.id,
           crewRequirement: { mode: "aircraft_default" },
+          picName: person.picName || "",
+          fixedCrewGroupKey: person.fixedCrewGroupKey || "",
+          fixedCrewDisplayLabel: person.fixedCrewDisplayLabel || "",
           selected: true,
           pushed: false
         });
@@ -28363,6 +28431,7 @@ const PrioritiesView = ({
   const buildCurrencyPriorityEventsFromDrafts = (drafts) => {
     return drafts.map((draft, index) => {
       const isSolo = draft.crewMode === "solo";
+      const picName = String(draft.picName || "").trim();
       const startBase = draft.eventType === "flight" ? flyingStartTime : ftdStartTime;
       const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(", ") : "";
       const aircraftConfigId = draft.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
@@ -28374,7 +28443,9 @@ const PrioritiesView = ({
         type: draft.eventType,
         instructor: "",
         student: draft.personName,
-        pilot: isSolo ? draft.personName : "",
+        pilot: picName || (isSolo ? draft.personName : ""),
+        fixedCrewPic: picName || void 0,
+        fixedCrewGroup: draft.fixedCrewDisplayLabel || draft.fixedCrewGroupKey || void 0,
         flightNumber: eventCode2,
         duration: draft.eventType === "flight" ? 1.2 : 1.5,
         startTime: startBase,
@@ -28405,7 +28476,26 @@ const PrioritiesView = ({
     logAudit("Priorities", "Build", "Built trainee currency event review list", `${events.length} Currency event(s) staged`);
   };
   const addStaffCurrencyEventsToPriority = () => {
-    const selectedPeople = staffCurrencyRows.filter((row) => staffCurrencySelection.has(row.personKey)).map((row) => ({ idNumber: row.instructor.idNumber, personKey: row.personKey, name: row.instructor.name, rank: row.instructor.rank, dueCurrencies: row.dueCurrencies }));
+    const selectedRows = staffCurrencyRows.filter((row) => staffCurrencySelection.has(row.personKey));
+    const missingPicRows = selectedRows.filter((row) => !(staffCurrencyPicSelections[row.personKey] || getDefaultStaffCurrencyPicName(row.instructor)));
+    if (missingPicRows.length > 0) {
+      window.alert(`Select a PIC for ${missingPicRows.map((row) => row.instructor.name).join(", ")} before adding to the consolidated list.`);
+      return;
+    }
+    const selectedPeople = selectedRows.map((row) => {
+      const fixedCrewGroup = getStaffCurrencyFixedCrewGroup(row.instructor);
+      const selectedPic = staffCurrencyPicSelections[row.personKey] || getDefaultStaffCurrencyPicName(row.instructor);
+      return {
+        idNumber: row.instructor.idNumber,
+        personKey: row.personKey,
+        name: row.instructor.name,
+        rank: row.instructor.rank,
+        dueCurrencies: row.dueCurrencies,
+        picName: selectedPic,
+        fixedCrewGroupKey: fixedCrewGroup?.key || "",
+        fixedCrewDisplayLabel: fixedCrewGroup?.label || ""
+      };
+    });
     const events = buildCurrencyDraftEvents("staff", selectedPeople, staffCurrencyIncludeFlights, staffCurrencyIncludeSims, staffCurrencyCrewMode);
     if (events.length === 0) return;
     setCurrencyDraftEvents((prev) => [...prev, ...events]);
@@ -28532,6 +28622,7 @@ const PrioritiesView = ({
         const tileBaseClass = "h-[140px] w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 p-2 text-left shadow-sm";
         const controlClass = "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500";
         const selectedCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === req.crewGroupKey || group.crewValue === String(req.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(req.crewUnitCode || "").trim().toUpperCase());
+        const selectedCrewPicCandidates = (selectedCrewGroup?.members || []).filter((member) => staffHasPicQualification(member));
         const isRequestCurrencyMenuOpen = openCurrencyRequestKey === `${type}:${req.id}`;
         const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? req.crewGroupKey || req.crewDisplayLabel : req.name));
         const stageSpecificCurrencyRequest = () => {
@@ -28558,6 +28649,9 @@ const PrioritiesView = ({
                 selectedCurrencies: req.currency ? [req.currency] : [],
                 aircraftConfigId: req.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
                 crewRequirement: req.crewRequirement || { mode: "aircraft_default" },
+                picName: req.crewIndividual || "",
+                fixedCrewGroupKey: req.crewGroupKey || selectedCrewGroup?.key || "",
+                fixedCrewDisplayLabel: selectedCrewGroup?.label || req.crewDisplayLabel || "",
                 selected: true,
                 pushed: false
               }
@@ -28575,13 +28669,15 @@ const PrioritiesView = ({
                   value: selectedCrewGroup?.key || "",
                   onChange: (e) => {
                     const group = fixedCrewRequestCrewGroups.find((candidate) => candidate.key === e.target.value);
+                    const picCandidates = (group?.members || []).filter((member) => staffHasPicQualification(member));
+                    const defaultPic = picCandidates.length === 1 ? picCandidates[0].name : "";
                     onPatchSctRequest(req.id, {
                       crewGroupKey: group?.key || "",
                       crewGroup: group?.crewValue || "",
                       crewUnitCode: group?.unitCode || "",
                       crewDisplayLabel: group?.label || "",
-                      crewIndividual: "",
-                      name: ""
+                      crewIndividual: defaultPic,
+                      name: defaultPic
                     }, type);
                   },
                   className: controlClass,
@@ -28611,7 +28707,7 @@ const PrioritiesView = ({
                   className: controlClass,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: selectedCrewGroup ? "Select PIC" : "Select crew first" }),
-                    selectedCrewGroup?.members.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: member.name }, member.id || member.idNumber || member.name))
+                    selectedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: member.name }, member.id || member.idNumber || member.name))
                   ]
                 }
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-500", children: "N/A" })
@@ -29778,28 +29874,51 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-center", children: "Add" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Rank" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Role" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Staff" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Staff" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "PIC" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-700/60", children: [
-              staffCurrencyRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { colSpan: 4, className: "px-3 py-6 text-center text-sm text-slate-500", children: [
+              staffCurrencyRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { colSpan: 5, className: "px-3 py-6 text-center text-sm text-slate-500", children: [
                 "No ",
                 getStaffCurrencyRoleLabel(selectedStaffCurrencyRole),
                 " staff currently require Currency events."
               ] }) }),
-              staffCurrencyRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/40", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "checkbox",
-                    checked: staffCurrencySelection.has(row.personKey),
-                    onChange: () => setStaffCurrencySelection((prev) => toggleSetValue(prev, row.personKey)),
-                    className: "h-4 w-4 rounded bg-slate-800 accent-cyan-500"
-                  }
-                ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: row.instructor.rank }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: getStaffCurrencyRoleLabel(row.instructor.role || selectedStaffCurrencyRole) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-semibold text-white", children: row.instructor.name })
-              ] }, row.personKey))
+              staffCurrencyRows.map((row) => {
+                const picOptions = getStaffCurrencyPicOptions(row.instructor);
+                const isSelected = staffCurrencySelection.has(row.personKey);
+                const isSelfPic = staffHasPicQualification(row.instructor);
+                const selectedPic = staffCurrencyPicSelections[row.personKey] || getDefaultStaffCurrencyPicName(row.instructor);
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/40", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      checked: isSelected,
+                      onChange: () => setStaffCurrencySelection((prev) => toggleSetValue(prev, row.personKey)),
+                      className: "h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                    }
+                  ) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: row.instructor.rank }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: getStaffCurrencyRoleLabel(row.instructor.role || selectedStaffCurrencyRole) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-semibold text-white", children: row.instructor.name }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: isSelfPic ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-semibold text-green-300", children: row.instructor.name }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      value: selectedPic,
+                      disabled: !isSelected,
+                      onChange: (event) => setStaffCurrencyPicSelections((prev) => ({
+                        ...prev,
+                        [row.personKey]: event.target.value
+                      })),
+                      className: "w-full min-w-[12rem] rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: picOptions.length > 0 ? "Select PIC" : "No PIC available" }),
+                        picOptions.map((candidate) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: candidate.name, children: candidate.name }, candidate.id || candidate.idNumber || candidate.name))
+                      ]
+                    }
+                  ) })
+                ] }, row.personKey);
+              })
             ] })
           ] }) })
         ] })
@@ -98612,6 +98731,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             crewPositionTerminology: activeCrewPositionTerminology,
             crewCompositionSettings: activeCrewCompositionSettings,
             standardMissionCrewOptions: activeStandardMissionCrewOptions,
+            staffQualificationCatalogue: activeStaffQualificationCatalogue,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             unitCallsignSettings: activeUnitCallsignSettings,
             onAddPriorityEvents: (eventsToAdd) => {

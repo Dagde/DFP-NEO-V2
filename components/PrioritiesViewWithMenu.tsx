@@ -11,6 +11,7 @@ import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import type { CrewCompositionSettings } from '../utils/crewCompositionProfiles';
 import type { UnitCallsignSettings } from '../utils/unitCallsigns';
+import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface PrioritiesViewWithMenuProps {
@@ -89,6 +90,7 @@ interface PrioritiesViewWithMenuProps {
   crewCompositionSettings?: CrewCompositionSettings;
   standardMissionCrewOptions?: string[];
   unitCallsignSettings?: UnitCallsignSettings;
+  staffQualificationCatalogue?: StaffQualificationCatalogue;
 }
 
 type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';

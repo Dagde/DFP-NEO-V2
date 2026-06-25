@@ -43,6 +43,13 @@ import {
   type UnitCallsignEntry,
   type UnitCallsignSettings,
 } from '../utils/unitCallsigns';
+import {
+  getQualificationsForOperationalModel,
+  normaliseAssignedQualificationIds,
+  normaliseQualificationToken,
+  normaliseStaffQualificationCatalogue,
+  type StaffQualificationCatalogue,
+} from '../utils/staffQualifications';
 
 type FixedCrewTrainingStreamDisplay = FixedCrewTrainingStreamPriority & { eventCount?: number };
 type PriorityAllocationModel = 'flight_school' | 'air_combat' | 'fixed_crew';
@@ -255,6 +262,7 @@ interface PrioritiesViewProps {
   crewCompositionSettings?: CrewCompositionSettings;
   standardMissionCrewOptions?: string[];
   unitCallsignSettings?: UnitCallsignSettings;
+  staffQualificationCatalogue?: StaffQualificationCatalogue;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 }
 
@@ -1014,6 +1022,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   crewCompositionSettings,
   standardMissionCrewOptions = [],
   unitCallsignSettings,
+  staffQualificationCatalogue,
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
@@ -1023,6 +1032,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
   const locationDisplayName = school === 'ESL' ? 'East Sale (ESL)' : school === 'PEA' ? 'Pearce (PEA)' : school;
   const staffRankOrder = ['WGCDR', 'SQNLDR', 'FLTLT', 'FLGOFF', 'PLTOFF', 'Mr'];
+  const normalisedStaffQualificationCatalogue = useMemo(
+    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue || null),
+    [staffQualificationCatalogue],
+  );
+  const fixedCrewPicQualification = useMemo(() => getQualificationsForOperationalModel(normalisedStaffQualificationCatalogue, 'fixed_crew')
+    .find(qualification => (
+      normaliseQualificationToken(qualification.id) === 'pic'
+      || normaliseQualificationToken(qualification.code) === 'pic'
+      || normaliseQualificationToken(qualification.name) === 'pic'
+    )), [normalisedStaffQualificationCatalogue]);
   const aircraftConfigOptions = useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0
       ? aircraftConfigurationDefinitions
@@ -1242,6 +1261,51 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     map.get(unitKey)!.push(group);
     return map;
   }, new Map<string, typeof fixedCrewRequestCrewGroups>()), [fixedCrewRequestCrewGroups]);
+  const staffHasPicQualification = (staff?: Instructor | null): boolean => {
+    if (!staff || !fixedCrewPicQualification) return false;
+    return normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], normalisedStaffQualificationCatalogue, false)
+      .includes(fixedCrewPicQualification.id);
+  };
+  const allPicQualifiedStaff = useMemo(() => instructorsData
+    .filter(staff => staffHasPicQualification(staff))
+    .filter(staff => {
+      const unitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+      return activeUnitCodeSet.size === 0 || !unitCode || activeUnitCodeSet.has(unitCode);
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })), [
+      activeUnitCode,
+      activeUnitCodeSet,
+      fixedCrewPicQualification,
+      instructorsData,
+      normalisedStaffQualificationCatalogue,
+      school,
+    ]);
+  const getStaffCurrencyPicOptions = (staff: Instructor): Instructor[] => {
+    if (staffHasPicQualification(staff)) return [staff];
+    const crewValue = String(staff.crew || '').replace(/^CREW\s*/i, '').trim().toUpperCase();
+    const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+    if (!crewValue || staff.isAdminStaff || staff.isDeputyFlightCommander) return allPicQualifiedStaff;
+    const crewGroup = fixedCrewRequestCrewGroups.find(group => (
+      group.crewValue === crewValue &&
+      (!staffUnitCode || group.unitCode === staffUnitCode)
+    ));
+    const crewPicCandidates = (crewGroup?.members || []).filter(candidate => staffHasPicQualification(candidate));
+    return crewPicCandidates.length > 0 ? crewPicCandidates : allPicQualifiedStaff;
+  };
+  const getDefaultStaffCurrencyPicName = (staff: Instructor): string => {
+    const options = getStaffCurrencyPicOptions(staff);
+    if (staffHasPicQualification(staff)) return staff.name;
+    return options.length === 1 ? options[0].name : '';
+  };
+  const getStaffCurrencyFixedCrewGroup = (staff: Instructor) => {
+    const crewValue = String(staff.crew || '').replace(/^CREW\s*/i, '').trim().toUpperCase();
+    const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+    if (!crewValue) return undefined;
+    return fixedCrewRequestCrewGroups.find(group => (
+      group.crewValue === crewValue &&
+      (!staffUnitCode || group.unitCode === staffUnitCode)
+    ));
+  };
   const getCurrencyProfileConfigId = (profile: CurrencyProfile): string | null => {
     const profileConfig = String(profile.config || '').trim();
     if (!profileConfig || profileConfig.toUpperCase() === 'ANY') return null;
@@ -2004,6 +2068,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [traineeCurrencyCrewMode, setTraineeCurrencyCrewMode] = useState<'withInstructor' | 'solo'>('withInstructor');
   const [isTraineeCurrencyBuilderOpen, setIsTraineeCurrencyBuilderOpen] = useState(false);
   const [staffCurrencySelection, setStaffCurrencySelection] = useState<Set<string>>(new Set());
+  const [staffCurrencyPicSelections, setStaffCurrencyPicSelections] = useState<Record<string, string>>({});
   const [staffCurrencyIncludeFlights, setStaffCurrencyIncludeFlights] = useState(true);
   const [staffCurrencyIncludeSims, setStaffCurrencyIncludeSims] = useState(false);
   const [staffCurrencyCrewMode, setStaffCurrencyCrewMode] = useState<'withOtherPilot' | 'solo'>('withOtherPilot');
@@ -2068,6 +2133,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     selectedCurrencies: string[];
     aircraftConfigId: string;
     crewRequirement?: CrewRequirement;
+    picName?: string;
+    fixedCrewGroupKey?: string;
+    fixedCrewDisplayLabel?: string;
     selected: boolean;
     pushed: boolean;
   }>>(() => {
@@ -2082,6 +2150,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             currencyProfileName: String(draft?.currencyProfileName || draft?.eventName || '').trim(),
             currencyProfileCode: String(draft?.currencyProfileCode || draft?.eventCode || '').trim().toUpperCase().slice(0, 8),
             crewRequirement: draft?.crewRequirement || { mode: 'aircraft_default' },
+            picName: String(draft?.picName || '').trim(),
+            fixedCrewGroupKey: String(draft?.fixedCrewGroupKey || '').trim(),
+            fixedCrewDisplayLabel: String(draft?.fixedCrewDisplayLabel || '').trim(),
           }))
         : [];
     } catch {
@@ -2435,7 +2506,28 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       }
       return prev;
     });
+    setStaffCurrencyPicSelections(prev => {
+      const validIds = new Set(staffCurrencyRows.map(row => row.personKey));
+      const next = Object.fromEntries(Object.entries(prev).filter(([personKey]) => validIds.has(personKey)));
+      return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
+    });
   }, [staffCurrencyRows]);
+
+  useEffect(() => {
+    setStaffCurrencyPicSelections(prev => {
+      let changed = false;
+      const next = { ...prev };
+      staffCurrencyRows.forEach(row => {
+        if (!staffCurrencySelection.has(row.personKey)) return;
+        if (next[row.personKey]) return;
+        const defaultPic = getDefaultStaffCurrencyPicName(row.instructor);
+        if (!defaultPic) return;
+        next[row.personKey] = defaultPic;
+        changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [staffCurrencyRows, staffCurrencySelection, fixedCrewPicQualification, normalisedStaffQualificationCatalogue]);
 
   const toggleSetValue = <T,>(set: Set<T>, value: T) => {
     const next = new Set(set);
@@ -2465,7 +2557,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   const buildCurrencyDraftEvents = (
     audience: 'trainee' | 'staff',
-    people: { idNumber: number; personKey: string; name: string; fullName?: string; course?: string; rank?: string; dueCurrencies: string[] }[],
+    people: { idNumber: number; personKey: string; name: string; fullName?: string; course?: string; rank?: string; dueCurrencies: string[]; picName?: string; fixedCrewGroupKey?: string; fixedCrewDisplayLabel?: string }[],
     includeFlights: boolean,
     includeSims: boolean,
     crewMode: 'withInstructor' | 'solo' | 'withOtherPilot'
@@ -2498,6 +2590,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           selectedCurrencies: defaultProfile?.currency ? [defaultProfile.currency] : [],
           aircraftConfigId: defaultProfileConfigId || BASE_AIRCRAFT_CONFIG.id,
           crewRequirement: { mode: 'aircraft_default' },
+          picName: person.picName || '',
+          fixedCrewGroupKey: person.fixedCrewGroupKey || '',
+          fixedCrewDisplayLabel: person.fixedCrewDisplayLabel || '',
           selected: true,
           pushed: false,
         });
@@ -2509,6 +2604,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const buildCurrencyPriorityEventsFromDrafts = (drafts: typeof currencyDraftEvents): ScheduleEvent[] => {
     return drafts.map((draft, index) => {
       const isSolo = draft.crewMode === 'solo';
+      const picName = String(draft.picName || '').trim();
       const startBase = draft.eventType === 'flight' ? flyingStartTime : ftdStartTime;
       const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(', ') : '';
       const aircraftConfigId = draft.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
@@ -2520,7 +2616,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         type: draft.eventType,
         instructor: '',
         student: draft.personName,
-        pilot: isSolo ? draft.personName : '',
+        pilot: picName || (isSolo ? draft.personName : ''),
+        fixedCrewPic: picName || undefined,
+        fixedCrewGroup: draft.fixedCrewDisplayLabel || draft.fixedCrewGroupKey || undefined,
         flightNumber: eventCode,
         duration: draft.eventType === 'flight' ? 1.2 : 1.5,
         startTime: startBase,
@@ -2555,9 +2653,27 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   };
 
   const addStaffCurrencyEventsToPriority = () => {
-    const selectedPeople = staffCurrencyRows
-      .filter(row => staffCurrencySelection.has(row.personKey))
-      .map(row => ({ idNumber: row.instructor.idNumber, personKey: row.personKey, name: row.instructor.name, rank: row.instructor.rank, dueCurrencies: row.dueCurrencies }));
+    const selectedRows = staffCurrencyRows.filter(row => staffCurrencySelection.has(row.personKey));
+    const missingPicRows = selectedRows.filter(row => !(staffCurrencyPicSelections[row.personKey] || getDefaultStaffCurrencyPicName(row.instructor)));
+    if (missingPicRows.length > 0) {
+      window.alert(`Select a PIC for ${missingPicRows.map(row => row.instructor.name).join(', ')} before adding to the consolidated list.`);
+      return;
+    }
+    const selectedPeople = selectedRows
+      .map(row => {
+        const fixedCrewGroup = getStaffCurrencyFixedCrewGroup(row.instructor);
+        const selectedPic = staffCurrencyPicSelections[row.personKey] || getDefaultStaffCurrencyPicName(row.instructor);
+        return {
+          idNumber: row.instructor.idNumber,
+          personKey: row.personKey,
+          name: row.instructor.name,
+          rank: row.instructor.rank,
+          dueCurrencies: row.dueCurrencies,
+          picName: selectedPic,
+          fixedCrewGroupKey: fixedCrewGroup?.key || '',
+          fixedCrewDisplayLabel: fixedCrewGroup?.label || '',
+        };
+      });
     const events = buildCurrencyDraftEvents('staff', selectedPeople, staffCurrencyIncludeFlights, staffCurrencyIncludeSims, staffCurrencyCrewMode);
     if (events.length === 0) return;
     setCurrencyDraftEvents(prev => [...prev, ...events]);
@@ -2712,6 +2828,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     || (group.crewValue === String(req.crewGroup || '').replace(/^CREW\s*/i, '').trim().toUpperCase()
                       && group.unitCode === String(req.crewUnitCode || '').trim().toUpperCase())
                   ));
+                  const selectedCrewPicCandidates = (selectedCrewGroup?.members || []).filter(member => staffHasPicQualification(member));
                   const isRequestCurrencyMenuOpen = openCurrencyRequestKey === `${type}:${req.id}`;
                   const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? (req.crewGroupKey || req.crewDisplayLabel) : req.name));
                   const stageSpecificCurrencyRequest = () => {
@@ -2743,6 +2860,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   selectedCurrencies: req.currency ? [req.currency] : [],
                                   aircraftConfigId: req.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
                                   crewRequirement: req.crewRequirement || { mode: 'aircraft_default' },
+                                  picName: req.crewIndividual || '',
+                                  fixedCrewGroupKey: req.crewGroupKey || selectedCrewGroup?.key || '',
+                                  fixedCrewDisplayLabel: selectedCrewGroup?.label || req.crewDisplayLabel || '',
                                   selected: true,
                                   pushed: false,
                               },
@@ -2761,13 +2881,15 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                               value={selectedCrewGroup?.key || ''}
                                               onChange={e => {
                                                   const group = fixedCrewRequestCrewGroups.find(candidate => candidate.key === e.target.value);
+                                                  const picCandidates = (group?.members || []).filter(member => staffHasPicQualification(member));
+                                                  const defaultPic = picCandidates.length === 1 ? picCandidates[0].name : '';
                                                   onPatchSctRequest(req.id, {
                                                       crewGroupKey: group?.key || '',
                                                       crewGroup: group?.crewValue || '',
                                                       crewUnitCode: group?.unitCode || '',
                                                       crewDisplayLabel: group?.label || '',
-                                                      crewIndividual: '',
-                                                      name: '',
+                                                      crewIndividual: defaultPic,
+                                                      name: defaultPic,
                                                   }, type);
                                               }}
                                               className={controlClass}
@@ -2803,7 +2925,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                               className={controlClass}
                                           >
                                               <option value="">{selectedCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
-                                              {selectedCrewGroup?.members.map(member => (
+                                              {selectedCrewPicCandidates.map(member => (
                                                   <option key={member.id || member.idNumber || member.name} value={member.name}>{member.name}</option>
                                               ))}
                                           </select>
@@ -4044,23 +4166,29 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <div className="overflow-x-auto rounded-lg border border-slate-700">
                 <table className="min-w-full text-sm">
                     <thead className="bg-slate-950/80 text-xs uppercase text-slate-400">
-                            <tr>
-                                <th className="px-2 py-2 text-center">Add</th>
-                                <th className="px-2 py-2 text-left">Rank</th>
-                                <th className="px-2 py-2 text-left">Role</th>
-                                <th className="px-2 py-2 text-left">Staff</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-700/60">
-                            {staffCurrencyRows.length === 0 && (
-                                <tr><td colSpan={4} className="px-3 py-6 text-center text-sm text-slate-500">No {getStaffCurrencyRoleLabel(selectedStaffCurrencyRole)} staff currently require Currency events.</td></tr>
-                            )}
-                        {staffCurrencyRows.map(row => (
+                        <tr>
+                            <th className="px-2 py-2 text-center">Add</th>
+                            <th className="px-2 py-2 text-left">Rank</th>
+                            <th className="px-2 py-2 text-left">Role</th>
+                            <th className="px-2 py-2 text-left">Staff</th>
+                            <th className="px-2 py-2 text-left">PIC</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/60">
+                        {staffCurrencyRows.length === 0 && (
+                            <tr><td colSpan={5} className="px-3 py-6 text-center text-sm text-slate-500">No {getStaffCurrencyRoleLabel(selectedStaffCurrencyRole)} staff currently require Currency events.</td></tr>
+                        )}
+                        {staffCurrencyRows.map(row => {
+                            const picOptions = getStaffCurrencyPicOptions(row.instructor);
+                            const isSelected = staffCurrencySelection.has(row.personKey);
+                            const isSelfPic = staffHasPicQualification(row.instructor);
+                            const selectedPic = staffCurrencyPicSelections[row.personKey] || getDefaultStaffCurrencyPicName(row.instructor);
+                            return (
                             <tr key={row.personKey} className="hover:bg-sky-900/40">
                                 <td className="px-2 py-2 text-center">
                                     <input
                                         type="checkbox"
-                                        checked={staffCurrencySelection.has(row.personKey)}
+                                        checked={isSelected}
                                         onChange={() => setStaffCurrencySelection(prev => toggleSetValue(prev, row.personKey))}
                                         className="h-4 w-4 rounded bg-slate-800 accent-cyan-500"
                                     />
@@ -4068,8 +4196,33 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <td className="px-2 py-2 text-slate-300">{row.instructor.rank}</td>
                                 <td className="px-2 py-2 text-slate-300">{getStaffCurrencyRoleLabel(row.instructor.role || selectedStaffCurrencyRole)}</td>
                                 <td className="px-2 py-2 font-semibold text-white">{row.instructor.name}</td>
+                                <td className="px-2 py-2">
+                                    {isSelfPic ? (
+                                        <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-semibold text-green-300">
+                                            {row.instructor.name}
+                                        </div>
+                                    ) : (
+                                        <select
+                                            value={selectedPic}
+                                            disabled={!isSelected}
+                                            onChange={event => setStaffCurrencyPicSelections(prev => ({
+                                                ...prev,
+                                                [row.personKey]: event.target.value,
+                                            }))}
+                                            className="w-full min-w-[12rem] rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <option value="">{picOptions.length > 0 ? 'Select PIC' : 'No PIC available'}</option>
+                                            {picOptions.map(candidate => (
+                                                <option key={candidate.id || candidate.idNumber || candidate.name} value={candidate.name}>
+                                                    {candidate.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </td>
                             </tr>
-                        ))}
+                        );
+                        })}
                     </tbody>
                 </table>
             </div>

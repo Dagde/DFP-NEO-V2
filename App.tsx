@@ -35061,6 +35061,7 @@ appliedUpdates.forEach(update => {
                     crewPositionTerminology={activeCrewPositionTerminology}
                     crewCompositionSettings={activeCrewCompositionSettings}
                     standardMissionCrewOptions={activeStandardMissionCrewOptions}
+                    staffQualificationCatalogue={activeStaffQualificationCatalogue}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     unitCallsignSettings={activeUnitCallsignSettings}
                     onAddPriorityEvents={(eventsToAdd) => {
