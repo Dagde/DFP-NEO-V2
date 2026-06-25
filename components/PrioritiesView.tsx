@@ -4240,7 +4240,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                             checked={draft.selected}
                                             disabled={isPublishedInActiveSchedule}
                                             onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: !event.selected } : event))}
-                                            className="h-5 w-5 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
+                                            className="h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
                                             aria-label="Select currency event for Higher Priority"
                                         />
                                     </div>
