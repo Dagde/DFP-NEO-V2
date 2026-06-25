@@ -28777,7 +28777,12 @@ const PrioritiesView = ({
     const item = syllabusDetails.find((s) => s.code === event.flightNumber);
     return item?.isRemedial || event.flightNumber.includes("REM") || event.flightNumber.endsWith("RF") || event.isRemedial;
   };
-  const standardPriorityEvents = highestPriorityEvents;
+  const priorityEventMatchesBuildDate = (event) => {
+    const eventDate = String(event.date || "").trim();
+    return !eventDate || eventDate === buildDfpDate;
+  };
+  const standardPriorityEvents = highestPriorityEvents.filter(priorityEventMatchesBuildDate);
+  const stalePriorityEvents = highestPriorityEvents.filter((event) => !priorityEventMatchesBuildDate(event));
   reactExports.useMemo(() => {
     const list = [];
     traineesData.forEach((t) => {
@@ -30114,7 +30119,21 @@ const PrioritiesView = ({
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "highest-priority-events-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Highest Priority Events" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Highest Priority Events" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: [
+              "Build date ",
+              formatPriorityDate(buildDfpDate)
+            ] })
+          ] }),
+          stalePriorityEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-right text-[11px] font-semibold text-amber-100", children: [
+            stalePriorityEvents.length,
+            " saved row",
+            stalePriorityEvents.length === 1 ? "" : "s",
+            " not included because the date does not match this build."
+          ] })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(PriorityEventTable, { events: standardPriorityEvents })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "optional-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
@@ -77017,6 +77036,31 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       courses: activeFixedCrewTrainingSyllabusItems.filter(({ item, stream }) => stream.kind === "course" && !buildFixedCrewEventFromSyllabus(item)).length,
       packages: activeFixedCrewTrainingSyllabusItems.filter(({ item, stream }) => stream.kind === "training_package" && !buildFixedCrewEventFromSyllabus(item)).length
     };
+    const fixedCrewPriorityInputAudit = highestPriorityEvents.map((event) => {
+      const matchesDate = priorityEventMatchesBuildDate(event, buildDate);
+      const tasking = isTaskingPriorityEvent(event);
+      const currency = isCurrencyPriorityEvent(event);
+      const timeFixed = event.isTimeFixed === true;
+      const exclusionReasons = [];
+      if (!matchesDate) exclusionReasons.push("DATE_MISMATCH");
+      if (!tasking && !currency && !timeFixed) exclusionReasons.push("NOT_TASKING_CURRENCY_OR_TIME_FIXED");
+      return {
+        id: event.id || null,
+        event: event.flightNumber || event.taskingDisplayLabel || event.taskingName || event.currency || null,
+        date: event.date || null,
+        buildDate,
+        matchesDate,
+        category: tasking ? "tasking" : currency ? "currency" : event.isRemedial ? "remedial" : "priority",
+        isTimeFixed: timeFixed,
+        includedInFixedCrewPriorityQueue: matchesDate && (tasking || currency || timeFixed),
+        exclusionReasons,
+        priority: event.priority || null,
+        scheduler: event.isMandatoryTasking || event.priority === "High" ? "Mandatory" : "Desirable",
+        pic: event.fixedCrewPic || event.pilot || null,
+        crew: event.fixedCrewGroup || event.group || null,
+        currency: event.currency || null
+      };
+    });
     const fixedCrewQueue = [
       ...fixedCrewPriorityQueue,
       ...activeUnitTrainingItems.map(({ event, stream }) => ({ source: stream.kind === "course" ? "fixed-crew-course" : "fixed-crew-package", event }))
@@ -77034,7 +77078,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         tasking: highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate) && isTaskingPriorityEvent(event)).length,
         currency: highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate) && isCurrencyPriorityEvent(event)).length,
         timeFixed: highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate) && event.isTimeFixed).length,
-        schedulable: fixedCrewPriorityQueue.length
+        schedulable: fixedCrewPriorityQueue.length,
+        audit: fixedCrewPriorityInputAudit,
+        excluded: fixedCrewPriorityInputAudit.filter((event) => !event.includedInFixedCrewPriorityQueue)
       },
       packageInputs: {
         activeUnitStaffCatItems: activeFixedCrewTrainingSyllabusItems.filter((entry) => entry.stream.kind === "training_package").length,

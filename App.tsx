@@ -8440,6 +8440,31 @@ function generateDfpInternal(
             courses: activeFixedCrewTrainingSyllabusItems.filter(({ item, stream }) => stream.kind === 'course' && !buildFixedCrewEventFromSyllabus(item)).length,
             packages: activeFixedCrewTrainingSyllabusItems.filter(({ item, stream }) => stream.kind === 'training_package' && !buildFixedCrewEventFromSyllabus(item)).length,
         };
+        const fixedCrewPriorityInputAudit = highestPriorityEvents.map(event => {
+            const matchesDate = priorityEventMatchesBuildDate(event, buildDate);
+            const tasking = isTaskingPriorityEvent(event);
+            const currency = isCurrencyPriorityEvent(event);
+            const timeFixed = event.isTimeFixed === true;
+            const exclusionReasons: string[] = [];
+            if (!matchesDate) exclusionReasons.push('DATE_MISMATCH');
+            if (!tasking && !currency && !timeFixed) exclusionReasons.push('NOT_TASKING_CURRENCY_OR_TIME_FIXED');
+            return {
+                id: event.id || null,
+                event: event.flightNumber || event.taskingDisplayLabel || event.taskingName || event.currency || null,
+                date: event.date || null,
+                buildDate,
+                matchesDate,
+                category: tasking ? 'tasking' : currency ? 'currency' : event.isRemedial ? 'remedial' : 'priority',
+                isTimeFixed: timeFixed,
+                includedInFixedCrewPriorityQueue: matchesDate && (tasking || currency || timeFixed),
+                exclusionReasons,
+                priority: event.priority || null,
+                scheduler: event.isMandatoryTasking || event.priority === 'High' ? 'Mandatory' : 'Desirable',
+                pic: event.fixedCrewPic || event.pilot || null,
+                crew: event.fixedCrewGroup || event.group || null,
+                currency: event.currency || null,
+            };
+        });
         const fixedCrewQueue = [
             ...fixedCrewPriorityQueue,
             ...activeUnitTrainingItems.map(({ event, stream }) => ({ source: stream.kind === 'course' ? 'fixed-crew-course' : 'fixed-crew-package', event })),
@@ -8458,6 +8483,8 @@ function generateDfpInternal(
                 currency: highestPriorityEvents.filter(event => priorityEventMatchesBuildDate(event, buildDate) && isCurrencyPriorityEvent(event)).length,
                 timeFixed: highestPriorityEvents.filter(event => priorityEventMatchesBuildDate(event, buildDate) && event.isTimeFixed).length,
                 schedulable: fixedCrewPriorityQueue.length,
+                audit: fixedCrewPriorityInputAudit,
+                excluded: fixedCrewPriorityInputAudit.filter(event => !event.includedInFixedCrewPriorityQueue),
             },
             packageInputs: {
                 activeUnitStaffCatItems: activeFixedCrewTrainingSyllabusItems.filter(entry => entry.stream.kind === 'training_package').length,

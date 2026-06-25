@@ -3010,10 +3010,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       return item?.isRemedial || event.flightNumber.includes('REM') || event.flightNumber.endsWith('RF') || event.isRemedial;
   };
 
-  // CRITICAL FIX: Don't filter out force-scheduled remedial events
-  // They should appear in Highest Priority Events list just like SCT events
-  // Only filter out remedial events that are NOT in the highestPriorityEvents list
-  const standardPriorityEvents = highestPriorityEvents;
+  const priorityEventMatchesBuildDate = (event: ScheduleEvent): boolean => {
+      const eventDate = String(event.date || '').trim();
+      return !eventDate || eventDate === buildDfpDate;
+  };
+  const standardPriorityEvents = highestPriorityEvents.filter(priorityEventMatchesBuildDate);
+  const stalePriorityEvents = highestPriorityEvents.filter(event => !priorityEventMatchesBuildDate(event));
   
   // Calculate incomplete remedials for display
   const incompleteRemedials = useMemo(() => {
@@ -4414,7 +4416,19 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         </div>
 
         <div className="highest-priority-events-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-sky-400 mb-4">Highest Priority Events</h2>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 className="text-xl font-semibold text-sky-400">Highest Priority Events</h2>
+                    <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        Build date {formatPriorityDate(buildDfpDate)}
+                    </p>
+                </div>
+                {stalePriorityEvents.length > 0 && (
+                    <div className="rounded border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-right text-[11px] font-semibold text-amber-100">
+                        {stalePriorityEvents.length} saved row{stalePriorityEvents.length === 1 ? '' : 's'} not included because the date does not match this build.
+                    </div>
+                )}
+            </div>
             <PriorityEventTable events={standardPriorityEvents} />
         </div>
 
