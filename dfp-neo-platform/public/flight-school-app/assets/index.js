@@ -29971,7 +29971,7 @@ const PrioritiesView = ({
                           checked: draft.selected,
                           disabled: isPublishedInActiveSchedule,
                           onChange: () => setCurrencyDraftEvents((prev) => prev.map((event) => event.id === draft.id ? { ...event, selected: !event.selected } : event)),
-                          className: "h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40",
+                          className: "h-3 w-3 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40",
                           "aria-label": "Select currency event for Higher Priority"
                         }
                       )
@@ -73938,7 +73938,22 @@ const REMEDIAL_EARLIEST_START = 10;
 const REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY = "neo_remedial_force_schedule_requests";
 const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY = "dfp_active_operational_context";
 const ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY = "neo_context_selector_diag";
+const HIGHEST_PRIORITY_EVENTS_STORAGE_PREFIX = "dfp_highest_priority_events_v1";
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
+const buildHighestPriorityEventsStorageKey = (locationCode, unitCode) => `${HIGHEST_PRIORITY_EVENTS_STORAGE_PREFIX}:${String(locationCode || "UNKNOWN").trim().toUpperCase()}:${String(unitCode || "UNKNOWN").trim().toUpperCase()}`;
+const loadHighestPriorityEventsFromStorage = (storageKey) => {
+  try {
+    if (typeof localStorage === "undefined") return [];
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((event) => event && typeof event === "object" && typeof event.id === "string" && typeof event.date === "string");
+  } catch (error) {
+    console.warn("[HighestPriorityEvents] Failed to load stored events", error);
+    return [];
+  }
+};
 const isRemedialEventCode = (value) => !!value && REMEDIAL_EVENT_CODE_REGEX.test(value);
 const getRemedialBaseEventCode = (item) => String(item.code || item.id || item.masterEventId || "").replace(REMEDIAL_EVENT_CODE_REGEX, "");
 const isRemedialSyllabusItem = (item) => !!item && (item.lmpSource === "remedial" || item.isRemedial === true || isRemedialEventCode(item.id) || isRemedialEventCode(item.code));
@@ -88444,8 +88459,28 @@ const App = () => {
   const [showDateWarning, setShowDateWarning] = reactExports.useState(false);
   const [unavailabilityNotifications, setUnavailabilityNotifications] = reactExports.useState([]);
   const [isPriorityEventCreation, setIsPriorityEventCreation] = reactExports.useState(false);
-  const [highestPriorityEvents, setHighestPriorityEvents] = reactExports.useState([]);
+  const highestPriorityEventsStorageKey = reactExports.useMemo(
+    () => buildHighestPriorityEventsStorageKey(school, activeUnitCode),
+    [activeUnitCode, school]
+  );
+  const skipNextHighestPriorityPersistRef = reactExports.useRef(false);
+  const [highestPriorityEvents, setHighestPriorityEvents] = reactExports.useState(() => loadHighestPriorityEventsFromStorage(buildHighestPriorityEventsStorageKey(initialOperationalContext.location, initialOperationalContext.unit)));
   const [instructorPriority, setInstructorPriority] = reactExports.useState(DEFAULT_INSTRUCTOR_PRIORITY_CONFIG);
+  reactExports.useEffect(() => {
+    skipNextHighestPriorityPersistRef.current = true;
+    setHighestPriorityEvents(loadHighestPriorityEventsFromStorage(highestPriorityEventsStorageKey));
+  }, [highestPriorityEventsStorageKey]);
+  reactExports.useEffect(() => {
+    if (skipNextHighestPriorityPersistRef.current) {
+      skipNextHighestPriorityPersistRef.current = false;
+      return;
+    }
+    try {
+      localStorage.setItem(highestPriorityEventsStorageKey, JSON.stringify(highestPriorityEvents));
+    } catch (error) {
+      console.warn("[HighestPriorityEvents] Failed to persist events", error);
+    }
+  }, [highestPriorityEvents, highestPriorityEventsStorageKey]);
   const [cancellationRecords, setCancellationRecords] = reactExports.useState(() => {
     const stored = localStorage.getItem("cancellationRecords");
     return stored ? JSON.parse(stored) : [];

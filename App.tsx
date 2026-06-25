@@ -4463,7 +4463,31 @@ const REMEDIAL_EARLIEST_START = 10.0;
 const REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY = 'neo_remedial_force_schedule_requests';
 const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY = 'dfp_active_operational_context';
 const ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY = 'neo_context_selector_diag';
+const HIGHEST_PRIORITY_EVENTS_STORAGE_PREFIX = 'dfp_highest_priority_events_v1';
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
+
+const buildHighestPriorityEventsStorageKey = (locationCode: string, unitCode: string): string => (
+    `${HIGHEST_PRIORITY_EVENTS_STORAGE_PREFIX}:${String(locationCode || 'UNKNOWN').trim().toUpperCase()}:${String(unitCode || 'UNKNOWN').trim().toUpperCase()}`
+);
+
+const loadHighestPriorityEventsFromStorage = (storageKey: string): ScheduleEvent[] => {
+    try {
+        if (typeof localStorage === 'undefined') return [];
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((event: any): event is ScheduleEvent => (
+            event &&
+            typeof event === 'object' &&
+            typeof event.id === 'string' &&
+            typeof event.date === 'string'
+        ));
+    } catch (error) {
+        console.warn('[HighestPriorityEvents] Failed to load stored events', error);
+        return [];
+    }
+};
 
 const isRemedialEventCode = (value?: string): boolean =>
     !!value && REMEDIAL_EVENT_CODE_REGEX.test(value);
@@ -22439,8 +22463,32 @@ const App: React.FC = () => {
     const [showDateWarning, setShowDateWarning] = useState(false);
     const [unavailabilityNotifications, setUnavailabilityNotifications] = useState<string[]>([]);
     const [isPriorityEventCreation, setIsPriorityEventCreation] = useState(false);
-    const [highestPriorityEvents, setHighestPriorityEvents] = useState<ScheduleEvent[]>([]);
+    const highestPriorityEventsStorageKey = useMemo(
+        () => buildHighestPriorityEventsStorageKey(school, activeUnitCode),
+        [activeUnitCode, school],
+    );
+    const skipNextHighestPriorityPersistRef = useRef(false);
+    const [highestPriorityEvents, setHighestPriorityEvents] = useState<ScheduleEvent[]>(() => (
+        loadHighestPriorityEventsFromStorage(buildHighestPriorityEventsStorageKey(initialOperationalContext.location, initialOperationalContext.unit))
+    ));
     const [instructorPriority, setInstructorPriority] = useState<InstructorPriorityConfig>(DEFAULT_INSTRUCTOR_PRIORITY_CONFIG);
+
+    useEffect(() => {
+        skipNextHighestPriorityPersistRef.current = true;
+        setHighestPriorityEvents(loadHighestPriorityEventsFromStorage(highestPriorityEventsStorageKey));
+    }, [highestPriorityEventsStorageKey]);
+
+    useEffect(() => {
+        if (skipNextHighestPriorityPersistRef.current) {
+            skipNextHighestPriorityPersistRef.current = false;
+            return;
+        }
+        try {
+            localStorage.setItem(highestPriorityEventsStorageKey, JSON.stringify(highestPriorityEvents));
+        } catch (error) {
+            console.warn('[HighestPriorityEvents] Failed to persist events', error);
+        }
+    }, [highestPriorityEvents, highestPriorityEventsStorageKey]);
 
     // Cancellation Records State
     const [cancellationRecords, setCancellationRecords] = useState<CancellationRecord[]>(() => {
