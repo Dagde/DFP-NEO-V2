@@ -36961,6 +36961,36 @@ appliedUpdates.forEach(update => {
                                         }
                                     }
 
+                                    const isTaskingPostFlightEvent = !!eventForPostFlight && (
+                                        eventForPostFlight.isTaskingRequest === true ||
+                                        !!eventForPostFlight.taskingRequestId ||
+                                        String(eventForPostFlight.id || '').startsWith('tasking-')
+                                    );
+                                    if (isTaskingPostFlightEvent && eventForPostFlight && (data.result === 'DCO' || data.result === 'DPCO')) {
+                                        const completedTaskingRequestId = String(eventForPostFlight.taskingRequestId || '').trim();
+                                        if (completedTaskingRequestId) {
+                                            try {
+                                                const storedTaskingRequests = localStorage.getItem(TASKING_REQUEST_STORAGE_KEY);
+                                                const taskingRequests = storedTaskingRequests ? JSON.parse(storedTaskingRequests) : [];
+                                                if (Array.isArray(taskingRequests)) {
+                                                    const nextTaskingRequests = taskingRequests.filter((request: any) => (
+                                                        String(request?.id || '').trim() !== completedTaskingRequestId
+                                                    ));
+                                                    if (nextTaskingRequests.length !== taskingRequests.length) {
+                                                        localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(nextTaskingRequests));
+                                                        window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
+                                                        console.log(`[PostFlight] Tasking request cleared after ${data.result}:`, completedTaskingRequestId);
+                                                    }
+                                                }
+                                                setHighestPriorityEvents(prev =>
+                                                    prev.filter(event => event.taskingRequestId !== completedTaskingRequestId)
+                                                );
+                                            } catch (taskingCleanupErr) {
+                                                console.warn('[PostFlight] Failed to clear completed tasking request after post-flight result:', taskingCleanupErr);
+                                            }
+                                        }
+                                    }
+
                                     setEventForPostFlight(null);
                                     handleNavigation('Program Schedule');
                                     setSuccessMessage('Post-flight data saved!');
