@@ -28630,6 +28630,11 @@ const PrioritiesView = ({
         const controlClass = "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500";
         const selectedCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === req.crewGroupKey || group.crewValue === String(req.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(req.crewUnitCode || "").trim().toUpperCase());
         const selectedCrewPicCandidates = (selectedCrewGroup?.members || []).filter((member) => staffHasPicQualification(member));
+        const selectedCrewPicNames = new Set(selectedCrewPicCandidates.map((member) => member.name));
+        const otherPicCandidates = selectedCrewGroup ? allPicQualifiedStaff.filter((staff) => !selectedCrewPicNames.has(staff.name)).filter((staff) => {
+          const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+          return !selectedCrewGroup.unitCode || staffUnitCode === selectedCrewGroup.unitCode;
+        }).filter((staff) => !String(staff.crew || "").trim()) : [];
         const isRequestCurrencyMenuOpen = openCurrencyRequestKey === `${type}:${req.id}`;
         const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? req.crewGroupKey || req.crewDisplayLabel : req.name));
         const stageSpecificCurrencyRequest = () => {
@@ -28714,7 +28719,8 @@ const PrioritiesView = ({
                   className: controlClass,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: selectedCrewGroup ? "Select PIC" : "Select crew first" }),
-                    selectedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: member.name }, member.id || member.idNumber || member.name))
+                    selectedCrewPicCandidates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: selectedCrewGroup?.label || "Selected Crew", children: selectedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: member.name }, member.id || member.idNumber || member.name)) }),
+                    otherPicCandidates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: "OTHER", children: otherPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: member.name }, member.id || member.idNumber || member.name)) })
                   ]
                 }
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-500", children: "N/A" })

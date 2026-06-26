@@ -2837,6 +2837,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                       && group.unitCode === String(req.crewUnitCode || '').trim().toUpperCase())
                   ));
                   const selectedCrewPicCandidates = (selectedCrewGroup?.members || []).filter(member => staffHasPicQualification(member));
+                  const selectedCrewPicNames = new Set(selectedCrewPicCandidates.map(member => member.name));
+                  const otherPicCandidates = selectedCrewGroup
+                    ? allPicQualifiedStaff
+                        .filter(staff => !selectedCrewPicNames.has(staff.name))
+                        .filter(staff => {
+                          const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+                          return !selectedCrewGroup.unitCode || staffUnitCode === selectedCrewGroup.unitCode;
+                        })
+                        .filter(staff => !String(staff.crew || '').trim())
+                    : [];
                   const isRequestCurrencyMenuOpen = openCurrencyRequestKey === `${type}:${req.id}`;
                   const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? (req.crewGroupKey || req.crewDisplayLabel) : req.name));
                   const stageSpecificCurrencyRequest = () => {
@@ -2933,9 +2943,20 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                               className={controlClass}
                                           >
                                               <option value="">{selectedCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
-                                              {selectedCrewPicCandidates.map(member => (
-                                                  <option key={member.id || member.idNumber || member.name} value={member.name}>{member.name}</option>
-                                              ))}
+                                              {selectedCrewPicCandidates.length > 0 && (
+                                                  <optgroup label={selectedCrewGroup?.label || 'Selected Crew'}>
+                                                      {selectedCrewPicCandidates.map(member => (
+                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{member.name}</option>
+                                                      ))}
+                                                  </optgroup>
+                                              )}
+                                              {otherPicCandidates.length > 0 && (
+                                                  <optgroup label="OTHER">
+                                                      {otherPicCandidates.map(member => (
+                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{member.name}</option>
+                                                      ))}
+                                                  </optgroup>
+                                              )}
                                           </select>
                                       ) : (
                                           <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-500">N/A</div>
