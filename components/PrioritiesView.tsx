@@ -3027,9 +3027,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                       </div>
                   );
               })}
-              {requests.length === 0 && (
-                  <p className="text-sm text-slate-500">No requests added.</p>
-              )}
           </div>
       </div>
   )};
@@ -4028,8 +4025,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               </button>
             </div>
             <div className="space-y-6">
-                {renderSctRequestTable('flight', sctFlights)}
-                {renderSctRequestTable('ftd', sctFtds)}
+                {sctFlights.length === 0 && sctFtds.length === 0 ? (
+                  <p className="text-sm text-slate-500">No requests added.</p>
+                ) : (
+                  <>
+                    {sctFlights.length > 0 && renderSctRequestTable('flight', sctFlights)}
+                    {sctFtds.length > 0 && renderSctRequestTable('ftd', sctFtds)}
+                  </>
+                )}
             </div>
         </div>
 
