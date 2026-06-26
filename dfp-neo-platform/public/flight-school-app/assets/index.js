@@ -70681,6 +70681,7 @@ const normaliseAssistPriorityWeights = (items) => {
 };
 const TASKING_REQUEST_STORAGE_KEY = "neoTaskingRequests";
 const TASKING_REQUESTS_UPDATED_EVENT = "neoTaskingRequestsUpdated";
+const CURRENCY_DRAFT_STORAGE_KEY = "neoCurrencyDraftEvents.v2";
 const DfpSidePanelTimeline = ({
   flyingStartTime,
   flyingEndTime,
@@ -71856,7 +71857,7 @@ const DfpSidePanelTimeline = ({
     const request = assistTaskRequests.find((item) => item.id === id);
     if (!request || !request.tasking.trim()) return;
     if (isAssistTaskRequestInHighestPriority(id)) {
-      window.alert("Already added to Highest Priority Events list");
+      setAssistTaskRequests((prev) => prev.map((item) => item.id === id ? { ...item, saved: true, submitted: true, ignored: false } : item));
       return;
     }
     onAddPriorityEvents(buildTaskRequestEvents(request));
@@ -71876,10 +71877,68 @@ const DfpSidePanelTimeline = ({
     patchAssistCurrencyRequest(id, { submitted: false, includeInBuild: false });
   };
   const submitAssistCurrencyRequest = (id) => {
+    if (highestPriorityEvents.some((event) => event.sctRequestId === id || event.currencyDraftId === id || String(event.id || "") === `sct-flight-${id}` || String(event.id || "") === `sct-ftd-${id}` || String(event.id || "") === `neo-assist-currency-${id}`)) return;
     const type = getAssistCurrencyRequestType(id);
     const request = type === "flight" ? sctFlights.find((item) => item.id === id) : type === "ftd" ? sctFtds.find((item) => item.id === id) : null;
     if (!type || !request || !String(request.event || request.currency || "").trim()) return;
     patchAssistCurrencyRequest(id, { submitted: true, includeInBuild: true }, type);
+  };
+  const loadAssistCurrencyDraftEvents = () => {
+    try {
+      const stored = window.localStorage.getItem(CURRENCY_DRAFT_STORAGE_KEY);
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+  const buildCurrencyPriorityEventFromDraft = (draft) => {
+    const eventType = draft?.eventType === "ftd" ? "ftd" : "flight";
+    const isSolo = draft?.crewMode === "solo";
+    const aircraftConfigId = draft?.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+    const selectedCurrencies = Array.isArray(draft?.selectedCurrencies) ? draft.selectedCurrencies : [];
+    const selectedCurrencyText = selectedCurrencies.length > 0 ? selectedCurrencies.join(", ") : Array.isArray(draft?.dueCurrencies) ? draft.dueCurrencies.join(", ") : "";
+    const eventCode2 = String(draft?.currencyProfileCode || draft?.eventCode || "").trim().toUpperCase().slice(0, 8) || "CURR";
+    const picName = String(draft?.picName || "").trim();
+    return {
+      id: `currency-${draft?.audience || "staff"}-${eventType}-${draft?.personId || draft?.id || "draft"}-${date}-${v4()}`,
+      currencyDraftId: draft.id,
+      date,
+      type: eventType,
+      instructor: "",
+      student: String(draft?.personName || ""),
+      pilot: picName || (isSolo ? String(draft?.personName || "") : ""),
+      fixedCrewPic: picName || void 0,
+      fixedCrewGroup: draft?.fixedCrewDisplayLabel || draft?.fixedCrewGroupKey || void 0,
+      flightNumber: eventCode2,
+      duration: eventType === "flight" ? 1.2 : 1.5,
+      startTime: eventType === "flight" ? flyingStartTime : ftdStartTime,
+      resourceId: "",
+      color: "bg-amber-500/80",
+      flightType: isSolo ? "Solo" : "Dual",
+      locationType: "Local",
+      origin: locationCode,
+      destination: locationCode,
+      isTimeFixed: false,
+      eventCategory: "currency",
+      currency: selectedCurrencyText || "Currency",
+      priority: "Medium",
+      notes: selectedCurrencyText ? `Currency event required: ${selectedCurrencyText}` : "Currency event required",
+      crewRequirement: draft?.crewRequirement || { mode: "aircraft_default" },
+      ...eventType === "flight" ? {
+        aircraftConfigId,
+        acceptableAircraftConfigs: [aircraftConfigId]
+      } : {}
+    };
+  };
+  const submitAssistCurrencyDraft = (id) => {
+    if (highestPriorityEvents.some((event) => event.currencyDraftId === id)) return;
+    const drafts = loadAssistCurrencyDraftEvents();
+    const draft = drafts.find((item) => item?.id === id);
+    if (!draft) return;
+    onAddPriorityEvents([buildCurrencyPriorityEventFromDraft(draft)]);
+    const nextDrafts = drafts.map((item) => item?.id === id ? { ...item, selected: false, pushed: true } : item);
+    window.localStorage.setItem(CURRENCY_DRAFT_STORAGE_KEY, JSON.stringify(nextDrafts));
   };
   const highestPriorityTaskRows = reactExports.useMemo(() => {
     const grouped = /* @__PURE__ */ new Map();
@@ -71900,13 +71959,91 @@ const DfpSidePanelTimeline = ({
     });
   }, [date, highestPriorityEvents]);
   const highestPriorityCurrencyRows = reactExports.useMemo(() => highestPriorityEvents.filter((event) => event.currency || event.currencyDraftId || String(event.id || "").startsWith("neo-assist-currency-")).map((event) => ({
-    id: event.currencyDraftId || event.id,
+    id: event.currencyDraftId || event.sctRequestId || event.id,
     event,
     currency: event.currency || event.flightNumber || "Currency",
     date: event.date || date,
     takeoff: event.startTime,
     scheduled: true
   })), [date, highestPriorityEvents]);
+  const wizardTaskRows = reactExports.useMemo(() => {
+    const rows = [];
+    const seen = /* @__PURE__ */ new Set();
+    highestPriorityTaskRows.forEach((row) => {
+      const identity = String(row.id || `${row.tasking}-${row.date}-${row.takeoff}`);
+      if (seen.has(identity)) return;
+      seen.add(identity);
+      rows.push({
+        selectionId: `highest::${identity}`,
+        tasking: row.tasking || "Task",
+        date: row.date || date,
+        takeoff: row.takeoff,
+        alreadyInHighest: true
+      });
+    });
+    assistTaskRequests.filter((request) => request.saved && !request.ignored).forEach((request) => {
+      const identity = request.id;
+      if (seen.has(identity)) return;
+      seen.add(identity);
+      rows.push({
+        selectionId: `tasking::${request.id}`,
+        tasking: request.tasking || "Task",
+        date: request.date || date,
+        takeoff: request.takeoff,
+        alreadyInHighest: isAssistTaskRequestInHighestPriority(request.id)
+      });
+    });
+    return rows;
+  }, [assistTaskRequests, date, highestPriorityTaskRows, highestPriorityEvents]);
+  const wizardCurrencyRows = reactExports.useMemo(() => {
+    const rows = [];
+    const seen = /* @__PURE__ */ new Set();
+    const addRow = (identity, row) => {
+      if (!identity || seen.has(identity)) return;
+      seen.add(identity);
+      rows.push(row);
+    };
+    highestPriorityCurrencyRows.forEach((row) => {
+      const identity = String(row.id || `${row.currency}-${row.date}-${row.takeoff}`);
+      addRow(identity, {
+        selectionId: `highest::${identity}`,
+        currency: row.currency || "Currency",
+        date: row.date || date,
+        takeoff: row.takeoff,
+        alreadyInHighest: true
+      });
+    });
+    loadAssistCurrencyDraftEvents().forEach((draft) => {
+      const identity = String(draft?.id || "");
+      const selectedCurrencies = Array.isArray(draft?.selectedCurrencies) ? draft.selectedCurrencies : [];
+      const dueCurrencies = Array.isArray(draft?.dueCurrencies) ? draft.dueCurrencies : [];
+      const currencyLabel = String(
+        draft?.currencyProfileCode || draft?.currencyProfileName || draft?.eventCode || selectedCurrencies.join(", ") || dueCurrencies.join(", ") || draft?.personName || "Currency"
+      );
+      addRow(identity, {
+        selectionId: `draft::${identity}`,
+        currency: currencyLabel,
+        date,
+        takeoff: draft?.eventType === "ftd" ? ftdStartTime : flyingStartTime,
+        alreadyInHighest: highestPriorityEvents.some((event) => event.currencyDraftId === identity)
+      });
+    });
+    [
+      ...sctFlights.map((request) => ({ request, type: "flight" })),
+      ...sctFtds.map((request) => ({ request, type: "ftd" }))
+    ].filter(({ request }) => request.submitted || request.includeInBuild || request.priority === "High").forEach(({ request, type }) => {
+      const identity = request.id;
+      const alreadyInHighest = highestPriorityEvents.some((event) => event.sctRequestId === identity || String(event.id || "") === `sct-${type}-${identity}` || String(event.id || "") === `sct-${type === "flight" ? "flight" : "ftd"}-${identity}` || String(event.id || "") === `neo-assist-currency-${identity}`);
+      addRow(identity, {
+        selectionId: `sct::${identity}`,
+        currency: request.event || request.currency || "Currency",
+        date: request.dateRequested || date,
+        takeoff: parseTimeToDecimal(request.requestedTime || formatTime2(type === "ftd" ? ftdStartTime : flyingStartTime)),
+        alreadyInHighest
+      });
+    });
+    return rows;
+  }, [date, flyingStartTime, ftdStartTime, highestPriorityCurrencyRows, highestPriorityEvents, sctFlights, sctFtds]);
   const ignorePriorityEvents = (events) => {
     events.forEach((event) => {
       void onDeletePriorityEvent(event.id);
@@ -71942,12 +72079,20 @@ const DfpSidePanelTimeline = ({
     setter((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]);
   };
   const continueWizardTaskings = () => {
-    selectedWizardTaskingIds.forEach((id) => submitAssistTaskRequest(id));
+    selectedWizardTaskingIds.forEach((selectionId) => {
+      const [source, id] = selectionId.split("::");
+      if (source === "tasking" && id) submitAssistTaskRequest(id);
+    });
     setSelectedWizardTaskingIds([]);
     advanceWizard();
   };
   const continueWizardCurrency = () => {
-    selectedWizardCurrencyIds.forEach((id) => submitAssistCurrencyRequest(id));
+    selectedWizardCurrencyIds.forEach((selectionId) => {
+      const [source, id] = selectionId.split("::");
+      if (!id) return;
+      if (source === "draft") submitAssistCurrencyDraft(id);
+      if (source === "sct") submitAssistCurrencyRequest(id);
+    });
     setSelectedWizardCurrencyIds([]);
     advanceWizard();
   };
@@ -71996,15 +72141,6 @@ const DfpSidePanelTimeline = ({
   };
   const renderWizardStep = () => {
     const assistWizardModelLabel = isFixedCrewNeoAssist ? "Fixed Crew" : "Air Combat";
-    const savedTaskRequests = assistTaskRequests.filter((request) => request.saved && !request.ignored);
-    const savedCurrencyRequests = [
-      ...sctFlights,
-      ...sctFtds
-    ].filter((request) => request.submitted || request.includeInBuild || request.priority === "High").map((request) => ({
-      id: request.id,
-      currency: request.event || request.currency || "Currency",
-      takeoff: parseTimeToDecimal(request.requestedTime || formatTime2(flyingStartTime))
-    }));
     const configSummaryText = aircraftConfigurationDefinitions.map((definition) => {
       const value = definition.id === BASE_AIRCRAFT_CONFIG.id && hasEnteredConfigCapacity ? derivedCleanConfigCapacity : aircraftConfigCapacities[definition.id];
       return `${definition.label}: ${value || 0}`;
@@ -72243,21 +72379,21 @@ const DfpSidePanelTimeline = ({
     if (wizardStep === 8) {
       return questionShell(
         "Which saved taskings must be scheduled?",
-        savedTaskRequests.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select the saved taskings to send into Highest Priority Events, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved taskings are waiting in NEO Assist." }),
-        savedTaskRequests.length ? savedTaskRequests.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        wizardTaskRows.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select taskings from Highest Priority Events and the Tasking section, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved taskings are waiting in NEO Assist." }),
+        wizardTaskRows.length ? wizardTaskRows.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
             type: "button",
-            className: wizardSelectionTileClass(selectedWizardTaskingIds.includes(request.id)),
-            onClick: () => toggleWizardSelection(request.id, setSelectedWizardTaskingIds),
+            className: wizardSelectionTileClass(selectedWizardTaskingIds.includes(request.selectionId)),
+            onClick: () => toggleWizardSelection(request.selectionId, setSelectedWizardTaskingIds),
             children: [
-              "Schedule ",
+              request.alreadyInHighest ? "Confirm " : "Schedule ",
               request.tasking || "Task",
               " at ",
               formatCompactTime(request.takeoff)
             ]
           },
-          request.id
+          request.selectionId
         )).concat(
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
@@ -72275,20 +72411,21 @@ const DfpSidePanelTimeline = ({
     if (wizardStep === 9) {
       return questionShell(
         "How should currency requests be treated?",
-        savedCurrencyRequests.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select the currency events to send into Highest Priority Events, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved currency requests are waiting in NEO Assist." }),
-        savedCurrencyRequests.length ? savedCurrencyRequests.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        wizardCurrencyRows.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select currency events from Consolidated Currency Event Build and Highest Priority Events, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved currency requests are waiting in NEO Assist." }),
+        wizardCurrencyRows.length ? wizardCurrencyRows.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
             type: "button",
-            className: wizardSelectionTileClass(selectedWizardCurrencyIds.includes(request.id)),
-            onClick: () => toggleWizardSelection(request.id, setSelectedWizardCurrencyIds),
+            className: wizardSelectionTileClass(selectedWizardCurrencyIds.includes(request.selectionId)),
+            onClick: () => toggleWizardSelection(request.selectionId, setSelectedWizardCurrencyIds),
             children: [
+              request.alreadyInHighest ? "Confirm " : "Schedule ",
               request.currency || "Currency",
               " at ",
               formatCompactTime(request.takeoff)
             ]
           },
-          request.id
+          request.selectionId
         )).concat(
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
