@@ -26621,6 +26621,8 @@ const ConfigCapacityInfoHint = ({ definition }) => {
 };
 const TASKING_REQUEST_STORAGE_KEY$1 = "neoTaskingRequests";
 const TASKING_REQUESTS_UPDATED_EVENT$1 = "neoTaskingRequestsUpdated";
+const FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS$1 = 4;
+const FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS$1 = 2;
 const normaliseTaskingUnitCode = (value) => String(value || "").trim().toUpperCase();
 const splitTaskingCompositeUnitCode = (value) => normaliseTaskingUnitCode(value).split(/[+/]/).map((code) => code.trim()).filter(Boolean);
 const AircraftConfigSelect = ({ value, definitions, disabled = false, includeAny = false, onChange }) => {
@@ -27197,6 +27199,8 @@ const PrioritiesView = ({
   const [turnaroundTimestamp, setTurnaroundTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
   const isAirCombatModel = String(operationalModel2 || "").trim().toLowerCase() === "air_combat";
   const isFixedCrewModel = String(operationalModel2 || "").trim().toLowerCase() === "fixed_crew";
+  const defaultTaskingDuration = isFixedCrewModel ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS$1 : 1;
+  const defaultCurrencyDuration = isFixedCrewModel ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS$1 : 1.2;
   const priorityAllocationModel = isAirCombatModel ? "air_combat" : isFixedCrewModel ? "fixed_crew" : "flight_school";
   const normalisedAirCombatWeights = reactExports.useMemo(
     () => normaliseAirCombatSchedulingWeights(airCombatSchedulingWeights),
@@ -28061,7 +28065,7 @@ const PrioritiesView = ({
     tasking: request.tasking || "",
     date: request.date || buildDfpDate,
     takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
-    duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
+    duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : defaultTaskingDuration,
     flightType: request.flightType === "Solo" ? "Solo" : "Dual",
     depPoint: request.depPoint || school,
     arrivalPoint: request.arrivalPoint || school,
@@ -28207,7 +28211,7 @@ const PrioritiesView = ({
       tasking: "",
       date: buildDfpDate,
       takeoff: flyingStartTime,
-      duration: 1,
+      duration: defaultTaskingDuration,
       flightType: isSingleSeatAircraft ? "Solo" : "Dual",
       depPoint: school,
       arrivalPoint: school,
@@ -28454,7 +28458,7 @@ const PrioritiesView = ({
         fixedCrewPic: picName || void 0,
         fixedCrewGroup: draft.fixedCrewDisplayLabel || draft.fixedCrewGroupKey || void 0,
         flightNumber: eventCode2,
-        duration: draft.eventType === "flight" ? 1.2 : 1.5,
+        duration: isFixedCrewModel ? defaultCurrencyDuration : draft.eventType === "flight" ? 1.2 : 1.5,
         startTime: startBase,
         resourceId: "",
         color: "bg-amber-500/80",
@@ -70682,6 +70686,8 @@ const normaliseAssistPriorityWeights = (items) => {
 const TASKING_REQUEST_STORAGE_KEY = "neoTaskingRequests";
 const TASKING_REQUESTS_UPDATED_EVENT = "neoTaskingRequestsUpdated";
 const CURRENCY_DRAFT_STORAGE_KEY = "neoCurrencyDraftEvents.v2";
+const FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS = 4;
+const FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS = 2;
 const DfpSidePanelTimeline = ({
   flyingStartTime,
   flyingEndTime,
@@ -70785,9 +70791,14 @@ const DfpSidePanelTimeline = ({
   const [selectedPackageEventCode, setSelectedPackageEventCode] = reactExports.useState("");
   const [selectedCourseName, setSelectedCourseName] = reactExports.useState("");
   const [selectedPackageName, setSelectedPackageName] = reactExports.useState("");
+  const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel2);
+  const isAirCombatNeoAssist = normalisedAssistOperationalModel === "air_combat";
+  const isFixedCrewNeoAssist = normalisedAssistOperationalModel === "fixed_crew";
+  const defaultAssistTaskDuration = isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS : 1.2;
+  const defaultAssistCurrencyDuration = isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : 1.2;
   const [assistTaskDate, setAssistTaskDate] = reactExports.useState(date);
   const [assistTaskTakeoff, setAssistTaskTakeoff] = reactExports.useState(flyingStartTime);
-  const [assistTaskDuration, setAssistTaskDuration] = reactExports.useState(1.2);
+  const [assistTaskDuration, setAssistTaskDuration] = reactExports.useState(defaultAssistTaskDuration);
   const [assistTaskFlightType, setAssistTaskFlightType] = reactExports.useState("Solo");
   const [assistTaskDepPoint, setAssistTaskDepPoint] = reactExports.useState(locationCode);
   const [assistTaskArrivalPoint, setAssistTaskArrivalPoint] = reactExports.useState(locationCode);
@@ -70799,7 +70810,7 @@ const DfpSidePanelTimeline = ({
     tasking: request.tasking || "",
     date: request.date || date,
     takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
-    duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
+    duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : defaultAssistTaskDuration,
     flightType: request.flightType === "Solo" ? "Solo" : "Dual",
     depPoint: request.depPoint || locationCode,
     arrivalPoint: request.arrivalPoint || locationCode,
@@ -70822,12 +70833,17 @@ const DfpSidePanelTimeline = ({
   const [assistTaskRequests, setAssistTaskRequests] = reactExports.useState(() => loadStoredAssistTaskRequests());
   const [assistCurrencyDate, setAssistCurrencyDate] = reactExports.useState(date);
   const [assistCurrencyTakeoff, setAssistCurrencyTakeoff] = reactExports.useState(flyingStartTime);
-  const [assistCurrencyDuration, setAssistCurrencyDuration] = reactExports.useState(1.2);
+  const [assistCurrencyDuration, setAssistCurrencyDuration] = reactExports.useState(defaultAssistCurrencyDuration);
   const [assistCurrencyFlightType, setAssistCurrencyFlightType] = reactExports.useState("Solo");
   const [assistCurrencyDepPoint, setAssistCurrencyDepPoint] = reactExports.useState(locationCode);
   const [assistCurrencyArrivalPoint, setAssistCurrencyArrivalPoint] = reactExports.useState(locationCode);
   const [assistCurrencyConfigId, setAssistCurrencyConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   const [assistCurrencyRequests, setAssistCurrencyRequests] = reactExports.useState([]);
+  reactExports.useEffect(() => {
+    if (!isFixedCrewNeoAssist) return;
+    setAssistTaskDuration((prev) => prev === 1 || prev === 1.2 ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS : prev);
+    setAssistCurrencyDuration((prev) => prev === 1.2 || prev === 1.5 ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : prev);
+  }, [isFixedCrewNeoAssist]);
   const [showAssistTaskForm, setShowAssistTaskForm] = reactExports.useState(false);
   const [showAssistCurrencyForm, setShowAssistCurrencyForm] = reactExports.useState(false);
   const [airCombatAssistMode, setAirCombatAssistMode] = reactExports.useState("tile");
@@ -70987,9 +71003,6 @@ const DfpSidePanelTimeline = ({
     return `PC-21 ${number}`;
   }, [selectedResourceKind, selectedResourceNumber]);
   const assistFormationSize = selectedResourceKind === "flight" ? Math.max(1, Math.floor(Number(selectedResourceNumber) || 1)) : 1;
-  const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel2);
-  const isAirCombatNeoAssist = normalisedAssistOperationalModel === "air_combat";
-  const isFixedCrewNeoAssist = normalisedAssistOperationalModel === "fixed_crew";
   const usesNeoAssistModeHeader = isAirCombatNeoAssist || isFixedCrewNeoAssist;
   const isNeoAssistWizardMode = usesNeoAssistModeHeader && airCombatAssistMode === "wizard";
   const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === "tile";
@@ -71148,7 +71161,7 @@ const DfpSidePanelTimeline = ({
   }, [activeAssistSection, isAirCombatTileMode, selectedCurrencyName, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
   const assistDuration = Math.max(
     0.1,
-    activeAssistSection === "taskings" ? Number(assistTaskDuration) || 1.2 : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || 1.2 : Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2
+    activeAssistSection === "taskings" ? Number(assistTaskDuration) || defaultAssistTaskDuration : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || defaultAssistCurrencyDuration : Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2
   );
   const assistStartTime = activeAssistSection === "taskings" ? assistTaskTakeoff : activeAssistSection === "currency" ? assistCurrencyTakeoff : flyingStartTime;
   const effectiveAssistTaskFlightType = isSingleSeatFlightResource ? "Solo" : assistTaskFlightType;
@@ -71821,7 +71834,7 @@ const DfpSidePanelTimeline = ({
       pilot: "",
       group: aircraftCount > 1 ? `Tasking ${index + 1} of ${aircraftCount}` : "Tasking",
       flightNumber: label,
-      duration: Math.max(0.1, Number(request.duration) || 1.2),
+      duration: Math.max(0.1, Number(request.duration) || defaultAssistTaskDuration),
       startTime: request.takeoff,
       resourceId: "",
       color: "bg-cyan-500/80",
@@ -71911,7 +71924,7 @@ const DfpSidePanelTimeline = ({
       fixedCrewPic: picName || void 0,
       fixedCrewGroup: draft?.fixedCrewDisplayLabel || draft?.fixedCrewGroupKey || void 0,
       flightNumber: eventCode2,
-      duration: eventType === "flight" ? 1.2 : 1.5,
+      duration: isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : eventType === "flight" ? 1.2 : 1.5,
       startTime: eventType === "flight" ? flyingStartTime : ftdStartTime,
       resourceId: "",
       color: "bg-amber-500/80",
@@ -73339,7 +73352,7 @@ const DfpSidePanelTimeline = ({
         currency: request.event || request.currency || "Currency",
         date: request.dateRequested || date,
         takeoff: parseTimeToDecimal(request.requestedTime || formatTime2(flyingStartTime)),
-        duration: 1.2,
+        duration: defaultAssistCurrencyDuration,
         flightType: request.flightType,
         depPoint: locationCode,
         arrivalPoint: locationCode,
@@ -93739,6 +93752,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       (req) => (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
     );
     console.log("🔍 Found SCT flights to include:", highPrioritySctFlights.length, "| FTDs:", highPrioritySctFtds.length);
+    const fixedCrewCurrencyEventDuration = normaliseOperationalModel(activeOperationalModel) === "fixed_crew" ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : null;
     highPrioritySctFlights.forEach((sctReq) => {
       const sctEventCode = String(sctReq.eventCode || sctReq.event || "").trim().toUpperCase().slice(0, 8) || sctReq.event;
       const sctCrewGroupKey = getSctCrewGroupKey(sctReq);
@@ -93753,7 +93767,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       );
       if (existingInPriorityIndex > -1) {
         const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
-        const duration = syllabusItem?.duration || 1.5;
+        const duration = fixedCrewCurrencyEventDuration ?? syllabusItem?.duration ?? 1.5;
         let startTime = 8;
         if (sctReq.requestedTime) {
           const [hours, minutes] = sctReq.requestedTime.split(":").map(Number);
@@ -93785,7 +93799,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
         allTraineesData.find((t) => t.fullName === sctReq.name);
-        const duration = syllabusItem?.duration || 1.5;
+        const duration = fixedCrewCurrencyEventDuration ?? syllabusItem?.duration ?? 1.5;
         const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
         let startTime = 8;
         if (sctReq.requestedTime) {
@@ -93848,7 +93862,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       );
       if (existingInPriorityIndex > -1) {
         const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
-        const duration = syllabusItem?.duration || 1.5;
+        const duration = fixedCrewCurrencyEventDuration ?? syllabusItem?.duration ?? 1.5;
         let startTime = 8;
         if (sctReq.requestedTime) {
           const [hours, minutes] = sctReq.requestedTime.split(":").map(Number);
@@ -93877,7 +93891,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
         allTraineesData.find((t) => t.fullName === sctReq.name);
-        const duration = syllabusItem?.duration || 1.5;
+        const duration = fixedCrewCurrencyEventDuration ?? syllabusItem?.duration ?? 1.5;
         let startTime = 8;
         if (sctReq.requestedTime) {
           const [hours, minutes] = sctReq.requestedTime.split(":").map(Number);

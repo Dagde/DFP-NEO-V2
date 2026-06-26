@@ -286,6 +286,8 @@ const ConfigCapacityInfoHint: React.FC<{ definition: AircraftConfigurationDefini
 
 const TASKING_REQUEST_STORAGE_KEY = 'neoTaskingRequests';
 const TASKING_REQUESTS_UPDATED_EVENT = 'neoTaskingRequestsUpdated';
+const FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS = 4;
+const FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS = 2;
 
 const normaliseTaskingUnitCode = (value?: string | null): string => (
   String(value || '').trim().toUpperCase()
@@ -1064,6 +1066,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [turnaroundTimestamp, setTurnaroundTimestamp] = useState(new Date().toLocaleString());
   const isAirCombatModel = String(operationalModel || '').trim().toLowerCase() === 'air_combat';
   const isFixedCrewModel = String(operationalModel || '').trim().toLowerCase() === 'fixed_crew';
+  const defaultTaskingDuration = isFixedCrewModel ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS : 1;
+  const defaultCurrencyDuration = isFixedCrewModel ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : 1.2;
   const priorityAllocationModel: PriorityAllocationModel = isAirCombatModel ? 'air_combat' : isFixedCrewModel ? 'fixed_crew' : 'flight_school';
   const normalisedAirCombatWeights = useMemo(
     () => normaliseAirCombatSchedulingWeights(airCombatSchedulingWeights),
@@ -2085,7 +2089,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     tasking: request.tasking || '',
     date: request.date || buildDfpDate,
     takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
-    duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
+    duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : defaultTaskingDuration,
     flightType: request.flightType === 'Solo' ? 'Solo' : 'Dual',
     depPoint: request.depPoint || school,
     arrivalPoint: request.arrivalPoint || school,
@@ -2299,7 +2303,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       tasking: '',
       date: buildDfpDate,
       takeoff: flyingStartTime,
-      duration: 1,
+      duration: defaultTaskingDuration,
       flightType: isSingleSeatAircraft ? 'Solo' : 'Dual',
       depPoint: school,
       arrivalPoint: school,
@@ -2628,7 +2632,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         fixedCrewPic: picName || undefined,
         fixedCrewGroup: draft.fixedCrewDisplayLabel || draft.fixedCrewGroupKey || undefined,
         flightNumber: eventCode,
-        duration: draft.eventType === 'flight' ? 1.2 : 1.5,
+        duration: isFixedCrewModel ? defaultCurrencyDuration : draft.eventType === 'flight' ? 1.2 : 1.5,
         startTime: startBase,
         resourceId: '',
         color: 'bg-amber-500/80',

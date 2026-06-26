@@ -361,6 +361,8 @@ type NeoAssistDropPlacement = {
 const TASKING_REQUEST_STORAGE_KEY = 'neoTaskingRequests';
 const TASKING_REQUESTS_UPDATED_EVENT = 'neoTaskingRequestsUpdated';
 const CURRENCY_DRAFT_STORAGE_KEY = 'neoCurrencyDraftEvents.v2';
+const FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS = 4;
+const FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS = 2;
 
 const DfpSidePanelTimeline: React.FC<{
     flyingStartTime: number;
@@ -533,9 +535,14 @@ const DfpSidePanelTimeline: React.FC<{
     const [selectedPackageEventCode, setSelectedPackageEventCode] = useState('');
     const [selectedCourseName, setSelectedCourseName] = useState('');
     const [selectedPackageName, setSelectedPackageName] = useState('');
+    const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel);
+    const isAirCombatNeoAssist = normalisedAssistOperationalModel === 'air_combat';
+    const isFixedCrewNeoAssist = normalisedAssistOperationalModel === 'fixed_crew';
+    const defaultAssistTaskDuration = isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS : 1.2;
+    const defaultAssistCurrencyDuration = isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : 1.2;
     const [assistTaskDate, setAssistTaskDate] = useState(date);
     const [assistTaskTakeoff, setAssistTaskTakeoff] = useState(flyingStartTime);
-    const [assistTaskDuration, setAssistTaskDuration] = useState(1.2);
+    const [assistTaskDuration, setAssistTaskDuration] = useState(defaultAssistTaskDuration);
     const [assistTaskFlightType, setAssistTaskFlightType] = useState<'Solo' | 'Dual'>('Solo');
     const [assistTaskDepPoint, setAssistTaskDepPoint] = useState(locationCode);
     const [assistTaskArrivalPoint, setAssistTaskArrivalPoint] = useState(locationCode);
@@ -547,7 +554,7 @@ const DfpSidePanelTimeline: React.FC<{
         tasking: request.tasking || '',
         date: request.date || date,
         takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
-        duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
+        duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : defaultAssistTaskDuration,
         flightType: request.flightType === 'Solo' ? 'Solo' as const : 'Dual' as const,
         depPoint: request.depPoint || locationCode,
         arrivalPoint: request.arrivalPoint || locationCode,
@@ -585,7 +592,7 @@ const DfpSidePanelTimeline: React.FC<{
     }>>(() => loadStoredAssistTaskRequests());
     const [assistCurrencyDate, setAssistCurrencyDate] = useState(date);
     const [assistCurrencyTakeoff, setAssistCurrencyTakeoff] = useState(flyingStartTime);
-    const [assistCurrencyDuration, setAssistCurrencyDuration] = useState(1.2);
+    const [assistCurrencyDuration, setAssistCurrencyDuration] = useState(defaultAssistCurrencyDuration);
     const [assistCurrencyFlightType, setAssistCurrencyFlightType] = useState<'Solo' | 'Dual'>('Solo');
     const [assistCurrencyDepPoint, setAssistCurrencyDepPoint] = useState(locationCode);
     const [assistCurrencyArrivalPoint, setAssistCurrencyArrivalPoint] = useState(locationCode);
@@ -604,6 +611,15 @@ const DfpSidePanelTimeline: React.FC<{
         submitted?: boolean;
         ignored?: boolean;
     }>>([]);
+    useEffect(() => {
+        if (!isFixedCrewNeoAssist) return;
+        setAssistTaskDuration(prev => (
+            prev === 1 || prev === 1.2 ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS : prev
+        ));
+        setAssistCurrencyDuration(prev => (
+            prev === 1.2 || prev === 1.5 ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : prev
+        ));
+    }, [isFixedCrewNeoAssist]);
     const [showAssistTaskForm, setShowAssistTaskForm] = useState(false);
     const [showAssistCurrencyForm, setShowAssistCurrencyForm] = useState(false);
     const [airCombatAssistMode, setAirCombatAssistMode] = useState<'tile' | 'wizard'>('tile');
@@ -818,9 +834,6 @@ const DfpSidePanelTimeline: React.FC<{
     const assistFormationSize = selectedResourceKind === 'flight'
         ? Math.max(1, Math.floor(Number(selectedResourceNumber) || 1))
         : 1;
-    const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel);
-    const isAirCombatNeoAssist = normalisedAssistOperationalModel === 'air_combat';
-    const isFixedCrewNeoAssist = normalisedAssistOperationalModel === 'fixed_crew';
     const usesNeoAssistModeHeader = isAirCombatNeoAssist || isFixedCrewNeoAssist;
     const isNeoAssistWizardMode = usesNeoAssistModeHeader && airCombatAssistMode === 'wizard';
     const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === 'tile';
@@ -1023,9 +1036,9 @@ const DfpSidePanelTimeline: React.FC<{
     const assistDuration = Math.max(
         0.1,
         activeAssistSection === 'taskings'
-            ? Number(assistTaskDuration) || 1.2
+            ? Number(assistTaskDuration) || defaultAssistTaskDuration
             : activeAssistSection === 'currency'
-                ? Number(assistCurrencyDuration) || 1.2
+                ? Number(assistCurrencyDuration) || defaultAssistCurrencyDuration
                 : Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2,
     );
 
@@ -1849,7 +1862,7 @@ const DfpSidePanelTimeline: React.FC<{
             pilot: '',
             group: aircraftCount > 1 ? `Tasking ${index + 1} of ${aircraftCount}` : 'Tasking',
             flightNumber: label,
-            duration: Math.max(0.1, Number(request.duration) || 1.2),
+            duration: Math.max(0.1, Number(request.duration) || defaultAssistTaskDuration),
             startTime: request.takeoff,
             resourceId: '',
             color: 'bg-cyan-500/80',
@@ -1886,7 +1899,7 @@ const DfpSidePanelTimeline: React.FC<{
             pilot: selectedCrewName || '',
             group: 'Currency',
             flightNumber: request.currency || 'Currency',
-            duration: Math.max(0.1, Number(request.duration) || 1.2),
+            duration: Math.max(0.1, Number(request.duration) || defaultAssistCurrencyDuration),
             startTime: request.takeoff,
             resourceId: '',
             color: '#7c3aed',
@@ -1995,7 +2008,7 @@ const DfpSidePanelTimeline: React.FC<{
             fixedCrewPic: picName || undefined,
             fixedCrewGroup: draft?.fixedCrewDisplayLabel || draft?.fixedCrewGroupKey || undefined,
             flightNumber: eventCode,
-            duration: eventType === 'flight' ? 1.2 : 1.5,
+            duration: isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : eventType === 'flight' ? 1.2 : 1.5,
             startTime: eventType === 'flight' ? flyingStartTime : ftdStartTime,
             resourceId: '',
             color: 'bg-amber-500/80',
@@ -3485,7 +3498,7 @@ const DfpSidePanelTimeline: React.FC<{
                 currency: request.event || request.currency || 'Currency',
                 date: request.dateRequested || date,
                 takeoff: parseTimeToDecimal(request.requestedTime || formatTime(flyingStartTime)),
-                duration: 1.2,
+                duration: defaultAssistCurrencyDuration,
                 flightType: request.flightType,
                 depPoint: locationCode,
                 arrivalPoint: locationCode,
@@ -28881,6 +28894,9 @@ const App: React.FC = () => {
             (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
         );
         console.log('🔍 Found SCT flights to include:', highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
+        const fixedCrewCurrencyEventDuration = normaliseOperationalModel(activeOperationalModel) === 'fixed_crew'
+            ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS
+            : null;
 
         // Process SCT Flights
         highPrioritySctFlights.forEach(sctReq => {
@@ -28900,7 +28916,7 @@ const App: React.FC = () => {
             if (existingInPriorityIndex > -1) {
                 // Update existing event in priority list
                 const syllabusItem = syllabusDetails.find(s => s.code === sctReq.event);
-                const duration = syllabusItem?.duration || 1.5;
+                const duration = fixedCrewCurrencyEventDuration ?? syllabusItem?.duration ?? 1.5;
 
                 // Convert requested time to decimal hours
                 let startTime = 8.0;
@@ -28936,7 +28952,7 @@ const App: React.FC = () => {
                 }
                 const syllabusItem = syllabusDetails.find(s => s.code === sctReq.event);
                 const trainee = allTraineesData.find(t => t.fullName === sctReq.name);
-                const duration = syllabusItem?.duration || 1.5;
+                const duration = fixedCrewCurrencyEventDuration ?? syllabusItem?.duration ?? 1.5;
                 const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
 
                 // Convert requested time to decimal hours (e.g., "15:00" -> 15.0)
@@ -29001,7 +29017,7 @@ const App: React.FC = () => {
             if (existingInPriorityIndex > -1) {
                 // Update existing event in priority list
                 const syllabusItem = syllabusDetails.find(s => s.code === sctReq.event);
-                const duration = syllabusItem?.duration || 1.5;
+                const duration = fixedCrewCurrencyEventDuration ?? syllabusItem?.duration ?? 1.5;
 
                 // Convert requested time to decimal hours
                 let startTime = 8.0;
@@ -29034,7 +29050,7 @@ const App: React.FC = () => {
                 }
                 const syllabusItem = syllabusDetails.find(s => s.code === sctReq.event);
                 const trainee = allTraineesData.find(t => t.fullName === sctReq.name);
-                const duration = syllabusItem?.duration || 1.5;
+                const duration = fixedCrewCurrencyEventDuration ?? syllabusItem?.duration ?? 1.5;
 
                 // Convert requested time to decimal hours (e.g., "15:00" -> 15.0)
                 let startTime = 8.0; // Default
