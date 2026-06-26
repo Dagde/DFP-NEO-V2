@@ -19509,6 +19509,14 @@ const App: React.FC = () => {
         cancelText?: string;
         autoCloseDelay?: number;
     } | null>(null);
+    const [fixedCrewCrewChoiceModal, setFixedCrewCrewChoiceModal] = useState<{
+        eventLabel: string;
+        picName: string;
+        crews: { key: string; label: string }[];
+        selectedMode: 'crew' | 'random';
+        selectedCrewKey: string;
+        onResolve: (choice: { mode: 'crew'; crewKey: string } | { mode: 'random' } | null) => void;
+    } | null>(null);
 
     // Visual Adjust state
     const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
@@ -29418,7 +29426,27 @@ const App: React.FC = () => {
         }
     };
 
-    const resolveFixedCrewPicPriorityEventsWithoutCrew = (events: ScheduleEvent[]): ScheduleEvent[] | null => {
+    const showFixedCrewCrewChoiceModal = (
+        eventLabel: string,
+        picName: string,
+        crews: { key: string; label: string }[]
+    ): Promise<{ mode: 'crew'; crewKey: string } | { mode: 'random' } | null> => (
+        new Promise(resolve => {
+            setFixedCrewCrewChoiceModal({
+                eventLabel,
+                picName,
+                crews,
+                selectedMode: 'random',
+                selectedCrewKey: '',
+                onResolve: choice => {
+                    setFixedCrewCrewChoiceModal(null);
+                    resolve(choice);
+                },
+            });
+        })
+    );
+
+    const resolveFixedCrewPicPriorityEventsWithoutCrew = async (events: ScheduleEvent[]): Promise<ScheduleEvent[] | null> => {
         if (activeOperationalModel !== 'fixed_crew') return events;
 
         const normalisePromptUnitCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
@@ -29496,18 +29524,15 @@ const App: React.FC = () => {
             }
 
             const eventLabel = String(event.taskingName || event.taskingDisplayLabel || event.flightNumber || event.id || 'Priority event').trim();
-            const crewList = sameUnitCrews
-                .map((group, index) => `${index + 1}. ${group.label}`)
-                .join('\n');
-            const response = window.prompt(
-                `${eventLabel} has PIC ${picName} but no crew assigned.\n\nChoose a crew for this build:\n${crewList}\n\nType a number, or type ANY to let NEO choose randomly from these crews. Cancel pauses the build.`,
-                sameUnitCrews.length === 1 ? '1' : 'ANY'
+            const choice = await showFixedCrewCrewChoiceModal(
+                eventLabel,
+                picName,
+                sameUnitCrews.map(group => ({ key: group.key, label: group.label }))
             );
 
-            if (response === null) return null;
+            if (!choice) return null;
 
-            const answer = response.trim().toUpperCase();
-            if (answer === 'ANY' || answer === 'A' || answer === '0') {
+            if (choice.mode === 'random') {
                 replacements.set(event.id, {
                     ...event,
                     fixedCrewRandomCrew: true,
@@ -29522,11 +29547,10 @@ const App: React.FC = () => {
                 continue;
             }
 
-            const selectedIndex = Number.parseInt(answer, 10) - 1;
-            const selectedCrew = sameUnitCrews[selectedIndex];
+            const selectedCrew = sameUnitCrews.find(group => group.key === choice.crewKey);
             if (!selectedCrew) {
                 showDarkAlert(
-                    `NEO Build was paused because "${response}" is not a valid crew selection for ${eventLabel}.`,
+                    `NEO Build was paused because the selected crew is no longer available for ${eventLabel}.`,
                     'Crew Selection Required',
                     'warning'
                 );
@@ -29554,7 +29578,7 @@ const App: React.FC = () => {
         return resolvedEvents;
     };
 
-    const startBuildProcess = () => {
+    const startBuildProcess = async () => {
         console.log('🚀 [NEO-Build] startBuildProcess called');
         // CRITICAL FIRST STEP: Sync SCT and Remedial requests to Highest Priority
         console.log('🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====');
@@ -29804,7 +29828,7 @@ const App: React.FC = () => {
 
         console.log('DEBUG ===== PRE-BUILD ANALYSIS END =====');
 
-        const resolvedPicCrewPriorityEvents = resolveFixedCrewPicPriorityEventsWithoutCrew(newHighestPriorityEvents);
+        const resolvedPicCrewPriorityEvents = await resolveFixedCrewPicPriorityEventsWithoutCrew(newHighestPriorityEvents);
         if (!resolvedPicCrewPriorityEvents) {
             console.log('DEBUG NEO Build paused: fixed crew PIC priority event requires crew selection.');
             return;
@@ -29873,12 +29897,12 @@ const App: React.FC = () => {
         }
 
         console.log('🚀 [NEO-Build] Starting build process');
-        startBuildProcess();
+        void startBuildProcess();
     };
 
     const handleConfirmDateAndBuild = () => {
         setShowDateWarning(false);
-        startBuildProcess();
+        void startBuildProcess();
     };
 
     const runBuildAlgorithm = async (preservedEvents?: ScheduleEvent[], buildPublishedSchedulesOverride?: Record<string, ScheduleEvent[]>) => {
@@ -37884,6 +37908,110 @@ appliedUpdates.forEach(update => {
                     sctEvents={sctEvents}
                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                 />
+            )}
+
+            {fixedCrewCrewChoiceModal && (
+                <div className="fixed inset-0 bg-black/75 z-[91] flex items-center justify-center animate-fade-in">
+                    <div className="w-full max-w-2xl rounded-lg border border-cyan-500/40 bg-gray-900 shadow-2xl shadow-cyan-950/40 overflow-hidden">
+                        <div className="border-b border-cyan-500/20 bg-cyan-950/30 px-6 py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-400/50 bg-amber-500/10 text-amber-300">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-cyan-100">Crew Required</h2>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/70">Fixed Crew Priority Event</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="space-y-5 px-6 py-5">
+                            <div className="rounded-md border border-gray-700 bg-gray-950/60 p-4">
+                                <p className="text-sm leading-6 text-gray-200">
+                                    <span className="font-semibold text-white">{fixedCrewCrewChoiceModal.eventLabel}</span>
+                                    {' '}has PIC{' '}
+                                    <span className="font-semibold text-amber-200">{fixedCrewCrewChoiceModal.picName}</span>
+                                    {' '}but no crew assigned. Select a same-unit crew to write into Build Planner, or allow NEO to assign a random same-unit crew for this build.
+                                </p>
+                            </div>
+                            <div className="grid gap-3">
+                                {fixedCrewCrewChoiceModal.crews.map(crew => {
+                                    const checked = fixedCrewCrewChoiceModal.selectedMode === 'crew'
+                                        && fixedCrewCrewChoiceModal.selectedCrewKey === crew.key;
+                                    return (
+                                        <label
+                                            key={crew.key}
+                                            className={`flex items-center gap-3 rounded-md border px-4 py-3 transition-colors cursor-pointer ${
+                                                checked
+                                                    ? 'border-cyan-300 bg-cyan-900/40 text-white'
+                                                    : 'border-gray-700 bg-gray-950/50 text-gray-200 hover:border-cyan-500/60'
+                                            }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={checked}
+                                                onChange={() => setFixedCrewCrewChoiceModal(prev => prev ? {
+                                                    ...prev,
+                                                    selectedMode: 'crew',
+                                                    selectedCrewKey: crew.key,
+                                                } : prev)}
+                                                className="h-4 w-4 accent-cyan-400"
+                                            />
+                                            <span className="text-sm font-semibold">{crew.label}</span>
+                                        </label>
+                                    );
+                                })}
+                                <label className={`flex items-center gap-3 rounded-md border px-4 py-3 transition-colors cursor-pointer ${
+                                    fixedCrewCrewChoiceModal.selectedMode === 'random'
+                                        ? 'border-amber-300 bg-amber-900/30 text-white'
+                                        : 'border-gray-700 bg-gray-950/50 text-gray-200 hover:border-amber-500/60'
+                                }`}>
+                                    <input
+                                        type="radio"
+                                        name="fixed-crew-random-choice"
+                                        checked={fixedCrewCrewChoiceModal.selectedMode === 'random'}
+                                        onChange={() => setFixedCrewCrewChoiceModal(prev => prev ? {
+                                            ...prev,
+                                            selectedMode: 'random',
+                                            selectedCrewKey: '',
+                                        } : prev)}
+                                        className="h-4 w-4 accent-amber-400"
+                                    />
+                                    <span className="text-sm font-semibold">Assign random same-unit crew</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 border-t border-gray-700 bg-gray-950/70 px-6 py-4">
+                            <button
+                                type="button"
+                                onClick={() => fixedCrewCrewChoiceModal.onResolve(null)}
+                                className="rounded-md bg-gray-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600"
+                            >
+                                Pause Build
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (fixedCrewCrewChoiceModal.selectedMode === 'random') {
+                                        fixedCrewCrewChoiceModal.onResolve({ mode: 'random' });
+                                        return;
+                                    }
+                                    if (fixedCrewCrewChoiceModal.selectedCrewKey) {
+                                        fixedCrewCrewChoiceModal.onResolve({
+                                            mode: 'crew',
+                                            crewKey: fixedCrewCrewChoiceModal.selectedCrewKey,
+                                        });
+                                    }
+                                }}
+                                disabled={fixedCrewCrewChoiceModal.selectedMode === 'crew' && !fixedCrewCrewChoiceModal.selectedCrewKey}
+                                className="rounded-md bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-gray-600 disabled:text-gray-300"
+                            >
+                                Continue Build
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Dark Message Modal for replacing browser alerts and confirms */}

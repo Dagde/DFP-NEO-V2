@@ -86273,6 +86273,7 @@ const App = () => {
   const [isMultiSelectMode, setIsMultiSelectMode] = reactExports.useState(false);
   const [selectedEventIds, setSelectedEventIds] = reactExports.useState(/* @__PURE__ */ new Set());
   const [darkMessageModal, setDarkMessageModal] = reactExports.useState(null);
+  const [fixedCrewCrewChoiceModal, setFixedCrewCrewChoiceModal] = reactExports.useState(null);
   const [isVisualAdjustMode, setIsVisualAdjustMode] = reactExports.useState(false);
   const _scheduleUpdatePersistTimer = reactExports.useRef(null);
   const [visualAdjustEvent, setVisualAdjustEvent] = reactExports.useState(null);
@@ -94198,7 +94199,20 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       handleNavigation("CourseRoster");
     }
   };
-  const resolveFixedCrewPicPriorityEventsWithoutCrew = (events2) => {
+  const showFixedCrewCrewChoiceModal = (eventLabel, picName, crews) => new Promise((resolve) => {
+    setFixedCrewCrewChoiceModal({
+      eventLabel,
+      picName,
+      crews,
+      selectedMode: "random",
+      selectedCrewKey: "",
+      onResolve: (choice) => {
+        setFixedCrewCrewChoiceModal(null);
+        resolve(choice);
+      }
+    });
+  });
+  const resolveFixedCrewPicPriorityEventsWithoutCrew = async (events2) => {
     if (activeOperationalModel !== "fixed_crew") return events2;
     const normalisePromptUnitCode = (value) => String(value || "").trim().toUpperCase();
     const normalisePromptCrewKey = (value) => String(value || "").replace(/^CREW\s*/i, "").trim().toUpperCase();
@@ -94251,19 +94265,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         return null;
       }
       const eventLabel = String(event.taskingName || event.taskingDisplayLabel || event.flightNumber || event.id || "Priority event").trim();
-      const crewList = sameUnitCrews.map((group, index) => `${index + 1}. ${group.label}`).join("\n");
-      const response = window.prompt(
-        `${eventLabel} has PIC ${picName} but no crew assigned.
-
-Choose a crew for this build:
-${crewList}
-
-Type a number, or type ANY to let NEO choose randomly from these crews. Cancel pauses the build.`,
-        sameUnitCrews.length === 1 ? "1" : "ANY"
+      const choice = await showFixedCrewCrewChoiceModal(
+        eventLabel,
+        picName,
+        sameUnitCrews.map((group) => ({ key: group.key, label: group.label }))
       );
-      if (response === null) return null;
-      const answer = response.trim().toUpperCase();
-      if (answer === "ANY" || answer === "A" || answer === "0") {
+      if (!choice) return null;
+      if (choice.mode === "random") {
         replacements.set(event.id, {
           ...event,
           fixedCrewRandomCrew: true,
@@ -94277,11 +94285,10 @@ Type a number, or type ANY to let NEO choose randomly from these crews. Cancel p
         });
         continue;
       }
-      const selectedIndex = Number.parseInt(answer, 10) - 1;
-      const selectedCrew = sameUnitCrews[selectedIndex];
+      const selectedCrew = sameUnitCrews.find((group) => group.key === choice.crewKey);
       if (!selectedCrew) {
         showDarkAlert2(
-          `NEO Build was paused because "${response}" is not a valid crew selection for ${eventLabel}.`,
+          `NEO Build was paused because the selected crew is no longer available for ${eventLabel}.`,
           "Crew Selection Required",
           "warning"
         );
@@ -94305,7 +94312,7 @@ Type a number, or type ANY to let NEO choose randomly from these crews. Cancel p
     setHighestPriorityEvents((prevEvents) => prevEvents.map((event) => replacements.get(event.id) || event));
     return resolvedEvents;
   };
-  const startBuildProcess = () => {
+  const startBuildProcess = async () => {
     console.log("🚀 [NEO-Build] startBuildProcess called");
     console.log("🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====");
     console.log("🚀 [NEO-Build] Pre-Build Step 1: Syncing SCT and Remedial requests...");
@@ -94511,7 +94518,7 @@ Type a number, or type ANY to let NEO choose randomly from these crews. Cancel p
       console.log(`DEBUG Pre-Build Analysis: No fixed Active DFP events found for this date; ${existingEventsForDate.length} non-fixed event(s) will be rebuilt`);
     }
     console.log("DEBUG ===== PRE-BUILD ANALYSIS END =====");
-    const resolvedPicCrewPriorityEvents = resolveFixedCrewPicPriorityEventsWithoutCrew(newHighestPriorityEvents);
+    const resolvedPicCrewPriorityEvents = await resolveFixedCrewPicPriorityEventsWithoutCrew(newHighestPriorityEvents);
     if (!resolvedPicCrewPriorityEvents) {
       console.log("DEBUG NEO Build paused: fixed crew PIC priority event requires crew selection.");
       return;
@@ -94561,11 +94568,11 @@ Type a number, or type ANY to let NEO choose randomly from these crews. Cancel p
       return;
     }
     console.log("🚀 [NEO-Build] Starting build process");
-    startBuildProcess();
+    void startBuildProcess();
   };
   const handleConfirmDateAndBuild = () => {
     setShowDateWarning(false);
-    startBuildProcess();
+    void startBuildProcess();
   };
   const runBuildAlgorithm = async (preservedEvents, buildPublishedSchedulesOverride) => {
     console.log("🚀 [NEO-Build] runBuildAlgorithm called");
@@ -101370,6 +101377,103 @@ Do you want to replace the existing entry?`,
           aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions
         }
       ),
+      fixedCrewCrewChoiceModal && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/75 z-[91] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-2xl rounded-lg border border-cyan-500/40 bg-gray-900 shadow-2xl shadow-cyan-950/40 overflow-hidden", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-950/30 px-6 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-8 w-8 items-center justify-center rounded-full border border-amber-400/50 bg-amber-500/10 text-amber-300", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v3.75m0 3.75h.008v.008H12v-.008zM10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-cyan-100", children: "Crew Required" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/70", children: "Fixed Crew Priority Event" })
+          ] })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 px-6 py-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-950/60 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm leading-6 text-gray-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: fixedCrewCrewChoiceModal.eventLabel }),
+            " ",
+            "has PIC",
+            " ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-amber-200", children: fixedCrewCrewChoiceModal.picName }),
+            " ",
+            "but no crew assigned. Select a same-unit crew to write into Build Planner, or allow NEO to assign a random same-unit crew for this build."
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3", children: [
+            fixedCrewCrewChoiceModal.crews.map((crew) => {
+              const checked = fixedCrewCrewChoiceModal.selectedMode === "crew" && fixedCrewCrewChoiceModal.selectedCrewKey === crew.key;
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "label",
+                {
+                  className: `flex items-center gap-3 rounded-md border px-4 py-3 transition-colors cursor-pointer ${checked ? "border-cyan-300 bg-cyan-900/40 text-white" : "border-gray-700 bg-gray-950/50 text-gray-200 hover:border-cyan-500/60"}`,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked,
+                        onChange: () => setFixedCrewCrewChoiceModal((prev) => prev ? {
+                          ...prev,
+                          selectedMode: "crew",
+                          selectedCrewKey: crew.key
+                        } : prev),
+                        className: "h-4 w-4 accent-cyan-400"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold", children: crew.label })
+                  ]
+                },
+                crew.key
+              );
+            }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-3 rounded-md border px-4 py-3 transition-colors cursor-pointer ${fixedCrewCrewChoiceModal.selectedMode === "random" ? "border-amber-300 bg-amber-900/30 text-white" : "border-gray-700 bg-gray-950/50 text-gray-200 hover:border-amber-500/60"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "radio",
+                  name: "fixed-crew-random-choice",
+                  checked: fixedCrewCrewChoiceModal.selectedMode === "random",
+                  onChange: () => setFixedCrewCrewChoiceModal((prev) => prev ? {
+                    ...prev,
+                    selectedMode: "random",
+                    selectedCrewKey: ""
+                  } : prev),
+                  className: "h-4 w-4 accent-amber-400"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold", children: "Assign random same-unit crew" })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-3 border-t border-gray-700 bg-gray-950/70 px-6 py-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => fixedCrewCrewChoiceModal.onResolve(null),
+              className: "rounded-md bg-gray-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600",
+              children: "Pause Build"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                if (fixedCrewCrewChoiceModal.selectedMode === "random") {
+                  fixedCrewCrewChoiceModal.onResolve({ mode: "random" });
+                  return;
+                }
+                if (fixedCrewCrewChoiceModal.selectedCrewKey) {
+                  fixedCrewCrewChoiceModal.onResolve({
+                    mode: "crew",
+                    crewKey: fixedCrewCrewChoiceModal.selectedCrewKey
+                  });
+                }
+              },
+              disabled: fixedCrewCrewChoiceModal.selectedMode === "crew" && !fixedCrewCrewChoiceModal.selectedCrewKey,
+              className: "rounded-md bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-gray-600 disabled:text-gray-300",
+              children: "Continue Build"
+            }
+          )
+        ] })
+      ] }) }),
       darkMessageModal && /* @__PURE__ */ jsxRuntimeExports.jsx(
         DarkMessageModal,
         {
