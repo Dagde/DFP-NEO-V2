@@ -29,6 +29,11 @@ interface PostFlightViewProps {
   aircraftNumberSettings?: AircraftNumberSettings;
 }
 
+const POST_FLIGHT_FORM_STORAGE_PREFIX = 'dfpNeo.postFlightFormSnapshot.';
+
+const getPostFlightFormStorageKey = (eventId?: string) =>
+    eventId ? `${POST_FLIGHT_FORM_STORAGE_PREFIX}${eventId}` : '';
+
 // FIX: Changed to a named export to resolve module resolution errors.
 export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
     const { freezeState, checkAndWarn } = useSystemFreeze();
@@ -205,13 +210,26 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         }
     }, [event, school]);
 
+    useEffect(() => {
+        const storageKey = getPostFlightFormStorageKey(event?.id);
+        if (!storageKey) return;
+        try {
+            const raw = localStorage.getItem(storageKey);
+            if (!raw) return;
+            applySavedFormState(JSON.parse(raw), 'local storage');
+        } catch (err) {
+            console.warn('[PostFlight] Could not restore saved form snapshot:', err);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [event?.id]);
+
     // ── Load previously saved FlightLogEntry on mount ────────────────────────
     // Fetch any existing saved data for this event from the DB and pre-populate
     // all form fields so reopening the form shows the last-saved values.
-    const hasFetchedSavedData = useRef(false);
+    const fetchedFlightLogEventId = useRef<string | null>(null);
     useEffect(() => {
-        if (!event?.id || hasFetchedSavedData.current) return;
-        hasFetchedSavedData.current = true;
+        if (!event?.id || fetchedFlightLogEventId.current === event.id) return;
+        fetchedFlightLogEventId.current = event.id;
 
         fetch(`/api/flight-log?scheduleEventId=${encodeURIComponent(event.id)}`, {
             credentials: 'include',
@@ -228,48 +246,37 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
                 console.log('[PostFlight] Restoring saved data from FlightLogEntry:', row);
 
-                // Restore times
-                if (row.takeoffTime) setTakeoffTime(row.takeoffTime);
-                if (row.landTime)    setLandTime(row.landTime);
-
-                // Restore time fields
-                if (row.captainTime     != null) setCaptainTime(String(row.captainTime));
-                if (row.instructorTime  != null) setInstructorTime(String(row.instructorTime));
-                if (row.nightTime       != null) setNightTime(String(row.nightTime));
-                if (row.ifActualTime    != null) setIfActualTime(String(row.ifActualTime));
-                if (row.ifSimTime       != null) setIfSimTime(String(row.ifSimTime));
-                if (row.ineffectiveTime != null) setIneffectiveTime(String(row.ineffectiveTime));
-
-                // Restore approaches
-                if (row.ilsCount   > 0) { setIlsChecked(true);   setIlsCount(row.ilsCount); }
-                if (row.rnpCount   > 0) { setRnpChecked(true);   setRnpCount(row.rnpCount); }
-                if (row.tacanCount > 0) { setTacanChecked(true); setTacanCount(row.tacanCount); }
-                if (row.vorCount   > 0) { setVorChecked(true);   setVorCount(row.vorCount); }
-
-                // Restore misc fields
-                if (row.aircraftNumber) {
-                    const parsedAircraftNumber = parseAircraftNumber(row.aircraftNumber, aircraftNumberSettings);
-                    setAircraftNumber(parsedAircraftNumber.number || '001');
-                    setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
-                }
-                if (row.fromIcao) setFrom(row.fromIcao);
-                if (row.toIcao)   setTo(row.toIcao);
-                if (row.duty)     setDuty(row.duty);
-                if (row.isSolo    != null) setIsSolo(!!row.isSolo);
-                if (row.isDual    != null) setIsDual(!!row.isDual);
-                if (row.isFlightLog != null) setIsFlightLog(!!row.isFlightLog);
-                if (row.isFtdLog    != null) setIsFtdLog(!!row.isFtdLog);
-
-                // Restore logbook overrides (captainLog / crewLog snapshots)
                 const captSnap = traineeRow?.captainLogSnapshot || instrRow?.captainLogSnapshot;
                 const crewSnap = traineeRow?.crewLogSnapshot    || instrRow?.crewLogSnapshot;
-                if (captSnap && typeof captSnap === 'object') setCaptLogOverride(captSnap as Record<string, string>);
-                if (crewSnap && typeof crewSnap === 'object') setCrewLogOverride(crewSnap as Record<string, string>);
-
-                // Reset dirty flag — we just loaded saved data, not edited it
-                setIsDirty(false);
+                applySavedFormState({
+                    aircraftNumber: row.aircraftNumber,
+                    from: row.fromIcao,
+                    to: row.toIcao,
+                    duty: row.duty,
+                    isSolo: row.isSolo,
+                    isDual: row.isDual,
+                    isFlightLog: row.isFlightLog,
+                    isFtdLog: row.isFtdLog,
+                    takeoffTime: row.takeoffTime,
+                    landTime: row.landTime,
+                    captainTime: traineeRow?.captainTime ?? instrRow?.captainTime,
+                    instructorTime: instrRow?.instructorTime ?? traineeRow?.instructorTime,
+                    nightTime: row.nightTime,
+                    ifActualTime: row.ifActualTime,
+                    ifSimTime: row.ifSimTime,
+                    ineffectiveTime: row.ineffectiveTime,
+                    approaches: {
+                        ils: row.ilsCount || 0,
+                        rnp: row.rnpCount || 0,
+                        tacan: row.tacanCount || 0,
+                        vor: row.vorCount || 0,
+                    },
+                    captainLog: captSnap,
+                    crewLog: crewSnap,
+                }, 'FlightLogEntry');
             })
             .catch(err => console.warn('[PostFlight] Could not load saved FlightLogEntry:', err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [event?.id, aircraftNumberSettings]);
 
     // Also load the DCO result from EventCompletion on mount
@@ -281,11 +288,20 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             .then(r => r.ok ? r.json() : null)
             .then((json: any) => {
                 if (!json) return;
-                // API may return array or single object
-                const record = Array.isArray(json) ? json[0] : (json.completion || json);
+                // API may return { completions }, { completion }, an array, or a single object.
+                const record = Array.isArray(json)
+                    ? json[0]
+                    : Array.isArray(json.completions)
+                        ? json.completions[0]
+                        : (json.completion || json);
                 if (!record) return;
                 if (record.dcoResult && ['DCO', 'DPCO', 'DNCO'].includes(record.dcoResult)) {
                     setResult(record.dcoResult as 'DCO' | 'DPCO' | 'DNCO');
+                    initialFormState.current = {
+                        ...(initialFormState.current || {}),
+                        result: record.dcoResult,
+                    };
+                    setIsDirty(false);
                     console.log('[PostFlight] Restored DCO result:', record.dcoResult);
                 }
             })
@@ -310,6 +326,95 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     // Track which fields the user has manually touched (so auto-fill doesn't stomp them)
     const [captLogTouched, setCaptLogTouched] = useState<Set<string>>(new Set());
     const [crewLogTouched, setCrewLogTouched] = useState<Set<string>>(new Set());
+
+    function applySavedFormState(saved: any, source: string) {
+        if (!saved || typeof saved !== 'object') return;
+
+        if (saved.result != null && ['DCO', 'DPCO', 'DNCO', ''].includes(saved.result)) {
+            setResult(saved.result || '');
+        }
+        if (saved.aircraftNumber) {
+            const parsedAircraftNumber = parseAircraftNumber(saved.aircraftNumber, aircraftNumberSettings);
+            setAircraftNumber(parsedAircraftNumber.number || '001');
+            setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
+        }
+        if (saved.from) setFrom(saved.from);
+        if (saved.to) setTo(saved.to);
+        if (saved.isFlightLog != null) setIsFlightLog(!!saved.isFlightLog);
+        if (saved.isFtdLog != null) setIsFtdLog(!!saved.isFtdLog);
+        if (saved.isSolo != null) setIsSolo(!!saved.isSolo);
+        if (saved.isDual != null) setIsDual(!!saved.isDual);
+        if (saved.duty) setDuty(saved.duty);
+        if (saved.takeoffTime) setTakeoffTime(saved.takeoffTime);
+        if (saved.landTime) setLandTime(saved.landTime);
+        if (saved.captainTime != null) setCaptainTime(String(saved.captainTime));
+        if (saved.instructorTime != null) setInstructorTime(String(saved.instructorTime));
+        if (saved.nightTime != null) setNightTime(String(saved.nightTime));
+        if (saved.ifActualTime != null) setIfActualTime(String(saved.ifActualTime));
+        if (saved.ifSimTime != null) setIfSimTime(String(saved.ifSimTime));
+        if (saved.ineffectiveTime != null) setIneffectiveTime(String(saved.ineffectiveTime));
+
+        const approaches = saved.approaches || {};
+        const restoreApproach = (
+            value: unknown,
+            setChecked: React.Dispatch<React.SetStateAction<boolean>>,
+            setCount: React.Dispatch<React.SetStateAction<number>>,
+        ) => {
+            const count = Number(value || 0);
+            setChecked(count > 0);
+            setCount(Number.isFinite(count) ? count : 0);
+        };
+        restoreApproach(approaches.ils, setIlsChecked, setIlsCount);
+        restoreApproach(approaches.rnp, setRnpChecked, setRnpCount);
+        restoreApproach(approaches.tacan, setTacanChecked, setTacanCount);
+        restoreApproach(approaches.vor, setVorChecked, setVorCount);
+
+        if (saved.currencyUpdates && typeof saved.currencyUpdates === 'object') {
+            setCurrencyValues(saved.currencyUpdates);
+        } else if (saved.currencyValues && typeof saved.currencyValues === 'object') {
+            setCurrencyValues(saved.currencyValues);
+        }
+
+        if (saved.captainLog && typeof saved.captainLog === 'object') setCaptLogOverride(saved.captainLog);
+        if (saved.crewLog && typeof saved.crewLog === 'object') setCrewLogOverride(saved.crewLog);
+
+        initialFormState.current = {
+            result: saved.result != null ? saved.result || '' : result,
+            aircraftNumber: saved.aircraftNumber
+                ? parseAircraftNumber(saved.aircraftNumber, aircraftNumberSettings).number || '001'
+                : aircraftNumber,
+            aircraftNumberPrefix: saved.aircraftNumber
+                ? parseAircraftNumber(saved.aircraftNumber, aircraftNumberSettings).prefix || aircraftNumberSettings.defaultPrefix
+                : aircraftNumberPrefix,
+            from: saved.from || from,
+            to: saved.to || to,
+            isFlightLog: saved.isFlightLog ?? isFlightLog,
+            isFtdLog: saved.isFtdLog ?? isFtdLog,
+            isSolo: saved.isSolo ?? isSolo,
+            isDual: saved.isDual ?? isDual,
+            duty: saved.duty || duty,
+            takeoffTime: saved.takeoffTime || takeoffTime,
+            landTime: saved.landTime || landTime,
+            captainTime: saved.captainTime != null ? String(saved.captainTime) : captainTime,
+            instructorTime: saved.instructorTime != null ? String(saved.instructorTime) : instructorTime,
+            nightTime: saved.nightTime != null ? String(saved.nightTime) : nightTime,
+            ifActualTime: saved.ifActualTime != null ? String(saved.ifActualTime) : ifActualTime,
+            ifSimTime: saved.ifSimTime != null ? String(saved.ifSimTime) : ifSimTime,
+            ineffectiveTime: saved.ineffectiveTime != null ? String(saved.ineffectiveTime) : ineffectiveTime,
+            ilsChecked: Number(approaches.ils || 0) > 0,
+            ilsCount: Number(approaches.ils || 0),
+            rnpChecked: Number(approaches.rnp || 0) > 0,
+            rnpCount: Number(approaches.rnp || 0),
+            tacanChecked: Number(approaches.tacan || 0) > 0,
+            tacanCount: Number(approaches.tacan || 0),
+            vorChecked: Number(approaches.vor || 0) > 0,
+            vorCount: Number(approaches.vor || 0),
+            currencyValues: saved.currencyUpdates || saved.currencyValues || currencyValues,
+        };
+        setIsDirty(false);
+        setSaveStatus('Saved');
+        console.log(`[PostFlight] Restored saved form snapshot from ${source}:`, saved);
+    }
 
     const handleCaptLogChange = (key: string, value: string) => {
         setCaptLogTouched(prev => new Set(prev).add(key));
@@ -565,6 +670,18 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 await showDarkAlert(`Post-flight data could not be saved.\n\n${error instanceof Error ? error.message : String(error)}`, 'Post Flight Save Failed', 'error');
                 return;
             }
+        }
+
+        try {
+            const storageKey = getPostFlightFormStorageKey(event.id);
+            if (storageKey) {
+                localStorage.setItem(storageKey, JSON.stringify({
+                    ...saveData,
+                    savedAt: new Date().toISOString(),
+                }));
+            }
+        } catch (snapshotErr) {
+            console.warn('[PostFlight] Could not save form snapshot:', snapshotErr);
         }
 
         // 2. Persist to Data Storage (Auto-Save to File)
