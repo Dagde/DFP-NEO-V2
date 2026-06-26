@@ -8302,6 +8302,26 @@ function generateDfpInternal(
                 return starts;
             };
             const startStepMinutes = getFixedCrewStartStepMinutes(sourceEvent.type);
+            const buildFixedCrewFixedStartWaveCandidates = (
+                fixedStart: number,
+                end: number,
+                duration: number,
+                stepMinutes: number,
+                waveSize: number,
+            ): number[] => {
+                const latestStartMinutes = Math.floor((end - duration) * 60 + 0.001);
+                const firstStartMinutes = Math.round(fixedStart * 60);
+                if (latestStartMinutes < firstStartMinutes) return [];
+                const starts: number[] = [];
+                const boundedStepMinutes = Math.max(1, Math.floor(stepMinutes) || 1);
+                const candidateCount = Math.max(1, waveSize);
+                for (let index = 0; index < candidateCount; index += 1) {
+                    const minute = firstStartMinutes + (index * boundedStepMinutes);
+                    if (minute > latestStartMinutes) break;
+                    starts.push(Number((minute / 60).toFixed(4)));
+                }
+                return starts;
+            };
             const eventPerf = {
                 event: sourceEvent.flightNumber,
                 source,
@@ -8329,8 +8349,16 @@ function generateDfpInternal(
             const window = getFixedCrewWindow(sourceEvent.type);
             const duration = getFixedCrewDuration(sourceEvent);
             const starts = Number.isFinite(fixedStartTime)
-                ? [Number(fixedStartTime)]
+                ? buildFixedCrewFixedStartWaveCandidates(Number(fixedStartTime), window.end, duration, startStepMinutes, resourceOptions.length)
                 : buildFixedCrewStartCandidates(window.start, window.end, duration, startStepMinutes);
+            if (Number.isFinite(fixedStartTime)) {
+                (eventPerf as any).fixedStartWave = {
+                    requestedStartTime: Number(fixedStartTime),
+                    staggerMinutes: startStepMinutes,
+                    maxCandidates: resourceOptions.length,
+                    generatedCandidates: starts,
+                };
+            }
             const eligibleCrewEntries = prefilterFixedCrewCandidateEntries(sourceEvent, eventPerf);
             if (eligibleCrewEntries.length === 0) {
                 incrementFixedCrewRejection('NO_ELIGIBLE_CREW_AFTER_PREFILTER');
