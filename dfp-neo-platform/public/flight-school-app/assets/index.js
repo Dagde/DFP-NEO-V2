@@ -28827,6 +28827,7 @@ const PrioritiesView = ({
     });
     return list.sort((a, b) => a.trainee.name.localeCompare(b.trainee.name));
   }, [traineesData, traineeLMPs, scores, syllabusDetails]);
+  const showOptionalCurrencyEventsSection = false;
   const showRemedialPriorityQueue = false;
   const getCrewRequirementSignature = (requirement) => (normaliseCrewRequirement(requirement).roles || []).map((role) => [
     String(role.role || "").trim().toUpperCase(),
@@ -30163,93 +30164,7 @@ const PrioritiesView = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(PriorityEventTable, { events: standardPriorityEvents })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "optional-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-amber-400 mb-2", children: "Optional Currency Events" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-4", children: 'MEDIUM and LOW priority currency events can be manually included in the NEO Build. Check the "Include" box to add to the build.' }),
-        sctFlights.filter((r) => r.priority !== "High").length === 0 && sctFtds.filter((r) => r.priority !== "High").length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm italic", children: "No MEDIUM or LOW priority currency events. Add specific currency requests with MEDIUM or LOW priority in the Specific Currency Requests section above." }),
-        sctFlights.filter((r) => r.priority !== "High").length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: "Currency Flights" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Type" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-center", children: "Include in Build" })
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: sctFlights.filter((r) => r.priority !== "High").map((req) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/50", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.name }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-amber-300 font-semibold", children: req.event }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.flightType }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.currency || "N/A" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 font-semibold ${req.priority === "Medium" ? "text-orange-400" : "text-green-400"}`, children: req.priority }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                AircraftConfigSelect,
-                {
-                  value: req.aircraftConfigId,
-                  definitions: aircraftConfigOptions,
-                  onChange: (aircraftConfigId) => onUpdateSctRequest(req.id, "aircraftConfigId", aircraftConfigId, "flight")
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: req.includeInBuild || false,
-                  onChange: () => onToggleSctInclude(req.id, "flight"),
-                  className: "h-4 w-4 bg-gray-700 rounded accent-sky-500"
-                }
-              ) })
-            ] }, req.id)) })
-          ] }) })
-        ] }),
-        sctFtds.filter((r) => r.priority !== "High").length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: [
-            "Currency ",
-            ftdLabel,
-            "s"
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Type" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-center", children: "Include in Build" })
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: sctFtds.filter((r) => r.priority !== "High").map((req) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/50", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.name }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-amber-300 font-semibold", children: req.event }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.flightType }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.currency || "N/A" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 font-semibold ${req.priority === "Medium" ? "text-orange-400" : "text-green-400"}`, children: req.priority }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                AircraftConfigSelect,
-                {
-                  value: req.aircraftConfigId,
-                  definitions: aircraftConfigOptions,
-                  disabled: true,
-                  onChange: () => {
-                  }
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: req.includeInBuild || false,
-                  onChange: () => onToggleSctInclude(req.id, "ftd"),
-                  className: "h-4 w-4 bg-gray-700 rounded accent-sky-500"
-                }
-              ) })
-            ] }, req.id)) })
-          ] }) })
-        ] })
-      ] }),
+      showOptionalCurrencyEventsSection,
       showRemedialPriorityQueue
     ] })
   ] });
@@ -30301,7 +30216,7 @@ const PrioritiesViewWithMenu = (props) => {
       step: "04",
       label: "Directed Events",
       shortLabel: "Exceptions",
-      description: "Manage currency requests, high-priority events and optional currency queues."
+      description: "Manage currency requests and high-priority events."
     }
   ].filter((item) => !item.hidden);
   const fixedCrewTabs = [
@@ -30327,7 +30242,7 @@ const PrioritiesViewWithMenu = (props) => {
       step: "01",
       label: "Events Builder",
       shortLabel: "Events",
-      description: "Manage priority events, tasking, currency requests and optional queues."
+      description: "Manage priority events, tasking and currency requests."
     }
   ] : [
     workflowItems.find((item) => item.id === "build-timeline"),
@@ -95682,6 +95597,16 @@ ${conflictLines.join("\n")}${moreText}`,
     });
     console.log("[PUBLISH] nextDayBuildEvents:", nextDayBuildEvents.length, "→ after dedup:", dedupedBuildEvents.length);
     const newEventsForDate = dedupedBuildEvents.map((e) => ({ ...e, date: buildDfpDate }));
+    const publishedCurrencyDraftIds = new Set(
+      newEventsForDate.map((event) => String(event.currencyDraftId || "").trim()).filter(Boolean)
+    );
+    const publishedSpecificCurrencyRequestIdsByType = newEventsForDate.reduce((map, event) => {
+      const draftId = String(event.currencyDraftId || "").trim();
+      const parsedMatch = draftId.match(/^specific-currency-(flight|ftd)-(.+)$/);
+      if (!parsedMatch) return map;
+      map[parsedMatch[1]].add(parsedMatch[2]);
+      return map;
+    }, { flight: /* @__PURE__ */ new Set(), ftd: /* @__PURE__ */ new Set() });
     const publishedSctRequestIdsByType = newEventsForDate.reduce((map, event) => {
       const explicitId = String(event.sctRequestId || "").trim();
       const parsedMatch = !explicitId ? String(event.id || "").match(/^sct-(flight|ftd)-(.+)$/) : null;
@@ -95691,6 +95616,8 @@ ${conflictLines.join("\n")}${moreText}`,
       map[requestType].add(requestId);
       return map;
     }, { flight: /* @__PURE__ */ new Set(), ftd: /* @__PURE__ */ new Set() });
+    publishedSpecificCurrencyRequestIdsByType.flight.forEach((requestId) => publishedSctRequestIdsByType.flight.add(requestId));
+    publishedSpecificCurrencyRequestIdsByType.ftd.forEach((requestId) => publishedSctRequestIdsByType.ftd.add(requestId));
     const publishedSctRequestIds = [
       ...Array.from(publishedSctRequestIdsByType.flight),
       ...Array.from(publishedSctRequestIdsByType.ftd)
@@ -95705,6 +95632,11 @@ ${conflictLines.join("\n")}${moreText}`,
       publishedSctRequestIds.forEach((requestId) => {
         fetch(`/api/sct-requests/${requestId}`, { method: "DELETE" }).catch((err) => console.error("Failed to delete published SCT request:", err));
       });
+    }
+    if (publishedCurrencyDraftIds.size > 0) {
+      setHighestPriorityEvents(
+        (prevEvents) => prevEvents.filter((event) => !event.currencyDraftId || !publishedCurrencyDraftIds.has(event.currencyDraftId))
+      );
     }
     setPublishedSchedules((prev) => ({
       ...prev,

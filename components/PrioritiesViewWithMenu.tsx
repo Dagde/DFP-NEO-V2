@@ -136,7 +136,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             step: '04',
             label: 'Directed Events',
             shortLabel: 'Exceptions',
-            description: 'Manage currency requests, high-priority events and optional currency queues.',
+            description: 'Manage currency requests and high-priority events.',
         },
     ].filter(item => !item.hidden);
 
@@ -166,7 +166,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                 step: '01',
                 label: 'Events Builder',
                 shortLabel: 'Events',
-                description: 'Manage priority events, tasking, currency requests and optional queues.',
+                description: 'Manage priority events, tasking and currency requests.',
             },
         ]
         : [

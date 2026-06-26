@@ -3091,6 +3091,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         });
         return list.sort((a, b) => a.trainee.name.localeCompare(b.trainee.name));
     }, [traineesData, traineeLMPs, scores, syllabusDetails]);
+  const showOptionalCurrencyEventsSection = false;
   const showRemedialPriorityQueue = false;
 
   const getCrewRequirementSignature = (requirement?: CrewRequirement | null): string => (
@@ -4484,7 +4485,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <PriorityEventTable events={standardPriorityEvents} />
         </div>
 
-        {/* MEDIUM/LOW Priority Currency Events - User can manually include in build */}
+        {/* MEDIUM/LOW Priority Currency Events - hidden from the fixed crew planner for now; code retained for future reactivation. */}
+        {showOptionalCurrencyEventsSection && (
         <div className="optional-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <h2 className="text-xl font-semibold text-amber-400 mb-2">Optional Currency Events</h2>
             <p className="text-xs text-gray-400 mb-4">MEDIUM and LOW priority currency events can be manually included in the NEO Build. Check the "Include" box to add to the build.</p>
@@ -4588,7 +4590,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   </div>
                 </div>
               )}
-          </div>
+        </div>
+        )}
 
         {showRemedialPriorityQueue && (
         <div className="remedial-priority-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">

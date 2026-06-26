@@ -31278,6 +31278,18 @@ const App: React.FC = () => {
         console.log('[PUBLISH] nextDayBuildEvents:', nextDayBuildEvents.length, '→ after dedup:', dedupedBuildEvents.length);
 
         const newEventsForDate = dedupedBuildEvents.map(e => ({ ...e, date: buildDfpDate }));
+        const publishedCurrencyDraftIds = new Set(
+            newEventsForDate
+                .map(event => String(event.currencyDraftId || '').trim())
+                .filter(Boolean)
+        );
+        const publishedSpecificCurrencyRequestIdsByType = newEventsForDate.reduce((map, event) => {
+            const draftId = String(event.currencyDraftId || '').trim();
+            const parsedMatch = draftId.match(/^specific-currency-(flight|ftd)-(.+)$/);
+            if (!parsedMatch) return map;
+            map[parsedMatch[1] as 'flight' | 'ftd'].add(parsedMatch[2]);
+            return map;
+        }, { flight: new Set<string>(), ftd: new Set<string>() });
         const publishedSctRequestIdsByType = newEventsForDate.reduce((map, event) => {
             const explicitId = String(event.sctRequestId || '').trim();
             const parsedMatch = !explicitId ? String(event.id || '').match(/^sct-(flight|ftd)-(.+)$/) : null;
@@ -31287,6 +31299,8 @@ const App: React.FC = () => {
             map[requestType].add(requestId);
             return map;
         }, { flight: new Set<string>(), ftd: new Set<string>() });
+        publishedSpecificCurrencyRequestIdsByType.flight.forEach(requestId => publishedSctRequestIdsByType.flight.add(requestId));
+        publishedSpecificCurrencyRequestIdsByType.ftd.forEach(requestId => publishedSctRequestIdsByType.ftd.add(requestId));
         const publishedSctRequestIds = [
             ...Array.from(publishedSctRequestIdsByType.flight),
             ...Array.from(publishedSctRequestIdsByType.ftd),
@@ -31302,6 +31316,11 @@ const App: React.FC = () => {
                 fetch(`/api/sct-requests/${requestId}`, { method: 'DELETE' })
                     .catch(err => console.error('Failed to delete published SCT request:', err));
             });
+        }
+        if (publishedCurrencyDraftIds.size > 0) {
+            setHighestPriorityEvents(prevEvents =>
+                prevEvents.filter(event => !event.currencyDraftId || !publishedCurrencyDraftIds.has(event.currencyDraftId))
+            );
         }
 
         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({
