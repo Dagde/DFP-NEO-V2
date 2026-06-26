@@ -849,10 +849,7 @@ const PLATFORM_CONFIG_AUDIT_TABLES = [
       name: row.name || '',
       category: row.category || 'Training',
       status: row.status || 'ACTIVE',
-      settings: {
-        ...(row.settings || {}),
-        ...(row.crewComposition ? { crewComposition: row.crewComposition } : {}),
-      },
+      settings: buildCommercialAircraftTypeSettings(row),
     }),
     keys: (row) => [row.id, row.code].filter(Boolean),
     label: (row) => row.name || row.code,
@@ -1079,6 +1076,7 @@ const PLATFORM_FIELD_LABELS = {
     name: 'Aircraft type name',
     category: 'Aircraft category',
     status: 'Aircraft type status',
+    'settings.defaultTasKtas': 'Default TAS (KTAS)',
   },
   CommercialResourcePool: {
     organisationCode: 'Organisation',
@@ -1455,6 +1453,29 @@ const getRequestIp = (req) => {
   return forwardedFor || req.ip || 'unknown';
 };
 
+const normaliseAircraftTypeTasKtas = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.round(parsed);
+};
+
+const getAircraftTypeTasKtas = (aircraftType = {}) => (
+  normaliseAircraftTypeTasKtas(aircraftType.defaultTasKtas ?? aircraftType.settings?.defaultTasKtas)
+);
+
+const buildCommercialAircraftTypeSettings = (aircraftType = {}) => {
+  const settings = { ...(aircraftType.settings || {}) };
+  if (aircraftType.crewComposition) settings.crewComposition = aircraftType.crewComposition;
+  const defaultTasKtas = getAircraftTypeTasKtas(aircraftType);
+  if (defaultTasKtas === null) {
+    delete settings.defaultTasKtas;
+  } else {
+    settings.defaultTasKtas = defaultTasKtas;
+  }
+  return settings;
+};
+
 async function resolveAuditUser(db, req) {
   const authHeader = req.headers.authorization || '';
   const sessionToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
@@ -1669,6 +1690,7 @@ app.get('/api/platform-config', async (req, res) => {
       aircraftTypes: aircraftTypes.map((aircraftType) => ({
         ...aircraftType,
         crewComposition: aircraftType.crewComposition || aircraftType.settings?.crewComposition || null,
+        defaultTasKtas: getAircraftTypeTasKtas(aircraftType),
       })),
       resourcePools,
       modules,
@@ -2232,10 +2254,7 @@ app.post('/api/platform-config', async (req, res) => {
 
     for (const aircraftType of aircraftTypes) {
       if (!aircraftType.code || !aircraftType.name) continue;
-      const aircraftTypeSettings = {
-        ...(aircraftType.settings || {}),
-        ...(aircraftType.crewComposition ? { crewComposition: aircraftType.crewComposition } : {}),
-      };
+      const aircraftTypeSettings = buildCommercialAircraftTypeSettings(aircraftType);
       await db.$executeRawUnsafe(`
         INSERT INTO "CommercialAircraftType" ("id", "code", "name", "category", "status", "settings", "createdAt", "updatedAt")
         VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5::jsonb, $6::timestamp, $6::timestamp)
