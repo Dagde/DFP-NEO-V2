@@ -324,6 +324,7 @@ export interface ScheduleEvent {
       crewRequirement?: CrewRequirement;
       fixedCrewGroup?: string;
       fixedCrewPic?: string;
+      fixedCrewRandomCrew?: boolean;
       fixedCrewManifestStatus?: 'pending' | 'complete' | 'partial' | 'swapped' | 'invalid';
       fixedCrewManifestNotes?: string;
       

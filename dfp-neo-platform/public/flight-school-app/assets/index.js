@@ -76456,14 +76456,28 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return null;
       }).filter(Boolean);
     };
+    const getFixedCrewStableRandomScore = (seed) => {
+      let hash = 2166136261;
+      for (let index = 0; index < seed.length; index++) {
+        hash ^= seed.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+      return hash >>> 0;
+    };
     const getFixedCrewCandidateEntries = (event) => {
       const eventOwnerUnit = getFixedCrewEventOwnerUnit(event);
       const requestedCrewGroup = normaliseFixedCrewGroupKey(event.fixedCrewGroup);
-      const requestedCurrencyPersonNames = isCurrencyPriorityEvent(event) ? [event.fixedCrewPic, event.pilot, event.student].map((name) => String(name || "").trim()).filter((name) => name && !isPlaceholderPersonnelName(name) && !/^CREW\b/i.test(name)) : [];
-      const requiresRequestedCurrencyPerson = requestedCurrencyPersonNames.length > 0;
-      const candidates = Array.from(crewGroups.entries()).filter(([crew]) => crewMatchesFixedCrewEventOwnerUnit(crew, eventOwnerUnit)).filter(([crew]) => !requestedCrewGroup || normaliseFixedCrewGroupKey(crew) === requestedCrewGroup).filter(([, members]) => !requiresRequestedCurrencyPerson || members.some((staff) => requestedCurrencyPersonNames.some((name) => personnelNamesMatch(staff.name, name)))).sort(
-        ([leftCrew], [rightCrew]) => (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0) || leftCrew.localeCompare(rightCrew, void 0, { numeric: true })
-      );
+      const priorityEventRequiresRequestedPicCrew = isCurrencyPriorityEvent(event) || isTaskingPriorityEvent(event);
+      const requestedPriorityPersonNames = priorityEventRequiresRequestedPicCrew ? [event.fixedCrewPic, event.pilot, event.instructor].map((name) => String(name || "").trim()).filter((name) => name && !isPlaceholderPersonnelName(name) && !/^CREW\b/i.test(name)) : [];
+      const requiresRequestedPriorityPerson = requestedPriorityPersonNames.length > 0;
+      const randomiseCrewSelection = Boolean(event.fixedCrewRandomCrew) && !requestedCrewGroup;
+      const candidates = Array.from(crewGroups.entries()).filter(([crew]) => crewMatchesFixedCrewEventOwnerUnit(crew, eventOwnerUnit)).filter(([crew]) => !requestedCrewGroup || normaliseFixedCrewGroupKey(crew) === requestedCrewGroup).filter(([, members]) => !requiresRequestedPriorityPerson || members.some((staff) => requestedPriorityPersonNames.some((name) => personnelNamesMatch(staff.name, name)))).sort(([leftCrew], [rightCrew]) => {
+        if (randomiseCrewSelection) {
+          const eventSeed = String(event.id || event.flightNumber || event.taskingRequestId || event.currencyDraftId || "fixed-crew-priority");
+          return getFixedCrewStableRandomScore(`${buildDate}|${eventSeed}|${leftCrew}`) - getFixedCrewStableRandomScore(`${buildDate}|${eventSeed}|${rightCrew}`);
+        }
+        return (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0) || leftCrew.localeCompare(rightCrew, void 0, { numeric: true });
+      });
       if (fixedCrewUsesSharedUnitContext && eventOwnerUnit) {
         fixedCrewPerf.counters.ownerUnitRestrictedCrewSelections += 1;
         fixedCrewPerf.counters.ownerUnitFilteredCrewCandidates += Math.max(0, crewGroups.size - candidates.length);
@@ -76477,13 +76491,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           reason: "REQUESTED_CREW_GROUP_NOT_AVAILABLE"
         });
       }
-      if (!requestedCrewGroup && requiresRequestedCurrencyPerson && candidates.length === 0) {
+      if (!requestedCrewGroup && requiresRequestedPriorityPerson && candidates.length === 0) {
         pushFixedCrewAttempt({
           event: event.flightNumber,
-          requestedCurrencyPersonNames,
+          requestedPriorityPersonNames,
           ownerUnit: eventOwnerUnit || null,
           outcome: "rejected",
-          reason: "REQUESTED_CURRENCY_PERSON_NOT_IN_CREW"
+          reason: "REQUESTED_PRIORITY_PERSON_NOT_IN_CREW"
         });
       }
       return candidates;
@@ -94179,6 +94193,114 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       handleNavigation("CourseRoster");
     }
   };
+  const resolveFixedCrewPicPriorityEventsWithoutCrew = (events2) => {
+    if (activeOperationalModel !== "fixed_crew") return events2;
+    const normalisePromptUnitCode = (value) => String(value || "").trim().toUpperCase();
+    const normalisePromptCrewKey = (value) => String(value || "").replace(/^CREW\s*/i, "").trim().toUpperCase();
+    const formatPromptCrewLabel = (unitCode, crewKey) => unitCode ? `CREW ${crewKey}/${unitCode}` : `CREW ${crewKey}`;
+    const eventMatchesBuildDate = (event) => {
+      const eventDate = String(event.date || "").trim();
+      return !eventDate || eventDate === buildDfpDate;
+    };
+    const isPromptCurrencyPriority = (event) => event.eventCategory === "currency" || !!event.currencyDraftId || event.flightNumber === "CURR";
+    const isPromptTaskingPriority = (event) => event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
+    const getEventPicName = (event) => String(event.fixedCrewPic || event.pilot || event.instructor || "").trim();
+    const hasAssignedCrew = (event) => Boolean(String(event.fixedCrewGroup || "").trim());
+    const promptPicQualification = getQualificationsForOperationalModel(activeStaffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic");
+    const staffHasPromptPicQualification = (staff) => Boolean(promptPicQualification) && normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], activeStaffQualificationCatalogue, false).includes(promptPicQualification.id);
+    const activeUnitSet = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set(activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode]);
+    const crewGroups = /* @__PURE__ */ new Map();
+    instructorsData.filter((staff) => Boolean(staff.name) && !staff.isAdminStaff).filter((staff) => {
+      const unitCode = normalisePromptUnitCode(staff.unit);
+      return activeUnitSet.size === 0 || !unitCode || activeUnitSet.has(unitCode);
+    }).forEach((staff) => {
+      const unitCode = normalisePromptUnitCode(staff.unit);
+      const crewKey = normalisePromptCrewKey(staff.crew);
+      if (!crewKey) return;
+      const groupKey = unitCode ? `${unitCode}::${crewKey}` : crewKey;
+      if (!crewGroups.has(groupKey)) {
+        crewGroups.set(groupKey, {
+          key: groupKey,
+          unit: unitCode,
+          crew: crewKey,
+          label: formatPromptCrewLabel(unitCode, crewKey),
+          members: []
+        });
+      }
+      crewGroups.get(groupKey).members.push(staff);
+    });
+    const replacements = /* @__PURE__ */ new Map();
+    for (const event of events2) {
+      if (!eventMatchesBuildDate(event)) continue;
+      if (!isPromptCurrencyPriority(event) && !isPromptTaskingPriority(event)) continue;
+      if (hasAssignedCrew(event)) continue;
+      const picName = getEventPicName(event);
+      if (!picName || isPlaceholderPersonnelName(picName) || /^CREW\b/i.test(picName)) continue;
+      const picStaff = instructorsData.find((staff) => personnelNamesMatch(staff.name, picName));
+      const eventUnit = normalisePromptUnitCode(event.fixedCrewUnit || event.unit || picStaff?.unit || activeUnitCode);
+      const sameUnitCrewsWithPic = Array.from(crewGroups.values()).filter((group) => !eventUnit || group.unit === eventUnit).filter((group) => group.members.some((staff) => personnelNamesMatch(staff.name, picName) && staffHasPromptPicQualification(staff))).sort((left, right) => left.label.localeCompare(right.label, void 0, { numeric: true }));
+      if (sameUnitCrewsWithPic.length === 0) {
+        showDarkAlert2(
+          `${event.flightNumber || event.taskingName || "Priority event"} has PIC ${picName}, but no same-unit crew contains that PIC. Assign a crew in Build Planner or update the staff crew profile before running NEO Build.`,
+          "Crew Required",
+          "warning"
+        );
+        return null;
+      }
+      const eventLabel = String(event.taskingName || event.taskingDisplayLabel || event.flightNumber || event.id || "Priority event").trim();
+      const crewList = sameUnitCrewsWithPic.map((group, index) => `${index + 1}. ${group.label}`).join("\n");
+      const response = window.prompt(
+        `${eventLabel} has PIC ${picName} but no crew assigned.
+
+Choose a crew for this build:
+${crewList}
+
+Type a number, or type ANY to let NEO choose randomly from these crews. Cancel pauses the build.`,
+        sameUnitCrewsWithPic.length === 1 ? "1" : "ANY"
+      );
+      if (response === null) return null;
+      const answer = response.trim().toUpperCase();
+      if (answer === "ANY" || answer === "A" || answer === "0") {
+        replacements.set(event.id, {
+          ...event,
+          fixedCrewRandomCrew: true,
+          fixedCrewPic: picName,
+          pilot: picName,
+          fixedCrewManifestNotes: [
+            event.fixedCrewManifestNotes,
+            "NEO Build prompted for crew selection; user selected any same-unit crew containing the assigned PIC."
+          ].filter(Boolean).join(" ")
+        });
+        continue;
+      }
+      const selectedIndex = Number.parseInt(answer, 10) - 1;
+      const selectedCrew = sameUnitCrewsWithPic[selectedIndex];
+      if (!selectedCrew) {
+        showDarkAlert2(
+          `NEO Build was paused because "${response}" is not a valid crew selection for ${eventLabel}.`,
+          "Crew Selection Required",
+          "warning"
+        );
+        return null;
+      }
+      replacements.set(event.id, {
+        ...event,
+        fixedCrewGroup: selectedCrew.key,
+        fixedCrewRandomCrew: false,
+        fixedCrewPic: picName,
+        pilot: picName,
+        crew: selectedCrew.label,
+        fixedCrewManifestNotes: [
+          event.fixedCrewManifestNotes,
+          `NEO Build prompted for crew selection; user selected ${selectedCrew.label}.`
+        ].filter(Boolean).join(" ")
+      });
+    }
+    if (replacements.size === 0) return events2;
+    const resolvedEvents = events2.map((event) => replacements.get(event.id) || event);
+    setHighestPriorityEvents((prevEvents) => prevEvents.map((event) => replacements.get(event.id) || event));
+    return resolvedEvents;
+  };
   const startBuildProcess = () => {
     console.log("🚀 [NEO-Build] startBuildProcess called");
     console.log("🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====");
@@ -94385,7 +94507,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       console.log(`DEBUG Pre-Build Analysis: No fixed Active DFP events found for this date; ${existingEventsForDate.length} non-fixed event(s) will be rebuilt`);
     }
     console.log("DEBUG ===== PRE-BUILD ANALYSIS END =====");
-    const finalPreservedEvents = newHighestPriorityEvents;
+    const resolvedPicCrewPriorityEvents = resolveFixedCrewPicPriorityEventsWithoutCrew(newHighestPriorityEvents);
+    if (!resolvedPicCrewPriorityEvents) {
+      console.log("DEBUG NEO Build paused: fixed crew PIC priority event requires crew selection.");
+      return;
+    }
+    const finalPreservedEvents = resolvedPicCrewPriorityEvents;
     console.log(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
     const activeTrainees = allTraineesData.filter((t) => !t.isPaused && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, "flight"));
     let bnfTraineeCount = 0;
