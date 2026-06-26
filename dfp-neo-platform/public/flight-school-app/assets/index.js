@@ -77189,14 +77189,38 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return generatedEvents;
     }
     const queueBuildStart = fixedCrewPerfNow();
-    const fixedCrewPriorityQueue = highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate)).filter((event) => isTaskingPriorityEvent(event) || isCurrencyPriorityEvent(event) || event.isTimeFixed).map((event) => {
+    const getFixedCrewPriorityQueueRank = (event, source) => {
+      const schedulerRank = event.isMandatoryTasking || event.priority === "High" ? 0 : 1;
+      const hasExplicitCrewOrPic = Boolean(
+        normaliseFixedCrewGroupKey(event.fixedCrewGroup) || String(event.fixedCrewPic || event.pilot || "").trim()
+      );
+      const specificityRank = hasExplicitCrewOrPic ? 0 : 1;
+      const sourceRank = source === "fixed-crew-currency" ? 0 : source === "fixed-crew-tasking" ? 1 : 2;
+      const fixedStartRank = event.isTimeFixed ? 0 : 1;
+      return { schedulerRank, specificityRank, sourceRank, fixedStartRank };
+    };
+    const fixedCrewPriorityQueue = highestPriorityEvents.map((event, inputIndex) => ({ event, inputIndex })).filter(({ event }) => priorityEventMatchesBuildDate(event, buildDate)).filter(({ event }) => isTaskingPriorityEvent(event) || isCurrencyPriorityEvent(event) || event.isTimeFixed).map(({ event, inputIndex }) => {
       const isCurrencyPriority = isCurrencyPriorityEvent(event);
+      const source = isTaskingPriorityEvent(event) ? "fixed-crew-tasking" : isCurrencyPriority ? "fixed-crew-currency" : "fixed-crew-priority";
+      const rank = getFixedCrewPriorityQueueRank(event, source);
       return {
-        source: isTaskingPriorityEvent(event) ? "fixed-crew-tasking" : isCurrencyPriority ? "fixed-crew-currency" : "fixed-crew-priority",
+        source,
         event: buildFixedCrewEventFromPriority(event),
-        fixedStartTime: event.isTimeFixed && !isCurrencyPriority ? event.startTime : void 0
+        fixedStartTime: event.isTimeFixed && !isCurrencyPriority ? event.startTime : void 0,
+        inputIndex,
+        rank
       };
-    }).filter((item) => Boolean(item.event));
+    }).filter((item) => Boolean(item.event)).sort(
+      (left, right) => left.rank.schedulerRank - right.rank.schedulerRank || left.rank.specificityRank - right.rank.specificityRank || left.rank.sourceRank - right.rank.sourceRank || left.rank.fixedStartRank - right.rank.fixedStartRank || left.inputIndex - right.inputIndex
+    ).map(({ source, event, fixedStartTime, inputIndex, rank }) => ({
+      source,
+      event: {
+        ...event,
+        fixedCrewPriorityQueueInputIndex: inputIndex,
+        fixedCrewPriorityQueueRank: rank
+      },
+      fixedStartTime
+    }));
     const configuredFixedCrewTrainingPriorities = normaliseFixedCrewTrainingPriorityWeights(config.fixedCrewTrainingPriorities);
     const fixedCrewTrainingPriorityByKey = new Map(configuredFixedCrewTrainingPriorities.map((stream) => [stream.key, stream]));
     configuredFixedCrewTrainingPriorities.length > 0;
@@ -77434,7 +77458,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       student: item.event.student || null,
       crew: item.event.crew || null,
       group: item.event.group || null,
-      crewRequirement: item.event.crewRequirement || null
+      crewRequirement: item.event.crewRequirement || null,
+      priorityQueueInputIndex: item.event.fixedCrewPriorityQueueInputIndex ?? null,
+      priorityQueueRank: item.event.fixedCrewPriorityQueueRank ?? null
     }));
     diag.sctCrewTrace.queueInputs = fixedCrewQueue.filter((item) => isFixedCrewSctEvent(item.event)).map((item) => ({
       ...summarizeFixedCrewSctEvent(item.event, `fixedCrewQueue:${item.source}`),
