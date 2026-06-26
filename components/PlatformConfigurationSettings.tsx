@@ -2589,6 +2589,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             code,
             name: 'New Aircraft Type',
             category: 'Other',
+            defaultTasKtas: null,
             status: 'ACTIVE',
             crewComposition: DEFAULT_AIRCRAFT_CREW_COMPOSITION,
           },
@@ -4683,10 +4684,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </div>
 
                   <div className="grid gap-3 p-3">
-                    <div className="grid gap-3 md:grid-cols-[0.75fr_1.35fr_1fr]">
+                    <div className="grid gap-3 md:grid-cols-[0.75fr_1.35fr_1fr_0.85fr]">
                       <Field label="Code" value={aircraft.code} disabled={!canEditResourcePools} onChange={(value) => updateRow('aircraftTypes', index, { code: value })} />
                       <Field label="Name" value={aircraft.name} disabled={!canEditResourcePools} onChange={(value) => updateRow('aircraftTypes', index, { name: value })} />
                       <SelectField label="Category" value={aircraft.category || 'Training'} disabled={!canEditResourcePools} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'Rotary', 'Other']} onChange={(value) => updateRow('aircraftTypes', index, { category: value })} />
+                      <OptionalNumberField
+                        label="Default TAS (KTAS)"
+                        value={aircraft.defaultTasKtas ?? null}
+                        disabled={!canEditResourcePools}
+                        placeholder="KTAS"
+                        info="Used for route/time planning when a mission or event does not specify a custom speed."
+                        onChange={(value) => updateRow('aircraftTypes', index, { defaultTasKtas: value })}
+                      />
                     </div>
 
                     <div className={resourceSectionPanelClass}>
@@ -6966,7 +6975,7 @@ const DateField = ({ label, value, disabled, onChange, info }: { label: string; 
   </label>
 );
 
-const OptionalNumberField = ({ label, value, disabled, onChange, info }: { label: string; value: number | null; disabled: boolean; onChange: (value: number | null) => void; info?: string }) => (
+const OptionalNumberField = ({ label, value, disabled, onChange, info, placeholder = 'Unlimited' }: { label: string; value: number | null; disabled: boolean; onChange: (value: number | null) => void; info?: string; placeholder?: string }) => (
   <label>
     <FieldLabel label={label} info={info} />
     <input
@@ -6974,7 +6983,7 @@ const OptionalNumberField = ({ label, value, disabled, onChange, info }: { label
       type="number"
       value={value ?? ''}
       disabled={disabled}
-      placeholder="Unlimited"
+      placeholder={placeholder}
       onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value))}
     />
   </label>

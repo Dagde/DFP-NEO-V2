@@ -56543,6 +56543,7 @@ const PlatformConfigurationSettings = ({
             code,
             name: "New Aircraft Type",
             category: "Other",
+            defaultTasKtas: null,
             status: "ACTIVE",
             crewComposition: DEFAULT_AIRCRAFT_CREW_COMPOSITION
           }
@@ -58334,10 +58335,21 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 p-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[0.75fr_1.35fr_1fr]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[0.75fr_1.35fr_1fr_0.85fr]", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Code", value: aircraft.code, disabled: !canEditResourcePools, onChange: (value) => updateRow("aircraftTypes", index, { code: value }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: aircraft.name, disabled: !canEditResourcePools, onChange: (value) => updateRow("aircraftTypes", index, { name: value }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Category", value: aircraft.category || "Training", disabled: !canEditResourcePools, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Category", value: aircraft.category || "Training", disabled: !canEditResourcePools, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    OptionalNumberField,
+                    {
+                      label: "Default TAS (KTAS)",
+                      value: aircraft.defaultTasKtas ?? null,
+                      disabled: !canEditResourcePools,
+                      placeholder: "KTAS",
+                      info: "Used for route/time planning when a mission or event does not specify a custom speed.",
+                      onChange: (value) => updateRow("aircraftTypes", index, { defaultTasKtas: value })
+                    }
+                  )
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
@@ -60553,7 +60565,7 @@ const DateField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ *
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: fieldClass, type: "date", value: formatDateInput(value), disabled, onChange: (event) => onChange(event.target.value) })
 ] });
-const OptionalNumberField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+const OptionalNumberField = ({ label, value, disabled, onChange, info, placeholder = "Unlimited" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
     "input",
@@ -60562,7 +60574,7 @@ const OptionalNumberField = ({ label, value, disabled, onChange, info }) => /* @
       type: "number",
       value: value ?? "",
       disabled,
-      placeholder: "Unlimited",
+      placeholder,
       onChange: (event) => onChange(event.target.value === "" ? null : Number(event.target.value))
     }
   )
