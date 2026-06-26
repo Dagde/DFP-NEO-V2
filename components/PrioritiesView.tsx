@@ -3036,15 +3036,18 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   useEffect(() => {
       const today = getTodayDateString();
       highestPriorityEvents
+          .filter(isPriorityEventPublished)
+          .forEach(event => onDeletePriorityEvent(event.id));
+      highestPriorityEvents
+          .filter(event => !isPriorityEventPublished(event))
           .filter(event => {
               const eventDate = String(event.date || '').trim();
               return /^\d{4}-\d{2}-\d{2}$/.test(eventDate)
                   && eventDate < buildDfpDate
                   && eventDate >= today
-                  && !isPriorityEventPublished(event);
           })
           .forEach(event => onUpdatePriorityEvent(event.id, { date: buildDfpDate }));
-  }, [activeScheduleEvents, buildDfpDate, highestPriorityEvents, onUpdatePriorityEvent]);
+  }, [activeScheduleEvents, buildDfpDate, highestPriorityEvents, onDeletePriorityEvent, onUpdatePriorityEvent]);
   const standardPriorityEvents = highestPriorityEvents.filter(priorityEventMatchesBuildDate);
   const stalePriorityEvents = highestPriorityEvents.filter(event => !priorityEventMatchesBuildDate(event));
   
