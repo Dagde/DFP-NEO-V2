@@ -614,6 +614,8 @@ const DfpSidePanelTimeline: React.FC<{
     const [wizardExclusionEnd, setWizardExclusionEnd] = useState(Math.min(23.75, flyingStartTime + 0.5));
     const [wizardExclusionRestriction, setWizardExclusionRestriction] = useState<FlyingWindowExclusionRestriction>('both');
     const [showWizardConfigEditor, setShowWizardConfigEditor] = useState(false);
+    const [selectedWizardTaskingIds, setSelectedWizardTaskingIds] = useState<string[]>([]);
+    const [selectedWizardCurrencyIds, setSelectedWizardCurrencyIds] = useState<string[]>([]);
 
     const courseEventOptions = useMemo(() => (
         fullAssistEventOptions.filter(item => item.lmpType !== 'Staff CAT' && !isSyllabusCourseShell(item))
@@ -2022,6 +2024,31 @@ const DfpSidePanelTimeline: React.FC<{
     const wizardCenteredChoiceClass = wizardChoiceClass.replace('text-left', 'text-center');
     const wizardKeepButtonClass = 'rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-xs font-bold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
     const wizardSmallButtonClass = 'rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
+    const wizardSelectionTileClass = (isSelected: boolean) => (
+        `rounded-lg border px-4 py-3 text-left text-sm font-semibold shadow-sm transition ${
+            isSelected
+                ? 'border-orange-400 bg-orange-100 text-orange-950 ring-2 ring-orange-300/70'
+                : 'border-slate-300 bg-white text-slate-800 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900'
+        }`
+    );
+    const toggleWizardSelection = (
+        id: string,
+        setter: React.Dispatch<React.SetStateAction<string[]>>,
+    ) => {
+        setter(prev => prev.includes(id)
+            ? prev.filter(item => item !== id)
+            : [...prev, id]);
+    };
+    const continueWizardTaskings = () => {
+        selectedWizardTaskingIds.forEach(id => submitAssistTaskRequest(id));
+        setSelectedWizardTaskingIds([]);
+        advanceWizard();
+    };
+    const continueWizardCurrency = () => {
+        selectedWizardCurrencyIds.forEach(id => submitAssistCurrencyRequest(id));
+        setSelectedWizardCurrencyIds([]);
+        advanceWizard();
+    };
     const renderWizardTimeBox = (
         label: string,
         value: number,
@@ -2171,7 +2198,15 @@ const DfpSidePanelTimeline: React.FC<{
             return questionShell(
                 'Are the exclusion periods right?',
                 <p>Current exclusions: <strong>{exclusionText}</strong>.</p>,
-                <>
+                flyingWindowExclusions.length === 0 ? (
+                    <button
+                        type="button"
+                        className="sm:col-span-2 rounded-xl border border-orange-300 bg-orange-500 px-5 py-5 text-center text-base font-black text-white shadow-lg shadow-orange-950/20 transition hover:bg-orange-600"
+                        onClick={advanceWizard}
+                    >
+                        No exclusions set. Continue.
+                    </button>
+                ) : <>
                     <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Yes, keep them</button>
                     <button type="button" className={wizardChoiceClass} onClick={() => { onUpdateFlyingWindowExclusions([]); advanceWizard(); }}>Clear exclusions for this build</button>
                     <button type="button" className={wizardChoiceClass} onClick={() => setShowWizardExclusionEditor(value => !value)}>Add</button>
@@ -2291,14 +2326,26 @@ const DfpSidePanelTimeline: React.FC<{
             return questionShell(
                 'Which saved taskings must be scheduled?',
                 savedTaskRequests.length
-                    ? <p>Select any saved task that must go into Highest Priority Events.</p>
+                    ? <p>Select the saved taskings to send into Highest Priority Events, then continue.</p>
                     : <p>No saved taskings are waiting in NEO Assist.</p>,
                 savedTaskRequests.length ? savedTaskRequests.map(request => (
-                    <button key={request.id} type="button" className={wizardChoiceClass} onClick={() => submitAssistTaskRequest(request.id)}>
+                    <button
+                        key={request.id}
+                        type="button"
+                        className={wizardSelectionTileClass(selectedWizardTaskingIds.includes(request.id))}
+                        onClick={() => toggleWizardSelection(request.id, setSelectedWizardTaskingIds)}
+                    >
                         Schedule {request.tasking || 'Task'} at {formatCompactTime(request.takeoff)}
                     </button>
                 )).concat(
-                    <button key="taskings-next" type="button" className={wizardChoiceClass} onClick={advanceWizard}>Done with taskings</button>
+                    <button
+                        key="taskings-next"
+                        type="button"
+                        className="sm:col-span-2 rounded-xl bg-orange-500 px-4 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+                        onClick={continueWizardTaskings}
+                    >
+                        Continue
+                    </button>
                 ) : <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Continue</button>,
             );
         }
@@ -2306,17 +2353,26 @@ const DfpSidePanelTimeline: React.FC<{
             return questionShell(
                 'How should currency requests be treated?',
                 savedCurrencyRequests.length
-                    ? <p>Essential currency goes into Highest Priority Events. Normal currency stays available for ordinary planning.</p>
+                    ? <p>Select the currency events to send into Highest Priority Events, then continue.</p>
                     : <p>No saved currency requests are waiting in NEO Assist.</p>,
-                savedCurrencyRequests.length ? savedCurrencyRequests.flatMap(request => ([
-                    <button key={`${request.id}-essential`} type="button" className={wizardChoiceClass} onClick={() => submitAssistCurrencyRequest(request.id)}>
-                        Essential: {request.currency || 'Currency'} at {formatCompactTime(request.takeoff)}
-                    </button>,
-                    <button key={`${request.id}-normal`} type="button" className={wizardChoiceClass} onClick={() => saveAssistCurrencyRequest(request.id)}>
-                        Normal priority: {request.currency || 'Currency'}
-                    </button>,
-                ])).concat(
-                    <button key="currency-next" type="button" className={wizardChoiceClass} onClick={advanceWizard}>Done with currency</button>
+                savedCurrencyRequests.length ? savedCurrencyRequests.map(request => (
+                    <button
+                        key={request.id}
+                        type="button"
+                        className={wizardSelectionTileClass(selectedWizardCurrencyIds.includes(request.id))}
+                        onClick={() => toggleWizardSelection(request.id, setSelectedWizardCurrencyIds)}
+                    >
+                        {request.currency || 'Currency'} at {formatCompactTime(request.takeoff)}
+                    </button>
+                )).concat(
+                    <button
+                        key="currency-next"
+                        type="button"
+                        className="sm:col-span-2 rounded-xl bg-orange-500 px-4 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-orange-600"
+                        onClick={continueWizardCurrency}
+                    >
+                        Continue
+                    </button>
                 ) : <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Continue</button>,
             );
         }

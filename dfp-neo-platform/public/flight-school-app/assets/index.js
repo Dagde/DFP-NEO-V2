@@ -70838,6 +70838,8 @@ const DfpSidePanelTimeline = ({
   const [wizardExclusionEnd, setWizardExclusionEnd] = reactExports.useState(Math.min(23.75, flyingStartTime + 0.5));
   const [wizardExclusionRestriction, setWizardExclusionRestriction] = reactExports.useState("both");
   const [showWizardConfigEditor, setShowWizardConfigEditor] = reactExports.useState(false);
+  const [selectedWizardTaskingIds, setSelectedWizardTaskingIds] = reactExports.useState([]);
+  const [selectedWizardCurrencyIds, setSelectedWizardCurrencyIds] = reactExports.useState([]);
   const courseEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType !== "Staff CAT" && !isSyllabusCourseShell(item)), [fullAssistEventOptions]);
   const packageEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType === "Staff CAT" && !isSyllabusCourseShell(item)), [fullAssistEventOptions]);
   const activeSyllabusOptions = activeAssistSection === "packages" ? packageEventOptions : activeAssistSection === "course" ? courseEventOptions : filteredEventOptions;
@@ -71935,6 +71937,20 @@ const DfpSidePanelTimeline = ({
   const wizardChoiceClass = "rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
   const wizardCenteredChoiceClass = wizardChoiceClass.replace("text-left", "text-center");
   const wizardKeepButtonClass = "rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-xs font-bold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
+  const wizardSelectionTileClass = (isSelected) => `rounded-lg border px-4 py-3 text-left text-sm font-semibold shadow-sm transition ${isSelected ? "border-orange-400 bg-orange-100 text-orange-950 ring-2 ring-orange-300/70" : "border-slate-300 bg-white text-slate-800 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900"}`;
+  const toggleWizardSelection = (id, setter) => {
+    setter((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]);
+  };
+  const continueWizardTaskings = () => {
+    selectedWizardTaskingIds.forEach((id) => submitAssistTaskRequest(id));
+    setSelectedWizardTaskingIds([]);
+    advanceWizard();
+  };
+  const continueWizardCurrency = () => {
+    selectedWizardCurrencyIds.forEach((id) => submitAssistCurrencyRequest(id));
+    setSelectedWizardCurrencyIds([]);
+    advanceWizard();
+  };
   const renderWizardTimeBox = (label, value, setter) => {
     const makeRepeatAction = (delta) => {
       let nextValue = value;
@@ -72086,7 +72102,15 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: exclusionText }),
           "."
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        flyingWindowExclusions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "sm:col-span-2 rounded-xl border border-orange-300 bg-orange-500 px-5 py-5 text-center text-base font-black text-white shadow-lg shadow-orange-950/20 transition hover:bg-orange-600",
+            onClick: advanceWizard,
+            children: "No exclusions set. Continue."
+          }
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Yes, keep them" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: () => {
             onUpdateFlyingWindowExclusions([]);
@@ -72219,34 +72243,63 @@ const DfpSidePanelTimeline = ({
     if (wizardStep === 8) {
       return questionShell(
         "Which saved taskings must be scheduled?",
-        savedTaskRequests.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select any saved task that must go into Highest Priority Events." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved taskings are waiting in NEO Assist." }),
-        savedTaskRequests.length ? savedTaskRequests.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: () => submitAssistTaskRequest(request.id), children: [
-          "Schedule ",
-          request.tasking || "Task",
-          " at ",
-          formatCompactTime(request.takeoff)
-        ] }, request.id)).concat(
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Done with taskings" }, "taskings-next")
+        savedTaskRequests.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select the saved taskings to send into Highest Priority Events, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved taskings are waiting in NEO Assist." }),
+        savedTaskRequests.length ? savedTaskRequests.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            className: wizardSelectionTileClass(selectedWizardTaskingIds.includes(request.id)),
+            onClick: () => toggleWizardSelection(request.id, setSelectedWizardTaskingIds),
+            children: [
+              "Schedule ",
+              request.tasking || "Task",
+              " at ",
+              formatCompactTime(request.takeoff)
+            ]
+          },
+          request.id
+        )).concat(
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "sm:col-span-2 rounded-xl bg-orange-500 px-4 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500",
+              onClick: continueWizardTaskings,
+              children: "Continue"
+            },
+            "taskings-next"
+          )
         ) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardKeepButtonClass, onClick: advanceWizard, children: "Continue" })
       );
     }
     if (wizardStep === 9) {
       return questionShell(
         "How should currency requests be treated?",
-        savedCurrencyRequests.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Essential currency goes into Highest Priority Events. Normal currency stays available for ordinary planning." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved currency requests are waiting in NEO Assist." }),
-        savedCurrencyRequests.length ? savedCurrencyRequests.flatMap((request) => [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: () => submitAssistCurrencyRequest(request.id), children: [
-            "Essential: ",
-            request.currency || "Currency",
-            " at ",
-            formatCompactTime(request.takeoff)
-          ] }, `${request.id}-essential`),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: () => saveAssistCurrencyRequest(request.id), children: [
-            "Normal priority: ",
-            request.currency || "Currency"
-          ] }, `${request.id}-normal`)
-        ]).concat(
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Done with currency" }, "currency-next")
+        savedCurrencyRequests.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select the currency events to send into Highest Priority Events, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved currency requests are waiting in NEO Assist." }),
+        savedCurrencyRequests.length ? savedCurrencyRequests.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            className: wizardSelectionTileClass(selectedWizardCurrencyIds.includes(request.id)),
+            onClick: () => toggleWizardSelection(request.id, setSelectedWizardCurrencyIds),
+            children: [
+              request.currency || "Currency",
+              " at ",
+              formatCompactTime(request.takeoff)
+            ]
+          },
+          request.id
+        )).concat(
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "sm:col-span-2 rounded-xl bg-orange-500 px-4 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-orange-600",
+              onClick: continueWizardCurrency,
+              children: "Continue"
+            },
+            "currency-next"
+          )
         ) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardKeepButtonClass, onClick: advanceWizard, children: "Continue" })
       );
     }
