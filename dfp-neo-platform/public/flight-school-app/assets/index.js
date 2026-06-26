@@ -28788,6 +28788,21 @@ const PrioritiesView = ({
     const eventDate = String(event.date || "").trim();
     return !eventDate || eventDate === buildDfpDate;
   };
+  const isPriorityEventPublished = (event) => activeScheduleEvents.some(
+    (activeEvent) => activeEvent.id === event.id || !!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId
+  );
+  const getTodayDateString = () => {
+    const now = /* @__PURE__ */ new Date();
+    const offsetMs = now.getTimezoneOffset() * 6e4;
+    return new Date(now.getTime() - offsetMs).toISOString().split("T")[0];
+  };
+  reactExports.useEffect(() => {
+    const today = getTodayDateString();
+    highestPriorityEvents.filter((event) => {
+      const eventDate = String(event.date || "").trim();
+      return /^\d{4}-\d{2}-\d{2}$/.test(eventDate) && eventDate < buildDfpDate && eventDate >= today && !isPriorityEventPublished(event);
+    }).forEach((event) => onUpdatePriorityEvent(event.id, { date: buildDfpDate }));
+  }, [activeScheduleEvents, buildDfpDate, highestPriorityEvents, onUpdatePriorityEvent]);
   const standardPriorityEvents = highestPriorityEvents.filter(priorityEventMatchesBuildDate);
   const stalePriorityEvents = highestPriorityEvents.filter((event) => !priorityEventMatchesBuildDate(event));
   reactExports.useMemo(() => {
@@ -28886,9 +28901,7 @@ const PrioritiesView = ({
       Array.from({ length: 9 }).map((_, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-2 py-3 text-slate-600", children: " " }, `${group.key}-empty-${index}`))
     ] }, `${group.key}-empty`);
     const renderEventRow = (event, group, index) => {
-      const isPublishedInActiveSchedule = activeScheduleEvents.some(
-        (activeEvent) => activeEvent.id === event.id || !!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId
-      );
+      const isPublishedInActiveSchedule = isPriorityEventPublished(event);
       const rowText = isPublishedInActiveSchedule ? "text-green-300" : "text-slate-100";
       const eventLabel = getPriorityEventLabel(event);
       const crewRequirementName = getPriorityEventCrewRequirementName(event);
