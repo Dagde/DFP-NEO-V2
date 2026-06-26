@@ -60558,12 +60558,34 @@ const AirfieldLookupField = ({
 };
 const NumberField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: fieldClass, type: "number", value: value ?? 0, disabled, onChange: (event) => onChange(Number(event.target.value)) })
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      className: fieldClass,
+      type: "number",
+      value: value ?? 0,
+      disabled,
+      onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDown: stopEditableKeyPropagation,
+      onChange: (event) => onChange(Number(event.target.value))
+    }
+  )
 ] });
 const formatDateInput = (value) => value ? String(value).slice(0, 10) : "";
 const DateField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: fieldClass, type: "date", value: formatDateInput(value), disabled, onChange: (event) => onChange(event.target.value) })
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      className: fieldClass,
+      type: "date",
+      value: formatDateInput(value),
+      disabled,
+      onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDown: stopEditableKeyPropagation,
+      onChange: (event) => onChange(event.target.value)
+    }
+  )
 ] });
 const OptionalNumberField = ({ label, value, disabled, onChange, info, placeholder = "Unlimited" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
@@ -60575,6 +60597,8 @@ const OptionalNumberField = ({ label, value, disabled, onChange, info, placehold
       value: value ?? "",
       disabled,
       placeholder,
+      onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDown: stopEditableKeyPropagation,
       onChange: (event) => onChange(event.target.value === "" ? null : Number(event.target.value))
     }
   )

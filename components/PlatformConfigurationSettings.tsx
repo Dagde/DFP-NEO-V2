@@ -6962,7 +6962,15 @@ const AirfieldLookupField = ({
 const NumberField = ({ label, value, disabled, onChange, info }: { label: string; value: number; disabled: boolean; onChange: (value: number) => void; info?: string }) => (
   <label>
     <FieldLabel label={label} info={info} />
-    <input className={fieldClass} type="number" value={value ?? 0} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} />
+    <input
+      className={fieldClass}
+      type="number"
+      value={value ?? 0}
+      disabled={disabled}
+      onKeyDownCapture={stopEditableKeyPropagation}
+      onKeyDown={stopEditableKeyPropagation}
+      onChange={(event) => onChange(Number(event.target.value))}
+    />
   </label>
 );
 
@@ -6971,7 +6979,15 @@ const formatDateInput = (value: string) => (value ? String(value).slice(0, 10) :
 const DateField = ({ label, value, disabled, onChange, info }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string }) => (
   <label>
     <FieldLabel label={label} info={info} />
-    <input className={fieldClass} type="date" value={formatDateInput(value)} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+    <input
+      className={fieldClass}
+      type="date"
+      value={formatDateInput(value)}
+      disabled={disabled}
+      onKeyDownCapture={stopEditableKeyPropagation}
+      onKeyDown={stopEditableKeyPropagation}
+      onChange={(event) => onChange(event.target.value)}
+    />
   </label>
 );
 
@@ -6984,6 +7000,8 @@ const OptionalNumberField = ({ label, value, disabled, onChange, info, placehold
       value={value ?? ''}
       disabled={disabled}
       placeholder={placeholder}
+      onKeyDownCapture={stopEditableKeyPropagation}
+      onKeyDown={stopEditableKeyPropagation}
       onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value))}
     />
   </label>
