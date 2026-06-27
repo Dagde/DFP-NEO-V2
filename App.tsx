@@ -533,7 +533,6 @@ const DfpSidePanelTimeline: React.FC<{
     const [assistGeneralDuration, setAssistGeneralDuration] = useState(4);
     const [assistAirfieldCatalogue, setAssistAirfieldCatalogue] = useState<Array<{ c?: string; i?: string; l?: string; n?: string; m?: string; y?: string; a?: number; o?: number }>>([]);
     const [activeAssistAirfieldField, setActiveAssistAirfieldField] = useState<'dep' | 'arrive' | null>(null);
-    const [assistCruiseFlightLevel, setAssistCruiseFlightLevel] = useState(180);
     const [assistWindProfiles, setAssistWindProfiles] = useState<Array<{ lat: number; lon: number; flightLevel: number; windFrom: number; windSpeed: number }>>([]);
     const [assistCallsign, setAssistCallsign] = useState('');
     const [assistUnitCallsignBase, setAssistUnitCallsignBase] = useState('');
@@ -1929,9 +1928,6 @@ const DfpSidePanelTimeline: React.FC<{
         const flightLevel = Number(activeAircraftType?.defaultCruiseAltitudeFl ?? activeAircraftType?.defaultCruiseAltitude);
         return Number.isFinite(flightLevel) && flightLevel > 0 ? flightLevel : 180;
     }, [activeAircraftType]);
-    useEffect(() => {
-        setAssistCruiseFlightLevel(activeAircraftCruiseFlightLevel);
-    }, [activeAircraftCruiseFlightLevel]);
     const calculateGreatCircleRoute = (dep: { lat: number; lon: number }, arr: { lat: number; lon: number }) => {
         const toRad = (degrees: number) => degrees * Math.PI / 180;
         const toDeg = (radians: number) => radians * 180 / Math.PI;
@@ -1972,7 +1968,7 @@ const DfpSidePanelTimeline: React.FC<{
         if (!dep || !arr) return { status: 'error' as const, message: 'Enter valid departure and arrival ICAO/IATA codes.' };
         if (!activeAircraftTasKtas || activeAircraftTasKtas <= 0) return { status: 'error' as const, message: 'Aircraft TAS is missing. Add TAS in Settings > Aircraft & Resource Pools.' };
         const route = calculateGreatCircleRoute(dep, arr);
-        const wind = getNearestAssistWindProfile((dep.lat + arr.lat) / 2, (dep.lon + arr.lon) / 2, assistCruiseFlightLevel);
+        const wind = getNearestAssistWindProfile((dep.lat + arr.lat) / 2, (dep.lon + arr.lon) / 2, activeAircraftCruiseFlightLevel);
         if (!wind) return { status: 'error' as const, message: 'Wind profile data is unavailable.' };
         const angleDiff = Math.abs((((wind.windFrom - route.bearing + 540) % 360) - 180));
         const headwindComponent = wind.windSpeed * Math.cos(angleDiff * Math.PI / 180);
@@ -1990,7 +1986,7 @@ const DfpSidePanelTimeline: React.FC<{
             wind,
             message: `${Math.floor(totalMinutes / 60)} hr ${String(totalMinutes % 60).padStart(2, '0')} min, ${Math.round(route.distanceNm)} NM, ${Math.round(groundspeed)} kt GS`,
         };
-    }, [activeAircraftTasKtas, assistArrivalPoint, assistCruiseFlightLevel, assistDepPoint, getAssistAirfieldByCode, getNearestAssistWindProfile]);
+    }, [activeAircraftCruiseFlightLevel, activeAircraftTasKtas, assistArrivalPoint, assistDepPoint, getAssistAirfieldByCode, getNearestAssistWindProfile]);
     useEffect(() => {
         if (assistRouteDurationCalc?.status !== 'ok') return;
         setAssistGeneralDuration(Number(assistRouteDurationCalc.durationHours.toFixed(2)));
@@ -3234,9 +3230,10 @@ const DfpSidePanelTimeline: React.FC<{
                                 type="number"
                                 min={180}
                                 step={10}
-                                value={assistCruiseFlightLevel}
-                                onChange={event => setAssistCruiseFlightLevel(Math.max(0, Number(event.target.value) || 0))}
-                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                value={activeAircraftCruiseFlightLevel}
+                                readOnly
+                                title="Set this in Settings > Aircraft & Resource Pools > Aircraft Types > Cruise Alt (FL)."
+                                className="mt-1 w-full rounded border border-slate-600 bg-slate-900/80 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-300"
                             />
                         </label>
                     </div>

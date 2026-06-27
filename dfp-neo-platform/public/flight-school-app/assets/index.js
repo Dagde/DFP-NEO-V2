@@ -70871,7 +70871,6 @@ const DfpSidePanelTimeline = ({
   const [assistGeneralDuration, setAssistGeneralDuration] = reactExports.useState(4);
   const [assistAirfieldCatalogue, setAssistAirfieldCatalogue] = reactExports.useState([]);
   const [activeAssistAirfieldField, setActiveAssistAirfieldField] = reactExports.useState(null);
-  const [assistCruiseFlightLevel, setAssistCruiseFlightLevel] = reactExports.useState(180);
   const [assistWindProfiles, setAssistWindProfiles] = reactExports.useState([]);
   const [assistCallsign, setAssistCallsign] = reactExports.useState("");
   const [assistUnitCallsignBase, setAssistUnitCallsignBase] = reactExports.useState("");
@@ -71959,9 +71958,6 @@ const DfpSidePanelTimeline = ({
     const flightLevel = Number(activeAircraftType?.defaultCruiseAltitudeFl ?? activeAircraftType?.defaultCruiseAltitude);
     return Number.isFinite(flightLevel) && flightLevel > 0 ? flightLevel : 180;
   }, [activeAircraftType]);
-  reactExports.useEffect(() => {
-    setAssistCruiseFlightLevel(activeAircraftCruiseFlightLevel);
-  }, [activeAircraftCruiseFlightLevel]);
   const calculateGreatCircleRoute = (dep, arr) => {
     const toRad = (degrees) => degrees * Math.PI / 180;
     const toDeg = (radians) => radians * 180 / Math.PI;
@@ -71999,7 +71995,7 @@ const DfpSidePanelTimeline = ({
     if (!dep || !arr) return { status: "error", message: "Enter valid departure and arrival ICAO/IATA codes." };
     if (!activeAircraftTasKtas || activeAircraftTasKtas <= 0) return { status: "error", message: "Aircraft TAS is missing. Add TAS in Settings > Aircraft & Resource Pools." };
     const route = calculateGreatCircleRoute(dep, arr);
-    const wind = getNearestAssistWindProfile((dep.lat + arr.lat) / 2, (dep.lon + arr.lon) / 2, assistCruiseFlightLevel);
+    const wind = getNearestAssistWindProfile((dep.lat + arr.lat) / 2, (dep.lon + arr.lon) / 2, activeAircraftCruiseFlightLevel);
     if (!wind) return { status: "error", message: "Wind profile data is unavailable." };
     const angleDiff = Math.abs((wind.windFrom - route.bearing + 540) % 360 - 180);
     const headwindComponent = wind.windSpeed * Math.cos(angleDiff * Math.PI / 180);
@@ -72017,7 +72013,7 @@ const DfpSidePanelTimeline = ({
       wind,
       message: `${Math.floor(totalMinutes / 60)} hr ${String(totalMinutes % 60).padStart(2, "0")} min, ${Math.round(route.distanceNm)} NM, ${Math.round(groundspeed)} kt GS`
     };
-  }, [activeAircraftTasKtas, assistArrivalPoint, assistCruiseFlightLevel, assistDepPoint, getAssistAirfieldByCode, getNearestAssistWindProfile]);
+  }, [activeAircraftCruiseFlightLevel, activeAircraftTasKtas, assistArrivalPoint, assistDepPoint, getAssistAirfieldByCode, getNearestAssistWindProfile]);
   reactExports.useEffect(() => {
     if (assistRouteDurationCalc?.status !== "ok") return;
     setAssistGeneralDuration(Number(assistRouteDurationCalc.durationHours.toFixed(2)));
@@ -73144,9 +73140,10 @@ const DfpSidePanelTimeline = ({
                 type: "number",
                 min: 180,
                 step: 10,
-                value: assistCruiseFlightLevel,
-                onChange: (event) => setAssistCruiseFlightLevel(Math.max(0, Number(event.target.value) || 0)),
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                value: activeAircraftCruiseFlightLevel,
+                readOnly: true,
+                title: "Set this in Settings > Aircraft & Resource Pools > Aircraft Types > Cruise Alt (FL).",
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-900/80 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-300"
               }
             )
           ] })
