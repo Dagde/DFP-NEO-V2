@@ -8184,6 +8184,7 @@ function generateDfpInternal(
         const getFixedCrewEventType = (item: Partial<SyllabusItemDetail> & Partial<ScheduleEvent>): ScheduleEvent['type'] | null => {
             const rawType = String(item.type || '').trim().toLowerCase();
             const code = String((item as any).code || (item as any).flightNumber || '').trim().toUpperCase();
+            if (rawType === 'deployment') return 'deployment';
             if (rawType === 'flight') return 'flight';
             if (rawType === 'ftd' || rawType === 'sim' || rawType === 'simulator') return 'ftd';
             if (rawType === 'cpt' || code.includes('CPT')) return 'cpt';
@@ -8797,6 +8798,48 @@ function generateDfpInternal(
                 reason: null as string | null,
                 elapsedMs: 0,
             };
+            if (sourceEvent.type === 'deployment') {
+                const placed: Omit<ScheduleEvent, 'date'> & { _source?: string } = {
+                    ...sourceEvent,
+                    id: sourceEvent.id || uuidv4(),
+                    type: 'deployment',
+                    flightNumber: sourceEvent.flightNumber || 'DEPLOYMENT',
+                    pilot: '',
+                    instructor: '',
+                    student: '',
+                    crew: '',
+                    group: undefined,
+                    color: sourceEvent.color || 'bg-gray-600/30',
+                    flightType: 'Dual',
+                    soloOrDual: 'Dual',
+                    locationType: 'Land Away',
+                    origin: sourceEvent.origin || 'DEPLOY',
+                    destination: sourceEvent.destination || 'DEPLOY',
+                    callsign: '',
+                    isDeploy: true,
+                    fixedCrewGroup: undefined,
+                    fixedCrewPic: undefined,
+                    fixedCrewManifestStatus: undefined,
+                    preStart: undefined,
+                    postEnd: undefined,
+                    _source: source,
+                };
+                generatedEvents.push(placed);
+                fixedCrewPerf.counters.placements += 1;
+                pushFixedCrewPlacement({
+                    event: placed.flightNumber,
+                    eventId: placed.id || null,
+                    source,
+                    startTime: placed.startTime,
+                    resourceId: placed.resourceId,
+                    duration: placed.duration,
+                    type: 'deployment',
+                });
+                eventPerf.outcome = 'placed';
+                eventPerf.elapsedMs = Math.round((fixedCrewPerfNow() - eventPerfStart) * 100) / 100;
+                if (fixedCrewPerf.events.length < 120) fixedCrewPerf.events.push(eventPerf);
+                return true;
+            }
             const resourceOptions = getFixedCrewResourceOptions(sourceEvent);
             if (resourceOptions.length === 0) {
                 incrementFixedCrewRejection('NO_RESOURCE_OPTIONS');
@@ -36251,9 +36294,22 @@ appliedUpdates.forEach(update => {
                         });
                     }}
                     onAddBuildEvents={(eventsToAdd) => {
-                        const nextDayEvents = eventsToAdd.map(event => {
-                            const { date: _date, ...nextDayEvent } = event;
-                            return nextDayEvent;
+                        const nextDayEvents = eventsToAdd
+                            .filter(event => !event.date || event.date === buildDfpDate)
+                            .map(event => {
+                                const { date: _date, ...nextDayEvent } = event;
+                                return nextDayEvent;
+                            });
+                        setHighestPriorityEvents(prev => {
+                            const incomingIds = new Set(eventsToAdd.map(event => event.id));
+                            return [
+                                ...prev.filter(event => !incomingIds.has(event.id)),
+                                ...eventsToAdd.map(event => ({
+                                    ...event,
+                                    isTimeFixed: true,
+                                    priority: event.priority || 'High',
+                                })),
+                            ];
                         });
                         setNextDayBuildEvents(prev => [...prev, ...nextDayEvents]);
                         logAudit('Next Day Build', 'Create', 'Added Build Planner deployment', `${eventsToAdd.length} x DEPLOYMENT`);

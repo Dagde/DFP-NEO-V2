@@ -107,6 +107,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     const [deploymentStartTime, setDeploymentStartTime] = useState(props.flyingStartTime);
     const [deploymentEndTime, setDeploymentEndTime] = useState(Math.min(23.75, props.flyingStartTime + 4));
     const [deploymentAircraftCount, setDeploymentAircraftCount] = useState(1);
+    const [deploymentAddMessage, setDeploymentAddMessage] = useState('');
     const mainScrollRef = useRef<HTMLElement | null>(null);
     const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
     const locationDisplayName = props.school === 'ESL' ? 'East Sale' : props.school === 'PEA' ? 'Pearce' : props.school;
@@ -266,12 +267,6 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         }, 80);
     };
 
-    const formatPlannerTimeInput = (value: number): string => {
-        const hours = Math.floor(Math.max(0, value));
-        const minutes = Math.round((Math.max(0, value) - hours) * 60);
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-    };
-
     const parsePlannerTimeInput = (value: string): number => {
         const [hours, minutes] = String(value || '').split(':').map(Number);
         if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
@@ -311,6 +306,12 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         }
         return dates.length > 0 ? dates : [startDate].filter(Boolean);
     };
+
+    const plannerTimeOptions = Array.from({ length: 96 }, (_, index) => {
+        const hours = Math.floor(index / 4);
+        const minutes = (index % 4) * 15;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    });
 
     const deploymentPreviewText = `DEPLOYMENT ${formatPlannerClock(deploymentStartTime)} ${formatPlannerDateLabel(deploymentStartDate)} - ${formatPlannerClock(deploymentEndTime)} ${formatPlannerDateLabel(deploymentEndDate)}`;
     const hasInvalidDeploymentDateRange = Boolean(deploymentStartDate && deploymentEndDate && deploymentStartDate > deploymentEndDate);
@@ -364,6 +365,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             };
         }).filter(event => event.duration > 0);
         props.onAddBuildEvents(events);
+        setDeploymentAddMessage(`Added deployment to the Build Planner for ${deploymentDates.length} day${deploymentDates.length === 1 ? '' : 's'}.`);
     };
 
     const renderDeploymentPlanner = () => (
@@ -400,13 +402,15 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                             </label>
                             <label className="block">
                                 <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Begin Time</span>
-                                <input
-                                    type="time"
-                                    step="900"
-                                    value={formatPlannerTimeInput(deploymentStartTime)}
+                                <select
+                                    value={`${String(Math.floor(deploymentStartTime)).padStart(2, '0')}:${String(Math.round((deploymentStartTime % 1) * 60)).padStart(2, '0')}`}
                                     onChange={(event) => setDeploymentStartTime(parsePlannerTimeInput(event.target.value))}
                                     className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
-                                />
+                                >
+                                    {plannerTimeOptions.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
                             </label>
                             <label className="block">
                                 <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">End Date</span>
@@ -419,13 +423,15 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                             </label>
                             <label className="block">
                                 <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">End Time</span>
-                                <input
-                                    type="time"
-                                    step="900"
-                                    value={formatPlannerTimeInput(deploymentEndTime)}
+                                <select
+                                    value={`${String(Math.floor(deploymentEndTime)).padStart(2, '0')}:${String(Math.round((deploymentEndTime % 1) * 60)).padStart(2, '0')}`}
                                     onChange={(event) => setDeploymentEndTime(parsePlannerTimeInput(event.target.value))}
                                     className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
-                                />
+                                >
+                                    {plannerTimeOptions.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
                             </label>
                             <label className="block md:col-span-2">
                                 <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Aircraft</span>
@@ -451,6 +457,11 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                             {(hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) && (
                                 <p className="mt-3 rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200">
                                     End date/time must be after begin date/time before the deployment can be added.
+                                </p>
+                            )}
+                            {deploymentAddMessage && !(hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) && (
+                                <p className="mt-3 rounded-md border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">
+                                    {deploymentAddMessage}
                                 </p>
                             )}
                         </div>

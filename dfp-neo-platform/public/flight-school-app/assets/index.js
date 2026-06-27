@@ -30186,6 +30186,7 @@ const PrioritiesViewWithMenu = (props) => {
   const [deploymentStartTime, setDeploymentStartTime] = reactExports.useState(props.flyingStartTime);
   const [deploymentEndTime, setDeploymentEndTime] = reactExports.useState(Math.min(23.75, props.flyingStartTime + 4));
   const [deploymentAircraftCount, setDeploymentAircraftCount] = reactExports.useState(1);
+  const [deploymentAddMessage, setDeploymentAddMessage] = reactExports.useState("");
   const mainScrollRef = reactExports.useRef(null);
   const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const locationDisplayName = props.school === "ESL" ? "East Sale" : props.school === "PEA" ? "Pearce" : props.school;
@@ -30324,11 +30325,6 @@ const PrioritiesViewWithMenu = (props) => {
       });
     }, 80);
   };
-  const formatPlannerTimeInput = (value) => {
-    const hours = Math.floor(Math.max(0, value));
-    const minutes = Math.round((Math.max(0, value) - hours) * 60);
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-  };
   const parsePlannerTimeInput = (value) => {
     const [hours, minutes] = String(value || "").split(":").map(Number);
     if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
@@ -30360,6 +30356,11 @@ const PrioritiesViewWithMenu = (props) => {
     }
     return dates.length > 0 ? dates : [startDate].filter(Boolean);
   };
+  const plannerTimeOptions = Array.from({ length: 96 }, (_, index) => {
+    const hours = Math.floor(index / 4);
+    const minutes = index % 4 * 15;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  });
   const deploymentPreviewText = `DEPLOYMENT ${formatPlannerClock(deploymentStartTime)} ${formatPlannerDateLabel(deploymentStartDate)} - ${formatPlannerClock(deploymentEndTime)} ${formatPlannerDateLabel(deploymentEndDate)}`;
   const hasInvalidDeploymentDateRange = Boolean(deploymentStartDate && deploymentEndDate && deploymentStartDate > deploymentEndDate);
   const hasInvalidSameDayTimes = deploymentStartDate === deploymentEndDate && deploymentEndTime <= deploymentStartTime;
@@ -30407,6 +30408,7 @@ const PrioritiesViewWithMenu = (props) => {
       };
     }).filter((event) => event.duration > 0);
     props.onAddBuildEvents(events);
+    setDeploymentAddMessage(`Added deployment to the Build Planner for ${deploymentDates.length} day${deploymentDates.length === 1 ? "" : "s"}.`);
   };
   const renderDeploymentPlanner = () => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "section-deployments", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "deployment-builder-card rounded-lg border border-violet-400/70 bg-slate-900/78 p-5 shadow-[0_0_0_1px_rgba(139,92,246,0.18),0_14px_30px_rgba(15,23,42,0.28)]", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
@@ -30446,13 +30448,12 @@ const PrioritiesViewWithMenu = (props) => {
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400", children: "Begin Time" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
+            "select",
             {
-              type: "time",
-              step: "900",
-              value: formatPlannerTimeInput(deploymentStartTime),
+              value: `${String(Math.floor(deploymentStartTime)).padStart(2, "0")}:${String(Math.round(deploymentStartTime % 1 * 60)).padStart(2, "0")}`,
               onChange: (event) => setDeploymentStartTime(parsePlannerTimeInput(event.target.value)),
-              className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
+              className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300",
+              children: plannerTimeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
             }
           )
         ] }),
@@ -30471,13 +30472,12 @@ const PrioritiesViewWithMenu = (props) => {
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400", children: "End Time" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
+            "select",
             {
-              type: "time",
-              step: "900",
-              value: formatPlannerTimeInput(deploymentEndTime),
+              value: `${String(Math.floor(deploymentEndTime)).padStart(2, "0")}:${String(Math.round(deploymentEndTime % 1 * 60)).padStart(2, "0")}`,
               onChange: (event) => setDeploymentEndTime(parsePlannerTimeInput(event.target.value)),
-              className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
+              className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300",
+              children: plannerTimeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
             }
           )
         ] }),
@@ -30504,7 +30504,8 @@ const PrioritiesViewWithMenu = (props) => {
           deploymentAircraftCount,
           " x aircraft. Tile will use the Deployed resource row in the build plan."
         ] }),
-        (hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200", children: "End date/time must be after begin date/time before the deployment can be added." })
+        (hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200", children: "End date/time must be after begin date/time before the deployment can be added." }),
+        deploymentAddMessage && !(hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-md border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200", children: deploymentAddMessage })
       ] })
     ] }) })
   ] }) });
@@ -77117,6 +77118,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const getFixedCrewEventType = (item) => {
       const rawType = String(item.type || "").trim().toLowerCase();
       const code = String(item.code || item.flightNumber || "").trim().toUpperCase();
+      if (rawType === "deployment") return "deployment";
       if (rawType === "flight") return "flight";
       if (rawType === "ftd" || rawType === "sim" || rawType === "simulator") return "ftd";
       if (rawType === "cpt" || code.includes("CPT")) return "cpt";
@@ -77634,6 +77636,48 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         reason: null,
         elapsedMs: 0
       };
+      if (sourceEvent.type === "deployment") {
+        const placed = {
+          ...sourceEvent,
+          id: sourceEvent.id || v4(),
+          type: "deployment",
+          flightNumber: sourceEvent.flightNumber || "DEPLOYMENT",
+          pilot: "",
+          instructor: "",
+          student: "",
+          crew: "",
+          group: void 0,
+          color: sourceEvent.color || "bg-gray-600/30",
+          flightType: "Dual",
+          soloOrDual: "Dual",
+          locationType: "Land Away",
+          origin: sourceEvent.origin || "DEPLOY",
+          destination: sourceEvent.destination || "DEPLOY",
+          callsign: "",
+          isDeploy: true,
+          fixedCrewGroup: void 0,
+          fixedCrewPic: void 0,
+          fixedCrewManifestStatus: void 0,
+          preStart: void 0,
+          postEnd: void 0,
+          _source: source
+        };
+        generatedEvents.push(placed);
+        fixedCrewPerf.counters.placements += 1;
+        pushFixedCrewPlacement({
+          event: placed.flightNumber,
+          eventId: placed.id || null,
+          source,
+          startTime: placed.startTime,
+          resourceId: placed.resourceId,
+          duration: placed.duration,
+          type: "deployment"
+        });
+        eventPerf.outcome = "placed";
+        eventPerf.elapsedMs = Math.round((fixedCrewPerfNow() - eventPerfStart) * 100) / 100;
+        if (fixedCrewPerf.events.length < 120) fixedCrewPerf.events.push(eventPerf);
+        return true;
+      }
       const resourceOptions = getFixedCrewResourceOptions(sourceEvent);
       if (resourceOptions.length === 0) {
         incrementFixedCrewRejection("NO_RESOURCE_OPTIONS");
@@ -100059,9 +100103,20 @@ ${error instanceof Error ? error.message : String(error)}`,
               });
             },
             onAddBuildEvents: (eventsToAdd) => {
-              const nextDayEvents = eventsToAdd.map((event) => {
+              const nextDayEvents = eventsToAdd.filter((event) => !event.date || event.date === buildDfpDate).map((event) => {
                 const { date: _date, ...nextDayEvent } = event;
                 return nextDayEvent;
+              });
+              setHighestPriorityEvents((prev) => {
+                const incomingIds = new Set(eventsToAdd.map((event) => event.id));
+                return [
+                  ...prev.filter((event) => !incomingIds.has(event.id)),
+                  ...eventsToAdd.map((event) => ({
+                    ...event,
+                    isTimeFixed: true,
+                    priority: event.priority || "High"
+                  }))
+                ];
               });
               setNextDayBuildEvents((prev) => [...prev, ...nextDayEvents]);
               logAudit("Next Day Build", "Create", "Added Build Planner deployment", `${eventsToAdd.length} x DEPLOYMENT`);
