@@ -74212,7 +74212,15 @@ const DfpSidePanelTimeline = ({
           onDragEnd: clearAssistDragPreview,
           className: `w-full max-w-[360px] cursor-grab rounded-md border bg-slate-950/70 p-2 active:cursor-grabbing ${isDeploymentAssistTile ? "border-slate-500/45" : "border-emerald-300/35"}`,
           title: "Drag this tile onto the DFP to create a copy",
-          children: isDeploymentAssistTile ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-10 items-center justify-center overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md", children: "DEPLOYMENT" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          children: isDeploymentAssistTile ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-10 overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70", children: formatDeploymentAssistClock(assistDeploymentStartTime) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute inset-0 flex items-center justify-center px-14", children: "DEPLOYMENT" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute right-2 top-1 whitespace-nowrap font-mono text-[9px] font-semibold text-white/75", children: [
+              formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", ""),
+              " ",
+              formatDeploymentAssistDateLabel(assistDeploymentStartDate)
+            ] })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
               className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",

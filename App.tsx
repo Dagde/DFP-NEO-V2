@@ -4333,8 +4333,16 @@ const DfpSidePanelTimeline: React.FC<{
                     title="Drag this tile onto the DFP to create a copy"
                 >
                     {isDeploymentAssistTile ? (
-                        <div className="flex h-10 items-center justify-center overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md">
-                            DEPLOYMENT
+                        <div className="relative h-10 overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md">
+                            <span className="absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70">
+                                {formatDeploymentAssistClock(assistDeploymentStartTime)}
+                            </span>
+                            <span className="absolute inset-0 flex items-center justify-center px-14">
+                                DEPLOYMENT
+                            </span>
+                            <span className="absolute right-2 top-1 whitespace-nowrap font-mono text-[9px] font-semibold text-white/75">
+                                {formatDeploymentAssistClock(assistDeploymentStartTime).replace(':', '')} {formatDeploymentAssistDateLabel(assistDeploymentStartDate)}
+                            </span>
                         </div>
                     ) : (
                         <div
