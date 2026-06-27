@@ -29647,7 +29647,7 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Directed Events" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Review hard requests and build exceptions after the normal course weighting is set." })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "tasking-events-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "tasking-events-card rounded-lg border border-cyan-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Tasking" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: addTaskingRequest, className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -29678,7 +29678,7 @@ const PrioritiesView = ({
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "specific-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "specific-currency-card rounded-lg border border-violet-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(167,139,250,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Specific Currency Requests" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddSctRequest("flight"), className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -29692,7 +29692,7 @@ const PrioritiesView = ({
           sctFtds.length > 0 && renderSctRequestTable("ftd", sctFtds)
         ] }) })
       ] }),
-      !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-violet-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(167,139,250,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Trainee Currency Events" }),
@@ -29827,7 +29827,7 @@ const PrioritiesView = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bulk-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bulk-currency-card rounded-lg border border-violet-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(167,139,250,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Bulk Currency Builder" }),
@@ -29954,7 +29954,7 @@ const PrioritiesView = ({
           ] }) })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "consolidated-currency-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "consolidated-currency-card rounded-lg border border-violet-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(167,139,250,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-start justify-between gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Consolidated Currency Event Build" }),
@@ -30144,7 +30144,7 @@ const PrioritiesView = ({
           })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "highest-priority-events-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "highest-priority-events-card rounded-lg border border-amber-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(251,191,36,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-center justify-between gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Highest Priority Events" }),
