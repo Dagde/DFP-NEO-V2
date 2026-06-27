@@ -56866,8 +56866,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     setSelectedResourcePoolDeleteKey("");
     onShowSuccess(`Resource pool "${selectedResourcePoolDeleteOption.name}" removed. Click Save to apply the deletion.`);
   };
-  const save = async (configOverride, restoreSection) => {
+  const save = async (configOverride, restoreSection, options) => {
     const configToSave = configOverride && Array.isArray(configOverride.locations) ? configOverride : config;
+    const reloadPage = options?.reloadPage ?? true;
     if (!canEdit) return false;
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
@@ -56918,6 +56919,11 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         });
       });
       loadedConfigRef.current = configToSave;
+      if (!reloadPage) {
+        await reloadPlatformConfig();
+        onShowSuccess(options?.successMessage || "Platform configuration saved.");
+        return true;
+      }
       shouldReload = true;
       setApplyingChanges(true);
       onShowSuccess("Platform configuration saved. Applying changes...");
@@ -56941,7 +56947,10 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     }
   };
   const saveResourcePoolsAndExitEdit = async () => {
-    const saved = await save(void 0, "platform-resource-pools");
+    const saved = await save(void 0, "platform-resource-pools", {
+      reloadPage: false,
+      successMessage: "Aircraft & Resource Pools saved."
+    });
     if (saved) setResourcePoolsUnlocked(false);
   };
   const saveCrewCompositionAndKeepPosition = async () => {
@@ -57100,7 +57109,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     const res = await fetch(`${getApiBase()}/platform-config`);
     if (!res.ok) throw new Error(`Configuration reload failed (${res.status})`);
     const data = await res.json();
-    setConfig({ ...emptyConfig, ...data });
+    const nextConfig = { ...emptyConfig, ...data };
+    setConfig(nextConfig);
+    loadedConfigRef.current = nextConfig;
   };
   const verifySignedLicense = async () => {
     if (!licenseImportText.trim()) {

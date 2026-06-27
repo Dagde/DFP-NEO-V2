@@ -2982,10 +2982,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     onShowSuccess(`Resource pool "${selectedResourcePoolDeleteOption.name}" removed. Click Save to apply the deletion.`);
   };
 
-  const save = async (configOverride?: PlatformConfig, restoreSection?: string) => {
+  const save = async (
+    configOverride?: PlatformConfig,
+    restoreSection?: string,
+    options?: { reloadPage?: boolean; successMessage?: string },
+  ) => {
     const configToSave = configOverride && Array.isArray(configOverride.locations)
       ? configOverride
       : config;
+    const reloadPage = options?.reloadPage ?? true;
     if (!canEdit) return false;
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
@@ -3036,6 +3041,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         });
       });
       loadedConfigRef.current = configToSave;
+      if (!reloadPage) {
+        await reloadPlatformConfig();
+        onShowSuccess(options?.successMessage || 'Platform configuration saved.');
+        return true;
+      }
       shouldReload = true;
       setApplyingChanges(true);
       onShowSuccess('Platform configuration saved. Applying changes...');
@@ -3061,7 +3071,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const saveResourcePoolsAndExitEdit = async () => {
-    const saved = await save(undefined, 'platform-resource-pools');
+    const saved = await save(undefined, 'platform-resource-pools', {
+      reloadPage: false,
+      successMessage: 'Aircraft & Resource Pools saved.',
+    });
     if (saved) setResourcePoolsUnlocked(false);
   };
 
@@ -3252,7 +3265,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const res = await fetch(`${getApiBase()}/platform-config`);
     if (!res.ok) throw new Error(`Configuration reload failed (${res.status})`);
     const data = await res.json();
-    setConfig({ ...emptyConfig, ...data });
+    const nextConfig = { ...emptyConfig, ...data };
+    setConfig(nextConfig);
+    loadedConfigRef.current = nextConfig;
   };
 
   const verifySignedLicense = async () => {
