@@ -428,6 +428,7 @@ const DfpSidePanelTimeline: React.FC<{
     formatResourceLabel: (resourceId: string) => string;
     operationalModel?: string;
     activeUnitCode?: string;
+    activeAircraftType?: any;
     staffQualificationCatalogue?: StaffQualificationCatalogue;
     unitCallsignSettings?: UnitCallsignSettings;
     scheduleZoomLevel?: number;
@@ -494,6 +495,7 @@ const DfpSidePanelTimeline: React.FC<{
     formatResourceLabel,
     operationalModel,
     activeUnitCode,
+    activeAircraftType,
     staffQualificationCatalogue,
     unitCallsignSettings,
     scheduleZoomLevel = 1,
@@ -529,8 +531,10 @@ const DfpSidePanelTimeline: React.FC<{
     const [assistDepPoint, setAssistDepPoint] = useState(locationCode);
     const [assistArrivalPoint, setAssistArrivalPoint] = useState(locationCode);
     const [assistGeneralDuration, setAssistGeneralDuration] = useState(4);
-    const [assistAirfieldCatalogue, setAssistAirfieldCatalogue] = useState<Array<{ c?: string; i?: string; l?: string; n?: string; m?: string; y?: string }>>([]);
+    const [assistAirfieldCatalogue, setAssistAirfieldCatalogue] = useState<Array<{ c?: string; i?: string; l?: string; n?: string; m?: string; y?: string; a?: number; o?: number }>>([]);
     const [activeAssistAirfieldField, setActiveAssistAirfieldField] = useState<'dep' | 'arrive' | null>(null);
+    const [assistCruiseFlightLevel, setAssistCruiseFlightLevel] = useState(180);
+    const [assistWindProfiles, setAssistWindProfiles] = useState<Array<{ lat: number; lon: number; flightLevel: number; windFrom: number; windSpeed: number }>>([]);
     const [assistCallsign, setAssistCallsign] = useState('');
     const [assistUnitCallsignBase, setAssistUnitCallsignBase] = useState('');
     const [assistUnitCallsignNumber, setAssistUnitCallsignNumber] = useState(0);
@@ -710,6 +714,43 @@ const DfpSidePanelTimeline: React.FC<{
             }
         };
         loadAirfieldCatalogue();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        const loadWindProfiles = async () => {
+            try {
+                const baseUrl = new URL((import.meta as any)?.env?.BASE_URL || './', window.location.href);
+                const response = await fetch(new URL('global_FL180plus_2deg_annual_mean_winds.csv', baseUrl).toString());
+                if (!response.ok) throw new Error(`Wind profile load failed: ${response.status}`);
+                const text = await response.text();
+                const rows = text.trim().split(/\r?\n/).slice(1);
+                const profiles = rows.map(row => {
+                    const [lat, lon, flightLevel, windFrom, windSpeed] = row.split(',');
+                    return {
+                        lat: Number(lat),
+                        lon: Number(lon),
+                        flightLevel: Number(flightLevel),
+                        windFrom: Number(windFrom),
+                        windSpeed: Number(windSpeed),
+                    };
+                }).filter(row => (
+                    Number.isFinite(row.lat) &&
+                    Number.isFinite(row.lon) &&
+                    Number.isFinite(row.flightLevel) &&
+                    Number.isFinite(row.windFrom) &&
+                    Number.isFinite(row.windSpeed)
+                ));
+                if (!cancelled) setAssistWindProfiles(profiles);
+            } catch (error) {
+                console.warn('NEO Assist wind profile unavailable', error);
+                if (!cancelled) setAssistWindProfiles([]);
+            }
+        };
+        loadWindProfiles();
         return () => {
             cancelled = true;
         };
@@ -1838,17 +1879,21 @@ const DfpSidePanelTimeline: React.FC<{
     }, []);
     const assistAirfieldOptions = useMemo(() => {
         const seen = new Set<string>();
-        const options: Array<{ code: string; label: string }> = [];
+        const options: Array<{ code: string; label: string; lat: number; lon: number }> = [];
         assistAirfieldCatalogue.forEach(entry => {
             const name = String(entry.n || entry.m || '').trim();
             const country = String(entry.y || '').trim();
+            const lat = Number(entry.a);
+            const lon = Number(entry.o);
             [entry.c, entry.i].forEach(rawCode => {
                 const code = String(rawCode || '').trim().toUpperCase();
-                if (!code || seen.has(code)) return;
+                if (!code || seen.has(code) || !Number.isFinite(lat) || !Number.isFinite(lon)) return;
                 seen.add(code);
                 options.push({
                     code,
                     label: [name, country].filter(Boolean).join(', '),
+                    lat,
+                    lon,
                 });
             });
         });
@@ -1867,11 +1912,82 @@ const DfpSidePanelTimeline: React.FC<{
                 if (option.code.includes(query)) return { option, score: 60 };
                 return null;
             })
-            .filter((item): item is { option: { code: string; label: string }; score: number } => Boolean(item))
+            .filter((item): item is { option: { code: string; label: string; lat: number; lon: number }; score: number } => Boolean(item))
             .sort((left, right) => right.score - left.score || left.option.code.localeCompare(right.option.code))
             .slice(0, 8)
             .map(item => item.option);
     }, [assistAirfieldOptions]);
+    const getAssistAirfieldByCode = useCallback((value: string) => {
+        const code = normaliseAssistAirfieldCode(value);
+        return assistAirfieldOptions.find(option => option.code === code) || null;
+    }, [assistAirfieldOptions]);
+    const activeAircraftTasKtas = useMemo(() => {
+        const tas = Number(activeAircraftType?.defaultTasKtas);
+        return Number.isFinite(tas) ? tas : 0;
+    }, [activeAircraftType]);
+    const calculateGreatCircleRoute = (dep: { lat: number; lon: number }, arr: { lat: number; lon: number }) => {
+        const toRad = (degrees: number) => degrees * Math.PI / 180;
+        const toDeg = (radians: number) => radians * 180 / Math.PI;
+        const lat1 = toRad(dep.lat);
+        const lat2 = toRad(arr.lat);
+        const deltaLat = toRad(arr.lat - dep.lat);
+        const deltaLon = toRad(arr.lon - dep.lon);
+        const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
+        const centralAngle = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+        const distanceNm = 3440.065 * centralAngle;
+        const y = Math.sin(deltaLon) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
+        const bearing = (toDeg(Math.atan2(y, x)) + 360) % 360;
+        return { distanceNm, bearing };
+    };
+    const getNearestAssistWindProfile = useCallback((lat: number, lon: number, flightLevel: number) => {
+        if (assistWindProfiles.length === 0) return null;
+        let best = assistWindProfiles[0];
+        let bestScore = Number.POSITIVE_INFINITY;
+        assistWindProfiles.forEach(profile => {
+            const score =
+                Math.abs(profile.lat - lat) * 1000000 +
+                Math.abs(profile.lon - lon) * 10000 +
+                Math.abs(profile.flightLevel - flightLevel);
+            if (score < bestScore) {
+                best = profile;
+                bestScore = score;
+            }
+        });
+        return best;
+    }, [assistWindProfiles]);
+    const assistRouteDurationCalc = useMemo(() => {
+        const depCode = normaliseAssistAirfieldCode(assistDepPoint);
+        const arrCode = normaliseAssistAirfieldCode(assistArrivalPoint);
+        if (!depCode || !arrCode || depCode === arrCode) return null;
+        const dep = getAssistAirfieldByCode(depCode);
+        const arr = getAssistAirfieldByCode(arrCode);
+        if (!dep || !arr) return { status: 'error' as const, message: 'Enter valid departure and arrival ICAO/IATA codes.' };
+        if (!activeAircraftTasKtas || activeAircraftTasKtas <= 0) return { status: 'error' as const, message: 'Aircraft TAS is missing. Add TAS in Settings > Aircraft & Resource Pools.' };
+        const route = calculateGreatCircleRoute(dep, arr);
+        const wind = getNearestAssistWindProfile((dep.lat + arr.lat) / 2, (dep.lon + arr.lon) / 2, assistCruiseFlightLevel);
+        if (!wind) return { status: 'error' as const, message: 'Wind profile data is unavailable.' };
+        const angleDiff = Math.abs((((wind.windFrom - route.bearing + 540) % 360) - 180));
+        const headwindComponent = wind.windSpeed * Math.cos(angleDiff * Math.PI / 180);
+        const groundspeed = activeAircraftTasKtas - headwindComponent;
+        if (groundspeed < 50) return { status: 'error' as const, message: `Calculated groundspeed ${Math.round(groundspeed)} kt is invalid/unrealistic.` };
+        const totalMinutes = Math.max(1, Math.round((route.distanceNm / groundspeed) * 60 + 8));
+        return {
+            status: 'ok' as const,
+            durationHours: totalMinutes / 60,
+            totalMinutes,
+            distanceNm: route.distanceNm,
+            bearing: route.bearing,
+            headwindComponent,
+            groundspeed,
+            wind,
+            message: `${Math.floor(totalMinutes / 60)} hr ${String(totalMinutes % 60).padStart(2, '0')} min, ${Math.round(route.distanceNm)} NM, ${Math.round(groundspeed)} kt GS`,
+        };
+    }, [activeAircraftTasKtas, assistArrivalPoint, assistCruiseFlightLevel, assistDepPoint, getAssistAirfieldByCode, getNearestAssistWindProfile]);
+    useEffect(() => {
+        if (assistRouteDurationCalc?.status !== 'ok') return;
+        setAssistGeneralDuration(Number(assistRouteDurationCalc.durationHours.toFixed(2)));
+    }, [assistRouteDurationCalc]);
     const updateAirCombatCourseWeight = (value: number) => {
         const courses = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
         onUpdateAirCombatSchedulingWeights({
@@ -3083,7 +3199,7 @@ const DfpSidePanelTimeline: React.FC<{
                         </select>
                     </label>
                     {isDeploymentAssistTile && <div aria-hidden="true" />}
-                    <div className="col-span-2 grid grid-cols-3 gap-2">
+                    <div className="col-span-2 grid grid-cols-4 gap-2">
                         {renderAssistAirfieldCodeControl('dep', 'Dep', assistDepPoint, setAssistDepPoint)}
                         {renderAssistAirfieldCodeControl('arrive', 'Arrive', assistArrivalPoint, setAssistArrivalPoint)}
                         <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
@@ -3105,7 +3221,29 @@ const DfpSidePanelTimeline: React.FC<{
                                 className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
                             />
                         </label>
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            Cruise FL
+                            <input
+                                type="number"
+                                min={180}
+                                step={10}
+                                value={assistCruiseFlightLevel}
+                                onChange={event => setAssistCruiseFlightLevel(Math.max(0, Number(event.target.value) || 0))}
+                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                            />
+                        </label>
                     </div>
+                    {assistRouteDurationCalc && (
+                        <div className={`col-span-2 rounded border px-2 py-1 text-[10px] font-semibold normal-case tracking-normal ${
+                            assistRouteDurationCalc.status === 'ok'
+                                ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
+                                : 'border-amber-400/30 bg-amber-500/10 text-amber-100'
+                        }`}>
+                            {assistRouteDurationCalc.status === 'ok'
+                                ? `Calculated route duration: ${assistRouteDurationCalc.message}`
+                                : assistRouteDurationCalc.message}
+                        </div>
+                    )}
                     {isDeploymentAssistTile && (
                         <>
                             <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
@@ -38172,6 +38310,7 @@ appliedUpdates.forEach(update => {
                                     formatResourceLabel={formatResourceDisplayLabel}
                                     operationalModel={activeOperationalModel}
                                     activeUnitCode={activeUnitCode}
+                                    activeAircraftType={activeRuntimeAircraftType}
                                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
                                     unitCallsignSettings={activeUnitCallsignSettings}
                                     scheduleZoomLevel={zoomLevel}
