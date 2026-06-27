@@ -74214,11 +74214,13 @@ const DfpSidePanelTimeline = ({
           title: "Drag this tile onto the DFP to create a copy",
           children: isDeploymentAssistTile ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-10 overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70", children: formatDeploymentAssistClock(assistDeploymentStartTime) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute inset-0 flex items-center justify-center px-14", children: "DEPLOYMENT" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute right-2 top-1 whitespace-nowrap font-mono text-[9px] font-semibold text-white/75", children: [
-              formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", ""),
-              " ",
-              formatDeploymentAssistDateLabel(assistDeploymentStartDate)
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute inset-0 flex items-center justify-center gap-1 px-14", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "DEPLOYMENT" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "whitespace-nowrap font-mono text-[9px] font-semibold text-white/75", children: [
+                formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", ""),
+                " ",
+                formatDeploymentAssistDateLabel(assistDeploymentStartDate)
+              ] })
             ] })
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",

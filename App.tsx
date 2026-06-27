@@ -4337,11 +4337,11 @@ const DfpSidePanelTimeline: React.FC<{
                             <span className="absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70">
                                 {formatDeploymentAssistClock(assistDeploymentStartTime)}
                             </span>
-                            <span className="absolute inset-0 flex items-center justify-center px-14">
-                                DEPLOYMENT
-                            </span>
-                            <span className="absolute right-2 top-1 whitespace-nowrap font-mono text-[9px] font-semibold text-white/75">
+                            <span className="absolute inset-0 flex items-center justify-center gap-1 px-14">
+                                <span>DEPLOYMENT</span>
+                                <span className="whitespace-nowrap font-mono text-[9px] font-semibold text-white/75">
                                 {formatDeploymentAssistClock(assistDeploymentStartTime).replace(':', '')} {formatDeploymentAssistDateLabel(assistDeploymentStartDate)}
+                                </span>
                             </span>
                         </div>
                     ) : (
