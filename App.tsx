@@ -526,6 +526,10 @@ const DfpSidePanelTimeline: React.FC<{
     const [selectedResourceKind, setSelectedResourceKind] = useState<NeoAssistResourceKind>('flight');
     const [selectedResourceNumber, setSelectedResourceNumber] = useState(1);
     const [selectedAircraftNumber, setSelectedAircraftNumber] = useState('TBA');
+    const [assistDepPoint, setAssistDepPoint] = useState(locationCode);
+    const [assistArrivalPoint, setAssistArrivalPoint] = useState(locationCode);
+    const [assistGeneralDuration, setAssistGeneralDuration] = useState(4);
+    const [assistAirfieldCatalogue, setAssistAirfieldCatalogue] = useState<Array<{ c?: string; i?: string; l?: string; n?: string; m?: string; y?: string }>>([]);
     const [assistCallsign, setAssistCallsign] = useState('');
     const [assistUnitCallsignBase, setAssistUnitCallsignBase] = useState('');
     const [assistUnitCallsignNumber, setAssistUnitCallsignNumber] = useState(0);
@@ -602,7 +606,7 @@ const DfpSidePanelTimeline: React.FC<{
     const [assistDeploymentStartDate, setAssistDeploymentStartDate] = useState(date);
     const [assistDeploymentEndDate, setAssistDeploymentEndDate] = useState(date);
     const [assistDeploymentStartTime, setAssistDeploymentStartTime] = useState(flyingStartTime);
-    const [assistDeploymentEndTime, setAssistDeploymentEndTime] = useState(Math.min(23.75, flyingStartTime + 1));
+    const [assistDeploymentEndTime, setAssistDeploymentEndTime] = useState((flyingStartTime + 4) % 24);
     const [assistCurrencyRequests, setAssistCurrencyRequests] = useState<Array<{
         id: string;
         currency: string;
@@ -682,11 +686,33 @@ const DfpSidePanelTimeline: React.FC<{
     }, [date]);
 
     useEffect(() => {
+        setAssistDepPoint(previous => previous || locationCode);
+        setAssistArrivalPoint(previous => previous || locationCode);
         setAssistTaskDepPoint(previous => previous || locationCode);
         setAssistTaskArrivalPoint(previous => previous || locationCode);
         setAssistCurrencyDepPoint(previous => previous || locationCode);
         setAssistCurrencyArrivalPoint(previous => previous || locationCode);
     }, [locationCode]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const loadAirfieldCatalogue = async () => {
+            try {
+                const baseUrl = new URL((import.meta as any)?.env?.BASE_URL || './', window.location.href);
+                const response = await fetch(new URL('airfield-location-catalog.json', baseUrl).toString());
+                if (!response.ok) throw new Error(`Airfield catalogue failed: ${response.status}`);
+                const entries = await response.json();
+                if (!cancelled && Array.isArray(entries)) setAssistAirfieldCatalogue(entries);
+            } catch (error) {
+                console.warn('NEO Assist airfield catalogue unavailable', error);
+                if (!cancelled) setAssistAirfieldCatalogue([]);
+            }
+        };
+        loadAirfieldCatalogue();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         window.localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(assistTaskRequests));
@@ -1064,6 +1090,21 @@ const DfpSidePanelTimeline: React.FC<{
             timeZone: 'UTC',
         });
     };
+    const getDeploymentAssistEndForDuration = (startDate: string, startTime: number, durationHours: number): { date: string; time: number } => {
+        const [year, month, day] = String(startDate || '').split('-').map(Number);
+        const safeStart = Number.isFinite(Number(startTime)) ? Number(startTime) : flyingStartTime;
+        const safeDuration = Math.max(0.1, Number(durationHours) || 0.1);
+        const totalHours = safeStart + safeDuration;
+        const dayOffset = Math.floor(Math.max(0, totalHours) / 24);
+        const endTime = ((totalHours % 24) + 24) % 24;
+        if (![year, month, day].every(Number.isFinite)) return { date: startDate || date, time: endTime };
+        const result = new Date(Date.UTC(year, month - 1, day));
+        result.setUTCDate(result.getUTCDate() + dayOffset);
+        return {
+            date: `${result.getUTCFullYear()}-${String(result.getUTCMonth() + 1).padStart(2, '0')}-${String(result.getUTCDate()).padStart(2, '0')}`,
+            time: endTime,
+        };
+    };
     const deploymentAssistLabel = `DEPLOYMENT ${formatDeploymentAssistClock(assistDeploymentStartTime).replace(':', '')} ${formatDeploymentAssistDateLabel(assistDeploymentStartDate)} - ${formatDeploymentAssistClock(assistDeploymentEndTime).replace(':', '')} ${formatDeploymentAssistDateLabel(assistDeploymentEndDate)}`;
 
     const assistEventLabel = useMemo(() => {
@@ -1087,7 +1128,7 @@ const DfpSidePanelTimeline: React.FC<{
             ? Number(assistTaskDuration) || defaultAssistTaskDuration
             : activeAssistSection === 'currency'
                 ? Number(assistCurrencyDuration) || defaultAssistCurrencyDuration
-                : Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2,
+                : Number(assistGeneralDuration) || 4,
     );
 
     const assistStartTime = isDeploymentAssistTile
@@ -1108,12 +1149,12 @@ const DfpSidePanelTimeline: React.FC<{
         ? assistTaskDepPoint.trim().toUpperCase()
         : activeAssistSection === 'currency'
             ? assistCurrencyDepPoint.trim().toUpperCase()
-            : locationCode;
+            : assistDepPoint.trim().toUpperCase();
     const assistDestination = activeAssistSection === 'taskings'
         ? assistTaskArrivalPoint.trim().toUpperCase()
         : activeAssistSection === 'currency'
             ? assistCurrencyArrivalPoint.trim().toUpperCase()
-            : locationCode;
+            : assistArrivalPoint.trim().toUpperCase();
     const assistConfigId = activeAssistSection === 'taskings'
         ? assistTaskConfigId
         : activeAssistSection === 'currency'
@@ -1199,6 +1240,7 @@ const DfpSidePanelTimeline: React.FC<{
         assistFlightType,
         assistOrigin,
         assistDestination,
+        assistGeneralDuration,
         assistResourceId,
         assistStartTime,
         assistTaskDate,
@@ -1793,6 +1835,24 @@ const DfpSidePanelTimeline: React.FC<{
         }
         return options;
     }, []);
+    const assistAirfieldOptions = useMemo(() => {
+        const seen = new Set<string>();
+        const options: Array<{ code: string; label: string }> = [];
+        assistAirfieldCatalogue.forEach(entry => {
+            const name = String(entry.n || entry.m || '').trim();
+            const country = String(entry.y || '').trim();
+            [entry.c, entry.i].forEach(rawCode => {
+                const code = String(rawCode || '').trim().toUpperCase();
+                if (!code || seen.has(code)) return;
+                seen.add(code);
+                options.push({
+                    code,
+                    label: [name, country].filter(Boolean).join(', '),
+                });
+            });
+        });
+        return options.sort((left, right) => left.code.localeCompare(right.code));
+    }, [assistAirfieldCatalogue]);
     const updateAirCombatCourseWeight = (value: number) => {
         const courses = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
         onUpdateAirCombatSchedulingWeights({
@@ -2940,8 +3000,14 @@ const DfpSidePanelTimeline: React.FC<{
                         <select
                             value={selectedResourceKind}
                             onChange={event => {
-                                setSelectedResourceKind(event.target.value as NeoAssistResourceKind);
+                                const nextResourceKind = event.target.value as NeoAssistResourceKind;
+                                setSelectedResourceKind(nextResourceKind);
                                 setSelectedResourceNumber(1);
+                                if (nextResourceKind === 'deployment') {
+                                    const end = getDeploymentAssistEndForDuration(assistDeploymentStartDate, assistDeploymentStartTime, assistGeneralDuration);
+                                    setAssistDeploymentEndDate(end.date);
+                                    setAssistDeploymentEndTime(end.time);
+                                }
                             }}
                             className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
                         >
@@ -2952,6 +3018,54 @@ const DfpSidePanelTimeline: React.FC<{
                         </select>
                     </label>
                     {isDeploymentAssistTile && <div aria-hidden="true" />}
+                    <datalist id="neo-assist-airfield-options">
+                        {assistAirfieldOptions.map(option => (
+                            <option key={`neo-assist-airfield-${option.code}`} value={option.code}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </datalist>
+                    <div className="col-span-2 grid grid-cols-3 gap-2">
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            Dep
+                            <input
+                                list="neo-assist-airfield-options"
+                                value={assistDepPoint}
+                                onChange={event => setAssistDepPoint(event.target.value.toUpperCase())}
+                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                placeholder={locationCode}
+                            />
+                        </label>
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            Arrive
+                            <input
+                                list="neo-assist-airfield-options"
+                                value={assistArrivalPoint}
+                                onChange={event => setAssistArrivalPoint(event.target.value.toUpperCase())}
+                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                placeholder={locationCode}
+                            />
+                        </label>
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            Duration
+                            <input
+                                type="number"
+                                min={0.1}
+                                step={0.1}
+                                value={assistGeneralDuration}
+                                onChange={event => {
+                                    const nextDuration = Math.max(0.1, Number(event.target.value) || 0.1);
+                                    setAssistGeneralDuration(nextDuration);
+                                    if (isDeploymentAssistTile) {
+                                        const end = getDeploymentAssistEndForDuration(assistDeploymentStartDate, assistDeploymentStartTime, nextDuration);
+                                        setAssistDeploymentEndDate(end.date);
+                                        setAssistDeploymentEndTime(end.time);
+                                    }
+                                }}
+                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                            />
+                        </label>
+                    </div>
                     {isDeploymentAssistTile && (
                         <>
                             <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
@@ -2962,7 +3076,9 @@ const DfpSidePanelTimeline: React.FC<{
                                     onChange={event => {
                                         const nextDate = event.target.value;
                                         setAssistDeploymentStartDate(nextDate);
-                                        if (assistDeploymentEndDate < nextDate) setAssistDeploymentEndDate(nextDate);
+                                        const end = getDeploymentAssistEndForDuration(nextDate, assistDeploymentStartTime, assistGeneralDuration);
+                                        setAssistDeploymentEndDate(end.date);
+                                        setAssistDeploymentEndTime(end.time);
                                     }}
                                     className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
                                 />
@@ -2971,7 +3087,13 @@ const DfpSidePanelTimeline: React.FC<{
                                 Begin Time
                                 <select
                                     value={assistDeploymentStartTime}
-                                    onChange={event => setAssistDeploymentStartTime(Number(event.target.value))}
+                                    onChange={event => {
+                                        const nextStartTime = Number(event.target.value);
+                                        setAssistDeploymentStartTime(nextStartTime);
+                                        const end = getDeploymentAssistEndForDuration(assistDeploymentStartDate, nextStartTime, assistGeneralDuration);
+                                        setAssistDeploymentEndDate(end.date);
+                                        setAssistDeploymentEndTime(end.time);
+                                    }}
                                     className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
                                 >
                                     {timeOptions.map(option => <option key={`assist-deploy-start-${option.label}`} value={option.value}>{option.label}</option>)}

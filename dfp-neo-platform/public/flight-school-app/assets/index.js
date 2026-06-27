@@ -70853,6 +70853,10 @@ const DfpSidePanelTimeline = ({
   const [selectedResourceKind, setSelectedResourceKind] = reactExports.useState("flight");
   const [selectedResourceNumber, setSelectedResourceNumber] = reactExports.useState(1);
   const [selectedAircraftNumber, setSelectedAircraftNumber] = reactExports.useState("TBA");
+  const [assistDepPoint, setAssistDepPoint] = reactExports.useState(locationCode);
+  const [assistArrivalPoint, setAssistArrivalPoint] = reactExports.useState(locationCode);
+  const [assistGeneralDuration, setAssistGeneralDuration] = reactExports.useState(4);
+  const [assistAirfieldCatalogue, setAssistAirfieldCatalogue] = reactExports.useState([]);
   const [assistCallsign, setAssistCallsign] = reactExports.useState("");
   const [assistUnitCallsignBase, setAssistUnitCallsignBase] = reactExports.useState("");
   const [assistUnitCallsignNumber, setAssistUnitCallsignNumber] = reactExports.useState(0);
@@ -70914,7 +70918,7 @@ const DfpSidePanelTimeline = ({
   const [assistDeploymentStartDate, setAssistDeploymentStartDate] = reactExports.useState(date);
   const [assistDeploymentEndDate, setAssistDeploymentEndDate] = reactExports.useState(date);
   const [assistDeploymentStartTime, setAssistDeploymentStartTime] = reactExports.useState(flyingStartTime);
-  const [assistDeploymentEndTime, setAssistDeploymentEndTime] = reactExports.useState(Math.min(23.75, flyingStartTime + 1));
+  const [assistDeploymentEndTime, setAssistDeploymentEndTime] = reactExports.useState((flyingStartTime + 4) % 24);
   const [assistCurrencyRequests, setAssistCurrencyRequests] = reactExports.useState([]);
   reactExports.useEffect(() => {
     if (!isFixedCrewNeoAssist) return;
@@ -70954,11 +70958,32 @@ const DfpSidePanelTimeline = ({
     setAssistDeploymentEndDate(date);
   }, [date]);
   reactExports.useEffect(() => {
+    setAssistDepPoint((previous) => previous || locationCode);
+    setAssistArrivalPoint((previous) => previous || locationCode);
     setAssistTaskDepPoint((previous) => previous || locationCode);
     setAssistTaskArrivalPoint((previous) => previous || locationCode);
     setAssistCurrencyDepPoint((previous) => previous || locationCode);
     setAssistCurrencyArrivalPoint((previous) => previous || locationCode);
   }, [locationCode]);
+  reactExports.useEffect(() => {
+    let cancelled = false;
+    const loadAirfieldCatalogue = async () => {
+      try {
+        const baseUrl = new URL("./", window.location.href);
+        const response = await fetch(new URL("airfield-location-catalog.json", baseUrl).toString());
+        if (!response.ok) throw new Error(`Airfield catalogue failed: ${response.status}`);
+        const entries = await response.json();
+        if (!cancelled && Array.isArray(entries)) setAssistAirfieldCatalogue(entries);
+      } catch (error) {
+        console.warn("NEO Assist airfield catalogue unavailable", error);
+        if (!cancelled) setAssistAirfieldCatalogue([]);
+      }
+    };
+    loadAirfieldCatalogue();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   reactExports.useEffect(() => {
     window.localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(assistTaskRequests));
     window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
@@ -71257,6 +71282,21 @@ const DfpSidePanelTimeline = ({
       timeZone: "UTC"
     });
   };
+  const getDeploymentAssistEndForDuration = (startDate, startTime, durationHours) => {
+    const [year, month, day] = String(startDate || "").split("-").map(Number);
+    const safeStart = Number.isFinite(Number(startTime)) ? Number(startTime) : flyingStartTime;
+    const safeDuration = Math.max(0.1, Number(durationHours) || 0.1);
+    const totalHours = safeStart + safeDuration;
+    const dayOffset = Math.floor(Math.max(0, totalHours) / 24);
+    const endTime = (totalHours % 24 + 24) % 24;
+    if (![year, month, day].every(Number.isFinite)) return { date: startDate || date, time: endTime };
+    const result = new Date(Date.UTC(year, month - 1, day));
+    result.setUTCDate(result.getUTCDate() + dayOffset);
+    return {
+      date: `${result.getUTCFullYear()}-${String(result.getUTCMonth() + 1).padStart(2, "0")}-${String(result.getUTCDate()).padStart(2, "0")}`,
+      time: endTime
+    };
+  };
   `DEPLOYMENT ${formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", "")} ${formatDeploymentAssistDateLabel(assistDeploymentStartDate)} - ${formatDeploymentAssistClock(assistDeploymentEndTime).replace(":", "")} ${formatDeploymentAssistDateLabel(assistDeploymentEndDate)}`;
   const assistEventLabel = reactExports.useMemo(() => {
     if (selectedResourceKind === "deployment") return "DEPLOYMENT";
@@ -71272,14 +71312,14 @@ const DfpSidePanelTimeline = ({
   }, [activeAssistSection, isAirCombatTileMode, selectedCurrencyName, selectedResourceKind, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
   const assistDuration = Math.max(
     0.1,
-    isDeploymentAssistTile ? assistDeploymentDuration : activeAssistSection === "taskings" ? Number(assistTaskDuration) || defaultAssistTaskDuration : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || defaultAssistCurrencyDuration : Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2
+    isDeploymentAssistTile ? assistDeploymentDuration : activeAssistSection === "taskings" ? Number(assistTaskDuration) || defaultAssistTaskDuration : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || defaultAssistCurrencyDuration : Number(assistGeneralDuration) || 4
   );
   const assistStartTime = isDeploymentAssistTile ? assistDeploymentStartTime : activeAssistSection === "taskings" ? assistTaskTakeoff : activeAssistSection === "currency" ? assistCurrencyTakeoff : flyingStartTime;
   const effectiveAssistTaskFlightType = isSingleSeatFlightResource ? "Solo" : assistTaskFlightType;
   const effectiveAssistCurrencyFlightType = isSingleSeatFlightResource ? "Solo" : assistCurrencyFlightType;
   const assistFlightType = activeAssistSection === "taskings" ? effectiveAssistTaskFlightType : activeAssistSection === "currency" ? effectiveAssistCurrencyFlightType : "Solo";
-  const assistOrigin = activeAssistSection === "taskings" ? assistTaskDepPoint.trim().toUpperCase() : activeAssistSection === "currency" ? assistCurrencyDepPoint.trim().toUpperCase() : locationCode;
-  const assistDestination = activeAssistSection === "taskings" ? assistTaskArrivalPoint.trim().toUpperCase() : activeAssistSection === "currency" ? assistCurrencyArrivalPoint.trim().toUpperCase() : locationCode;
+  const assistOrigin = activeAssistSection === "taskings" ? assistTaskDepPoint.trim().toUpperCase() : activeAssistSection === "currency" ? assistCurrencyDepPoint.trim().toUpperCase() : assistDepPoint.trim().toUpperCase();
+  const assistDestination = activeAssistSection === "taskings" ? assistTaskArrivalPoint.trim().toUpperCase() : activeAssistSection === "currency" ? assistCurrencyArrivalPoint.trim().toUpperCase() : assistArrivalPoint.trim().toUpperCase();
   const assistConfigId = activeAssistSection === "taskings" ? assistTaskConfigId : activeAssistSection === "currency" ? assistCurrencyConfigId : selectedSyllabusItem?.acceptableAircraftConfigs?.[0];
   const selectedCrewRecords = reactExports.useMemo(() => selectedCrewNames.map((name) => instructors.find((instructor) => instructor.name === name)).filter((staff) => Boolean(staff)), [instructors, selectedCrewNames]);
   const selectedPilotCrewName = isFixedCrewNeoAssist ? selectedFixedCrewPic : selectedCrewRecords.find(isStaffPilotCrewPosition)?.name || selectedCrewName || "";
@@ -71348,6 +71388,7 @@ const DfpSidePanelTimeline = ({
     assistFlightType,
     assistOrigin,
     assistDestination,
+    assistGeneralDuration,
     assistResourceId,
     assistStartTime,
     assistTaskDate,
@@ -71827,6 +71868,24 @@ const DfpSidePanelTimeline = ({
     }
     return options;
   }, []);
+  const assistAirfieldOptions = reactExports.useMemo(() => {
+    const seen = /* @__PURE__ */ new Set();
+    const options = [];
+    assistAirfieldCatalogue.forEach((entry) => {
+      const name = String(entry.n || entry.m || "").trim();
+      const country = String(entry.y || "").trim();
+      [entry.c, entry.i].forEach((rawCode) => {
+        const code = String(rawCode || "").trim().toUpperCase();
+        if (!code || seen.has(code)) return;
+        seen.add(code);
+        options.push({
+          code,
+          label: [name, country].filter(Boolean).join(", ")
+        });
+      });
+    });
+    return options.sort((left, right) => left.code.localeCompare(right.code));
+  }, [assistAirfieldCatalogue]);
   const updateAirCombatCourseWeight = (value) => {
     const courses = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
     onUpdateAirCombatSchedulingWeights({
@@ -72857,8 +72916,14 @@ const DfpSidePanelTimeline = ({
             {
               value: selectedResourceKind,
               onChange: (event) => {
-                setSelectedResourceKind(event.target.value);
+                const nextResourceKind = event.target.value;
+                setSelectedResourceKind(nextResourceKind);
                 setSelectedResourceNumber(1);
+                if (nextResourceKind === "deployment") {
+                  const end = getDeploymentAssistEndForDuration(assistDeploymentStartDate, assistDeploymentStartTime, assistGeneralDuration);
+                  setAssistDeploymentEndDate(end.date);
+                  setAssistDeploymentEndTime(end.time);
+                }
               },
               className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
               children: [
@@ -72871,6 +72936,57 @@ const DfpSidePanelTimeline = ({
           )
         ] }),
         isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "aria-hidden": "true" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-airfield-options", children: assistAirfieldOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.code, children: option.label }, `neo-assist-airfield-${option.code}`)) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2 grid grid-cols-3 gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Dep",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                list: "neo-assist-airfield-options",
+                value: assistDepPoint,
+                onChange: (event) => setAssistDepPoint(event.target.value.toUpperCase()),
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                placeholder: locationCode
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Arrive",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                list: "neo-assist-airfield-options",
+                value: assistArrivalPoint,
+                onChange: (event) => setAssistArrivalPoint(event.target.value.toUpperCase()),
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                placeholder: locationCode
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Duration",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                min: 0.1,
+                step: 0.1,
+                value: assistGeneralDuration,
+                onChange: (event) => {
+                  const nextDuration = Math.max(0.1, Number(event.target.value) || 0.1);
+                  setAssistGeneralDuration(nextDuration);
+                  if (isDeploymentAssistTile) {
+                    const end = getDeploymentAssistEndForDuration(assistDeploymentStartDate, assistDeploymentStartTime, nextDuration);
+                    setAssistDeploymentEndDate(end.date);
+                    setAssistDeploymentEndTime(end.time);
+                  }
+                },
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+              }
+            )
+          ] })
+        ] }),
         isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Begin Date",
@@ -72882,7 +72998,9 @@ const DfpSidePanelTimeline = ({
                 onChange: (event) => {
                   const nextDate = event.target.value;
                   setAssistDeploymentStartDate(nextDate);
-                  if (assistDeploymentEndDate < nextDate) setAssistDeploymentEndDate(nextDate);
+                  const end = getDeploymentAssistEndForDuration(nextDate, assistDeploymentStartTime, assistGeneralDuration);
+                  setAssistDeploymentEndDate(end.date);
+                  setAssistDeploymentEndTime(end.time);
                 },
                 className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
               }
@@ -72894,7 +73012,13 @@ const DfpSidePanelTimeline = ({
               "select",
               {
                 value: assistDeploymentStartTime,
-                onChange: (event) => setAssistDeploymentStartTime(Number(event.target.value)),
+                onChange: (event) => {
+                  const nextStartTime = Number(event.target.value);
+                  setAssistDeploymentStartTime(nextStartTime);
+                  const end = getDeploymentAssistEndForDuration(assistDeploymentStartDate, nextStartTime, assistGeneralDuration);
+                  setAssistDeploymentEndDate(end.date);
+                  setAssistDeploymentEndTime(end.time);
+                },
                 className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
                 children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `assist-deploy-start-${option.label}`))
               }
