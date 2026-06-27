@@ -4688,11 +4688,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <Field label="Code" value={aircraft.code} disabled={!canEditResourcePools} onChange={(value) => updateRow('aircraftTypes', index, { code: value })} />
                       <Field label="Name" value={aircraft.name} disabled={!canEditResourcePools} onChange={(value) => updateRow('aircraftTypes', index, { name: value })} />
                       <SelectField label="Category" value={aircraft.category || 'Training'} disabled={!canEditResourcePools} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'Rotary', 'Other']} onChange={(value) => updateRow('aircraftTypes', index, { category: value })} />
-                      <OptionalNumberField
+                      <TasField
                         label="Default TAS (KTAS)"
                         value={aircraft.defaultTasKtas ?? null}
                         disabled={!canEditResourcePools}
-                        placeholder="KTAS"
                         info="Used for route/time planning when a mission or event does not specify a custom speed."
                         onChange={(value) => updateRow('aircraftTypes', index, { defaultTasKtas: value })}
                       />
@@ -7003,6 +7002,27 @@ const OptionalNumberField = ({ label, value, disabled, onChange, info, placehold
       onKeyDownCapture={stopEditableKeyPropagation}
       onKeyDown={stopEditableKeyPropagation}
       onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value))}
+    />
+  </label>
+);
+
+const TasField = ({ label, value, disabled, onChange, info }: { label: string; value: number | string | null; disabled: boolean; onChange: (value: string | null) => void; info?: string }) => (
+  <label>
+    <FieldLabel label={label} info={info} />
+    <input
+      className={fieldClass}
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      value={value === null || value === undefined ? '' : String(value)}
+      disabled={disabled}
+      placeholder="KTAS"
+      onKeyDownCapture={stopEditableKeyPropagation}
+      onKeyDown={stopEditableKeyPropagation}
+      onChange={(event) => {
+        const digitsOnly = event.target.value.replace(/[^\d]/g, '').slice(0, 4);
+        onChange(digitsOnly || null);
+      }}
     />
   </label>
 );

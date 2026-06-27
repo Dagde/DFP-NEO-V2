@@ -58340,12 +58340,11 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: aircraft.name, disabled: !canEditResourcePools, onChange: (value) => updateRow("aircraftTypes", index, { name: value }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Category", value: aircraft.category || "Training", disabled: !canEditResourcePools, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    OptionalNumberField,
+                    TasField,
                     {
                       label: "Default TAS (KTAS)",
                       value: aircraft.defaultTasKtas ?? null,
                       disabled: !canEditResourcePools,
-                      placeholder: "KTAS",
                       info: "Used for route/time planning when a mission or event does not specify a custom speed.",
                       onChange: (value) => updateRow("aircraftTypes", index, { defaultTasKtas: value })
                     }
@@ -60600,6 +60599,27 @@ const OptionalNumberField = ({ label, value, disabled, onChange, info, placehold
       onKeyDownCapture: stopEditableKeyPropagation,
       onKeyDown: stopEditableKeyPropagation,
       onChange: (event) => onChange(event.target.value === "" ? null : Number(event.target.value))
+    }
+  )
+] });
+const TasField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      className: fieldClass,
+      type: "text",
+      inputMode: "numeric",
+      pattern: "[0-9]*",
+      value: value === null || value === void 0 ? "" : String(value),
+      disabled,
+      placeholder: "KTAS",
+      onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDown: stopEditableKeyPropagation,
+      onChange: (event) => {
+        const digitsOnly = event.target.value.replace(/[^\d]/g, "").slice(0, 4);
+        onChange(digitsOnly || null);
+      }
     }
   )
 ] });
