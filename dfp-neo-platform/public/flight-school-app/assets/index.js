@@ -74216,7 +74216,7 @@ const DfpSidePanelTimeline = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70", children: formatDeploymentAssistClock(assistDeploymentStartTime) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute inset-0 flex items-center justify-center gap-1 px-14", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "DEPLOYMENT" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "whitespace-nowrap font-mono text-[9px] font-semibold text-white/75", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "whitespace-nowrap text-white/75", children: [
                 formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", ""),
                 " ",
                 formatDeploymentAssistDateLabel(assistDeploymentStartDate)
