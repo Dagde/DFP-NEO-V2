@@ -2590,6 +2590,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             name: 'New Aircraft Type',
             category: 'Other',
             defaultTasKtas: null,
+            defaultCruiseAltitudeFl: null,
             status: 'ACTIVE',
             crewComposition: DEFAULT_AIRCRAFT_CREW_COMPOSITION,
           },
@@ -4708,7 +4709,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </div>
 
                   <div className="grid gap-3 p-3">
-                    <div className="grid gap-3 md:grid-cols-[0.75fr_1.35fr_1fr_0.85fr]">
+                    <div className="grid gap-3 md:grid-cols-[0.7fr_1.25fr_0.9fr_0.8fr_0.8fr]">
                       <Field label="Code" value={aircraft.code} disabled={!canEditResourcePools} onChange={(value) => updateRow('aircraftTypes', index, { code: value })} />
                       <Field label="Name" value={aircraft.name} disabled={!canEditResourcePools} onChange={(value) => updateRow('aircraftTypes', index, { name: value })} />
                       <SelectField label="Category" value={aircraft.category || 'Training'} disabled={!canEditResourcePools} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'Rotary', 'Other']} onChange={(value) => updateRow('aircraftTypes', index, { category: value })} />
@@ -4718,6 +4719,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         disabled={!canEditResourcePools}
                         info="Used for route/time planning when a mission or event does not specify a custom speed."
                         onChange={(value) => updateRow('aircraftTypes', index, { defaultTasKtas: value })}
+                      />
+                      <TasField
+                        label="Cruise Alt"
+                        value={aircraft.defaultCruiseAltitudeFl ?? null}
+                        disabled={!canEditResourcePools}
+                        placeholder="FL"
+                        info="Default cruise flight level for route wind and duration planning."
+                        onChange={(value) => updateRow('aircraftTypes', index, { defaultCruiseAltitudeFl: value })}
                       />
                     </div>
 
@@ -7030,7 +7039,7 @@ const OptionalNumberField = ({ label, value, disabled, onChange, info, placehold
   </label>
 );
 
-const TasField = ({ label, value, disabled, onChange, info }: { label: string; value: number | string | null; disabled: boolean; onChange: (value: string | null) => void; info?: string }) => (
+const TasField = ({ label, value, disabled, onChange, info, placeholder = 'KTAS' }: { label: string; value: number | string | null; disabled: boolean; onChange: (value: string | null) => void; info?: string; placeholder?: string }) => (
   <label>
     <FieldLabel label={label} info={info} />
     <input
@@ -7040,7 +7049,7 @@ const TasField = ({ label, value, disabled, onChange, info }: { label: string; v
       pattern="[0-9]*"
       value={value === null || value === undefined ? '' : String(value)}
       disabled={disabled}
-      placeholder="KTAS"
+      placeholder={placeholder}
       onKeyDownCapture={stopEditableKeyPropagation}
       onKeyDown={stopEditableKeyPropagation}
       onChange={(event) => {

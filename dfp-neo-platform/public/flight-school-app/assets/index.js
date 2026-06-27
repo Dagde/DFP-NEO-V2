@@ -56541,6 +56541,7 @@ const PlatformConfigurationSettings = ({
             name: "New Aircraft Type",
             category: "Other",
             defaultTasKtas: null,
+            defaultCruiseAltitudeFl: null,
             status: "ACTIVE",
             crewComposition: DEFAULT_AIRCRAFT_CREW_COMPOSITION
           }
@@ -58352,7 +58353,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 p-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[0.75fr_1.35fr_1fr_0.85fr]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[0.7fr_1.25fr_0.9fr_0.8fr_0.8fr]", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Code", value: aircraft.code, disabled: !canEditResourcePools, onChange: (value) => updateRow("aircraftTypes", index, { code: value }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: aircraft.name, disabled: !canEditResourcePools, onChange: (value) => updateRow("aircraftTypes", index, { name: value }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Category", value: aircraft.category || "Training", disabled: !canEditResourcePools, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) }),
@@ -58364,6 +58365,17 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                       disabled: !canEditResourcePools,
                       info: "Used for route/time planning when a mission or event does not specify a custom speed.",
                       onChange: (value) => updateRow("aircraftTypes", index, { defaultTasKtas: value })
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    TasField,
+                    {
+                      label: "Cruise Alt",
+                      value: aircraft.defaultCruiseAltitudeFl ?? null,
+                      disabled: !canEditResourcePools,
+                      placeholder: "FL",
+                      info: "Default cruise flight level for route wind and duration planning.",
+                      onChange: (value) => updateRow("aircraftTypes", index, { defaultCruiseAltitudeFl: value })
                     }
                   )
                 ] }),
@@ -60619,7 +60631,7 @@ const OptionalNumberField = ({ label, value, disabled, onChange, info, placehold
     }
   )
 ] });
-const TasField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+const TasField = ({ label, value, disabled, onChange, info, placeholder = "KTAS" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
     "input",
@@ -60630,7 +60642,7 @@ const TasField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */
       pattern: "[0-9]*",
       value: value === null || value === void 0 ? "" : String(value),
       disabled,
-      placeholder: "KTAS",
+      placeholder,
       onKeyDownCapture: stopEditableKeyPropagation,
       onKeyDown: stopEditableKeyPropagation,
       onChange: (event) => {
@@ -71943,6 +71955,13 @@ const DfpSidePanelTimeline = ({
     const tas = Number(activeAircraftType?.defaultTasKtas);
     return Number.isFinite(tas) ? tas : 0;
   }, [activeAircraftType]);
+  const activeAircraftCruiseFlightLevel = reactExports.useMemo(() => {
+    const flightLevel = Number(activeAircraftType?.defaultCruiseAltitudeFl);
+    return Number.isFinite(flightLevel) && flightLevel > 0 ? flightLevel : 180;
+  }, [activeAircraftType]);
+  reactExports.useEffect(() => {
+    setAssistCruiseFlightLevel(activeAircraftCruiseFlightLevel);
+  }, [activeAircraftCruiseFlightLevel]);
   const calculateGreatCircleRoute = (dep, arr) => {
     const toRad = (degrees) => degrees * Math.PI / 180;
     const toDeg = (radians) => radians * 180 / Math.PI;

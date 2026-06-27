@@ -1925,6 +1925,13 @@ const DfpSidePanelTimeline: React.FC<{
         const tas = Number(activeAircraftType?.defaultTasKtas);
         return Number.isFinite(tas) ? tas : 0;
     }, [activeAircraftType]);
+    const activeAircraftCruiseFlightLevel = useMemo(() => {
+        const flightLevel = Number(activeAircraftType?.defaultCruiseAltitudeFl);
+        return Number.isFinite(flightLevel) && flightLevel > 0 ? flightLevel : 180;
+    }, [activeAircraftType]);
+    useEffect(() => {
+        setAssistCruiseFlightLevel(activeAircraftCruiseFlightLevel);
+    }, [activeAircraftCruiseFlightLevel]);
     const calculateGreatCircleRoute = (dep: { lat: number; lon: number }, arr: { lat: number; lon: number }) => {
         const toRad = (degrees: number) => degrees * Math.PI / 180;
         const toDeg = (radians: number) => radians * 180 / Math.PI;
