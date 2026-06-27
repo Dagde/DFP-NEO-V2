@@ -4327,28 +4327,36 @@ const DfpSidePanelTimeline: React.FC<{
                     onDrag={updateAssistTileDrag}
                     onDragOver={updateAssistTileDrag}
                     onDragEnd={clearAssistDragPreview}
-                    className="w-full max-w-[360px] cursor-grab rounded-md border border-emerald-300/35 bg-slate-950/70 p-2 active:cursor-grabbing"
+                    className={`w-full max-w-[360px] cursor-grab rounded-md border bg-slate-950/70 p-2 active:cursor-grabbing ${
+                        isDeploymentAssistTile ? 'border-slate-500/45' : 'border-emerald-300/35'
+                    }`}
                     title="Drag this tile onto the DFP to create a copy"
                 >
-                    <div
-                        className="relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]"
-                        style={{ backgroundColor: getAssistTileDisplayColor(assistDraftEvent.color) }}
-                    >
-                        <div className="absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight">
-                            <span className="shrink-0 font-mono text-[9px] font-semibold text-white/70">{formatTime(assistStartTime)}</span>
-                            <span className="truncate">{previewCrewName}</span>
-                            <span className="shrink-0 whitespace-nowrap font-mono">[{assistDuration.toFixed(1)}] {assistEventLabel}</span>
+                    {isDeploymentAssistTile ? (
+                        <div className="flex h-10 items-center justify-center overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md">
+                            DEPLOYMENT
                         </div>
-                        <div className="absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none">
-                            <span className="font-mono text-[9px] text-white/80">{previewAircraftNumber}</span>
-                            <span className="justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">
-                                {isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase()}
-                            </span>
-                            <span className="truncate text-right font-mono text-cyan-50">
-                                {previewAreaCallsign}
-                            </span>
+                    ) : (
+                        <div
+                            className="relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]"
+                            style={{ backgroundColor: getAssistTileDisplayColor(assistDraftEvent.color) }}
+                        >
+                            <div className="absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight">
+                                <span className="shrink-0 font-mono text-[9px] font-semibold text-white/70">{formatTime(assistStartTime)}</span>
+                                <span className="truncate">{previewCrewName}</span>
+                                <span className="shrink-0 whitespace-nowrap font-mono">[{assistDuration.toFixed(1)}] {assistEventLabel}</span>
+                            </div>
+                            <div className="absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none">
+                                <span className="font-mono text-[9px] text-white/80">{previewAircraftNumber}</span>
+                                <span className="justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">
+                                    {isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase()}
+                                </span>
+                                <span className="truncate text-right font-mono text-cyan-50">
+                                    {previewAreaCallsign}
+                                </span>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
             <div className="mt-3 grid grid-cols-[128px_minmax(0,1fr)] gap-3">
