@@ -55569,14 +55569,14 @@ const PlatformConfigurationSettings = ({
     }, 40);
   }, [config.resourcePools.length]);
   reactExports.useEffect(() => {
-    if (!resourcePoolsUnlocked || !resourcePoolsDirty) return;
+    if (!resourcePoolsUnlocked || !resourcePoolsDirty || saving || applyingChanges) return;
     const handleBeforeUnload = (event) => {
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [config.aircraftTypes, config.resourcePools, resourcePoolsDirty, resourcePoolsUnlocked]);
+  }, [applyingChanges, config.aircraftTypes, config.resourcePools, resourcePoolsDirty, resourcePoolsUnlocked, saving]);
   reactExports.useEffect(() => {
     if (!scrollTarget || loading || sectionOnly) return;
     const frame = window.requestAnimationFrame(() => {

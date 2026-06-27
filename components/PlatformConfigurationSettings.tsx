@@ -1355,14 +1355,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, [config.resourcePools.length]);
 
   useEffect(() => {
-    if (!resourcePoolsUnlocked || !resourcePoolsDirty) return;
+    if (!resourcePoolsUnlocked || !resourcePoolsDirty || saving || applyingChanges) return;
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = '';
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [config.aircraftTypes, config.resourcePools, resourcePoolsDirty, resourcePoolsUnlocked]);
+  }, [applyingChanges, config.aircraftTypes, config.resourcePools, resourcePoolsDirty, resourcePoolsUnlocked, saving]);
 
   useEffect(() => {
     if (!scrollTarget || loading || sectionOnly) return;
