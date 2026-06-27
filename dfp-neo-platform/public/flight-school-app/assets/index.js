@@ -70911,6 +70911,10 @@ const DfpSidePanelTimeline = ({
   const [assistCurrencyDepPoint, setAssistCurrencyDepPoint] = reactExports.useState(locationCode);
   const [assistCurrencyArrivalPoint, setAssistCurrencyArrivalPoint] = reactExports.useState(locationCode);
   const [assistCurrencyConfigId, setAssistCurrencyConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
+  const [assistDeploymentStartDate, setAssistDeploymentStartDate] = reactExports.useState(date);
+  const [assistDeploymentEndDate, setAssistDeploymentEndDate] = reactExports.useState(date);
+  const [assistDeploymentStartTime, setAssistDeploymentStartTime] = reactExports.useState(flyingStartTime);
+  const [assistDeploymentEndTime, setAssistDeploymentEndTime] = reactExports.useState(Math.min(23.75, flyingStartTime + 1));
   const [assistCurrencyRequests, setAssistCurrencyRequests] = reactExports.useState([]);
   reactExports.useEffect(() => {
     if (!isFixedCrewNeoAssist) return;
@@ -70946,6 +70950,8 @@ const DfpSidePanelTimeline = ({
   reactExports.useEffect(() => {
     setAssistTaskDate(date);
     setAssistCurrencyDate(date);
+    setAssistDeploymentStartDate(date);
+    setAssistDeploymentEndDate(date);
   }, [date]);
   reactExports.useEffect(() => {
     setAssistTaskDepPoint((previous) => previous || locationCode);
@@ -71222,6 +71228,36 @@ const DfpSidePanelTimeline = ({
     return raw.replace(/[^A-Z0-9]/g, "").replace(/\d+$/g, "") || "CSIGN";
   };
   const getAssistFormationCallsign = (position) => assistFormationSize > 1 ? `${getAssistFormationCallsignBase()}${position}` : assistCallsign.trim() || void 0;
+  const isDeploymentAssistTile = selectedResourceKind === "deployment";
+  const getDeploymentAssistDateOffset = (startDate, endDate) => {
+    const startParts = String(startDate || "").split("-").map(Number);
+    const endParts = String(endDate || "").split("-").map(Number);
+    if (startParts.length !== 3 || endParts.length !== 3 || startParts.some((part) => !Number.isFinite(part)) || endParts.some((part) => !Number.isFinite(part))) return 0;
+    const startMs = Date.UTC(startParts[0], startParts[1] - 1, startParts[2]);
+    const endMs = Date.UTC(endParts[0], endParts[1] - 1, endParts[2]);
+    return Math.round((endMs - startMs) / 864e5);
+  };
+  const assistDeploymentDuration = Math.max(
+    0.1,
+    getDeploymentAssistDateOffset(assistDeploymentStartDate, assistDeploymentEndDate) * 24 + (Number(assistDeploymentEndTime) - Number(assistDeploymentStartTime))
+  );
+  const formatDeploymentAssistClock = (decimalHour) => {
+    const normalised = ((Number(decimalHour) || 0) % 24 + 24) % 24;
+    const hours = Math.floor(normalised);
+    const minutes = Math.round((normalised - hours) * 60);
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+  const formatDeploymentAssistDateLabel = (dateString) => {
+    if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return "";
+    const [year, month, day] = dateString.split("-").map(Number);
+    const deploymentDate = new Date(Date.UTC(year, month - 1, day));
+    return deploymentDate.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC"
+    });
+  };
+  const deploymentAssistLabel = `DEPLOYMENT ${formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", "")} ${formatDeploymentAssistDateLabel(assistDeploymentStartDate)} - ${formatDeploymentAssistClock(assistDeploymentEndTime).replace(":", "")} ${formatDeploymentAssistDateLabel(assistDeploymentEndDate)}`;
   const assistEventLabel = reactExports.useMemo(() => {
     if (selectedResourceKind === "deployment") return "DEPLOYMENT";
     if (activeAssistSection === "taskings" && selectedTaskProfile) {
@@ -71236,9 +71272,9 @@ const DfpSidePanelTimeline = ({
   }, [activeAssistSection, isAirCombatTileMode, selectedCurrencyName, selectedResourceKind, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
   const assistDuration = Math.max(
     0.1,
-    activeAssistSection === "taskings" ? Number(assistTaskDuration) || defaultAssistTaskDuration : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || defaultAssistCurrencyDuration : Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2
+    isDeploymentAssistTile ? assistDeploymentDuration : activeAssistSection === "taskings" ? Number(assistTaskDuration) || defaultAssistTaskDuration : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || defaultAssistCurrencyDuration : Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2
   );
-  const assistStartTime = activeAssistSection === "taskings" ? assistTaskTakeoff : activeAssistSection === "currency" ? assistCurrencyTakeoff : flyingStartTime;
+  const assistStartTime = isDeploymentAssistTile ? assistDeploymentStartTime : activeAssistSection === "taskings" ? assistTaskTakeoff : activeAssistSection === "currency" ? assistCurrencyTakeoff : flyingStartTime;
   const effectiveAssistTaskFlightType = isSingleSeatFlightResource ? "Solo" : assistTaskFlightType;
   const effectiveAssistCurrencyFlightType = isSingleSeatFlightResource ? "Solo" : assistCurrencyFlightType;
   const assistFlightType = activeAssistSection === "taskings" ? effectiveAssistTaskFlightType : activeAssistSection === "currency" ? effectiveAssistCurrencyFlightType : "Solo";
@@ -71248,23 +71284,6 @@ const DfpSidePanelTimeline = ({
   const selectedCrewRecords = reactExports.useMemo(() => selectedCrewNames.map((name) => instructors.find((instructor) => instructor.name === name)).filter((staff) => Boolean(staff)), [instructors, selectedCrewNames]);
   const selectedPilotCrewName = isFixedCrewNeoAssist ? selectedFixedCrewPic : selectedCrewRecords.find(isStaffPilotCrewPosition)?.name || selectedCrewName || "";
   const selectedSupportCrewName = isFixedCrewNeoAssist ? "" : selectedCrewRecords.find((staff) => staff.name !== selectedPilotCrewName)?.name || "";
-  const isDeploymentAssistTile = selectedResourceKind === "deployment";
-  const deploymentEndTotalHours = assistStartTime + assistDuration;
-  const formatDeploymentAssistClock = (decimalHour) => {
-    const normalised = ((Number(decimalHour) || 0) % 24 + 24) % 24;
-    const hours = Math.floor(normalised);
-    const minutes = Math.round((normalised - hours) * 60);
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-  };
-  const deploymentEndDate = reactExports.useMemo(() => {
-    if (!isDeploymentAssistTile) return void 0;
-    const sourceDate = activeAssistSection === "taskings" ? assistTaskDate : activeAssistSection === "currency" ? assistCurrencyDate : date;
-    const dateParts = String(sourceDate || date).split("-").map(Number);
-    if (dateParts.length !== 3 || dateParts.some((part) => !Number.isFinite(part))) return sourceDate || date;
-    const endDate = new Date(Date.UTC(dateParts[0], dateParts[1] - 1, dateParts[2]));
-    endDate.setUTCDate(endDate.getUTCDate() + Math.floor(Math.max(0, deploymentEndTotalHours) / 24));
-    return `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, "0")}-${String(endDate.getUTCDate()).padStart(2, "0")}`;
-  }, [activeAssistSection, assistCurrencyDate, assistTaskDate, date, deploymentEndTotalHours, isDeploymentAssistTile]);
   const getAssistTileDisplayColor = (color) => {
     if (!color) return "#047857";
     if (color === "bg-emerald-500/70") return "rgba(16,185,129,0.42)";
@@ -71310,16 +71329,20 @@ const DfpSidePanelTimeline = ({
     preStart: !isDeploymentAssistTile && selectedSyllabusItem ? Math.max(0, assistStartTime - (selectedSyllabusItem.preFlightTime || 0) / 60) : void 0,
     postEnd: !isDeploymentAssistTile && selectedSyllabusItem ? assistStartTime + assistDuration + (selectedSyllabusItem.postFlightTime || 0) / 60 : void 0,
     isDeploy: isDeploymentAssistTile ? true : void 0,
-    deploymentStartDate: isDeploymentAssistTile ? activeAssistSection === "taskings" ? assistTaskDate : activeAssistSection === "currency" ? assistCurrencyDate : date : void 0,
+    deploymentStartDate: isDeploymentAssistTile ? assistDeploymentStartDate : void 0,
     deploymentStartTime: isDeploymentAssistTile ? formatDeploymentAssistClock(assistStartTime) : void 0,
-    deploymentEndDate: isDeploymentAssistTile ? deploymentEndDate : void 0,
-    deploymentEndTime: isDeploymentAssistTile ? formatDeploymentAssistClock(deploymentEndTotalHours) : void 0,
+    deploymentEndDate: isDeploymentAssistTile ? assistDeploymentEndDate : void 0,
+    deploymentEndTime: isDeploymentAssistTile ? formatDeploymentAssistClock(assistDeploymentEndTime) : void 0,
     deploymentAircraftCount: isDeploymentAssistTile ? 1 : void 0
   }), [
     activeAssistSection,
     assistCallsign,
     assistConfigId,
     assistCurrencyDate,
+    assistDeploymentEndDate,
+    assistDeploymentEndTime,
+    assistDeploymentStartDate,
+    assistDeploymentStartTime,
     assistDuration,
     assistEventLabel,
     assistFlightType,
@@ -71330,8 +71353,6 @@ const DfpSidePanelTimeline = ({
     assistTaskDate,
     assistFormationSize,
     date,
-    deploymentEndDate,
-    deploymentEndTotalHours,
     fixedCrewAssistCallsign,
     isDeploymentAssistTile,
     isFixedCrewNeoAssist,
@@ -71391,6 +71412,26 @@ const DfpSidePanelTimeline = ({
       tile.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       tile.style.fontWeight = "700";
       tile.style.boxShadow = "inset 3px 0 0 rgba(163,230,53,0.72), 0 6px 16px rgba(0,0,0,0.28)";
+      if (isDeploymentAssistTile) {
+        tile.style.border = "1px solid rgba(255,255,255,0.6)";
+        tile.style.background = "rgba(75,85,99,0.3)";
+        tile.style.boxShadow = "0 6px 16px rgba(0,0,0,0.28)";
+        tile.style.display = "flex";
+        tile.style.alignItems = "center";
+        tile.style.justifyContent = "center";
+        tile.style.padding = "0 8px";
+        const label = document.createElement("div");
+        label.textContent = deploymentAssistLabel;
+        label.style.overflow = "hidden";
+        label.style.textOverflow = "ellipsis";
+        label.style.whiteSpace = "nowrap";
+        label.style.textAlign = "center";
+        label.style.fontSize = "12px";
+        label.style.fontWeight = "600";
+        label.style.color = "rgba(255,255,255,0.8)";
+        tile.append(label);
+        return tile;
+      }
       const top = document.createElement("div");
       top.style.position = "absolute";
       top.style.left = "6px";
@@ -72827,6 +72868,61 @@ const DfpSidePanelTimeline = ({
               ]
             }
           )
+        ] }),
+        isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Begin Date",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                value: assistDeploymentStartDate,
+                onChange: (event) => {
+                  const nextDate = event.target.value;
+                  setAssistDeploymentStartDate(nextDate);
+                  if (assistDeploymentEndDate < nextDate) setAssistDeploymentEndDate(nextDate);
+                },
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Begin Time",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                value: assistDeploymentStartTime,
+                onChange: (event) => setAssistDeploymentStartTime(Number(event.target.value)),
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `assist-deploy-start-${option.label}`))
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "End Date",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                min: assistDeploymentStartDate,
+                value: assistDeploymentEndDate,
+                onChange: (event) => setAssistDeploymentEndDate(event.target.value),
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "End Time",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                value: assistDeploymentEndTime,
+                onChange: (event) => setAssistDeploymentEndTime(Number(event.target.value)),
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `assist-deploy-end-${option.label}`))
+              }
+            )
+          ] })
         ] }),
         showFlightOnlyDetails && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
@@ -96610,10 +96706,12 @@ ${conflictLines.join("\n")}${moreText}`,
     const firstResourceId = placement.resourceId || draft.resourceId;
     const startTime = placement.startTime;
     if (draft.type === "deployment") {
+      const deploymentStartTime = Number.isFinite(Number(draft.startTime)) ? Number(draft.startTime) : startTime;
+      const deploymentDuration = Math.max(0.1, Number(draft.duration) || 1);
       const deployedResourceNumbers = resourcePool.map((resourceId2) => /^Deployed\s+(\d+)$/i.exec(String(resourceId2 || "").trim())).filter((match) => Boolean(match)).map((match) => Number(match[1])).filter((number) => Number.isFinite(number));
       const nextDeploymentNumber = Math.max(0, ...deployedResourceNumbers) + 1;
       const resourceId = firstResourceId?.startsWith("Deployed") ? firstResourceId : `Deployed ${nextDeploymentNumber}`;
-      const totalEndHours = startTime + Math.max(0.1, Number(draft.duration) || 1);
+      const totalEndHours = deploymentStartTime + deploymentDuration;
       const endDayOffset = Math.floor(Math.max(0, totalEndHours) / 24);
       return [{
         ...draft,
@@ -96626,7 +96724,8 @@ ${conflictLines.join("\n")}${moreText}`,
         student: "",
         crew: "",
         group: void 0,
-        startTime,
+        duration: deploymentDuration,
+        startTime: deploymentStartTime,
         resourceId,
         color: draft.color || "bg-gray-600/30",
         flightType: "Dual",
@@ -96645,10 +96744,10 @@ ${conflictLines.join("\n")}${moreText}`,
         fixedCrewPic: void 0,
         fixedCrewManifestStatus: void 0,
         isDeploy: true,
-        deploymentStartDate: eventDate,
-        deploymentStartTime: formatDroppedDeploymentClock(startTime),
-        deploymentEndDate: addDaysToIsoDate(eventDate, endDayOffset),
-        deploymentEndTime: formatDroppedDeploymentClock(totalEndHours),
+        deploymentStartDate: draft.deploymentStartDate || eventDate,
+        deploymentStartTime: draft.deploymentStartTime || formatDroppedDeploymentClock(deploymentStartTime),
+        deploymentEndDate: draft.deploymentEndDate || addDaysToIsoDate(eventDate, endDayOffset),
+        deploymentEndTime: draft.deploymentEndTime || formatDroppedDeploymentClock(totalEndHours),
         deploymentAircraftCount: draft.deploymentAircraftCount || 1,
         preStart: void 0,
         postEnd: void 0
