@@ -1279,7 +1279,7 @@ const DfpSidePanelTimeline: React.FC<{
                 tile.style.padding = '0 8px';
 
                 const label = document.createElement('div');
-                label.textContent = deploymentAssistLabel;
+                label.textContent = 'DEPLOYMENT';
                 label.style.overflow = 'hidden';
                 label.style.textOverflow = 'ellipsis';
                 label.style.whiteSpace = 'nowrap';
@@ -2935,7 +2935,7 @@ const DfpSidePanelTimeline: React.FC<{
             const showFlightOnlyDetails = selectedResourceKind !== 'deployment' && (!isAirCombatTileMode || selectedResourceKind === 'flight');
             return (
                 <div className="grid grid-cols-2 gap-2">
-                    <label className={`${isDeploymentAssistTile ? 'col-span-2' : ''} text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400`}>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                         Resource
                         <select
                             value={selectedResourceKind}
@@ -2951,6 +2951,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <option value="deployment">Deployment</option>
                         </select>
                     </label>
+                    {isDeploymentAssistTile && <div aria-hidden="true" />}
                     {isDeploymentAssistTile && (
                         <>
                             <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">

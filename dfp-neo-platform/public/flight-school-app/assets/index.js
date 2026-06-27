@@ -71257,7 +71257,7 @@ const DfpSidePanelTimeline = ({
       timeZone: "UTC"
     });
   };
-  const deploymentAssistLabel = `DEPLOYMENT ${formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", "")} ${formatDeploymentAssistDateLabel(assistDeploymentStartDate)} - ${formatDeploymentAssistClock(assistDeploymentEndTime).replace(":", "")} ${formatDeploymentAssistDateLabel(assistDeploymentEndDate)}`;
+  `DEPLOYMENT ${formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", "")} ${formatDeploymentAssistDateLabel(assistDeploymentStartDate)} - ${formatDeploymentAssistClock(assistDeploymentEndTime).replace(":", "")} ${formatDeploymentAssistDateLabel(assistDeploymentEndDate)}`;
   const assistEventLabel = reactExports.useMemo(() => {
     if (selectedResourceKind === "deployment") return "DEPLOYMENT";
     if (activeAssistSection === "taskings" && selectedTaskProfile) {
@@ -71422,7 +71422,7 @@ const DfpSidePanelTimeline = ({
         tile.style.justifyContent = "center";
         tile.style.padding = "0 8px";
         const label = document.createElement("div");
-        label.textContent = deploymentAssistLabel;
+        label.textContent = "DEPLOYMENT";
         label.style.overflow = "hidden";
         label.style.textOverflow = "ellipsis";
         label.style.whiteSpace = "nowrap";
@@ -72850,7 +72850,7 @@ const DfpSidePanelTimeline = ({
     if (activeAssistSection === "details") {
       const showFlightOnlyDetails = selectedResourceKind !== "deployment" && (!isAirCombatTileMode || selectedResourceKind === "flight");
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `${isDeploymentAssistTile ? "col-span-2" : ""} text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400`, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
           "Resource",
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
@@ -72870,6 +72870,7 @@ const DfpSidePanelTimeline = ({
             }
           )
         ] }),
+        isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "aria-hidden": "true" }),
         isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Begin Date",
