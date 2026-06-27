@@ -70857,6 +70857,7 @@ const DfpSidePanelTimeline = ({
   const [assistArrivalPoint, setAssistArrivalPoint] = reactExports.useState(locationCode);
   const [assistGeneralDuration, setAssistGeneralDuration] = reactExports.useState(4);
   const [assistAirfieldCatalogue, setAssistAirfieldCatalogue] = reactExports.useState([]);
+  const [activeAssistAirfieldField, setActiveAssistAirfieldField] = reactExports.useState(null);
   const [assistCallsign, setAssistCallsign] = reactExports.useState("");
   const [assistUnitCallsignBase, setAssistUnitCallsignBase] = reactExports.useState("");
   const [assistUnitCallsignNumber, setAssistUnitCallsignNumber] = reactExports.useState(0);
@@ -71886,6 +71887,17 @@ const DfpSidePanelTimeline = ({
     });
     return options.sort((left, right) => left.code.localeCompare(right.code));
   }, [assistAirfieldCatalogue]);
+  const normaliseAssistAirfieldCode = (value) => String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+  const getAssistAirfieldSuggestions = reactExports.useCallback((value) => {
+    const query = normaliseAssistAirfieldCode(value);
+    if (!query) return [];
+    return assistAirfieldOptions.map((option) => {
+      if (option.code === query) return { option, score: 120 };
+      if (option.code.startsWith(query)) return { option, score: 100 };
+      if (option.code.includes(query)) return { option, score: 60 };
+      return null;
+    }).filter((item) => Boolean(item)).sort((left, right) => right.score - left.score || left.option.code.localeCompare(right.option.code)).slice(0, 8).map((item) => item.option);
+  }, [assistAirfieldOptions]);
   const updateAirCombatCourseWeight = (value) => {
     const courses = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
     onUpdateAirCombatSchedulingWeights({
@@ -72905,6 +72917,45 @@ const DfpSidePanelTimeline = ({
     const itemComplete = Boolean(item.completedAt || item.isComplete || item.completed || item.completedDate || item.status === "Complete");
     return { complete: itemComplete, dateLabel: itemComplete ? getCompletionDateLabel(item) : "" };
   };
+  const renderAssistAirfieldCodeControl = (field, label, value, onChange) => {
+    const suggestions = activeAssistAirfieldField === field ? getAssistAirfieldSuggestions(value) : [];
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+      label,
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          value,
+          onFocus: () => setActiveAssistAirfieldField(field),
+          onBlur: () => window.setTimeout(() => setActiveAssistAirfieldField((current) => current === field ? null : current), 120),
+          onChange: (event) => {
+            onChange(normaliseAssistAirfieldCode(event.target.value));
+            setActiveAssistAirfieldField(field);
+          },
+          className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+          placeholder: locationCode,
+          maxLength: 4,
+          autoComplete: "off"
+        }
+      ),
+      suggestions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-md border border-cyan-400/30 bg-slate-950 shadow-xl shadow-black/40", children: suggestions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          type: "button",
+          onMouseDown: (event) => {
+            event.preventDefault();
+            onChange(option.code);
+            setActiveAssistAirfieldField(null);
+          },
+          className: "block w-full px-2 py-1.5 text-left normal-case tracking-normal hover:bg-cyan-500/15",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-mono text-[11px] font-bold uppercase text-cyan-100", children: option.code }),
+            option.label && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[9px] font-medium text-slate-400", children: option.label })
+          ]
+        },
+        `${field}-${option.code}`
+      )) })
+    ] });
+  };
   const renderAssistSection = () => {
     if (activeAssistSection === "details") {
       const showFlightOnlyDetails = selectedResourceKind !== "deployment" && (!isAirCombatTileMode || selectedResourceKind === "flight");
@@ -72936,34 +72987,9 @@ const DfpSidePanelTimeline = ({
           )
         ] }),
         isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "aria-hidden": "true" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-airfield-options", children: assistAirfieldOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.code, children: option.label }, `neo-assist-airfield-${option.code}`)) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2 grid grid-cols-3 gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Dep",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                list: "neo-assist-airfield-options",
-                value: assistDepPoint,
-                onChange: (event) => setAssistDepPoint(event.target.value.toUpperCase()),
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-                placeholder: locationCode
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Arrive",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                list: "neo-assist-airfield-options",
-                value: assistArrivalPoint,
-                onChange: (event) => setAssistArrivalPoint(event.target.value.toUpperCase()),
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-                placeholder: locationCode
-              }
-            )
-          ] }),
+          renderAssistAirfieldCodeControl("dep", "Dep", assistDepPoint, setAssistDepPoint),
+          renderAssistAirfieldCodeControl("arrive", "Arrive", assistArrivalPoint, setAssistArrivalPoint),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Duration",
             /* @__PURE__ */ jsxRuntimeExports.jsx(

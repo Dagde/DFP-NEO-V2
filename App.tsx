@@ -530,6 +530,7 @@ const DfpSidePanelTimeline: React.FC<{
     const [assistArrivalPoint, setAssistArrivalPoint] = useState(locationCode);
     const [assistGeneralDuration, setAssistGeneralDuration] = useState(4);
     const [assistAirfieldCatalogue, setAssistAirfieldCatalogue] = useState<Array<{ c?: string; i?: string; l?: string; n?: string; m?: string; y?: string }>>([]);
+    const [activeAssistAirfieldField, setActiveAssistAirfieldField] = useState<'dep' | 'arrive' | null>(null);
     const [assistCallsign, setAssistCallsign] = useState('');
     const [assistUnitCallsignBase, setAssistUnitCallsignBase] = useState('');
     const [assistUnitCallsignNumber, setAssistUnitCallsignNumber] = useState(0);
@@ -1853,6 +1854,24 @@ const DfpSidePanelTimeline: React.FC<{
         });
         return options.sort((left, right) => left.code.localeCompare(right.code));
     }, [assistAirfieldCatalogue]);
+    const normaliseAssistAirfieldCode = (value: string): string => (
+        String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4)
+    );
+    const getAssistAirfieldSuggestions = useCallback((value: string) => {
+        const query = normaliseAssistAirfieldCode(value);
+        if (!query) return [];
+        return assistAirfieldOptions
+            .map(option => {
+                if (option.code === query) return { option, score: 120 };
+                if (option.code.startsWith(query)) return { option, score: 100 };
+                if (option.code.includes(query)) return { option, score: 60 };
+                return null;
+            })
+            .filter((item): item is { option: { code: string; label: string }; score: number } => Boolean(item))
+            .sort((left, right) => right.score - left.score || left.option.code.localeCompare(right.option.code))
+            .slice(0, 8)
+            .map(item => item.option);
+    }, [assistAirfieldOptions]);
     const updateAirCombatCourseWeight = (value: number) => {
         const courses = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
         onUpdateAirCombatSchedulingWeights({
@@ -2990,6 +3009,52 @@ const DfpSidePanelTimeline: React.FC<{
         return { complete: itemComplete, dateLabel: itemComplete ? getCompletionDateLabel(item) : '' };
     };
 
+    const renderAssistAirfieldCodeControl = (
+        field: 'dep' | 'arrive',
+        label: string,
+        value: string,
+        onChange: (value: string) => void,
+    ) => {
+        const suggestions = activeAssistAirfieldField === field ? getAssistAirfieldSuggestions(value) : [];
+        return (
+            <label className="relative text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                {label}
+                <input
+                    value={value}
+                    onFocus={() => setActiveAssistAirfieldField(field)}
+                    onBlur={() => window.setTimeout(() => setActiveAssistAirfieldField(current => current === field ? null : current), 120)}
+                    onChange={event => {
+                        onChange(normaliseAssistAirfieldCode(event.target.value));
+                        setActiveAssistAirfieldField(field);
+                    }}
+                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                    placeholder={locationCode}
+                    maxLength={4}
+                    autoComplete="off"
+                />
+                {suggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-md border border-cyan-400/30 bg-slate-950 shadow-xl shadow-black/40">
+                        {suggestions.map(option => (
+                            <button
+                                key={`${field}-${option.code}`}
+                                type="button"
+                                onMouseDown={event => {
+                                    event.preventDefault();
+                                    onChange(option.code);
+                                    setActiveAssistAirfieldField(null);
+                                }}
+                                className="block w-full px-2 py-1.5 text-left normal-case tracking-normal hover:bg-cyan-500/15"
+                            >
+                                <span className="block font-mono text-[11px] font-bold uppercase text-cyan-100">{option.code}</span>
+                                {option.label && <span className="block truncate text-[9px] font-medium text-slate-400">{option.label}</span>}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </label>
+        );
+    };
+
     const renderAssistSection = () => {
         if (activeAssistSection === 'details') {
             const showFlightOnlyDetails = selectedResourceKind !== 'deployment' && (!isAirCombatTileMode || selectedResourceKind === 'flight');
@@ -3018,34 +3083,9 @@ const DfpSidePanelTimeline: React.FC<{
                         </select>
                     </label>
                     {isDeploymentAssistTile && <div aria-hidden="true" />}
-                    <datalist id="neo-assist-airfield-options">
-                        {assistAirfieldOptions.map(option => (
-                            <option key={`neo-assist-airfield-${option.code}`} value={option.code}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </datalist>
                     <div className="col-span-2 grid grid-cols-3 gap-2">
-                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                            Dep
-                            <input
-                                list="neo-assist-airfield-options"
-                                value={assistDepPoint}
-                                onChange={event => setAssistDepPoint(event.target.value.toUpperCase())}
-                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                                placeholder={locationCode}
-                            />
-                        </label>
-                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                            Arrive
-                            <input
-                                list="neo-assist-airfield-options"
-                                value={assistArrivalPoint}
-                                onChange={event => setAssistArrivalPoint(event.target.value.toUpperCase())}
-                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                                placeholder={locationCode}
-                            />
-                        </label>
+                        {renderAssistAirfieldCodeControl('dep', 'Dep', assistDepPoint, setAssistDepPoint)}
+                        {renderAssistAirfieldCodeControl('arrive', 'Arrive', assistArrivalPoint, setAssistArrivalPoint)}
                         <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                             Duration
                             <input
