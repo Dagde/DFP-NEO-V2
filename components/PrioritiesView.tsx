@@ -4021,7 +4021,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             />
         </div>
 
-        <div className="specific-currency-card rounded-lg border border-violet-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(167,139,250,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6">
+        <div className="specific-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-sky-400">Specific Currency Requests</h2>
               <button onClick={() => onAddSctRequest('flight')} className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight">
@@ -4040,7 +4040,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>
         </div>
 
-        {!isFixedCrewModel && <div className="rounded-lg border border-violet-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(167,139,250,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6">
+        {!isFixedCrewModel && <div className="rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
                     <h2 className="text-xl font-semibold text-sky-400">Trainee Currency Events</h2>
@@ -4174,7 +4174,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>}
         </div>}
 
-        <div className="bulk-currency-card rounded-lg border border-violet-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(167,139,250,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6">
+        <div className="bulk-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
                     <h2 className="text-xl font-semibold text-sky-400">Bulk Currency Builder</h2>
@@ -4291,7 +4291,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </>}
         </div>
 
-        <div className="consolidated-currency-card rounded-lg border border-violet-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(167,139,250,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6">
+        <div className="consolidated-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                     <h2 className="text-xl font-semibold text-sky-400">Consolidated Currency Event Build</h2>
@@ -4475,7 +4475,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>
         </div>
 
-        <div className="highest-priority-events-card rounded-lg border border-amber-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(251,191,36,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
+        <div className="highest-priority-events-card rounded-lg border border-emerald-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(52,211,153,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h2 className="text-xl font-semibold text-sky-400">Highest Priority Events</h2>
@@ -4494,7 +4494,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
         {/* MEDIUM/LOW Priority Currency Events - hidden from the fixed crew planner for now; code retained for future reactivation. */}
         {showOptionalCurrencyEventsSection && (
-        <div className="optional-currency-card rounded-lg border border-violet-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(167,139,250,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6">
+        <div className="optional-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <h2 className="text-xl font-semibold text-amber-400 mb-2">Optional Currency Events</h2>
             <p className="text-xs text-gray-400 mb-4">MEDIUM and LOW priority currency events can be manually included in the NEO Build. Check the "Include" box to add to the build.</p>
             {sctFlights.filter(r => r.priority !== 'High').length === 0 && sctFtds.filter(r => r.priority !== 'High').length === 0 && (
