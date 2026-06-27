@@ -1464,6 +1464,22 @@ const getAircraftTypeTasKtas = (aircraftType = {}) => (
   normaliseAircraftTypeTasKtas(aircraftType.defaultTasKtas ?? aircraftType.settings?.defaultTasKtas)
 );
 
+const normaliseAircraftTypeCruiseAltitudeFl = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(String(value).replace(/[^\d]/g, ''));
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.round(parsed);
+};
+
+const getAircraftTypeCruiseAltitudeFl = (aircraftType = {}) => (
+  normaliseAircraftTypeCruiseAltitudeFl(
+    aircraftType.defaultCruiseAltitudeFl ??
+    aircraftType.defaultCruiseAltitude ??
+    aircraftType.settings?.defaultCruiseAltitudeFl ??
+    aircraftType.settings?.defaultCruiseAltitude
+  )
+);
+
 const buildCommercialAircraftTypeSettings = (aircraftType = {}) => {
   const settings = { ...(aircraftType.settings || {}) };
   if (aircraftType.crewComposition) settings.crewComposition = aircraftType.crewComposition;
@@ -1472,6 +1488,13 @@ const buildCommercialAircraftTypeSettings = (aircraftType = {}) => {
     delete settings.defaultTasKtas;
   } else {
     settings.defaultTasKtas = defaultTasKtas;
+  }
+  const defaultCruiseAltitudeFl = getAircraftTypeCruiseAltitudeFl(aircraftType);
+  if (defaultCruiseAltitudeFl === null) {
+    delete settings.defaultCruiseAltitudeFl;
+    delete settings.defaultCruiseAltitude;
+  } else {
+    settings.defaultCruiseAltitudeFl = defaultCruiseAltitudeFl;
   }
   return settings;
 };
@@ -1691,6 +1714,7 @@ app.get('/api/platform-config', async (req, res) => {
         ...aircraftType,
         crewComposition: aircraftType.crewComposition || aircraftType.settings?.crewComposition || null,
         defaultTasKtas: getAircraftTypeTasKtas(aircraftType),
+        defaultCruiseAltitudeFl: getAircraftTypeCruiseAltitudeFl(aircraftType),
       })),
       resourcePools,
       modules,

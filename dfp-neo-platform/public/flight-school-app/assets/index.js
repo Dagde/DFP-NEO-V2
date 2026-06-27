@@ -58360,7 +58360,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     TasField,
                     {
-                      label: "Default TAS (KTAS)",
+                      label: "TAS (KTAS)",
                       value: aircraft.defaultTasKtas ?? null,
                       disabled: !canEditResourcePools,
                       info: "Used for route/time planning when a mission or event does not specify a custom speed.",
@@ -58370,11 +58370,11 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     TasField,
                     {
-                      label: "Cruise Alt",
+                      label: "Cruise Alt (FL)",
                       value: aircraft.defaultCruiseAltitudeFl ?? null,
                       disabled: !canEditResourcePools,
-                      placeholder: "FL",
-                      info: "Default cruise flight level for route wind and duration planning.",
+                      placeholder: "360",
+                      info: "Enter the flight level number only, for example 360 rather than FL360.",
                       onChange: (value) => updateRow("aircraftTypes", index, { defaultCruiseAltitudeFl: value })
                     }
                   )
@@ -71956,7 +71956,7 @@ const DfpSidePanelTimeline = ({
     return Number.isFinite(tas) ? tas : 0;
   }, [activeAircraftType]);
   const activeAircraftCruiseFlightLevel = reactExports.useMemo(() => {
-    const flightLevel = Number(activeAircraftType?.defaultCruiseAltitudeFl);
+    const flightLevel = Number(activeAircraftType?.defaultCruiseAltitudeFl ?? activeAircraftType?.defaultCruiseAltitude);
     return Number.isFinite(flightLevel) && flightLevel > 0 ? flightLevel : 180;
   }, [activeAircraftType]);
   reactExports.useEffect(() => {

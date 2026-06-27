@@ -4714,18 +4714,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <Field label="Name" value={aircraft.name} disabled={!canEditResourcePools} onChange={(value) => updateRow('aircraftTypes', index, { name: value })} />
                       <SelectField label="Category" value={aircraft.category || 'Training'} disabled={!canEditResourcePools} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'Rotary', 'Other']} onChange={(value) => updateRow('aircraftTypes', index, { category: value })} />
                       <TasField
-                        label="Default TAS (KTAS)"
+                        label="TAS (KTAS)"
                         value={aircraft.defaultTasKtas ?? null}
                         disabled={!canEditResourcePools}
                         info="Used for route/time planning when a mission or event does not specify a custom speed."
                         onChange={(value) => updateRow('aircraftTypes', index, { defaultTasKtas: value })}
                       />
                       <TasField
-                        label="Cruise Alt"
+                        label="Cruise Alt (FL)"
                         value={aircraft.defaultCruiseAltitudeFl ?? null}
                         disabled={!canEditResourcePools}
-                        placeholder="FL"
-                        info="Default cruise flight level for route wind and duration planning."
+                        placeholder="360"
+                        info="Enter the flight level number only, for example 360 rather than FL360."
                         onChange={(value) => updateRow('aircraftTypes', index, { defaultCruiseAltitudeFl: value })}
                       />
                     </div>

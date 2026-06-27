@@ -1926,7 +1926,7 @@ const DfpSidePanelTimeline: React.FC<{
         return Number.isFinite(tas) ? tas : 0;
     }, [activeAircraftType]);
     const activeAircraftCruiseFlightLevel = useMemo(() => {
-        const flightLevel = Number(activeAircraftType?.defaultCruiseAltitudeFl);
+        const flightLevel = Number(activeAircraftType?.defaultCruiseAltitudeFl ?? activeAircraftType?.defaultCruiseAltitude);
         return Number.isFinite(flightLevel) && flightLevel > 0 ? flightLevel : 180;
     }, [activeAircraftType]);
     useEffect(() => {
