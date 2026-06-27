@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { TrashIcon } from '@heroicons/react/24/outline';
 import { PrioritiesView } from './PrioritiesView';
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest, FlyingWindowExclusionPeriod } from '../types';
@@ -57,6 +58,7 @@ interface PrioritiesViewWithMenuProps {
   onSelectEvent: (event: ScheduleEvent) => void;
   onAddPriorityEvents: (events: ScheduleEvent[]) => void;
   onAddBuildEvents?: (events: ScheduleEvent[]) => void;
+  onRemoveBuildDeploymentEvents?: (eventIds: string[]) => void;
   onUpdatePriorityEvent: (eventId: string, updates: Partial<ScheduleEvent>) => void;
   instructorPriority: InstructorPriorityConfig;
   onUpdateInstructorPriority: (value: InstructorPriorityConfig) => void;
@@ -316,6 +318,23 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     const deploymentPreviewText = `DEPLOYMENT ${formatPlannerClock(deploymentStartTime)} ${formatPlannerDateLabel(deploymentStartDate)} - ${formatPlannerClock(deploymentEndTime)} ${formatPlannerDateLabel(deploymentEndDate)}`;
     const hasInvalidDeploymentDateRange = Boolean(deploymentStartDate && deploymentEndDate && deploymentStartDate > deploymentEndDate);
     const hasInvalidSameDayTimes = deploymentStartDate === deploymentEndDate && deploymentEndTime <= deploymentStartTime;
+    const deploymentGroups = Array.from(
+        (props.highestPriorityEvents || [])
+            .filter(event => event.type === 'deployment')
+            .reduce<Map<string, ScheduleEvent[]>>((groups, event) => {
+                const key = [
+                    event.deploymentStartDate || event.date || '',
+                    event.deploymentStartTime || '',
+                    event.deploymentEndDate || event.date || '',
+                    event.deploymentEndTime || '',
+                    event.resourceId || '',
+                    event.deploymentAircraftCount || 1,
+                ].join('|');
+                groups.set(key, [...(groups.get(key) || []), event]);
+                return groups;
+            }, new Map())
+            .entries()
+    ).map(([key, events]) => ({ key, events }));
 
     const handleAddDeployment = () => {
         if (!props.onAddBuildEvents || hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) return;
@@ -366,6 +385,12 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         }).filter(event => event.duration > 0);
         props.onAddBuildEvents(events);
         setDeploymentAddMessage(`Added deployment to the Build Planner for ${deploymentDates.length} day${deploymentDates.length === 1 ? '' : 's'}.`);
+    };
+
+    const handleRemoveDeploymentGroup = (eventIds: string[]) => {
+        if (eventIds.length === 0) return;
+        props.onRemoveBuildDeploymentEvents?.(eventIds);
+        setDeploymentAddMessage('Deployment removed from the Build Planner.');
     };
 
     const renderDeploymentPlanner = () => (
@@ -466,6 +491,45 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                             )}
                         </div>
                     </div>
+                </div>
+                <div className="mt-5 rounded-md border border-slate-700/70 bg-slate-950/70 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <h4 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-300">Built Deployments</h4>
+                            <p className="mt-1 text-xs text-slate-500">Deployments added here are build-planner deployment tiles.</p>
+                        </div>
+                    </div>
+                    {deploymentGroups.length === 0 ? (
+                        <p className="mt-4 rounded-md border border-slate-700/70 bg-slate-900/70 px-3 py-3 text-sm text-slate-500">
+                            No deployments built.
+                        </p>
+                    ) : (
+                        <div className="mt-4 space-y-2">
+                            {deploymentGroups.map(group => {
+                                const first = group.events[0];
+                                const label = `DEPLOYMENT ${String(first.deploymentStartTime || '').replace(':', '') || formatPlannerClock(first.startTime)} ${formatPlannerDateLabel(first.deploymentStartDate || first.date)} - ${String(first.deploymentEndTime || '').replace(':', '') || formatPlannerClock(first.startTime + first.duration)} ${formatPlannerDateLabel(first.deploymentEndDate || first.date)}`;
+                                return (
+                                    <div key={group.key} className="flex items-center justify-between gap-3 rounded-md border border-slate-700 bg-slate-900/80 px-3 py-2">
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-bold text-slate-100">{label}</p>
+                                            <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                                {group.events.length} day{group.events.length === 1 ? '' : 's'} · {first.resourceId || 'Deployment tile'}
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveDeploymentGroup(group.events.map(event => event.id).filter(Boolean))}
+                                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-rose-400/35 bg-rose-500/10 text-rose-200 transition hover:border-rose-300 hover:bg-rose-500/20"
+                                            aria-label="Remove deployment"
+                                            title="Remove deployment"
+                                        >
+                                            <TrashIcon className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </section>
         </div>

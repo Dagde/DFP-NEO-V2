@@ -30364,6 +30364,20 @@ const PrioritiesViewWithMenu = (props) => {
   const deploymentPreviewText = `DEPLOYMENT ${formatPlannerClock(deploymentStartTime)} ${formatPlannerDateLabel(deploymentStartDate)} - ${formatPlannerClock(deploymentEndTime)} ${formatPlannerDateLabel(deploymentEndDate)}`;
   const hasInvalidDeploymentDateRange = Boolean(deploymentStartDate && deploymentEndDate && deploymentStartDate > deploymentEndDate);
   const hasInvalidSameDayTimes = deploymentStartDate === deploymentEndDate && deploymentEndTime <= deploymentStartTime;
+  const deploymentGroups = Array.from(
+    (props.highestPriorityEvents || []).filter((event) => event.type === "deployment").reduce((groups, event) => {
+      const key = [
+        event.deploymentStartDate || event.date || "",
+        event.deploymentStartTime || "",
+        event.deploymentEndDate || event.date || "",
+        event.deploymentEndTime || "",
+        event.resourceId || "",
+        event.deploymentAircraftCount || 1
+      ].join("|");
+      groups.set(key, [...groups.get(key) || [], event]);
+      return groups;
+    }, /* @__PURE__ */ new Map()).entries()
+  ).map(([key, events]) => ({ key, events }));
   const handleAddDeployment = () => {
     if (!props.onAddBuildEvents || hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) return;
     const deploymentDates = getDeploymentDateRange(deploymentStartDate, deploymentEndDate);
@@ -30409,6 +30423,11 @@ const PrioritiesViewWithMenu = (props) => {
     }).filter((event) => event.duration > 0);
     props.onAddBuildEvents(events);
     setDeploymentAddMessage(`Added deployment to the Build Planner for ${deploymentDates.length} day${deploymentDates.length === 1 ? "" : "s"}.`);
+  };
+  const handleRemoveDeploymentGroup = (eventIds) => {
+    if (eventIds.length === 0) return;
+    props.onRemoveBuildDeploymentEvents?.(eventIds);
+    setDeploymentAddMessage("Deployment removed from the Build Planner.");
   };
   const renderDeploymentPlanner = () => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "section-deployments", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "deployment-builder-card rounded-lg border border-violet-400/70 bg-slate-900/78 p-5 shadow-[0_0_0_1px_rgba(139,92,246,0.18),0_14px_30px_rgba(15,23,42,0.28)]", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
@@ -30507,7 +30526,40 @@ const PrioritiesViewWithMenu = (props) => {
         (hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200", children: "End date/time must be after begin date/time before the deployment can be added." }),
         deploymentAddMessage && !(hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-md border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200", children: deploymentAddMessage })
       ] })
-    ] }) })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 rounded-md border border-slate-700/70 bg-slate-950/70 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-[0.16em] text-slate-300", children: "Built Deployments" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-500", children: "Deployments added here are build-planner deployment tiles." })
+      ] }) }),
+      deploymentGroups.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-4 rounded-md border border-slate-700/70 bg-slate-900/70 px-3 py-3 text-sm text-slate-500", children: "No deployments built." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-2", children: deploymentGroups.map((group) => {
+        const first = group.events[0];
+        const label = `DEPLOYMENT ${String(first.deploymentStartTime || "").replace(":", "") || formatPlannerClock(first.startTime)} ${formatPlannerDateLabel(first.deploymentStartDate || first.date)} - ${String(first.deploymentEndTime || "").replace(":", "") || formatPlannerClock(first.startTime + first.duration)} ${formatPlannerDateLabel(first.deploymentEndDate || first.date)}`;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3 rounded-md border border-slate-700 bg-slate-900/80 px-3 py-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-sm font-bold text-slate-100", children: label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500", children: [
+              group.events.length,
+              " day",
+              group.events.length === 1 ? "" : "s",
+              " · ",
+              first.resourceId || "Deployment tile"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => handleRemoveDeploymentGroup(group.events.map((event) => event.id).filter(Boolean)),
+              className: "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-rose-400/35 bg-rose-500/10 text-rose-200 transition hover:border-rose-300 hover:bg-rose-500/20",
+              "aria-label": "Remove deployment",
+              title: "Remove deployment",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-4 w-4" })
+            }
+          )
+        ] }, group.key);
+      }) })
+    ] })
   ] }) });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priorities-view": "true", className: "flex-1 flex overflow-hidden bg-slate-950 text-slate-100", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: `${isFixedCrewModel ? "w-[220px]" : "w-80"} bg-slate-950/95 border-r border-slate-700/60 flex flex-col flex-shrink-0`, children: [
@@ -100120,6 +100172,12 @@ ${error instanceof Error ? error.message : String(error)}`,
               });
               setNextDayBuildEvents((prev) => [...prev, ...nextDayEvents]);
               logAudit("Next Day Build", "Create", "Added Build Planner deployment", `${eventsToAdd.length} x DEPLOYMENT`);
+            },
+            onRemoveBuildDeploymentEvents: (eventIds) => {
+              const idsToRemove = new Set(eventIds);
+              setHighestPriorityEvents((prev) => prev.filter((event) => !idsToRemove.has(event.id)));
+              setNextDayBuildEvents((prev) => prev.filter((event) => !idsToRemove.has(event.id)));
+              logAudit("Next Day Build", "Delete", "Removed Build Planner deployment", `${eventIds.length} deployment segment(s)`);
             },
             onUpdatePriorityEvent: handleUpdatePriorityEvent,
             onDeletePriorityEvent: handleDeletePriorityEvent,

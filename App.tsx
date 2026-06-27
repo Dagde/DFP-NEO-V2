@@ -36314,6 +36314,12 @@ appliedUpdates.forEach(update => {
                         setNextDayBuildEvents(prev => [...prev, ...nextDayEvents]);
                         logAudit('Next Day Build', 'Create', 'Added Build Planner deployment', `${eventsToAdd.length} x DEPLOYMENT`);
                     }}
+                    onRemoveBuildDeploymentEvents={(eventIds) => {
+                        const idsToRemove = new Set(eventIds);
+                        setHighestPriorityEvents(prev => prev.filter(event => !idsToRemove.has(event.id)));
+                        setNextDayBuildEvents(prev => prev.filter(event => !idsToRemove.has(event.id)));
+                        logAudit('Next Day Build', 'Delete', 'Removed Build Planner deployment', `${eventIds.length} deployment segment(s)`);
+                    }}
                     onUpdatePriorityEvent={handleUpdatePriorityEvent}
                     onDeletePriorityEvent={handleDeletePriorityEvent}
                     instructorPriority={instructorPriority}
