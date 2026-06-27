@@ -71071,6 +71071,7 @@ const DfpSidePanelTimeline = ({
   };
   const assistResourceId = reactExports.useMemo(() => {
     const number = Math.max(1, Math.floor(Number(selectedResourceNumber) || 1));
+    if (selectedResourceKind === "deployment") return "Deployed 1";
     if (selectedResourceKind === "ftd") return `FTD ${number}`;
     if (selectedResourceKind === "cpt") return `CPT ${number}`;
     return `PC-21 ${number}`;
@@ -71222,6 +71223,7 @@ const DfpSidePanelTimeline = ({
   };
   const getAssistFormationCallsign = (position) => assistFormationSize > 1 ? `${getAssistFormationCallsignBase()}${position}` : assistCallsign.trim() || void 0;
   const assistEventLabel = reactExports.useMemo(() => {
+    if (selectedResourceKind === "deployment") return "DEPLOYMENT";
     if (activeAssistSection === "taskings" && selectedTaskProfile) {
       const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || "";
       if (isAirCombatTileMode) return abbreviation ? `Task - ${abbreviation}` : `Task - ${selectedTaskProfile}`;
@@ -71231,7 +71233,7 @@ const DfpSidePanelTimeline = ({
       return selectedCurrencyName;
     }
     return selectedSyllabusItem?.code || "Event";
-  }, [activeAssistSection, isAirCombatTileMode, selectedCurrencyName, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
+  }, [activeAssistSection, isAirCombatTileMode, selectedCurrencyName, selectedResourceKind, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
   const assistDuration = Math.max(
     0.1,
     activeAssistSection === "taskings" ? Number(assistTaskDuration) || defaultAssistTaskDuration : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || defaultAssistCurrencyDuration : Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2
@@ -71246,6 +71248,17 @@ const DfpSidePanelTimeline = ({
   const selectedCrewRecords = reactExports.useMemo(() => selectedCrewNames.map((name) => instructors.find((instructor) => instructor.name === name)).filter((staff) => Boolean(staff)), [instructors, selectedCrewNames]);
   const selectedPilotCrewName = isFixedCrewNeoAssist ? selectedFixedCrewPic : selectedCrewRecords.find(isStaffPilotCrewPosition)?.name || selectedCrewName || "";
   const selectedSupportCrewName = isFixedCrewNeoAssist ? "" : selectedCrewRecords.find((staff) => staff.name !== selectedPilotCrewName)?.name || "";
+  const isDeploymentAssistTile = selectedResourceKind === "deployment";
+  const deploymentEndTotalHours = assistStartTime + assistDuration;
+  const deploymentEndDate = reactExports.useMemo(() => {
+    if (!isDeploymentAssistTile) return void 0;
+    const sourceDate = activeAssistSection === "taskings" ? assistTaskDate : activeAssistSection === "currency" ? assistCurrencyDate : date;
+    const dateParts = String(sourceDate || date).split("-").map(Number);
+    if (dateParts.length !== 3 || dateParts.some((part) => !Number.isFinite(part))) return sourceDate || date;
+    const endDate = new Date(Date.UTC(dateParts[0], dateParts[1] - 1, dateParts[2]));
+    endDate.setUTCDate(endDate.getUTCDate() + Math.floor(Math.max(0, deploymentEndTotalHours) / 24));
+    return `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, "0")}-${String(endDate.getUTCDate()).padStart(2, "0")}`;
+  }, [activeAssistSection, assistCurrencyDate, assistTaskDate, date, deploymentEndTotalHours, isDeploymentAssistTile]);
   const getAssistTileDisplayColor = (color) => {
     if (!color) return "#047857";
     if (color === "bg-emerald-500/70") return "rgba(16,185,129,0.42)";
@@ -71255,41 +71268,47 @@ const DfpSidePanelTimeline = ({
   const assistDraftEvent = reactExports.useMemo(() => ({
     id: `neo-assist-draft-${Date.now()}`,
     date: activeAssistSection === "taskings" ? assistTaskDate : activeAssistSection === "currency" ? assistCurrencyDate : date,
-    type: selectedResourceKind === "ftd" ? "ftd" : selectedResourceKind === "cpt" ? "cpt" : "flight",
-    pilot: selectedPilotCrewName || "Bloggs, Joe",
-    instructor: selectedPilotCrewName || "Bloggs, Joe",
-    crew: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : selectedSupportCrewName,
-    group: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : void 0,
+    type: isDeploymentAssistTile ? "deployment" : selectedResourceKind === "ftd" ? "ftd" : selectedResourceKind === "cpt" ? "cpt" : "flight",
+    pilot: isDeploymentAssistTile ? "" : selectedPilotCrewName || "Bloggs, Joe",
+    instructor: isDeploymentAssistTile ? "" : selectedPilotCrewName || "Bloggs, Joe",
+    crew: isDeploymentAssistTile ? "" : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : selectedSupportCrewName,
+    group: isDeploymentAssistTile ? void 0 : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : void 0,
     flightNumber: assistEventLabel,
-    eventCode: selectedSyllabusItem?.code,
-    taskingName: activeAssistSection === "taskings" ? selectedTaskProfile : void 0,
-    taskingDisplayLabel: activeAssistSection === "taskings" ? assistEventLabel : void 0,
-    isTaskingRequest: activeAssistSection === "taskings",
-    currency: activeAssistSection === "currency" ? selectedCurrencyName : void 0,
+    eventCode: isDeploymentAssistTile ? void 0 : selectedSyllabusItem?.code,
+    taskingName: !isDeploymentAssistTile && activeAssistSection === "taskings" ? selectedTaskProfile : void 0,
+    taskingDisplayLabel: !isDeploymentAssistTile && activeAssistSection === "taskings" ? assistEventLabel : void 0,
+    isTaskingRequest: !isDeploymentAssistTile && activeAssistSection === "taskings",
+    currency: !isDeploymentAssistTile && activeAssistSection === "currency" ? selectedCurrencyName : void 0,
     duration: assistDuration,
     startTime: assistStartTime,
     resourceId: assistResourceId,
-    color: activeAssistSection === "taskings" ? "#0891b2" : activeAssistSection === "currency" ? "#7c3aed" : selectedResourceKind === "flight" ? "bg-emerald-500/70" : "#0369a1",
-    flightType: isFixedCrewNeoAssist && selectedFixedCrewGroup ? "Dual" : assistFlightType,
-    soloOrDual: isFixedCrewNeoAssist && selectedFixedCrewGroup ? "Dual" : assistFlightType,
-    locationType: assistOrigin !== assistDestination ? "Land Away" : "Local",
-    origin: assistOrigin,
-    destination: assistDestination,
-    callsign: isFixedCrewNeoAssist ? fixedCrewAssistCallsign : getAssistFormationCallsign(1),
+    color: isDeploymentAssistTile ? "bg-gray-600/30" : activeAssistSection === "taskings" ? "#0891b2" : activeAssistSection === "currency" ? "#7c3aed" : selectedResourceKind === "flight" ? "bg-emerald-500/70" : "#0369a1",
+    flightType: isDeploymentAssistTile ? "Dual" : isFixedCrewNeoAssist && selectedFixedCrewGroup ? "Dual" : assistFlightType,
+    soloOrDual: isDeploymentAssistTile ? "Dual" : isFixedCrewNeoAssist && selectedFixedCrewGroup ? "Dual" : assistFlightType,
+    locationType: isDeploymentAssistTile ? "Land Away" : assistOrigin !== assistDestination ? "Land Away" : "Local",
+    origin: isDeploymentAssistTile ? "DEPLOY" : assistOrigin,
+    destination: isDeploymentAssistTile ? "DEPLOY" : assistDestination,
+    callsign: isDeploymentAssistTile ? "" : isFixedCrewNeoAssist ? fixedCrewAssistCallsign : getAssistFormationCallsign(1),
     aircraftNumber: selectedResourceKind === "flight" ? selectedAircraftNumber.trim() || "TBA" : void 0,
     area: selectedAssignedArea && selectedAssignedArea !== "TBA" ? selectedAssignedArea : void 0,
-    formationType: assistFormationSize > 1 ? "NEO Assist Formation" : void 0,
-    formationPosition: assistFormationSize > 1 ? 1 : void 0,
-    formationSize: assistFormationSize > 1 ? assistFormationSize : void 0,
-    crewSelectionOrder: selectedCrewNames,
-    fixedCrewGroup: isFixedCrewNeoAssist ? selectedFixedCrewGroup || void 0 : void 0,
-    fixedCrewPic: isFixedCrewNeoAssist ? selectedFixedCrewPic || void 0 : void 0,
-    fixedCrewManifestStatus: isFixedCrewNeoAssist && selectedFixedCrewGroup && selectedFixedCrewPic ? "complete" : isFixedCrewNeoAssist ? "pending" : void 0,
-    aircraftConfigId: assistConfigId,
-    acceptableAircraftConfigs: assistConfigId ? [assistConfigId] : void 0,
-    crewRequirement: selectedSyllabusItem?.crewRequirement || { mode: "aircraft_default" },
-    preStart: selectedSyllabusItem ? Math.max(0, assistStartTime - (selectedSyllabusItem.preFlightTime || 0) / 60) : void 0,
-    postEnd: selectedSyllabusItem ? assistStartTime + assistDuration + (selectedSyllabusItem.postFlightTime || 0) / 60 : void 0
+    formationType: !isDeploymentAssistTile && assistFormationSize > 1 ? "NEO Assist Formation" : void 0,
+    formationPosition: !isDeploymentAssistTile && assistFormationSize > 1 ? 1 : void 0,
+    formationSize: !isDeploymentAssistTile && assistFormationSize > 1 ? assistFormationSize : void 0,
+    crewSelectionOrder: isDeploymentAssistTile ? [] : selectedCrewNames,
+    fixedCrewGroup: !isDeploymentAssistTile && isFixedCrewNeoAssist ? selectedFixedCrewGroup || void 0 : void 0,
+    fixedCrewPic: !isDeploymentAssistTile && isFixedCrewNeoAssist ? selectedFixedCrewPic || void 0 : void 0,
+    fixedCrewManifestStatus: !isDeploymentAssistTile && isFixedCrewNeoAssist && selectedFixedCrewGroup && selectedFixedCrewPic ? "complete" : !isDeploymentAssistTile && isFixedCrewNeoAssist ? "pending" : void 0,
+    aircraftConfigId: isDeploymentAssistTile ? void 0 : assistConfigId,
+    acceptableAircraftConfigs: !isDeploymentAssistTile && assistConfigId ? [assistConfigId] : void 0,
+    crewRequirement: isDeploymentAssistTile ? void 0 : selectedSyllabusItem?.crewRequirement || { mode: "aircraft_default" },
+    preStart: !isDeploymentAssistTile && selectedSyllabusItem ? Math.max(0, assistStartTime - (selectedSyllabusItem.preFlightTime || 0) / 60) : void 0,
+    postEnd: !isDeploymentAssistTile && selectedSyllabusItem ? assistStartTime + assistDuration + (selectedSyllabusItem.postFlightTime || 0) / 60 : void 0,
+    isDeploy: isDeploymentAssistTile ? true : void 0,
+    deploymentStartDate: isDeploymentAssistTile ? activeAssistSection === "taskings" ? assistTaskDate : activeAssistSection === "currency" ? assistCurrencyDate : date : void 0,
+    deploymentStartTime: isDeploymentAssistTile ? formatTime2(assistStartTime) : void 0,
+    deploymentEndDate: isDeploymentAssistTile ? deploymentEndDate : void 0,
+    deploymentEndTime: isDeploymentAssistTile ? formatTime2((deploymentEndTotalHours % 24 + 24) % 24) : void 0,
+    deploymentAircraftCount: isDeploymentAssistTile ? 1 : void 0
   }), [
     activeAssistSection,
     assistCallsign,
@@ -71305,7 +71324,10 @@ const DfpSidePanelTimeline = ({
     assistTaskDate,
     assistFormationSize,
     date,
+    deploymentEndDate,
+    deploymentEndTotalHours,
     fixedCrewAssistCallsign,
+    isDeploymentAssistTile,
     isFixedCrewNeoAssist,
     selectedCurrencyName,
     selectedCrewName,
@@ -71406,14 +71428,14 @@ const DfpSidePanelTimeline = ({
       aircraft.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
       aircraft.style.color = "rgba(255,255,255,0.82)";
       const flightType = document.createElement("span");
-      flightType.textContent = isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase();
+      flightType.textContent = isDeploymentAssistTile ? "DEPLOY" : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase();
       flightType.style.justifySelf = "start";
       flightType.style.borderRadius = "3px";
       flightType.style.background = "rgba(132,204,22,0.62)";
       flightType.style.padding = "1px 4px";
       flightType.style.color = "#f7fee7";
       const areaCallsign = document.createElement("span");
-      const previewFormationCallsign = assistFormationSize > 1 ? getAssistFormationCallsign(position) : previewCallsign;
+      const previewFormationCallsign = isDeploymentAssistTile ? "DEPLOY" : assistFormationSize > 1 ? getAssistFormationCallsign(position) : previewCallsign;
       areaCallsign.textContent = `${selectedAssignedArea && selectedAssignedArea !== "TBA" ? `${selectedAssignedArea} ` : ""}${previewFormationCallsign || "CSIGN"}`;
       areaCallsign.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
       areaCallsign.style.textAlign = "right";
@@ -71651,11 +71673,11 @@ const DfpSidePanelTimeline = ({
     { id: "course", label: "Course events" },
     { id: "packages", label: "Packages" }
   ];
-  const resourceNumberLimit = selectedResourceKind === "ftd" ? Math.max(1, availableFtdCount) : selectedResourceKind === "cpt" ? Math.max(1, availableCptCount) : Math.max(1, availableAircraftCount);
+  const resourceNumberLimit = selectedResourceKind === "deployment" ? 1 : selectedResourceKind === "ftd" ? Math.max(1, availableFtdCount) : selectedResourceKind === "cpt" ? Math.max(1, availableCptCount) : Math.max(1, availableAircraftCount);
   Object.entries(aircraftConfigCapacities || {}).filter(([, count]) => Number(count) > 0).map(([configId, count]) => `${configId}: ${count}`).join(", ") || "No CONFIG split set";
-  const previewCrewName = isFixedCrewNeoAssist ? selectedFixedCrewPic || "Select PIC" : selectedCrewName || "Bloggs, Joe";
-  const previewCallsign = isFixedCrewNeoAssist ? fixedCrewAssistCallsign || "CSIGN" : assistCallsign.trim() || "CSIGN";
-  const previewAircraftNumber = selectedResourceKind === "flight" ? selectedAircraftNumber.trim() || "TBA" : "TBA";
+  const previewCrewName = isDeploymentAssistTile ? "Deployment" : isFixedCrewNeoAssist ? selectedFixedCrewPic || "Select PIC" : selectedCrewName || "Bloggs, Joe";
+  const previewCallsign = isDeploymentAssistTile ? "DEPLOY" : isFixedCrewNeoAssist ? fixedCrewAssistCallsign || "CSIGN" : assistCallsign.trim() || "CSIGN";
+  const previewAircraftNumber = selectedResourceKind === "flight" ? selectedAircraftNumber.trim() || "TBA" : isDeploymentAssistTile ? "DEPLOY" : "TBA";
   const previewAreaCallsign = `${selectedAssignedArea && selectedAssignedArea !== "TBA" ? `${selectedAssignedArea} ` : ""}${previewCallsign}`;
   const simulatorResourceLabel = formatResourceLabel2("FTD 1").replace(/\s+1$/, "");
   const proceduralTrainerResourceLabel = formatResourceLabel2("CPT 1").replace(/\s+1$/, "");
@@ -72778,7 +72800,7 @@ const DfpSidePanelTimeline = ({
   };
   const renderAssistSection = () => {
     if (activeAssistSection === "details") {
-      const showFlightOnlyDetails = !isAirCombatTileMode || selectedResourceKind === "flight";
+      const showFlightOnlyDetails = selectedResourceKind !== "deployment" && (!isAirCombatTileMode || selectedResourceKind === "flight");
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
           "Resource",
@@ -72794,7 +72816,8 @@ const DfpSidePanelTimeline = ({
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "flight", children: "Flight" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ftd", children: simulatorResourceLabel }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cpt", children: proceduralTrainerResourceLabel })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cpt", children: proceduralTrainerResourceLabel }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "deployment", children: "Deployment" })
               ]
             }
           )
@@ -96564,9 +96587,67 @@ ${conflictLines.join("\n")}${moreText}`,
     const raw = String(callsign || "CSIGN").trim().toUpperCase();
     return raw.replace(/[^A-Z0-9]/g, "").replace(/\d+$/g, "") || "CSIGN";
   };
+  const formatDroppedDeploymentClock = (decimalHour) => {
+    const normalised = ((Number(decimalHour) || 0) % 24 + 24) % 24;
+    const hours = Math.floor(normalised);
+    const minutes = Math.round((normalised - hours) * 60);
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+  const addDaysToIsoDate = (isoDate, daysToAdd) => {
+    const parts = String(isoDate || "").split("-").map(Number);
+    if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) return isoDate;
+    const result = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    result.setUTCDate(result.getUTCDate() + daysToAdd);
+    return `${result.getUTCFullYear()}-${String(result.getUTCMonth() + 1).padStart(2, "0")}-${String(result.getUTCDate()).padStart(2, "0")}`;
+  };
   const buildDroppedNeoAssistEvents = reactExports.useCallback((draft, placement, eventDate, resourcePool) => {
     const firstResourceId = placement.resourceId || draft.resourceId;
     const startTime = placement.startTime;
+    if (draft.type === "deployment") {
+      const deployedResourceNumbers = resourcePool.map((resourceId2) => /^Deployed\s+(\d+)$/i.exec(String(resourceId2 || "").trim())).filter((match) => Boolean(match)).map((match) => Number(match[1])).filter((number) => Number.isFinite(number));
+      const nextDeploymentNumber = Math.max(0, ...deployedResourceNumbers) + 1;
+      const resourceId = firstResourceId?.startsWith("Deployed") ? firstResourceId : `Deployed ${nextDeploymentNumber}`;
+      const totalEndHours = startTime + Math.max(0.1, Number(draft.duration) || 1);
+      const endDayOffset = Math.floor(Math.max(0, totalEndHours) / 24);
+      return [{
+        ...draft,
+        id: v4(),
+        date: eventDate,
+        type: "deployment",
+        flightNumber: "DEPLOYMENT",
+        pilot: "",
+        instructor: "",
+        student: "",
+        crew: "",
+        group: void 0,
+        startTime,
+        resourceId,
+        color: draft.color || "bg-gray-600/30",
+        flightType: "Dual",
+        soloOrDual: "Dual",
+        locationType: "Land Away",
+        origin: "DEPLOY",
+        destination: "DEPLOY",
+        callsign: "",
+        aircraftNumber: void 0,
+        formationId: void 0,
+        formationType: void 0,
+        formationPosition: void 0,
+        formationSize: void 0,
+        crewSelectionOrder: [],
+        fixedCrewGroup: void 0,
+        fixedCrewPic: void 0,
+        fixedCrewManifestStatus: void 0,
+        isDeploy: true,
+        deploymentStartDate: eventDate,
+        deploymentStartTime: formatDroppedDeploymentClock(startTime),
+        deploymentEndDate: addDaysToIsoDate(eventDate, endDayOffset),
+        deploymentEndTime: formatDroppedDeploymentClock(totalEndHours),
+        deploymentAircraftCount: draft.deploymentAircraftCount || 1,
+        preStart: void 0,
+        postEnd: void 0
+      }];
+    }
     const preOffset = typeof draft.preStart === "number" ? Math.max(0, draft.startTime - draft.preStart) : 0;
     const postOffset = typeof draft.postEnd === "number" ? Math.max(0, draft.postEnd - (draft.startTime + draft.duration)) : 0;
     const requestedFormationSize = Math.max(1, Math.floor(Number(draft.formationSize) || 1));
