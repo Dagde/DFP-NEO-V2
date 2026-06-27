@@ -57171,12 +57171,19 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-6 text-gray-300", children: "Loading platform configuration..." });
   }
   const visibleSectionTarget = sectionOnly ? scrollTarget || "platform-configuration-health" : null;
+  const isResourcePoolsOnlyView = visibleSectionTarget === "platform-resource-pools";
   const getSectionClass = (sectionId) => `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId ? " hidden" : ""}`;
   const saveButton = /* @__PURE__ */ jsxRuntimeExports.jsx(
     "button",
     {
       type: "button",
-      onClick: () => save(),
+      onClick: () => {
+        if (isResourcePoolsOnlyView) {
+          void saveResourcePoolsAndExitEdit();
+          return;
+        }
+        void save();
+      },
       disabled: !canEdit || saving || applyingChanges,
       className: `${platformActionButtonClass} ml-auto`,
       title: applyingChanges ? "Applying changes" : saving ? "Saving platform configuration" : "Save platform configuration",
@@ -58269,7 +58276,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border px-3 py-2 ${resourcePoolsUnlocked ? "border-cyan-400/40 bg-cyan-500/10" : "border-gray-700 bg-gray-950/60"}`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Edit State" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-1 text-sm font-bold ${resourcePoolsUnlocked ? "text-cyan-100" : "text-gray-200"}`, children: resourcePoolsUnlocked ? "Editing active" : "Locked" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: resourcePoolsUnlocked ? "Save writes changes to the database and reloads this section." : "Click Edit before changing aircraft or pool settings." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: resourcePoolsUnlocked ? "Save writes changes to the database and keeps the active DFP loaded." : "Click Edit before changing aircraft or pool settings." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Aircraft Types" }),

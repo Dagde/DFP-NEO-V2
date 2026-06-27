@@ -3335,12 +3335,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }
 
   const visibleSectionTarget = sectionOnly ? (scrollTarget || 'platform-configuration-health') : null;
+  const isResourcePoolsOnlyView = visibleSectionTarget === 'platform-resource-pools';
   const getSectionClass = (sectionId: string) =>
     `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId ? ' hidden' : ''}`;
   const saveButton = (
     <button
       type="button"
-      onClick={() => save()}
+      onClick={() => {
+        if (isResourcePoolsOnlyView) {
+          void saveResourcePoolsAndExitEdit();
+          return;
+        }
+        void save();
+      }}
       disabled={!canEdit || saving || applyingChanges}
       className={`${platformActionButtonClass} ml-auto`}
       title={applyingChanges ? 'Applying changes' : saving ? 'Saving platform configuration' : 'Save platform configuration'}
@@ -4620,7 +4627,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 {resourcePoolsUnlocked ? 'Editing active' : 'Locked'}
               </div>
               <div className="mt-1 text-[11px] leading-relaxed text-gray-500">
-                {resourcePoolsUnlocked ? 'Save writes changes to the database and reloads this section.' : 'Click Edit before changing aircraft or pool settings.'}
+                {resourcePoolsUnlocked ? 'Save writes changes to the database and keeps the active DFP loaded.' : 'Click Edit before changing aircraft or pool settings.'}
               </div>
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
