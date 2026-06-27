@@ -56866,7 +56866,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   };
   const save = async (configOverride, restoreSection, options) => {
     const configToSave = configOverride && Array.isArray(configOverride.locations) ? configOverride : config;
-    const reloadPage = options?.reloadPage ?? true;
+    const reloadPage = true;
     if (!canEdit) return false;
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
@@ -56917,11 +56917,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         });
       });
       loadedConfigRef.current = configToSave;
-      if (!reloadPage) {
-        await reloadPlatformConfig();
-        onShowSuccess(options?.successMessage || "Platform configuration saved.");
-        return true;
-      }
+      if (!reloadPage) ;
       shouldReload = true;
       setApplyingChanges(true);
       onShowSuccess("Platform configuration saved. Applying changes...");
@@ -56945,10 +56941,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     }
   };
   const saveResourcePoolsAndExitEdit = async () => {
-    const saved = await save(void 0, "platform-resource-pools", {
-      reloadPage: false,
-      successMessage: "Aircraft & Resource Pools saved."
-    });
+    const saved = await save(void 0, "platform-resource-pools");
     if (saved) setResourcePoolsUnlocked(false);
   };
   const saveCrewCompositionAndKeepPosition = async () => {

@@ -3072,10 +3072,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const saveResourcePoolsAndExitEdit = async () => {
-    const saved = await save(undefined, 'platform-resource-pools', {
-      reloadPage: false,
-      successMessage: 'Aircraft & Resource Pools saved.',
-    });
+    const saved = await save(undefined, 'platform-resource-pools');
     if (saved) setResourcePoolsUnlocked(false);
   };
 
