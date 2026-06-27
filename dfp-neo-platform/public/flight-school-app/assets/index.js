@@ -55576,7 +55576,7 @@ const PlatformConfigurationSettings = ({
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [resourcePoolsDirty, resourcePoolsUnlocked]);
+  }, [config.aircraftTypes, config.resourcePools, resourcePoolsDirty, resourcePoolsUnlocked]);
   reactExports.useEffect(() => {
     if (!scrollTarget || loading || sectionOnly) return;
     const frame = window.requestAnimationFrame(() => {
@@ -57080,13 +57080,15 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
       if (!target) return;
       if (target.closest("#platform-resource-pools")) return;
       if (target.closest(".fixed.inset-0")) return;
+      if (target.closest("button")) return;
+      if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
       event.preventDefault();
       event.stopPropagation();
       void exitResourcePoolsEditMode();
     };
     document.addEventListener("click", handleOutsideResourcePoolClick, true);
     return () => document.removeEventListener("click", handleOutsideResourcePoolClick, true);
-  }, [resourcePoolsDirty, resourcePoolsUnlocked]);
+  }, [config.aircraftTypes, config.resourcePools, resourcePoolsDirty, resourcePoolsUnlocked]);
   const refreshLicenseStatus = async () => {
     const res = await fetch(`${getApiBase()}/platform-license/status`);
     if (!res.ok) throw new Error(`Licence status failed (${res.status})`);

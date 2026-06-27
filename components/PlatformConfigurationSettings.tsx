@@ -1362,7 +1362,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [resourcePoolsDirty, resourcePoolsUnlocked]);
+  }, [config.aircraftTypes, config.resourcePools, resourcePoolsDirty, resourcePoolsUnlocked]);
 
   useEffect(() => {
     if (!scrollTarget || loading || sectionOnly) return;
@@ -3230,13 +3230,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       if (!target) return;
       if (target.closest('#platform-resource-pools')) return;
       if (target.closest('.fixed.inset-0')) return;
+      if (target.closest('button')) return;
+      if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
       event.preventDefault();
       event.stopPropagation();
       void exitResourcePoolsEditMode();
     };
     document.addEventListener('click', handleOutsideResourcePoolClick, true);
     return () => document.removeEventListener('click', handleOutsideResourcePoolClick, true);
-  }, [resourcePoolsDirty, resourcePoolsUnlocked]);
+  }, [config.aircraftTypes, config.resourcePools, resourcePoolsDirty, resourcePoolsUnlocked]);
 
   const refreshLicenseStatus = async () => {
     const res = await fetch(`${getApiBase()}/platform-license/status`);
