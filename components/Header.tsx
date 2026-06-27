@@ -319,11 +319,6 @@ const Header: React.FC<HeaderProps> = ({
                             title={isNeoTileModelUnavailable ? 'NEO - Tile is not available for the Fixed Crew Model yet.' : canRunNeoBuild ? 'NEO - Tile' : 'Access denied: NEO Build permission required'}
                         >
                             <span className={`text-center leading-tight ${isOracleMode && !isNeoTileModelUnavailable ? 'animate-pulse-neo-text' : ''}`} style={{color: "#fb923c"}}>NEO - Tile</span>
-                            {isNeoTileModelUnavailable && (
-                                <span className="pointer-events-none absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full border border-red-500/80 text-red-400" aria-hidden="true">
-                                    <span className="h-[1px] w-3 rotate-[-38deg] bg-red-400" />
-                                </span>
-                            )}
                         </button>
 
                         {/* 10. Logged In As / User Button - shows active commit fetched from server */}
