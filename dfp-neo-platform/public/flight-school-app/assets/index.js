@@ -71415,7 +71415,8 @@ const DfpSidePanelTimeline = ({
       if (isDeploymentAssistTile) {
         tile.style.border = "1px solid rgba(255,255,255,0.6)";
         tile.style.background = "rgba(75,85,99,0.3)";
-        tile.style.boxShadow = "0 6px 16px rgba(0,0,0,0.28)";
+        tile.style.borderRadius = "2px";
+        tile.style.boxShadow = "0 4px 6px rgba(0,0,0,0.25)";
         tile.style.display = "flex";
         tile.style.alignItems = "center";
         tile.style.justifyContent = "center";
@@ -72849,7 +72850,7 @@ const DfpSidePanelTimeline = ({
     if (activeAssistSection === "details") {
       const showFlightOnlyDetails = selectedResourceKind !== "deployment" && (!isAirCombatTileMode || selectedResourceKind === "flight");
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `${isDeploymentAssistTile ? "col-span-2" : ""} text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400`, children: [
           "Resource",
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
@@ -96702,56 +96703,87 @@ ${conflictLines.join("\n")}${moreText}`,
     result.setUTCDate(result.getUTCDate() + daysToAdd);
     return `${result.getUTCFullYear()}-${String(result.getUTCMonth() + 1).padStart(2, "0")}-${String(result.getUTCDate()).padStart(2, "0")}`;
   };
+  const getDeploymentDateRange = (startDate, endDate) => {
+    const startParts = String(startDate || "").split("-").map(Number);
+    const endParts = String(endDate || "").split("-").map(Number);
+    if (startParts.length !== 3 || endParts.length !== 3 || startParts.some((part) => !Number.isFinite(part)) || endParts.some((part) => !Number.isFinite(part))) return [startDate].filter(Boolean);
+    const cursor = new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2]));
+    const end = new Date(Date.UTC(endParts[0], endParts[1] - 1, endParts[2]));
+    const dates = [];
+    while (cursor.getTime() <= end.getTime()) {
+      dates.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}-${String(cursor.getUTCDate()).padStart(2, "0")}`);
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    return dates.length > 0 ? dates : [startDate].filter(Boolean);
+  };
+  const parseDeploymentClockHours = (clock) => {
+    if (!clock) return null;
+    const match = String(clock).trim().match(/^(\d{1,2}):?(\d{2})$/);
+    if (!match) return null;
+    return Number(match[1]) + Number(match[2]) / 60;
+  };
   const buildDroppedNeoAssistEvents = reactExports.useCallback((draft, placement, eventDate, resourcePool) => {
     const firstResourceId = placement.resourceId || draft.resourceId;
     const startTime = placement.startTime;
     if (draft.type === "deployment") {
       const deploymentStartTime = Number.isFinite(Number(draft.startTime)) ? Number(draft.startTime) : startTime;
       const deploymentDuration = Math.max(0.1, Number(draft.duration) || 1);
+      const deploymentStartDate = draft.deploymentStartDate || eventDate;
+      const deploymentStartClock = draft.deploymentStartTime || formatDroppedDeploymentClock(deploymentStartTime);
+      const deploymentEndClock = draft.deploymentEndTime || formatDroppedDeploymentClock(deploymentStartTime + deploymentDuration);
+      const deploymentEndDate = draft.deploymentEndDate || addDaysToIsoDate(eventDate, Math.floor(Math.max(0, deploymentStartTime + deploymentDuration) / 24));
+      const deploymentStartHour = parseDeploymentClockHours(deploymentStartClock) ?? deploymentStartTime;
+      const deploymentEndHour = parseDeploymentClockHours(deploymentEndClock) ?? (deploymentStartTime + deploymentDuration) % 24;
+      const deploymentDates = getDeploymentDateRange(deploymentStartDate, deploymentEndDate);
       const deployedResourceNumbers = resourcePool.map((resourceId2) => /^Deployed\s+(\d+)$/i.exec(String(resourceId2 || "").trim())).filter((match) => Boolean(match)).map((match) => Number(match[1])).filter((number) => Number.isFinite(number));
       const nextDeploymentNumber = Math.max(0, ...deployedResourceNumbers) + 1;
       const resourceId = firstResourceId?.startsWith("Deployed") ? firstResourceId : `Deployed ${nextDeploymentNumber}`;
-      const totalEndHours = deploymentStartTime + deploymentDuration;
-      const endDayOffset = Math.floor(Math.max(0, totalEndHours) / 24);
-      return [{
-        ...draft,
-        id: v4(),
-        date: eventDate,
-        type: "deployment",
-        flightNumber: "DEPLOYMENT",
-        pilot: "",
-        instructor: "",
-        student: "",
-        crew: "",
-        group: void 0,
-        duration: deploymentDuration,
-        startTime: deploymentStartTime,
-        resourceId,
-        color: draft.color || "bg-gray-600/30",
-        flightType: "Dual",
-        soloOrDual: "Dual",
-        locationType: "Land Away",
-        origin: "DEPLOY",
-        destination: "DEPLOY",
-        callsign: "",
-        aircraftNumber: void 0,
-        formationId: void 0,
-        formationType: void 0,
-        formationPosition: void 0,
-        formationSize: void 0,
-        crewSelectionOrder: [],
-        fixedCrewGroup: void 0,
-        fixedCrewPic: void 0,
-        fixedCrewManifestStatus: void 0,
-        isDeploy: true,
-        deploymentStartDate: draft.deploymentStartDate || eventDate,
-        deploymentStartTime: draft.deploymentStartTime || formatDroppedDeploymentClock(deploymentStartTime),
-        deploymentEndDate: draft.deploymentEndDate || addDaysToIsoDate(eventDate, endDayOffset),
-        deploymentEndTime: draft.deploymentEndTime || formatDroppedDeploymentClock(totalEndHours),
-        deploymentAircraftCount: draft.deploymentAircraftCount || 1,
-        preStart: void 0,
-        postEnd: void 0
-      }];
+      return deploymentDates.map((currentDate) => {
+        const isFirstDate = currentDate === deploymentStartDate;
+        const isLastDate = currentDate === deploymentEndDate;
+        const segmentStartTime = isFirstDate ? deploymentStartHour : 0;
+        const segmentEndTime = isLastDate ? deploymentEndHour : 24;
+        const segmentDuration = Math.max(0.1, segmentEndTime - segmentStartTime);
+        return {
+          ...draft,
+          id: v4(),
+          date: currentDate,
+          type: "deployment",
+          flightNumber: "DEPLOYMENT",
+          pilot: "",
+          instructor: "",
+          student: "",
+          crew: "",
+          group: void 0,
+          duration: segmentDuration,
+          startTime: segmentStartTime,
+          resourceId,
+          color: draft.color || "bg-gray-600/30",
+          flightType: "Dual",
+          soloOrDual: "Dual",
+          locationType: "Land Away",
+          origin: "DEPLOY",
+          destination: "DEPLOY",
+          callsign: "",
+          aircraftNumber: void 0,
+          formationId: void 0,
+          formationType: void 0,
+          formationPosition: void 0,
+          formationSize: void 0,
+          crewSelectionOrder: [],
+          fixedCrewGroup: void 0,
+          fixedCrewPic: void 0,
+          fixedCrewManifestStatus: void 0,
+          isDeploy: true,
+          deploymentStartDate,
+          deploymentStartTime: deploymentStartClock,
+          deploymentEndDate,
+          deploymentEndTime: deploymentEndClock,
+          deploymentAircraftCount: draft.deploymentAircraftCount || 1,
+          preStart: void 0,
+          postEnd: void 0
+        };
+      }).filter((event) => event.duration > 0);
     }
     const preOffset = typeof draft.preStart === "number" ? Math.max(0, draft.startTime - draft.preStart) : 0;
     const postOffset = typeof draft.postEnd === "number" ? Math.max(0, draft.postEnd - (draft.startTime + draft.duration)) : 0;
@@ -96793,12 +96825,27 @@ ${conflictLines.join("\n")}${moreText}`,
       return;
     }
     const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, date, buildResources);
-    const nextSchedule = [...publishedSchedules[date] || [], ...droppedEvents];
+    const droppedEventsByDate = droppedEvents.reduce((groups, event) => {
+      const eventDate = event.date || date;
+      groups[eventDate] = [...groups[eventDate] || [], event];
+      return groups;
+    }, {});
+    const nextSchedulesByDate = Object.fromEntries(
+      Object.entries(droppedEventsByDate).map(([eventDate, eventsForDropDate]) => [
+        eventDate,
+        [...publishedSchedules[eventDate] || [], ...eventsForDropDate]
+      ])
+    );
     setPublishedSchedules((prev) => {
-      const currentSchedule = prev[date] || [];
-      return { ...prev, [date]: [...currentSchedule, ...droppedEvents] };
+      const next = { ...prev };
+      Object.entries(droppedEventsByDate).forEach(([eventDate, eventsForDropDate]) => {
+        next[eventDate] = [...prev[eventDate] || [], ...eventsForDropDate];
+      });
+      return next;
     });
-    persistScheduleForDate(date, nextSchedule);
+    Object.entries(nextSchedulesByDate).forEach(([eventDate, eventsForDate2]) => {
+      persistScheduleForDate(eventDate, eventsForDate2);
+    });
     logAudit("Program Schedule", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
   }, [buildDroppedNeoAssistEvents, buildResources, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules]);
   const handleNextDayExternalEventDrop = reactExports.useCallback((draft, placement) => {
