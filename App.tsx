@@ -1086,6 +1086,12 @@ const DfpSidePanelTimeline: React.FC<{
         : selectedCrewRecords.find(staff => staff.name !== selectedPilotCrewName)?.name || '';
     const isDeploymentAssistTile = selectedResourceKind === 'deployment';
     const deploymentEndTotalHours = assistStartTime + assistDuration;
+    const formatDeploymentAssistClock = (decimalHour: number): string => {
+        const normalised = ((Number(decimalHour) || 0) % 24 + 24) % 24;
+        const hours = Math.floor(normalised);
+        const minutes = Math.round((normalised - hours) * 60);
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    };
     const deploymentEndDate = useMemo(() => {
         if (!isDeploymentAssistTile) return undefined;
         const sourceDate = activeAssistSection === 'taskings'
@@ -1156,9 +1162,9 @@ const DfpSidePanelTimeline: React.FC<{
                     ? assistCurrencyDate
                     : date
         ) : undefined,
-        deploymentStartTime: isDeploymentAssistTile ? formatTime(assistStartTime) : undefined,
+        deploymentStartTime: isDeploymentAssistTile ? formatDeploymentAssistClock(assistStartTime) : undefined,
         deploymentEndDate: isDeploymentAssistTile ? deploymentEndDate : undefined,
-        deploymentEndTime: isDeploymentAssistTile ? formatTime(((deploymentEndTotalHours % 24) + 24) % 24) : undefined,
+        deploymentEndTime: isDeploymentAssistTile ? formatDeploymentAssistClock(deploymentEndTotalHours) : undefined,
         deploymentAircraftCount: isDeploymentAssistTile ? 1 : undefined,
     }), [
         activeAssistSection,

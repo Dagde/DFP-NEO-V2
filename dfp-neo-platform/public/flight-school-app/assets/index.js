@@ -71250,6 +71250,12 @@ const DfpSidePanelTimeline = ({
   const selectedSupportCrewName = isFixedCrewNeoAssist ? "" : selectedCrewRecords.find((staff) => staff.name !== selectedPilotCrewName)?.name || "";
   const isDeploymentAssistTile = selectedResourceKind === "deployment";
   const deploymentEndTotalHours = assistStartTime + assistDuration;
+  const formatDeploymentAssistClock = (decimalHour) => {
+    const normalised = ((Number(decimalHour) || 0) % 24 + 24) % 24;
+    const hours = Math.floor(normalised);
+    const minutes = Math.round((normalised - hours) * 60);
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
   const deploymentEndDate = reactExports.useMemo(() => {
     if (!isDeploymentAssistTile) return void 0;
     const sourceDate = activeAssistSection === "taskings" ? assistTaskDate : activeAssistSection === "currency" ? assistCurrencyDate : date;
@@ -71305,9 +71311,9 @@ const DfpSidePanelTimeline = ({
     postEnd: !isDeploymentAssistTile && selectedSyllabusItem ? assistStartTime + assistDuration + (selectedSyllabusItem.postFlightTime || 0) / 60 : void 0,
     isDeploy: isDeploymentAssistTile ? true : void 0,
     deploymentStartDate: isDeploymentAssistTile ? activeAssistSection === "taskings" ? assistTaskDate : activeAssistSection === "currency" ? assistCurrencyDate : date : void 0,
-    deploymentStartTime: isDeploymentAssistTile ? formatTime2(assistStartTime) : void 0,
+    deploymentStartTime: isDeploymentAssistTile ? formatDeploymentAssistClock(assistStartTime) : void 0,
     deploymentEndDate: isDeploymentAssistTile ? deploymentEndDate : void 0,
-    deploymentEndTime: isDeploymentAssistTile ? formatTime2((deploymentEndTotalHours % 24 + 24) % 24) : void 0,
+    deploymentEndTime: isDeploymentAssistTile ? formatDeploymentAssistClock(deploymentEndTotalHours) : void 0,
     deploymentAircraftCount: isDeploymentAssistTile ? 1 : void 0
   }), [
     activeAssistSection,
