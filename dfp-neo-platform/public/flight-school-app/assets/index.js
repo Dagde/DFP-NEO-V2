@@ -30181,6 +30181,11 @@ const PrioritiesViewWithMenu = (props) => {
   const [activeSection, setActiveSection] = reactExports.useState("build-timeline");
   const [activeFixedCrewTab, setActiveFixedCrewTab] = reactExports.useState("events-builder");
   const [expandedFixedCrewTab, setExpandedFixedCrewTab] = reactExports.useState(null);
+  const [deploymentStartDate, setDeploymentStartDate] = reactExports.useState(props.buildDfpDate);
+  const [deploymentEndDate, setDeploymentEndDate] = reactExports.useState(props.buildDfpDate);
+  const [deploymentStartTime, setDeploymentStartTime] = reactExports.useState(props.flyingStartTime);
+  const [deploymentEndTime, setDeploymentEndTime] = reactExports.useState(Math.min(23.75, props.flyingStartTime + 4));
+  const [deploymentAircraftCount, setDeploymentAircraftCount] = reactExports.useState(1);
   const mainScrollRef = reactExports.useRef(null);
   const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const locationDisplayName = props.school === "ESL" ? "East Sale" : props.school === "PEA" ? "Pearce" : props.school;
@@ -30219,6 +30224,7 @@ const PrioritiesViewWithMenu = (props) => {
   ].filter((item) => !item.hidden);
   const fixedCrewTabs = [
     { id: "events-builder", label: "Events Builder" },
+    { id: "deployments", label: "Deployments" },
     { id: "build-priorities", label: "Build Priorities" }
   ];
   const fixedCrewPlannerSections = {
@@ -30226,6 +30232,9 @@ const PrioritiesViewWithMenu = (props) => {
       { label: "Highest Priority Table", target: ".highest-priority-events-card" },
       { label: "Tasking Section", target: ".tasking-events-card" },
       { label: "Currency Section", target: ".consolidated-currency-card" }
+    ],
+    "deployments": [
+      { label: "Deployment Builder", target: ".deployment-builder-card" }
     ],
     "build-priorities": [
       { label: "Flying Windows & Capacity", target: ".section-build-timeline" },
@@ -30241,6 +30250,14 @@ const PrioritiesViewWithMenu = (props) => {
       label: "Events Builder",
       shortLabel: "Events",
       description: "Manage priority events, tasking and currency requests."
+    }
+  ] : activeFixedCrewTab === "deployments" ? [
+    {
+      id: "deployments",
+      step: "02",
+      label: "Deployments",
+      shortLabel: "Deploy",
+      description: "Build deployment tiles for the Fixed Crew plan using deployment dates and times."
     }
   ] : [
     workflowItems.find((item) => item.id === "build-timeline"),
@@ -30258,8 +30275,20 @@ const PrioritiesViewWithMenu = (props) => {
       setActiveSection("directed-events");
       return;
     }
+    if (activeFixedCrewTab === "deployments") {
+      setActiveSection("deployments");
+      return;
+    }
     setActiveSection((current) => current === "course-demand" ? current : "build-timeline");
   }, [activeFixedCrewTab, isFixedCrewModel]);
+  reactExports.useEffect(() => {
+    setDeploymentStartDate(props.buildDfpDate);
+    setDeploymentEndDate(props.buildDfpDate);
+  }, [props.buildDfpDate]);
+  reactExports.useEffect(() => {
+    setDeploymentStartTime(props.flyingStartTime);
+    setDeploymentEndTime(Math.min(23.75, props.flyingStartTime + 4));
+  }, [props.flyingStartTime]);
   const activeWorkflowItem = visibleWorkflowItems.find((item) => item.id === activeSection) ?? visibleWorkflowItems[0] ?? workflowItems[0];
   const fixedCrewPlannerMode = isFixedCrewModel ? activeFixedCrewTab : null;
   const scrollPlannerToTop = () => {
@@ -30274,11 +30303,11 @@ const PrioritiesViewWithMenu = (props) => {
     }
     setActiveFixedCrewTab(tabId);
     setExpandedFixedCrewTab(tabId);
-    setActiveSection(tabId === "events-builder" ? "directed-events" : "build-timeline");
+    setActiveSection(tabId === "events-builder" ? "directed-events" : tabId === "deployments" ? "deployments" : "build-timeline");
     scrollPlannerToTop();
   };
   const handleFixedCrewSectionClick = (target) => {
-    const targetSection = activeFixedCrewTab === "events-builder" ? "directed-events" : target.includes("course") ? "course-demand" : "build-timeline";
+    const targetSection = activeFixedCrewTab === "events-builder" ? "directed-events" : activeFixedCrewTab === "deployments" ? "deployments" : target.includes("course") ? "course-demand" : "build-timeline";
     setActiveSection(targetSection);
     window.setTimeout(() => {
       const scrollRoot = mainScrollRef.current;
@@ -30295,6 +30324,190 @@ const PrioritiesViewWithMenu = (props) => {
       });
     }, 80);
   };
+  const formatPlannerTimeInput = (value) => {
+    const hours = Math.floor(Math.max(0, value));
+    const minutes = Math.round((Math.max(0, value) - hours) * 60);
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+  const parsePlannerTimeInput = (value) => {
+    const [hours, minutes] = String(value || "").split(":").map(Number);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
+    return Math.max(0, Math.min(23.75, hours + minutes / 60));
+  };
+  const formatPlannerClock = (value) => {
+    const totalMinutes = Math.round(Math.max(0, value) * 60);
+    const hours = Math.floor(totalMinutes / 60) % 24;
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
+  };
+  const formatPlannerDateLabel = (isoDate) => {
+    const [year, month, day] = String(isoDate || "").split("-").map(Number);
+    if (!year || !month || !day) return isoDate;
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" }).replace(",", "");
+  };
+  const getDeploymentDateRange = (startDate, endDate) => {
+    const startParts = String(startDate || "").split("-").map(Number);
+    const endParts = String(endDate || "").split("-").map(Number);
+    if (startParts.length !== 3 || endParts.length !== 3 || startParts.some((part) => !Number.isFinite(part)) || endParts.some((part) => !Number.isFinite(part))) return [startDate].filter(Boolean);
+    const cursor = new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2]));
+    const end = new Date(Date.UTC(endParts[0], endParts[1] - 1, endParts[2]));
+    if (cursor.getTime() > end.getTime()) return [startDate].filter(Boolean);
+    const dates = [];
+    while (cursor.getTime() <= end.getTime()) {
+      dates.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}-${String(cursor.getUTCDate()).padStart(2, "0")}`);
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    return dates.length > 0 ? dates : [startDate].filter(Boolean);
+  };
+  const deploymentPreviewText = `DEPLOYMENT ${formatPlannerClock(deploymentStartTime)} ${formatPlannerDateLabel(deploymentStartDate)} - ${formatPlannerClock(deploymentEndTime)} ${formatPlannerDateLabel(deploymentEndDate)}`;
+  const hasInvalidDeploymentDateRange = Boolean(deploymentStartDate && deploymentEndDate && deploymentStartDate > deploymentEndDate);
+  const hasInvalidSameDayTimes = deploymentStartDate === deploymentEndDate && deploymentEndTime <= deploymentStartTime;
+  const handleAddDeployment = () => {
+    if (!props.onAddBuildEvents || hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) return;
+    const deploymentDates = getDeploymentDateRange(deploymentStartDate, deploymentEndDate);
+    const deployedResourceNumbers = (props.activeScheduleEvents || []).map((event) => /^Deployed\s+(\d+)$/i.exec(String(event.resourceId || "").trim())).filter((match) => Boolean(match)).map((match) => Number(match[1])).filter((number) => Number.isFinite(number));
+    const nextDeploymentNumber = Math.max(0, ...deployedResourceNumbers) + 1;
+    const resourceId = `Deployed ${nextDeploymentNumber}`;
+    const deploymentStartClock = formatPlannerClock(deploymentStartTime);
+    const deploymentEndClock = formatPlannerClock(deploymentEndTime);
+    const events = deploymentDates.map((currentDate) => {
+      const isFirstDate = currentDate === deploymentStartDate;
+      const isLastDate = currentDate === deploymentEndDate;
+      const segmentStartTime = isFirstDate ? deploymentStartTime : 0;
+      const segmentEndTime = isLastDate ? deploymentEndTime : 24;
+      const segmentDuration = Math.max(0.1, segmentEndTime - segmentStartTime);
+      return {
+        id: v4(),
+        date: currentDate,
+        type: "deployment",
+        instructor: "",
+        student: "",
+        pilot: "",
+        crew: "",
+        group: void 0,
+        flightNumber: "DEPLOYMENT",
+        duration: segmentDuration,
+        startTime: segmentStartTime,
+        resourceId,
+        color: "bg-gray-600/30",
+        flightType: "Dual",
+        soloOrDual: "Dual",
+        locationType: "Land Away",
+        origin: "DEPLOY",
+        destination: "DEPLOY",
+        callsign: "",
+        aircraftNumber: void 0,
+        isDeploy: true,
+        deploymentStartDate,
+        deploymentStartTime: deploymentStartClock,
+        deploymentEndDate,
+        deploymentEndTime: deploymentEndClock,
+        deploymentAircraftCount
+      };
+    }).filter((event) => event.duration > 0);
+    props.onAddBuildEvents(events);
+  };
+  const renderDeploymentPlanner = () => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "section-deployments", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "deployment-builder-card rounded-lg border border-violet-400/70 bg-slate-900/78 p-5 shadow-[0_0_0_1px_rgba(139,92,246,0.18),0_14px_30px_rgba(15,23,42,0.28)]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-2xl font-bold text-cyan-300", children: "Deployment Builder" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 max-w-3xl text-sm leading-6 text-slate-400", children: "Create deployment tiles for the Fixed Crew build plan. Multi-day deployments are split into daily deployment segments with the same deployment period retained on each tile." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          type: "button",
+          onClick: handleAddDeployment,
+          disabled: !props.onAddBuildEvents || hasInvalidDeploymentDateRange || hasInvalidSameDayTimes,
+          className: "h-[57px] w-[72px] rounded-md border border-slate-300/80 bg-gradient-to-r from-slate-100 via-white to-slate-300 px-2 text-center text-[12px] font-bold leading-tight text-slate-800 shadow transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45",
+          children: [
+            "Add",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            "Deploy"
+          ]
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-5 rounded-md border border-slate-700/70 bg-slate-950/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.7fr)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400", children: "Begin Date" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "date",
+              value: deploymentStartDate,
+              onChange: (event) => setDeploymentStartDate(event.target.value),
+              className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400", children: "Begin Time" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "time",
+              step: "900",
+              value: formatPlannerTimeInput(deploymentStartTime),
+              onChange: (event) => setDeploymentStartTime(parsePlannerTimeInput(event.target.value)),
+              className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400", children: "End Date" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "date",
+              value: deploymentEndDate,
+              onChange: (event) => setDeploymentEndDate(event.target.value),
+              className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400", children: "End Time" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "time",
+              step: "900",
+              value: formatPlannerTimeInput(deploymentEndTime),
+              onChange: (event) => setDeploymentEndTime(parsePlannerTimeInput(event.target.value)),
+              className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block md:col-span-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400", children: "Aircraft" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "number",
+              min: 1,
+              max: 99,
+              value: deploymentAircraftCount,
+              onChange: (event) => setDeploymentAircraftCount(Math.max(1, Math.floor(Number(event.target.value) || 1))),
+              className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700 bg-slate-900/80 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500", children: "Preview" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 flex h-14 items-center justify-center border-y border-slate-300/70 bg-slate-500/20 text-center text-sm font-bold uppercase tracking-wide text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]", children: deploymentPreviewText }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-3 text-xs leading-5 text-slate-500", children: [
+          "Deployment row: ",
+          deploymentAircraftCount,
+          " x aircraft. Tile will use the Deployed resource row in the build plan."
+        ] }),
+        (hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200", children: "End date/time must be after begin date/time before the deployment can be added." })
+      ] })
+    ] }) })
+  ] }) });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priorities-view": "true", className: "flex-1 flex overflow-hidden bg-slate-950 text-slate-100", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: `${isFixedCrewModel ? "w-[220px]" : "w-80"} bg-slate-950/95 border-r border-slate-700/60 flex flex-col flex-shrink-0`, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${isFixedCrewModel ? "p-4" : "p-5"} border-b border-slate-700/60`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border border-cyan-500/20 bg-cyan-500/10 ${isFixedCrewModel ? "p-3" : "p-4"}`, children: [
@@ -30446,7 +30659,7 @@ const PrioritiesViewWithMenu = (props) => {
             " build setup"
           ] })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "priorities-content", onKeyDownCapture: stopEditableKeyPropagation, children: /* @__PURE__ */ jsxRuntimeExports.jsx(PrioritiesView, { ...props, instructorPriority: effectiveInstructorPriority, activeSection }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "priorities-content", onKeyDownCapture: stopEditableKeyPropagation, children: isFixedCrewModel && activeFixedCrewTab === "deployments" ? renderDeploymentPlanner() : /* @__PURE__ */ jsxRuntimeExports.jsx(PrioritiesView, { ...props, instructorPriority: effectiveInstructorPriority, activeSection }) })
       ] })
     ] })
   ] });
@@ -99823,7 +100036,10 @@ ${error instanceof Error ? error.message : String(error)}`,
             traineesData,
             buildDfpDate,
             highestPriorityEvents,
-            activeScheduleEvents: Object.values(publishedSchedules).flat(),
+            activeScheduleEvents: [
+              ...Object.values(publishedSchedules).flat(),
+              ...nextDayBuildEvents.map((event) => ({ ...event, date: buildDfpDate }))
+            ],
             isSingleSeatAircraft: activeAircraftCrewComposition.crewCount === 1,
             aircraftCrewComposition: activeAircraftCrewComposition,
             aircraftTypeCode: activeRuntimeAircraftTypeCode,
@@ -99841,6 +100057,14 @@ ${error instanceof Error ? error.message : String(error)}`,
                   ...eventsToAdd
                 ];
               });
+            },
+            onAddBuildEvents: (eventsToAdd) => {
+              const nextDayEvents = eventsToAdd.map((event) => {
+                const { date: _date, ...nextDayEvent } = event;
+                return nextDayEvent;
+              });
+              setNextDayBuildEvents((prev) => [...prev, ...nextDayEvents]);
+              logAudit("Next Day Build", "Create", "Added Build Planner deployment", `${eventsToAdd.length} x DEPLOYMENT`);
             },
             onUpdatePriorityEvent: handleUpdatePriorityEvent,
             onDeletePriorityEvent: handleDeletePriorityEvent,

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { PrioritiesView } from './PrioritiesView';
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest, FlyingWindowExclusionPeriod } from '../types';
@@ -55,6 +56,7 @@ interface PrioritiesViewWithMenuProps {
   activeScheduleEvents?: ScheduleEvent[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onAddPriorityEvents: (events: ScheduleEvent[]) => void;
+  onAddBuildEvents?: (events: ScheduleEvent[]) => void;
   onUpdatePriorityEvent: (eventId: string, updates: Partial<ScheduleEvent>) => void;
   instructorPriority: InstructorPriorityConfig;
   onUpdateInstructorPriority: (value: InstructorPriorityConfig) => void;
@@ -93,13 +95,18 @@ interface PrioritiesViewWithMenuProps {
   staffQualificationCatalogue?: StaffQualificationCatalogue;
 }
 
-type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
-type FixedCrewPlannerTab = 'events-builder' | 'build-priorities';
+type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events' | 'deployments';
+type FixedCrewPlannerTab = 'events-builder' | 'deployments' | 'build-priorities';
 
 export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<PrioritiesSection>('build-timeline');
     const [activeFixedCrewTab, setActiveFixedCrewTab] = useState<FixedCrewPlannerTab>('events-builder');
     const [expandedFixedCrewTab, setExpandedFixedCrewTab] = useState<FixedCrewPlannerTab | null>(null);
+    const [deploymentStartDate, setDeploymentStartDate] = useState(props.buildDfpDate);
+    const [deploymentEndDate, setDeploymentEndDate] = useState(props.buildDfpDate);
+    const [deploymentStartTime, setDeploymentStartTime] = useState(props.flyingStartTime);
+    const [deploymentEndTime, setDeploymentEndTime] = useState(Math.min(23.75, props.flyingStartTime + 4));
+    const [deploymentAircraftCount, setDeploymentAircraftCount] = useState(1);
     const mainScrollRef = useRef<HTMLElement | null>(null);
     const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
     const locationDisplayName = props.school === 'ESL' ? 'East Sale' : props.school === 'PEA' ? 'Pearce' : props.school;
@@ -142,6 +149,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
 
     const fixedCrewTabs = [
         { id: 'events-builder' as const, label: 'Events Builder' },
+        { id: 'deployments' as const, label: 'Deployments' },
         { id: 'build-priorities' as const, label: 'Build Priorities' },
     ];
 
@@ -150,6 +158,9 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             { label: 'Highest Priority Table', target: '.highest-priority-events-card' },
             { label: 'Tasking Section', target: '.tasking-events-card' },
             { label: 'Currency Section', target: '.consolidated-currency-card' },
+        ],
+        'deployments': [
+            { label: 'Deployment Builder', target: '.deployment-builder-card' },
         ],
         'build-priorities': [
             { label: 'Flying Windows & Capacity', target: '.section-build-timeline' },
@@ -167,6 +178,16 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                 label: 'Events Builder',
                 shortLabel: 'Events',
                 description: 'Manage priority events, tasking and currency requests.',
+            },
+        ]
+        : activeFixedCrewTab === 'deployments'
+        ? [
+            {
+                id: 'deployments' as const,
+                step: '02',
+                label: 'Deployments',
+                shortLabel: 'Deploy',
+                description: 'Build deployment tiles for the Fixed Crew plan using deployment dates and times.',
             },
         ]
         : [
@@ -188,8 +209,22 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             setActiveSection('directed-events');
             return;
         }
+        if (activeFixedCrewTab === 'deployments') {
+            setActiveSection('deployments');
+            return;
+        }
         setActiveSection(current => current === 'course-demand' ? current : 'build-timeline');
     }, [activeFixedCrewTab, isFixedCrewModel]);
+
+    useEffect(() => {
+        setDeploymentStartDate(props.buildDfpDate);
+        setDeploymentEndDate(props.buildDfpDate);
+    }, [props.buildDfpDate]);
+
+    useEffect(() => {
+        setDeploymentStartTime(props.flyingStartTime);
+        setDeploymentEndTime(Math.min(23.75, props.flyingStartTime + 4));
+    }, [props.flyingStartTime]);
 
     const activeWorkflowItem = visibleWorkflowItems.find((item) => item.id === activeSection) ?? visibleWorkflowItems[0] ?? workflowItems[0];
     const fixedCrewPlannerMode = isFixedCrewModel ? activeFixedCrewTab : null;
@@ -205,11 +240,15 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         }
         setActiveFixedCrewTab(tabId);
         setExpandedFixedCrewTab(tabId);
-        setActiveSection(tabId === 'events-builder' ? 'directed-events' : 'build-timeline');
+        setActiveSection(tabId === 'events-builder' ? 'directed-events' : tabId === 'deployments' ? 'deployments' : 'build-timeline');
         scrollPlannerToTop();
     };
     const handleFixedCrewSectionClick = (target: string) => {
-        const targetSection: PrioritiesSection = activeFixedCrewTab === 'events-builder' ? 'directed-events' : (target.includes('course') ? 'course-demand' : 'build-timeline');
+        const targetSection: PrioritiesSection = activeFixedCrewTab === 'events-builder'
+            ? 'directed-events'
+            : activeFixedCrewTab === 'deployments'
+                ? 'deployments'
+                : (target.includes('course') ? 'course-demand' : 'build-timeline');
         setActiveSection(targetSection);
         window.setTimeout(() => {
             const scrollRoot = mainScrollRef.current;
@@ -226,6 +265,200 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             });
         }, 80);
     };
+
+    const formatPlannerTimeInput = (value: number): string => {
+        const hours = Math.floor(Math.max(0, value));
+        const minutes = Math.round((Math.max(0, value) - hours) * 60);
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    };
+
+    const parsePlannerTimeInput = (value: string): number => {
+        const [hours, minutes] = String(value || '').split(':').map(Number);
+        if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
+        return Math.max(0, Math.min(23.75, hours + minutes / 60));
+    };
+
+    const formatPlannerClock = (value: number): string => {
+        const totalMinutes = Math.round(Math.max(0, value) * 60);
+        const hours = Math.floor(totalMinutes / 60) % 24;
+        const minutes = totalMinutes % 60;
+        return `${String(hours).padStart(2, '0')}${String(minutes).padStart(2, '0')}`;
+    };
+
+    const formatPlannerDateLabel = (isoDate: string): string => {
+        const [year, month, day] = String(isoDate || '').split('-').map(Number);
+        if (!year || !month || !day) return isoDate;
+        const date = new Date(Date.UTC(year, month - 1, day));
+        return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' }).replace(',', '');
+    };
+
+    const getDeploymentDateRange = (startDate: string, endDate: string): string[] => {
+        const startParts = String(startDate || '').split('-').map(Number);
+        const endParts = String(endDate || '').split('-').map(Number);
+        if (
+            startParts.length !== 3 ||
+            endParts.length !== 3 ||
+            startParts.some(part => !Number.isFinite(part)) ||
+            endParts.some(part => !Number.isFinite(part))
+        ) return [startDate].filter(Boolean);
+        const cursor = new Date(Date.UTC(startParts[0], startParts[1] - 1, startParts[2]));
+        const end = new Date(Date.UTC(endParts[0], endParts[1] - 1, endParts[2]));
+        if (cursor.getTime() > end.getTime()) return [startDate].filter(Boolean);
+        const dates: string[] = [];
+        while (cursor.getTime() <= end.getTime()) {
+            dates.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, '0')}-${String(cursor.getUTCDate()).padStart(2, '0')}`);
+            cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+        return dates.length > 0 ? dates : [startDate].filter(Boolean);
+    };
+
+    const deploymentPreviewText = `DEPLOYMENT ${formatPlannerClock(deploymentStartTime)} ${formatPlannerDateLabel(deploymentStartDate)} - ${formatPlannerClock(deploymentEndTime)} ${formatPlannerDateLabel(deploymentEndDate)}`;
+    const hasInvalidDeploymentDateRange = Boolean(deploymentStartDate && deploymentEndDate && deploymentStartDate > deploymentEndDate);
+    const hasInvalidSameDayTimes = deploymentStartDate === deploymentEndDate && deploymentEndTime <= deploymentStartTime;
+
+    const handleAddDeployment = () => {
+        if (!props.onAddBuildEvents || hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) return;
+        const deploymentDates = getDeploymentDateRange(deploymentStartDate, deploymentEndDate);
+        const deployedResourceNumbers = (props.activeScheduleEvents || [])
+            .map(event => /^Deployed\s+(\d+)$/i.exec(String(event.resourceId || '').trim()))
+            .filter((match): match is RegExpExecArray => Boolean(match))
+            .map(match => Number(match[1]))
+            .filter(number => Number.isFinite(number));
+        const nextDeploymentNumber = Math.max(0, ...deployedResourceNumbers) + 1;
+        const resourceId = `Deployed ${nextDeploymentNumber}`;
+        const deploymentStartClock = formatPlannerClock(deploymentStartTime);
+        const deploymentEndClock = formatPlannerClock(deploymentEndTime);
+        const events = deploymentDates.map(currentDate => {
+            const isFirstDate = currentDate === deploymentStartDate;
+            const isLastDate = currentDate === deploymentEndDate;
+            const segmentStartTime = isFirstDate ? deploymentStartTime : 0;
+            const segmentEndTime = isLastDate ? deploymentEndTime : 24;
+            const segmentDuration = Math.max(0.1, segmentEndTime - segmentStartTime);
+            return {
+                id: uuidv4(),
+                date: currentDate,
+                type: 'deployment' as const,
+                instructor: '',
+                student: '',
+                pilot: '',
+                crew: '',
+                group: undefined,
+                flightNumber: 'DEPLOYMENT',
+                duration: segmentDuration,
+                startTime: segmentStartTime,
+                resourceId,
+                color: 'bg-gray-600/30',
+                flightType: 'Dual' as const,
+                soloOrDual: 'Dual' as const,
+                locationType: 'Land Away' as const,
+                origin: 'DEPLOY',
+                destination: 'DEPLOY',
+                callsign: '',
+                aircraftNumber: undefined,
+                isDeploy: true,
+                deploymentStartDate,
+                deploymentStartTime: deploymentStartClock,
+                deploymentEndDate,
+                deploymentEndTime: deploymentEndClock,
+                deploymentAircraftCount,
+            };
+        }).filter(event => event.duration > 0);
+        props.onAddBuildEvents(events);
+    };
+
+    const renderDeploymentPlanner = () => (
+        <div className="section-deployments">
+            <section className="deployment-builder-card rounded-lg border border-violet-400/70 bg-slate-900/78 p-5 shadow-[0_0_0_1px_rgba(139,92,246,0.18),0_14px_30px_rgba(15,23,42,0.28)]">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <h3 className="text-2xl font-bold text-cyan-300">Deployment Builder</h3>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                            Create deployment tiles for the Fixed Crew build plan. Multi-day deployments are split into daily deployment segments with the same deployment period retained on each tile.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleAddDeployment}
+                        disabled={!props.onAddBuildEvents || hasInvalidDeploymentDateRange || hasInvalidSameDayTimes}
+                        className="h-[57px] w-[72px] rounded-md border border-slate-300/80 bg-gradient-to-r from-slate-100 via-white to-slate-300 px-2 text-center text-[12px] font-bold leading-tight text-slate-800 shadow transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                        Add<br />Deploy
+                    </button>
+                </div>
+
+                <div className="mt-5 rounded-md border border-slate-700/70 bg-slate-950/70 p-4">
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.7fr)]">
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <label className="block">
+                                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Begin Date</span>
+                                <input
+                                    type="date"
+                                    value={deploymentStartDate}
+                                    onChange={(event) => setDeploymentStartDate(event.target.value)}
+                                    className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
+                                />
+                            </label>
+                            <label className="block">
+                                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Begin Time</span>
+                                <input
+                                    type="time"
+                                    step="900"
+                                    value={formatPlannerTimeInput(deploymentStartTime)}
+                                    onChange={(event) => setDeploymentStartTime(parsePlannerTimeInput(event.target.value))}
+                                    className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
+                                />
+                            </label>
+                            <label className="block">
+                                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">End Date</span>
+                                <input
+                                    type="date"
+                                    value={deploymentEndDate}
+                                    onChange={(event) => setDeploymentEndDate(event.target.value)}
+                                    className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
+                                />
+                            </label>
+                            <label className="block">
+                                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">End Time</span>
+                                <input
+                                    type="time"
+                                    step="900"
+                                    value={formatPlannerTimeInput(deploymentEndTime)}
+                                    onChange={(event) => setDeploymentEndTime(parsePlannerTimeInput(event.target.value))}
+                                    className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
+                                />
+                            </label>
+                            <label className="block md:col-span-2">
+                                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Aircraft</span>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={99}
+                                    value={deploymentAircraftCount}
+                                    onChange={(event) => setDeploymentAircraftCount(Math.max(1, Math.floor(Number(event.target.value) || 1)))}
+                                    className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-300"
+                                />
+                            </label>
+                        </div>
+
+                        <div className="rounded-md border border-slate-700 bg-slate-900/80 p-4">
+                            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Preview</p>
+                            <div className="mt-4 flex h-14 items-center justify-center border-y border-slate-300/70 bg-slate-500/20 text-center text-sm font-bold uppercase tracking-wide text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                                {deploymentPreviewText}
+                            </div>
+                            <p className="mt-3 text-xs leading-5 text-slate-500">
+                                Deployment row: {deploymentAircraftCount} x aircraft. Tile will use the Deployed resource row in the build plan.
+                            </p>
+                            {(hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) && (
+                                <p className="mt-3 rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200">
+                                    End date/time must be after begin date/time before the deployment can be added.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    );
 
     return (
         <div data-priorities-view="true" className="flex-1 flex overflow-hidden bg-slate-950 text-slate-100">
@@ -409,7 +642,9 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                         </div>
                     </div>
                     <div className="priorities-content" onKeyDownCapture={stopEditableKeyPropagation}>
-                        <PrioritiesView {...props} instructorPriority={effectiveInstructorPriority} activeSection={activeSection} />
+                        {isFixedCrewModel && activeFixedCrewTab === 'deployments'
+                            ? renderDeploymentPlanner()
+                            : <PrioritiesView {...props} instructorPriority={effectiveInstructorPriority} activeSection={activeSection} />}
                     </div>
                 </div>
             </main>

@@ -36228,7 +36228,10 @@ appliedUpdates.forEach(update => {
                     traineesData={traineesData}
                     buildDfpDate={buildDfpDate}
                     highestPriorityEvents={highestPriorityEvents}
-                    activeScheduleEvents={Object.values(publishedSchedules).flat()}
+                    activeScheduleEvents={[
+                        ...Object.values(publishedSchedules).flat(),
+                        ...nextDayBuildEvents.map(event => ({ ...event, date: buildDfpDate } as ScheduleEvent)),
+                    ]}
                     isSingleSeatAircraft={activeAircraftCrewComposition.crewCount === 1}
                     aircraftCrewComposition={activeAircraftCrewComposition}
                     aircraftTypeCode={activeRuntimeAircraftTypeCode}
@@ -36246,6 +36249,14 @@ appliedUpdates.forEach(update => {
                                 ...eventsToAdd,
                             ];
                         });
+                    }}
+                    onAddBuildEvents={(eventsToAdd) => {
+                        const nextDayEvents = eventsToAdd.map(event => {
+                            const { date: _date, ...nextDayEvent } = event;
+                            return nextDayEvent;
+                        });
+                        setNextDayBuildEvents(prev => [...prev, ...nextDayEvents]);
+                        logAudit('Next Day Build', 'Create', 'Added Build Planner deployment', `${eventsToAdd.length} x DEPLOYMENT`);
                     }}
                     onUpdatePriorityEvent={handleUpdatePriorityEvent}
                     onDeletePriorityEvent={handleDeletePriorityEvent}
