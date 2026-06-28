@@ -25,6 +25,7 @@ import {
     crewPositionValuesMatch,
     findCrewPositionEntry,
     getCrewPositionDisplayLabel,
+    normaliseFixedCrewStaffRole,
     type CrewPositionTerminology,
 } from '../utils/crewPositionTerminology';
 import { normaliseOperationalModel } from '../utils/platformConfigService';
@@ -707,13 +708,26 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     };
     const getFixedCrewRoleLabel = (role?: string | null): string => {
         const aircraftRole = resolveFixedCrewAircraftRole(role);
-        if (!aircraftRole) return 'Unconfigured role';
+        if (!aircraftRole) {
+            const rawRole = normaliseFixedCrewStaffRole(role, '');
+            return rawRole.toUpperCase() === 'AWO' ? 'AWO' : 'Unconfigured role';
+        }
         return getCrewPositionDisplayLabel(aircraftRole, crewPositionTerminology, aircraftRole);
     };
-    const fixedCrewRolesMatch = (left?: string | null, right?: string | null): boolean => (
-        Boolean(resolveFixedCrewAircraftRole(left))
-        && resolveFixedCrewAircraftRole(left) === resolveFixedCrewAircraftRole(right)
-    );
+    const normaliseFixedCrewRosterRoleKey = (role?: string | null): string => {
+        const aircraftRole = resolveFixedCrewAircraftRole(role);
+        const rawRole = normaliseFixedCrewStaffRole(role, '');
+        const entry = findCrewPositionEntry(aircraftRole || rawRole, crewPositionTerminology);
+        return String(entry?.genericName || aircraftRole || rawRole || '').trim().toUpperCase();
+    };
+    const fixedCrewRolesMatch = (left?: string | null, right?: string | null): boolean => {
+        const leftAircraftRole = resolveFixedCrewAircraftRole(left);
+        const rightAircraftRole = resolveFixedCrewAircraftRole(right);
+        if (leftAircraftRole && rightAircraftRole) return leftAircraftRole === rightAircraftRole;
+        const leftKey = normaliseFixedCrewRosterRoleKey(left);
+        const rightKey = normaliseFixedCrewRosterRoleKey(right);
+        return Boolean(leftKey && rightKey && leftKey === rightKey);
+    };
     const fixedCrewGroups = useMemo(() => Array.from(new Set(instructorsData
         .filter(staff => staffMatchesActiveFixedCrewUnit(staff))
         .map(staff => {

@@ -18219,10 +18219,26 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   };
   const getFixedCrewRoleLabel = (role) => {
     const aircraftRole = resolveFixedCrewAircraftRole(role);
-    if (!aircraftRole) return "Unconfigured role";
+    if (!aircraftRole) {
+      const rawRole = normaliseFixedCrewStaffRole(role, "");
+      return rawRole.toUpperCase() === "AWO" ? "AWO" : "Unconfigured role";
+    }
     return getCrewPositionDisplayLabel(aircraftRole, crewPositionTerminology, aircraftRole);
   };
-  const fixedCrewRolesMatch = (left, right) => Boolean(resolveFixedCrewAircraftRole(left)) && resolveFixedCrewAircraftRole(left) === resolveFixedCrewAircraftRole(right);
+  const normaliseFixedCrewRosterRoleKey = (role) => {
+    const aircraftRole = resolveFixedCrewAircraftRole(role);
+    const rawRole = normaliseFixedCrewStaffRole(role, "");
+    const entry = findCrewPositionEntry(aircraftRole || rawRole, crewPositionTerminology);
+    return String(entry?.genericName || aircraftRole || rawRole || "").trim().toUpperCase();
+  };
+  const fixedCrewRolesMatch = (left, right) => {
+    const leftAircraftRole = resolveFixedCrewAircraftRole(left);
+    const rightAircraftRole = resolveFixedCrewAircraftRole(right);
+    if (leftAircraftRole && rightAircraftRole) return leftAircraftRole === rightAircraftRole;
+    const leftKey = normaliseFixedCrewRosterRoleKey(left);
+    const rightKey = normaliseFixedCrewRosterRoleKey(right);
+    return Boolean(leftKey && rightKey && leftKey === rightKey);
+  };
   const fixedCrewGroups = reactExports.useMemo(() => Array.from(new Set(instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff)).map((staff) => {
     const staffCrew = String(staff.crew || "").trim();
     const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
