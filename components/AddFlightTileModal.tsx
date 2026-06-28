@@ -1141,6 +1141,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       crew: raw.replace(/^CREW\s*/i, '').trim().toUpperCase(),
     };
   };
+  const stripLeadingUnitLabel = (value?: string | null, unit?: string | null) => {
+    const text = String(value || '').trim();
+    const unitLabel = normaliseFixedCrewUnitCode(unit);
+    if (!text || !unitLabel) return text;
+    if (!text.toUpperCase().startsWith(unitLabel)) return text;
+    const stripped = text.slice(unitLabel.length).replace(/^[\s\-_/]+/, '').trim();
+    return stripped || text;
+  };
   const fixedCrewStaff = useMemo(() => instructorsData
     .filter(staff => {
       const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
@@ -1155,6 +1163,15 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     })
     .filter(Boolean)))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [fixedCrewStaff]);
+  const fixedCrewGroupOptionGroups = useMemo(() => {
+    const groups = new Map<string, string[]>();
+    fixedCrewGroups.forEach(groupKey => {
+      const parsed = parseFixedCrewGroupKey(groupKey);
+      const unit = parsed.unit || 'Unit';
+      groups.set(unit, [...(groups.get(unit) || []), groupKey]);
+    });
+    return Array.from(groups.entries()).map(([unit, options]) => ({ unit, options }));
+  }, [fixedCrewGroups]);
   const fixedCrewMembers = useMemo(() => {
     const selectedGroup = parseFixedCrewGroupKey(fixedCrewGroup);
     return selectedGroup.crew
@@ -1501,10 +1518,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   const fixedCrewEventOptionGroups = useMemo(() => {
     const getCoursePackageLabel = (item: SyllabusItemDetail) => {
+      const unit = normaliseFixedCrewUnitCode(item.unit);
       const courseLabel = Array.isArray(item.courses) && item.courses.length > 0
-        ? item.courses.filter(Boolean).join(', ')
+        ? item.courses
+          .filter(Boolean)
+          .map(course => stripLeadingUnitLabel(course, unit))
+          .join(', ')
         : '';
-      return courseLabel || item.phase || item.lmpType || 'Course/Package';
+      return courseLabel || stripLeadingUnitLabel(item.phase, unit) || item.lmpType || 'Course/Package';
     };
     const groups = new Map<string, SyllabusItemDetail[]>();
     fixedCrewEventOptions.forEach(item => {
@@ -1985,8 +2006,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     {fixedCrewEventOptionGroups.map(group => (
                       <optgroup key={group.label} label={group.label}>
                         {group.options.map(item => {
-                          const code = item.code || item.id || '';
-                          const label = [code, (item as any).title || item.eventDescription || (item as any).description].filter(Boolean).join(' - ');
+                          const unit = normaliseFixedCrewUnitCode(item.unit);
+                          const code = stripLeadingUnitLabel(item.code || item.id || '', unit);
+                          const description = stripLeadingUnitLabel((item as any).title || item.eventDescription || (item as any).description, unit);
+                          const label = [code, description].filter(Boolean).join(' - ');
                           const optionKey = getFixedCrewEventOptionKey(item);
                           return <option key={optionKey} value={optionKey}>{label}</option>;
                         })}
@@ -2005,7 +2028,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
                   >
                     <option value="">Select crew</option>
-                    {fixedCrewGroups.map(group => <option key={group} value={group}>{formatFixedCrewDisplayGroup(group)}</option>)}
+                    {fixedCrewGroupOptionGroups.map(group => (
+                      <optgroup key={group.unit} label={group.unit}>
+                        {group.options.map(crewGroup => {
+                          const parsed = parseFixedCrewGroupKey(crewGroup);
+                          return <option key={crewGroup} value={crewGroup}>{`CREW ${parsed.crew}`}</option>;
+                        })}
+                      </optgroup>
+                    ))}
                   </select>
                 </div>
                 <div>

@@ -21813,6 +21813,14 @@ const AddFlightTileModal = ({
       crew: raw.replace(/^CREW\s*/i, "").trim().toUpperCase()
     };
   };
+  const stripLeadingUnitLabel = (value, unit) => {
+    const text = String(value || "").trim();
+    const unitLabel = normaliseFixedCrewUnitCode2(unit);
+    if (!text || !unitLabel) return text;
+    if (!text.toUpperCase().startsWith(unitLabel)) return text;
+    const stripped = text.slice(unitLabel.length).replace(/^[\s\-_/]+/, "").trim();
+    return stripped || text;
+  };
   const fixedCrewStaff = reactExports.useMemo(() => instructorsData.filter((staff) => {
     const staffUnit = normaliseFixedCrewUnitCode2(staff.unit);
     return activeFixedCrewUnitCodeSet.size === 0 || activeFixedCrewUnitCodeSet.has(staffUnit);
@@ -21822,6 +21830,15 @@ const AddFlightTileModal = ({
     const unit = normaliseFixedCrewUnitCode2(staff.unit);
     return crew ? `${unit}::${crew}` : "";
   }).filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true })), [fixedCrewStaff]);
+  const fixedCrewGroupOptionGroups = reactExports.useMemo(() => {
+    const groups = /* @__PURE__ */ new Map();
+    fixedCrewGroups.forEach((groupKey) => {
+      const parsed = parseFixedCrewGroupKey(groupKey);
+      const unit = parsed.unit || "Unit";
+      groups.set(unit, [...groups.get(unit) || [], groupKey]);
+    });
+    return Array.from(groups.entries()).map(([unit, options]) => ({ unit, options }));
+  }, [fixedCrewGroups]);
   const fixedCrewMembers = reactExports.useMemo(() => {
     const selectedGroup = parseFixedCrewGroupKey(fixedCrewGroup);
     return selectedGroup.crew ? fixedCrewStaff.filter((staff) => {
@@ -22099,8 +22116,9 @@ const AddFlightTileModal = ({
   }, [activeFixedCrewUnitCodeSet, syllabusDetails]);
   const fixedCrewEventOptionGroups = reactExports.useMemo(() => {
     const getCoursePackageLabel = (item) => {
-      const courseLabel = Array.isArray(item.courses) && item.courses.length > 0 ? item.courses.filter(Boolean).join(", ") : "";
-      return courseLabel || item.phase || item.lmpType || "Course/Package";
+      const unit = normaliseFixedCrewUnitCode2(item.unit);
+      const courseLabel = Array.isArray(item.courses) && item.courses.length > 0 ? item.courses.filter(Boolean).map((course) => stripLeadingUnitLabel(course, unit)).join(", ") : "";
+      return courseLabel || stripLeadingUnitLabel(item.phase, unit) || item.lmpType || "Course/Package";
     };
     const groups = /* @__PURE__ */ new Map();
     fixedCrewEventOptions.forEach((item) => {
@@ -22531,8 +22549,10 @@ const AddFlightTileModal = ({
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select Fixed Crew event" }),
                           fixedCrewEventOptionGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "No Fixed Crew events for selected unit" }),
                           fixedCrewEventOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((item) => {
-                            const code = item.code || item.id || "";
-                            const label = [code, item.title || item.eventDescription || item.description].filter(Boolean).join(" - ");
+                            const unit = normaliseFixedCrewUnitCode2(item.unit);
+                            const code = stripLeadingUnitLabel(item.code || item.id || "", unit);
+                            const description = stripLeadingUnitLabel(item.title || item.eventDescription || item.description, unit);
+                            const label = [code, description].filter(Boolean).join(" - ");
                             const optionKey = getFixedCrewEventOptionKey(item);
                             return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: optionKey, children: label }, optionKey);
                           }) }, group.label))
@@ -22553,7 +22573,10 @@ const AddFlightTileModal = ({
                         className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                          fixedCrewGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group, children: formatFixedCrewDisplayGroup$1(group) }, group))
+                          fixedCrewGroupOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.options.map((crewGroup) => {
+                            const parsed = parseFixedCrewGroupKey(crewGroup);
+                            return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: crewGroup, children: `CREW ${parsed.crew}` }, crewGroup);
+                          }) }, group.unit))
                         ]
                       }
                     )
