@@ -706,26 +706,29 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         if (!rawRole) return '';
         return fixedCrewAircraftRoleOptions.find(option => crewPositionValuesMatch(option, rawRole, crewPositionTerminology)) || '';
     };
-    const getFixedCrewRoleLabel = (role?: string | null): string => {
-        const aircraftRole = resolveFixedCrewAircraftRole(role);
-        if (!aircraftRole) {
-            const rawRole = normaliseFixedCrewStaffRole(role, '');
-            return rawRole.toUpperCase() === 'AWO' ? 'AWO' : 'Unconfigured role';
-        }
+    const resolveFixedCrewStaffAircraftRole = (staff?: Partial<Instructor> | null): string => {
+        const rawRole = String(staff?.role || '').trim();
+        const normalisedRole = normaliseFixedCrewStaffRole(rawRole, staff?.unit || activeUnitCode);
+        return resolveFixedCrewAircraftRole(normalisedRole) || resolveFixedCrewAircraftRole(rawRole);
+    };
+    const getFixedCrewStaffRoleLabel = (staff?: Partial<Instructor> | null): string => {
+        const aircraftRole = resolveFixedCrewStaffAircraftRole(staff);
+        const rawRole = normaliseFixedCrewStaffRole(staff?.role, staff?.unit || activeUnitCode);
+        if (!aircraftRole) return rawRole.toUpperCase() === 'AWO' ? 'AWO' : 'Unconfigured role';
         return getCrewPositionDisplayLabel(aircraftRole, crewPositionTerminology, aircraftRole);
     };
-    const normaliseFixedCrewRosterRoleKey = (role?: string | null): string => {
-        const aircraftRole = resolveFixedCrewAircraftRole(role);
-        const rawRole = normaliseFixedCrewStaffRole(role, '');
+    const normaliseFixedCrewStaffRoleKey = (staff?: Partial<Instructor> | null): string => {
+        const aircraftRole = resolveFixedCrewStaffAircraftRole(staff);
+        const rawRole = normaliseFixedCrewStaffRole(staff?.role, staff?.unit || activeUnitCode);
         const entry = findCrewPositionEntry(aircraftRole || rawRole, crewPositionTerminology);
         return String(entry?.genericName || aircraftRole || rawRole || '').trim().toUpperCase();
     };
-    const fixedCrewRolesMatch = (left?: string | null, right?: string | null): boolean => {
-        const leftAircraftRole = resolveFixedCrewAircraftRole(left);
-        const rightAircraftRole = resolveFixedCrewAircraftRole(right);
+    const fixedCrewStaffRolesMatch = (left?: Partial<Instructor> | null, right?: Partial<Instructor> | null): boolean => {
+        const leftAircraftRole = resolveFixedCrewStaffAircraftRole(left);
+        const rightAircraftRole = resolveFixedCrewStaffAircraftRole(right);
         if (leftAircraftRole && rightAircraftRole) return leftAircraftRole === rightAircraftRole;
-        const leftKey = normaliseFixedCrewRosterRoleKey(left);
-        const rightKey = normaliseFixedCrewRosterRoleKey(right);
+        const leftKey = normaliseFixedCrewStaffRoleKey(left);
+        const rightKey = normaliseFixedCrewStaffRoleKey(right);
         return Boolean(leftKey && rightKey && leftKey === rightKey);
     };
     const fixedCrewGroups = useMemo(() => Array.from(new Set(instructorsData
@@ -873,7 +876,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             .filter(candidate => !assignedToCurrentEvent.has(candidate.name))
             .filter(candidate => !candidate.isAdminStaff)
             .filter(candidate => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit)
-            .filter(candidate => fixedCrewRolesMatch(candidate.role, role))
+            .filter(candidate => fixedCrewStaffRolesMatch(candidate, staff))
             .filter(candidate => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate))
             .filter(candidate => !staffHasEventConflict(candidate, bookingWindow))
             .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
@@ -932,12 +935,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 const aPic = a.staff.name === picName ? 0 : 1;
                 const bPic = b.staff.name === picName ? 0 : 1;
                 if (aPic !== bPic) return aPic - bPic;
-                const roleDiff = roleRank(getFixedCrewRoleLabel(a.staff.role)) - roleRank(getFixedCrewRoleLabel(b.staff.role));
+                const roleDiff = roleRank(getFixedCrewStaffRoleLabel(a.staff)) - roleRank(getFixedCrewStaffRoleLabel(b.staff));
                 if (roleDiff !== 0) return roleDiff;
                 return comparePeopleByConfiguredRank(a.staff, b.staff, personnelDisplaySettings, 'staff');
             })
             .reduce<Array<{ role: string; members: typeof fixedCrewRosterStatus }>>((groups, status) => {
-                const role = getFixedCrewRoleLabel(status.staff.role);
+                const role = getFixedCrewStaffRoleLabel(status.staff);
                 const existing = groups.find(group => group.role === role);
                 if (existing) existing.members.push(status);
                 else groups.push({ role, members: [status] });
@@ -971,13 +974,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         const bookingWindow = getEventBookingWindow(event);
         const unavailableUnit = normaliseFixedCrewUnitCode(unavailableStaff.unit);
         const substituteUnit = normaliseFixedCrewUnitCode(substitute.unit);
-        const unavailableRole = String(unavailableStaff.role || '').trim().toUpperCase();
-        const substituteRole = String(substitute.role || '').trim().toUpperCase();
         const reasons: string[] = [];
         if (!substituteUnit || substituteUnit !== unavailableUnit) {
             reasons.push(`${[substitute.rank, substitute.name].filter(Boolean).join(' ')} is not from the same unit as ${unavailableStaff.name}.`);
         }
-        if (!substituteRole || substituteRole !== unavailableRole) {
+        if (!fixedCrewStaffRolesMatch(substitute, unavailableStaff)) {
             reasons.push(`${[substitute.rank, substitute.name].filter(Boolean).join(' ')} is not assigned to the same role as ${unavailableStaff.name}.`);
         }
         if (staffHasAvailabilityConflict(substitute, bookingWindow, event.date)) {
@@ -1052,7 +1053,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                                                     >
                                                         {[staff.rank, staff.name].filter(Boolean).join(' ')}
                                                     </button>
-                                                    <span className="shrink-0 text-[11px] text-gray-400">{getFixedCrewRoleLabel(staff.role)}{isPic ? ' / PIC' : ''}</span>
+                                                    <span className="shrink-0 text-[11px] text-gray-400">{getFixedCrewStaffRoleLabel(staff)}{isPic ? ' / PIC' : ''}</span>
                                                 </div>
                                             );
                                         })}
@@ -1075,7 +1076,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                                 </div>
                                 <div className="mt-3 border-t border-gray-800 pt-2">
                                     <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300">
-                                        Available same-unit {getFixedCrewRoleLabel(activeCrewConflict.staff.role)}
+                                        Available same-unit {getFixedCrewStaffRoleLabel(activeCrewConflict.staff)}
                                     </div>
                                     {activeCrewConflict.alternatives.length > 0 ? (
                                         <div className="space-y-0.5">
