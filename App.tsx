@@ -35914,7 +35914,7 @@ appliedUpdates.forEach(update => {
                             aircraftNumberSettings={aircraftNumberSettings}
                        />;
             case 'InstructorSchedule':
-                const locationFilteredInstructorsForSchedule = instructorsData
+                const locationFilteredInstructorsForSchedule = [...instructorsData]
                     .sort((a, b) => {
                         // First sort by unit (group by unit)
                         const unitA = a.unit || 'ZZZ'; // Put staff without unit at the end
@@ -35965,7 +35965,7 @@ appliedUpdates.forEach(update => {
                 }
             case 'NextDayInstructorSchedule':
                 // Apply same sorting for Next Day view: group by unit, then configured rank/name order within unit.
-                const sortedNextDayInstructors = instructorsData
+                const sortedNextDayInstructors = [...instructorsData]
                     .sort((a, b) => {
                         const unitA = a.unit || 'ZZZ';
                         const unitB = b.unit || 'ZZZ';

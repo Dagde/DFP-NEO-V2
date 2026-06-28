@@ -95,8 +95,19 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
     : props.archivedInstructorsData;
 
   // App already provides the active location/unit scoped staff list.
-  const locationFilteredInstructorsForSchedule = scopedInstructorsData
+  const shouldGroupCombinedUnitStaffSchedule = isFixedCrewModel && sharedUnitTabs.length > 1;
+  const scheduleInstructorsData = shouldGroupCombinedUnitStaffSchedule
+    ? props.instructorsData.filter(instructor => sharedUnitTabs.includes(normaliseUnitCode(instructor.unit)))
+    : scopedInstructorsData;
+  const locationFilteredInstructorsForSchedule = [...scheduleInstructorsData]
     .sort((a, b) => {
+      if (shouldGroupCombinedUnitStaffSchedule) {
+        const unitA = normaliseUnitCode(a.unit) || 'ZZZ';
+        const unitB = normaliseUnitCode(b.unit) || 'ZZZ';
+        if (unitA !== unitB) return unitA.localeCompare(unitB);
+        return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, 'staff');
+      }
+
       // First sort by Role - flying staff before SIM IPs
       const roleA = a.role === 'QFI' || a.role === 'Pilot' ? 0 : 1;
       const roleB = b.role === 'QFI' || b.role === 'Pilot' ? 0 : 1;

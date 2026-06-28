@@ -42201,7 +42201,15 @@ const StaffView = (props) => {
   }, [activeTab, isFixedCrewModel]);
   const scopedInstructorsData = shouldShowUnitTabs ? props.instructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : props.instructorsData;
   const scopedArchivedInstructorsData = shouldShowUnitTabs ? props.archivedInstructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : props.archivedInstructorsData;
-  const locationFilteredInstructorsForSchedule = scopedInstructorsData.sort((a, b) => {
+  const shouldGroupCombinedUnitStaffSchedule = isFixedCrewModel && sharedUnitTabs.length > 1;
+  const scheduleInstructorsData = shouldGroupCombinedUnitStaffSchedule ? props.instructorsData.filter((instructor) => sharedUnitTabs.includes(normaliseUnitCode2(instructor.unit))) : scopedInstructorsData;
+  const locationFilteredInstructorsForSchedule = [...scheduleInstructorsData].sort((a, b) => {
+    if (shouldGroupCombinedUnitStaffSchedule) {
+      const unitA = normaliseUnitCode2(a.unit) || "ZZZ";
+      const unitB = normaliseUnitCode2(b.unit) || "ZZZ";
+      if (unitA !== unitB) return unitA.localeCompare(unitB);
+      return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, "staff");
+    }
     const roleA = a.role === "QFI" || a.role === "Pilot" ? 0 : 1;
     const roleB = b.role === "QFI" || b.role === "Pilot" ? 0 : 1;
     if (roleA !== roleB) {
@@ -100476,7 +100484,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           }
         );
       case "InstructorSchedule":
-        const locationFilteredInstructorsForSchedule = instructorsData.sort((a, b) => {
+        const locationFilteredInstructorsForSchedule = [...instructorsData].sort((a, b) => {
           const unitA = a.unit || "ZZZ";
           const unitB = b.unit || "ZZZ";
           if (unitA !== unitB) {
@@ -100524,7 +100532,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           throw error;
         }
       case "NextDayInstructorSchedule":
-        const sortedNextDayInstructors = instructorsData.sort((a, b) => {
+        const sortedNextDayInstructors = [...instructorsData].sort((a, b) => {
           const unitA = a.unit || "ZZZ";
           const unitB = b.unit || "ZZZ";
           if (unitA !== unitB) {
