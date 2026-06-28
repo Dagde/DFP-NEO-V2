@@ -30,6 +30,8 @@ import {
 interface AddFlightTileModalProps {
   onClose: () => void;
   onSave: (events: ScheduleEvent[]) => void;
+  initialEvent?: ScheduleEvent | null;
+  eventsForDate?: ScheduleEvent[];
   instructors: string[];
   trainees: string[];
   syllabusDetails: SyllabusItemDetail[];
@@ -1054,7 +1056,7 @@ const FlightTile: React.FC<TileProps> = ({
   );
 };// ─── Main Modal ───────────────────────────────────────────────────────────────
 const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
-  onClose, onSave, instructors, trainees, syllabusDetails, school,
+  onClose, onSave, initialEvent = null, eventsForDate = [], instructors, trainees, syllabusDetails, school,
   traineesData, instructorsData, courseColors, date, traineeLMPs, scores,
   locationOpAreas = {},
   formationCallsigns = [],
@@ -1111,6 +1113,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [deploymentEndTime,    setDeploymentEndTime]    = useState('08:00');
   const [deploymentAircraftCount, setDeploymentAircraftCount] = useState(1);
   const [guidedStep, setGuidedStep] = useState<GuideStep>('startTime');
+  const suppressNextCategoryResetRef = useRef(false);
   const aircraftConfigOptions = useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0
       ? aircraftConfigurationDefinitions
@@ -1120,6 +1123,13 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       : [BASE_AIRCRAFT_CONFIG, ...definitions];
   }, [aircraftConfigurationDefinitions]);
   const isFixedCrewModel = normaliseOperationalModel(operationalModel) === 'fixed_crew';
+  const isEditingExistingEvent = Boolean(initialEvent?.id && initialEvent?.resourceId);
+  const existingFormationEvents = useMemo(() => {
+    if (!initialEvent?.formationId) return initialEvent ? [initialEvent] : [];
+    return eventsForDate
+      .filter(candidate => candidate.formationId === initialEvent.formationId)
+      .sort((a, b) => Number(a.formationPosition || 0) - Number(b.formationPosition || 0));
+  }, [eventsForDate, initialEvent]);
   const normaliseFixedCrewUnitCode = (value?: string | null) => String(value || '').trim().toUpperCase();
   const activeFixedCrewUnitCodes = useMemo(() => {
     const rawUnits = activeUnitCodes.length > 0
@@ -1717,6 +1727,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   // ── Reset on category change ──────────────────────────────────────────────
   useEffect(() => {
+    if (suppressNextCategoryResetRef.current) {
+      suppressNextCategoryResetRef.current = false;
+      return;
+    }
     setPicName(''); setStudentName(''); setFlightNumber('');
     setStartTime(8.0); setDuration(1.2);
     setArea(opAreas[0] || '-'); setAircraftNumber('001');
@@ -1880,6 +1894,73 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     || profile.currency === flightNumber
   ));
 
+  useEffect(() => {
+    if (!initialEvent || !isFixedCrewModel) return;
+
+    const initialCategory = (initialEvent.eventCategory === 'lmp_currency'
+      || initialEvent.eventCategory === 'sct'
+      || initialEvent.eventCategory === 'staff_cat'
+      || initialEvent.eventCategory === 'twr_di'
+      || initialEvent.eventCategory === 'lmp_event')
+      ? initialEvent.eventCategory
+      : 'lmp_event';
+
+    suppressNextCategoryResetRef.current = initialCategory !== eventCategory;
+    setIsDeploy(Boolean(initialEvent.type === 'deployment' || initialEvent.isDeploy));
+    setEventCategory(initialCategory as any);
+    setFlightNumber(initialEvent.flightNumber || '');
+    setStartTime(Number(initialEvent.startTime) || 8);
+    setDuration(Number(initialEvent.duration) || (initialCategory === 'sct' ? 2 : 4));
+    setArea(initialEvent.area || (opAreas[0] || '-'));
+    const parsedAircraftNumber = parseAircraftNumber(initialEvent.aircraftNumber || '001', aircraftNumberSettings);
+    setAircraftNumber(parsedAircraftNumber.number || '001');
+    setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
+    setAircraftConfigId(initialEvent.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
+    setLocationType(initialEvent.locationType || 'Local');
+    setOrigin(initialEvent.origin || school);
+    setDestination(initialEvent.destination || school);
+    setAircraftCount(Math.max(1, Math.floor(Number(initialEvent.aircraftCount || initialEvent.formationSize) || 1)));
+    setCallsign(initialEvent.callsign || '');
+    setNotes(initialEvent.notes || '');
+    setFixedCrewGroup(initialEvent.fixedCrewGroup || '');
+    setFixedCrewPic(initialEvent.fixedCrewPic || initialEvent.pilot || initialEvent.instructor || '');
+    setFixedCrewManifestStatus(initialEvent.fixedCrewManifestStatus || 'pending');
+    setFixedCrewManifestNotes(initialEvent.fixedCrewManifestNotes || '');
+    setDeploymentStartDate(initialEvent.deploymentStartDate || initialEvent.date || date);
+    setDeploymentStartTime(initialEvent.deploymentStartTime || formatTime(Number(initialEvent.startTime) || 8));
+    setDeploymentEndDate(initialEvent.deploymentEndDate || initialEvent.date || date);
+    setDeploymentEndTime(initialEvent.deploymentEndTime || formatTime((Number(initialEvent.startTime) || 8) + (Number(initialEvent.duration) || 1)));
+    setDeploymentAircraftCount(Math.max(1, Math.floor(Number(initialEvent.deploymentAircraftCount) || 1)));
+
+    if (initialEvent.eventCategory === 'sct') {
+      const profile = fixedCrewCurrencyProfileOptions.find(candidate => (
+        candidate.code === initialEvent.flightNumber
+        || candidate.code === initialEvent.eventCode
+        || candidate.name === initialEvent.flightNumber
+        || candidate.currency === initialEvent.currency
+      ));
+      setFixedCrewEventKey(profile ? getFixedCrewCurrencyProfileOptionKey(profile) : '');
+    } else {
+      const item = syllabusDetails.find(candidate => (
+        candidate.code === initialEvent.flightNumber
+        || candidate.id === initialEvent.flightNumber
+        || candidate.code === initialEvent.eventCode
+        || candidate.id === initialEvent.eventCode
+      ));
+      setFixedCrewEventKey(item ? getFixedCrewEventOptionKey(item) : '');
+    }
+
+    const formationSiblings = existingFormationEvents
+      .filter(candidate => candidate.id !== initialEvent.id)
+      .map(candidate => ({
+        crewGroup: candidate.fixedCrewGroup || '',
+        pic: candidate.fixedCrewPic || candidate.pilot || candidate.instructor || '',
+      }));
+    setFixedCrewFormationAssignments(formationSiblings);
+  // Initial edit hydration should run once per selected event; changing dropdown data should not reset user edits.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialEvent?.id, isFixedCrewModel]);
+
   const updateFormationCrew = (index: number, updates: Partial<FormationCrewDraft>) => {
     setFormationCrew(prev => prev.map((crewMember, crewIndex) => (
       crewIndex === index ? { ...crewMember, ...updates } : crewMember
@@ -1947,7 +2028,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           const assignedPic = assignment.pic || fixedCrewPic;
           const assignedCrewMembers = getFixedCrewMembersForGroup(assignedCrewGroup);
           eventsToSave.push({
-          id: uuidv4(),
+          id: isEditingExistingEvent && existingFormationEvents[index]?.id ? existingFormationEvents[index].id : uuidv4(),
           date,
           type: eventType,
           eventCategory,
@@ -1966,7 +2047,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           callsign,
           locationType,
           color: 'bg-emerald-500',
-          resourceId: '',
+          resourceId: isEditingExistingEvent && existingFormationEvents[index]?.resourceId ? (existingFormationEvents[index].resourceId || '') : '',
           notes: [
             notes,
             selectedFixedCrewCurrencyProfile?.currency ? `Currency: ${selectedFixedCrewCurrencyProfile.currency}` : '',
@@ -1984,7 +2065,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           fixedCrewManifestStatus,
           fixedCrewManifestNotes,
           aircraftCount: savedAircraftCount,
-          formationId,
+          formationId: isEditingExistingEvent && index === 0 && savedAircraftCount === 1 ? initialEvent!.formationId : formationId,
           formationPosition: savedAircraftCount > 1 ? index + 1 : undefined,
           formationSize: savedAircraftCount > 1 ? savedAircraftCount : undefined,
           taskingAircraftIndex: savedAircraftCount > 1 ? index + 1 : undefined,

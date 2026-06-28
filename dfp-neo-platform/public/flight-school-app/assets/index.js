@@ -2723,7 +2723,7 @@ const normaliseAircraftNumberSettings = (settings) => {
     defaultPrefix
   };
 };
-const parseAircraftNumber = (value, settings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS) => {
+const parseAircraftNumber$1 = (value, settings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS) => {
   const raw = cleanToken(value);
   const prefix = settings.defaultPrefix || settings.prefixes[0] || "";
   if (!raw) return { prefix, number: "" };
@@ -2737,7 +2737,7 @@ const parseAircraftNumber = (value, settings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS)
   return { prefix, number: raw };
 };
 const formatAircraftNumber = (number, prefix, settings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS) => {
-  const parsed = parseAircraftNumber(number, settings);
+  const parsed = parseAircraftNumber$1(number, settings);
   const cleanNumber2 = parsed.number || cleanToken(number);
   if (!cleanNumber2) return "";
   if (!settings.usePrefix) return cleanNumber2;
@@ -7386,7 +7386,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const isFixedCrewCrewEvent = !!event.fixedCrewGroup;
   const isTwrDiEvent = event.eventCategory === "twr_di";
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
-  const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
+  const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber$1(event.aircraftNumber, aircraftNumberSettings).number : "";
   const picName = isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
   const fixedCrewDisplay = isFixedCrewCrewEvent ? formatFixedCrewDisplayGroup$3(event.fixedCrewGroup) : "";
   const studentName = isFixedCrewCrewEvent ? fixedCrewDisplay : isTaskingEvent2 || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
@@ -17968,7 +17968,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel: operationalModel2, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel: operationalModel2, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -17994,7 +17994,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [eventType, setEventType] = reactExports.useState(event.type);
   const [startTime, setStartTime] = reactExports.useState(normalizeStartTimeValue(event.startTime));
   const [area, setArea] = reactExports.useState(event.area || "A");
-  const initialAircraftNumber = parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings);
+  const initialAircraftNumber = parseAircraftNumber$1(event.aircraftNumber || "001", aircraftNumberSettings);
   const [aircraftNumber, setAircraftNumber] = reactExports.useState(initialAircraftNumber.number || "001");
   const [aircraftNumberPrefix, setAircraftNumberPrefix] = reactExports.useState(initialAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
   const [aircraftConfigId, setAircraftConfigId] = reactExports.useState(event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
@@ -18805,7 +18805,7 @@ ${swapNote}` : swapNote
     setEventType(event.type);
     setStartTime(normalizeStartTimeValue(event.startTime));
     setArea(event.area || "A");
-    const parsedAircraftNumber = parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings);
+    const parsedAircraftNumber = parseAircraftNumber$1(event.aircraftNumber || "001", aircraftNumberSettings);
     setAircraftNumber(parsedAircraftNumber.number || "001");
     setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
     setAircraftConfigId(event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
@@ -19717,7 +19717,13 @@ ${swapNote}` : swapNote
             ] }),
             !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setIsEditing(true), className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Edit" }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
+                if (isFixedCrewModel && onEditFixedCrewTile) {
+                  onEditFixedCrewTile();
+                  return;
+                }
+                setIsEditing(true);
+              }, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Edit" }) })
             ] })
           ] })
         ] }),
@@ -21717,6 +21723,8 @@ const FlightTile = ({
 const AddFlightTileModal = ({
   onClose,
   onSave,
+  initialEvent = null,
+  eventsForDate = [],
   instructors,
   trainees,
   syllabusDetails,
@@ -21782,11 +21790,17 @@ const AddFlightTileModal = ({
   const [deploymentEndTime, setDeploymentEndTime] = reactExports.useState("08:00");
   const [deploymentAircraftCount, setDeploymentAircraftCount] = reactExports.useState(1);
   const [guidedStep, setGuidedStep] = reactExports.useState("startTime");
+  const suppressNextCategoryResetRef = reactExports.useRef(false);
   const aircraftConfigOptions = reactExports.useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
     return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
   }, [aircraftConfigurationDefinitions]);
   const isFixedCrewModel = normaliseOperationalModel(operationalModel2) === "fixed_crew";
+  const isEditingExistingEvent = Boolean(initialEvent?.id && initialEvent?.resourceId);
+  const existingFormationEvents = reactExports.useMemo(() => {
+    if (!initialEvent?.formationId) return initialEvent ? [initialEvent] : [];
+    return eventsForDate.filter((candidate) => candidate.formationId === initialEvent.formationId).sort((a, b) => Number(a.formationPosition || 0) - Number(b.formationPosition || 0));
+  }, [eventsForDate, initialEvent]);
   const normaliseFixedCrewUnitCode2 = (value) => String(value || "").trim().toUpperCase();
   const activeFixedCrewUnitCodes = reactExports.useMemo(() => {
     const rawUnits = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || "").split("+");
@@ -22252,6 +22266,10 @@ const AddFlightTileModal = ({
     setCallsignOptions([]);
   }, [picName, instructorsData, traineesData, formationCallsigns, school, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
   reactExports.useEffect(() => {
+    if (suppressNextCategoryResetRef.current) {
+      suppressNextCategoryResetRef.current = false;
+      return;
+    }
     setPicName("");
     setStudentName("");
     setFlightNumber("");
@@ -22392,6 +22410,48 @@ const AddFlightTileModal = ({
   };
   const selectedFixedCrewEvent = fixedCrewEventOptions.find((item) => getFixedCrewEventOptionKey(item) === fixedCrewEventKey) || fixedCrewEventOptions.find((item) => item.code === flightNumber || item.id === flightNumber);
   const selectedFixedCrewCurrencyProfile = fixedCrewCurrencyProfileOptions.find((profile) => getFixedCrewCurrencyProfileOptionKey(profile) === fixedCrewEventKey || profile.code === flightNumber || profile.name === flightNumber || profile.currency === flightNumber);
+  reactExports.useEffect(() => {
+    if (!initialEvent || !isFixedCrewModel) return;
+    const initialCategory = initialEvent.eventCategory === "lmp_currency" || initialEvent.eventCategory === "sct" || initialEvent.eventCategory === "staff_cat" || initialEvent.eventCategory === "twr_di" || initialEvent.eventCategory === "lmp_event" ? initialEvent.eventCategory : "lmp_event";
+    suppressNextCategoryResetRef.current = initialCategory !== eventCategory;
+    setIsDeploy(Boolean(initialEvent.type === "deployment" || initialEvent.isDeploy));
+    setEventCategory(initialCategory);
+    setFlightNumber(initialEvent.flightNumber || "");
+    setStartTime(Number(initialEvent.startTime) || 8);
+    setDuration(Number(initialEvent.duration) || (initialCategory === "sct" ? 2 : 4));
+    setArea(initialEvent.area || (opAreas[0] || "-"));
+    const parsedAircraftNumber = parseAircraftNumber(initialEvent.aircraftNumber || "001", aircraftNumberSettings);
+    setAircraftNumber(parsedAircraftNumber.number || "001");
+    setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
+    setAircraftConfigId(initialEvent.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
+    setLocationType(initialEvent.locationType || "Local");
+    setOrigin(initialEvent.origin || school);
+    setDestination(initialEvent.destination || school);
+    setAircraftCount(Math.max(1, Math.floor(Number(initialEvent.aircraftCount || initialEvent.formationSize) || 1)));
+    setCallsign(initialEvent.callsign || "");
+    setNotes(initialEvent.notes || "");
+    setFixedCrewGroup(initialEvent.fixedCrewGroup || "");
+    setFixedCrewPic(initialEvent.fixedCrewPic || initialEvent.pilot || initialEvent.instructor || "");
+    setFixedCrewManifestStatus(initialEvent.fixedCrewManifestStatus || "pending");
+    setFixedCrewManifestNotes(initialEvent.fixedCrewManifestNotes || "");
+    setDeploymentStartDate(initialEvent.deploymentStartDate || initialEvent.date || date);
+    setDeploymentStartTime(initialEvent.deploymentStartTime || formatTime$3(Number(initialEvent.startTime) || 8));
+    setDeploymentEndDate(initialEvent.deploymentEndDate || initialEvent.date || date);
+    setDeploymentEndTime(initialEvent.deploymentEndTime || formatTime$3((Number(initialEvent.startTime) || 8) + (Number(initialEvent.duration) || 1)));
+    setDeploymentAircraftCount(Math.max(1, Math.floor(Number(initialEvent.deploymentAircraftCount) || 1)));
+    if (initialEvent.eventCategory === "sct") {
+      const profile = fixedCrewCurrencyProfileOptions.find((candidate) => candidate.code === initialEvent.flightNumber || candidate.code === initialEvent.eventCode || candidate.name === initialEvent.flightNumber || candidate.currency === initialEvent.currency);
+      setFixedCrewEventKey(profile ? getFixedCrewCurrencyProfileOptionKey(profile) : "");
+    } else {
+      const item = syllabusDetails.find((candidate) => candidate.code === initialEvent.flightNumber || candidate.id === initialEvent.flightNumber || candidate.code === initialEvent.eventCode || candidate.id === initialEvent.eventCode);
+      setFixedCrewEventKey(item ? getFixedCrewEventOptionKey(item) : "");
+    }
+    const formationSiblings = existingFormationEvents.filter((candidate) => candidate.id !== initialEvent.id).map((candidate) => ({
+      crewGroup: candidate.fixedCrewGroup || "",
+      pic: candidate.fixedCrewPic || candidate.pilot || candidate.instructor || ""
+    }));
+    setFixedCrewFormationAssignments(formationSiblings);
+  }, [initialEvent?.id, isFixedCrewModel]);
   const updateFormationCrew = (index, updates) => {
     setFormationCrew((prev) => prev.map((crewMember, crewIndex) => crewIndex === index ? { ...crewMember, ...updates } : crewMember));
   };
@@ -22446,7 +22506,7 @@ const AddFlightTileModal = ({
           const assignedPic = assignment.pic || fixedCrewPic;
           const assignedCrewMembers = getFixedCrewMembersForGroup(assignedCrewGroup);
           eventsToSave.push({
-            id: v4(),
+            id: isEditingExistingEvent && existingFormationEvents[index]?.id ? existingFormationEvents[index].id : v4(),
             date,
             type: eventType,
             eventCategory,
@@ -22465,7 +22525,7 @@ const AddFlightTileModal = ({
             callsign,
             locationType,
             color: "bg-emerald-500",
-            resourceId: "",
+            resourceId: isEditingExistingEvent && existingFormationEvents[index]?.resourceId ? existingFormationEvents[index].resourceId || "" : "",
             notes: [
               notes,
               selectedFixedCrewCurrencyProfile?.currency ? `Currency: ${selectedFixedCrewCurrencyProfile.currency}` : "",
@@ -22483,7 +22543,7 @@ const AddFlightTileModal = ({
             fixedCrewManifestStatus,
             fixedCrewManifestNotes,
             aircraftCount: savedAircraftCount,
-            formationId,
+            formationId: isEditingExistingEvent && index === 0 && savedAircraftCount === 1 ? initialEvent.formationId : formationId,
             formationPosition: savedAircraftCount > 1 ? index + 1 : void 0,
             formationSize: savedAircraftCount > 1 ? savedAircraftCount : void 0,
             taskingAircraftIndex: savedAircraftCount > 1 ? index + 1 : void 0,
@@ -63659,7 +63719,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       setResult(saved.result || "");
     }
     if (saved.aircraftNumber) {
-      const parsedAircraftNumber = parseAircraftNumber(saved.aircraftNumber, aircraftNumberSettings);
+      const parsedAircraftNumber = parseAircraftNumber$1(saved.aircraftNumber, aircraftNumberSettings);
       setAircraftNumber(parsedAircraftNumber.number || "001");
       setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
     }
@@ -63697,8 +63757,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     if (saved.crewLog && typeof saved.crewLog === "object") setCrewLogOverride(saved.crewLog);
     initialFormState.current = {
       result: saved.result != null ? saved.result || "" : result,
-      aircraftNumber: saved.aircraftNumber ? parseAircraftNumber(saved.aircraftNumber, aircraftNumberSettings).number || "001" : aircraftNumber,
-      aircraftNumberPrefix: saved.aircraftNumber ? parseAircraftNumber(saved.aircraftNumber, aircraftNumberSettings).prefix || aircraftNumberSettings.defaultPrefix : aircraftNumberPrefix,
+      aircraftNumber: saved.aircraftNumber ? parseAircraftNumber$1(saved.aircraftNumber, aircraftNumberSettings).number || "001" : aircraftNumber,
+      aircraftNumberPrefix: saved.aircraftNumber ? parseAircraftNumber$1(saved.aircraftNumber, aircraftNumberSettings).prefix || aircraftNumberSettings.defaultPrefix : aircraftNumberPrefix,
       from: saved.from || from,
       to: saved.to || to,
       isFlightLog: saved.isFlightLog ?? isFlightLog,
@@ -102855,6 +102915,8 @@ Do you want to replace the existing entry?`,
             setSelectedEvent(null);
             setIsAddingTile(false);
           },
+          initialEvent: selectedEvent,
+          eventsForDate,
           instructors: instructorsData.map((i) => i.name),
           trainees: allTraineesData.map((t) => t.fullName),
           syllabusDetails: activeOperationalModel === "fixed_crew" ? visibleSyllabusDetails : syllabusDetails,
@@ -103018,6 +103080,11 @@ Do you want to replace the existing entry?`,
           baselineEvent: selectedEvent ? baselineSchedules[activeBaselineKey]?.find((b) => b.id === selectedEvent.id) || null : null,
           onSendAlert: handleSendAlert,
           onClearAlert: handleClearAlert,
+          onEditFixedCrewTile: () => {
+            setIsEditingDefault(false);
+            setIsPriorityEventCreation(highestPriorityEvents.some((p) => p.id === selectedEvent.id));
+            setIsAddingTile(true);
+          },
           canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule" && !isPastDfpDate(selectedEvent.date),
           resourceDisplayNames,
           aircraftNumberSettings,

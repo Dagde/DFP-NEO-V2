@@ -38710,6 +38710,8 @@ appliedUpdates.forEach(update => {
                         setSelectedEvent(null);
                         setIsAddingTile(false);
                     }}
+                    initialEvent={selectedEvent}
+                    eventsForDate={eventsForDate}
                     instructors={instructorsData.map(i => i.name)}
                     trainees={allTraineesData.map(t => t.fullName)}
                     syllabusDetails={activeOperationalModel === 'fixed_crew' ? visibleSyllabusDetails : syllabusDetails}
@@ -38893,6 +38895,11 @@ appliedUpdates.forEach(update => {
                     baselineEvent={selectedEvent ? (baselineSchedules[activeBaselineKey]?.find(b => b.id === selectedEvent.id) || null) : null}
                     onSendAlert={handleSendAlert}
                     onClearAlert={handleClearAlert}
+                    onEditFixedCrewTile={() => {
+                        setIsEditingDefault(false);
+                        setIsPriorityEventCreation(highestPriorityEvents.some(p => p.id === selectedEvent.id));
+                        setIsAddingTile(true);
+                    }}
                     canSendAlert={['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission) && activeView === 'Program Schedule' && !isPastDfpDate(selectedEvent.date)}
                     resourceDisplayNames={resourceDisplayNames}
                     aircraftNumberSettings={aircraftNumberSettings}

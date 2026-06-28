@@ -439,7 +439,8 @@ interface EventDetailModalProps {
     canSendAlert?: boolean;
     alertData?: any | null;
     baselineEvent?: any | null;
-    onClearAlert?: (eventId: string) => void;
+  onClearAlert?: (eventId: string) => void;
+    onEditFixedCrewTile?: () => void;
     resourceDisplayNames?: ResourceDisplayNames;
     aircraftNumberSettings?: AircraftNumberSettings;
     aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
@@ -496,7 +497,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = '', staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, isReadOnly = false }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = '', staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, isReadOnly = false }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -2771,7 +2772,13 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         {isFrozen && (
                                             <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                         )}
-                                        <button onClick={() => setIsEditing(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                        <button onClick={() => {
+                                            if (isFixedCrewModel && onEditFixedCrewTile) {
+                                                onEditFixedCrewTile();
+                                                return;
+                                            }
+                                            setIsEditing(true);
+                                        }} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
                                             <span className="text-center leading-tight">Edit</span>
                                         </button>
                                     </div>}
