@@ -2848,7 +2848,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               {requests.map(req => {
                   const expiryInfo = calculateDaysToExpire(req.currencyExpire);
                   const tileLabelClass = 'mb-2 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
-                  const tileBaseClass = 'h-[140px] w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 p-2 text-left shadow-sm';
+                  const tileBaseClass = 'min-h-[140px] w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 p-2 text-left shadow-sm';
                   const controlClass = 'w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500';
                   const selectedCrewGroup = fixedCrewRequestCrewGroups.find(group => (
                     group.key === req.crewGroupKey
@@ -2945,6 +2945,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   <div className={`${tileBaseClass} flex flex-col`}>
                                       <div className={tileLabelClass}>Crew</div>
                                       {isFixedCrewModel ? (
+                                        <div className="space-y-2">
+                                          <div>
+                                            {aircraftCount > 1 && <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300">A/C 1</div>}
                                           <select
                                               value={selectedCrewGroup?.key || ''}
                                               onChange={e => {
@@ -2967,10 +2970,49 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                   <optgroup key={unitCode} label={unitCode}>
                                                       {groups.map(group => (
                                                           <option key={group.key} value={group.key}>{group.label}</option>
-                                                      ))}
-                                                  </optgroup>
-                                              ))}
+                                                  ))}
+                                              </optgroup>
+                                          ))}
                                           </select>
+                                          </div>
+                                          {aircraftCount > 1 && formationAssignments.map((assignment, assignmentIndex) => {
+                                              const assignmentCrewGroup = fixedCrewRequestCrewGroups.find(group => (
+                                                  group.key === assignment.crewGroupKey
+                                                  || (group.crewValue === String(assignment.crewGroup || '').replace(/^CREW\s*/i, '').trim().toUpperCase()
+                                                      && group.unitCode === String(assignment.crewUnitCode || '').trim().toUpperCase())
+                                              ));
+                                              return (
+                                                <div key={`${req.id}-formation-crew-${assignmentIndex}`}>
+                                                  <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300">A/C {assignmentIndex + 2}</div>
+                                                  <select
+                                                      value={assignmentCrewGroup?.key || ''}
+                                                      onChange={e => {
+                                                          const group = fixedCrewRequestCrewGroups.find(candidate => candidate.key === e.target.value);
+                                                          const picCandidates = (group?.members || []).filter(member => staffHasPicQualification(member));
+                                                          const defaultPic = picCandidates.length === 1 ? picCandidates[0].name : '';
+                                                          updateFormationAssignment(assignmentIndex, {
+                                                              crewGroupKey: group?.key || '',
+                                                              crewGroup: group?.crewValue || '',
+                                                              crewUnitCode: group?.unitCode || '',
+                                                              crewDisplayLabel: group?.label || '',
+                                                              crewIndividual: defaultPic,
+                                                          });
+                                                      }}
+                                                      className={controlClass}
+                                                  >
+                                                      <option value="">Select crew</option>
+                                                      {Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => (
+                                                          <optgroup key={unitCode} label={unitCode}>
+                                                              {groups.map(group => (
+                                                                  <option key={group.key} value={group.key}>{group.label}</option>
+                                                              ))}
+                                                          </optgroup>
+                                                      ))}
+                                                  </select>
+                                                </div>
+                                              );
+                                          })}
+                                        </div>
                                       ) : (
                                           <select value={req.name} onChange={e => onUpdateSctRequest(req.id, 'name', e.target.value, type)} className={controlClass}>
                                               <option value="">Select Instructor</option>
@@ -2981,6 +3023,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   <div className={`${tileBaseClass} flex flex-col`}>
                                       <div className={tileLabelClass}>PIC</div>
                                       {isFixedCrewModel ? (
+                                        <div className="space-y-2">
+                                          <div>
+                                            {aircraftCount > 1 && <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300">A/C 1</div>}
                                           <select
                                               value={req.crewIndividual || ''}
                                               onChange={e => {
@@ -3008,6 +3053,32 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                   </optgroup>
                                               )}
                                           </select>
+                                          </div>
+                                          {aircraftCount > 1 && formationAssignments.map((assignment, assignmentIndex) => {
+                                              const assignmentCrewGroup = fixedCrewRequestCrewGroups.find(group => (
+                                                  group.key === assignment.crewGroupKey
+                                                  || (group.crewValue === String(assignment.crewGroup || '').replace(/^CREW\s*/i, '').trim().toUpperCase()
+                                                      && group.unitCode === String(assignment.crewUnitCode || '').trim().toUpperCase())
+                                              ));
+                                              const assignmentPicCandidates = (assignmentCrewGroup?.members || []).filter(member => staffHasPicQualification(member));
+                                              return (
+                                                <div key={`${req.id}-formation-pic-${assignmentIndex}`}>
+                                                  <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300">A/C {assignmentIndex + 2}</div>
+                                                  <select
+                                                      value={assignment.crewIndividual || ''}
+                                                      onChange={e => updateFormationAssignment(assignmentIndex, { crewIndividual: e.target.value })}
+                                                      disabled={!assignmentCrewGroup}
+                                                      className={controlClass}
+                                                  >
+                                                      <option value="">{assignmentCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
+                                                      {assignmentPicCandidates.map(member => (
+                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{member.name}</option>
+                                                      ))}
+                                                  </select>
+                                                </div>
+                                              );
+                                          })}
+                                        </div>
                                       ) : (
                                           <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-500">N/A</div>
                                       )}
@@ -3084,67 +3155,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                       </select>
                                   </div>
                               </div>
-                              {isFixedCrewModel && aircraftCount > 1 && (
-                                  <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
-                                      <div className="mb-3 flex items-center justify-between gap-3">
-                                          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-300">Formation Crew</div>
-                                          <div className="text-[10px] text-slate-500">Aircraft 1 uses the Crew and PIC tiles above.</div>
-                                      </div>
-                                      <div className="space-y-2">
-                                          {formationAssignments.map((assignment, assignmentIndex) => {
-                                              const assignmentCrewGroup = fixedCrewRequestCrewGroups.find(group => (
-                                                  group.key === assignment.crewGroupKey
-                                                  || (group.crewValue === String(assignment.crewGroup || '').replace(/^CREW\s*/i, '').trim().toUpperCase()
-                                                      && group.unitCode === String(assignment.crewUnitCode || '').trim().toUpperCase())
-                                              ));
-                                              const assignmentPicCandidates = (assignmentCrewGroup?.members || []).filter(member => staffHasPicQualification(member));
-                                              return (
-                                                  <div key={`${req.id}-formation-${assignmentIndex}`} className="grid gap-2 rounded-md border border-slate-800 bg-slate-900/70 p-2 md:grid-cols-[4.25rem_minmax(0,1fr)_minmax(0,1fr)]">
-                                                      <div className="flex items-center text-[10px] font-black uppercase tracking-[0.12em] text-sky-300">
-                                                          A/C {assignmentIndex + 2}
-                                                      </div>
-                                                      <select
-                                                          value={assignmentCrewGroup?.key || ''}
-                                                          onChange={e => {
-                                                              const group = fixedCrewRequestCrewGroups.find(candidate => candidate.key === e.target.value);
-                                                              const picCandidates = (group?.members || []).filter(member => staffHasPicQualification(member));
-                                                              const defaultPic = picCandidates.length === 1 ? picCandidates[0].name : '';
-                                                              updateFormationAssignment(assignmentIndex, {
-                                                                  crewGroupKey: group?.key || '',
-                                                                  crewGroup: group?.crewValue || '',
-                                                                  crewUnitCode: group?.unitCode || '',
-                                                                  crewDisplayLabel: group?.label || '',
-                                                                  crewIndividual: defaultPic,
-                                                              });
-                                                          }}
-                                                          className={controlClass}
-                                                      >
-                                                          <option value="">Select crew</option>
-                                                          {Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => (
-                                                              <optgroup key={unitCode} label={unitCode}>
-                                                                  {groups.map(group => (
-                                                                      <option key={group.key} value={group.key}>{group.label}</option>
-                                                                  ))}
-                                                              </optgroup>
-                                                          ))}
-                                                      </select>
-                                                      <select
-                                                          value={assignment.crewIndividual || ''}
-                                                          onChange={e => updateFormationAssignment(assignmentIndex, { crewIndividual: e.target.value })}
-                                                          disabled={!assignmentCrewGroup}
-                                                          className={controlClass}
-                                                      >
-                                                          <option value="">{assignmentCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
-                                                          {assignmentPicCandidates.map(member => (
-                                                              <option key={member.id || member.idNumber || member.name} value={member.name}>{member.name}</option>
-                                                          ))}
-                                                      </select>
-                                                  </div>
-                                              );
-                                          })}
-                                      </div>
-                                  </div>
-                              )}
                               </div>
                               <div className="flex h-[288px] w-16 flex-col items-center justify-center gap-3">
                                   {req.submitted ? (
