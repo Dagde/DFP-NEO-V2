@@ -729,7 +729,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         if (leftAircraftRole && rightAircraftRole) return leftAircraftRole === rightAircraftRole;
         const leftKey = normaliseFixedCrewStaffRoleKey(left);
         const rightKey = normaliseFixedCrewStaffRoleKey(right);
-        return Boolean(leftKey && rightKey && leftKey === rightKey);
+        if (leftKey && rightKey && leftKey === rightKey) return true;
+        const leftLabel = getFixedCrewStaffRoleLabel(left).trim().toUpperCase();
+        const rightLabel = getFixedCrewStaffRoleLabel(right).trim().toUpperCase();
+        return Boolean(leftLabel && rightLabel && leftLabel !== 'UNCONFIGURED ROLE' && leftLabel === rightLabel);
     };
     const fixedCrewGroups = useMemo(() => Array.from(new Set(instructorsData
         .filter(staff => staffMatchesActiveFixedCrewUnit(staff))
@@ -881,6 +884,37 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             .filter(candidate => !staffHasEventConflict(candidate, bookingWindow))
             .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
     };
+    const getFixedCrewSubstituteRejectReasons = (
+        staff: Instructor,
+        bookingWindow: { start: number; end: number },
+        eventDate?: string,
+    ): Array<{ candidate: Instructor; reasons: string[] }> => {
+        const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || '';
+        const crewUnit = splitFixedCrewGroupKey(eventCrewKey).unit || normaliseFixedCrewUnitCode(staff.unit);
+        if (!crewUnit) return [];
+        const assignedToCurrentEvent = new Set([
+            ...getPersonnelForConflictCheck(event),
+            ...rosteredFixedCrewMembers.map(member => member.name),
+        ].map(name => String(name || '').trim()).filter(Boolean));
+
+        return instructorsData
+            .filter(candidate => candidate.name !== staff.name)
+            .filter(candidate => !candidate.isAdminStaff)
+            .map(candidate => {
+                const reasons: string[] = [];
+                if (normaliseFixedCrewUnitCode(candidate.unit) !== crewUnit) reasons.push('different unit');
+                if (!fixedCrewStaffRolesMatch(candidate, staff)) reasons.push(`role is ${getFixedCrewStaffRoleLabel(candidate) || 'unconfigured'}`);
+                if (assignedToCurrentEvent.has(candidate.name)) reasons.push('already assigned to this event');
+                if (staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)) reasons.push('unavailable during this event window');
+                if (staffHasEventConflict(candidate, bookingWindow)) reasons.push('already assigned to another event in this event window');
+                return { candidate, reasons };
+            })
+            .filter(entry => normaliseFixedCrewUnitCode(entry.candidate.unit) === crewUnit)
+            .filter(entry => fixedCrewStaffRolesMatch(entry.candidate, staff) || getFixedCrewStaffRoleLabel(entry.candidate) === getFixedCrewStaffRoleLabel(staff))
+            .filter(entry => entry.reasons.length > 0)
+            .sort((a, b) => comparePeopleByConfiguredRank(a.candidate, b.candidate, personnelDisplaySettings, 'staff'))
+            .slice(0, 8);
+    };
     const fixedCrewRosterStatus = useMemo(() => {
         const bookingWindow = getEventBookingWindow(event);
         const eventDate = event.date;
@@ -923,6 +957,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 conflicts,
                 isClear: conflicts.length === 0,
                 alternatives: getAvailableFixedCrewRoleAlternatives(staff, bookingWindow, eventDate),
+                alternativeRejects: getFixedCrewSubstituteRejectReasons(staff, bookingWindow, eventDate),
             };
         });
     }, [event, eventsForDate, rosteredFixedCrewMembers, syllabusDetails]);
@@ -1093,7 +1128,20 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="text-xs text-gray-400">No same-unit crew with this role are available for the full event window.</div>
+                                        <div className="space-y-2">
+                                            <div className="text-xs text-gray-400">No same-unit crew with this role are available for the full event window.</div>
+                                            {activeCrewConflict.alternativeRejects?.length > 0 && (
+                                                <div className="space-y-1 border-t border-gray-800 pt-2">
+                                                    <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Checked same-unit {getFixedCrewStaffRoleLabel(activeCrewConflict.staff)}</div>
+                                                    {activeCrewConflict.alternativeRejects.map(({ candidate, reasons }) => (
+                                                        <div key={candidate.id || candidate.name} className="text-[11px] leading-tight text-gray-300">
+                                                            <span className="font-semibold text-gray-200">{[candidate.rank, candidate.name].filter(Boolean).join(' ')}</span>
+                                                            <span className="text-gray-500"> - {reasons.join('; ')}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </div>

@@ -18240,7 +18240,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     if (leftAircraftRole && rightAircraftRole) return leftAircraftRole === rightAircraftRole;
     const leftKey = normaliseFixedCrewStaffRoleKey(left);
     const rightKey = normaliseFixedCrewStaffRoleKey(right);
-    return Boolean(leftKey && rightKey && leftKey === rightKey);
+    if (leftKey && rightKey && leftKey === rightKey) return true;
+    const leftLabel = getFixedCrewStaffRoleLabel(left).trim().toUpperCase();
+    const rightLabel = getFixedCrewStaffRoleLabel(right).trim().toUpperCase();
+    return Boolean(leftLabel && rightLabel && leftLabel !== "UNCONFIGURED ROLE" && leftLabel === rightLabel);
   };
   const fixedCrewGroups = reactExports.useMemo(() => Array.from(new Set(instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff)).map((staff) => {
     const staffCrew = String(staff.crew || "").trim();
@@ -18337,6 +18340,24 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     ].map((name) => String(name || "").trim()).filter(Boolean));
     return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !assignedToCurrentEvent.has(candidate.name)).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => fixedCrewStaffRolesMatch(candidate, staff)).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
   };
+  const getFixedCrewSubstituteRejectReasons = (staff, bookingWindow, eventDate) => {
+    const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || "";
+    const crewUnit = splitFixedCrewGroupKey(eventCrewKey).unit || normaliseFixedCrewUnitCode(staff.unit);
+    if (!crewUnit) return [];
+    const assignedToCurrentEvent = new Set([
+      ...getPersonnelForConflictCheck(event),
+      ...rosteredFixedCrewMembers.map((member) => member.name)
+    ].map((name) => String(name || "").trim()).filter(Boolean));
+    return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !candidate.isAdminStaff).map((candidate) => {
+      const reasons = [];
+      if (normaliseFixedCrewUnitCode(candidate.unit) !== crewUnit) reasons.push("different unit");
+      if (!fixedCrewStaffRolesMatch(candidate, staff)) reasons.push(`role is ${getFixedCrewStaffRoleLabel(candidate) || "unconfigured"}`);
+      if (assignedToCurrentEvent.has(candidate.name)) reasons.push("already assigned to this event");
+      if (staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)) reasons.push("unavailable during this event window");
+      if (staffHasEventConflict(candidate, bookingWindow)) reasons.push("already assigned to another event in this event window");
+      return { candidate, reasons };
+    }).filter((entry) => normaliseFixedCrewUnitCode(entry.candidate.unit) === crewUnit).filter((entry) => fixedCrewStaffRolesMatch(entry.candidate, staff) || getFixedCrewStaffRoleLabel(entry.candidate) === getFixedCrewStaffRoleLabel(staff)).filter((entry) => entry.reasons.length > 0).sort((a, b) => comparePeopleByConfiguredRank(a.candidate, b.candidate, personnelDisplaySettings, "staff")).slice(0, 8);
+  };
   const fixedCrewRosterStatus = reactExports.useMemo(() => {
     const bookingWindow = getEventBookingWindow2(event);
     const eventDate = event.date;
@@ -18366,7 +18387,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         staff,
         conflicts,
         isClear: conflicts.length === 0,
-        alternatives: getAvailableFixedCrewRoleAlternatives(staff, bookingWindow, eventDate)
+        alternatives: getAvailableFixedCrewRoleAlternatives(staff, bookingWindow, eventDate),
+        alternativeRejects: getFixedCrewSubstituteRejectReasons(staff, bookingWindow, eventDate)
       };
     });
   }, [event, eventsForDate, rosteredFixedCrewMembers, syllabusDetails]);
@@ -18515,7 +18537,22 @@ ${swapNote}` : swapNote
                 children: [candidate.rank, candidate.name].filter(Boolean).join(" ")
               },
               candidate.id || candidate.name
-            )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "No same-unit crew with this role are available for the full event window." })
+            )) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "No same-unit crew with this role are available for the full event window." }),
+              activeCrewConflict.alternativeRejects?.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1 border-t border-gray-800 pt-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[10px] font-bold uppercase tracking-wider text-gray-500", children: [
+                  "Checked same-unit ",
+                  getFixedCrewStaffRoleLabel(activeCrewConflict.staff)
+                ] }),
+                activeCrewConflict.alternativeRejects.map(({ candidate, reasons }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] leading-tight text-gray-300", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-gray-200", children: [candidate.rank, candidate.name].filter(Boolean).join(" ") }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-500", children: [
+                    " - ",
+                    reasons.join("; ")
+                  ] })
+                ] }, candidate.id || candidate.name))
+              ] })
+            ] })
           ] })
         ] })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: "No crew roster is assigned to this event." })
