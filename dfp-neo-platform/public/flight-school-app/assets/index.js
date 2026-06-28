@@ -27531,7 +27531,6 @@ const PrioritiesView = ({
   }, [aircraftConfigurationDefinitions]);
   const [courseTimestamp, setCourseTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
   const instructorNames = reactExports.useMemo(() => instructorsData.map((i) => i.name).sort(), [instructorsData]);
-  const [openCurrencyRequestKey, setOpenCurrencyRequestKey] = reactExports.useState(null);
   const [aircraftTimestamp, setAircraftTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
   const [flyingWindowTimestamp, setFlyingWindowTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
   const [dutyPeriodTimestamp, setDutyPeriodTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
@@ -28913,52 +28912,6 @@ const PrioritiesView = ({
       return { ...event, selectedCurrencies: Array.from(nextCurrencies) };
     }));
   };
-  const CurrencySelect = ({ request, type }) => {
-    const dropdownKey = `${type}:${request.id}`;
-    const isOpen = openCurrencyRequestKey === dropdownKey;
-    const selectedLabel = request.currency || "Select Currency";
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "button",
-        {
-          type: "button",
-          onClick: () => setOpenCurrencyRequestKey(isOpen ? null : dropdownKey),
-          className: "flex w-full items-center justify-between rounded border border-gray-600 bg-gray-700 px-2 py-1 text-left text-xs text-white focus:outline-none focus:ring-1 focus:ring-sky-500",
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: selectedLabel }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-[10px] text-gray-300", children: "v" })
-          ]
-        }
-      ),
-      isOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-0 top-full z-[120] mt-1 max-h-64 w-64 overflow-y-auto rounded border border-sky-500/40 bg-slate-950 shadow-xl", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onClick: () => {
-              onUpdateSctRequest(request.id, "currency", "", type);
-              setOpenCurrencyRequestKey(null);
-            },
-            className: "block w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-sky-900/70",
-            children: "Select Currency"
-          }
-        ),
-        currencyNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onClick: () => {
-              onUpdateSctRequest(request.id, "currency", name, type);
-              setOpenCurrencyRequestKey(null);
-            },
-            className: "block w-full px-3 py-2 text-left text-xs text-white hover:bg-sky-900/70",
-            children: name
-          },
-          name
-        ))
-      ] })
-    ] });
-  };
   const renderSctRequestTable = (type, requests) => {
     const calculateDaysToExpire = (expireDateStr) => {
       if (!expireDateStr) return null;
@@ -28977,6 +28930,15 @@ const PrioritiesView = ({
       }
     };
     const statusButtonClass = "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed";
+    const crewRequirementFromPreset = (preset) => preset.kind === "standard" ? { mode: "aircraft_default" } : { mode: "custom", roles: preset.roles || [] };
+    const crewRequirementPresetIdFor = (requirement) => {
+      const normalised = normaliseCrewRequirement(requirement);
+      if (normalised.mode === "aircraft_default") {
+        return crewRequirementPresets.find((preset) => preset.kind === "standard")?.id || "standard-aircraft-crew";
+      }
+      const signature = getCrewRequirementSignature(requirement);
+      return crewRequirementPresets.find((preset) => preset.kind === "alternate" && getCrewRequirementSignature({ mode: "custom", roles: preset.roles || [] }) === signature)?.id || "";
+    };
     const applyCurrencyProfile = (requestId, eventValue) => {
       const profile = currencyProfilesForContext.find((candidate) => String(candidate.name || candidate.currency || "").trim() === eventValue || String(candidate.currency || "").trim() === eventValue);
       if (!profile) {
@@ -29012,7 +28974,6 @@ const PrioritiesView = ({
         const nextAssignments = formationAssignments.map((assignment, assignmentIndex) => assignmentIndex === index ? { ...assignment, ...updates } : assignment);
         onPatchSctRequest(req.id, { formationCrew: nextAssignments }, type);
       };
-      const isRequestCurrencyMenuOpen = openCurrencyRequestKey === `${type}:${req.id}`;
       const formationAssignmentsComplete = !isFixedCrewModel || aircraftCount <= 1 || formationAssignments.every((assignment) => (assignment.crewGroupKey || assignment.crewDisplayLabel) && assignment.crewIndividual);
       const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? req.crewGroupKey || req.crewDisplayLabel : req.name) && formationAssignmentsComplete);
       const stageSpecificCurrencyRequest = () => {
@@ -29057,7 +29018,7 @@ const PrioritiesView = ({
         });
         onSubmitSctRequest(req.id, type);
       };
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20 transition-[padding-bottom] duration-200 ${isRequestCurrencyMenuOpen ? "pb-64" : ""}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid w-full min-w-[704px] max-w-[1304px] grid-cols-[minmax(632px,1232px)_4rem] gap-2", children: [
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid w-full min-w-[704px] max-w-[1304px] grid-cols-[minmax(632px,1232px)_4rem] gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-5 gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
@@ -29120,6 +29081,25 @@ const PrioritiesView = ({
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Crew Composition" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: crewRequirementPresetIdFor(req.crewRequirement),
+                  onChange: (e) => {
+                    const preset = crewRequirementPresets.find((candidate) => candidate.id === e.target.value);
+                    if (!preset) return;
+                    onPatchSctRequest(req.id, { crewRequirement: crewRequirementFromPreset(preset) }, type);
+                  },
+                  className: controlClass,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select composition" }),
+                    crewRequirementPresets.map((preset) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: preset.id, children: preset.label }, preset.id))
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "CONFIG" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 AircraftConfigSelect,
@@ -29129,10 +29109,6 @@ const PrioritiesView = ({
                   onChange: (aircraftConfigId) => onUpdateSctRequest(req.id, "aircraftConfigId", aircraftConfigId, type)
                 }
               ) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Currency" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(CurrencySelect, { request: req, type })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "No. of A/C" }),

@@ -1058,7 +1058,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [courseTimestamp, setCourseTimestamp] = useState(new Date().toLocaleString());
 
   const instructorNames = useMemo(() => instructorsData.map(i => i.name).sort(), [instructorsData]);
-  const [openCurrencyRequestKey, setOpenCurrencyRequestKey] = useState<string | null>(null);
 
 
   // State for Build Factors
@@ -2770,54 +2769,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   };
 
-  const CurrencySelect: React.FC<{ request: SctRequest; type: 'flight' | 'ftd' }> = ({ request, type }) => {
-    const dropdownKey = `${type}:${request.id}`;
-    const isOpen = openCurrencyRequestKey === dropdownKey;
-    const selectedLabel = request.currency || 'Select Currency';
-
-    return (
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setOpenCurrencyRequestKey(isOpen ? null : dropdownKey)}
-          className="flex w-full items-center justify-between rounded border border-gray-600 bg-gray-700 px-2 py-1 text-left text-xs text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-        >
-          <span className="truncate">{selectedLabel}</span>
-          <span className="ml-2 text-[10px] text-gray-300">v</span>
-        </button>
-        {isOpen && (
-          <div className="absolute left-0 top-full z-[120] mt-1 max-h-64 w-64 overflow-y-auto rounded border border-sky-500/40 bg-slate-950 shadow-xl">
-            <button
-              type="button"
-              onClick={() => {
-                onUpdateSctRequest(request.id, 'currency', '', type);
-                setOpenCurrencyRequestKey(null);
-              }}
-              className="block w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-sky-900/70"
-            >
-              Select Currency
-            </button>
-            {currencyNames.map(name => (
-              <button
-                key={name}
-                type="button"
-                onClick={() => {
-                  onUpdateSctRequest(request.id, 'currency', name, type);
-                  setOpenCurrencyRequestKey(null);
-                }}
-                className="block w-full px-3 py-2 text-left text-xs text-white hover:bg-sky-900/70"
-              >
-                {name}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  
-  
   const renderSctRequestTable = (type: 'flight' | 'ftd', requests: SctRequest[]) => {
       
     const calculateDaysToExpire = (expireDateStr: string): { days: number; color: string } | null => {
@@ -2841,6 +2792,22 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     };
 
     const statusButtonClass = 'btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed';
+    const crewRequirementFromPreset = (preset: CrewRequirementPreset): CrewRequirement => (
+      preset.kind === 'standard'
+        ? { mode: 'aircraft_default' }
+        : { mode: 'custom', roles: preset.roles || [] }
+    );
+    const crewRequirementPresetIdFor = (requirement?: CrewRequirement): string => {
+      const normalised = normaliseCrewRequirement(requirement);
+      if (normalised.mode === 'aircraft_default') {
+        return crewRequirementPresets.find(preset => preset.kind === 'standard')?.id || 'standard-aircraft-crew';
+      }
+      const signature = getCrewRequirementSignature(requirement);
+      return crewRequirementPresets.find(preset => (
+        preset.kind === 'alternate'
+        && getCrewRequirementSignature({ mode: 'custom', roles: preset.roles || [] }) === signature
+      ))?.id || '';
+    };
     const applyCurrencyProfile = (requestId: string, eventValue: string) => {
       const profile = currencyProfilesForContext.find(candidate => (
         String(candidate.name || candidate.currency || '').trim() === eventValue
@@ -2894,7 +2861,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     ));
                     onPatchSctRequest(req.id, { formationCrew: nextAssignments }, type);
                   };
-                  const isRequestCurrencyMenuOpen = openCurrencyRequestKey === `${type}:${req.id}`;
                   const formationAssignmentsComplete = !isFixedCrewModel || aircraftCount <= 1 || formationAssignments.every(assignment => (
                       (assignment.crewGroupKey || assignment.crewDisplayLabel) && assignment.crewIndividual
                   ));
@@ -2947,7 +2913,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                       onSubmitSctRequest(req.id, type);
                   };
                   return (
-                      <div key={req.id} className={`overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20 transition-[padding-bottom] duration-200 ${isRequestCurrencyMenuOpen ? 'pb-64' : ''}`}>
+                      <div key={req.id} className="overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20">
                           <div className="grid w-full min-w-[704px] max-w-[1304px] grid-cols-[minmax(632px,1232px)_4rem] gap-2">
                               <div className="space-y-3">
                               <div className="grid grid-cols-5 gap-2">
@@ -3029,6 +2995,23 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                       </select>
                                   </div>
                                   <div className={`${tileBaseClass} flex flex-col`}>
+                                      <div className={tileLabelClass}>Crew Composition</div>
+                                      <select
+                                          value={crewRequirementPresetIdFor(req.crewRequirement)}
+                                          onChange={e => {
+                                              const preset = crewRequirementPresets.find(candidate => candidate.id === e.target.value);
+                                              if (!preset) return;
+                                              onPatchSctRequest(req.id, { crewRequirement: crewRequirementFromPreset(preset) }, type);
+                                          }}
+                                          className={controlClass}
+                                      >
+                                          <option value="">Select composition</option>
+                                          {crewRequirementPresets.map(preset => (
+                                              <option key={preset.id} value={preset.id}>{preset.label}</option>
+                                          ))}
+                                      </select>
+                                  </div>
+                                  <div className={`${tileBaseClass} flex flex-col`}>
                                       <div className={tileLabelClass}>CONFIG</div>
                                       <div className="[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white">
                                           <AircraftConfigSelect
@@ -3037,10 +3020,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                               onChange={(aircraftConfigId) => onUpdateSctRequest(req.id, 'aircraftConfigId', aircraftConfigId, type)}
                                           />
                                       </div>
-                                  </div>
-                                  <div className={`${tileBaseClass} flex flex-col`}>
-                                      <div className={tileLabelClass}>Currency</div>
-                                      <CurrencySelect request={req} type={type} />
                                   </div>
                                   <div className={`${tileBaseClass} flex flex-col`}>
                                       <div className={tileLabelClass}>No. of A/C</div>
