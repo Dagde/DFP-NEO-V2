@@ -22653,6 +22653,57 @@ const AddFlightTileModal = ({
                   ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Location" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        value: locationType,
+                        onChange: (e) => setLocationType(e.target.value),
+                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Local", children: "Local" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Land Away", children: "Land Away" })
+                        ]
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Date" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$3(date) })
+                  ] })
+                ] }),
+                locationType === "Land Away" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Origin" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "text",
+                        value: origin,
+                        onChange: (e) => setOrigin(e.target.value.toUpperCase()),
+                        maxLength: 4,
+                        placeholder: "ESL",
+                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Destination" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "text",
+                        value: destination,
+                        onChange: (e) => setDestination(e.target.value.toUpperCase()),
+                        maxLength: 4,
+                        placeholder: "PEA",
+                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
+                      }
+                    )
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/45 p-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400", children: "Crew Members" }),
                     fixedCrewMembers.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2", children: fixedCrewMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm", children: [
@@ -22675,7 +22726,7 @@ const AddFlightTileModal = ({
                   ] })
                 ] })
               ] }),
-              !isDeploy && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              !isDeploy && !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3", children: "Flight Tile" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "0 2px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   FlightTile,
@@ -22683,7 +22734,7 @@ const AddFlightTileModal = ({
                     flightType,
                     startTime,
                     picName,
-                    studentName: isFixedCrewModel && fixedCrewGroup ? formatFixedCrewDisplayGroup$1(fixedCrewGroup) : studentName,
+                    studentName,
                     duration,
                     flightNumber,
                     area,
@@ -22738,7 +22789,7 @@ const AddFlightTileModal = ({
                     onCallsignChange: setCallsign
                   }
                 ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2", children: isFixedCrewModel ? "Use the Fixed Crew controls above to select the LMP event, crew and PIC. The tile preview reflects that scheduled assignment." : `Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.${isSingleSeatAircraft ? " This aircraft type is configured as single-seat, so new flights are Solo." : " Click SOLO badge to switch to Dual."}` })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2", children: `Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.${isSingleSeatAircraft ? " This aircraft type is configured as single-seat, so new flights are Solo." : " Click SOLO badge to switch to Dual."}` })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 pt-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 cursor-pointer py-2 mb-3", children: [
@@ -22823,7 +22874,7 @@ const AddFlightTileModal = ({
                     ] })
                   ] })
                 ] }),
-                !isDeploy && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                !isDeploy && !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                   !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mb-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Flight Type" }),

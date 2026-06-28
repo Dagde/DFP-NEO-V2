@@ -2107,6 +2107,51 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Location</label>
+                  <select
+                    value={locationType}
+                    onChange={e => setLocationType(e.target.value as 'Local'|'Land Away')}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
+                  >
+                    <option value="Local">Local</option>
+                    <option value="Land Away">Land Away</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Date</label>
+                  <div className="w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono">
+                    {formatDate(date)}
+                  </div>
+                </div>
+              </div>
+              {locationType === 'Land Away' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Origin</label>
+                    <input
+                      type="text"
+                      value={origin}
+                      onChange={e => setOrigin(e.target.value.toUpperCase())}
+                      maxLength={4}
+                      placeholder="ESL"
+                      className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Destination</label>
+                    <input
+                      type="text"
+                      value={destination}
+                      onChange={e => setDestination(e.target.value.toUpperCase())}
+                      maxLength={4}
+                      placeholder="PEA"
+                      className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="rounded-md border border-gray-700 bg-gray-900/45 p-3">
                   <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Crew Members</div>
                   {fixedCrewMembers.length > 0 ? (
@@ -2136,8 +2181,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
             </div>
           )}
 
-          {/* Large Flight Tile */}
-          {!isDeploy && (
+          {/* Interactive flight tile input for Flight School / Air Combat. Fixed Crew uses the structured controls above. */}
+          {!isDeploy && !isFixedCrewModel && (
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Flight Tile</label>
               <div style={{ padding: '0 2px' }}>
@@ -2145,7 +2190,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   flightType={flightType}
                   startTime={startTime}
                   picName={picName}
-                  studentName={isFixedCrewModel && fixedCrewGroup ? formatFixedCrewDisplayGroup(fixedCrewGroup) : studentName}
+                  studentName={studentName}
                   duration={duration}
                   flightNumber={flightNumber}
                   area={area}
@@ -2201,9 +2246,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                {isFixedCrewModel
-                  ? 'Use the Fixed Crew controls above to select the LMP event, crew and PIC. The tile preview reflects that scheduled assignment.'
-                  : `Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.${isSingleSeatAircraft ? ' This aircraft type is configured as single-seat, so new flights are Solo.' : ' Click SOLO badge to switch to Dual.'}`}
+                {`Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.${isSingleSeatAircraft ? ' This aircraft type is configured as single-seat, so new flights are Solo.' : ' Click SOLO badge to switch to Dual.'}`}
               </p>
             </div>
           )}
@@ -2255,7 +2298,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
             )}
 
             {/* Flight type toggle + Location + Date + Notes — hidden when deploying */}
-            {!isDeploy && (
+            {!isDeploy && !isFixedCrewModel && (
               <>
                 {!isFixedCrewModel && <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
