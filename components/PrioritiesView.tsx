@@ -50,6 +50,13 @@ import {
   normaliseStaffQualificationCatalogue,
   type StaffQualificationCatalogue,
 } from '../utils/staffQualifications';
+import {
+  appendUnavailableLabel,
+  getStaffUnavailabilityStatus,
+  summariseCrewUnavailability,
+  timeFieldToHours,
+  type FixedCrewAvailabilityWindow,
+} from '../utils/fixedCrewAvailability';
 
 type FixedCrewTrainingStreamDisplay = FixedCrewTrainingStreamPriority & { eventCount?: number };
 type PriorityAllocationModel = 'flight_school' | 'air_combat' | 'fixed_crew';
@@ -2825,6 +2832,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       groups.set(groupLabel, [...(groups.get(groupLabel) || []), preset]);
       return groups;
     }, new Map<string, CrewRequirementPreset[]>());
+    const getRequestAvailabilityWindow = (request: SctRequest): FixedCrewAvailabilityWindow => {
+      const start = timeFieldToHours(request.requestedTime, type === 'ftd' ? ftdStartTime : flyingStartTime) || 0;
+      return {
+        date: request.dateRequested || buildDfpDate,
+        start: Math.max(0, start),
+        end: Math.min(24, start + defaultCurrencyDuration),
+        resourceKind: type === 'flight' ? 'flight' : 'sim',
+      };
+    };
+    const formatRequestCrewOptionLabel = (group: { label: string; members: Instructor[] }, window: FixedCrewAvailabilityWindow): string => (
+      appendUnavailableLabel(group.label, summariseCrewUnavailability(group.members, window))
+    );
+    const formatRequestPicOptionLabel = (member: Instructor, window: FixedCrewAvailabilityWindow): string => (
+      appendUnavailableLabel(member.name, getStaffUnavailabilityStatus(member, window).reason)
+    );
     const applyCurrencyProfile = (requestId: string, eventValue: string) => {
       const profile = currencyProfilesForContext.find(candidate => (
         String(candidate.name || candidate.currency || '').trim() === eventValue
@@ -2861,6 +2883,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   ));
                   const selectedCrewPicCandidates = (selectedCrewGroup?.members || []).filter(member => staffHasPicQualification(member));
                   const selectedCrewPicNames = new Set(selectedCrewPicCandidates.map(member => member.name));
+                  const requestAvailabilityWindow = getRequestAvailabilityWindow(req);
+                  const selectedCrewUnavailableSummary = selectedCrewGroup
+                    ? summariseCrewUnavailability(selectedCrewGroup.members, requestAvailabilityWindow)
+                    : '';
                   const otherPicCandidates = selectedCrewGroup
                     ? allPicQualifiedStaff
                         .filter(staff => !selectedCrewPicNames.has(staff.name))
@@ -2973,11 +2999,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                               {Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => (
                                                   <optgroup key={unitCode} label={unitCode}>
                                                       {groups.map(group => (
-                                                          <option key={group.key} value={group.key}>{group.label}</option>
-                                                  ))}
-                                              </optgroup>
-                                          ))}
+                                                          <option key={group.key} value={group.key}>{formatRequestCrewOptionLabel(group, requestAvailabilityWindow)}</option>
+                                                      ))}
+                                                  </optgroup>
+                                              ))}
                                           </select>
+                                          {selectedCrewUnavailableSummary && (
+                                            <div className="rounded border border-red-500/30 bg-red-950/25 px-2 py-1 text-[10px] font-semibold leading-snug text-red-200">
+                                              {selectedCrewUnavailableSummary}
+                                            </div>
+                                          )}
                                           </div>
                                           {aircraftCount > 1 && formationAssignments.map((assignment, assignmentIndex) => {
                                               const assignmentCrewGroup = fixedCrewRequestCrewGroups.find(group => (
@@ -3008,7 +3039,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                       {Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => (
                                                           <optgroup key={unitCode} label={unitCode}>
                                                               {groups.map(group => (
-                                                                  <option key={group.key} value={group.key}>{group.label}</option>
+                                                                  <option key={group.key} value={group.key}>{formatRequestCrewOptionLabel(group, requestAvailabilityWindow)}</option>
                                                               ))}
                                                           </optgroup>
                                                       ))}
@@ -3045,14 +3076,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                               {selectedCrewPicCandidates.length > 0 && (
                                                   <optgroup label={selectedCrewGroup?.label || 'Selected Crew'}>
                                                       {selectedCrewPicCandidates.map(member => (
-                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{member.name}</option>
+                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{formatRequestPicOptionLabel(member, requestAvailabilityWindow)}</option>
                                                       ))}
                                                   </optgroup>
                                               )}
                                               {otherPicCandidates.length > 0 && (
                                                   <optgroup label="OTHER">
                                                       {otherPicCandidates.map(member => (
-                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{member.name}</option>
+                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{formatRequestPicOptionLabel(member, requestAvailabilityWindow)}</option>
                                                       ))}
                                                   </optgroup>
                                               )}
@@ -3076,7 +3107,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                   >
                                                       <option value="">{assignmentCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
                                                       {assignmentPicCandidates.map(member => (
-                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{member.name}</option>
+                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{formatRequestPicOptionLabel(member, requestAvailabilityWindow)}</option>
                                                       ))}
                                                   </select>
                                                 </div>

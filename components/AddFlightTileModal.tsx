@@ -27,6 +27,13 @@ import {
   getUnitCallsignEntries,
   type UnitCallsignSettings,
 } from '../utils/unitCallsigns';
+import {
+  appendUnavailableLabel,
+  getStaffUnavailabilityStatus,
+  summariseCrewUnavailability,
+  timeFieldToHours,
+  type FixedCrewAvailabilityWindow,
+} from '../utils/fixedCrewAvailability';
 
 interface AddFlightTileModalProps {
   onClose: () => void;
@@ -1894,6 +1901,41 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     || profile.name === flightNumber
     || profile.currency === flightNumber
   ));
+  const normaliseAvailabilityOffsetHours = (value?: string | number | null): number => {
+    const numeric = timeFieldToHours(value, 0) || 0;
+    return numeric > 24 ? numeric / 60 : numeric;
+  };
+  const fixedCrewAvailabilityWindow = useMemo<FixedCrewAvailabilityWindow>(() => {
+    const start = Number(startTime) || 0;
+    const durationHours = Math.max(0, Number(duration) || 0);
+    const preFlight = normaliseAvailabilityOffsetHours(selectedFixedCrewEvent?.preFlightTime);
+    const postFlight = normaliseAvailabilityOffsetHours(selectedFixedCrewEvent?.postFlightTime);
+    const resourceKind = String(selectedFixedCrewEvent?.type || eventCategory || '').toLowerCase().includes('ftd')
+      || String(selectedFixedCrewEvent?.type || eventCategory || '').toLowerCase().includes('cpt')
+      || eventCategory === 'lmp_currency'
+        ? 'sim'
+        : 'flight';
+    return {
+      date,
+      start: Math.max(0, start - preFlight),
+      end: Math.min(24, start + durationHours + postFlight),
+      resourceKind,
+    };
+  }, [date, duration, eventCategory, selectedFixedCrewEvent, startTime]);
+  const formatUnavailableStaffLabel = (staff: Instructor, fallback?: string): string => {
+    const label = fallback || [staff.rank, staff.name].filter(Boolean).join(' ');
+    const status = getStaffUnavailabilityStatus(staff, fixedCrewAvailabilityWindow);
+    return appendUnavailableLabel(label, status.reason);
+  };
+  const formatUnavailableCrewLabel = (crewGroup: string): string => {
+    const parsed = parseFixedCrewGroupKey(crewGroup);
+    const label = `CREW ${parsed.crew}`;
+    return appendUnavailableLabel(label, summariseCrewUnavailability(getFixedCrewMembersForGroup(crewGroup), fixedCrewAvailabilityWindow));
+  };
+  const selectedFixedCrewUnavailableSummary = useMemo(
+    () => summariseCrewUnavailability(fixedCrewMembers, fixedCrewAvailabilityWindow),
+    [fixedCrewAvailabilityWindow, fixedCrewMembers],
+  );
 
   useEffect(() => {
     if (!initialEvent || !isFixedCrewModel) return;
@@ -2333,13 +2375,17 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     <option value="">Select crew</option>
                     {fixedCrewGroupOptionGroups.map(group => (
                       <optgroup key={group.unit} label={group.unit}>
-                        {group.options.map(crewGroup => {
-                          const parsed = parseFixedCrewGroupKey(crewGroup);
-                          return <option key={crewGroup} value={crewGroup}>{`CREW ${parsed.crew}`}</option>;
-                        })}
+                        {group.options.map(crewGroup => (
+                          <option key={crewGroup} value={crewGroup}>{formatUnavailableCrewLabel(crewGroup)}</option>
+                        ))}
                       </optgroup>
                     ))}
                   </select>
+                  {selectedFixedCrewUnavailableSummary && (
+                    <div className="mt-1 rounded border border-red-500/30 bg-red-950/25 px-2 py-1 text-[11px] font-semibold text-red-200">
+                      {selectedFixedCrewUnavailableSummary}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">PIC</label>
@@ -2352,7 +2398,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     <option value="">{fixedCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
                     {fixedCrewPicCandidates.map(staff => (
                       <option key={staff.id || staff.name} value={staff.name}>
-                        {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                        {formatUnavailableStaffLabel(staff)}
                       </option>
                     ))}
                   </select>
@@ -2446,10 +2492,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                               <option value="">Select crew</option>
                               {fixedCrewGroupOptionGroups.map(group => (
                                 <optgroup key={group.unit} label={group.unit}>
-                                  {group.options.map(crewGroup => {
-                                    const parsed = parseFixedCrewGroupKey(crewGroup);
-                                    return <option key={crewGroup} value={crewGroup}>{`CREW ${parsed.crew}`}</option>;
-                                  })}
+                                  {group.options.map(crewGroup => (
+                                    <option key={crewGroup} value={crewGroup}>{formatUnavailableCrewLabel(crewGroup)}</option>
+                                  ))}
                                 </optgroup>
                               ))}
                             </select>
@@ -2465,7 +2510,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                               <option value="">{assignment.crewGroup ? 'Select PIC' : 'Select crew first'}</option>
                               {picCandidates.map(staff => (
                                 <option key={staff.id || staff.name} value={staff.name}>
-                                  {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                                  {formatUnavailableStaffLabel(staff)}
                                 </option>
                               ))}
                             </select>

@@ -124,6 +124,7 @@ import {
     normaliseDispatchStaggerSettings,
     type DispatchStaggerSettings,
 } from './utils/dispatchStagger';
+import { getStaffUnavailabilityStatus } from './utils/fixedCrewAvailability';
 import { isSyllabusCourseShell } from './utils/syllabusCourseShell';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
@@ -1795,26 +1796,13 @@ const DfpSidePanelTimeline: React.FC<{
         end: Math.min(24, assistStartTime + assistDuration + getSyllabusDurationOffset(selectedSyllabusItem?.postFlightTime)),
     }), [assistDuration, assistStartTime, selectedSyllabusItem]);
     const getUnavailabilityConflictReason = (person: Instructor | undefined): string | null => {
-        if (!person?.unavailability?.length) return null;
-        for (const period of person.unavailability) {
-            const isInDateRange = period.allDay
-                ? date >= period.startDate && date < period.endDate
-                : date >= period.startDate && date <= period.endDate;
-            if (!isInDateRange) continue;
-            if (period.reason === 'TMUF - Ground Duties only' && selectedResourceKind !== 'flight') continue;
-            if (period.allDay) return period.reason || 'Unavailable';
-
-            const unavailableStart = timeStringToHours(period.startTime);
-            const unavailableEnd = timeStringToHours(period.endTime);
-            if (unavailableStart === null || unavailableEnd === null) continue;
-
-            const dayStart = date === period.startDate ? unavailableStart : 0;
-            const dayEnd = date === period.endDate ? unavailableEnd : 24;
-            if (hoursOverlap(assistBookingWindow.start, assistBookingWindow.end, dayStart, dayEnd)) {
-                return period.reason || 'Unavailable';
-            }
-        }
-        return null;
+        const status = getStaffUnavailabilityStatus(person, {
+            date,
+            start: assistBookingWindow.start,
+            end: assistBookingWindow.end,
+            resourceKind: selectedResourceKind,
+        });
+        return status.reason || null;
     };
     const isCrewStatusEvent = (event: ScheduleEvent): boolean => {
         const eventType = String(event.type || '').toLowerCase();

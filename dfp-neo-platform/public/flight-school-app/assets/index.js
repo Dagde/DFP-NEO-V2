@@ -4426,6 +4426,70 @@ const normaliseFixedCrewTrainingPriorityWeights = (streams) => {
     return { ...stream, weight };
   });
 };
+const hoursOverlap = (firstStart, firstEnd, secondStart, secondEnd) => firstStart < secondEnd && secondStart < firstEnd;
+const timeFieldToHours = (value, fallback = null) => {
+  if (typeof value === "number") return Number.isFinite(value) ? value : fallback;
+  const text = String(value || "").trim();
+  if (!text) return fallback;
+  if (/^\d{1,2}:\d{2}$/.test(text)) {
+    const [hours, minutes] = text.split(":").map(Number);
+    if (Number.isFinite(hours) && Number.isFinite(minutes)) return hours + minutes / 60;
+  }
+  if (/^\d{3,4}$/.test(text)) {
+    const padded = text.padStart(4, "0");
+    const hours = Number(padded.slice(0, 2));
+    const minutes = Number(padded.slice(2, 4));
+    if (Number.isFinite(hours) && Number.isFinite(minutes)) return hours + minutes / 60;
+  }
+  const numeric = Number(text);
+  return Number.isFinite(numeric) ? numeric : fallback;
+};
+const formatAvailabilityHour = (value) => {
+  const bounded = Math.max(0, Math.min(24, value));
+  const hours = Math.floor(bounded);
+  const minutes = Math.round((bounded - hours) * 60);
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
+const getStaffUnavailabilityStatus = (staff, window2) => {
+  if (!staff?.unavailability?.length || !window2.date) {
+    return { unavailable: false, reason: "" };
+  }
+  const windowStart = Math.max(0, Number(window2.start) || 0);
+  const windowEnd = Math.min(24, Math.max(windowStart, Number(window2.end) || windowStart));
+  const resourceKind = String(window2.resourceKind || "flight").toLowerCase();
+  for (const period of staff.unavailability) {
+    if (!period?.startDate || !period?.endDate) continue;
+    if (window2.date < period.startDate || window2.date > period.endDate) continue;
+    if (period.reason === "TMUF - Ground Duties only" && resourceKind !== "flight") continue;
+    const reason = period.reason || "Unavailable";
+    if (period.allDay) {
+      return { unavailable: true, reason: `${reason} all day` };
+    }
+    const periodStart = window2.date === period.startDate ? timeFieldToHours(period.startTime, 0) : 0;
+    const periodEnd = window2.date === period.endDate ? timeFieldToHours(period.endTime, 24) : 24;
+    if (periodStart === null || periodEnd === null) continue;
+    if (hoursOverlap(windowStart, windowEnd, periodStart, periodEnd)) {
+      return {
+        unavailable: true,
+        reason: `${reason} ${formatAvailabilityHour(periodStart)}-${formatAvailabilityHour(periodEnd)}`
+      };
+    }
+  }
+  return { unavailable: false, reason: "" };
+};
+const summariseCrewUnavailability = (members, window2) => {
+  const unavailableMembers = members.map((member) => ({
+    member,
+    status: getStaffUnavailabilityStatus(member, window2)
+  })).filter((item) => item.status.unavailable);
+  if (unavailableMembers.length === 0) return "";
+  if (unavailableMembers.length === 1) {
+    const item = unavailableMembers[0];
+    return `${item.member.name}: ${item.status.reason}`;
+  }
+  return `${unavailableMembers.length} crew unavailable`;
+};
+const appendUnavailableLabel = (label, reason) => reason ? `${label} - UNAVAILABLE: ${reason}` : label;
 const SYLLABUS_COURSE_SHELL_NOTE = "[DFP_COURSE_SHELL]";
 const isSyllabusCourseShell = (item) => String(item?.notes || "").includes(SYLLABUS_COURSE_SHELL_NOTE);
 const pendingAudits = /* @__PURE__ */ new Map();
@@ -22410,6 +22474,37 @@ const AddFlightTileModal = ({
   };
   const selectedFixedCrewEvent = fixedCrewEventOptions.find((item) => getFixedCrewEventOptionKey(item) === fixedCrewEventKey) || fixedCrewEventOptions.find((item) => item.code === flightNumber || item.id === flightNumber);
   const selectedFixedCrewCurrencyProfile = fixedCrewCurrencyProfileOptions.find((profile) => getFixedCrewCurrencyProfileOptionKey(profile) === fixedCrewEventKey || profile.code === flightNumber || profile.name === flightNumber || profile.currency === flightNumber);
+  const normaliseAvailabilityOffsetHours = (value) => {
+    const numeric = timeFieldToHours(value, 0) || 0;
+    return numeric > 24 ? numeric / 60 : numeric;
+  };
+  const fixedCrewAvailabilityWindow = reactExports.useMemo(() => {
+    const start = Number(startTime) || 0;
+    const durationHours = Math.max(0, Number(duration) || 0);
+    const preFlight = normaliseAvailabilityOffsetHours(selectedFixedCrewEvent?.preFlightTime);
+    const postFlight = normaliseAvailabilityOffsetHours(selectedFixedCrewEvent?.postFlightTime);
+    const resourceKind = String(selectedFixedCrewEvent?.type || eventCategory || "").toLowerCase().includes("ftd") || String(selectedFixedCrewEvent?.type || eventCategory || "").toLowerCase().includes("cpt") || eventCategory === "lmp_currency" ? "sim" : "flight";
+    return {
+      date,
+      start: Math.max(0, start - preFlight),
+      end: Math.min(24, start + durationHours + postFlight),
+      resourceKind
+    };
+  }, [date, duration, eventCategory, selectedFixedCrewEvent, startTime]);
+  const formatUnavailableStaffLabel = (staff, fallback) => {
+    const label = [staff.rank, staff.name].filter(Boolean).join(" ");
+    const status = getStaffUnavailabilityStatus(staff, fixedCrewAvailabilityWindow);
+    return appendUnavailableLabel(label, status.reason);
+  };
+  const formatUnavailableCrewLabel = (crewGroup) => {
+    const parsed = parseFixedCrewGroupKey(crewGroup);
+    const label = `CREW ${parsed.crew}`;
+    return appendUnavailableLabel(label, summariseCrewUnavailability(getFixedCrewMembersForGroup(crewGroup), fixedCrewAvailabilityWindow));
+  };
+  const selectedFixedCrewUnavailableSummary = reactExports.useMemo(
+    () => summariseCrewUnavailability(fixedCrewMembers, fixedCrewAvailabilityWindow),
+    [fixedCrewAvailabilityWindow, fixedCrewMembers]
+  );
   reactExports.useEffect(() => {
     if (!initialEvent || !isFixedCrewModel) return;
     const initialCategory = initialEvent.eventCategory === "lmp_currency" || initialEvent.eventCategory === "sct" || initialEvent.eventCategory === "staff_cat" || initialEvent.eventCategory === "twr_di" || initialEvent.eventCategory === "lmp_event" ? initialEvent.eventCategory : "lmp_event";
@@ -22795,13 +22890,11 @@ const AddFlightTileModal = ({
                         className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                          fixedCrewGroupOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.options.map((crewGroup) => {
-                            const parsed = parseFixedCrewGroupKey(crewGroup);
-                            return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: crewGroup, children: `CREW ${parsed.crew}` }, crewGroup);
-                          }) }, group.unit))
+                          fixedCrewGroupOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.options.map((crewGroup) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: crewGroup, children: formatUnavailableCrewLabel(crewGroup) }, crewGroup)) }, group.unit))
                         ]
                       }
-                    )
+                    ),
+                    selectedFixedCrewUnavailableSummary && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-red-500/30 bg-red-950/25 px-2 py-1 text-[11px] font-semibold text-red-200", children: selectedFixedCrewUnavailableSummary })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "PIC" }),
@@ -22814,7 +22907,7 @@ const AddFlightTileModal = ({
                         className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed",
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: fixedCrewGroup ? "Select PIC" : "Select crew first" }),
-                          fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: [staff.rank, staff.name].filter(Boolean).join(" ") }, staff.id || staff.name))
+                          fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatUnavailableStaffLabel(staff) }, staff.id || staff.name))
                         ]
                       }
                     )
@@ -22911,10 +23004,7 @@ const AddFlightTileModal = ({
                             className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
                             children: [
                               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                              fixedCrewGroupOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.options.map((crewGroup) => {
-                                const parsed = parseFixedCrewGroupKey(crewGroup);
-                                return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: crewGroup, children: `CREW ${parsed.crew}` }, crewGroup);
-                              }) }, group.unit))
+                              fixedCrewGroupOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.options.map((crewGroup) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: crewGroup, children: formatUnavailableCrewLabel(crewGroup) }, crewGroup)) }, group.unit))
                             ]
                           }
                         )
@@ -22930,7 +23020,7 @@ const AddFlightTileModal = ({
                             className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed",
                             children: [
                               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: assignment.crewGroup ? "Select PIC" : "Select crew first" }),
-                              picCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: [staff.rank, staff.name].filter(Boolean).join(" ") }, staff.id || staff.name))
+                              picCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatUnavailableStaffLabel(staff) }, staff.id || staff.name))
                             ]
                           }
                         )
@@ -29014,6 +29104,17 @@ const PrioritiesView = ({
       groups.set(groupLabel, [...groups.get(groupLabel) || [], preset]);
       return groups;
     }, /* @__PURE__ */ new Map());
+    const getRequestAvailabilityWindow = (request) => {
+      const start = timeFieldToHours(request.requestedTime, type === "ftd" ? ftdStartTime : flyingStartTime) || 0;
+      return {
+        date: request.dateRequested || buildDfpDate,
+        start: Math.max(0, start),
+        end: Math.min(24, start + defaultCurrencyDuration),
+        resourceKind: type === "flight" ? "flight" : "sim"
+      };
+    };
+    const formatRequestCrewOptionLabel = (group, window2) => appendUnavailableLabel(group.label, summariseCrewUnavailability(group.members, window2));
+    const formatRequestPicOptionLabel = (member, window2) => appendUnavailableLabel(member.name, getStaffUnavailabilityStatus(member, window2).reason);
     const applyCurrencyProfile = (requestId, eventValue) => {
       const profile = currencyProfilesForContext.find((candidate) => String(candidate.name || candidate.currency || "").trim() === eventValue || String(candidate.currency || "").trim() === eventValue);
       if (!profile) {
@@ -29039,6 +29140,8 @@ const PrioritiesView = ({
       const selectedCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === req.crewGroupKey || group.crewValue === String(req.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(req.crewUnitCode || "").trim().toUpperCase());
       const selectedCrewPicCandidates = (selectedCrewGroup?.members || []).filter((member) => staffHasPicQualification(member));
       const selectedCrewPicNames = new Set(selectedCrewPicCandidates.map((member) => member.name));
+      const requestAvailabilityWindow = getRequestAvailabilityWindow(req);
+      const selectedCrewUnavailableSummary = selectedCrewGroup ? summariseCrewUnavailability(selectedCrewGroup.members, requestAvailabilityWindow) : "";
       const otherPicCandidates = selectedCrewGroup ? allPicQualifiedStaff.filter((staff) => !selectedCrewPicNames.has(staff.name)).filter((staff) => {
         const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
         return !selectedCrewGroup.unitCode || staffUnitCode === selectedCrewGroup.unitCode;
@@ -29129,10 +29232,11 @@ const PrioritiesView = ({
                     className: controlClass,
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                      Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unitCode, children: groups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group.key, children: group.label }, group.key)) }, unitCode))
+                      Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unitCode, children: groups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group.key, children: formatRequestCrewOptionLabel(group, requestAvailabilityWindow) }, group.key)) }, unitCode))
                     ]
                   }
-                )
+                ),
+                selectedCrewUnavailableSummary && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-red-500/30 bg-red-950/25 px-2 py-1 text-[10px] font-semibold leading-snug text-red-200", children: selectedCrewUnavailableSummary })
               ] }),
               aircraftCount > 1 && formationAssignments.map((assignment, assignmentIndex) => {
                 const assignmentCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === assignment.crewGroupKey || group.crewValue === String(assignment.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(assignment.crewUnitCode || "").trim().toUpperCase());
@@ -29157,7 +29261,7 @@ const PrioritiesView = ({
                       className: controlClass,
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                        Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unitCode, children: groups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group.key, children: group.label }, group.key)) }, unitCode))
+                        Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unitCode, children: groups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group.key, children: formatRequestCrewOptionLabel(group, requestAvailabilityWindow) }, group.key)) }, unitCode))
                       ]
                     }
                   )
@@ -29187,8 +29291,8 @@ const PrioritiesView = ({
                     className: controlClass,
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: selectedCrewGroup ? "Select PIC" : "Select crew first" }),
-                      selectedCrewPicCandidates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: selectedCrewGroup?.label || "Selected Crew", children: selectedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: member.name }, member.id || member.idNumber || member.name)) }),
-                      otherPicCandidates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: "OTHER", children: otherPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: member.name }, member.id || member.idNumber || member.name)) })
+                      selectedCrewPicCandidates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: selectedCrewGroup?.label || "Selected Crew", children: selectedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: formatRequestPicOptionLabel(member, requestAvailabilityWindow) }, member.id || member.idNumber || member.name)) }),
+                      otherPicCandidates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: "OTHER", children: otherPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: formatRequestPicOptionLabel(member, requestAvailabilityWindow) }, member.id || member.idNumber || member.name)) })
                     ]
                   }
                 )
@@ -29207,7 +29311,7 @@ const PrioritiesView = ({
                       className: controlClass,
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: assignmentCrewGroup ? "Select PIC" : "Select crew first" }),
-                        assignmentPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: member.name }, member.id || member.idNumber || member.name))
+                        assignmentPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: formatRequestPicOptionLabel(member, requestAvailabilityWindow) }, member.id || member.idNumber || member.name))
                       ]
                     }
                   )
@@ -72626,7 +72730,7 @@ const DfpSidePanelTimeline = ({
     const personLabel = rank ? `${rank} ${name}` : name;
     return roleLabel ? `${personLabel} (${roleLabel})` : personLabel;
   };
-  const hoursOverlap = (firstStart, firstEnd, secondStart, secondEnd) => firstStart < secondEnd && secondStart < firstEnd;
+  const hoursOverlap2 = (firstStart, firstEnd, secondStart, secondEnd) => firstStart < secondEnd && secondStart < firstEnd;
   const getSyllabusDurationOffset = (value) => {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
@@ -72649,22 +72753,13 @@ const DfpSidePanelTimeline = ({
     end: Math.min(24, assistStartTime + assistDuration + getSyllabusDurationOffset(selectedSyllabusItem?.postFlightTime))
   }), [assistDuration, assistStartTime, selectedSyllabusItem]);
   const getUnavailabilityConflictReason = (person) => {
-    if (!person?.unavailability?.length) return null;
-    for (const period of person.unavailability) {
-      const isInDateRange = period.allDay ? date >= period.startDate && date < period.endDate : date >= period.startDate && date <= period.endDate;
-      if (!isInDateRange) continue;
-      if (period.reason === "TMUF - Ground Duties only" && selectedResourceKind !== "flight") continue;
-      if (period.allDay) return period.reason || "Unavailable";
-      const unavailableStart = timeStringToHours(period.startTime);
-      const unavailableEnd = timeStringToHours(period.endTime);
-      if (unavailableStart === null || unavailableEnd === null) continue;
-      const dayStart = date === period.startDate ? unavailableStart : 0;
-      const dayEnd = date === period.endDate ? unavailableEnd : 24;
-      if (hoursOverlap(assistBookingWindow.start, assistBookingWindow.end, dayStart, dayEnd)) {
-        return period.reason || "Unavailable";
-      }
-    }
-    return null;
+    const status = getStaffUnavailabilityStatus(person, {
+      date,
+      start: assistBookingWindow.start,
+      end: assistBookingWindow.end,
+      resourceKind: selectedResourceKind
+    });
+    return status.reason || null;
   };
   const isCrewStatusEvent = (event) => {
     const eventType = String(event.type || "").toLowerCase();
@@ -72685,7 +72780,7 @@ const DfpSidePanelTimeline = ({
         if (!isCrewStatusEvent(event)) return false;
         if (!getPersonnel(event).includes(name)) return false;
         const bookingWindow = getScheduleEventBookingWindow(event);
-        return hoursOverlap(assistBookingWindow.start, assistBookingWindow.end, bookingWindow.start, bookingWindow.end);
+        return hoursOverlap2(assistBookingWindow.start, assistBookingWindow.end, bookingWindow.start, bookingWindow.end);
       });
       if (conflictingEvent) {
         statusMap.set(name, {
