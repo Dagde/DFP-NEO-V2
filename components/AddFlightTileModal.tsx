@@ -7,6 +7,7 @@ import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '..
 import {
   DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
   formatAircraftNumber,
+  parseAircraftNumber,
   type AircraftNumberSettings,
 } from '../utils/aircraftNumberFormat';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';

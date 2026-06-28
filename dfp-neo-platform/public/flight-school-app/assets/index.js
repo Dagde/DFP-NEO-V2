@@ -2723,7 +2723,7 @@ const normaliseAircraftNumberSettings = (settings) => {
     defaultPrefix
   };
 };
-const parseAircraftNumber$1 = (value, settings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS) => {
+const parseAircraftNumber = (value, settings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS) => {
   const raw = cleanToken(value);
   const prefix = settings.defaultPrefix || settings.prefixes[0] || "";
   if (!raw) return { prefix, number: "" };
@@ -2737,7 +2737,7 @@ const parseAircraftNumber$1 = (value, settings = DEFAULT_AIRCRAFT_NUMBER_SETTING
   return { prefix, number: raw };
 };
 const formatAircraftNumber = (number, prefix, settings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS) => {
-  const parsed = parseAircraftNumber$1(number, settings);
+  const parsed = parseAircraftNumber(number, settings);
   const cleanNumber2 = parsed.number || cleanToken(number);
   if (!cleanNumber2) return "";
   if (!settings.usePrefix) return cleanNumber2;
@@ -7386,7 +7386,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const isFixedCrewCrewEvent = !!event.fixedCrewGroup;
   const isTwrDiEvent = event.eventCategory === "twr_di";
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
-  const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber$1(event.aircraftNumber, aircraftNumberSettings).number : "";
+  const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
   const picName = isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
   const fixedCrewDisplay = isFixedCrewCrewEvent ? formatFixedCrewDisplayGroup$3(event.fixedCrewGroup) : "";
   const studentName = isFixedCrewCrewEvent ? fixedCrewDisplay : isTaskingEvent2 || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
@@ -17994,7 +17994,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [eventType, setEventType] = reactExports.useState(event.type);
   const [startTime, setStartTime] = reactExports.useState(normalizeStartTimeValue(event.startTime));
   const [area, setArea] = reactExports.useState(event.area || "A");
-  const initialAircraftNumber = parseAircraftNumber$1(event.aircraftNumber || "001", aircraftNumberSettings);
+  const initialAircraftNumber = parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings);
   const [aircraftNumber, setAircraftNumber] = reactExports.useState(initialAircraftNumber.number || "001");
   const [aircraftNumberPrefix, setAircraftNumberPrefix] = reactExports.useState(initialAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
   const [aircraftConfigId, setAircraftConfigId] = reactExports.useState(event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
@@ -18805,7 +18805,7 @@ ${swapNote}` : swapNote
     setEventType(event.type);
     setStartTime(normalizeStartTimeValue(event.startTime));
     setArea(event.area || "A");
-    const parsedAircraftNumber = parseAircraftNumber$1(event.aircraftNumber || "001", aircraftNumberSettings);
+    const parsedAircraftNumber = parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings);
     setAircraftNumber(parsedAircraftNumber.number || "001");
     setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
     setAircraftConfigId(event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
@@ -63719,7 +63719,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       setResult(saved.result || "");
     }
     if (saved.aircraftNumber) {
-      const parsedAircraftNumber = parseAircraftNumber$1(saved.aircraftNumber, aircraftNumberSettings);
+      const parsedAircraftNumber = parseAircraftNumber(saved.aircraftNumber, aircraftNumberSettings);
       setAircraftNumber(parsedAircraftNumber.number || "001");
       setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
     }
@@ -63757,8 +63757,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     if (saved.crewLog && typeof saved.crewLog === "object") setCrewLogOverride(saved.crewLog);
     initialFormState.current = {
       result: saved.result != null ? saved.result || "" : result,
-      aircraftNumber: saved.aircraftNumber ? parseAircraftNumber$1(saved.aircraftNumber, aircraftNumberSettings).number || "001" : aircraftNumber,
-      aircraftNumberPrefix: saved.aircraftNumber ? parseAircraftNumber$1(saved.aircraftNumber, aircraftNumberSettings).prefix || aircraftNumberSettings.defaultPrefix : aircraftNumberPrefix,
+      aircraftNumber: saved.aircraftNumber ? parseAircraftNumber(saved.aircraftNumber, aircraftNumberSettings).number || "001" : aircraftNumber,
+      aircraftNumberPrefix: saved.aircraftNumber ? parseAircraftNumber(saved.aircraftNumber, aircraftNumberSettings).prefix || aircraftNumberSettings.defaultPrefix : aircraftNumberPrefix,
       from: saved.from || from,
       to: saved.to || to,
       isFlightLog: saved.isFlightLog ?? isFlightLog,
