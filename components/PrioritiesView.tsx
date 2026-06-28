@@ -1082,6 +1082,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const settings = normaliseCrewCompositionSettings(crewCompositionSettings || null);
     const contextCodes = Array.from(activeUnitCodeSet);
     const activeAircraftTypeCode = String(aircraftTypeCode || '').trim().toUpperCase();
+    const activeGroupLabels = contextCodes.length > 0
+      ? contextCodes
+      : [normaliseTaskingUnitCode(activeUnitCode) || normaliseTaskingUnitCode(school) || 'Unit'];
     const compositeCodes = new Set<string>([
       normaliseTaskingUnitCode(activeUnitCode),
       contextCodes.join('+'),
@@ -1118,6 +1121,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         })(),
         description: profile.description,
         kind: 'alternate',
+        groupLabel: normaliseTaskingUnitCode(profile.unitCode)
+          || normaliseTaskingUnitCode(profile.compositeUnitCode)
+          || activeGroupLabels[0]
+          || 'Unit',
         roles: profile.roleRequirements.map(role => ({
           role: role.role,
           count: role.count,
@@ -1126,15 +1133,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       }));
 
     return [
-      {
-        id: 'standard-aircraft-crew',
+      ...activeGroupLabels.map((unitCode, index): CrewRequirementPreset => ({
+        id: index === 0 ? 'standard-aircraft-crew' : `standard-aircraft-crew:${unitCode}`,
         label: `Standard ${activeAircraftTypeCode || 'Aircraft'} Crew`,
         description: formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology),
         kind: 'standard',
-      },
+        groupLabel: unitCode,
+      })),
       ...alternatePresets,
     ];
-  }, [activeUnitCode, activeUnitCodeSet, aircraftCrewComposition, aircraftTypeCode, crewCompositionSettings, crewPositionTerminology, operationalModel]);
+  }, [activeUnitCode, activeUnitCodeSet, aircraftCrewComposition, aircraftTypeCode, crewCompositionSettings, crewPositionTerminology, operationalModel, school]);
   const activeCallsignUnitCodes = useMemo(() => {
     const contextCodes = Array.from(activeUnitCodeSet);
     if (contextCodes.length > 0) return contextCodes;
@@ -2808,6 +2816,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         && getCrewRequirementSignature({ mode: 'custom', roles: preset.roles || [] }) === signature
       ))?.id || '';
     };
+    const crewRequirementPresetsByUnit = crewRequirementPresets.reduce((groups, preset) => {
+      const groupLabel = String(preset.groupLabel || 'Unit').trim() || 'Unit';
+      groups.set(groupLabel, [...(groups.get(groupLabel) || []), preset]);
+      return groups;
+    }, new Map<string, CrewRequirementPreset[]>());
     const applyCurrencyProfile = (requestId: string, eventValue: string) => {
       const profile = currencyProfilesForContext.find(candidate => (
         String(candidate.name || candidate.currency || '').trim() === eventValue
@@ -3006,8 +3019,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                           className={controlClass}
                                       >
                                           <option value="">Select composition</option>
-                                          {crewRequirementPresets.map(preset => (
-                                              <option key={preset.id} value={preset.id}>{preset.label}</option>
+                                          {Array.from(crewRequirementPresetsByUnit.entries()).map(([unitCode, presets]) => (
+                                              <optgroup key={unitCode} label={unitCode}>
+                                                  {presets.map(preset => (
+                                                      <option key={preset.id} value={preset.id}>{preset.label}</option>
+                                                  ))}
+                                              </optgroup>
                                           ))}
                                       </select>
                                   </div>

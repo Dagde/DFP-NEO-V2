@@ -27552,6 +27552,7 @@ const PrioritiesView = ({
     const settings = normaliseCrewCompositionSettings(crewCompositionSettings || null);
     const contextCodes = Array.from(activeUnitCodeSet);
     const activeAircraftTypeCode = String(aircraftTypeCode || "").trim().toUpperCase();
+    const activeGroupLabels = contextCodes.length > 0 ? contextCodes : [normaliseTaskingUnitCode(activeUnitCode) || normaliseTaskingUnitCode(school) || "Unit"];
     const compositeCodes = new Set([
       normaliseTaskingUnitCode(activeUnitCode),
       contextCodes.join("+"),
@@ -27583,6 +27584,7 @@ const PrioritiesView = ({
       })(),
       description: profile.description,
       kind: "alternate",
+      groupLabel: normaliseTaskingUnitCode(profile.unitCode) || normaliseTaskingUnitCode(profile.compositeUnitCode) || activeGroupLabels[0] || "Unit",
       roles: profile.roleRequirements.map((role) => ({
         role: role.role,
         count: role.count,
@@ -27590,15 +27592,16 @@ const PrioritiesView = ({
       }))
     }));
     return [
-      {
-        id: "standard-aircraft-crew",
+      ...activeGroupLabels.map((unitCode, index) => ({
+        id: index === 0 ? "standard-aircraft-crew" : `standard-aircraft-crew:${unitCode}`,
         label: `Standard ${activeAircraftTypeCode || "Aircraft"} Crew`,
         description: formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology),
-        kind: "standard"
-      },
+        kind: "standard",
+        groupLabel: unitCode
+      })),
       ...alternatePresets
     ];
-  }, [activeUnitCode, activeUnitCodeSet, aircraftCrewComposition, aircraftTypeCode, crewCompositionSettings, crewPositionTerminology, operationalModel2]);
+  }, [activeUnitCode, activeUnitCodeSet, aircraftCrewComposition, aircraftTypeCode, crewCompositionSettings, crewPositionTerminology, operationalModel2, school]);
   const activeCallsignUnitCodes = reactExports.useMemo(() => {
     const contextCodes = Array.from(activeUnitCodeSet);
     if (contextCodes.length > 0) return contextCodes;
@@ -28939,6 +28942,11 @@ const PrioritiesView = ({
       const signature = getCrewRequirementSignature(requirement);
       return crewRequirementPresets.find((preset) => preset.kind === "alternate" && getCrewRequirementSignature({ mode: "custom", roles: preset.roles || [] }) === signature)?.id || "";
     };
+    const crewRequirementPresetsByUnit = crewRequirementPresets.reduce((groups, preset) => {
+      const groupLabel = String(preset.groupLabel || "Unit").trim() || "Unit";
+      groups.set(groupLabel, [...groups.get(groupLabel) || [], preset]);
+      return groups;
+    }, /* @__PURE__ */ new Map());
     const applyCurrencyProfile = (requestId, eventValue) => {
       const profile = currencyProfilesForContext.find((candidate) => String(candidate.name || candidate.currency || "").trim() === eventValue || String(candidate.currency || "").trim() === eventValue);
       if (!profile) {
@@ -29094,7 +29102,7 @@ const PrioritiesView = ({
                   className: controlClass,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select composition" }),
-                    crewRequirementPresets.map((preset) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: preset.id, children: preset.label }, preset.id))
+                    Array.from(crewRequirementPresetsByUnit.entries()).map(([unitCode, presets]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unitCode, children: presets.map((preset) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: preset.id, children: preset.label }, preset.id)) }, unitCode))
                   ]
                 }
               )

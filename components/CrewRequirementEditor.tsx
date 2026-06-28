@@ -16,6 +16,7 @@ export interface CrewRequirementPreset {
   description?: string;
   kind: 'standard' | 'alternate';
   roles?: CrewRequirementRole[];
+  groupLabel?: string;
 }
 
 interface CrewRequirementEditorProps {
