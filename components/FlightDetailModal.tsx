@@ -24,6 +24,7 @@ import { getAircraftSeatEligibleRoles, type AircraftCrewComposition } from '../u
 import {
     crewPositionValuesMatch,
     findCrewPositionEntry,
+    getCrewPositionDisplayLabel,
     type CrewPositionTerminology,
 } from '../utils/crewPositionTerminology';
 import { normaliseOperationalModel } from '../utils/platformConfigService';
@@ -707,7 +708,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const getFixedCrewRoleLabel = (role?: string | null): string => {
         const aircraftRole = resolveFixedCrewAircraftRole(role);
         if (!aircraftRole) return 'Unconfigured role';
-        return findCrewPositionEntry(aircraftRole, crewPositionTerminology)?.label || aircraftRole;
+        return getCrewPositionDisplayLabel(aircraftRole, crewPositionTerminology, aircraftRole);
     };
     const fixedCrewRolesMatch = (left?: string | null, right?: string | null): boolean => (
         Boolean(resolveFixedCrewAircraftRole(left))
@@ -793,14 +794,22 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             const cleaned = String(name || '').trim();
             if (cleaned) eventRosterNames.add(cleaned);
         });
+        const crewParts = splitFixedCrewGroupKey(eventCrewKey);
         const rosterFromAttendees = Array.from(eventRosterNames)
-            .map(name => instructorsData.find(staff => staff.name === name))
+            .map(name => {
+                const candidates = instructorsData.filter(staff => staff.name === name);
+                return candidates.find(staff => (
+                    staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)
+                    && (!crewParts.crew || String(staff.crew || '').trim().toUpperCase() === crewParts.crew)
+                ))
+                    || candidates.find(staff => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey))
+                    || candidates[0];
+            })
             .filter(Boolean) as Instructor[];
         if (rosterFromAttendees.length > 0) {
             return rosterFromAttendees.sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
         }
         if (!eventCrewKey) return [] as Instructor[];
-        const crewParts = splitFixedCrewGroupKey(eventCrewKey);
         return instructorsData
             .filter(staff => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey))
             .filter(staff => String(staff.crew || '').trim().toUpperCase() === crewParts.crew)

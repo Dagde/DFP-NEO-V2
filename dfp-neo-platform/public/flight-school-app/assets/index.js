@@ -9857,6 +9857,7 @@ const STABLE_ROLE_COLOUR_OVERRIDES = {
   "flight engineer": "text-rose-300",
   mpro: "text-amber-300",
   ewo: "text-stone-300",
+  awo: "text-violet-300",
   aea: "text-cyan-300",
   crew: "text-cyan-300",
   trainee: "text-lime-300"
@@ -18219,7 +18220,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const getFixedCrewRoleLabel = (role) => {
     const aircraftRole = resolveFixedCrewAircraftRole(role);
     if (!aircraftRole) return "Unconfigured role";
-    return findCrewPositionEntry(aircraftRole, crewPositionTerminology)?.label || aircraftRole;
+    return getCrewPositionDisplayLabel(aircraftRole, crewPositionTerminology, aircraftRole);
   };
   const fixedCrewRolesMatch = (left, right) => Boolean(resolveFixedCrewAircraftRole(left)) && resolveFixedCrewAircraftRole(left) === resolveFixedCrewAircraftRole(right);
   const fixedCrewGroups = reactExports.useMemo(() => Array.from(new Set(instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff)).map((staff) => {
@@ -18279,12 +18280,15 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       const cleaned = String(name || "").trim();
       if (cleaned) eventRosterNames.add(cleaned);
     });
-    const rosterFromAttendees = Array.from(eventRosterNames).map((name) => instructorsData.find((staff) => staff.name === name)).filter(Boolean);
+    const crewParts = splitFixedCrewGroupKey(eventCrewKey);
+    const rosterFromAttendees = Array.from(eventRosterNames).map((name) => {
+      const candidates = instructorsData.filter((staff) => staff.name === name);
+      return candidates.find((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey) && (!crewParts.crew || String(staff.crew || "").trim().toUpperCase() === crewParts.crew)) || candidates.find((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)) || candidates[0];
+    }).filter(Boolean);
     if (rosterFromAttendees.length > 0) {
       return rosterFromAttendees.sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
     }
     if (!eventCrewKey) return [];
-    const crewParts = splitFixedCrewGroupKey(eventCrewKey);
     return instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)).filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewParts.crew).filter((staff) => !staff.isAdminStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
   }, [event, fixedCrewGroup, instructorsData, isFixedCrewCrewedEvent, activeUnitMemberCodes, personnelDisplaySettings]);
   const staffHasAvailabilityConflict = (staff, bookingWindow, eventDate) => {
