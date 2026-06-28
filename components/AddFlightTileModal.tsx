@@ -1706,7 +1706,12 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setFixedCrewEventKey(''); setFixedCrewGroup(''); setFixedCrewPic(''); setFixedCrewManifestStatus('pending'); setFixedCrewManifestNotes('');
     setErrors([]);
     setGuidedStep('startTime');
-  }, [eventCategory, defaultUnitCallsign]);
+  }, [eventCategory]);
+
+  useEffect(() => {
+    if (!defaultUnitCallsign) return;
+    setUnitCallsignBase(current => current || defaultUnitCallsign);
+  }, [defaultUnitCallsign]);
 
   useEffect(() => {
     if (isFixedCrewModel) {
@@ -1754,11 +1759,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (flightNumber === 'SCT FORM') {
       setAircraftCount(prev => Math.max(prev, 2));
       setFlightType('Solo');
-    } else {
+    } else if (!isFixedCrewModel) {
       setAircraftCount(1);
       setFormationCrew([]);
     }
-  }, [flightNumber]);
+  }, [flightNumber, isFixedCrewModel]);
 
   // ── Set sortie type from LMP item when event chosen ───────────────────────
   useEffect(() => {

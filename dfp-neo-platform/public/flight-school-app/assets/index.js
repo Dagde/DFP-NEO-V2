@@ -22261,7 +22261,11 @@ const AddFlightTileModal = ({
     setFixedCrewManifestNotes("");
     setErrors([]);
     setGuidedStep("startTime");
-  }, [eventCategory, defaultUnitCallsign]);
+  }, [eventCategory]);
+  reactExports.useEffect(() => {
+    if (!defaultUnitCallsign) return;
+    setUnitCallsignBase((current) => current || defaultUnitCallsign);
+  }, [defaultUnitCallsign]);
   reactExports.useEffect(() => {
     if (isFixedCrewModel) {
       setFlightType("Dual");
@@ -22302,11 +22306,11 @@ const AddFlightTileModal = ({
     if (flightNumber === "SCT FORM") {
       setAircraftCount((prev) => Math.max(prev, 2));
       setFlightType("Solo");
-    } else {
+    } else if (!isFixedCrewModel) {
       setAircraftCount(1);
       setFormationCrew([]);
     }
-  }, [flightNumber]);
+  }, [flightNumber, isFixedCrewModel]);
   reactExports.useEffect(() => {
     const name = flightType === "Solo" ? picName : studentName;
     if (!name || !flightNumber || !traineeLMPs) return;
