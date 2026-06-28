@@ -29040,8 +29040,8 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Crew" }),
             isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                aircraftCount > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300", children: "A/C 1" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: aircraftCount > 1 ? "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2" : "", children: [
+                aircraftCount > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center text-[10px] font-bold text-sky-300", children: "1" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "select",
                   {
@@ -29069,11 +29069,8 @@ const PrioritiesView = ({
               ] }),
               aircraftCount > 1 && formationAssignments.map((assignment, assignmentIndex) => {
                 const assignmentCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === assignment.crewGroupKey || group.crewValue === String(assignment.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(assignment.crewUnitCode || "").trim().toUpperCase());
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300", children: [
-                    "A/C ",
-                    assignmentIndex + 2
-                  ] }),
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center text-[10px] font-bold text-sky-300", children: assignmentIndex + 2 }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "select",
                     {
@@ -29107,8 +29104,8 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "PIC" }),
             isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                aircraftCount > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300", children: "A/C 1" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: aircraftCount > 1 ? "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2" : "", children: [
+                aircraftCount > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center text-[10px] font-bold text-sky-300", children: "1" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "select",
                   {
@@ -29132,11 +29129,8 @@ const PrioritiesView = ({
               aircraftCount > 1 && formationAssignments.map((assignment, assignmentIndex) => {
                 const assignmentCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === assignment.crewGroupKey || group.crewValue === String(assignment.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(assignment.crewUnitCode || "").trim().toUpperCase());
                 const assignmentPicCandidates = (assignmentCrewGroup?.members || []).filter((member) => staffHasPicQualification(member));
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300", children: [
-                    "A/C ",
-                    assignmentIndex + 2
-                  ] }),
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center text-[10px] font-bold text-sky-300", children: assignmentIndex + 2 }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "select",
                     {

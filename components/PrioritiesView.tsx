@@ -2946,8 +2946,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                       <div className={tileLabelClass}>Crew</div>
                                       {isFixedCrewModel ? (
                                         <div className="space-y-2">
-                                          <div>
-                                            {aircraftCount > 1 && <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300">A/C 1</div>}
+                                          <div className={aircraftCount > 1 ? 'grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2' : ''}>
+                                            {aircraftCount > 1 && <div className="text-center text-[10px] font-bold text-sky-300">1</div>}
                                           <select
                                               value={selectedCrewGroup?.key || ''}
                                               onChange={e => {
@@ -2982,8 +2982,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                       && group.unitCode === String(assignment.crewUnitCode || '').trim().toUpperCase())
                                               ));
                                               return (
-                                                <div key={`${req.id}-formation-crew-${assignmentIndex}`}>
-                                                  <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300">A/C {assignmentIndex + 2}</div>
+                                                <div key={`${req.id}-formation-crew-${assignmentIndex}`} className="grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2">
+                                                  <div className="text-center text-[10px] font-bold text-sky-300">{assignmentIndex + 2}</div>
                                                   <select
                                                       value={assignmentCrewGroup?.key || ''}
                                                       onChange={e => {
@@ -3024,8 +3024,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                       <div className={tileLabelClass}>PIC</div>
                                       {isFixedCrewModel ? (
                                         <div className="space-y-2">
-                                          <div>
-                                            {aircraftCount > 1 && <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300">A/C 1</div>}
+                                          <div className={aircraftCount > 1 ? 'grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2' : ''}>
+                                            {aircraftCount > 1 && <div className="text-center text-[10px] font-bold text-sky-300">1</div>}
                                           <select
                                               value={req.crewIndividual || ''}
                                               onChange={e => {
@@ -3062,8 +3062,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                               ));
                                               const assignmentPicCandidates = (assignmentCrewGroup?.members || []).filter(member => staffHasPicQualification(member));
                                               return (
-                                                <div key={`${req.id}-formation-pic-${assignmentIndex}`}>
-                                                  <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300">A/C {assignmentIndex + 2}</div>
+                                                <div key={`${req.id}-formation-pic-${assignmentIndex}`} className="grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2">
+                                                  <div className="text-center text-[10px] font-bold text-sky-300">{assignmentIndex + 2}</div>
                                                   <select
                                                       value={assignment.crewIndividual || ''}
                                                       onChange={e => updateFormationAssignment(assignmentIndex, { crewIndividual: e.target.value })}
