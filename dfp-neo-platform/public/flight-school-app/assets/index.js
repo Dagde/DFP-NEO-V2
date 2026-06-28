@@ -9903,7 +9903,9 @@ const getUnitTextColor = (unit) => {
     "No. 3 Squadron": "text-cyan-300",
     "No. 75 Squadron": "text-amber-300",
     "No. 76 Squadron": "text-lime-300",
-    "No. 77 Squadron": "text-emerald-300"
+    "No. 77 Squadron": "text-emerald-300",
+    "11SQN": "text-sky-300",
+    "12SQN": "text-violet-300"
   };
   console.log("🎨 UNIT COLOR DEBUG - Unit:", unit, "Color:", unitColors[unit || ""] || "text-gray-300");
   return unitColors[unit || ""] || "text-gray-300";
@@ -9922,7 +9924,9 @@ const getUnitColor = (unit) => {
     "No. 3 Squadron": "bg-cyan-500/20 border-cyan-500/50 text-cyan-300",
     "No. 75 Squadron": "bg-amber-500/20 border-amber-500/50 text-amber-300",
     "No. 76 Squadron": "bg-lime-500/20 border-lime-500/50 text-lime-300",
-    "No. 77 Squadron": "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
+    "No. 77 Squadron": "bg-emerald-500/20 border-emerald-500/50 text-emerald-300",
+    "11SQN": "bg-sky-500/20 border-sky-500/50 text-sky-300",
+    "12SQN": "bg-violet-500/20 border-violet-500/50 text-violet-300"
   };
   return unitColors[unit || ""] || "bg-gray-600/20 border-gray-500/50 text-gray-300";
 };
@@ -9948,14 +9952,12 @@ const PersonnelColumn = ({
   const groupedPersonnel = React.useMemo(() => {
     if (!showUnits) return personnel;
     const groups = {};
-    groups["Unassigned"] = personnel.filter((p) => !p.unit);
     personnel.forEach((person) => {
-      if (person.unit) {
-        if (!groups[person.unit]) {
-          groups[person.unit] = [];
-        }
-        groups[person.unit].push(person);
+      const unit = person.unit || "Unassigned";
+      if (!groups[unit]) {
+        groups[unit] = [];
       }
+      groups[unit].push(person);
     });
     return groups;
   }, [personnel, showUnits]);
@@ -9982,35 +9984,48 @@ const PersonnelColumn = ({
       );
     }) }) });
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-48 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: Object.entries(groupedPersonnel).map(([unit, people]) => /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "bg-gray-900/80 border-b border-gray-600 px-3 py-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `text-xs font-semibold ${useUnitColors ? getUnitColor(unit).split(" ").find((c) => c.startsWith("text-")) || "text-gray-400" : "text-gray-400"}`, children: [
-      unit,
-      " (",
-      people.length,
-      ")"
-    ] }) }),
-    people.map(({ name, rank, unit: personUnit, role }, index) => {
-      const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel);
-      const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(personUnit) : "text-gray-300";
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+  let visualRowIndex = 0;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: Object.entries(groupedPersonnel).map(([unit, people]) => {
+    visualRowIndex += 1;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
         "li",
         {
-          ref: (el) => onRowRef?.(name, el),
-          className: `flex items-center justify-start pl-3 pr-2 py-1 text-xs transition-colors duration-150 border-b border-gray-700/50 bg-gray-800 ${onPersonClick ? "cursor-pointer hover:bg-gray-700" : ""}`,
+          className: `flex items-center border-b px-3 ${getUnitColor(unit)}`,
           style: { height: rowHeight, minHeight: rowHeight },
-          onMouseEnter: () => onRowEnter?.(index),
-          onMouseLeave: () => onRowLeave?.(),
-          onClick: () => onPersonClick?.(name),
-          title: useRoleColors ? `${name} - ${roleDisplay.label}` : name,
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-10 text-xs", children: rank }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate font-medium flex-1 ${nameTextClass}`, children: name })
-          ]
-        },
-        `${unit}-${name}`
-      );
-    })
-  ] }, unit)) }) });
+          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `text-xs font-semibold ${useUnitColors ? getUnitColor(unit).split(" ").find((c) => c.startsWith("text-")) || "text-gray-400" : "text-gray-400"}`, children: [
+            unit,
+            " (",
+            people.length,
+            ")"
+          ] })
+        }
+      ),
+      people.map(({ name, rank, unit: personUnit, role }) => {
+        const rowIndex = visualRowIndex;
+        visualRowIndex += 1;
+        const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel);
+        const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(personUnit) : "text-gray-300";
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "li",
+          {
+            ref: (el) => onRowRef?.(name, el),
+            className: `flex items-center justify-start pl-3 pr-2 py-1 text-xs transition-colors duration-150 border-b border-gray-700/50 bg-gray-800 ${onPersonClick ? "cursor-pointer hover:bg-gray-700" : ""}`,
+            style: { height: rowHeight, minHeight: rowHeight },
+            onMouseEnter: () => onRowEnter?.(rowIndex),
+            onMouseLeave: () => onRowLeave?.(),
+            onClick: () => onPersonClick?.(name),
+            title: useRoleColors ? `${name} - ${roleDisplay.label}` : name,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-10 text-xs", children: rank }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate font-medium flex-1 ${nameTextClass}`, children: name })
+            ]
+          },
+          `${unit}-${name}`
+        );
+      })
+    ] }, unit);
+  }) }) });
 };
 const PIXELS_PER_HOUR$5 = 200;
 const ROW_HEIGHT$5 = 32;
@@ -10272,7 +10287,26 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
       didDragRef.current = false;
     }, 0);
   };
-  const totalRows = instructors.length;
+  const showUnitHeadings = normaliseOperationalModel(operationalModel2) === "fixed_crew" && new Set(instructors.map((instructor) => String(instructor.unit || "").trim()).filter(Boolean)).size > 1;
+  const scheduleRows = reactExports.useMemo(() => {
+    if (!showUnitHeadings) return instructors.map((instructor) => ({ type: "person", instructor }));
+    const rows = [];
+    let currentUnit = "";
+    instructors.forEach((instructor) => {
+      const unit = String(instructor.unit || "Unassigned").trim() || "Unassigned";
+      if (unit !== currentUnit) {
+        currentUnit = unit;
+        rows.push({
+          type: "unit",
+          unit,
+          count: instructors.filter((candidate) => (String(candidate.unit || "Unassigned").trim() || "Unassigned") === unit).length
+        });
+      }
+      rows.push({ type: "person", instructor });
+    });
+    return rows;
+  }, [instructors, showUnitHeadings]);
+  const totalRows = scheduleRows.length;
   console.log("📏 CALCULATING DIMENSIONS:");
   console.log("  - TOTAL_HOURS:", TOTAL_HOURS$5);
   console.log("  - PIXELS_PER_HOUR:", PIXELS_PER_HOUR$5);
@@ -10511,7 +10545,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
               onPersonClick: onSelectInstructor,
               onRowEnter: setHoveredRowIndex,
               onRowLeave: () => setHoveredRowIndex(null),
-              showUnits: false,
+              showUnits: showUnitHeadings,
               useUnitColors: true,
               useRoleColors: normaliseOperationalModel(operationalModel2) === "air_combat",
               crewPositionTerminology,
@@ -10532,7 +10566,18 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
               renderNightShade(),
               renderDaylightLines(),
               renderCurrentTimeIndicator(),
-              instructors.flatMap((instructor, rowIndex) => {
+              scheduleRows.flatMap((row, rowIndex) => {
+                if (row.type === "unit") {
+                  return [/* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "div",
+                    {
+                      className: "absolute left-0 right-0 z-[2] border-b border-gray-600/60 bg-gray-800/70",
+                      style: { top: rowIndex * ROW_HEIGHT$5, height: ROW_HEIGHT$5 }
+                    },
+                    `unit-band-${row.unit}-${rowIndex}`
+                  )];
+                }
+                const { instructor } = row;
                 const rowHighlight = hoveredRowIndex === rowIndex ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "div",
                   {
@@ -69787,7 +69832,27 @@ const NextDayInstructorScheduleView = ({
       didDragRef.current = false;
     }, 0);
   };
-  const totalRows = instructors.length;
+  const showUnitHeadings = normaliseOperationalModel(operationalModel2) === "fixed_crew" && new Set(instructors.map((instructor) => String(instructor.unit || "").trim()).filter(Boolean)).size > 1;
+  const scheduleRows = reactExports.useMemo(() => {
+    if (!showUnitHeadings) return instructors.map((instructor) => ({ type: "person", instructor }));
+    const unitCounts = instructors.reduce((counts, instructor) => {
+      const unit = String(instructor.unit || "Unassigned").trim() || "Unassigned";
+      counts[unit] = (counts[unit] || 0) + 1;
+      return counts;
+    }, {});
+    const rows = [];
+    let currentUnit = "";
+    instructors.forEach((instructor) => {
+      const unit = String(instructor.unit || "Unassigned").trim() || "Unassigned";
+      if (unit !== currentUnit) {
+        currentUnit = unit;
+        rows.push({ type: "unit", unit, count: unitCounts[unit] || 0 });
+      }
+      rows.push({ type: "person", instructor });
+    });
+    return rows;
+  }, [instructors, showUnitHeadings]);
+  const totalRows = scheduleRows.length;
   const timelineWidth = TOTAL_HOURS$1 * PIXELS_PER_HOUR$1 * zoomLevel;
   const containerHeight = totalRows * ROW_HEIGHT$1;
   const timeStringToHours2 = reactExports.useCallback((timeString) => {
@@ -69839,7 +69904,9 @@ const NextDayInstructorScheduleView = ({
       seenPrePostIds.add(e.id);
       return true;
     });
-    instructors.forEach((instructor, rowIndex) => {
+    scheduleRows.forEach((row, rowIndex) => {
+      if (row.type !== "person") return;
+      const { instructor } = row;
       const instructorEvents = uniqueEventsForBars.filter((e) => e.instructor === instructor.name).sort((a, b) => a.startTime - b.startTime);
       for (let i = 0; i < instructorEvents.length; i++) {
         const currentEvent = instructorEvents[i];
@@ -69991,7 +70058,7 @@ const NextDayInstructorScheduleView = ({
             rowHeight: ROW_HEIGHT$1,
             onRowEnter: setHoveredRowIndex,
             onPersonClick: onSelectInstructor,
-            showUnits: false,
+            showUnits: showUnitHeadings,
             useUnitColors: true,
             useRoleColors: normaliseOperationalModel(operationalModel2) === "air_combat",
             crewPositionTerminology,
@@ -70018,7 +70085,18 @@ const NextDayInstructorScheduleView = ({
                   seenIds.add(e.id);
                   return true;
                 });
-                return instructors.flatMap((instructor, rowIndex) => {
+                return scheduleRows.flatMap((row, rowIndex) => {
+                  if (row.type === "unit") {
+                    return [/* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "div",
+                      {
+                        className: "absolute left-0 right-0 z-[2] border-b border-gray-600/60 bg-gray-800/70",
+                        style: { top: rowIndex * ROW_HEIGHT$1, height: ROW_HEIGHT$1 }
+                      },
+                      `unit-band-${row.unit}-${rowIndex}`
+                    )];
+                  }
+                  const { instructor } = row;
                   const rowHighlight = hoveredRowIndex === rowIndex ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "div",
                     {

@@ -38,6 +38,9 @@ const END_HOUR = 24;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
 const PERSONNEL_COLUMN_WIDTH = 160;
 const TIME_HEADER_HEIGHT = 40;
+type NextDayInstructorScheduleRow =
+  | { type: 'unit'; unit: string; count: number }
+  | { type: 'person'; instructor: { name: string; rank: InstructorRank; unit?: string; role?: string } };
 
 const addPersonnelName = (personnel: Set<string>, value?: string) => {
     const name = String(value || '').trim();
@@ -302,7 +305,29 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
     setTimeout(() => { didDragRef.current = false; }, 0);
   };
 
-  const totalRows = instructors.length;
+  const showUnitHeadings = normaliseOperationalModel(operationalModel) === 'fixed_crew'
+    && new Set(instructors.map(instructor => String(instructor.unit || '').trim()).filter(Boolean)).size > 1;
+  const scheduleRows = useMemo<NextDayInstructorScheduleRow[]>(() => {
+    if (!showUnitHeadings) return instructors.map(instructor => ({ type: 'person', instructor }));
+    const unitCounts = instructors.reduce<Record<string, number>>((counts, instructor) => {
+      const unit = String(instructor.unit || 'Unassigned').trim() || 'Unassigned';
+      counts[unit] = (counts[unit] || 0) + 1;
+      return counts;
+    }, {});
+    const rows: NextDayInstructorScheduleRow[] = [];
+    let currentUnit = '';
+    instructors.forEach(instructor => {
+      const unit = String(instructor.unit || 'Unassigned').trim() || 'Unassigned';
+      if (unit !== currentUnit) {
+        currentUnit = unit;
+        rows.push({ type: 'unit', unit, count: unitCounts[unit] || 0 });
+      }
+      rows.push({ type: 'person', instructor });
+    });
+    return rows;
+  }, [instructors, showUnitHeadings]);
+
+  const totalRows = scheduleRows.length;
   const timelineWidth = TOTAL_HOURS * PIXELS_PER_HOUR * zoomLevel;
   const containerHeight = totalRows * ROW_HEIGHT;
 
@@ -372,7 +397,9 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
       return true;
     });
   
-    instructors.forEach((instructor, rowIndex) => {
+    scheduleRows.forEach((row, rowIndex) => {
+      if (row.type !== 'person') return;
+      const { instructor } = row;
       const instructorEvents = uniqueEventsForBars
         .filter(e => e.instructor === instructor.name)
         .sort((a, b) => a.startTime - b.startTime);
@@ -545,7 +572,7 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
             rowHeight={ROW_HEIGHT}
             onRowEnter={setHoveredRowIndex}
             onPersonClick={onSelectInstructor}
-            showUnits={false}
+            showUnits={showUnitHeadings}
             useUnitColors={true}
             useRoleColors={normaliseOperationalModel(operationalModel) === 'air_combat'}
             crewPositionTerminology={crewPositionTerminology}
@@ -572,7 +599,17 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
                 seenIds.add(e.id);
                 return true;
               });
-              return instructors.flatMap((instructor, rowIndex) => {
+              return scheduleRows.flatMap((row, rowIndex) => {
+              if (row.type === 'unit') {
+                return [(
+                  <div
+                    key={`unit-band-${row.unit}-${rowIndex}`}
+                    className="absolute left-0 right-0 z-[2] border-b border-gray-600/60 bg-gray-800/70"
+                    style={{ top: rowIndex * ROW_HEIGHT, height: ROW_HEIGHT }}
+                  />
+                )];
+              }
+              const { instructor } = row;
               // Render row highlight if this row is hovered
               const rowHighlight = hoveredRowIndex === rowIndex ? (
                 <div

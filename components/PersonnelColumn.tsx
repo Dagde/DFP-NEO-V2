@@ -40,6 +40,8 @@ const getUnitTextColor = (unit?: string): string => {
     'No. 75 Squadron': 'text-amber-300',
     'No. 76 Squadron': 'text-lime-300',
     'No. 77 Squadron': 'text-emerald-300',
+    '11SQN': 'text-sky-300',
+    '12SQN': 'text-violet-300',
   };
   console.log('🎨 UNIT COLOR DEBUG - Unit:', unit, 'Color:', unitColors[unit || ''] || 'text-gray-300');
      return unitColors[unit || ''] || 'text-gray-300';
@@ -61,6 +63,8 @@ const getUnitColor = (unit?: string): string => {
     'No. 75 Squadron': 'bg-amber-500/20 border-amber-500/50 text-amber-300',
     'No. 76 Squadron': 'bg-lime-500/20 border-lime-500/50 text-lime-300',
     'No. 77 Squadron': 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300',
+    '11SQN': 'bg-sky-500/20 border-sky-500/50 text-sky-300',
+    '12SQN': 'bg-violet-500/20 border-violet-500/50 text-violet-300',
   };
   return unitColors[unit || ''] || 'bg-gray-600/20 border-gray-500/50 text-gray-300';
 };
@@ -85,25 +89,19 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
        samplePersonnel: personnel.slice(0, 3).map(p => ({ name: p.name, unit: p.unit }))
      });
      
-     // Group personnel by unit if needed
+     // Group personnel by unit if needed, preserving the incoming sorted unit order.
   const groupedPersonnel = React.useMemo(() => {
     if (!showUnits) return personnel;
-    
-    const groups: { [unit: string]: Personnel[] } = {};
-    
-    // Add "Unassigned" group first
-    groups['Unassigned'] = personnel.filter(p => !p.unit);
-    
-    // Group by unit
+
+    const groups: Record<string, Personnel[]> = {};
     personnel.forEach(person => {
-      if (person.unit) {
-        if (!groups[person.unit]) {
-          groups[person.unit] = [];
-        }
-        groups[person.unit].push(person);
+      const unit = person.unit || 'Unassigned';
+      if (!groups[unit]) {
+        groups[unit] = [];
       }
+      groups[unit].push(person);
     });
-    
+
     return groups;
   }, [personnel, showUnits]);
 
@@ -137,20 +135,28 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
   }
 
   // Render grouped by units
+  let visualRowIndex = 0;
   return (
-    <div className="w-48 bg-gray-800 flex-shrink-0 h-full">
+    <div className="w-40 bg-gray-800 flex-shrink-0 h-full">
       <ul>
-        {Object.entries(groupedPersonnel).map(([unit, people]) => (
-          <React.Fragment key={unit}>
-            {/* Unit header */}
-            <li className="bg-gray-900/80 border-b border-gray-600 px-3 py-1">
-              <span className={`text-xs font-semibold ${useUnitColors ? getUnitColor(unit).split(' ').find(c => c.startsWith('text-')) || 'text-gray-400' : 'text-gray-400'}`}>
-                {unit} ({people.length})
-              </span>
-            </li>
-            
-            {/* Personnel in this unit - NO unit text under name, only colored text */}
-            {people.map(({ name, rank, unit: personUnit, role }, index) => {
+        {Object.entries(groupedPersonnel).map(([unit, people]) => {
+          visualRowIndex += 1;
+          return (
+            <React.Fragment key={unit}>
+              {/* Unit header */}
+              <li
+                className={`flex items-center border-b px-3 ${getUnitColor(unit)}`}
+                style={{ height: rowHeight, minHeight: rowHeight }}
+              >
+                <span className={`text-xs font-semibold ${useUnitColors ? getUnitColor(unit).split(' ').find(c => c.startsWith('text-')) || 'text-gray-400' : 'text-gray-400'}`}>
+                  {unit} ({people.length})
+                </span>
+              </li>
+
+              {/* Personnel in this unit - NO unit text under name, only colored text */}
+              {people.map(({ name, rank, unit: personUnit, role }) => {
+                const rowIndex = visualRowIndex;
+                visualRowIndex += 1;
               const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel);
               const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(personUnit) : 'text-gray-300';
               return (
@@ -161,7 +167,7 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
                   onPersonClick ? 'cursor-pointer hover:bg-gray-700' : ''
                 }`}
                 style={{ height: rowHeight, minHeight: rowHeight }}
-                onMouseEnter={() => onRowEnter?.(index)}
+                onMouseEnter={() => onRowEnter?.(rowIndex)}
                 onMouseLeave={() => onRowLeave?.()}
                 onClick={() => onPersonClick?.(name)}
                 title={useRoleColors ? `${name} - ${roleDisplay.label}` : name}
@@ -170,9 +176,10 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
                 <span className={`truncate font-medium flex-1 ${nameTextClass}`}>{name}</span>
               </li>
             );
-            })}
-          </React.Fragment>
-        ))}
+              })}
+            </React.Fragment>
+          );
+        })}
       </ul>
     </div>
   );
