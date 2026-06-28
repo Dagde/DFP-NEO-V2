@@ -94327,15 +94327,55 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       denyPastDfpEdit("delete events");
       return;
     }
-    setHighestPriorityEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
+    const isDeploymentDelete = selectedEvent.type === "deployment";
+    const selectedDeploymentSeriesId = selectedEvent.deploymentSeriesId;
+    const selectedDeploymentPeriodKey = [
+      selectedEvent.deploymentSource || "",
+      selectedEvent.deploymentStartDate || selectedEvent.date || "",
+      selectedEvent.deploymentStartTime || "",
+      selectedEvent.deploymentEndDate || selectedEvent.date || "",
+      selectedEvent.deploymentEndTime || "",
+      selectedEvent.deploymentAircraftCount || ""
+    ].join("|");
+    const isSameDeploymentToDelete = (event) => {
+      if (!isDeploymentDelete || event.type !== "deployment") return event.id === selectedEvent.id;
+      if (selectedDeploymentSeriesId) return event.deploymentSeriesId === selectedDeploymentSeriesId;
+      const eventPeriodKey = [
+        event.deploymentSource || "",
+        event.deploymentStartDate || event.date || "",
+        event.deploymentStartTime || "",
+        event.deploymentEndDate || event.date || "",
+        event.deploymentEndTime || "",
+        event.deploymentAircraftCount || ""
+      ].join("|");
+      return event.id === selectedEvent.id || eventPeriodKey === selectedDeploymentPeriodKey;
+    };
+    const deletedEventIds = /* @__PURE__ */ new Set([selectedEvent.id]);
+    if (isDeploymentDelete) {
+      Object.values(publishedSchedulesRef.current).flat().forEach((event) => {
+        if (isSameDeploymentToDelete(event)) deletedEventIds.add(event.id);
+      });
+    }
+    setHighestPriorityEvents((prev) => prev.filter((e) => !deletedEventIds.has(e.id)));
     if (isNextDay) {
-      setNextDayBuildEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
+      setNextDayBuildEvents((prev) => prev.filter((e) => !deletedEventIds.has(e.id)));
     } else {
-      const deletedEventId = selectedEvent.id;
       setPublishedSchedules((prev) => {
-        const newScheduleForDate = (prev[eventDate] || []).filter((e) => e.id !== deletedEventId);
-        persistScheduleForDate(eventDate, newScheduleForDate);
-        return { ...prev, [eventDate]: newScheduleForDate };
+        const nextSchedules = { ...prev };
+        Object.entries(prev).forEach(([scheduleDate, scheduleEvents]) => {
+          const newScheduleForDate = scheduleEvents.filter((e) => !isSameDeploymentToDelete(e));
+          if (newScheduleForDate.length !== scheduleEvents.length) {
+            nextSchedules[scheduleDate] = newScheduleForDate;
+            persistScheduleForDate(scheduleDate, newScheduleForDate, scheduleEvents);
+          }
+        });
+        if (!isDeploymentDelete) {
+          const scheduleForDate = prev[eventDate] || [];
+          const newScheduleForDate = scheduleForDate.filter((e) => e.id !== selectedEvent.id);
+          nextSchedules[eventDate] = newScheduleForDate;
+          persistScheduleForDate(eventDate, newScheduleForDate, scheduleForDate);
+        }
+        return nextSchedules;
       });
     }
     if (!isNextDay) {
@@ -94354,7 +94394,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const pageName = isNextDay ? "Next Day Build" : "Program Schedule";
     const eventType = selectedEvent.type || "event";
     const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || "Unknown";
-    const description = `Deleted ${eventType} event for ${personName}`;
+    const description = isDeploymentDelete && deletedEventIds.size > 1 ? `Deleted deployment period (${deletedEventIds.size} segments)` : `Deleted ${eventType} event for ${personName}`;
     const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs`;
     logAudit(pageName, "Delete", description, changes);
     const _deletedId = selectedEvent.id;
