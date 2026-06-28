@@ -22164,7 +22164,16 @@ const AddFlightTileModal = ({
     return Array.from(groups.entries()).map(([label, options]) => ({ label, options }));
   }, [activeFixedCrewUnitCodes, fixedCrewCurrencyProfileOptions]);
   const getFixedCrewEventOptionKey = (item) => `${normaliseFixedCrewUnitCode2(item.unit)}::${item.id || ""}::${item.code || ""}`;
-  const getFixedCrewCurrencyProfileOptionKey = (profile) => `currency::${profile.id || profile.code || profile.name || profile.currency}`;
+  const getFixedCrewCurrencyProfileOptionKey = (profile) => [
+    "currency",
+    normaliseFixedCrewUnitCode2(profile.unitCode || profile.compositeUnitCode),
+    String(profile.compositeProfileId || "").trim(),
+    String(profile.aircraftTypeCode || "").trim().toUpperCase(),
+    String(profile.id || "").trim(),
+    String(profile.code || "").trim().toUpperCase(),
+    String(profile.name || "").trim(),
+    String(profile.currency || "").trim()
+  ].join("::");
   const courseOptions = reactExports.useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
     return ["SCT", ...courses.filter((c) => c !== "SCT")];
@@ -22324,7 +22333,7 @@ const AddFlightTileModal = ({
   };
   const handleFixedCrewEventChange = (eventKey) => {
     if (eventCategory === "sct") {
-      const selectedProfile = fixedCrewCurrencyProfileOptions.find((profile) => getFixedCrewCurrencyProfileOptionKey(profile) === eventKey);
+      const selectedProfile = fixedCrewCurrencyProfileOptions.find((profile) => getFixedCrewCurrencyProfileOptionKey(profile) === eventKey) || fixedCrewCurrencyProfileOptions.find((profile) => profile.id === eventKey || profile.code === eventKey || profile.name === eventKey || profile.currency === eventKey);
       setFixedCrewEventKey(eventKey);
       setFlightNumber(selectedProfile?.code || selectedProfile?.name || selectedProfile?.currency || "");
       setDuration(2);
