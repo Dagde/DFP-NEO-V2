@@ -223,6 +223,8 @@ interface PrioritiesViewProps {
   buildDfpDate: string;
   highestPriorityEvents: ScheduleEvent[];
   activeScheduleEvents?: ScheduleEvent[];
+  scheduledBuildEvents?: ScheduleEvent[];
+  publishedScheduleEvents?: ScheduleEvent[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onAddPriorityEvents: (events: ScheduleEvent[]) => void;
   onUpdatePriorityEvent: (eventId: string, updates: Partial<ScheduleEvent>) => void;
@@ -987,6 +989,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   buildDfpDate,
   highestPriorityEvents,
   activeScheduleEvents = [],
+  scheduledBuildEvents = [],
+  publishedScheduleEvents,
   onSelectEvent,
   onAddPriorityEvents,
   onUpdatePriorityEvent,
@@ -3189,11 +3193,17 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       const eventDate = String(event.date || '').trim();
       return !eventDate || eventDate === buildDfpDate;
   };
+  const matchesPriorityEventIdentity = (source: ScheduleEvent, candidate: ScheduleEvent): boolean => (
+      candidate.id === source.id ||
+      (!!source.currencyDraftId && candidate.currencyDraftId === source.currencyDraftId) ||
+      (!!source.taskingRequestId && candidate.taskingRequestId === source.taskingRequestId) ||
+      (!!source.sctRequestId && candidate.sctRequestId === source.sctRequestId)
+  );
   const isPriorityEventPublished = (event: ScheduleEvent): boolean => (
-      activeScheduleEvents.some(activeEvent =>
-          activeEvent.id === event.id ||
-          (!!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId)
-      )
+      (publishedScheduleEvents || activeScheduleEvents).some(activeEvent => matchesPriorityEventIdentity(event, activeEvent))
+  );
+  const isPriorityEventScheduled = (event: ScheduleEvent): boolean => (
+      (scheduledBuildEvents || []).some(activeEvent => matchesPriorityEventIdentity(event, activeEvent))
   );
   const getTodayDateString = (): string => {
       const now = new Date();
@@ -3354,8 +3364,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     );
 
     const renderEventRow = (event: ScheduleEvent, group: typeof groups[number], index: number) => {
-      const isPublishedInActiveSchedule = isPriorityEventPublished(event);
-      const rowText = isPublishedInActiveSchedule ? 'text-green-300' : 'text-slate-100';
+      const isScheduledInBuild = isPriorityEventScheduled(event);
+      const rowText = isScheduledInBuild ? 'text-emerald-200' : 'text-slate-100';
+      const rowClass = isScheduledInBuild
+        ? 'cursor-pointer bg-emerald-950/60 transition-colors odd:bg-emerald-900/35 hover:bg-emerald-900/55'
+        : 'cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50';
       const eventLabel = getPriorityEventLabel(event);
       const crewRequirementName = getPriorityEventCrewRequirementName(event);
       const picName = getPriorityEventPicName(event);
@@ -3363,7 +3376,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       const eventDateLabel = formatPriorityDate(event.date);
 
       return (
-        <tr key={event.id} onClick={() => onSelectEvent(event)} className="cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50">
+        <tr key={event.id} onClick={() => onSelectEvent(event)} className={rowClass}>
           {index === 0 && (
             <td
               rowSpan={group.events.length}

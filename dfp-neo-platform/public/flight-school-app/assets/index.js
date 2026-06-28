@@ -27469,6 +27469,8 @@ const PrioritiesView = ({
   buildDfpDate,
   highestPriorityEvents,
   activeScheduleEvents = [],
+  scheduledBuildEvents = [],
+  publishedScheduleEvents,
   onSelectEvent,
   onAddPriorityEvents,
   onUpdatePriorityEvent,
@@ -29243,9 +29245,9 @@ const PrioritiesView = ({
     const eventDate = String(event.date || "").trim();
     return !eventDate || eventDate === buildDfpDate;
   };
-  const isPriorityEventPublished = (event) => activeScheduleEvents.some(
-    (activeEvent) => activeEvent.id === event.id || !!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId
-  );
+  const matchesPriorityEventIdentity = (source, candidate) => candidate.id === source.id || !!source.currencyDraftId && candidate.currencyDraftId === source.currencyDraftId || !!source.taskingRequestId && candidate.taskingRequestId === source.taskingRequestId || !!source.sctRequestId && candidate.sctRequestId === source.sctRequestId;
+  const isPriorityEventPublished = (event) => (publishedScheduleEvents || activeScheduleEvents).some((activeEvent) => matchesPriorityEventIdentity(event, activeEvent));
+  const isPriorityEventScheduled = (event) => (scheduledBuildEvents || []).some((activeEvent) => matchesPriorityEventIdentity(event, activeEvent));
   const getTodayDateString = () => {
     const now = /* @__PURE__ */ new Date();
     const offsetMs = now.getTimezoneOffset() * 6e4;
@@ -29358,14 +29360,15 @@ const PrioritiesView = ({
       Array.from({ length: 9 }).map((_, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-2 py-3 text-slate-600", children: " " }, `${group.key}-empty-${index}`))
     ] }, `${group.key}-empty`);
     const renderEventRow = (event, group, index) => {
-      const isPublishedInActiveSchedule = isPriorityEventPublished(event);
-      const rowText = isPublishedInActiveSchedule ? "text-green-300" : "text-slate-100";
+      const isScheduledInBuild = isPriorityEventScheduled(event);
+      const rowText = isScheduledInBuild ? "text-emerald-200" : "text-slate-100";
+      const rowClass = isScheduledInBuild ? "cursor-pointer bg-emerald-950/60 transition-colors odd:bg-emerald-900/35 hover:bg-emerald-900/55" : "cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50";
       const eventLabel = getPriorityEventLabel(event);
       const crewRequirementName = getPriorityEventCrewRequirementName(event);
       const picName = getPriorityEventPicName(event);
       const aircraftConfigSummary = getAircraftConfigSummary(event);
       const eventDateLabel = formatPriorityDate(event.date);
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { onClick: () => onSelectEvent(event), className: "cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50", children: [
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { onClick: () => onSelectEvent(event), className: rowClass, children: [
         index === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "td",
           {
@@ -97263,8 +97266,17 @@ ${conflictLines.join("\n")}${moreText}`,
     });
     console.log("[PUBLISH] nextDayBuildEvents:", nextDayBuildEvents.length, "→ after dedup:", dedupedBuildEvents.length);
     const newEventsForDate = dedupedBuildEvents.map((e) => ({ ...e, date: buildDfpDate }));
+    const publishedPriorityEventIds = new Set(
+      newEventsForDate.map((event) => String(event.id || "").trim()).filter(Boolean)
+    );
     const publishedCurrencyDraftIds = new Set(
       newEventsForDate.map((event) => String(event.currencyDraftId || "").trim()).filter(Boolean)
+    );
+    const publishedTaskingRequestIds = new Set(
+      newEventsForDate.map((event) => String(event.taskingRequestId || "").trim()).filter(Boolean)
+    );
+    const publishedSctRequestIdsFromEvents = new Set(
+      newEventsForDate.map((event) => String(event.sctRequestId || "").trim()).filter(Boolean)
     );
     const publishedSpecificCurrencyRequestIdsByType = newEventsForDate.reduce((map, event) => {
       const draftId = String(event.currencyDraftId || "").trim();
@@ -97299,9 +97311,15 @@ ${conflictLines.join("\n")}${moreText}`,
         fetch(`/api/sct-requests/${requestId}`, { method: "DELETE" }).catch((err) => console.error("Failed to delete published SCT request:", err));
       });
     }
-    if (publishedCurrencyDraftIds.size > 0) {
+    if (publishedPriorityEventIds.size > 0 || publishedCurrencyDraftIds.size > 0 || publishedTaskingRequestIds.size > 0 || publishedSctRequestIdsFromEvents.size > 0) {
       setHighestPriorityEvents(
-        (prevEvents) => prevEvents.filter((event) => !event.currencyDraftId || !publishedCurrencyDraftIds.has(event.currencyDraftId))
+        (prevEvents) => prevEvents.filter((event) => {
+          const eventId = String(event.id || "").trim();
+          const currencyDraftId = String(event.currencyDraftId || "").trim();
+          const taskingRequestId = String(event.taskingRequestId || "").trim();
+          const sctRequestId = String(event.sctRequestId || "").trim();
+          return !(eventId && publishedPriorityEventIds.has(eventId) || currencyDraftId && publishedCurrencyDraftIds.has(currencyDraftId) || taskingRequestId && publishedTaskingRequestIds.has(taskingRequestId) || sctRequestId && publishedSctRequestIdsFromEvents.has(sctRequestId));
+        })
       );
     }
     setPublishedSchedules((prev) => ({
@@ -100664,6 +100682,8 @@ ${error instanceof Error ? error.message : String(error)}`,
               ...Object.values(publishedSchedules).flat(),
               ...nextDayBuildEvents.map((event) => ({ ...event, date: buildDfpDate }))
             ],
+            publishedScheduleEvents: Object.values(publishedSchedules).flat(),
+            scheduledBuildEvents: nextDayBuildEvents.map((event) => ({ ...event, date: buildDfpDate })),
             isSingleSeatAircraft: activeAircraftCrewComposition.crewCount === 1,
             aircraftCrewComposition: activeAircraftCrewComposition,
             aircraftTypeCode: activeRuntimeAircraftTypeCode,

@@ -55,6 +55,8 @@ interface PrioritiesViewWithMenuProps {
   buildDfpDate: string;
   highestPriorityEvents: ScheduleEvent[];
   activeScheduleEvents?: ScheduleEvent[];
+  scheduledBuildEvents?: ScheduleEvent[];
+  publishedScheduleEvents?: ScheduleEvent[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onAddPriorityEvents: (events: ScheduleEvent[]) => void;
   onAddBuildEvents?: (events: ScheduleEvent[]) => void;

@@ -32166,9 +32166,24 @@ const App: React.FC = () => {
         console.log('[PUBLISH] nextDayBuildEvents:', nextDayBuildEvents.length, '→ after dedup:', dedupedBuildEvents.length);
 
         const newEventsForDate = dedupedBuildEvents.map(e => ({ ...e, date: buildDfpDate }));
+        const publishedPriorityEventIds = new Set(
+            newEventsForDate
+                .map(event => String(event.id || '').trim())
+                .filter(Boolean)
+        );
         const publishedCurrencyDraftIds = new Set(
             newEventsForDate
                 .map(event => String(event.currencyDraftId || '').trim())
+                .filter(Boolean)
+        );
+        const publishedTaskingRequestIds = new Set(
+            newEventsForDate
+                .map(event => String(event.taskingRequestId || '').trim())
+                .filter(Boolean)
+        );
+        const publishedSctRequestIdsFromEvents = new Set(
+            newEventsForDate
+                .map(event => String(event.sctRequestId || '').trim())
                 .filter(Boolean)
         );
         const publishedSpecificCurrencyRequestIdsByType = newEventsForDate.reduce((map, event) => {
@@ -32205,9 +32220,25 @@ const App: React.FC = () => {
                     .catch(err => console.error('Failed to delete published SCT request:', err));
             });
         }
-        if (publishedCurrencyDraftIds.size > 0) {
+        if (
+            publishedPriorityEventIds.size > 0 ||
+            publishedCurrencyDraftIds.size > 0 ||
+            publishedTaskingRequestIds.size > 0 ||
+            publishedSctRequestIdsFromEvents.size > 0
+        ) {
             setHighestPriorityEvents(prevEvents =>
-                prevEvents.filter(event => !event.currencyDraftId || !publishedCurrencyDraftIds.has(event.currencyDraftId))
+                prevEvents.filter(event => {
+                    const eventId = String(event.id || '').trim();
+                    const currencyDraftId = String(event.currencyDraftId || '').trim();
+                    const taskingRequestId = String(event.taskingRequestId || '').trim();
+                    const sctRequestId = String(event.sctRequestId || '').trim();
+                    return !(
+                        (eventId && publishedPriorityEventIds.has(eventId)) ||
+                        (currencyDraftId && publishedCurrencyDraftIds.has(currencyDraftId)) ||
+                        (taskingRequestId && publishedTaskingRequestIds.has(taskingRequestId)) ||
+                        (sctRequestId && publishedSctRequestIdsFromEvents.has(sctRequestId))
+                    );
+                })
             );
         }
 
@@ -36339,6 +36370,8 @@ appliedUpdates.forEach(update => {
                         ...Object.values(publishedSchedules).flat(),
                         ...nextDayBuildEvents.map(event => ({ ...event, date: buildDfpDate } as ScheduleEvent)),
                     ]}
+                    publishedScheduleEvents={Object.values(publishedSchedules).flat()}
+                    scheduledBuildEvents={nextDayBuildEvents.map(event => ({ ...event, date: buildDfpDate } as ScheduleEvent))}
                     isSingleSeatAircraft={activeAircraftCrewComposition.crewCount === 1}
                     aircraftCrewComposition={activeAircraftCrewComposition}
                     aircraftTypeCode={activeRuntimeAircraftTypeCode}
