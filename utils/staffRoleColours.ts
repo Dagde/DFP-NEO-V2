@@ -1,4 +1,4 @@
-import { findCrewPositionEntry, type CrewPositionTerminology } from './crewPositionTerminology';
+import { findCrewPositionEntry, getCrewPositionDisplayLabel, type CrewPositionTerminology } from './crewPositionTerminology';
 
 const ROLE_TEXT_COLOURS = [
   'text-sky-300',
@@ -37,7 +37,7 @@ export const getStaffRoleDisplay = (
 ): { key: string; label: string; textClassName: string } => {
   const entry = findCrewPositionEntry(role, terminology);
   const rawRole = String(role || '').trim();
-  const label = entry?.label || rawRole || 'Unassigned';
+  const label = getCrewPositionDisplayLabel(role, terminology, 'Unassigned');
   const stableKey = normaliseRoleKey(entry?.genericName || rawRole || 'unassigned');
 
   if (stableKey === 'qfi' || stableKey === 'instructor') {

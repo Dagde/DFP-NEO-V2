@@ -58,8 +58,11 @@ import {
 import {
     crewPositionValuesMatch,
     findCrewPositionEntry,
+    getCrewPositionDisplayLabel,
+    isFixedCrewLegacyAeaRole,
     isCrewPositionAvailableForOperationalModel,
     isPilotCrewPosition,
+    normaliseFixedCrewStaffRole,
     normaliseCrewPositionTerminology,
     type CrewPositionTerminology,
 } from './utils/crewPositionTerminology';
@@ -1760,8 +1763,7 @@ const DfpSidePanelTimeline: React.FC<{
     const formatCrewOptionLabel = (name: string): string => {
         const instructor = instructors.find(item => item.name === name);
         const rank = String(instructor?.rank || '').trim();
-        const crewPosition = findCrewPositionEntry(instructor?.role, crewPositionTerminology);
-        const roleLabel = crewPosition?.label || String(instructor?.role || '').trim();
+        const roleLabel = getCrewPositionDisplayLabel(instructor?.role, crewPositionTerminology, '');
         const personLabel = rank ? `${rank} ${name}` : name;
         return roleLabel ? `${personLabel} (${roleLabel})` : personLabel;
     };
@@ -4758,9 +4760,10 @@ const normalisePersonnelRecord = (person: any): any => {
         : {};
     const unitCode = String(person?.unit || '').trim().toUpperCase();
     const suppressLegacyProfileCallsign = unitCode === '11SQN' || unitCode === '12SQN';
+    const normalisedRole = normaliseFixedCrewStaffRole(person?.role, unitCode);
     return {
         ...person,
-        role: unitCode === '77SQN' ? 'Pilot' : person?.role,
+        role: unitCode === '77SQN' ? 'Pilot' : normalisedRole,
         callsign: suppressLegacyProfileCallsign ? '' : person?.callsign || preferences.callsign || '',
         secondaryCallsign: suppressLegacyProfileCallsign ? '' : person?.secondaryCallsign || preferences.secondaryCallsign || '',
         callsignNumber: suppressLegacyProfileCallsign ? null : person?.callsignNumber,
@@ -13824,7 +13827,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const matchingStaff = instructors.filter(staff => airCombatStaffMatchesCrewRole(staff, role));
             return {
                 role,
-                label: findCrewPositionEntry(role, buildCrewPositionTerminology)?.label || role,
+                label: getCrewPositionDisplayLabel(role, buildCrewPositionTerminology, role),
                 matchingStaffCount: matchingStaff.length,
                 matchingStaff: matchingStaff.slice(0, 80).map(staff => ({
                     name: staff.name,
@@ -21684,7 +21687,36 @@ const App: React.FC = () => {
             try {
                 const data = await initializeData();
 
-                setInstructorsData(data.instructors);
+                const normalisedInstructors = (data.instructors || []).map(normalisePersonnelRecord);
+                const legacyFixedCrewRoles = (data.instructors || []).filter((person: any) => (
+                    (person as any)?._dataSource === 'database'
+                    && (person as any)?.id
+                    && isFixedCrewLegacyAeaRole((person as any)?.role, (person as any)?.unit)
+                ));
+                if (legacyFixedCrewRoles.length > 0) {
+                    Promise.allSettled(legacyFixedCrewRoles.map((person: any) => (
+                        fetch(scopedApiPath(`/api/personnel/${person.id}`), {
+                            method: 'PATCH',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ role: 'AWO' }),
+                        }).then((response) => {
+                            if (!response.ok) {
+                                throw new Error(`Failed to migrate ${person.name || person.id}: ${response.status}`);
+                            }
+                            return response;
+                        })
+                    ))).then((results) => {
+                        const failed = results.filter(result => result.status === 'rejected').length;
+                        if (failed > 0) {
+                            console.warn(`[StaffRole] ${failed}/${legacyFixedCrewRoles.length} legacy AEA role migrations failed.`);
+                        } else {
+                            console.log(`[StaffRole] Migrated ${legacyFixedCrewRoles.length} fixed crew AEA role(s) to AWO.`);
+                        }
+                    });
+                }
+
+                setInstructorsData(normalisedInstructors);
                 setIsStaffLoaded(true);
                 setTraineesData(data.trainees);
                 setIsTraineeLoaded(true);
@@ -25108,7 +25140,7 @@ const App: React.FC = () => {
 
     const getDiagnosticRoleOption = useCallback((role: string | undefined, fallbackLabel: string): { key: string; label: string } => {
         const crewPosition = findCrewPositionEntry(role, activeCrewPositionTerminology);
-        const label = crewPosition?.label || String(role || fallbackLabel || '').trim() || 'Unassigned';
+        const label = getCrewPositionDisplayLabel(role, activeCrewPositionTerminology, fallbackLabel || 'Unassigned');
         const key = crewPosition?.genericName
             ? `crew:${crewPosition.genericName.trim().toLowerCase()}`
             : `role:${label.trim().toLowerCase()}`;
@@ -25193,7 +25225,7 @@ const App: React.FC = () => {
             getDiagnosticPersonKeys(staff.name).forEach(key => activeStaffKeys.add(key));
 
             const crewPosition = findCrewPositionEntry(staff.role, activeCrewPositionTerminology);
-            const label = crewPosition?.label || String(staff.role || '').trim() || 'Unassigned';
+            const label = getCrewPositionDisplayLabel(staff.role, activeCrewPositionTerminology, 'Unassigned');
             const key = crewPosition?.genericName
                 ? `crew:${crewPosition.genericName.trim().toLowerCase()}`
                 : `role:${label.trim().toLowerCase()}`;
@@ -33274,7 +33306,7 @@ appliedUpdates.forEach(update => {
                 roleText === 'sim ip' ? 'SIM IP' :
                 roleText === 'pilot' ? 'Pilot' :
                 roleText === 'qfi' || roleText === 'instructor' ? 'QFI' :
-                String(instructor.role || '').trim() || 'QFI';
+                normaliseFixedCrewStaffRole(instructor.role, unitCode) || 'QFI';
             const nextInstructor: Instructor = {
                 ...instructor,
                 role: normalisedRole,
@@ -33383,7 +33415,7 @@ appliedUpdates.forEach(update => {
     }, []);
 
     const handleReplaceInstructors = useCallback((newInstructors: Instructor[]) => {
-        setInstructorsData(newInstructors);
+        setInstructorsData(newInstructors.map(normalisePersonnelRecord));
         setSuccessMessage('Instructors successfully replaced!');
     }, []);
 
@@ -37281,13 +37313,14 @@ appliedUpdates.forEach(update => {
                                handleNavigation('Settings');
                            }}
                            onUpdateInstructor={async (data) => {
+                               const normalisedData = normalisePersonnelRecord(data);
                                const dbId = (data as any).id;
                                try {
                                    const response = await fetch(dbId ? `/api/personnel/${dbId}` : '/api/personnel', {
                                        method: dbId ? 'PATCH' : 'POST',
                                        credentials: 'include',
                                        headers: { 'Content-Type': 'application/json' },
-                                       body: JSON.stringify(data),
+                                       body: JSON.stringify(normalisedData),
                                    });
                                    if (!response.ok) {
                                        const errorData = await response.json().catch(() => ({}));
@@ -37297,7 +37330,7 @@ appliedUpdates.forEach(update => {
                                    const saved = responseData.personnel || data;
                                    setInstructorsData(prev => prev.map(instructor => (
                                        instructor.idNumber === data.idNumber
-                                           ? { ...data, ...normalisePersonnelRecord(saved), preferences: saved.preferences || data.preferences }
+                                           ? { ...normalisedData, ...normalisePersonnelRecord(saved), preferences: saved.preferences || normalisedData.preferences }
                                            : instructor
                                    )));
                                } catch (error) {

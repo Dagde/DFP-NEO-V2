@@ -202,6 +202,39 @@ export const findCrewPositionEntry = (
   }) || null;
 };
 
+export const normaliseFixedCrewStaffRole = (role: unknown, unit: unknown): string => {
+  const rawRole = String(role || '').trim();
+  const unitCode = String(unit || '').trim().toUpperCase().replace(/[\s-]+/g, '');
+  const roleCode = rawRole.toUpperCase().replace(/[\s-]+/g, ' ');
+  const isFixedCrewMaritimeUnit = unitCode === '11SQN' || unitCode === '12SQN';
+  if (
+    isFixedCrewMaritimeUnit
+    && (
+      roleCode === 'AEA'
+      || roleCode === 'ACOUSTIC ELECTRONICS ANALYST'
+      || roleCode === 'AIRBORNE ELECTRONICS ANALYST'
+    )
+  ) {
+    return 'AWO';
+  }
+  return rawRole;
+};
+
+export const isFixedCrewLegacyAeaRole = (role: unknown, unit: unknown): boolean => (
+  normaliseFixedCrewStaffRole(role, unit) === 'AWO'
+  && String(role || '').trim().toUpperCase().replace(/[\s-]+/g, ' ') !== 'AWO'
+);
+
+export const getCrewPositionDisplayLabel = (
+  value: unknown,
+  terminology?: CrewPositionTerminology,
+  fallback = 'Staff',
+): string => {
+  const rawValue = String(value || '').trim();
+  if (rawValue.toUpperCase() === 'AWO') return 'AWO';
+  return findCrewPositionEntry(value, terminology)?.label || rawValue || fallback;
+};
+
 export const crewPositionValuesMatch = (
   requiredPosition: unknown,
   staffPosition: unknown,

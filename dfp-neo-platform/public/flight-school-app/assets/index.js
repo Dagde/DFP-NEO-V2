@@ -2966,6 +2966,22 @@ const findCrewPositionEntry = (value, terminology) => {
     return tokens.includes(token) || !!acronym && tokens.includes(acronym);
   }) || null;
 };
+const normaliseFixedCrewStaffRole = (role, unit) => {
+  const rawRole = String(role || "").trim();
+  const unitCode = String(unit || "").trim().toUpperCase().replace(/[\s-]+/g, "");
+  const roleCode = rawRole.toUpperCase().replace(/[\s-]+/g, " ");
+  const isFixedCrewMaritimeUnit = unitCode === "11SQN" || unitCode === "12SQN";
+  if (isFixedCrewMaritimeUnit && (roleCode === "AEA" || roleCode === "ACOUSTIC ELECTRONICS ANALYST" || roleCode === "AIRBORNE ELECTRONICS ANALYST")) {
+    return "AWO";
+  }
+  return rawRole;
+};
+const isFixedCrewLegacyAeaRole = (role, unit) => normaliseFixedCrewStaffRole(role, unit) === "AWO" && String(role || "").trim().toUpperCase().replace(/[\s-]+/g, " ") !== "AWO";
+const getCrewPositionDisplayLabel = (value, terminology, fallback = "Staff") => {
+  const rawValue = String(value || "").trim();
+  if (rawValue.toUpperCase() === "AWO") return "AWO";
+  return findCrewPositionEntry(value, terminology)?.label || rawValue || fallback;
+};
 const crewPositionValuesMatch = (requiredPosition, staffPosition, terminology) => {
   const requiredEntry = findCrewPositionEntry(requiredPosition, terminology);
   const staffEntry = findCrewPositionEntry(staffPosition, terminology);
@@ -9849,7 +9865,7 @@ const normaliseRoleKey = (value) => String(value || "").trim().replace(/\s+/g, "
 const getStaffRoleDisplay = (role, terminology, instructorLabel = "QFI") => {
   const entry = findCrewPositionEntry(role, terminology);
   const rawRole = String(role || "").trim();
-  const label = entry?.label || rawRole || "Unassigned";
+  const label = getCrewPositionDisplayLabel(role, terminology, "Unassigned");
   const stableKey = normaliseRoleKey(entry?.genericName || rawRole || "unassigned");
   if (stableKey === "qfi" || stableKey === "instructor") {
     return {
@@ -28658,7 +28674,7 @@ const PrioritiesView = ({
     return roles.length > 0 ? roles : ["Pilot"];
   }, [aircraftCrewComposition]);
   const selectedStaffCurrencyRole = staffCurrencyRoleOptions.find((role) => crewPositionValuesMatch(role, staffCurrencyRoleFilter, crewPositionTerminology)) || staffCurrencyRoleOptions[0] || "Pilot";
-  const getStaffCurrencyRoleLabel = (role) => findCrewPositionEntry(role, crewPositionTerminology)?.label || role;
+  const getStaffCurrencyRoleLabel = (role) => getCrewPositionDisplayLabel(role, crewPositionTerminology, role);
   const staffCurrencyRows = reactExports.useMemo(() => {
     return instructorsData.map((instructor) => ({ instructor, personKey: String(instructor.id || instructor.idNumber || instructor.name), dueCurrencies: getDueCurrencies(instructor) })).filter((row) => row.dueCurrencies.length > 0).filter((row) => crewPositionValuesMatch(selectedStaffCurrencyRole, row.instructor.role, crewPositionTerminology)).sort((a, b) => {
       const rankDiff = staffRankOrder.indexOf(a.instructor.rank) - staffRankOrder.indexOf(b.instructor.rank);
@@ -39041,7 +39057,7 @@ const InstructorProfileFlyout = ({
       operationalModel2
     ).map((value) => ({
       value,
-      label: crewLabelMap[value] || value
+      label: getCrewPositionDisplayLabel(value, crewPositionTerminology, crewLabelMap[value] || value)
     }));
     const options = [...legacyOptions, ...crewOptions];
     const byValue = /* @__PURE__ */ new Map();
@@ -40360,7 +40376,7 @@ const InstructorProfileFlyout = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Role" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300 font-medium", children: instructor.role })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300 font-medium", children: getCrewPositionDisplayLabel(instructor.role, crewPositionTerminology, "N/A") })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Category" }),
@@ -72725,8 +72741,7 @@ const DfpSidePanelTimeline = ({
   const formatCrewOptionLabel = (name) => {
     const instructor = instructors.find((item) => item.name === name);
     const rank = String(instructor?.rank || "").trim();
-    const crewPosition = findCrewPositionEntry(instructor?.role, crewPositionTerminology);
-    const roleLabel = crewPosition?.label || String(instructor?.role || "").trim();
+    const roleLabel = getCrewPositionDisplayLabel(instructor?.role, crewPositionTerminology, "");
     const personLabel = rank ? `${rank} ${name}` : name;
     return roleLabel ? `${personLabel} (${roleLabel})` : personLabel;
   };
@@ -75453,9 +75468,10 @@ const normalisePersonnelRecord = (person) => {
   const preferences = person?.preferences && typeof person.preferences === "object" && !Array.isArray(person.preferences) ? person.preferences : {};
   const unitCode = String(person?.unit || "").trim().toUpperCase();
   const suppressLegacyProfileCallsign = unitCode === "11SQN" || unitCode === "12SQN";
+  const normalisedRole = normaliseFixedCrewStaffRole(person?.role, unitCode);
   return {
     ...person,
-    role: unitCode === "77SQN" ? "Pilot" : person?.role,
+    role: unitCode === "77SQN" ? "Pilot" : normalisedRole,
     callsign: suppressLegacyProfileCallsign ? "" : person?.callsign || preferences.callsign || "",
     secondaryCallsign: suppressLegacyProfileCallsign ? "" : person?.secondaryCallsign || preferences.secondaryCallsign || "",
     callsignNumber: suppressLegacyProfileCallsign ? null : person?.callsignNumber,
@@ -82545,7 +82561,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const matchingStaff = instructors.filter((staff) => airCombatStaffMatchesCrewRole(staff, role));
       return {
         role,
-        label: findCrewPositionEntry(role, buildCrewPositionTerminology)?.label || role,
+        label: getCrewPositionDisplayLabel(role, buildCrewPositionTerminology, role),
         matchingStaffCount: matchingStaff.length,
         matchingStaff: matchingStaff.slice(0, 80).map((staff) => ({
           name: staff.name,
@@ -89004,7 +89020,29 @@ const App = () => {
     const loadInitialData = async () => {
       try {
         const data = await initializeData();
-        setInstructorsData(data.instructors);
+        const normalisedInstructors = (data.instructors || []).map(normalisePersonnelRecord);
+        const legacyFixedCrewRoles = (data.instructors || []).filter((person) => person?._dataSource === "database" && person?.id && isFixedCrewLegacyAeaRole(person?.role, person?.unit));
+        if (legacyFixedCrewRoles.length > 0) {
+          Promise.allSettled(legacyFixedCrewRoles.map((person) => fetch(scopedApiPath(`/api/personnel/${person.id}`), {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ role: "AWO" })
+          }).then((response) => {
+            if (!response.ok) {
+              throw new Error(`Failed to migrate ${person.name || person.id}: ${response.status}`);
+            }
+            return response;
+          }))).then((results) => {
+            const failed = results.filter((result) => result.status === "rejected").length;
+            if (failed > 0) {
+              console.warn(`[StaffRole] ${failed}/${legacyFixedCrewRoles.length} legacy AEA role migrations failed.`);
+            } else {
+              console.log(`[StaffRole] Migrated ${legacyFixedCrewRoles.length} fixed crew AEA role(s) to AWO.`);
+            }
+          });
+        }
+        setInstructorsData(normalisedInstructors);
         setIsStaffLoaded(true);
         setTraineesData(data.trainees);
         setIsTraineeLoaded(true);
@@ -91807,7 +91845,7 @@ ${"=".repeat(60)}`);
   }, [syllabusDetails]);
   const getDiagnosticRoleOption = reactExports.useCallback((role, fallbackLabel) => {
     const crewPosition = findCrewPositionEntry(role, activeCrewPositionTerminology);
-    const label = crewPosition?.label || String(role || fallbackLabel || "").trim() || "Unassigned";
+    const label = getCrewPositionDisplayLabel(role, activeCrewPositionTerminology, fallbackLabel || "Unassigned");
     const key = crewPosition?.genericName ? `crew:${crewPosition.genericName.trim().toLowerCase()}` : `role:${label.trim().toLowerCase()}`;
     return { key, label };
   }, [activeCrewPositionTerminology]);
@@ -91865,7 +91903,7 @@ ${"=".repeat(60)}`);
       if (staff.isAdminStaff) return;
       getDiagnosticPersonKeys(staff.name).forEach((key2) => activeStaffKeys.add(key2));
       const crewPosition = findCrewPositionEntry(staff.role, activeCrewPositionTerminology);
-      const label = crewPosition?.label || String(staff.role || "").trim() || "Unassigned";
+      const label = getCrewPositionDisplayLabel(staff.role, activeCrewPositionTerminology, "Unassigned");
       const key = crewPosition?.genericName ? `crew:${crewPosition.genericName.trim().toLowerCase()}` : `role:${label.trim().toLowerCase()}`;
       const row = rows.get(key) || { label, available: 0, unavailable: 0 };
       const isUnavailable = diagnosticTime !== null && isDiagnosticUnavailableAtTime(staff, diagnosticTime);
@@ -98327,7 +98365,7 @@ ${conflictLines.join("\n")}${moreText}`,
       const roleText = String(instructor.role || "").trim().toLowerCase();
       const unitCode = String(instructor.unit || "").trim().toUpperCase();
       const inferredQfi = roleText === "qfi" || roleText === "instructor";
-      const normalisedRole = unitCode === "77SQN" ? "Pilot" : roleText === "sim ip" ? "SIM IP" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "QFI" : String(instructor.role || "").trim() || "QFI";
+      const normalisedRole = unitCode === "77SQN" ? "Pilot" : roleText === "sim ip" ? "SIM IP" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "QFI" : normaliseFixedCrewStaffRole(instructor.role, unitCode) || "QFI";
       const nextInstructor = {
         ...instructor,
         role: normalisedRole,
@@ -98423,7 +98461,7 @@ ${conflictLines.join("\n")}${moreText}`,
     });
   }, []);
   const handleReplaceInstructors = reactExports.useCallback((newInstructors) => {
-    setInstructorsData(newInstructors);
+    setInstructorsData(newInstructors.map(normalisePersonnelRecord));
     setSuccessMessage("Instructors successfully replaced!");
   }, []);
   const handleDatabaseDataChanged = reactExports.useCallback(async () => {
@@ -101724,13 +101762,14 @@ ${error instanceof Error ? error.message : String(error)}`,
               handleNavigation("Settings");
             },
             onUpdateInstructor: async (data) => {
+              const normalisedData = normalisePersonnelRecord(data);
               const dbId = data.id;
               try {
                 const response = await fetch(dbId ? `/api/personnel/${dbId}` : "/api/personnel", {
                   method: dbId ? "PATCH" : "POST",
                   credentials: "include",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(data)
+                  body: JSON.stringify(normalisedData)
                 });
                 if (!response.ok) {
                   const errorData = await response.json().catch(() => ({}));
@@ -101738,7 +101777,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 }
                 const responseData = await response.json().catch(() => ({}));
                 const saved = responseData.personnel || data;
-                setInstructorsData((prev) => prev.map((instructor) => instructor.idNumber === data.idNumber ? { ...data, ...normalisePersonnelRecord(saved), preferences: saved.preferences || data.preferences } : instructor));
+                setInstructorsData((prev) => prev.map((instructor) => instructor.idNumber === data.idNumber ? { ...normalisedData, ...normalisePersonnelRecord(saved), preferences: saved.preferences || normalisedData.preferences } : instructor));
               } catch (error) {
                 console.error("❌ Error saving Air Combat training assignment:", error);
                 throw error;

@@ -28,7 +28,7 @@ import {
 } from '../utils/fixedCrewTraining';
 import { isSyllabusCourseShell } from '../utils/syllabusCourseShell';
 import { getAircraftSeatEligibleRoles, type AircraftCrewComposition } from '../utils/aircraftCrewComposition';
-import { crewPositionValuesMatch, findCrewPositionEntry, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { crewPositionValuesMatch, getCrewPositionDisplayLabel, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { formatCrewRequirementSummary, normaliseCrewRequirement } from '../utils/crewRequirements';
 import {
   normaliseCrewCompositionSettings,
@@ -2257,7 +2257,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   )) || staffCurrencyRoleOptions[0] || 'Pilot';
 
   const getStaffCurrencyRoleLabel = (role: string): string => (
-    findCrewPositionEntry(role, crewPositionTerminology)?.label || role
+    getCrewPositionDisplayLabel(role, crewPositionTerminology, role)
   );
 
   const staffCurrencyRows = useMemo(() => {
