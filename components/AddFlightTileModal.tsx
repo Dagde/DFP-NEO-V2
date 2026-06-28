@@ -1196,6 +1196,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const fixedCrewPicCandidates = useMemo(() => fixedCrewPicQualification
     ? fixedCrewMembers.filter(staff => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id))
     : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
+  const activeCallsignUnitCodes = useMemo(() => (
+    isFixedCrewModel && activeFixedCrewUnitCodes.length > 0
+      ? activeFixedCrewUnitCodes
+      : [normaliseFixedCrewUnitCode(activeUnitCode)].filter(Boolean)
+  ), [activeFixedCrewUnitCodes, activeUnitCode, isFixedCrewModel]);
   const activeFixedCrewCompositeCodes = useMemo(() => new Set([
     String(activeUnitCode || '').trim().toUpperCase(),
     activeFixedCrewUnitCodes.join('+'),
@@ -1221,13 +1226,25 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         return String(a.code || a.name || a.currency).localeCompare(String(b.code || b.name || b.currency), undefined, { numeric: true });
       });
   }, [activeFixedCrewCompositeCodes, activeFixedCrewUnitCodeSet, crewCompositionSettings]);
-  const unitCallsignEntries = useMemo(
-    () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode),
-    [activeUnitCode, unitCallsignSettings],
-  );
+  const unitCallsignEntries = useMemo(() => {
+    const seen = new Set<string>();
+    return activeCallsignUnitCodes.flatMap(unitCode => getUnitCallsignEntries(unitCallsignSettings, unitCode))
+      .filter(entry => {
+        const key = `${entry.unitCode}::${entry.callsign.toUpperCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [activeCallsignUnitCodes, unitCallsignSettings]);
   const defaultUnitCallsign = useMemo(
-    () => getDefaultUnitCallsign(unitCallsignSettings, activeUnitCode),
-    [activeUnitCode, unitCallsignSettings],
+    () => {
+      for (const unitCode of activeCallsignUnitCodes) {
+        const defaultForUnit = getDefaultUnitCallsign(unitCallsignSettings, unitCode);
+        if (defaultForUnit) return defaultForUnit;
+      }
+      return '';
+    },
+    [activeCallsignUnitCodes, unitCallsignSettings],
   );
   const selectedPicHasIndividualCallsign = useMemo(() => {
     const instructor = instructorsData.find(staff => staff.name === picName);
@@ -2207,7 +2224,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                         <option value="">No unit callsigns</option>
                       ) : (
                         unitCallsignEntries.map(entry => (
-                          <option key={entry.id} value={entry.callsign}>{entry.callsign}{entry.isDefault ? ' (default)' : ''}</option>
+                          <option key={entry.id} value={entry.callsign}>
+                            {activeCallsignUnitCodes.length > 1 ? `${entry.unitCode} - ` : ''}{entry.callsign}{entry.isDefault ? ' (default)' : ''}
+                          </option>
                         ))
                       )}
                     </select>

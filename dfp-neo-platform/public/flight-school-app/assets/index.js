@@ -21839,6 +21839,7 @@ const AddFlightTileModal = ({
   }, [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings]);
   const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
   const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
+  const activeCallsignUnitCodes = reactExports.useMemo(() => isFixedCrewModel && activeFixedCrewUnitCodes.length > 0 ? activeFixedCrewUnitCodes : [normaliseFixedCrewUnitCode2(activeUnitCode)].filter(Boolean), [activeFixedCrewUnitCodes, activeUnitCode, isFixedCrewModel]);
   const activeFixedCrewCompositeCodes = reactExports.useMemo(() => new Set([
     String(activeUnitCode || "").trim().toUpperCase(),
     activeFixedCrewUnitCodes.join("+"),
@@ -21858,13 +21859,24 @@ const AddFlightTileModal = ({
       return String(a.code || a.name || a.currency).localeCompare(String(b.code || b.name || b.currency), void 0, { numeric: true });
     });
   }, [activeFixedCrewCompositeCodes, activeFixedCrewUnitCodeSet, crewCompositionSettings]);
-  const unitCallsignEntries = reactExports.useMemo(
-    () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode),
-    [activeUnitCode, unitCallsignSettings]
-  );
+  const unitCallsignEntries = reactExports.useMemo(() => {
+    const seen = /* @__PURE__ */ new Set();
+    return activeCallsignUnitCodes.flatMap((unitCode) => getUnitCallsignEntries(unitCallsignSettings, unitCode)).filter((entry) => {
+      const key = `${entry.unitCode}::${entry.callsign.toUpperCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [activeCallsignUnitCodes, unitCallsignSettings]);
   const defaultUnitCallsign = reactExports.useMemo(
-    () => getDefaultUnitCallsign(unitCallsignSettings, activeUnitCode),
-    [activeUnitCode, unitCallsignSettings]
+    () => {
+      for (const unitCode of activeCallsignUnitCodes) {
+        const defaultForUnit = getDefaultUnitCallsign(unitCallsignSettings, unitCode);
+        if (defaultForUnit) return defaultForUnit;
+      }
+      return "";
+    },
+    [activeCallsignUnitCodes, unitCallsignSettings]
   );
   const selectedPicHasIndividualCallsign = reactExports.useMemo(() => {
     const instructor = instructorsData.find((staff) => staff.name === picName);
@@ -22713,6 +22725,7 @@ const AddFlightTileModal = ({
                           disabled: unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign,
                           className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed",
                           children: unitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No unit callsigns" }) : unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: entry.callsign, children: [
+                            activeCallsignUnitCodes.length > 1 ? `${entry.unitCode} - ` : "",
                             entry.callsign,
                             entry.isDefault ? " (default)" : ""
                           ] }, entry.id))
