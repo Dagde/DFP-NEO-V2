@@ -6787,9 +6787,9 @@ function generateDfpInternal(
             if (isStbyResource(event.resourceId)) return false;
             const existingType = String(event.type || '').trim().toLowerCase();
             const existingIsSimulator = existingType === 'ftd' || existingType === 'sim' || existingType === 'simulator' || existingType === 'cpt';
+            if (options.allowSameFormationTakeoff && options.formationGroupId && event.formationId === options.formationGroupId) return false;
             if (type === 'flight') {
                 if (existingType !== 'flight') return false;
-                if (options.allowSameFormationTakeoff && options.formationGroupId && event.formationId === options.formationGroupId) return false;
             } else if (isSimulator) {
                 if (!existingIsSimulator) return false;
             } else {
@@ -8853,8 +8853,11 @@ function generateDfpInternal(
             }
             const window = getFixedCrewWindow(sourceEvent.type);
             const duration = getFixedCrewDuration(sourceEvent);
+            const isSameFormationEvent = Boolean(sourceEvent.formationId || (Number(sourceEvent.formationSize) || 0) > 1);
             const starts = Number.isFinite(fixedStartTime)
-                ? buildFixedCrewFixedStartWaveCandidates(Number(fixedStartTime), window.end, duration, startStepMinutes, resourceOptions.length)
+                ? (isSameFormationEvent
+                    ? [Number(fixedStartTime)]
+                    : buildFixedCrewFixedStartWaveCandidates(Number(fixedStartTime), window.end, duration, startStepMinutes, resourceOptions.length))
                 : buildFixedCrewStartCandidates(window.start, window.end, duration, startStepMinutes);
             if (Number.isFinite(fixedStartTime)) {
                 (eventPerf as any).fixedStartWave = {
@@ -8905,15 +8908,21 @@ function generateDfpInternal(
                         duration,
                         resourceId,
                     });
+                    const sameFormationDispatchOptions = {
+                        allowSameFormationTakeoff: isSameFormationEvent,
+                        formationGroupId: candidate.formationId,
+                    };
                     if (candidate.type === 'flight') {
-                        const dispatchViolation = getAirCombatHourlyDispatchLimitViolation(candidate.startTime);
+                        const dispatchViolation = getAirCombatHourlyDispatchLimitViolation(candidate.startTime, 1, {
+                            excludedFormationId: sameFormationDispatchOptions.formationGroupId,
+                        });
                         if (dispatchViolation) {
                             incrementFixedCrewRejection('HOURLY_DISPATCH_LIMIT');
                             eligibleCrewEntries.forEach(([crew, members]) => recordFixedCrewDecision(crew, members, 'placement', 'HOURLY_DISPATCH_LIMIT', candidate));
                             pushFixedCrewAttempt({ event: candidate.flightNumber, source, startTime, resourceId, outcome: 'rejected', ...dispatchViolation });
                             continue;
                         }
-                        if (hasDispatchStaggerConflict('flight', candidate.startTime, generatedEvents)) {
+                        if (hasDispatchStaggerConflict('flight', candidate.startTime, generatedEvents, sameFormationDispatchOptions)) {
                             incrementFixedCrewRejection('TAKEOFF_SEPARATION_VIOLATION');
                             eligibleCrewEntries.forEach(([crew, members]) => recordFixedCrewDecision(crew, members, 'placement', 'TAKEOFF_SEPARATION_VIOLATION', candidate));
                             pushFixedCrewAttempt({
@@ -8927,7 +8936,7 @@ function generateDfpInternal(
                             });
                             continue;
                         }
-                    } else if (hasDispatchStaggerConflict(candidate.type, candidate.startTime, generatedEvents)) {
+                    } else if (hasDispatchStaggerConflict(candidate.type, candidate.startTime, generatedEvents, sameFormationDispatchOptions)) {
                         incrementFixedCrewRejection('SIMULATOR_STAGGER_VIOLATION');
                         eligibleCrewEntries.forEach(([crew, members]) => recordFixedCrewDecision(crew, members, 'placement', 'SIMULATOR_STAGGER_VIOLATION', candidate));
                         pushFixedCrewAttempt({
@@ -9570,17 +9579,22 @@ function generateDfpInternal(
         return sortedFixedCrewEvents;
     };
 
-    const countAirCombatDispatchesInWindow = (windowStart: number, windowEnd: number): number =>
+    const countAirCombatDispatchesInWindow = (windowStart: number, windowEnd: number, excludedFormationId?: string): number =>
         generatedEvents.filter(event =>
             event.type === 'flight' &&
             !event.isCancelled &&
             !isStbyResource(event.resourceId) &&
+            (!excludedFormationId || event.formationId !== excludedFormationId) &&
             event.startTime > windowStart &&
             event.startTime <= windowEnd
         ).length;
 
-    const getAirCombatHourlyDispatchLimitViolation = (startTime: number, dispatchCount: number = 1): Record<string, any> | null => {
-        const dispatchesInPreviousHour = countAirCombatDispatchesInWindow(startTime - 1, startTime);
+    const getAirCombatHourlyDispatchLimitViolation = (
+        startTime: number,
+        dispatchCount: number = 1,
+        options: { excludedFormationId?: string } = {}
+    ): Record<string, any> | null => {
+        const dispatchesInPreviousHour = countAirCombatDispatchesInWindow(startTime - 1, startTime, options.excludedFormationId);
         if (dispatchesInPreviousHour + dispatchCount > hourlyDispatchLimit) {
             return {
                 reason: 'HOURLY_DISPATCH_LIMIT',
@@ -9598,6 +9612,7 @@ function generateDfpInternal(
                 event.type === 'flight' &&
                 !event.isCancelled &&
                 !isStbyResource(event.resourceId) &&
+                (!options.excludedFormationId || event.formationId !== options.excludedFormationId) &&
                 event.startTime > startTime &&
                 event.startTime <= startTime + 1
             )
@@ -9607,7 +9622,7 @@ function generateDfpInternal(
             const windowStart = futureEvent.startTime - 1;
             const windowEnd = futureEvent.startTime;
             if (startTime > windowStart && startTime <= windowEnd) {
-                const dispatchesInFutureWindow = countAirCombatDispatchesInWindow(windowStart, windowEnd);
+                const dispatchesInFutureWindow = countAirCombatDispatchesInWindow(windowStart, windowEnd, options.excludedFormationId);
                 if (dispatchesInFutureWindow + dispatchCount > hourlyDispatchLimit) {
                     return {
                         reason: 'HOURLY_DISPATCH_LIMIT',
@@ -12906,7 +12921,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             }
         }
 
-        if ((type === 'ftd' || type === 'cpt') && hasDispatchStaggerConflict(type, startTime, generatedEvents)) {
+        if ((type === 'ftd' || type === 'cpt') && hasDispatchStaggerConflict(type, startTime, generatedEvents, {
+            allowSameFormationTakeoff: options.allowSameFormationTakeoff,
+            formationGroupId: options.formationGroupId,
+        })) {
             return traceScheduleReject('SIMULATOR_STAGGER_VIOLATION', {
                 configuredStaggerMinutes: simulatorDispatchStaggerMinutes,
             });
