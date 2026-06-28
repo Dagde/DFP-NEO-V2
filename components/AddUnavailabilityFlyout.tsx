@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { UnavailabilityPeriod, UnavailabilityReason } from '../types';
 import { validateUnavailabilityPeriod, ValidationResult } from '../utils/unavailabilityValidation';
-import { showDarkConfirm } from './DarkMessageModal';
 import ValidationErrorDisplay from './ValidationErrorDisplay';
 
 interface AddUnavailabilityFlyoutProps {
@@ -57,7 +56,7 @@ const AddUnavailabilityFlyout: React.FC<AddUnavailabilityFlyoutProps> = ({ onClo
         }
     }, [startDate, endDate, startTime, endTime, reason, showErrors]);
 
-    const handleSave = async () => {
+    const handleSave = () => {
         console.log('handleSave called', { startDate, endDate, startTime, endTime, reason });
         
         // Perform comprehensive validation
@@ -82,21 +81,6 @@ const AddUnavailabilityFlyout: React.FC<AddUnavailabilityFlyoutProps> = ({ onClo
                 errorElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
             return;
-        }
-
-        // If there are only warnings, we can still proceed but let user know
-        if (validationResult.warnings.length > 0) {
-            const proceedWithWarnings = await showDarkConfirm(
-                `This unavailability has ${validationResult.warnings.length} warning(s):\n\n` +
-                validationResult.warnings.map(w => `• ${w.message}`).join('\n') +
-                '\n\nDo you want to proceed anyway?',
-                'Unavailability Warning',
-                'warning'
-            );
-            
-            if (!proceedWithWarnings) {
-                return;
-            }
         }
 
         // The logic for 'end date' is that it's the first day of return.

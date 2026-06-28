@@ -11465,7 +11465,7 @@ const AddUnavailabilityFlyout = ({ onClose, onTodayOnly, onSave, unavailabilityP
       validateField();
     }
   }, [startDate, endDate, startTime, endTime, reason, showErrors]);
-  const handleSave = async () => {
+  const handleSave = () => {
     console.log("handleSave called", { startDate, endDate, startTime, endTime, reason });
     const validationResult = validateUnavailabilityPeriod(
       startDate,
@@ -11484,18 +11484,6 @@ const AddUnavailabilityFlyout = ({ onClose, onTodayOnly, onSave, unavailabilityP
         errorElement?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
       return;
-    }
-    if (validationResult.warnings.length > 0) {
-      const proceedWithWarnings = await showDarkConfirm(
-        `This unavailability has ${validationResult.warnings.length} warning(s):
-
-` + validationResult.warnings.map((w) => `• ${w.message}`).join("\n") + "\n\nDo you want to proceed anyway?",
-        "Unavailability Warning",
-        "warning"
-      );
-      if (!proceedWithWarnings) {
-        return;
-      }
     }
     const isAllDay = !startTime && !endTime;
     console.log("Calling onSave with period data");
