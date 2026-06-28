@@ -588,6 +588,13 @@ export interface SctRequest {
     crewIndividual?: string;
     crewRequirement?: CrewRequirement;
     aircraftCount?: number;
+    formationCrew?: {
+      crewGroup?: string;
+      crewGroupKey?: string;
+      crewUnitCode?: string;
+      crewDisplayLabel?: string;
+      crewIndividual?: string;
+    }[];
     callsignBase?: string;
     callsignNumber?: number;
     callsign?: string;

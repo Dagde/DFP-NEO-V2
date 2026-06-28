@@ -365,6 +365,8 @@ interface TaskingRequest {
 
 type TaskingSchedulerPriority = NonNullable<TaskingRequest['schedulerPriority']>;
 
+type FixedCrewFormationAssignment = NonNullable<SctRequest['formationCrew']>[number];
+
 type TimeOption = {
   label: string;
   value: number;
@@ -2141,6 +2143,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     picName?: string;
     fixedCrewGroupKey?: string;
     fixedCrewDisplayLabel?: string;
+    formationCrew?: FixedCrewFormationAssignment[];
     selected: boolean;
     pushed: boolean;
   }>>(() => {
@@ -2159,6 +2162,15 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             picName: String(draft?.picName || '').trim(),
             fixedCrewGroupKey: String(draft?.fixedCrewGroupKey || '').trim(),
             fixedCrewDisplayLabel: String(draft?.fixedCrewDisplayLabel || '').trim(),
+            formationCrew: Array.isArray(draft?.formationCrew)
+              ? draft.formationCrew.map((assignment: any) => ({
+                  crewGroup: String(assignment?.crewGroup || '').trim(),
+                  crewGroupKey: String(assignment?.crewGroupKey || '').trim(),
+                  crewUnitCode: String(assignment?.crewUnitCode || '').trim(),
+                  crewDisplayLabel: String(assignment?.crewDisplayLabel || '').trim(),
+                  crewIndividual: String(assignment?.crewIndividual || '').trim(),
+                }))
+              : [],
           }))
         : [];
     } catch {
@@ -2609,6 +2621,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           picName: person.picName || '',
           fixedCrewGroupKey: person.fixedCrewGroupKey || '',
           fixedCrewDisplayLabel: person.fixedCrewDisplayLabel || '',
+          formationCrew: [],
           selected: true,
           pushed: false,
         });
@@ -2627,45 +2640,50 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       const eventCode = String(draft.currencyProfileCode || '').trim().toUpperCase().slice(0, 8) || 'CURR';
       const aircraftCount = Math.max(1, Math.floor(Number(draft.aircraftCount) || 1));
       const formationId = aircraftCount > 1 ? `currency-formation-${draft.id}-${uuidv4()}` : undefined;
-      return Array.from({ length: aircraftCount }, (_, aircraftIndex) => ({
-        id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${aircraftIndex + 1}-${buildDfpDate}-${uuidv4()}`,
-        currencyDraftId: draft.id,
-        date: buildDfpDate,
-        type: draft.eventType,
-        instructor: '',
-        student: draft.personName,
-        pilot: picName || (isSolo ? draft.personName : ''),
-        fixedCrewPic: picName || undefined,
-        fixedCrewGroup: draft.fixedCrewDisplayLabel || draft.fixedCrewGroupKey || undefined,
-        flightNumber: eventCode,
-        duration: isFixedCrewModel ? defaultCurrencyDuration : draft.eventType === 'flight' ? 1.2 : 1.5,
-        startTime: startBase,
-        resourceId: '',
-        color: 'bg-amber-500/80',
-        flightType: isSolo ? 'Solo' : 'Dual',
-        locationType: 'Local',
-        origin: school,
-        destination: school,
-        isTimeFixed: false,
-        eventCategory: 'currency',
-        currency: selectedCurrencyText || 'Currency',
-        priority: 'Medium',
-        notes: [
-          selectedCurrencyText ? `Currency event required: ${selectedCurrencyText}` : 'Currency event required',
-          aircraftCount > 1 ? `Aircraft requested: ${aircraftCount}` : '',
-        ].filter(Boolean).join('\n'),
-        crewRequirement: draft.crewRequirement || { mode: 'aircraft_default' },
-        aircraftCount,
-        formationId,
-        formationPosition: aircraftCount > 1 ? aircraftIndex + 1 : undefined,
-        formationSize: aircraftCount > 1 ? aircraftCount : undefined,
-        taskingAircraftIndex: aircraftCount > 1 ? aircraftIndex + 1 : undefined,
-        taskingAircraftCount: aircraftCount > 1 ? aircraftCount : undefined,
-        ...(draft.eventType === 'flight' ? {
-          aircraftConfigId,
-          acceptableAircraftConfigs: [aircraftConfigId],
-        } : {}),
-      }));
+      return Array.from({ length: aircraftCount }, (_, aircraftIndex) => {
+        const formationAssignment = aircraftIndex === 0 ? null : draft.formationCrew?.[aircraftIndex - 1];
+        const assignedPic = String(formationAssignment?.crewIndividual || picName || '').trim();
+        const assignedCrew = String(formationAssignment?.crewDisplayLabel || formationAssignment?.crewGroupKey || draft.fixedCrewDisplayLabel || draft.fixedCrewGroupKey || '').trim();
+        return {
+          id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${aircraftIndex + 1}-${buildDfpDate}-${uuidv4()}`,
+          currencyDraftId: draft.id,
+          date: buildDfpDate,
+          type: draft.eventType,
+          instructor: '',
+          student: draft.personName,
+          pilot: assignedPic || (isSolo ? draft.personName : ''),
+          fixedCrewPic: assignedPic || undefined,
+          fixedCrewGroup: assignedCrew || undefined,
+          flightNumber: eventCode,
+          duration: isFixedCrewModel ? defaultCurrencyDuration : draft.eventType === 'flight' ? 1.2 : 1.5,
+          startTime: startBase,
+          resourceId: '',
+          color: 'bg-amber-500/80',
+          flightType: isSolo ? 'Solo' : 'Dual',
+          locationType: 'Local',
+          origin: school,
+          destination: school,
+          isTimeFixed: false,
+          eventCategory: 'currency',
+          currency: selectedCurrencyText || 'Currency',
+          priority: 'Medium',
+          notes: [
+            selectedCurrencyText ? `Currency event required: ${selectedCurrencyText}` : 'Currency event required',
+            aircraftCount > 1 ? `Aircraft requested: ${aircraftCount}` : '',
+          ].filter(Boolean).join('\n'),
+          crewRequirement: draft.crewRequirement || { mode: 'aircraft_default' },
+          aircraftCount,
+          formationId,
+          formationPosition: aircraftCount > 1 ? aircraftIndex + 1 : undefined,
+          formationSize: aircraftCount > 1 ? aircraftCount : undefined,
+          taskingAircraftIndex: aircraftCount > 1 ? aircraftIndex + 1 : undefined,
+          taskingAircraftCount: aircraftCount > 1 ? aircraftCount : undefined,
+          ...(draft.eventType === 'flight' ? {
+            aircraftConfigId,
+            acceptableAircraftConfigs: [aircraftConfigId],
+          } : {}),
+        } as ScheduleEvent;
+      });
     });
   };
 
@@ -2838,6 +2856,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         eventCode: String(profile.code || '').trim().toUpperCase().slice(0, 8),
         currency: profile.currency,
         aircraftCount: Math.max(1, Math.floor(Number(profile.aircraftCount) || 1)),
+        formationCrew: [],
         ...(configId ? { aircraftConfigId: configId } : {}),
         ...(isFixedCrewModel && profile.crew ? { crewMember: profile.crew } : {}),
       }, type);
@@ -2867,8 +2886,19 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         })
                         .filter(staff => !String(staff.crew || '').trim())
                     : [];
+                  const aircraftCount = Math.max(1, Math.floor(Number(req.aircraftCount) || 1));
+                  const formationAssignments = Array.from({ length: Math.max(0, aircraftCount - 1) }, (_, index) => req.formationCrew?.[index] || {});
+                  const updateFormationAssignment = (index: number, updates: Partial<FixedCrewFormationAssignment>) => {
+                    const nextAssignments = formationAssignments.map((assignment, assignmentIndex) => (
+                      assignmentIndex === index ? { ...assignment, ...updates } : assignment
+                    ));
+                    onPatchSctRequest(req.id, { formationCrew: nextAssignments }, type);
+                  };
                   const isRequestCurrencyMenuOpen = openCurrencyRequestKey === `${type}:${req.id}`;
-                  const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? (req.crewGroupKey || req.crewDisplayLabel) : req.name));
+                  const formationAssignmentsComplete = !isFixedCrewModel || aircraftCount <= 1 || formationAssignments.every(assignment => (
+                      (assignment.crewGroupKey || assignment.crewDisplayLabel) && assignment.crewIndividual
+                  ));
+                  const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? (req.crewGroupKey || req.crewDisplayLabel) : req.name) && formationAssignmentsComplete);
                   const stageSpecificCurrencyRequest = () => {
                       if (!canSubmitRequest) return;
                       const profile = currencyProfilesForContext.find(candidate => (
@@ -2902,6 +2932,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   picName: req.crewIndividual || '',
                                   fixedCrewGroupKey: req.crewGroupKey || selectedCrewGroup?.key || '',
                                   fixedCrewDisplayLabel: selectedCrewGroup?.label || req.crewDisplayLabel || '',
+                                  formationCrew: formationAssignments.map(assignment => ({
+                                      crewGroup: assignment.crewGroup || '',
+                                      crewGroupKey: assignment.crewGroupKey || '',
+                                      crewUnitCode: assignment.crewUnitCode || '',
+                                      crewDisplayLabel: assignment.crewDisplayLabel || '',
+                                      crewIndividual: assignment.crewIndividual || '',
+                                  })),
                                   selected: true,
                                   pushed: false,
                               },
@@ -2912,6 +2949,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   return (
                       <div key={req.id} className={`overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20 transition-[padding-bottom] duration-200 ${isRequestCurrencyMenuOpen ? 'pb-64' : ''}`}>
                           <div className="grid w-full min-w-[704px] max-w-[1304px] grid-cols-[minmax(632px,1232px)_4rem] gap-2">
+                              <div className="space-y-3">
                               <div className="grid grid-cols-5 gap-2">
                                   <div className={`${tileBaseClass} flex flex-col`}>
                                       <div className={tileLabelClass}>Crew</div>
@@ -3037,6 +3075,68 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                           <option value="Low">Low</option>
                                       </select>
                                   </div>
+                              </div>
+                              {isFixedCrewModel && aircraftCount > 1 && (
+                                  <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                                      <div className="mb-3 flex items-center justify-between gap-3">
+                                          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-300">Formation Crew</div>
+                                          <div className="text-[10px] text-slate-500">Aircraft 1 uses the Crew and PIC tiles above.</div>
+                                      </div>
+                                      <div className="space-y-2">
+                                          {formationAssignments.map((assignment, assignmentIndex) => {
+                                              const assignmentCrewGroup = fixedCrewRequestCrewGroups.find(group => (
+                                                  group.key === assignment.crewGroupKey
+                                                  || (group.crewValue === String(assignment.crewGroup || '').replace(/^CREW\s*/i, '').trim().toUpperCase()
+                                                      && group.unitCode === String(assignment.crewUnitCode || '').trim().toUpperCase())
+                                              ));
+                                              const assignmentPicCandidates = (assignmentCrewGroup?.members || []).filter(member => staffHasPicQualification(member));
+                                              return (
+                                                  <div key={`${req.id}-formation-${assignmentIndex}`} className="grid gap-2 rounded-md border border-slate-800 bg-slate-900/70 p-2 md:grid-cols-[4.25rem_minmax(0,1fr)_minmax(0,1fr)]">
+                                                      <div className="flex items-center text-[10px] font-black uppercase tracking-[0.12em] text-sky-300">
+                                                          A/C {assignmentIndex + 2}
+                                                      </div>
+                                                      <select
+                                                          value={assignmentCrewGroup?.key || ''}
+                                                          onChange={e => {
+                                                              const group = fixedCrewRequestCrewGroups.find(candidate => candidate.key === e.target.value);
+                                                              const picCandidates = (group?.members || []).filter(member => staffHasPicQualification(member));
+                                                              const defaultPic = picCandidates.length === 1 ? picCandidates[0].name : '';
+                                                              updateFormationAssignment(assignmentIndex, {
+                                                                  crewGroupKey: group?.key || '',
+                                                                  crewGroup: group?.crewValue || '',
+                                                                  crewUnitCode: group?.unitCode || '',
+                                                                  crewDisplayLabel: group?.label || '',
+                                                                  crewIndividual: defaultPic,
+                                                              });
+                                                          }}
+                                                          className={controlClass}
+                                                      >
+                                                          <option value="">Select crew</option>
+                                                          {Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => (
+                                                              <optgroup key={unitCode} label={unitCode}>
+                                                                  {groups.map(group => (
+                                                                      <option key={group.key} value={group.key}>{group.label}</option>
+                                                                  ))}
+                                                              </optgroup>
+                                                          ))}
+                                                      </select>
+                                                      <select
+                                                          value={assignment.crewIndividual || ''}
+                                                          onChange={e => updateFormationAssignment(assignmentIndex, { crewIndividual: e.target.value })}
+                                                          disabled={!assignmentCrewGroup}
+                                                          className={controlClass}
+                                                      >
+                                                          <option value="">{assignmentCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
+                                                          {assignmentPicCandidates.map(member => (
+                                                              <option key={member.id || member.idNumber || member.name} value={member.name}>{member.name}</option>
+                                                          ))}
+                                                      </select>
+                                                  </div>
+                                              );
+                                          })}
+                                      </div>
+                                  </div>
+                              )}
                               </div>
                               <div className="flex h-[288px] w-16 flex-col items-center justify-center gap-3">
                                   {req.submitted ? (

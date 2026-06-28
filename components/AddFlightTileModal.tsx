@@ -86,6 +86,10 @@ type FormationCrewDraft = {
   studentName: string;
   callsign: string;
 };
+type FixedCrewFormationAssignment = {
+  crewGroup: string;
+  pic: string;
+};
 
 // ─── Scale constants for the large interactive tile ─────────────────────────
 //
@@ -1096,6 +1100,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [fixedCrewEventKey, setFixedCrewEventKey] = useState('');
   const [fixedCrewGroup, setFixedCrewGroup] = useState('');
   const [fixedCrewPic, setFixedCrewPic] = useState('');
+  const [fixedCrewFormationAssignments, setFixedCrewFormationAssignments] = useState<FixedCrewFormationAssignment[]>([]);
   const [fixedCrewManifestStatus, setFixedCrewManifestStatus] = useState<ScheduleEvent['fixedCrewManifestStatus']>('pending');
   const [fixedCrewManifestNotes, setFixedCrewManifestNotes] = useState('');
   const [errors,        setErrors]        = useState<string[]>([]);
@@ -1196,6 +1201,22 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const fixedCrewPicCandidates = useMemo(() => fixedCrewPicQualification
     ? fixedCrewMembers.filter(staff => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id))
     : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
+  const getFixedCrewMembersForGroup = (groupKey?: string | null) => {
+    const selectedGroup = parseFixedCrewGroupKey(groupKey);
+    return selectedGroup.crew
+      ? fixedCrewStaff
+        .filter(staff => {
+          const staffGroup = parseFixedCrewGroupKey(`${normaliseFixedCrewUnitCode(staff.unit)}::${staff.crew || ''}`);
+          return staffGroup.crew === selectedGroup.crew
+            && (!selectedGroup.unit || staffGroup.unit === selectedGroup.unit);
+        })
+        .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'))
+      : [];
+  };
+  const getFixedCrewPicCandidatesForGroup = (groupKey?: string | null) => fixedCrewPicQualification
+    ? getFixedCrewMembersForGroup(groupKey)
+      .filter(staff => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id))
+    : [];
   const activeCallsignUnitCodes = useMemo(() => (
     isFixedCrewModel && activeFixedCrewUnitCodes.length > 0
       ? activeFixedCrewUnitCodes
@@ -1703,7 +1724,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setAircraftCount(1); setFormationCrew([]);
     setCallsign(''); setCallsignOptions([]); setNotes('');
     setUnitCallsignBase(defaultUnitCallsign); setUnitCallsignNumber(0);
-    setFixedCrewEventKey(''); setFixedCrewGroup(''); setFixedCrewPic(''); setFixedCrewManifestStatus('pending'); setFixedCrewManifestNotes('');
+    setFixedCrewEventKey(''); setFixedCrewGroup(''); setFixedCrewPic(''); setFixedCrewFormationAssignments([]); setFixedCrewManifestStatus('pending'); setFixedCrewManifestNotes('');
     setErrors([]);
     setGuidedStep('startTime');
   }, [eventCategory]);
@@ -1721,6 +1742,15 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (isSingleSeatAircraft || eventCategory === 'sct' || eventCategory === 'twr_di') setFlightType('Solo');
     else setFlightType('Dual');
   }, [eventCategory, isSingleSeatAircraft, isFixedCrewModel]);
+
+  useEffect(() => {
+    if (!isFixedCrewModel) return;
+    const extraAircraftCount = Math.max(0, Math.floor(Number(aircraftCount) || 1) - 1);
+    setFixedCrewFormationAssignments(prev => {
+      if (prev.length === extraAircraftCount) return prev;
+      return Array.from({ length: extraAircraftCount }, (_, index) => prev[index] || { crewGroup: '', pic: '' });
+    });
+  }, [aircraftCount, isFixedCrewModel]);
 
   useEffect(() => {
     if (!isFixedCrewModel) return;
@@ -1856,6 +1886,12 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     )));
   };
 
+  const updateFixedCrewFormationAssignment = (index: number, updates: Partial<FixedCrewFormationAssignment>) => {
+    setFixedCrewFormationAssignments(prev => prev.map((assignment, assignmentIndex) => (
+      assignmentIndex === index ? { ...assignment, ...updates } : assignment
+    )));
+  };
+
   const handleSave = () => {
     const errs: string[] = [];
     if (isDeploy) {
@@ -1865,6 +1901,12 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       if (!flightNumber) errs.push(`${fixedCrewEventFieldLabel} is required.`);
       if (!fixedCrewGroup) errs.push('Crew is required.');
       if (!fixedCrewPic) errs.push('PIC is required.');
+      if (Math.max(1, Math.floor(Number(aircraftCount) || 1)) > 1) {
+        fixedCrewFormationAssignments.forEach((assignment, index) => {
+          if (!assignment.crewGroup) errs.push(`Aircraft ${index + 2} crew is required.`);
+          if (!assignment.pic) errs.push(`Aircraft ${index + 2} PIC is required.`);
+        });
+      }
       if (locationType === 'Land Away' && (!origin || !destination)) errs.push('Origin and destination are required for land away flights.');
       if (!duration || duration <= 0) errs.push('Duration must be greater than 0.');
     } else {
@@ -1897,17 +1939,24 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           : aircraftConfigId;
         const savedAircraftCount = Math.max(1, Math.floor(Number(aircraftCount) || 1));
         const formationId = savedAircraftCount > 1 ? `fixed-crew-formation-${uuidv4()}` : undefined;
-        Array.from({ length: savedAircraftCount }, (_, index) => index).forEach((index) => eventsToSave.push({
+        Array.from({ length: savedAircraftCount }, (_, index) => index).forEach((index) => {
+          const assignment = index === 0
+            ? { crewGroup: fixedCrewGroup, pic: fixedCrewPic }
+            : fixedCrewFormationAssignments[index - 1] || { crewGroup: fixedCrewGroup, pic: fixedCrewPic };
+          const assignedCrewGroup = assignment.crewGroup || fixedCrewGroup;
+          const assignedPic = assignment.pic || fixedCrewPic;
+          const assignedCrewMembers = getFixedCrewMembersForGroup(assignedCrewGroup);
+          eventsToSave.push({
           id: uuidv4(),
           date,
           type: eventType,
           eventCategory,
           flightType: 'Dual',
           flightNumber,
-          instructor: fixedCrewPic,
+          instructor: assignedPic,
           student: '',
-          pilot: fixedCrewPic,
-          crew: formatFixedCrewDisplayGroup(fixedCrewGroup),
+          pilot: assignedPic,
+          crew: formatFixedCrewDisplayGroup(assignedCrewGroup),
           startTime,
           duration,
           area: eventType === 'flight' ? area : '-',
@@ -1925,13 +1974,13 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           ].filter(Boolean).join('\n'),
           currency: selectedFixedCrewCurrencyProfile?.currency || undefined,
           eventCode: selectedFixedCrewCurrencyProfile?.code || selectedFixedCrewEvent?.code || undefined,
-          group: formatFixedCrewDisplayGroup(fixedCrewGroup),
+          group: formatFixedCrewDisplayGroup(assignedCrewGroup),
           groupTraineeIds: [],
-          attendees: fixedCrewMembers.map(staff => staff.name),
+          attendees: assignedCrewMembers.map(staff => staff.name),
           origin: locationType === 'Local' ? school : origin,
           destination: locationType === 'Local' ? school : destination,
-          fixedCrewGroup,
-          fixedCrewPic,
+          fixedCrewGroup: assignedCrewGroup,
+          fixedCrewPic: assignedPic,
           fixedCrewManifestStatus,
           fixedCrewManifestNotes,
           aircraftCount: savedAircraftCount,
@@ -1940,7 +1989,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           formationSize: savedAircraftCount > 1 ? savedAircraftCount : undefined,
           taskingAircraftIndex: savedAircraftCount > 1 ? index + 1 : undefined,
           taskingAircraftCount: savedAircraftCount > 1 ? savedAircraftCount : undefined,
-        } as any));
+          } as any);
+        });
         onSave(eventsToSave);
         onClose();
         return;
@@ -2290,6 +2340,60 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   )}
                 </div>
               </div>
+              {Math.max(1, Number(aircraftCount) || 1) > 1 && (
+                <div className="rounded-lg border border-emerald-500/25 bg-slate-950/35 p-3">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">Formation Crew</div>
+                    <div className="text-[11px] text-slate-400">Aircraft 1 uses the primary Crew and PIC above.</div>
+                  </div>
+                  <div className="space-y-3">
+                    {fixedCrewFormationAssignments.map((assignment, index) => {
+                      const picCandidates = getFixedCrewPicCandidatesForGroup(assignment.crewGroup);
+                      return (
+                        <div key={`fixed-crew-formation-${index}`} className="grid gap-3 rounded-md border border-slate-700 bg-slate-900/70 p-3 md:grid-cols-[5.75rem_minmax(0,1fr)_minmax(0,1fr)]">
+                          <div className="flex items-center text-xs font-black uppercase tracking-[0.12em] text-emerald-300">
+                            A/C {index + 2}
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
+                            <select
+                              value={assignment.crewGroup}
+                              onChange={e => updateFixedCrewFormationAssignment(index, { crewGroup: e.target.value, pic: '' })}
+                              className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
+                            >
+                              <option value="">Select crew</option>
+                              {fixedCrewGroupOptionGroups.map(group => (
+                                <optgroup key={group.unit} label={group.unit}>
+                                  {group.options.map(crewGroup => {
+                                    const parsed = parseFixedCrewGroupKey(crewGroup);
+                                    return <option key={crewGroup} value={crewGroup}>{`CREW ${parsed.crew}`}</option>;
+                                  })}
+                                </optgroup>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">PIC</label>
+                            <select
+                              value={assignment.pic}
+                              onChange={e => updateFixedCrewFormationAssignment(index, { pic: e.target.value })}
+                              disabled={!assignment.crewGroup || picCandidates.length === 0}
+                              className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                            >
+                              <option value="">{assignment.crewGroup ? 'Select PIC' : 'Select crew first'}</option>
+                              {picCandidates.map(staff => (
+                                <option key={staff.id || staff.name} value={staff.name}>
+                                  {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Location</label>
