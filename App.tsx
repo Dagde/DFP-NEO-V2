@@ -38569,7 +38569,7 @@ appliedUpdates.forEach(update => {
                     }}
                     instructors={instructorsData.map(i => i.name)}
                     trainees={allTraineesData.map(t => t.fullName)}
-                    syllabusDetails={syllabusDetails}
+                    syllabusDetails={activeOperationalModel === 'fixed_crew' ? visibleSyllabusDetails : syllabusDetails}
                     school={school}
                     traineesData={traineesData}
                     instructorsData={instructorsData}
@@ -38585,6 +38585,7 @@ appliedUpdates.forEach(update => {
                     aircraftCrewComposition={activeAircraftCrewComposition}
                     operationalModel={activeOperationalModel}
                     activeUnitCode={activeUnitCode}
+                    activeUnitCodes={activeContextUnitCodes}
                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
                     unitCallsignSettings={activeUnitCallsignSettings}
                     personnelDisplaySettings={personnelDisplaySettings}

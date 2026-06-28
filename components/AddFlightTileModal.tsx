@@ -47,6 +47,7 @@ interface AddFlightTileModalProps {
   aircraftCrewComposition?: AircraftCrewComposition;
   operationalModel?: string;
   activeUnitCode?: string;
+  activeUnitCodes?: string[];
   unitCallsignSettings?: UnitCallsignSettings;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   personnelDisplaySettings?: PersonnelDisplaySettings;
@@ -1057,6 +1058,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
   operationalModel,
   activeUnitCode = '',
+  activeUnitCodes = [],
   unitCallsignSettings,
   staffQualificationCatalogue,
   personnelDisplaySettings,
@@ -1088,6 +1090,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [unitCallsignBase, setUnitCallsignBase] = useState('');
   const [unitCallsignNumber, setUnitCallsignNumber] = useState(0);
   const [notes,         setNotes]         = useState('');
+  const [fixedCrewEventKey, setFixedCrewEventKey] = useState('');
   const [fixedCrewGroup, setFixedCrewGroup] = useState('');
   const [fixedCrewPic, setFixedCrewPic] = useState('');
   const [fixedCrewManifestStatus, setFixedCrewManifestStatus] = useState<ScheduleEvent['fixedCrewManifestStatus']>('pending');
@@ -1109,19 +1112,61 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       : [BASE_AIRCRAFT_CONFIG, ...definitions];
   }, [aircraftConfigurationDefinitions]);
   const isFixedCrewModel = normaliseOperationalModel(operationalModel) === 'fixed_crew';
-  const activeUnitNormalised = String(activeUnitCode || '').trim().toUpperCase();
+  const normaliseFixedCrewUnitCode = (value?: string | null) => String(value || '').trim().toUpperCase();
+  const activeFixedCrewUnitCodes = useMemo(() => {
+    const rawUnits = activeUnitCodes.length > 0
+      ? activeUnitCodes
+      : String(activeUnitCode || '').split('+');
+    return Array.from(new Set(
+      rawUnits
+        .map(unit => normaliseFixedCrewUnitCode(unit))
+        .filter(Boolean),
+    ));
+  }, [activeUnitCode, activeUnitCodes]);
+  const activeFixedCrewUnitCodeSet = useMemo(
+    () => new Set(activeFixedCrewUnitCodes),
+    [activeFixedCrewUnitCodes],
+  );
+  const parseFixedCrewGroupKey = (value?: string | null) => {
+    const raw = String(value || '').trim();
+    const [maybeUnit, ...crewParts] = raw.split('::');
+    if (crewParts.length > 0) {
+      return {
+        unit: normaliseFixedCrewUnitCode(maybeUnit),
+        crew: crewParts.join('::').replace(/^CREW\s*/i, '').trim().toUpperCase(),
+      };
+    }
+    return {
+      unit: '',
+      crew: raw.replace(/^CREW\s*/i, '').trim().toUpperCase(),
+    };
+  };
   const fixedCrewStaff = useMemo(() => instructorsData
-    .filter(staff => !activeUnitNormalised || String(staff.unit || '').trim().toUpperCase() === activeUnitNormalised)
-    .filter(staff => !staff.isAdminStaff), [activeUnitNormalised, instructorsData]);
+    .filter(staff => {
+      const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
+      return activeFixedCrewUnitCodeSet.size === 0 || activeFixedCrewUnitCodeSet.has(staffUnit);
+    })
+    .filter(staff => !staff.isAdminStaff), [activeFixedCrewUnitCodeSet, instructorsData]);
   const fixedCrewGroups = useMemo(() => Array.from(new Set(fixedCrewStaff
-    .map(staff => String(staff.crew || '').trim())
+    .map(staff => {
+      const crew = String(staff.crew || '').replace(/^CREW\s*/i, '').trim();
+      const unit = normaliseFixedCrewUnitCode(staff.unit);
+      return crew ? `${unit}::${crew}` : '';
+    })
     .filter(Boolean)))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [fixedCrewStaff]);
-  const fixedCrewMembers = useMemo(() => fixedCrewGroup
-    ? fixedCrewStaff
-      .filter(staff => String(staff.crew || '').trim().toUpperCase() === String(fixedCrewGroup || '').trim().toUpperCase())
+  const fixedCrewMembers = useMemo(() => {
+    const selectedGroup = parseFixedCrewGroupKey(fixedCrewGroup);
+    return selectedGroup.crew
+      ? fixedCrewStaff
+      .filter(staff => {
+        const staffGroup = parseFixedCrewGroupKey(`${normaliseFixedCrewUnitCode(staff.unit)}::${staff.crew || ''}`);
+        return staffGroup.crew === selectedGroup.crew
+          && (!selectedGroup.unit || staffGroup.unit === selectedGroup.unit);
+      })
       .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'))
-    : [], [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings]);
+      : [];
+  }, [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings]);
   const fixedCrewPicQualification = useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, 'fixed_crew')
     .find(qualification => (
       normaliseQualificationToken(qualification.id) === 'pic'
@@ -1440,13 +1485,39 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       const type = String(item.type || '').trim().toLowerCase();
       return type === 'flight' || type === 'ftd';
     };
-    const items = syllabusDetails.filter(isCrewedFixedCrewType);
+    const items = syllabusDetails.filter(item => {
+      if (!isCrewedFixedCrewType(item)) return false;
+      const itemUnit = normaliseFixedCrewUnitCode(item.unit);
+      return !itemUnit || activeFixedCrewUnitCodeSet.size === 0 || activeFixedCrewUnitCodeSet.has(itemUnit);
+    });
     return items.sort((a, b) => {
+      const unitCompare = normaliseFixedCrewUnitCode(a.unit).localeCompare(normaliseFixedCrewUnitCode(b.unit), undefined, { numeric: true });
+      if (unitCompare !== 0) return unitCompare;
       const phaseCompare = String(a.phase || '').localeCompare(String(b.phase || ''), undefined, { numeric: true });
       if (phaseCompare !== 0) return phaseCompare;
       return String(a.code || a.id || '').localeCompare(String(b.code || b.id || ''), undefined, { numeric: true });
     });
-  }, [syllabusDetails]);
+  }, [activeFixedCrewUnitCodeSet, syllabusDetails]);
+
+  const fixedCrewEventOptionGroups = useMemo(() => {
+    const getCoursePackageLabel = (item: SyllabusItemDetail) => {
+      const courseLabel = Array.isArray(item.courses) && item.courses.length > 0
+        ? item.courses.filter(Boolean).join(', ')
+        : '';
+      return courseLabel || item.phase || item.lmpType || 'Course/Package';
+    };
+    const groups = new Map<string, SyllabusItemDetail[]>();
+    fixedCrewEventOptions.forEach(item => {
+      const unitLabel = normaliseFixedCrewUnitCode(item.unit) || (activeFixedCrewUnitCodes.length === 1 ? activeFixedCrewUnitCodes[0] : 'Unit');
+      const groupLabel = `${unitLabel} - ${getCoursePackageLabel(item)}`;
+      groups.set(groupLabel, [...(groups.get(groupLabel) || []), item]);
+    });
+    return Array.from(groups.entries()).map(([label, options]) => ({ label, options }));
+  }, [activeFixedCrewUnitCodes, fixedCrewEventOptions]);
+
+  const getFixedCrewEventOptionKey = (item: SyllabusItemDetail) => (
+    `${normaliseFixedCrewUnitCode(item.unit)}::${item.id || ''}::${item.code || ''}`
+  );
 
   const courseOptions = useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
@@ -1631,9 +1702,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setGuidedStep('area');
   };
 
-  const handleFixedCrewEventChange = (code: string) => {
-    const selectedItem = fixedCrewEventOptions.find(item => (item.code || item.id) === code || item.id === code);
-    setFlightNumber(code);
+  const handleFixedCrewEventChange = (eventKey: string) => {
+    const selectedItem = fixedCrewEventOptions.find(item => getFixedCrewEventOptionKey(item) === eventKey);
+    setFixedCrewEventKey(eventKey);
+    setFlightNumber(selectedItem?.code || selectedItem?.id || '');
     if (selectedItem) {
       const resolvedDuration = Number(selectedItem.duration || selectedItem.flightOrSimHours);
       if (Number.isFinite(resolvedDuration) && resolvedDuration > 0) setDuration(resolvedDuration);
@@ -1651,9 +1723,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setGuidedStep('event');
   };
 
-  const selectedFixedCrewEvent = fixedCrewEventOptions.find(item => (
-    item.code === flightNumber || item.id === flightNumber
-  ));
+  const selectedFixedCrewEvent = fixedCrewEventOptions.find(item => getFixedCrewEventOptionKey(item) === fixedCrewEventKey)
+    || fixedCrewEventOptions.find(item => (
+      item.code === flightNumber || item.id === flightNumber
+    ));
 
   const updateFormationCrew = (index: number, updates: Partial<FormationCrewDraft>) => {
     setFormationCrew(prev => prev.map((crewMember, crewIndex) => (
@@ -1901,16 +1974,24 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 <div className="md:col-span-3">
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">LMP Event</label>
                   <select
-                    value={flightNumber}
+                    value={fixedCrewEventKey}
                     onChange={e => handleFixedCrewEventChange(e.target.value)}
                     className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
                   >
                     <option value="">Select Fixed Crew event</option>
-                    {fixedCrewEventOptions.map(item => {
-                      const code = item.code || item.id || '';
-                      const label = [code, item.title || item.eventDescription || item.description].filter(Boolean).join(' - ');
-                      return <option key={item.id || code} value={code}>{label}</option>;
-                    })}
+                    {fixedCrewEventOptionGroups.length === 0 && (
+                      <option value="" disabled>No Fixed Crew events for selected unit</option>
+                    )}
+                    {fixedCrewEventOptionGroups.map(group => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.options.map(item => {
+                          const code = item.code || item.id || '';
+                          const label = [code, (item as any).title || item.eventDescription || (item as any).description].filter(Boolean).join(' - ');
+                          const optionKey = getFixedCrewEventOptionKey(item);
+                          return <option key={optionKey} value={optionKey}>{label}</option>;
+                        })}
+                      </optgroup>
+                    ))}
                   </select>
                 </div>
                 <div>

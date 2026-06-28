@@ -21738,6 +21738,7 @@ const AddFlightTileModal = ({
   aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
   operationalModel: operationalModel2,
   activeUnitCode = "",
+  activeUnitCodes = [],
   unitCallsignSettings,
   staffQualificationCatalogue,
   personnelDisplaySettings
@@ -21769,6 +21770,7 @@ const AddFlightTileModal = ({
   const [unitCallsignBase, setUnitCallsignBase] = reactExports.useState("");
   const [unitCallsignNumber, setUnitCallsignNumber] = reactExports.useState(0);
   const [notes, setNotes] = reactExports.useState("");
+  const [fixedCrewEventKey, setFixedCrewEventKey] = reactExports.useState("");
   const [fixedCrewGroup, setFixedCrewGroup] = reactExports.useState("");
   const [fixedCrewPic, setFixedCrewPic] = reactExports.useState("");
   const [fixedCrewManifestStatus, setFixedCrewManifestStatus] = reactExports.useState("pending");
@@ -21786,10 +21788,47 @@ const AddFlightTileModal = ({
     return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
   }, [aircraftConfigurationDefinitions]);
   const isFixedCrewModel = normaliseOperationalModel(operationalModel2) === "fixed_crew";
-  const activeUnitNormalised = String(activeUnitCode || "").trim().toUpperCase();
-  const fixedCrewStaff = reactExports.useMemo(() => instructorsData.filter((staff) => !activeUnitNormalised || String(staff.unit || "").trim().toUpperCase() === activeUnitNormalised).filter((staff) => !staff.isAdminStaff), [activeUnitNormalised, instructorsData]);
-  const fixedCrewGroups = reactExports.useMemo(() => Array.from(new Set(fixedCrewStaff.map((staff) => String(staff.crew || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true })), [fixedCrewStaff]);
-  const fixedCrewMembers = reactExports.useMemo(() => fixedCrewGroup ? fixedCrewStaff.filter((staff) => String(staff.crew || "").trim().toUpperCase() === String(fixedCrewGroup || "").trim().toUpperCase()).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")) : [], [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings]);
+  const normaliseFixedCrewUnitCode2 = (value) => String(value || "").trim().toUpperCase();
+  const activeFixedCrewUnitCodes = reactExports.useMemo(() => {
+    const rawUnits = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || "").split("+");
+    return Array.from(new Set(
+      rawUnits.map((unit) => normaliseFixedCrewUnitCode2(unit)).filter(Boolean)
+    ));
+  }, [activeUnitCode, activeUnitCodes]);
+  const activeFixedCrewUnitCodeSet = reactExports.useMemo(
+    () => new Set(activeFixedCrewUnitCodes),
+    [activeFixedCrewUnitCodes]
+  );
+  const parseFixedCrewGroupKey = (value) => {
+    const raw = String(value || "").trim();
+    const [maybeUnit, ...crewParts] = raw.split("::");
+    if (crewParts.length > 0) {
+      return {
+        unit: normaliseFixedCrewUnitCode2(maybeUnit),
+        crew: crewParts.join("::").replace(/^CREW\s*/i, "").trim().toUpperCase()
+      };
+    }
+    return {
+      unit: "",
+      crew: raw.replace(/^CREW\s*/i, "").trim().toUpperCase()
+    };
+  };
+  const fixedCrewStaff = reactExports.useMemo(() => instructorsData.filter((staff) => {
+    const staffUnit = normaliseFixedCrewUnitCode2(staff.unit);
+    return activeFixedCrewUnitCodeSet.size === 0 || activeFixedCrewUnitCodeSet.has(staffUnit);
+  }).filter((staff) => !staff.isAdminStaff), [activeFixedCrewUnitCodeSet, instructorsData]);
+  const fixedCrewGroups = reactExports.useMemo(() => Array.from(new Set(fixedCrewStaff.map((staff) => {
+    const crew = String(staff.crew || "").replace(/^CREW\s*/i, "").trim();
+    const unit = normaliseFixedCrewUnitCode2(staff.unit);
+    return crew ? `${unit}::${crew}` : "";
+  }).filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true })), [fixedCrewStaff]);
+  const fixedCrewMembers = reactExports.useMemo(() => {
+    const selectedGroup = parseFixedCrewGroupKey(fixedCrewGroup);
+    return selectedGroup.crew ? fixedCrewStaff.filter((staff) => {
+      const staffGroup = parseFixedCrewGroupKey(`${normaliseFixedCrewUnitCode2(staff.unit)}::${staff.crew || ""}`);
+      return staffGroup.crew === selectedGroup.crew && (!selectedGroup.unit || staffGroup.unit === selectedGroup.unit);
+    }).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")) : [];
+  }, [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings]);
   const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
   const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
   const unitCallsignEntries = reactExports.useMemo(
@@ -22045,13 +22084,33 @@ const AddFlightTileModal = ({
       const type = String(item.type || "").trim().toLowerCase();
       return type === "flight" || type === "ftd";
     };
-    const items = syllabusDetails.filter(isCrewedFixedCrewType);
+    const items = syllabusDetails.filter((item) => {
+      if (!isCrewedFixedCrewType(item)) return false;
+      const itemUnit = normaliseFixedCrewUnitCode2(item.unit);
+      return !itemUnit || activeFixedCrewUnitCodeSet.size === 0 || activeFixedCrewUnitCodeSet.has(itemUnit);
+    });
     return items.sort((a, b) => {
+      const unitCompare = normaliseFixedCrewUnitCode2(a.unit).localeCompare(normaliseFixedCrewUnitCode2(b.unit), void 0, { numeric: true });
+      if (unitCompare !== 0) return unitCompare;
       const phaseCompare = String(a.phase || "").localeCompare(String(b.phase || ""), void 0, { numeric: true });
       if (phaseCompare !== 0) return phaseCompare;
       return String(a.code || a.id || "").localeCompare(String(b.code || b.id || ""), void 0, { numeric: true });
     });
-  }, [syllabusDetails]);
+  }, [activeFixedCrewUnitCodeSet, syllabusDetails]);
+  const fixedCrewEventOptionGroups = reactExports.useMemo(() => {
+    const getCoursePackageLabel = (item) => {
+      const courseLabel = Array.isArray(item.courses) && item.courses.length > 0 ? item.courses.filter(Boolean).join(", ") : "";
+      return courseLabel || item.phase || item.lmpType || "Course/Package";
+    };
+    const groups = /* @__PURE__ */ new Map();
+    fixedCrewEventOptions.forEach((item) => {
+      const unitLabel = normaliseFixedCrewUnitCode2(item.unit) || (activeFixedCrewUnitCodes.length === 1 ? activeFixedCrewUnitCodes[0] : "Unit");
+      const groupLabel = `${unitLabel} - ${getCoursePackageLabel(item)}`;
+      groups.set(groupLabel, [...groups.get(groupLabel) || [], item]);
+    });
+    return Array.from(groups.entries()).map(([label, options]) => ({ label, options }));
+  }, [activeFixedCrewUnitCodes, fixedCrewEventOptions]);
+  const getFixedCrewEventOptionKey = (item) => `${normaliseFixedCrewUnitCode2(item.unit)}::${item.id || ""}::${item.code || ""}`;
   const courseOptions = reactExports.useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
     return ["SCT", ...courses.filter((c) => c !== "SCT")];
@@ -22208,9 +22267,10 @@ const AddFlightTileModal = ({
     if (lmpDuration) setDuration(lmpDuration);
     setGuidedStep("area");
   };
-  const handleFixedCrewEventChange = (code) => {
-    const selectedItem = fixedCrewEventOptions.find((item) => (item.code || item.id) === code || item.id === code);
-    setFlightNumber(code);
+  const handleFixedCrewEventChange = (eventKey) => {
+    const selectedItem = fixedCrewEventOptions.find((item) => getFixedCrewEventOptionKey(item) === eventKey);
+    setFixedCrewEventKey(eventKey);
+    setFlightNumber(selectedItem?.code || selectedItem?.id || "");
     if (selectedItem) {
       const resolvedDuration = Number(selectedItem.duration || selectedItem.flightOrSimHours);
       if (Number.isFinite(resolvedDuration) && resolvedDuration > 0) setDuration(resolvedDuration);
@@ -22226,7 +22286,7 @@ const AddFlightTileModal = ({
     setPicName(name);
     setGuidedStep("event");
   };
-  const selectedFixedCrewEvent = fixedCrewEventOptions.find((item) => item.code === flightNumber || item.id === flightNumber);
+  const selectedFixedCrewEvent = fixedCrewEventOptions.find((item) => getFixedCrewEventOptionKey(item) === fixedCrewEventKey) || fixedCrewEventOptions.find((item) => item.code === flightNumber || item.id === flightNumber);
   const updateFormationCrew = (index, updates) => {
     setFormationCrew((prev) => prev.map((crewMember, crewIndex) => crewIndex === index ? { ...crewMember, ...updates } : crewMember));
   };
@@ -22464,16 +22524,18 @@ const AddFlightTileModal = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "select",
                       {
-                        value: flightNumber,
+                        value: fixedCrewEventKey,
                         onChange: (e) => handleFixedCrewEventChange(e.target.value),
                         className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select Fixed Crew event" }),
-                          fixedCrewEventOptions.map((item) => {
+                          fixedCrewEventOptionGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "No Fixed Crew events for selected unit" }),
+                          fixedCrewEventOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((item) => {
                             const code = item.code || item.id || "";
                             const label = [code, item.title || item.eventDescription || item.description].filter(Boolean).join(" - ");
-                            return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: code, children: label }, item.id || code);
-                          })
+                            const optionKey = getFixedCrewEventOptionKey(item);
+                            return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: optionKey, children: label }, optionKey);
+                          }) }, group.label))
                         ]
                       }
                     )
@@ -102281,7 +102343,7 @@ Do you want to replace the existing entry?`,
           },
           instructors: instructorsData.map((i) => i.name),
           trainees: allTraineesData.map((t) => t.fullName),
-          syllabusDetails,
+          syllabusDetails: activeOperationalModel === "fixed_crew" ? visibleSyllabusDetails : syllabusDetails,
           school,
           traineesData,
           instructorsData,
@@ -102297,6 +102359,7 @@ Do you want to replace the existing entry?`,
           aircraftCrewComposition: activeAircraftCrewComposition,
           operationalModel: activeOperationalModel,
           activeUnitCode,
+          activeUnitCodes: activeContextUnitCodes,
           staffQualificationCatalogue: activeStaffQualificationCatalogue,
           unitCallsignSettings: activeUnitCallsignSettings,
           personnelDisplaySettings
