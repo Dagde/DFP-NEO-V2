@@ -1961,26 +1961,41 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         <div className="p-6 space-y-5" style={{ overflowY: 'auto', flex: 1 }}>
 
           {/* Event Category */}
-          {!isDeploy && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Event Category</label>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(categoryLabels).map(([key, label]) => (
-                  <button
-                    key={key} type="button"
-                    onClick={() => setEventCategory(key as any)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      eventCategory === key
-                        ? 'bg-sky-600 text-white ring-2 ring-sky-400'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Event Category</label>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(categoryLabels).map(([key, label]) => (
+                <button
+                  key={key} type="button"
+                  onClick={() => {
+                    setIsDeploy(false);
+                    setEventCategory(key as any);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    !isDeploy && eventCategory === key
+                      ? 'bg-sky-600 text-white ring-2 ring-sky-400'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeploy(true);
+                  setLocationType('Land Away');
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  isDeploy
+                    ? 'bg-sky-600 text-white ring-2 ring-sky-400'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                Deployment
+              </button>
             </div>
-          )}
+          </div>
 
           {isFixedCrewModel && !isDeploy && (
             <div className="rounded-lg border border-emerald-500/35 bg-emerald-950/20 p-4 space-y-4">
@@ -2251,18 +2266,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
             </div>
           )}
 
-          {/* Deployment checkbox + fields */}
+          {/* Deployment fields */}
           <div className="border-t border-gray-700 pt-4">
-            <label className="flex items-center gap-2 cursor-pointer py-2 mb-3">
-              <input
-                type="checkbox"
-                checked={isDeploy}
-                onChange={e => { setIsDeploy(e.target.checked); if (e.target.checked) setLocationType('Land Away'); }}
-                className="h-5 w-5 accent-sky-500 bg-gray-600 rounded border-gray-500"
-              />
-              <span className="text-sm text-white">Add Deployment Tile</span>
-            </label>
-
             {isDeploy && (
               <div className="bg-gray-700/50 rounded-lg p-3 mb-4 border border-gray-600">
                 <h4 className="text-sm font-semibold text-white mb-3">Deployment Details</h4>

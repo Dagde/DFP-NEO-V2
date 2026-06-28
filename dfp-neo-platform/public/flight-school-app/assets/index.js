@@ -22515,18 +22515,35 @@ const AddFlightTileModal = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, style: { background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: "24", height: "24", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-5", style: { overflowY: "auto", flex: 1 }, children: [
-              !isDeploy && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Event Category" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: Object.entries(categoryLabels).map(([key, label]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => setEventCategory(key),
-                    className: `px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${eventCategory === key ? "bg-sky-600 text-white ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
-                    children: label
-                  },
-                  key
-                )) })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
+                  Object.entries(categoryLabels).map(([key, label]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        setIsDeploy(false);
+                        setEventCategory(key);
+                      },
+                      className: `px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${!isDeploy && eventCategory === key ? "bg-sky-600 text-white ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
+                      children: label
+                    },
+                    key
+                  )),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        setIsDeploy(true);
+                        setLocationType("Land Away");
+                      },
+                      className: `px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${isDeploy ? "bg-sky-600 text-white ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
+                      children: "Deployment"
+                    }
+                  )
+                ] })
               ] }),
               isFixedCrewModel && !isDeploy && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-emerald-500/35 bg-emerald-950/20 p-4 space-y-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
@@ -22792,21 +22809,6 @@ const AddFlightTileModal = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2", children: `Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.${isSingleSeatAircraft ? " This aircraft type is configured as single-seat, so new flights are Solo." : " Click SOLO badge to switch to Dual."}` })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 pt-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 cursor-pointer py-2 mb-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "checkbox",
-                      checked: isDeploy,
-                      onChange: (e) => {
-                        setIsDeploy(e.target.checked);
-                        if (e.target.checked) setLocationType("Land Away");
-                      },
-                      className: "h-5 w-5 accent-sky-500 bg-gray-600 rounded border-gray-500"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-white", children: "Add Deployment Tile" })
-                ] }),
                 isDeploy && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg p-3 mb-4 border border-gray-600", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white mb-3", children: "Deployment Details" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
