@@ -30364,9 +30364,18 @@ const PrioritiesViewWithMenu = (props) => {
   const deploymentPreviewText = `DEPLOYMENT ${formatPlannerClock(deploymentStartTime)} ${formatPlannerDateLabel(deploymentStartDate)} - ${formatPlannerClock(deploymentEndTime)} ${formatPlannerDateLabel(deploymentEndDate)}`;
   const hasInvalidDeploymentDateRange = Boolean(deploymentStartDate && deploymentEndDate && deploymentStartDate > deploymentEndDate);
   const hasInvalidSameDayTimes = deploymentStartDate === deploymentEndDate && deploymentEndTime <= deploymentStartTime;
+  const deploymentPlannerEvents = Array.from(
+    [
+      ...(props.activeScheduleEvents || []).filter((event) => event.type === "deployment" && event.deploymentSource === "build-planner"),
+      ...(props.highestPriorityEvents || []).filter((event) => event.type === "deployment" && (!event.deploymentSource || event.deploymentSource === "build-planner"))
+    ].reduce((eventsById, event) => {
+      eventsById.set(event.id, event);
+      return eventsById;
+    }, /* @__PURE__ */ new Map()).values()
+  );
   const deploymentGroups = Array.from(
-    (props.highestPriorityEvents || []).filter((event) => event.type === "deployment").reduce((groups, event) => {
-      const key = [
+    deploymentPlannerEvents.reduce((groups, event) => {
+      const key = event.deploymentSeriesId || [
         event.deploymentStartDate || event.date || "",
         event.deploymentStartTime || "",
         event.deploymentEndDate || event.date || "",
@@ -30377,7 +30386,10 @@ const PrioritiesViewWithMenu = (props) => {
       groups.set(key, [...groups.get(key) || [], event]);
       return groups;
     }, /* @__PURE__ */ new Map()).entries()
-  ).map(([key, events]) => ({ key, events }));
+  ).map(([key, events]) => ({
+    key,
+    events: [...events].sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")))
+  }));
   const handleAddDeployment = () => {
     if (!props.onAddBuildEvents || hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) return;
     const deploymentDates = getDeploymentDateRange(deploymentStartDate, deploymentEndDate);
@@ -30386,6 +30398,7 @@ const PrioritiesViewWithMenu = (props) => {
     const resourceId = `Deployed ${nextDeploymentNumber}`;
     const deploymentStartClock = formatPlannerClock(deploymentStartTime);
     const deploymentEndClock = formatPlannerClock(deploymentEndTime);
+    const deploymentSeriesId = v4();
     const events = deploymentDates.map((currentDate) => {
       const isFirstDate = currentDate === deploymentStartDate;
       const isLastDate = currentDate === deploymentEndDate;
@@ -30418,7 +30431,9 @@ const PrioritiesViewWithMenu = (props) => {
         deploymentStartTime: deploymentStartClock,
         deploymentEndDate,
         deploymentEndTime: deploymentEndClock,
-        deploymentAircraftCount
+        deploymentAircraftCount,
+        deploymentSeriesId,
+        deploymentSource: "build-planner"
       };
     }).filter((event) => event.duration > 0);
     props.onAddBuildEvents(events);
@@ -93805,7 +93820,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       console.log("[Persist] Skipped seed data for", targetDate);
       return;
     }
-    if (allEventsForDate.length === 0) {
+    if (allEventsForDate.length === 0 && (!baselineEventsForDate || baselineEventsForDate.length === 0)) {
       console.log("[Persist] No events for", targetDate, "- nothing to persist");
       return;
     }
@@ -100155,28 +100170,56 @@ ${error instanceof Error ? error.message : String(error)}`,
               });
             },
             onAddBuildEvents: (eventsToAdd) => {
-              const nextDayEvents = eventsToAdd.filter((event) => !event.date || event.date === buildDfpDate).map((event) => {
-                const { date: _date, ...nextDayEvent } = event;
-                return nextDayEvent;
+              const incomingIds = new Set(eventsToAdd.map((event) => event.id));
+              const directDeploymentEvents = eventsToAdd.map((event) => ({
+                ...event,
+                date: event.date || buildDfpDate,
+                isTimeFixed: true,
+                priority: event.priority || "High",
+                deploymentSource: event.deploymentSource || "build-planner"
+              }));
+              const eventsByDate = directDeploymentEvents.reduce((acc, event) => {
+                const eventDate = event.date || buildDfpDate;
+                acc[eventDate] = [...acc[eventDate] || [], event];
+                return acc;
+              }, {});
+              const nextPublishedSchedules = { ...publishedSchedulesRef.current };
+              Object.entries(eventsByDate).forEach(([eventDate, datedEvents]) => {
+                const existingEvents = nextPublishedSchedules[eventDate] || [];
+                const nextEventsForDate = [
+                  ...existingEvents.filter((event) => !incomingIds.has(event.id)),
+                  ...datedEvents
+                ];
+                nextPublishedSchedules[eventDate] = nextEventsForDate;
+                persistScheduleForDate(eventDate, nextEventsForDate, existingEvents);
               });
-              setHighestPriorityEvents((prev) => {
-                const incomingIds = new Set(eventsToAdd.map((event) => event.id));
+              setPublishedSchedules(nextPublishedSchedules);
+              setHighestPriorityEvents((prev) => prev.filter((event) => !incomingIds.has(event.id)));
+              setNextDayBuildEvents((prev) => {
+                const currentDateDeploymentEvents = directDeploymentEvents.filter((event) => event.date === buildDfpDate).map((event) => {
+                  const { date: _date, ...nextDayEvent } = event;
+                  return nextDayEvent;
+                });
                 return [
                   ...prev.filter((event) => !incomingIds.has(event.id)),
-                  ...eventsToAdd.map((event) => ({
-                    ...event,
-                    isTimeFixed: true,
-                    priority: event.priority || "High"
-                  }))
+                  ...currentDateDeploymentEvents
                 ];
               });
-              setNextDayBuildEvents((prev) => [...prev, ...nextDayEvents]);
-              logAudit("Next Day Build", "Create", "Added Build Planner deployment", `${eventsToAdd.length} x DEPLOYMENT`);
+              logAudit("Next Day Build", "Create", "Added Build Planner deployment tiles", `${directDeploymentEvents.length} x DEPLOYMENT`);
             },
             onRemoveBuildDeploymentEvents: (eventIds) => {
               const idsToRemove = new Set(eventIds);
               setHighestPriorityEvents((prev) => prev.filter((event) => !idsToRemove.has(event.id)));
               setNextDayBuildEvents((prev) => prev.filter((event) => !idsToRemove.has(event.id)));
+              const nextPublishedSchedules = Object.entries(publishedSchedulesRef.current).reduce((acc, [scheduleDate, scheduleEvents]) => {
+                const remainingEvents = scheduleEvents.filter((event) => !idsToRemove.has(event.id));
+                if (remainingEvents.length !== scheduleEvents.length) {
+                  persistScheduleForDate(scheduleDate, remainingEvents, scheduleEvents);
+                }
+                acc[scheduleDate] = remainingEvents;
+                return acc;
+              }, {});
+              setPublishedSchedules(nextPublishedSchedules);
               logAudit("Next Day Build", "Delete", "Removed Build Planner deployment", `${eventIds.length} deployment segment(s)`);
             },
             onUpdatePriorityEvent: handleUpdatePriorityEvent,

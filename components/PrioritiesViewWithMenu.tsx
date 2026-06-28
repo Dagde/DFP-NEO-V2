@@ -318,11 +318,20 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     const deploymentPreviewText = `DEPLOYMENT ${formatPlannerClock(deploymentStartTime)} ${formatPlannerDateLabel(deploymentStartDate)} - ${formatPlannerClock(deploymentEndTime)} ${formatPlannerDateLabel(deploymentEndDate)}`;
     const hasInvalidDeploymentDateRange = Boolean(deploymentStartDate && deploymentEndDate && deploymentStartDate > deploymentEndDate);
     const hasInvalidSameDayTimes = deploymentStartDate === deploymentEndDate && deploymentEndTime <= deploymentStartTime;
+    const deploymentPlannerEvents = Array.from(
+        [
+            ...(props.activeScheduleEvents || []).filter(event => event.type === 'deployment' && event.deploymentSource === 'build-planner'),
+            ...(props.highestPriorityEvents || []).filter(event => event.type === 'deployment' && (!event.deploymentSource || event.deploymentSource === 'build-planner')),
+        ].reduce<Map<string, ScheduleEvent>>((eventsById, event) => {
+            eventsById.set(event.id, event);
+            return eventsById;
+        }, new Map()).values()
+    );
+
     const deploymentGroups = Array.from(
-        (props.highestPriorityEvents || [])
-            .filter(event => event.type === 'deployment')
+        deploymentPlannerEvents
             .reduce<Map<string, ScheduleEvent[]>>((groups, event) => {
-                const key = [
+                const key = event.deploymentSeriesId || [
                     event.deploymentStartDate || event.date || '',
                     event.deploymentStartTime || '',
                     event.deploymentEndDate || event.date || '',
@@ -334,7 +343,10 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                 return groups;
             }, new Map())
             .entries()
-    ).map(([key, events]) => ({ key, events }));
+    ).map(([key, events]) => ({
+        key,
+        events: [...events].sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))),
+    }));
 
     const handleAddDeployment = () => {
         if (!props.onAddBuildEvents || hasInvalidDeploymentDateRange || hasInvalidSameDayTimes) return;
@@ -348,6 +360,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         const resourceId = `Deployed ${nextDeploymentNumber}`;
         const deploymentStartClock = formatPlannerClock(deploymentStartTime);
         const deploymentEndClock = formatPlannerClock(deploymentEndTime);
+        const deploymentSeriesId = uuidv4();
         const events = deploymentDates.map(currentDate => {
             const isFirstDate = currentDate === deploymentStartDate;
             const isLastDate = currentDate === deploymentEndDate;
@@ -381,6 +394,8 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                 deploymentEndDate,
                 deploymentEndTime: deploymentEndClock,
                 deploymentAircraftCount,
+                deploymentSeriesId,
+                deploymentSource: 'build-planner',
             };
         }).filter(event => event.duration > 0);
         props.onAddBuildEvents(events);

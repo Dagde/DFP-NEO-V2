@@ -293,6 +293,8 @@ export interface ScheduleEvent {
     deploymentEndDate?: string;
     deploymentEndTime?: string;
     deploymentAircraftCount?: number;
+    deploymentSeriesId?: string;
+    deploymentSource?: 'build-planner' | 'neo-assist' | 'flight-details' | string;
       
       // Event Category field (for progressive display)
       eventCategory?: 'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di' | 'currency';
