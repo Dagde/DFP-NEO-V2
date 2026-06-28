@@ -2136,6 +2136,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     dueCurrencies: string[];
     selectedCurrencies: string[];
     aircraftConfigId: string;
+    aircraftCount: number;
     crewRequirement?: CrewRequirement;
     picName?: string;
     fixedCrewGroupKey?: string;
@@ -2153,6 +2154,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             aircraftConfigId: draft?.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
             currencyProfileName: String(draft?.currencyProfileName || draft?.eventName || '').trim(),
             currencyProfileCode: String(draft?.currencyProfileCode || draft?.eventCode || '').trim().toUpperCase().slice(0, 8),
+            aircraftCount: Math.max(1, Math.floor(Number(draft?.aircraftCount) || 1)),
             crewRequirement: draft?.crewRequirement || { mode: 'aircraft_default' },
             picName: String(draft?.picName || '').trim(),
             fixedCrewGroupKey: String(draft?.fixedCrewGroupKey || '').trim(),
@@ -2563,6 +2565,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         currencyProfileCode: String(profile.code || '').trim().toUpperCase().slice(0, 8),
         selectedCurrencies: profile.currency ? [profile.currency] : event.selectedCurrencies,
         aircraftConfigId: configId || event.aircraftConfigId,
+        aircraftCount: Math.max(1, Number(profile.aircraftCount) || 1),
       };
     }));
   };
@@ -2601,6 +2604,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           dueCurrencies: person.dueCurrencies,
           selectedCurrencies: defaultProfile?.currency ? [defaultProfile.currency] : [],
           aircraftConfigId: defaultProfileConfigId || BASE_AIRCRAFT_CONFIG.id,
+          aircraftCount: Math.max(1, Number(defaultProfile?.aircraftCount) || 1),
           crewRequirement: { mode: 'aircraft_default' },
           picName: person.picName || '',
           fixedCrewGroupKey: person.fixedCrewGroupKey || '',
@@ -2614,15 +2618,17 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   };
 
   const buildCurrencyPriorityEventsFromDrafts = (drafts: typeof currencyDraftEvents): ScheduleEvent[] => {
-    return drafts.map((draft, index) => {
+    return drafts.flatMap((draft, index) => {
       const isSolo = draft.crewMode === 'solo';
       const picName = String(draft.picName || '').trim();
       const startBase = draft.eventType === 'flight' ? flyingStartTime : ftdStartTime;
       const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(', ') : '';
       const aircraftConfigId = draft.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
       const eventCode = String(draft.currencyProfileCode || '').trim().toUpperCase().slice(0, 8) || 'CURR';
-      return {
-        id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${buildDfpDate}-${uuidv4()}`,
+      const aircraftCount = Math.max(1, Math.floor(Number(draft.aircraftCount) || 1));
+      const formationId = aircraftCount > 1 ? `currency-formation-${draft.id}-${uuidv4()}` : undefined;
+      return Array.from({ length: aircraftCount }, (_, aircraftIndex) => ({
+        id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${aircraftIndex + 1}-${buildDfpDate}-${uuidv4()}`,
         currencyDraftId: draft.id,
         date: buildDfpDate,
         type: draft.eventType,
@@ -2644,13 +2650,22 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         eventCategory: 'currency',
         currency: selectedCurrencyText || 'Currency',
         priority: 'Medium',
-        notes: selectedCurrencyText ? `Currency event required: ${selectedCurrencyText}` : 'Currency event required',
+        notes: [
+          selectedCurrencyText ? `Currency event required: ${selectedCurrencyText}` : 'Currency event required',
+          aircraftCount > 1 ? `Aircraft requested: ${aircraftCount}` : '',
+        ].filter(Boolean).join('\n'),
         crewRequirement: draft.crewRequirement || { mode: 'aircraft_default' },
+        aircraftCount,
+        formationId,
+        formationPosition: aircraftCount > 1 ? aircraftIndex + 1 : undefined,
+        formationSize: aircraftCount > 1 ? aircraftCount : undefined,
+        taskingAircraftIndex: aircraftCount > 1 ? aircraftIndex + 1 : undefined,
+        taskingAircraftCount: aircraftCount > 1 ? aircraftCount : undefined,
         ...(draft.eventType === 'flight' ? {
           aircraftConfigId,
           acceptableAircraftConfigs: [aircraftConfigId],
         } : {}),
-      };
+      }));
     });
   };
 
@@ -2822,6 +2837,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         event: String(profile.name || profile.currency || '').trim(),
         eventCode: String(profile.code || '').trim().toUpperCase().slice(0, 8),
         currency: profile.currency,
+        aircraftCount: Math.max(1, Math.floor(Number(profile.aircraftCount) || 1)),
         ...(configId ? { aircraftConfigId: configId } : {}),
         ...(isFixedCrewModel && profile.crew ? { crewMember: profile.crew } : {}),
       }, type);
@@ -2881,6 +2897,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   dueCurrencies: req.currency ? [req.currency] : currencyNames,
                                   selectedCurrencies: req.currency ? [req.currency] : [],
                                   aircraftConfigId: req.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+                                  aircraftCount: Math.max(1, Math.floor(Number(req.aircraftCount) || 1)),
                                   crewRequirement: req.crewRequirement || { mode: 'aircraft_default' },
                                   picName: req.crewIndividual || '',
                                   fixedCrewGroupKey: req.crewGroupKey || selectedCrewGroup?.key || '',
@@ -2988,6 +3005,17 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                       <CurrencySelect request={req} type={type} />
                                   </div>
                                   <div className={`${tileBaseClass} flex flex-col`}>
+                                      <div className={tileLabelClass}>No. of A/C</div>
+                                      <input
+                                          type="number"
+                                          min="1"
+                                          max="24"
+                                          value={Math.max(1, Number(req.aircraftCount) || 1)}
+                                          onChange={e => onPatchSctRequest(req.id, { aircraftCount: Math.max(1, Math.min(24, Math.floor(Number(e.target.value) || 1))) }, type)}
+                                          className={controlClass}
+                                      />
+                                  </div>
+                                  <div className={`${tileBaseClass} flex flex-col`}>
                                       <div className={tileLabelClass}>Currency Expire</div>
                                       <input type="date" value={req.currencyExpire} onChange={e => onUpdateSctRequest(req.id, 'currencyExpire', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />
                                   </div>
@@ -3009,7 +3037,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                           <option value="Low">Low</option>
                                       </select>
                                   </div>
-                                  <div className={tileBaseClass} aria-hidden="true" />
                               </div>
                               <div className="flex h-[288px] w-16 flex-col items-center justify-center gap-3">
                                   {req.submitted ? (

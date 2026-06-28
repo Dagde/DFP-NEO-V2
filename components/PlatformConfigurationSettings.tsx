@@ -1918,6 +1918,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || 'Aircraft'} Crew`,
       config: 'ANY',
       currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
+      aircraftCount: 1,
       status: 'ACTIVE',
     });
     updateCurrencyProfiles([
@@ -4514,7 +4515,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   ? activeCurrencyDefinitionNames
                   : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
                 return (
-                <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]">
+                <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,0.55fr)_auto]">
                   <OffsetField label="Profile Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { name: value })} />
                   <OffsetField
                     label="Code"
@@ -4539,6 +4540,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       emptyLabel={currencyOptions.length === 0 ? 'No unit currencies configured' : undefined}
                     />
                   </div>
+                  <OffsetField
+                    label="No. of A/C"
+                    value={String(Math.max(1, Number(profile.aircraftCount) || 1))}
+                    disabled={!canEditCrewComposition}
+                    onChange={(value) => updateCurrencyProfile(profile.id, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(value) || 1))) })}
+                  />
                   <div className="flex items-end">
                     <button type="button" onClick={() => removeCurrencyProfile(profile.id)} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
                       <span className="text-[9px] leading-tight text-red-600">Delete</span>

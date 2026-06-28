@@ -1791,6 +1791,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       setFixedCrewEventKey(eventKey);
       setFlightNumber(selectedProfile?.code || selectedProfile?.name || selectedProfile?.currency || '');
       setDuration(2);
+      setAircraftCount(Math.max(1, Math.floor(Number(selectedProfile?.aircraftCount) || 1)));
       if (selectedProfile?.config && selectedProfile.config !== 'ANY') {
         setAircraftConfigId(selectedProfile.config);
       }
@@ -1800,6 +1801,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const selectedItem = fixedCrewEventOptions.find(item => getFixedCrewEventOptionKey(item) === eventKey);
     setFixedCrewEventKey(eventKey);
     setFlightNumber(selectedItem?.code || selectedItem?.id || '');
+    setAircraftCount(1);
     if (selectedItem) {
       const resolvedDuration = Number(selectedItem.duration || selectedItem.flightOrSimHours);
       if (Number.isFinite(resolvedDuration) && resolvedDuration > 0) setDuration(resolvedDuration);
@@ -1873,7 +1875,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         const selectedCurrencyConfig = selectedFixedCrewCurrencyProfile?.config && selectedFixedCrewCurrencyProfile.config !== 'ANY'
           ? selectedFixedCrewCurrencyProfile.config
           : aircraftConfigId;
-        eventsToSave.push({
+        const savedAircraftCount = Math.max(1, Math.floor(Number(aircraftCount) || 1));
+        const formationId = savedAircraftCount > 1 ? `fixed-crew-formation-${uuidv4()}` : undefined;
+        Array.from({ length: savedAircraftCount }, (_, index) => index).forEach((index) => eventsToSave.push({
           id: uuidv4(),
           date,
           type: eventType,
@@ -1894,9 +1898,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           locationType,
           color: 'bg-emerald-500',
           resourceId: '',
-          notes: selectedFixedCrewCurrencyProfile?.currency
-            ? [notes, `Currency: ${selectedFixedCrewCurrencyProfile.currency}`].filter(Boolean).join('\n')
-            : notes,
+          notes: [
+            notes,
+            selectedFixedCrewCurrencyProfile?.currency ? `Currency: ${selectedFixedCrewCurrencyProfile.currency}` : '',
+            savedAircraftCount > 1 ? `Aircraft requested: ${savedAircraftCount}` : '',
+          ].filter(Boolean).join('\n'),
           currency: selectedFixedCrewCurrencyProfile?.currency || undefined,
           eventCode: selectedFixedCrewCurrencyProfile?.code || selectedFixedCrewEvent?.code || undefined,
           group: formatFixedCrewDisplayGroup(fixedCrewGroup),
@@ -1908,8 +1914,13 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           fixedCrewPic,
           fixedCrewManifestStatus,
           fixedCrewManifestNotes,
-          formationId: undefined,
-        } as any);
+          aircraftCount: savedAircraftCount,
+          formationId,
+          formationPosition: savedAircraftCount > 1 ? index + 1 : undefined,
+          formationSize: savedAircraftCount > 1 ? savedAircraftCount : undefined,
+          taskingAircraftIndex: savedAircraftCount > 1 ? index + 1 : undefined,
+          taskingAircraftCount: savedAircraftCount > 1 ? savedAircraftCount : undefined,
+        } as any));
         onSave(eventsToSave);
         onClose();
         return;
@@ -2193,6 +2204,17 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       </option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">No. of A/C</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="24"
+                    value={Math.max(1, Number(aircraftCount) || 1)}
+                    onChange={e => setAircraftCount(Math.max(1, Math.min(24, Math.floor(Number(e.target.value) || 1))))}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Manifest Status</label>

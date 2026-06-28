@@ -309,9 +309,10 @@ export interface ScheduleEvent {
       // Additional fields for enhanced priority events display
       dateCreated?: string;
       notes?: string;
-      currency?: string;
-      currencyDraftId?: string;
-      priority?: 'High' | 'Medium' | 'Low';
+  currency?: string;
+  currencyDraftId?: string;
+  aircraftCount?: number;
+  priority?: 'High' | 'Medium' | 'Low';
       soloOrDual?: 'Solo' | 'Dual';
       isSctRequest?: boolean;
   isAcademic?: boolean;   // Academic (theory) events — never modified or deleted by NEO Build
@@ -586,6 +587,7 @@ export interface SctRequest {
     crewDisplayLabel?: string;
     crewIndividual?: string;
     crewRequirement?: CrewRequirement;
+    aircraftCount?: number;
     callsignBase?: string;
     callsignNumber?: number;
     callsign?: string;

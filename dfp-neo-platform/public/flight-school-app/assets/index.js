@@ -3742,6 +3742,7 @@ const normaliseCurrencyProfileCode = (value, fallback) => {
   if (token) return token;
   return String(fallback || "CURR").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CURR";
 };
+const normaliseAircraftCount = (value) => Math.max(1, Math.min(24, Math.round(Number(value) || 1)));
 const normaliseCrewCompositionSettings = (value) => {
   const source = value && typeof value === "object" ? value : {};
   const rows = Array.isArray(source.alternateCompositions) ? source.alternateCompositions : [];
@@ -3787,6 +3788,7 @@ const normaliseCrewCompositionSettings = (value) => {
       crew: String(row?.crew || ""),
       config: String(row?.config || row?.aircraftConfigId || "ANY").trim() || "ANY",
       currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),
+      aircraftCount: normaliseAircraftCount(row?.aircraftCount ?? row?.numberOfAircraft ?? row?.aircraft),
       status: String(row?.status || "ACTIVE").trim().toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
     };
   }).filter((profile) => profile.currency);
@@ -22326,6 +22328,7 @@ const AddFlightTileModal = ({
       setFixedCrewEventKey(eventKey);
       setFlightNumber(selectedProfile?.code || selectedProfile?.name || selectedProfile?.currency || "");
       setDuration(2);
+      setAircraftCount(Math.max(1, Math.floor(Number(selectedProfile?.aircraftCount) || 1)));
       if (selectedProfile?.config && selectedProfile.config !== "ANY") {
         setAircraftConfigId(selectedProfile.config);
       }
@@ -22335,6 +22338,7 @@ const AddFlightTileModal = ({
     const selectedItem = fixedCrewEventOptions.find((item) => getFixedCrewEventOptionKey(item) === eventKey);
     setFixedCrewEventKey(eventKey);
     setFlightNumber(selectedItem?.code || selectedItem?.id || "");
+    setAircraftCount(1);
     if (selectedItem) {
       const resolvedDuration = Number(selectedItem.duration || selectedItem.flightOrSimHours);
       if (Number.isFinite(resolvedDuration) && resolvedDuration > 0) setDuration(resolvedDuration);
@@ -22389,7 +22393,9 @@ const AddFlightTileModal = ({
       if (isFixedCrewModel) {
         const eventType = eventCategory === "sct" ? "flight" : String(selectedFixedCrewEvent?.type || "").trim().toLowerCase() === "ftd" ? "ftd" : "flight";
         const selectedCurrencyConfig = selectedFixedCrewCurrencyProfile?.config && selectedFixedCrewCurrencyProfile.config !== "ANY" ? selectedFixedCrewCurrencyProfile.config : aircraftConfigId;
-        eventsToSave.push({
+        const savedAircraftCount = Math.max(1, Math.floor(Number(aircraftCount) || 1));
+        const formationId = savedAircraftCount > 1 ? `fixed-crew-formation-${v4()}` : void 0;
+        Array.from({ length: savedAircraftCount }, (_, index) => index).forEach((index) => eventsToSave.push({
           id: v4(),
           date,
           type: eventType,
@@ -22410,7 +22416,11 @@ const AddFlightTileModal = ({
           locationType,
           color: "bg-emerald-500",
           resourceId: "",
-          notes: selectedFixedCrewCurrencyProfile?.currency ? [notes, `Currency: ${selectedFixedCrewCurrencyProfile.currency}`].filter(Boolean).join("\n") : notes,
+          notes: [
+            notes,
+            selectedFixedCrewCurrencyProfile?.currency ? `Currency: ${selectedFixedCrewCurrencyProfile.currency}` : "",
+            savedAircraftCount > 1 ? `Aircraft requested: ${savedAircraftCount}` : ""
+          ].filter(Boolean).join("\n"),
           currency: selectedFixedCrewCurrencyProfile?.currency || void 0,
           eventCode: selectedFixedCrewCurrencyProfile?.code || selectedFixedCrewEvent?.code || void 0,
           group: formatFixedCrewDisplayGroup$1(fixedCrewGroup),
@@ -22422,8 +22432,13 @@ const AddFlightTileModal = ({
           fixedCrewPic,
           fixedCrewManifestStatus,
           fixedCrewManifestNotes,
-          formationId: void 0
-        });
+          aircraftCount: savedAircraftCount,
+          formationId,
+          formationPosition: savedAircraftCount > 1 ? index + 1 : void 0,
+          formationSize: savedAircraftCount > 1 ? savedAircraftCount : void 0,
+          taskingAircraftIndex: savedAircraftCount > 1 ? index + 1 : void 0,
+          taskingAircraftCount: savedAircraftCount > 1 ? savedAircraftCount : void 0
+        }));
         onSave(eventsToSave);
         onClose();
         return;
@@ -22690,6 +22705,20 @@ const AddFlightTileModal = ({
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: fixedCrewGroup ? "Select PIC" : "Select crew first" }),
                           fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: [staff.rank, staff.name].filter(Boolean).join(" ") }, staff.id || staff.name))
                         ]
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "No. of A/C" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "number",
+                        min: "1",
+                        max: "24",
+                        value: Math.max(1, Number(aircraftCount) || 1),
+                        onChange: (e) => setAircraftCount(Math.max(1, Math.min(24, Math.floor(Number(e.target.value) || 1)))),
+                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
                       }
                     )
                   ] }),
@@ -28318,6 +28347,7 @@ const PrioritiesView = ({
         aircraftConfigId: draft?.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
         currencyProfileName: String(draft?.currencyProfileName || draft?.eventName || "").trim(),
         currencyProfileCode: String(draft?.currencyProfileCode || draft?.eventCode || "").trim().toUpperCase().slice(0, 8),
+        aircraftCount: Math.max(1, Math.floor(Number(draft?.aircraftCount) || 1)),
         crewRequirement: draft?.crewRequirement || { mode: "aircraft_default" },
         picName: String(draft?.picName || "").trim(),
         fixedCrewGroupKey: String(draft?.fixedCrewGroupKey || "").trim(),
@@ -28611,7 +28641,8 @@ const PrioritiesView = ({
         currencyProfileName: String(profile.name || profile.currency || "").trim(),
         currencyProfileCode: String(profile.code || "").trim().toUpperCase().slice(0, 8),
         selectedCurrencies: profile.currency ? [profile.currency] : event.selectedCurrencies,
-        aircraftConfigId: configId || event.aircraftConfigId
+        aircraftConfigId: configId || event.aircraftConfigId,
+        aircraftCount: Math.max(1, Number(profile.aircraftCount) || 1)
       };
     }));
   };
@@ -28643,6 +28674,7 @@ const PrioritiesView = ({
           dueCurrencies: person.dueCurrencies,
           selectedCurrencies: defaultProfile?.currency ? [defaultProfile.currency] : [],
           aircraftConfigId: defaultProfileConfigId || BASE_AIRCRAFT_CONFIG.id,
+          aircraftCount: Math.max(1, Number(defaultProfile?.aircraftCount) || 1),
           crewRequirement: { mode: "aircraft_default" },
           picName: person.picName || "",
           fixedCrewGroupKey: person.fixedCrewGroupKey || "",
@@ -28655,15 +28687,17 @@ const PrioritiesView = ({
     return events;
   };
   const buildCurrencyPriorityEventsFromDrafts = (drafts) => {
-    return drafts.map((draft, index) => {
+    return drafts.flatMap((draft, index) => {
       const isSolo = draft.crewMode === "solo";
       const picName = String(draft.picName || "").trim();
       const startBase = draft.eventType === "flight" ? flyingStartTime : ftdStartTime;
       const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(", ") : "";
       const aircraftConfigId = draft.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
       const eventCode2 = String(draft.currencyProfileCode || "").trim().toUpperCase().slice(0, 8) || "CURR";
-      return {
-        id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${buildDfpDate}-${v4()}`,
+      const aircraftCount = Math.max(1, Math.floor(Number(draft.aircraftCount) || 1));
+      const formationId = aircraftCount > 1 ? `currency-formation-${draft.id}-${v4()}` : void 0;
+      return Array.from({ length: aircraftCount }, (_, aircraftIndex) => ({
+        id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${aircraftIndex + 1}-${buildDfpDate}-${v4()}`,
         currencyDraftId: draft.id,
         date: buildDfpDate,
         type: draft.eventType,
@@ -28685,13 +28719,22 @@ const PrioritiesView = ({
         eventCategory: "currency",
         currency: selectedCurrencyText || "Currency",
         priority: "Medium",
-        notes: selectedCurrencyText ? `Currency event required: ${selectedCurrencyText}` : "Currency event required",
+        notes: [
+          selectedCurrencyText ? `Currency event required: ${selectedCurrencyText}` : "Currency event required",
+          aircraftCount > 1 ? `Aircraft requested: ${aircraftCount}` : ""
+        ].filter(Boolean).join("\n"),
         crewRequirement: draft.crewRequirement || { mode: "aircraft_default" },
+        aircraftCount,
+        formationId,
+        formationPosition: aircraftCount > 1 ? aircraftIndex + 1 : void 0,
+        formationSize: aircraftCount > 1 ? aircraftCount : void 0,
+        taskingAircraftIndex: aircraftCount > 1 ? aircraftIndex + 1 : void 0,
+        taskingAircraftCount: aircraftCount > 1 ? aircraftCount : void 0,
         ...draft.eventType === "flight" ? {
           aircraftConfigId,
           acceptableAircraftConfigs: [aircraftConfigId]
         } : {}
-      };
+      }));
     });
   };
   const addTraineeCurrencyEventsToPriority = () => {
@@ -28837,6 +28880,7 @@ const PrioritiesView = ({
         event: String(profile.name || profile.currency || "").trim(),
         eventCode: String(profile.code || "").trim().toUpperCase().slice(0, 8),
         currency: profile.currency,
+        aircraftCount: Math.max(1, Math.floor(Number(profile.aircraftCount) || 1)),
         ...configId ? { aircraftConfigId: configId } : {},
         ...isFixedCrewModel && profile.crew ? { crewMember: profile.crew } : {}
       }, type);
@@ -28878,6 +28922,7 @@ const PrioritiesView = ({
               dueCurrencies: req.currency ? [req.currency] : currencyNames,
               selectedCurrencies: req.currency ? [req.currency] : [],
               aircraftConfigId: req.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+              aircraftCount: Math.max(1, Math.floor(Number(req.aircraftCount) || 1)),
               crewRequirement: req.crewRequirement || { mode: "aircraft_default" },
               picName: req.crewIndividual || "",
               fixedCrewGroupKey: req.crewGroupKey || selectedCrewGroup?.key || "",
@@ -28966,6 +29011,20 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx(CurrencySelect, { request: req, type })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "No. of A/C" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                min: "1",
+                max: "24",
+                value: Math.max(1, Number(req.aircraftCount) || 1),
+                onChange: (e) => onPatchSctRequest(req.id, { aircraftCount: Math.max(1, Math.min(24, Math.floor(Number(e.target.value) || 1))) }, type),
+                className: controlClass
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Currency Expire" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: req.currencyExpire, onChange: (e) => onUpdateSctRequest(req.id, "currencyExpire", e.target.value, type), style: { colorScheme: "dark" }, className: controlClass })
           ] }),
@@ -28984,8 +29043,7 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
             ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileBaseClass, "aria-hidden": "true" })
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[288px] w-16 flex-col items-center justify-center gap-3", children: [
           req.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: statusButtonClass, style: { color: "#22c55e" }, children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -56499,6 +56557,7 @@ const PlatformConfigurationSettings = ({
       crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || "Aircraft"} Crew`,
       config: "ANY",
       currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
+      aircraftCount: 1,
       status: "ACTIVE"
     });
     updateCurrencyProfiles([
@@ -58646,7 +58705,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode);
             const configOptions = profileConfigOptions.includes(profile.config) ? profileConfigOptions : [profile.config, ...profileConfigOptions].filter(Boolean);
             const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency) ? activeCurrencyDefinitionNames : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]", children: [
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,0.55fr)_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Profile Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { name: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 OffsetField,
@@ -58671,6 +58730,15 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   emptyLabel: currencyOptions.length === 0 ? "No unit currencies configured" : void 0
                 }
               ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                OffsetField,
+                {
+                  label: "No. of A/C",
+                  value: String(Math.max(1, Number(profile.aircraftCount) || 1)),
+                  disabled: !canEditCrewComposition,
+                  onChange: (value) => updateCurrencyProfile(profile.id, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(value) || 1))) })
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeCurrencyProfile(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })
             ] }, profile.id);
           }) })
@@ -74515,7 +74583,8 @@ const DfpSidePanelTimeline = ({
                   crewIndividual: isFixedCrewNeoAssist ? selectedFixedCrewPic : "",
                   callsignBase: isFixedCrewNeoAssist ? assistUnitCallsignBase || defaultAssistUnitCallsign : "",
                   callsignNumber: isFixedCrewNeoAssist ? assistUnitCallsignNumber : 0,
-                  callsign: isFixedCrewNeoAssist ? buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, assistUnitCallsignNumber) : ""
+                  callsign: isFixedCrewNeoAssist ? buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, assistUnitCallsignNumber) : "",
+                  aircraftCount: 1
                 };
                 onAddSctRequestFromAssist(requestType, nextRequest);
                 window.setTimeout(onSyncSctRequestsFromAssist, 120);
@@ -90169,7 +90238,8 @@ const App = () => {
           crewGroupKey: r.crewGroupKey || "",
           crewUnitCode: r.crewUnitCode || "",
           crewDisplayLabel: r.crewDisplayLabel || "",
-          crewIndividual: r.crewIndividual || ""
+          crewIndividual: r.crewIndividual || "",
+          aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1))
         })));
         setSctFtds(data.filter((r) => r.requestType === "ftd").map((r) => ({
           id: r.id,
@@ -90191,7 +90261,8 @@ const App = () => {
           crewGroupKey: r.crewGroupKey || "",
           crewUnitCode: r.crewUnitCode || "",
           crewDisplayLabel: r.crewDisplayLabel || "",
-          crewIndividual: r.crewIndividual || ""
+          crewIndividual: r.crewIndividual || "",
+          aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1))
         })));
       } catch (err) {
         console.error("[SCT] Failed to load SCT requests from DB:", err);
@@ -94830,6 +94901,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       if (String(sctReq.crewDisplayLabel || "").trim()) noteLines.push(`Crew: ${sctReq.crewDisplayLabel}`);
       if (String(sctReq.crewIndividual || "").trim()) noteLines.push(`Individual: ${sctReq.crewIndividual}`);
       if (String(sctReq.currency || "").trim()) noteLines.push(`Currency: ${sctReq.currency}`);
+      if (Number(sctReq.aircraftCount) > 1) noteLines.push(`Aircraft requested: ${Math.floor(Number(sctReq.aircraftCount))}`);
       if (String(sctReq.currencyExpire || "").trim()) noteLines.push(`Currency Expire: ${sctReq.currencyExpire}`);
       if (String(sctReq.dateRequested || "").trim()) noteLines.push(`Date Requested: ${sctReq.dateRequested}`);
       if (String(sctReq.currencyExpire || "").trim()) {
@@ -100495,7 +100567,8 @@ ${error instanceof Error ? error.message : String(error)}`,
                 crewGroupKey: "",
                 crewUnitCode: "",
                 crewDisplayLabel: "",
-                crewIndividual: ""
+                crewIndividual: "",
+                aircraftCount: 1
               };
               console.log("[SCT] Created new request:", newReq.id);
               if (type === "flight") setSctFlights((prev) => [...prev, newReq]);
@@ -102860,7 +102933,8 @@ Do you want to replace the existing entry?`,
             console.log("[SCT] SctRequestFlyout onSave called with request:", request);
             const requestWithDefaults = {
               ...request,
-              aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id
+              aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+              aircraftCount: Math.max(1, Math.floor(Number(request.aircraftCount) || 1))
             };
             if (requestWithDefaults.event.includes("FTD")) {
               setSctFtds((prev) => [...prev, requestWithDefaults]);

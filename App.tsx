@@ -4146,6 +4146,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         callsign: isFixedCrewNeoAssist
                                             ? buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, assistUnitCallsignNumber)
                                             : '',
+                                        aircraftCount: 1,
                                     };
                                     onAddSctRequestFromAssist(requestType, nextRequest);
                                     window.setTimeout(onSyncSctRequestsFromAssist, 120);
@@ -23598,6 +23599,7 @@ const App: React.FC = () => {
                     crewUnitCode: r.crewUnitCode || '',
                     crewDisplayLabel: r.crewDisplayLabel || '',
                     crewIndividual: r.crewIndividual || '',
+                    aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1)),
                 })));
                 setSctFtds(data.filter((r: any) => r.requestType === 'ftd').map((r: any) => ({
                     id: r.id, name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
@@ -23611,6 +23613,7 @@ const App: React.FC = () => {
                     crewUnitCode: r.crewUnitCode || '',
                     crewDisplayLabel: r.crewDisplayLabel || '',
                     crewIndividual: r.crewIndividual || '',
+                    aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1)),
                 })));
             } catch (err) {
                 console.error('[SCT] Failed to load SCT requests from DB:', err);
@@ -29461,6 +29464,7 @@ const App: React.FC = () => {
             if (String(sctReq.crewDisplayLabel || '').trim()) noteLines.push(`Crew: ${sctReq.crewDisplayLabel}`);
             if (String(sctReq.crewIndividual || '').trim()) noteLines.push(`Individual: ${sctReq.crewIndividual}`);
             if (String(sctReq.currency || '').trim()) noteLines.push(`Currency: ${sctReq.currency}`);
+            if (Number(sctReq.aircraftCount) > 1) noteLines.push(`Aircraft requested: ${Math.floor(Number(sctReq.aircraftCount))}`);
             if (String(sctReq.currencyExpire || '').trim()) noteLines.push(`Currency Expire: ${sctReq.currencyExpire}`);
             if (String(sctReq.dateRequested || '').trim()) noteLines.push(`Date Requested: ${sctReq.dateRequested}`);
             if (String(sctReq.currencyExpire || '').trim()) {
@@ -36409,6 +36413,7 @@ appliedUpdates.forEach(update => {
                           crewUnitCode: '',
                           crewDisplayLabel: '',
                           crewIndividual: '',
+                          aircraftCount: 1,
                       };
                       console.log('[SCT] Created new request:', newReq.id);
                       if (type === 'flight') setSctFlights(prev => [...prev, newReq]);
@@ -38954,6 +38959,7 @@ appliedUpdates.forEach(update => {
                         const requestWithDefaults = {
                             ...request,
                             aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+                            aircraftCount: Math.max(1, Math.floor(Number((request as SctRequest).aircraftCount) || 1)),
                         };
                         // Add the SCT request to the appropriate list
                         if (requestWithDefaults.event.includes('FTD')) {

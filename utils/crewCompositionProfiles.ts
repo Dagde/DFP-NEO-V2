@@ -30,6 +30,7 @@ export interface CurrencyProfile {
   crew: string;
   config: string;
   currency: string;
+  aircraftCount: number;
   status?: string;
 }
 
@@ -91,6 +92,10 @@ const normaliseCurrencyProfileCode = (value: unknown, fallback: string): string 
     .slice(0, 8) || 'CURR';
 };
 
+const normaliseAircraftCount = (value: unknown): number => (
+  Math.max(1, Math.min(24, Math.round(Number(value) || 1)))
+);
+
 export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositionSettings => {
   const source = (value && typeof value === 'object') ? value as any : {};
   const rows = Array.isArray(source.alternateCompositions) ? source.alternateCompositions : [];
@@ -143,6 +148,7 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
       crew: String(row?.crew || ''),
       config: String(row?.config || row?.aircraftConfigId || 'ANY').trim() || 'ANY',
       currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),
+      aircraftCount: normaliseAircraftCount(row?.aircraftCount ?? row?.numberOfAircraft ?? row?.aircraft),
       status: String(row?.status || 'ACTIVE').trim().toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     };
   }).filter((profile) => profile.currency);

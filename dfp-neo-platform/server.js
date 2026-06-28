@@ -204,6 +204,7 @@ async function ensureSctRequestTable(db) {
         "crewUnitCode"   TEXT DEFAULT '',
         "crewDisplayLabel" TEXT DEFAULT '',
         "crewIndividual" TEXT DEFAULT '',
+        "aircraftCount"  INTEGER NOT NULL DEFAULT 1,
         "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "SctRequest_pkey" PRIMARY KEY ("id")
@@ -221,7 +222,8 @@ async function ensureSctRequestTable(db) {
       ADD COLUMN IF NOT EXISTS "crewGroupKey" TEXT DEFAULT '',
       ADD COLUMN IF NOT EXISTS "crewUnitCode" TEXT DEFAULT '',
       ADD COLUMN IF NOT EXISTS "crewDisplayLabel" TEXT DEFAULT '',
-      ADD COLUMN IF NOT EXISTS "crewIndividual" TEXT DEFAULT '';
+      ADD COLUMN IF NOT EXISTS "crewIndividual" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "aircraftCount" INTEGER NOT NULL DEFAULT 1;
     `);
     await db.$executeRawUnsafe(`
       CREATE INDEX IF NOT EXISTS "SctRequest_userId_idx"
@@ -1113,12 +1115,12 @@ app.get('/api/sct-requests', async (req, res) => {
 app.post('/api/sct-requests', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { id, userId, requestType, name, event, eventCode, flightType, currency, currencyExpire, priority, notes, dateRequested, requestedTime, aircraftConfigId, crewMember, crewGroup, crewGroupKey, crewUnitCode, crewDisplayLabel, crewIndividual } = req.body;
+    const { id, userId, requestType, name, event, eventCode, flightType, currency, currencyExpire, priority, notes, dateRequested, requestedTime, aircraftConfigId, crewMember, crewGroup, crewGroupKey, crewUnitCode, crewDisplayLabel, crewIndividual, aircraftCount } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId required' });
     const newId = id || generateUUID();
     await db.$executeRawUnsafe(
-      `INSERT INTO "SctRequest" ("id","userId","requestType","name","event","eventCode","flightType","currency","currencyExpire","priority","notes","dateRequested","requestedTime","submitted","includeInBuild","aircraftConfigId","crewMember","crewGroup","crewGroupKey","crewUnitCode","crewDisplayLabel","crewIndividual","createdAt","updatedAt")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,NOW(),NOW())`,
+      `INSERT INTO "SctRequest" ("id","userId","requestType","name","event","eventCode","flightType","currency","currencyExpire","priority","notes","dateRequested","requestedTime","submitted","includeInBuild","aircraftConfigId","crewMember","crewGroup","crewGroupKey","crewUnitCode","crewDisplayLabel","crewIndividual","aircraftCount","createdAt","updatedAt")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NOW(),NOW())`,
       newId,
       String(userId),
       requestType || 'flight',
@@ -1140,7 +1142,8 @@ app.post('/api/sct-requests', async (req, res) => {
       crewGroupKey || '',
       crewUnitCode || '',
       crewDisplayLabel || '',
-      crewIndividual || ''
+      crewIndividual || '',
+      Math.max(1, Math.min(24, Math.floor(Number(aircraftCount) || 1)))
     );
     const rows = await db.$queryRawUnsafe(`SELECT * FROM "SctRequest" WHERE "id" = $1`, newId);
     console.log(`✅ POST /api/sct-requests - created record id: ${newId} for userId: ${userId}`);
