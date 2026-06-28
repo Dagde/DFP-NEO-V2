@@ -28990,39 +28990,48 @@ const PrioritiesView = ({
         const profileCode = String(req.eventCode || profile?.code || "").trim().toUpperCase().slice(0, 8);
         const requestDraftId = `specific-currency-${type}-${req.id}`;
         const displayName = isFixedCrewModel ? req.crewIndividual || selectedCrewGroup?.label || req.crewDisplayLabel || req.crewGroup || "Fixed Crew" : req.name || "Currency request";
+        const draftEvent = {
+          id: requestDraftId,
+          audience: "staff",
+          personId: 0,
+          personKey: req.id,
+          personName: displayName,
+          eventType: type,
+          currencyProfileName: String(req.event || "").trim(),
+          currencyProfileCode: profileCode,
+          crewMode: req.flightType === "Solo" ? "solo" : "withOtherPilot",
+          dueCurrencies: req.currency ? [req.currency] : currencyNames,
+          selectedCurrencies: req.currency ? [req.currency] : [],
+          aircraftConfigId: req.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+          aircraftCount: Math.max(1, Math.floor(Number(req.aircraftCount) || 1)),
+          crewRequirement: req.crewRequirement || { mode: "aircraft_default" },
+          picName: req.crewIndividual || "",
+          fixedCrewGroupKey: req.crewGroupKey || selectedCrewGroup?.key || "",
+          fixedCrewDisplayLabel: selectedCrewGroup?.label || req.crewDisplayLabel || "",
+          formationCrew: formationAssignments.map((assignment) => ({
+            crewGroup: assignment.crewGroup || "",
+            crewGroupKey: assignment.crewGroupKey || "",
+            crewUnitCode: assignment.crewUnitCode || "",
+            crewDisplayLabel: assignment.crewDisplayLabel || "",
+            crewIndividual: assignment.crewIndividual || ""
+          })),
+          selected: true,
+          pushed: false
+        };
+        if (isFixedCrewModel) {
+          highestPriorityEvents.filter((event) => event.currencyDraftId === requestDraftId).forEach((event) => onDeletePriorityEvent(event.id));
+          const priorityEvents = buildCurrencyPriorityEventsFromDrafts([draftEvent]).map((event) => ({
+            ...event,
+            priority: req.priority || event.priority
+          }));
+          onAddPriorityEvents(priorityEvents);
+          onSubmitSctRequest(req.id, type);
+          logAudit("Priorities", "Submit", "Submitted specific currency request to Highest Priority", `${displayName} ${req.event || "Currency"} (${priorityEvents.length} event${priorityEvents.length === 1 ? "" : "s"})`);
+          return;
+        }
         setCurrencyDraftEvents((prev) => {
           if (prev.some((event) => event.id === requestDraftId)) return prev;
-          return [
-            ...prev,
-            {
-              id: requestDraftId,
-              audience: "staff",
-              personId: 0,
-              personKey: req.id,
-              personName: displayName,
-              eventType: type,
-              currencyProfileName: String(req.event || "").trim(),
-              currencyProfileCode: profileCode,
-              crewMode: req.flightType === "Solo" ? "solo" : "withOtherPilot",
-              dueCurrencies: req.currency ? [req.currency] : currencyNames,
-              selectedCurrencies: req.currency ? [req.currency] : [],
-              aircraftConfigId: req.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
-              aircraftCount: Math.max(1, Math.floor(Number(req.aircraftCount) || 1)),
-              crewRequirement: req.crewRequirement || { mode: "aircraft_default" },
-              picName: req.crewIndividual || "",
-              fixedCrewGroupKey: req.crewGroupKey || selectedCrewGroup?.key || "",
-              fixedCrewDisplayLabel: selectedCrewGroup?.label || req.crewDisplayLabel || "",
-              formationCrew: formationAssignments.map((assignment) => ({
-                crewGroup: assignment.crewGroup || "",
-                crewGroupKey: assignment.crewGroupKey || "",
-                crewUnitCode: assignment.crewUnitCode || "",
-                crewDisplayLabel: assignment.crewDisplayLabel || "",
-                crewIndividual: assignment.crewIndividual || ""
-              })),
-              selected: true,
-              pushed: false
-            }
-          ];
+          return [...prev, draftEvent];
         });
         onSubmitSctRequest(req.id, type);
       };
@@ -30264,7 +30273,7 @@ const PrioritiesView = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bulk-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
+      !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bulk-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Bulk Currency Builder" }),
@@ -30391,7 +30400,7 @@ const PrioritiesView = ({
           ] }) })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "consolidated-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
+      !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "consolidated-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-start justify-between gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Consolidated Currency Event Build" }),

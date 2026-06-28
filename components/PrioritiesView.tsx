@@ -2889,39 +2889,51 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                       const displayName = isFixedCrewModel
                           ? (req.crewIndividual || selectedCrewGroup?.label || req.crewDisplayLabel || req.crewGroup || 'Fixed Crew')
                           : (req.name || 'Currency request');
+                      const draftEvent = {
+                          id: requestDraftId,
+                          audience: 'staff' as const,
+                          personId: 0,
+                          personKey: req.id,
+                          personName: displayName,
+                          eventType: type,
+                          currencyProfileName: String(req.event || '').trim(),
+                          currencyProfileCode: profileCode,
+                          crewMode: req.flightType === 'Solo' ? 'solo' as const : 'withOtherPilot' as const,
+                          dueCurrencies: req.currency ? [req.currency] : currencyNames,
+                          selectedCurrencies: req.currency ? [req.currency] : [],
+                          aircraftConfigId: req.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+                          aircraftCount: Math.max(1, Math.floor(Number(req.aircraftCount) || 1)),
+                          crewRequirement: req.crewRequirement || { mode: 'aircraft_default' as const },
+                          picName: req.crewIndividual || '',
+                          fixedCrewGroupKey: req.crewGroupKey || selectedCrewGroup?.key || '',
+                          fixedCrewDisplayLabel: selectedCrewGroup?.label || req.crewDisplayLabel || '',
+                          formationCrew: formationAssignments.map(assignment => ({
+                              crewGroup: assignment.crewGroup || '',
+                              crewGroupKey: assignment.crewGroupKey || '',
+                              crewUnitCode: assignment.crewUnitCode || '',
+                              crewDisplayLabel: assignment.crewDisplayLabel || '',
+                              crewIndividual: assignment.crewIndividual || '',
+                          })),
+                          selected: true,
+                          pushed: false,
+                      };
+                      if (isFixedCrewModel) {
+                          highestPriorityEvents
+                              .filter(event => event.currencyDraftId === requestDraftId)
+                              .forEach(event => onDeletePriorityEvent(event.id));
+                          const priorityEvents = buildCurrencyPriorityEventsFromDrafts([draftEvent])
+                              .map(event => ({
+                                  ...event,
+                                  priority: req.priority || event.priority,
+                              }));
+                          onAddPriorityEvents(priorityEvents);
+                          onSubmitSctRequest(req.id, type);
+                          logAudit('Priorities', 'Submit', 'Submitted specific currency request to Highest Priority', `${displayName} ${req.event || 'Currency'} (${priorityEvents.length} event${priorityEvents.length === 1 ? '' : 's'})`);
+                          return;
+                      }
                       setCurrencyDraftEvents(prev => {
                           if (prev.some(event => event.id === requestDraftId)) return prev;
-                          return [
-                              ...prev,
-                              {
-                                  id: requestDraftId,
-                                  audience: 'staff',
-                                  personId: 0,
-                                  personKey: req.id,
-                                  personName: displayName,
-                                  eventType: type,
-                                  currencyProfileName: String(req.event || '').trim(),
-                                  currencyProfileCode: profileCode,
-                                  crewMode: req.flightType === 'Solo' ? 'solo' : 'withOtherPilot',
-                                  dueCurrencies: req.currency ? [req.currency] : currencyNames,
-                                  selectedCurrencies: req.currency ? [req.currency] : [],
-                                  aircraftConfigId: req.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
-                                  aircraftCount: Math.max(1, Math.floor(Number(req.aircraftCount) || 1)),
-                                  crewRequirement: req.crewRequirement || { mode: 'aircraft_default' },
-                                  picName: req.crewIndividual || '',
-                                  fixedCrewGroupKey: req.crewGroupKey || selectedCrewGroup?.key || '',
-                                  fixedCrewDisplayLabel: selectedCrewGroup?.label || req.crewDisplayLabel || '',
-                                  formationCrew: formationAssignments.map(assignment => ({
-                                      crewGroup: assignment.crewGroup || '',
-                                      crewGroupKey: assignment.crewGroupKey || '',
-                                      crewUnitCode: assignment.crewUnitCode || '',
-                                      crewDisplayLabel: assignment.crewDisplayLabel || '',
-                                      crewIndividual: assignment.crewIndividual || '',
-                                  })),
-                                  selected: true,
-                                  pushed: false,
-                              },
-                          ];
+                          return [...prev, draftEvent];
                       });
                       onSubmitSctRequest(req.id, type);
                   };
@@ -4297,6 +4309,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>}
         </div>}
 
+        {!isFixedCrewModel && (
         <div className="bulk-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
@@ -4413,7 +4426,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>
             </>}
         </div>
+        )}
 
+        {!isFixedCrewModel && (
         <div className="consolidated-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -4597,6 +4612,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 })}
             </div>
         </div>
+        )}
 
         <div className="highest-priority-events-card rounded-lg border border-emerald-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(52,211,153,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
