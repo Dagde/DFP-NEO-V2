@@ -35307,6 +35307,92 @@ appliedUpdates.forEach(update => {
         setIsOracleMode(prev => !prev);
     }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isNeoCapableOperationalModel, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
 
+    const handleQuickTile = useCallback(() => {
+        if (activeOperationalModel !== 'fixed_crew') {
+            handleToggleOracleMode();
+            return;
+        }
+        if (isViewingPastDfp) {
+            denyPastDfpEdit('add quick tiles');
+            return;
+        }
+        if (!canEditDfpTiles) {
+            denyPlatformAction('Add or edit flight tiles is not permitted for your assigned permission profile');
+            return;
+        }
+
+        const scheduleForDate = publishedSchedules[date] || [];
+        const quickStartTime = Number.isFinite(flyingStartTime) ? flyingStartTime : 8;
+        const quickDuration = 2;
+        const isNormalAircraftResource = (resourceId: string): boolean =>
+            /^PC-21\s+\d+$/i.test(String(resourceId || '').trim());
+        const aircraftResources = buildResources.filter(isNormalAircraftResource);
+        const hasAnyEventOnResource = (resourceId: string): boolean =>
+            scheduleForDate.some(event => !event.isCancelled && event.resourceId === resourceId);
+        const overlapsQuickWindow = (event: ScheduleEvent, resourceId: string): boolean =>
+            !event.isCancelled &&
+            event.resourceId === resourceId &&
+            event.startTime < quickStartTime + quickDuration &&
+            quickStartTime < event.startTime + event.duration;
+        const resourceId = aircraftResources.find(resource => !hasAnyEventOnResource(resource)) ||
+            aircraftResources.find(resource => !scheduleForDate.some(event => overlapsQuickWindow(event, resource)));
+
+        if (!resourceId) {
+            setShowInfoNotification('Quick Tile could not find a free aircraft resource line on the active DFP.');
+            return;
+        }
+
+        const quickTile: ScheduleEvent = {
+            id: uuidv4(),
+            date,
+            type: 'flight',
+            flightNumber: 'Quick Tile',
+            syllabusItem: 'Quick Tile',
+            startTime: quickStartTime,
+            duration: quickDuration,
+            resourceId,
+            color: 'bg-emerald-500',
+            flightType: 'Dual',
+            soloOrDual: 'Dual',
+            locationType: 'Local',
+            origin: school,
+            destination: school,
+            isTimeFixed: true,
+            aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
+            acceptableAircraftConfigs: [BASE_AIRCRAFT_CONFIG.id],
+            fixedCrewUnit: activeUnitCode,
+            eventCategory: 'quick_tile',
+            pilot: 'Select PIC',
+            instructor: 'Select PIC',
+            student: '',
+            crew: '',
+            group: '',
+        };
+
+        const nextEventsForDate = [...scheduleForDate, quickTile];
+        setPublishedSchedules(prev => ({
+            ...prev,
+            [date]: [...(prev[date] || []), quickTile],
+        }));
+        persistScheduleForDate(date, nextEventsForDate, scheduleForDate);
+        logAudit('Program Schedule', 'Create', 'Added Quick Tile', `Time: ${quickStartTime}, Duration: ${quickDuration}hrs, Resource: ${resourceId}`);
+    }, [
+        activeOperationalModel,
+        activeUnitCode,
+        buildResources,
+        canEditDfpTiles,
+        date,
+        denyPastDfpEdit,
+        denyPlatformAction,
+        flyingStartTime,
+        handleToggleOracleMode,
+        isViewingPastDfp,
+        logAudit,
+        persistScheduleForDate,
+        publishedSchedules,
+        school,
+    ]);
+
     useEffect(() => {
         if (isOracleMode) {
             runOracleAnalysis();
@@ -38264,6 +38350,7 @@ appliedUpdates.forEach(update => {
                     setIsMultiSelectMode={handleSetIsMultiSelectMode}
                     isOracleMode={isOracleMode}
                     onToggleOracleMode={handleToggleOracleMode}
+                    onQuickTile={handleQuickTile}
                     showDepartureDensityOverlay={showDepartureDensityOverlay}
                     onToggleDepartureDensityOverlay={() => setShowDepartureDensityOverlay(!showDepartureDensityOverlay)}
                     canEditDfpTiles={canEditDfpTiles && !isViewingPastDfp}

@@ -6768,6 +6768,7 @@ const Header = ({
   setIsMultiSelectMode,
   isOracleMode,
   onToggleOracleMode,
+  onQuickTile,
   showAircraftAvailability,
   onToggleAircraftAvailability,
   onPauseFlightOps,
@@ -6791,7 +6792,7 @@ const Header = ({
   const contextSelectorRef = reactExports.useRef(null);
   const isSuperAdmin = authUser?.role === "SUPER_ADMIN" || authUser?.role === "ADMIN";
   const disabledActionClass = "opacity-45 cursor-not-allowed grayscale";
-  const isNeoTileModelUnavailable = /fixed\s*crew/i.test(activeModelLabel || "");
+  const isFixedCrewModel = /fixed\s*crew/i.test(activeModelLabel || "");
   const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}`;
   const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
   const hoveredContext = contextOptions.find((option) => option.location === hoveredContextLocation) || contextOptions[0];
@@ -7008,12 +7009,16 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: isNeoTileModelUnavailable ? void 0 : onToggleOracleMode,
-            disabled: !canRunNeoBuild && !isNeoTileModelUnavailable,
-            "aria-disabled": isNeoTileModelUnavailable || !canRunNeoBuild,
-            className: `relative w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode && !isNeoTileModelUnavailable ? "active" : ""} ${isNeoTileModelUnavailable ? "cursor-not-allowed" : !canRunNeoBuild ? disabledActionClass : ""}`,
-            title: isNeoTileModelUnavailable ? "NEO - Tile is not available for the Fixed Crew Model yet." : canRunNeoBuild ? "NEO - Tile" : "Access denied: NEO Build permission required",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-center leading-tight ${isOracleMode && !isNeoTileModelUnavailable ? "animate-pulse-neo-text" : ""}`, style: { color: "#fb923c" }, children: "NEO - Tile" })
+            onClick: isFixedCrewModel ? onQuickTile : onToggleOracleMode,
+            disabled: isFixedCrewModel ? !canEditDfpTiles : !canRunNeoBuild,
+            "aria-disabled": isFixedCrewModel ? !canEditDfpTiles : !canRunNeoBuild,
+            className: `relative w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode && !isFixedCrewModel ? "active" : ""} ${isFixedCrewModel ? !canEditDfpTiles ? disabledActionClass : "" : !canRunNeoBuild ? disabledActionClass : ""}`,
+            title: isFixedCrewModel ? canEditDfpTiles ? "Quick Tile" : "Access denied: DFP tile edit permission required" : canRunNeoBuild ? "NEO - Tile" : "Access denied: NEO Build permission required",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-center leading-tight ${isOracleMode && !isFixedCrewModel ? "animate-pulse-neo-text" : ""}`, style: { color: isFixedCrewModel ? "#000000" : "#fb923c" }, children: isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              "Quick",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Tile"
+            ] }) : "NEO - Tile" })
           }
         ),
         authUser && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: userButtonRef, className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -99722,6 +99727,80 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     setIsOracleMode((prev) => !prev);
   }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isNeoCapableOperationalModel, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
+  const handleQuickTile = reactExports.useCallback(() => {
+    if (activeOperationalModel !== "fixed_crew") {
+      handleToggleOracleMode();
+      return;
+    }
+    if (isViewingPastDfp) {
+      denyPastDfpEdit("add quick tiles");
+      return;
+    }
+    if (!canEditDfpTiles) {
+      denyPlatformAction("Add or edit flight tiles is not permitted for your assigned permission profile");
+      return;
+    }
+    const scheduleForDate = publishedSchedules[date] || [];
+    const quickStartTime = Number.isFinite(flyingStartTime) ? flyingStartTime : 8;
+    const quickDuration = 2;
+    const isNormalAircraftResource = (resourceId2) => /^PC-21\s+\d+$/i.test(String(resourceId2 || "").trim());
+    const aircraftResources = buildResources.filter(isNormalAircraftResource);
+    const hasAnyEventOnResource = (resourceId2) => scheduleForDate.some((event) => !event.isCancelled && event.resourceId === resourceId2);
+    const overlapsQuickWindow = (event, resourceId2) => !event.isCancelled && event.resourceId === resourceId2 && event.startTime < quickStartTime + quickDuration && quickStartTime < event.startTime + event.duration;
+    const resourceId = aircraftResources.find((resource) => !hasAnyEventOnResource(resource)) || aircraftResources.find((resource) => !scheduleForDate.some((event) => overlapsQuickWindow(event, resource)));
+    if (!resourceId) {
+      setShowInfoNotification("Quick Tile could not find a free aircraft resource line on the active DFP.");
+      return;
+    }
+    const quickTile = {
+      id: v4(),
+      date,
+      type: "flight",
+      flightNumber: "Quick Tile",
+      syllabusItem: "Quick Tile",
+      startTime: quickStartTime,
+      duration: quickDuration,
+      resourceId,
+      color: "bg-emerald-500",
+      flightType: "Dual",
+      soloOrDual: "Dual",
+      locationType: "Local",
+      origin: school,
+      destination: school,
+      isTimeFixed: true,
+      aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
+      acceptableAircraftConfigs: [BASE_AIRCRAFT_CONFIG.id],
+      fixedCrewUnit: activeUnitCode,
+      eventCategory: "quick_tile",
+      pilot: "Select PIC",
+      instructor: "Select PIC",
+      student: "",
+      crew: "",
+      group: ""
+    };
+    const nextEventsForDate = [...scheduleForDate, quickTile];
+    setPublishedSchedules((prev) => ({
+      ...prev,
+      [date]: [...prev[date] || [], quickTile]
+    }));
+    persistScheduleForDate(date, nextEventsForDate, scheduleForDate);
+    logAudit("Program Schedule", "Create", "Added Quick Tile", `Time: ${quickStartTime}, Duration: ${quickDuration}hrs, Resource: ${resourceId}`);
+  }, [
+    activeOperationalModel,
+    activeUnitCode,
+    buildResources,
+    canEditDfpTiles,
+    date,
+    denyPastDfpEdit,
+    denyPlatformAction,
+    flyingStartTime,
+    handleToggleOracleMode,
+    isViewingPastDfp,
+    logAudit,
+    persistScheduleForDate,
+    publishedSchedules,
+    school
+  ]);
   reactExports.useEffect(() => {
     if (isOracleMode) {
       runOracleAnalysis();
@@ -102414,6 +102493,7 @@ Do you want to replace the existing entry?`,
             setIsMultiSelectMode: handleSetIsMultiSelectMode,
             isOracleMode,
             onToggleOracleMode: handleToggleOracleMode,
+            onQuickTile: handleQuickTile,
             showDepartureDensityOverlay,
             onToggleDepartureDensityOverlay: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay),
             canEditDfpTiles: canEditDfpTiles && !isViewingPastDfp,

@@ -25,6 +25,7 @@ interface HeaderProps {
     setIsMultiSelectMode: (enabled: boolean) => void;
     isOracleMode: boolean;
     onToggleOracleMode: () => void;
+    onQuickTile?: () => void;
     showAircraftAvailability?: boolean;
     onToggleAircraftAvailability?: () => void;
     onPauseFlightOps?: () => void;
@@ -57,6 +58,7 @@ const Header: React.FC<HeaderProps> = ({
     setIsMultiSelectMode, 
     isOracleMode, 
     onToggleOracleMode, 
+    onQuickTile,
     showAircraftAvailability, 
     onToggleAircraftAvailability, 
     onPauseFlightOps,
@@ -80,7 +82,7 @@ const Header: React.FC<HeaderProps> = ({
     const contextSelectorRef = useRef<HTMLDivElement>(null);
     const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
     const disabledActionClass = 'opacity-45 cursor-not-allowed grayscale';
-    const isNeoTileModelUnavailable = /fixed\s*crew/i.test(activeModelLabel || '');
+    const isFixedCrewModel = /fixed\s*crew/i.test(activeModelLabel || '');
     const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ''}`;
     const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
     const hoveredContext = contextOptions.find(option => option.location === hoveredContextLocation) || contextOptions[0];
@@ -310,15 +312,17 @@ const Header: React.FC<HeaderProps> = ({
                             <span className="text-center leading-tight">Add Flight<br/>Tile</span>
                         </button>
 
-                        {/* 9. NEO - Tile Button */}
+                        {/* 9. NEO - Tile / Quick Tile Button */}
                         <button
-                            onClick={isNeoTileModelUnavailable ? undefined : onToggleOracleMode}
-                            disabled={!canRunNeoBuild && !isNeoTileModelUnavailable}
-                            aria-disabled={isNeoTileModelUnavailable || !canRunNeoBuild}
-                            className={`relative w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode && !isNeoTileModelUnavailable ? 'active' : ''} ${isNeoTileModelUnavailable ? 'cursor-not-allowed' : !canRunNeoBuild ? disabledActionClass : ''}`}
-                            title={isNeoTileModelUnavailable ? 'NEO - Tile is not available for the Fixed Crew Model yet.' : canRunNeoBuild ? 'NEO - Tile' : 'Access denied: NEO Build permission required'}
+                            onClick={isFixedCrewModel ? onQuickTile : onToggleOracleMode}
+                            disabled={isFixedCrewModel ? !canEditDfpTiles : !canRunNeoBuild}
+                            aria-disabled={isFixedCrewModel ? !canEditDfpTiles : !canRunNeoBuild}
+                            className={`relative w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode && !isFixedCrewModel ? 'active' : ''} ${isFixedCrewModel ? (!canEditDfpTiles ? disabledActionClass : '') : (!canRunNeoBuild ? disabledActionClass : '')}`}
+                            title={isFixedCrewModel ? (canEditDfpTiles ? 'Quick Tile' : 'Access denied: DFP tile edit permission required') : canRunNeoBuild ? 'NEO - Tile' : 'Access denied: NEO Build permission required'}
                         >
-                            <span className={`text-center leading-tight ${isOracleMode && !isNeoTileModelUnavailable ? 'animate-pulse-neo-text' : ''}`} style={{color: "#fb923c"}}>NEO - Tile</span>
+                            <span className={`text-center leading-tight ${isOracleMode && !isFixedCrewModel ? 'animate-pulse-neo-text' : ''}`} style={{ color: isFixedCrewModel ? '#000000' : '#fb923c' }}>
+                                {isFixedCrewModel ? <>Quick<br />Tile</> : 'NEO - Tile'}
+                            </span>
                         </button>
 
                         {/* 10. Logged In As / User Button - shows active commit fetched from server */}
