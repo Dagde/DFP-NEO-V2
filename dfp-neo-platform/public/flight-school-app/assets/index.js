@@ -30365,10 +30365,7 @@ const PrioritiesViewWithMenu = (props) => {
   const hasInvalidDeploymentDateRange = Boolean(deploymentStartDate && deploymentEndDate && deploymentStartDate > deploymentEndDate);
   const hasInvalidSameDayTimes = deploymentStartDate === deploymentEndDate && deploymentEndTime <= deploymentStartTime;
   const deploymentPlannerEvents = Array.from(
-    [
-      ...(props.activeScheduleEvents || []).filter((event) => event.type === "deployment" && event.deploymentSource === "build-planner"),
-      ...(props.highestPriorityEvents || []).filter((event) => event.type === "deployment" && (!event.deploymentSource || event.deploymentSource === "build-planner"))
-    ].reduce((eventsById, event) => {
+    (props.activeScheduleEvents || []).filter((event) => event.type === "deployment" && event.deploymentSource === "build-planner").reduce((eventsById, event) => {
       eventsById.set(event.id, event);
       return eventsById;
     }, /* @__PURE__ */ new Map()).values()
@@ -30395,17 +30392,17 @@ const PrioritiesViewWithMenu = (props) => {
     const deploymentDates = getDeploymentDateRange(deploymentStartDate, deploymentEndDate);
     const deployedResourceNumbers = (props.activeScheduleEvents || []).map((event) => /^Deployed\s+(\d+)$/i.exec(String(event.resourceId || "").trim())).filter((match) => Boolean(match)).map((match) => Number(match[1])).filter((number) => Number.isFinite(number));
     const nextDeploymentNumber = Math.max(0, ...deployedResourceNumbers) + 1;
-    const resourceId = `Deployed ${nextDeploymentNumber}`;
     const deploymentStartClock = formatPlannerClock(deploymentStartTime);
     const deploymentEndClock = formatPlannerClock(deploymentEndTime);
     const deploymentSeriesId = v4();
-    const events = deploymentDates.map((currentDate) => {
+    const aircraftCount = Math.max(1, Math.floor(Number(deploymentAircraftCount) || 1));
+    const events = deploymentDates.flatMap((currentDate) => {
       const isFirstDate = currentDate === deploymentStartDate;
       const isLastDate = currentDate === deploymentEndDate;
       const segmentStartTime = isFirstDate ? deploymentStartTime : 0;
       const segmentEndTime = isLastDate ? deploymentEndTime : 24;
       const segmentDuration = Math.max(0.1, segmentEndTime - segmentStartTime);
-      return {
+      return Array.from({ length: aircraftCount }, (_, aircraftIndex) => ({
         id: v4(),
         date: currentDate,
         type: "deployment",
@@ -30417,7 +30414,7 @@ const PrioritiesViewWithMenu = (props) => {
         flightNumber: "DEPLOYMENT",
         duration: segmentDuration,
         startTime: segmentStartTime,
-        resourceId,
+        resourceId: `Deployed ${nextDeploymentNumber + aircraftIndex}`,
         color: "bg-gray-600/30",
         flightType: "Dual",
         soloOrDual: "Dual",
@@ -30431,10 +30428,10 @@ const PrioritiesViewWithMenu = (props) => {
         deploymentStartTime: deploymentStartClock,
         deploymentEndDate,
         deploymentEndTime: deploymentEndClock,
-        deploymentAircraftCount,
+        deploymentAircraftCount: aircraftCount,
         deploymentSeriesId,
         deploymentSource: "build-planner"
-      };
+      }));
     }).filter((event) => event.duration > 0);
     props.onAddBuildEvents(events);
     setDeploymentAddMessage(`Added deployment to the Build Planner for ${deploymentDates.length} day${deploymentDates.length === 1 ? "" : "s"}.`);
@@ -30549,16 +30546,19 @@ const PrioritiesViewWithMenu = (props) => {
       ] }) }),
       deploymentGroups.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-4 rounded-md border border-slate-700/70 bg-slate-900/70 px-3 py-3 text-sm text-slate-500", children: "No deployments built." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-2", children: deploymentGroups.map((group) => {
         const first = group.events[0];
+        const uniqueDates = new Set(group.events.map((event) => event.date).filter(Boolean));
+        const uniqueResources = new Set(group.events.map((event) => event.resourceId).filter(Boolean));
+        const deployedCount = Number(first.deploymentAircraftCount) || Math.max(1, uniqueResources.size);
         const label = `DEPLOYMENT ${String(first.deploymentStartTime || "").replace(":", "") || formatPlannerClock(first.startTime)} ${formatPlannerDateLabel(first.deploymentStartDate || first.date)} - ${String(first.deploymentEndTime || "").replace(":", "") || formatPlannerClock(first.startTime + first.duration)} ${formatPlannerDateLabel(first.deploymentEndDate || first.date)}`;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3 rounded-md border border-slate-700 bg-slate-900/80 px-3 py-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-sm font-bold text-slate-100", children: label }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500", children: [
-              group.events.length,
+              uniqueDates.size || group.events.length,
               " day",
-              group.events.length === 1 ? "" : "s",
-              " · ",
-              first.resourceId || "Deployment tile"
+              uniqueDates.size === 1 ? "" : "s",
+              " · deployed ",
+              deployedCount
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -88962,20 +88962,18 @@ const App = () => {
         student: event.student
       }))
     });
-    if (events2.length > 0) {
-      setPublishedSchedules((prev) => {
-        const existingNonSeed = (prev[targetDate] || []).filter((e) => !e.isHistoricalSeed);
-        if (!replace && existingNonSeed.length > 0) return prev;
-        return { ...prev, [targetDate]: events2 };
-      });
-      const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
-      setBaselineSchedules((prev) => {
-        const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
-        if (!replace && prev[baselineKey]) return prev;
-        return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
-      });
-      console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || "unit not set"}), ${events2.length} events`);
-    }
+    setPublishedSchedules((prev) => {
+      const existingNonSeed = (prev[targetDate] || []).filter((e) => !e.isHistoricalSeed);
+      if (!replace && existingNonSeed.length > 0 && events2.length > 0) return prev;
+      return { ...prev, [targetDate]: events2 };
+    });
+    const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
+    setBaselineSchedules((prev) => {
+      const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
+      if (!replace && prev[baselineKey] && events2.length > 0) return prev;
+      return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
+    });
+    console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || "unit not set"}), ${events2.length} events`);
     if (snap2.pt051Assessments && Object.keys(snap2.pt051Assessments).length > 0) {
       console.log(`[Snapshot] Ignored ${Object.keys(snap2.pt051Assessments).length} PT-051 snapshot records for ${targetDate}; TraineePerformance is authoritative`);
     }
@@ -100194,17 +100192,8 @@ ${error instanceof Error ? error.message : String(error)}`,
                 persistScheduleForDate(eventDate, nextEventsForDate, existingEvents);
               });
               setPublishedSchedules(nextPublishedSchedules);
-              setHighestPriorityEvents((prev) => prev.filter((event) => !incomingIds.has(event.id)));
-              setNextDayBuildEvents((prev) => {
-                const currentDateDeploymentEvents = directDeploymentEvents.filter((event) => event.date === buildDfpDate).map((event) => {
-                  const { date: _date, ...nextDayEvent } = event;
-                  return nextDayEvent;
-                });
-                return [
-                  ...prev.filter((event) => !incomingIds.has(event.id)),
-                  ...currentDateDeploymentEvents
-                ];
-              });
+              setHighestPriorityEvents((prev) => prev.filter((event) => event.type !== "deployment" && !incomingIds.has(event.id)));
+              setNextDayBuildEvents((prev) => prev.filter((event) => !incomingIds.has(event.id)));
               logAudit("Next Day Build", "Create", "Added Build Planner deployment tiles", `${directDeploymentEvents.length} x DEPLOYMENT`);
             },
             onRemoveBuildDeploymentEvents: (eventIds) => {

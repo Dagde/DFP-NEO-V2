@@ -22397,23 +22397,21 @@ const App: React.FC = () => {
                 student: event.student,
             })),
         });
-        if (events.length > 0) {
-            setPublishedSchedules(prev => {
-                const existingNonSeed = (prev[targetDate] || []).filter(e => !(e as any).isHistoricalSeed);
-                if (!replace && existingNonSeed.length > 0) return prev;
-                return { ...prev, [targetDate]: events };
-            });
+        setPublishedSchedules(prev => {
+            const existingNonSeed = (prev[targetDate] || []).filter(e => !(e as any).isHistoricalSeed);
+            if (!replace && existingNonSeed.length > 0 && events.length > 0) return prev;
+            return { ...prev, [targetDate]: events };
+        });
 
-            const baselineEvts: ScheduleEvent[] = Array.isArray(snap.baselineEvents) && snap.baselineEvents.length > 0
-                ? snap.baselineEvents
-                : events;
-            setBaselineSchedules(prev => {
-                const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
-                if (!replace && prev[baselineKey]) return prev;
-                return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
-            });
-            console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || 'unit not set'}), ${events.length} events`);
-        }
+        const baselineEvts: ScheduleEvent[] = Array.isArray(snap.baselineEvents) && snap.baselineEvents.length > 0
+            ? snap.baselineEvents
+            : events;
+        setBaselineSchedules(prev => {
+            const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
+            if (!replace && prev[baselineKey] && events.length > 0) return prev;
+            return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
+        });
+        console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || 'unit not set'}), ${events.length} events`);
 
         if (snap.pt051Assessments && Object.keys(snap.pt051Assessments).length > 0) {
             console.log(`[Snapshot] Ignored ${Object.keys(snap.pt051Assessments).length} PT-051 snapshot records for ${targetDate}; TraineePerformance is authoritative`);
@@ -36318,19 +36316,11 @@ appliedUpdates.forEach(update => {
                             persistScheduleForDate(eventDate, nextEventsForDate, existingEvents);
                         });
                         setPublishedSchedules(nextPublishedSchedules);
-                        setHighestPriorityEvents(prev => prev.filter(event => !incomingIds.has(event.id)));
-                        setNextDayBuildEvents(prev => {
-                            const currentDateDeploymentEvents = directDeploymentEvents
-                                .filter(event => event.date === buildDfpDate)
-                                .map(event => {
-                                    const { date: _date, ...nextDayEvent } = event;
-                                    return nextDayEvent;
-                                });
-                            return [
-                                ...prev.filter(event => !incomingIds.has(event.id)),
-                                ...currentDateDeploymentEvents,
-                            ];
-                        });
+                        setHighestPriorityEvents(prev => prev.filter(event => (
+                            event.type !== 'deployment' &&
+                            !incomingIds.has(event.id)
+                        )));
+                        setNextDayBuildEvents(prev => prev.filter(event => !incomingIds.has(event.id)));
                         logAudit('Next Day Build', 'Create', 'Added Build Planner deployment tiles', `${directDeploymentEvents.length} x DEPLOYMENT`);
                     }}
                     onRemoveBuildDeploymentEvents={(eventIds) => {

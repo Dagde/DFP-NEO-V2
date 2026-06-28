@@ -319,10 +319,9 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     const hasInvalidDeploymentDateRange = Boolean(deploymentStartDate && deploymentEndDate && deploymentStartDate > deploymentEndDate);
     const hasInvalidSameDayTimes = deploymentStartDate === deploymentEndDate && deploymentEndTime <= deploymentStartTime;
     const deploymentPlannerEvents = Array.from(
-        [
-            ...(props.activeScheduleEvents || []).filter(event => event.type === 'deployment' && event.deploymentSource === 'build-planner'),
-            ...(props.highestPriorityEvents || []).filter(event => event.type === 'deployment' && (!event.deploymentSource || event.deploymentSource === 'build-planner')),
-        ].reduce<Map<string, ScheduleEvent>>((eventsById, event) => {
+        (props.activeScheduleEvents || [])
+            .filter(event => event.type === 'deployment' && event.deploymentSource === 'build-planner')
+            .reduce<Map<string, ScheduleEvent>>((eventsById, event) => {
             eventsById.set(event.id, event);
             return eventsById;
         }, new Map()).values()
@@ -357,17 +356,17 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             .map(match => Number(match[1]))
             .filter(number => Number.isFinite(number));
         const nextDeploymentNumber = Math.max(0, ...deployedResourceNumbers) + 1;
-        const resourceId = `Deployed ${nextDeploymentNumber}`;
         const deploymentStartClock = formatPlannerClock(deploymentStartTime);
         const deploymentEndClock = formatPlannerClock(deploymentEndTime);
         const deploymentSeriesId = uuidv4();
-        const events = deploymentDates.map(currentDate => {
+        const aircraftCount = Math.max(1, Math.floor(Number(deploymentAircraftCount) || 1));
+        const events = deploymentDates.flatMap(currentDate => {
             const isFirstDate = currentDate === deploymentStartDate;
             const isLastDate = currentDate === deploymentEndDate;
             const segmentStartTime = isFirstDate ? deploymentStartTime : 0;
             const segmentEndTime = isLastDate ? deploymentEndTime : 24;
             const segmentDuration = Math.max(0.1, segmentEndTime - segmentStartTime);
-            return {
+            return Array.from({ length: aircraftCount }, (_, aircraftIndex) => ({
                 id: uuidv4(),
                 date: currentDate,
                 type: 'deployment' as const,
@@ -379,7 +378,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                 flightNumber: 'DEPLOYMENT',
                 duration: segmentDuration,
                 startTime: segmentStartTime,
-                resourceId,
+                resourceId: `Deployed ${nextDeploymentNumber + aircraftIndex}`,
                 color: 'bg-gray-600/30',
                 flightType: 'Dual' as const,
                 soloOrDual: 'Dual' as const,
@@ -393,10 +392,10 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                 deploymentStartTime: deploymentStartClock,
                 deploymentEndDate,
                 deploymentEndTime: deploymentEndClock,
-                deploymentAircraftCount,
+                deploymentAircraftCount: aircraftCount,
                 deploymentSeriesId,
                 deploymentSource: 'build-planner',
-            };
+            }));
         }).filter(event => event.duration > 0);
         props.onAddBuildEvents(events);
         setDeploymentAddMessage(`Added deployment to the Build Planner for ${deploymentDates.length} day${deploymentDates.length === 1 ? '' : 's'}.`);
@@ -522,13 +521,16 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                         <div className="mt-4 space-y-2">
                             {deploymentGroups.map(group => {
                                 const first = group.events[0];
+                                const uniqueDates = new Set(group.events.map(event => event.date).filter(Boolean));
+                                const uniqueResources = new Set(group.events.map(event => event.resourceId).filter(Boolean));
+                                const deployedCount = Number(first.deploymentAircraftCount) || Math.max(1, uniqueResources.size);
                                 const label = `DEPLOYMENT ${String(first.deploymentStartTime || '').replace(':', '') || formatPlannerClock(first.startTime)} ${formatPlannerDateLabel(first.deploymentStartDate || first.date)} - ${String(first.deploymentEndTime || '').replace(':', '') || formatPlannerClock(first.startTime + first.duration)} ${formatPlannerDateLabel(first.deploymentEndDate || first.date)}`;
                                 return (
                                     <div key={group.key} className="flex items-center justify-between gap-3 rounded-md border border-slate-700 bg-slate-900/80 px-3 py-2">
                                         <div className="min-w-0">
                                             <p className="truncate text-sm font-bold text-slate-100">{label}</p>
                                             <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                                                {group.events.length} day{group.events.length === 1 ? '' : 's'} · {first.resourceId || 'Deployment tile'}
+                                                {uniqueDates.size || group.events.length} day{uniqueDates.size === 1 ? '' : 's'} · deployed {deployedCount}
                                             </p>
                                         </div>
                                         <button
