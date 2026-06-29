@@ -10104,7 +10104,12 @@ const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) 
           eventType: "UNAVAILABILITY",
           allDay: period.allDay,
           reason: period.reason,
-          notes: period.notes
+          notes: period.notes,
+          unavailabilityStartDate: period.startDate,
+          unavailabilityEndDate: period.endDate,
+          unavailabilityStartTime: period.startTime,
+          unavailabilityEndTime: period.endTime,
+          unavailabilityPeriodId: period.id
         };
         unavailabilityEvents.push(unavailabilityEvent);
       }
@@ -10835,7 +10840,12 @@ const createUnavailabilityEvents = (date, personnelData) => {
           eventType: "UNAVAILABILITY",
           allDay: period.allDay,
           reason: period.reason,
-          notes: period.notes
+          notes: period.notes,
+          unavailabilityStartDate: period.startDate,
+          unavailabilityEndDate: period.endDate,
+          unavailabilityStartTime: period.startTime,
+          unavailabilityEndTime: period.endTime,
+          unavailabilityPeriodId: period.id
         };
         unavailabilityEvents.push(unavailabilityEvent);
       }
@@ -18081,6 +18091,34 @@ const formatTime$4 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
+const formatUnavailabilityDate = (dateValue) => {
+  if (!dateValue) return "-";
+  const parsedDate = /* @__PURE__ */ new Date(`${dateValue}T00:00:00Z`);
+  if (Number.isNaN(parsedDate.getTime())) return dateValue;
+  return parsedDate.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC"
+  });
+};
+const formatUnavailabilityClock = (rawTime, fallbackTime) => {
+  if (typeof rawTime === "number") return formatTime$4(rawTime);
+  if (typeof rawTime === "string" && rawTime.trim()) {
+    if (rawTime.includes(":")) return rawTime;
+    const cleaned = rawTime.replace(/\D/g, "").padStart(4, "0").slice(-4);
+    return `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
+  }
+  if (typeof fallbackTime === "number") return formatTime$4(fallbackTime);
+  return "-";
+};
+const getAllDayUnavailabilityEndDate = (dateValue) => {
+  if (!dateValue) return void 0;
+  const parsedDate = /* @__PURE__ */ new Date(`${dateValue}T00:00:00Z`);
+  if (Number.isNaN(parsedDate.getTime())) return dateValue;
+  parsedDate.setUTCDate(parsedDate.getUTCDate() - 1);
+  return parsedDate.toISOString().slice(0, 10);
+};
 const normalizeStartTimeValue = (time) => {
   if (typeof time === "number") return formatTime$4(time);
   if (!time) return "00:00";
@@ -18973,11 +19011,32 @@ ${swapNote}` : swapNote
       trainees: traineesData.filter((t) => t.course === courseName).sort((a, b) => a.name.localeCompare(b.name))
     }));
   }, [courses, traineesData]);
+  const isUnavailabilityDetailsEvent = event.type === "unavailability" || event.eventType === "UNAVAILABILITY" || event.flightNumber === "UNAVAIL";
+  const unavailabilityDetails = reactExports.useMemo(() => {
+    const unavailabilityEvent = event;
+    const personName = event.instructor || event.student || event.pilot || unavailabilityEvent.resourceName || "";
+    const staffRecord = instructorsData.find((staff) => staff.name === personName || staff.fullName === personName);
+    const traineeRecord = traineesData.find((trainee) => trainee.fullName === personName || trainee.name === personName);
+    const rawEndDate = unavailabilityEvent.unavailabilityEndDate || event.date;
+    const displayEndDate = unavailabilityEvent.allDay ? getAllDayUnavailabilityEndDate(rawEndDate) : rawEndDate;
+    const role = staffRecord ? staffRecord.role || staffRecord.instructorCategory || staffRecord.category || "-" : traineeRecord?.role || traineeRecord?.category || traineeRecord?.course || "Trainee";
+    return {
+      rank: staffRecord?.rank || traineeRecord?.rank || "-",
+      name: personName || "-",
+      role,
+      startDate: formatUnavailabilityDate(unavailabilityEvent.unavailabilityStartDate || event.date),
+      startTime: formatUnavailabilityClock(unavailabilityEvent.unavailabilityStartTime, event.startTime),
+      endDate: formatUnavailabilityDate(displayEndDate || event.date),
+      endTime: formatUnavailabilityClock(unavailabilityEvent.unavailabilityEndTime, event.startTime + event.duration),
+      reason: unavailabilityEvent.reason || unavailabilityEvent.notes || "Unavailability"
+    };
+  }, [event, instructorsData, traineesData]);
   const modalTitle = reactExports.useMemo(() => {
+    if (isUnavailabilityDetailsEvent) return "Unavailability Details";
     if (eventType === "flight") return "Flight Details";
     if (eventType === "ftd") return `${resourceDisplayNames.ftd} Session Details`;
     return "Ground Event Details";
-  }, [eventType, resourceDisplayNames.ftd]);
+  }, [eventType, isUnavailabilityDetailsEvent, resourceDisplayNames.ftd]);
   reactExports.useEffect(() => {
     setFlightNumber(event.flightNumber);
     if (isEditingDefault && !event.flightNumber) {
@@ -19742,6 +19801,63 @@ ${swapNote}` : swapNote
         onClose: () => setIsVisualAdjustMode(false)
       }
     );
+  }
+  if (isUnavailabilityDetailsEvent) {
+    const detailRows = [
+      { label: "Person", value: `${unavailabilityDetails.rank} ${unavailabilityDetails.name}`.trim() },
+      { label: "Role", value: unavailabilityDetails.role }
+    ];
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-50 flex items-center justify-center", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-xl border border-red-900/50 transform transition-all animate-fade-in flex flex-col max-h-[85vh]", onClick: (e) => e.stopPropagation(), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-4 px-5 border-b border-red-900/40 bg-red-950/30 flex items-center justify-between", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8", "aria-hidden": "true" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Unavailability Details" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: onClose,
+            className: "text-gray-300 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center rounded border border-gray-600 hover:border-gray-400",
+            "aria-label": "Close unavailability details",
+            children: "×"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-5 space-y-4 overflow-y-auto", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
+          detailRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/70 border border-gray-700 rounded p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] uppercase tracking-[0.18em] text-gray-400 mb-1", children: row.label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-base font-semibold text-white", children: row.value || "-" })
+          ] }, row.label)),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/70 border border-gray-700 rounded p-3 sm:col-span-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] uppercase tracking-[0.18em] text-gray-400 mb-1", children: "Unavailability" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-base font-semibold text-white", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-cyan-300", children: unavailabilityDetails.startTime }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                " ",
+                unavailabilityDetails.startDate,
+                " - "
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-cyan-300", children: unavailabilityDetails.endTime }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                " ",
+                unavailabilityDetails.endDate
+              ] })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/70 border border-red-900/50 rounded p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] uppercase tracking-[0.18em] text-gray-400 mb-1", children: "Reason" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-base font-semibold text-red-100", children: unavailabilityDetails.reason })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-gray-700 p-4 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: onClose,
+          className: "px-5 py-2 bg-gray-100 text-gray-900 rounded font-semibold hover:bg-white",
+          children: "Close"
+        }
+      ) })
+    ] }) });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     showTraineeScoresModal && traineeObject && /* @__PURE__ */ jsxRuntimeExports.jsx(

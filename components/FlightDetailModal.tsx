@@ -484,6 +484,37 @@ const formatTime = (time: number) => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
+const formatUnavailabilityDate = (dateValue?: string | null): string => {
+    if (!dateValue) return '-';
+    const parsedDate = new Date(`${dateValue}T00:00:00Z`);
+    if (Number.isNaN(parsedDate.getTime())) return dateValue;
+    return parsedDate.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'UTC',
+    });
+};
+
+const formatUnavailabilityClock = (rawTime?: string | number | null, fallbackTime?: number): string => {
+    if (typeof rawTime === 'number') return formatTime(rawTime);
+    if (typeof rawTime === 'string' && rawTime.trim()) {
+        if (rawTime.includes(':')) return rawTime;
+        const cleaned = rawTime.replace(/\D/g, '').padStart(4, '0').slice(-4);
+        return `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
+    }
+    if (typeof fallbackTime === 'number') return formatTime(fallbackTime);
+    return '-';
+};
+
+const getAllDayUnavailabilityEndDate = (dateValue?: string | null): string | undefined => {
+    if (!dateValue) return undefined;
+    const parsedDate = new Date(`${dateValue}T00:00:00Z`);
+    if (Number.isNaN(parsedDate.getTime())) return dateValue;
+    parsedDate.setUTCDate(parsedDate.getUTCDate() - 1);
+    return parsedDate.toISOString().slice(0, 10);
+};
+
 const normalizeStartTimeValue = (time: number | string | undefined): string => {
     if (typeof time === 'number') return formatTime(time);
     if (!time) return '00:00';
@@ -1682,11 +1713,46 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         }));
     }, [courses, traineesData]);
 
+    const isUnavailabilityDetailsEvent = event.type === 'unavailability' || event.eventType === 'UNAVAILABILITY' || event.flightNumber === 'UNAVAIL';
+
+    const unavailabilityDetails = useMemo(() => {
+        const unavailabilityEvent = event as ScheduleEvent & {
+            unavailabilityStartDate?: string;
+            unavailabilityEndDate?: string;
+            unavailabilityStartTime?: string;
+            unavailabilityEndTime?: string;
+            reason?: string;
+            notes?: string;
+            resourceName?: string;
+            allDay?: boolean;
+        };
+        const personName = event.instructor || event.student || event.pilot || unavailabilityEvent.resourceName || '';
+        const staffRecord = instructorsData.find((staff: any) => staff.name === personName || staff.fullName === personName);
+        const traineeRecord = traineesData.find((trainee: any) => trainee.fullName === personName || trainee.name === personName);
+        const rawEndDate = unavailabilityEvent.unavailabilityEndDate || event.date;
+        const displayEndDate = unavailabilityEvent.allDay ? getAllDayUnavailabilityEndDate(rawEndDate) : rawEndDate;
+        const role = staffRecord
+            ? ((staffRecord as any).role || (staffRecord as any).instructorCategory || (staffRecord as any).category || '-')
+            : ((traineeRecord as any)?.role || (traineeRecord as any)?.category || (traineeRecord as any)?.course || 'Trainee');
+
+        return {
+            rank: (staffRecord as any)?.rank || (traineeRecord as any)?.rank || '-',
+            name: personName || '-',
+            role,
+            startDate: formatUnavailabilityDate(unavailabilityEvent.unavailabilityStartDate || event.date),
+            startTime: formatUnavailabilityClock(unavailabilityEvent.unavailabilityStartTime, event.startTime),
+            endDate: formatUnavailabilityDate(displayEndDate || event.date),
+            endTime: formatUnavailabilityClock(unavailabilityEvent.unavailabilityEndTime, event.startTime + event.duration),
+            reason: unavailabilityEvent.reason || unavailabilityEvent.notes || 'Unavailability',
+        };
+    }, [event, instructorsData, traineesData]);
+
     const modalTitle = useMemo(() => {
+        if (isUnavailabilityDetailsEvent) return 'Unavailability Details';
         if (eventType === 'flight') return 'Flight Details';
         if (eventType === 'ftd') return `${resourceDisplayNames.ftd} Session Details`;
         return 'Ground Event Details';
-    }, [eventType, resourceDisplayNames.ftd]);
+    }, [eventType, isUnavailabilityDetailsEvent, resourceDisplayNames.ftd]);
 
     useEffect(() => {
         setFlightNumber(event.flightNumber);
@@ -2671,6 +2737,62 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                 onContinue={handleVisualAdjustContinue}
                 onClose={() => setIsVisualAdjustMode(false)}
             />
+        );
+    }
+
+    if (isUnavailabilityDetailsEvent) {
+        const detailRows = [
+            { label: 'Person', value: `${unavailabilityDetails.rank} ${unavailabilityDetails.name}`.trim() },
+            { label: 'Role', value: unavailabilityDetails.role },
+        ];
+
+        return (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
+                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-xl border border-red-900/50 transform transition-all animate-fade-in flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                    <div className="py-4 px-5 border-b border-red-900/40 bg-red-950/30 flex items-center justify-between">
+                        <div className="w-8" aria-hidden="true" />
+                        <h2 className="text-xl font-bold text-white">Unavailability Details</h2>
+                        <button
+                            onClick={onClose}
+                            className="text-gray-300 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center rounded border border-gray-600 hover:border-gray-400"
+                            aria-label="Close unavailability details"
+                        >
+                            &times;
+                        </button>
+                    </div>
+                    <div className="p-5 space-y-4 overflow-y-auto">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {detailRows.map(row => (
+                                <div key={row.label} className="bg-gray-900/70 border border-gray-700 rounded p-3">
+                                    <div className="text-[11px] uppercase tracking-[0.18em] text-gray-400 mb-1">{row.label}</div>
+                                    <div className="text-base font-semibold text-white">{row.value || '-'}</div>
+                                </div>
+                            ))}
+                            <div className="bg-gray-900/70 border border-gray-700 rounded p-3 sm:col-span-2">
+                                <div className="text-[11px] uppercase tracking-[0.18em] text-gray-400 mb-1">Unavailability</div>
+                                <div className="text-base font-semibold text-white">
+                                    <span className="text-cyan-300">{unavailabilityDetails.startTime}</span>
+                                    <span> {unavailabilityDetails.startDate} - </span>
+                                    <span className="text-cyan-300">{unavailabilityDetails.endTime}</span>
+                                    <span> {unavailabilityDetails.endDate}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-gray-900/70 border border-red-900/50 rounded p-3">
+                            <div className="text-[11px] uppercase tracking-[0.18em] text-gray-400 mb-1">Reason</div>
+                            <div className="text-base font-semibold text-red-100">{unavailabilityDetails.reason}</div>
+                        </div>
+                    </div>
+                    <div className="border-t border-gray-700 p-4 flex justify-end">
+                        <button
+                            onClick={onClose}
+                            className="px-5 py-2 bg-gray-100 text-gray-900 rounded font-semibold hover:bg-white"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
         );
     }
 

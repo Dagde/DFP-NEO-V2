@@ -139,7 +139,18 @@ const createUnavailabilityEvents = (date: string, personnelData: any[], isInstru
                     eventType: 'UNAVAILABILITY',
                     allDay: period.allDay,
                     reason: period.reason,
-                    notes: period.notes
+                    notes: period.notes,
+                    unavailabilityStartDate: period.startDate,
+                    unavailabilityEndDate: period.endDate,
+                    unavailabilityStartTime: period.startTime,
+                    unavailabilityEndTime: period.endTime,
+                    unavailabilityPeriodId: period.id
+                } as ScheduleEvent & {
+                    unavailabilityStartDate?: string;
+                    unavailabilityEndDate?: string;
+                    unavailabilityStartTime?: string;
+                    unavailabilityEndTime?: string;
+                    unavailabilityPeriodId?: string;
                 };
                 
                 unavailabilityEvents.push(unavailabilityEvent);
