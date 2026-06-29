@@ -28,6 +28,39 @@ export interface CrewRequirement {
   roles?: CrewRequirementRole[];
 }
 
+export type StandardMissionResourceType = 'Flight' | 'FTD' | 'CPT' | 'Ground';
+
+export interface StandardMissionRoleRequirement {
+  role: string;
+  count: number;
+}
+
+export interface StandardMissionProfile {
+  id: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  unitCode: string;
+  compositeUnitCode: string;
+  compositeProfileId: string;
+  aircraftTypeCode: string;
+  missionName: string;
+  shortTitle: string;
+  description: string;
+  resourceType: StandardMissionResourceType;
+  departureLocationCode: string;
+  arrivalLocationCode: string;
+  durationMinutes: number;
+  preFlightMinutes: number;
+  postFlightMinutes: number;
+  isFormation: boolean;
+  formationAircraft: number;
+  config: string;
+  crewCompositionMode: 'STANDARD' | 'ALTERNATE' | 'CUSTOM';
+  selectedCrewCompositionId: string;
+  acceptableCrewCompositionIds: string[];
+  roleRequirements: StandardMissionRoleRequirement[];
+  defaultCallsignPrefix: string;
+}
+
 export interface LogicNode {
   operator: LogicOperator;
   children: (string | LogicNode)[]; // Array of currency IDs or nested LogicNodes

@@ -266,7 +266,8 @@ import {
     FlyingWindowExclusionPeriod,
     FlyingWindowExclusionRestriction,
     AirCombatTrainingAssignment,
-    AirCombatTrainingReport
+    AirCombatTrainingReport,
+    StandardMissionProfile
 } from './types';
 import { NewCourseData } from './components/AddCourseFlyout';
 
@@ -21077,6 +21078,76 @@ const App: React.FC = () => {
             .filter(Boolean);
         return Array.from(new Set(options));
     }, [activeContextUnitCodes, activeUnitCode, platformConfig]);
+    const activeStandardMissionProfiles = useMemo<StandardMissionProfile[]>(() => {
+        const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
+            String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
+        )) || platformConfig?.organisations?.[0];
+        const source = activeOrganisation?.settings?.standardMissionProfiles;
+        const rows = Array.isArray(source?.profiles) ? source.profiles : Array.isArray(source) ? source : [];
+        const activeCodes = activeContextUnitCodes.length > 0
+            ? activeContextUnitCodes.map(code => String(code || '').trim().toUpperCase()).filter(Boolean)
+            : String(activeUnitCode || '').split('+').map(code => String(code || '').trim().toUpperCase()).filter(Boolean);
+        const activeCompositeCodes = new Set([
+            String(activeUnitCode || '').trim().toUpperCase(),
+            activeCodes.join('+'),
+            activeCodes.join('/'),
+        ].filter(Boolean));
+        const seen = new Set<string>();
+        return rows
+            .filter((row: any) => String(row?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+            .filter((row: any) => {
+                const unitCode = String(row?.unitCode || '').trim().toUpperCase();
+                const compositeUnitCode = String(row?.compositeUnitCode || '').trim().toUpperCase();
+                if (unitCode && activeCodes.length > 0) return activeCodes.includes(unitCode);
+                if (compositeUnitCode) return activeCompositeCodes.has(compositeUnitCode);
+                return true;
+            })
+            .map((row: any, index: number): StandardMissionProfile => ({
+                id: String(row?.id || `standard-mission-${index + 1}`),
+                status: String(row?.status || 'ACTIVE').toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+                unitCode: String(row?.unitCode || '').trim().toUpperCase(),
+                compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
+                compositeProfileId: String(row?.compositeProfileId || '').trim(),
+                aircraftTypeCode: String(row?.aircraftTypeCode || '').trim().toUpperCase(),
+                missionName: String(row?.missionName || row?.name || `Standard Mission ${index + 1}`).trim(),
+                shortTitle: String(row?.shortTitle || '').trim().slice(0, 8),
+                description: String(row?.description || '').trim(),
+                resourceType: (['Flight', 'FTD', 'CPT', 'Ground'].includes(String(row?.resourceType || row?.type || 'Flight')) ? String(row?.resourceType || row?.type || 'Flight') : 'Flight') as StandardMissionProfile['resourceType'],
+                departureLocationCode: String(row?.departureLocationCode || row?.dep || school || '').trim().toUpperCase(),
+                arrivalLocationCode: String(row?.arrivalLocationCode || row?.arr || school || '').trim().toUpperCase(),
+                durationMinutes: Math.max(0, Math.floor(Number(row?.durationMinutes ?? row?.duration ?? 240) || 0)),
+                preFlightMinutes: Math.max(0, Math.floor(Number(row?.preFlightMinutes ?? row?.preFlight ?? 90) || 0)),
+                postFlightMinutes: Math.max(0, Math.floor(Number(row?.postFlightMinutes ?? row?.postFlight ?? 60) || 0)),
+                isFormation: Boolean(row?.isFormation),
+                formationAircraft: Math.max(1, Math.floor(Number(row?.formationAircraft ?? row?.aircraftCount ?? 1) || 1)),
+                config: String(row?.config || 'ANY').trim() || 'ANY',
+                crewCompositionMode: (['STANDARD', 'ALTERNATE', 'CUSTOM'].includes(String(row?.crewCompositionMode || '').toUpperCase())
+                    ? String(row?.crewCompositionMode || '').toUpperCase()
+                    : 'STANDARD') as StandardMissionProfile['crewCompositionMode'],
+                selectedCrewCompositionId: String(row?.selectedCrewCompositionId || '').trim(),
+                acceptableCrewCompositionIds: Array.isArray(row?.acceptableCrewCompositionIds)
+                    ? row.acceptableCrewCompositionIds.map((value: any) => String(value || '').trim()).filter(Boolean)
+                    : [],
+                roleRequirements: Array.isArray(row?.roleRequirements)
+                    ? row.roleRequirements.map((roleRow: any) => ({
+                        role: String(roleRow?.role || '').trim(),
+                        count: Math.max(1, Math.floor(Number(roleRow?.count) || 1)),
+                    })).filter((roleRow: any) => roleRow.role)
+                    : [],
+                defaultCallsignPrefix: String(row?.defaultCallsignPrefix || '').trim(),
+            }))
+            .filter((profile: StandardMissionProfile) => {
+                const key = profile.compositeProfileId || profile.id;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            })
+            .sort((left, right) => (
+                left.unitCode.localeCompare(right.unitCode)
+                || left.aircraftTypeCode.localeCompare(right.aircraftTypeCode)
+                || left.missionName.localeCompare(right.missionName)
+            ));
+    }, [activeContextUnitCodes, activeUnitCode, platformConfig, school]);
     const activeStaffQualificationCatalogue = useMemo(() => {
         const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
             String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
@@ -23292,6 +23363,43 @@ const App: React.FC = () => {
             });
         }, 900);
     }, []);
+    const handleSaveStandardMissionProfileFromPlanner = useCallback((profileId: string, changes: Partial<StandardMissionProfile>) => {
+        const targetId = String(profileId || '').trim();
+        if (!targetId) return;
+        setPlatformConfig((prev) => {
+            if (!prev) return prev;
+            const activeOrganisation = (prev.organisations || []).find((organisation: any) => (
+                String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
+            )) || prev.organisations?.[0];
+            if (!activeOrganisation) return prev;
+            const nextConfig = {
+                ...prev,
+                organisations: (prev.organisations || []).map((organisation: any) => {
+                    if (organisation !== activeOrganisation) return organisation;
+                    const source = organisation.settings?.standardMissionProfiles;
+                    const rows = Array.isArray(source?.profiles) ? source.profiles : Array.isArray(source) ? source : [];
+                    const targetRow = rows.find((row: any, index: number) => String(row?.id || `standard-mission-${index + 1}`) === targetId);
+                    const targetCompositeProfileId = String(targetRow?.compositeProfileId || '').trim();
+                    return {
+                        ...organisation,
+                        settings: {
+                            ...(organisation.settings || {}),
+                            standardMissionProfiles: {
+                                profiles: rows.map((row: any, index: number) => {
+                                    const rowId = String(row?.id || `standard-mission-${index + 1}`);
+                                    const rowCompositeProfileId = String(row?.compositeProfileId || '').trim();
+                                    const isSameCompositeGroup = targetCompositeProfileId && rowCompositeProfileId === targetCompositeProfileId;
+                                    return rowId === targetId || isSameCompositeGroup ? { ...row, ...changes } : row;
+                                }),
+                            },
+                        },
+                    };
+                }),
+            };
+            savePlatformConfigDebounced(nextConfig);
+            return nextConfig;
+        });
+    }, [savePlatformConfigDebounced]);
     const handleUpdateActiveTrainingReportPhraseBank = useCallback((newBank: PhraseBank) => {
         const unitCode = String(activeTrainingReportUnitCode || '').trim();
         if (!unitCode || unitCode.includes('+')) {
@@ -36553,6 +36661,8 @@ appliedUpdates.forEach(update => {
                     crewPositionTerminology={activeCrewPositionTerminology}
                     crewCompositionSettings={activeCrewCompositionSettings}
                     standardMissionCrewOptions={activeStandardMissionCrewOptions}
+                    standardMissionProfiles={activeStandardMissionProfiles}
+                    onSaveStandardMissionProfile={handleSaveStandardMissionProfileFromPlanner}
                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     unitCallsignSettings={activeUnitCallsignSettings}

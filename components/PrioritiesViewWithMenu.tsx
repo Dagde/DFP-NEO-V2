@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import { PrioritiesView } from './PrioritiesView';
 import AuditButton from './AuditButton';
-import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest, FlyingWindowExclusionPeriod } from '../types';
+import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest, FlyingWindowExclusionPeriod, StandardMissionProfile } from '../types';
 import { InstructorPriorityConfig } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
@@ -95,6 +95,8 @@ interface PrioritiesViewWithMenuProps {
   crewPositionTerminology?: CrewPositionTerminology;
   crewCompositionSettings?: CrewCompositionSettings;
   standardMissionCrewOptions?: string[];
+  standardMissionProfiles?: StandardMissionProfile[];
+  onSaveStandardMissionProfile?: (profileId: string, changes: Partial<StandardMissionProfile>) => void;
   unitCallsignSettings?: UnitCallsignSettings;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
 }

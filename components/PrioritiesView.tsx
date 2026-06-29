@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { TrashIcon } from '@heroicons/react/24/outline';
-import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest, FlyingWindowExclusionPeriod, FlyingWindowExclusionRestriction, CrewRequirement } from '../types';
+import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest, FlyingWindowExclusionPeriod, FlyingWindowExclusionRestriction, CrewRequirement, StandardMissionProfile } from '../types';
 import UnavailabilitiesWindow from './UnavailabilitiesWindow';
 import AuditButton from './AuditButton';
 import CrewRequirementEditor, { type CrewRequirementPreset } from './CrewRequirementEditor';
@@ -270,6 +270,8 @@ interface PrioritiesViewProps {
   crewPositionTerminology?: CrewPositionTerminology;
   crewCompositionSettings?: CrewCompositionSettings;
   standardMissionCrewOptions?: string[];
+  standardMissionProfiles?: StandardMissionProfile[];
+  onSaveStandardMissionProfile?: (profileId: string, changes: Partial<StandardMissionProfile>) => void;
   unitCallsignSettings?: UnitCallsignSettings;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
@@ -1036,6 +1038,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   crewPositionTerminology,
   crewCompositionSettings,
   standardMissionCrewOptions = [],
+  standardMissionProfiles = [],
+  onSaveStandardMissionProfile,
   unitCallsignSettings,
   staffQualificationCatalogue,
 }) => {
@@ -1080,6 +1084,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const isFixedCrewModel = String(operationalModel || '').trim().toLowerCase() === 'fixed_crew';
   const defaultTaskingDuration = isFixedCrewModel ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS : 1;
   const defaultCurrencyDuration = isFixedCrewModel ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : 1.2;
+  const [openStandardMissionIds, setOpenStandardMissionIds] = useState<Set<string>>(new Set());
+  const [editingStandardMissionId, setEditingStandardMissionId] = useState<string | null>(null);
+  const [pendingStandardMissionSaveId, setPendingStandardMissionSaveId] = useState<string | null>(null);
+  const [standardMissionDrafts, setStandardMissionDrafts] = useState<Record<string, Partial<StandardMissionProfile>>>({});
+  const [temporaryStandardMissionOverrides, setTemporaryStandardMissionOverrides] = useState<Record<string, Partial<StandardMissionProfile>>>({});
   const priorityAllocationModel: PriorityAllocationModel = isAirCombatModel ? 'air_combat' : isFixedCrewModel ? 'fixed_crew' : 'flight_school';
   const normalisedAirCombatWeights = useMemo(
     () => normaliseAirCombatSchedulingWeights(airCombatSchedulingWeights),
@@ -1154,6 +1163,108 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       ...alternatePresets,
     ];
   }, [activeUnitCode, activeUnitCodeSet, aircraftCrewComposition, aircraftTypeCode, crewCompositionSettings, crewPositionTerminology, operationalModel, school]);
+
+  useEffect(() => {
+    setTemporaryStandardMissionOverrides({});
+    setPendingStandardMissionSaveId(null);
+  }, [buildDfpDate]);
+
+  const displayedStandardMissionProfiles = useMemo(() => (
+    standardMissionProfiles
+      .filter(profile => String(profile.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+      .map(profile => ({ ...profile, ...(temporaryStandardMissionOverrides[profile.id] || {}) }))
+      .sort((left, right) => (
+        String(left.unitCode || '').localeCompare(String(right.unitCode || ''))
+        || String(left.aircraftTypeCode || '').localeCompare(String(right.aircraftTypeCode || ''))
+        || String(left.missionName || '').localeCompare(String(right.missionName || ''))
+      ))
+  ), [standardMissionProfiles, temporaryStandardMissionOverrides]);
+
+  useEffect(() => {
+    const validIds = new Set(standardMissionProfiles.map(profile => profile.id));
+    setOpenStandardMissionIds(prev => new Set(Array.from(prev).filter(id => validIds.has(id))));
+    setStandardMissionDrafts(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => validIds.has(id))));
+    setTemporaryStandardMissionOverrides(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => validIds.has(id))));
+    setEditingStandardMissionId(prev => (prev && validIds.has(prev) ? prev : null));
+    setPendingStandardMissionSaveId(prev => (prev && validIds.has(prev) ? prev : null));
+  }, [standardMissionProfiles]);
+
+  const formatMissionMinutes = (minutes?: number): string => {
+    const safeMinutes = Math.max(0, Math.floor(Number(minutes) || 0));
+    const hours = Math.floor(safeMinutes / 60);
+    const mins = safeMinutes % 60;
+    if (hours && mins) return `${hours}h ${mins}m`;
+    if (hours) return `${hours}h`;
+    return `${mins}m`;
+  };
+
+  const getStandardMissionDraftValue = <K extends keyof StandardMissionProfile>(
+    profile: StandardMissionProfile,
+    field: K,
+  ): StandardMissionProfile[K] => (
+    standardMissionDrafts[profile.id]?.[field] ?? profile[field]
+  ) as StandardMissionProfile[K];
+
+  const updateStandardMissionDraft = (profileId: string, changes: Partial<StandardMissionProfile>) => {
+    setStandardMissionDrafts(prev => ({
+      ...prev,
+      [profileId]: {
+        ...(prev[profileId] || {}),
+        ...changes,
+      },
+    }));
+    setPendingStandardMissionSaveId(null);
+  };
+
+  const beginStandardMissionEdit = (profile: StandardMissionProfile) => {
+    setOpenStandardMissionIds(prev => new Set(prev).add(profile.id));
+    setEditingStandardMissionId(profile.id);
+    setPendingStandardMissionSaveId(null);
+    setStandardMissionDrafts(prev => ({
+      ...prev,
+      [profile.id]: { ...(temporaryStandardMissionOverrides[profile.id] || {}) },
+    }));
+  };
+
+  const cancelStandardMissionEdit = (profileId: string) => {
+    setEditingStandardMissionId(null);
+    setPendingStandardMissionSaveId(null);
+    setStandardMissionDrafts(prev => {
+      const next = { ...prev };
+      delete next[profileId];
+      return next;
+    });
+  };
+
+  const commitStandardMissionDraft = (profile: StandardMissionProfile, permanent: boolean) => {
+    const changes = standardMissionDrafts[profile.id] || {};
+    if (permanent) {
+      onSaveStandardMissionProfile?.(profile.id, changes);
+      setTemporaryStandardMissionOverrides(prev => {
+        const next = { ...prev };
+        delete next[profile.id];
+        return next;
+      });
+    } else {
+      setTemporaryStandardMissionOverrides(prev => ({
+        ...prev,
+        [profile.id]: {
+          ...(prev[profile.id] || {}),
+          ...changes,
+        },
+      }));
+    }
+    cancelStandardMissionEdit(profile.id);
+  };
+
+  const toggleStandardMissionOpen = (profileId: string) => {
+    setOpenStandardMissionIds(prev => {
+      const next = new Set(prev);
+      if (next.has(profileId)) next.delete(profileId);
+      else next.add(profileId);
+      return next;
+    });
+  };
   const activeCallsignUnitCodes = useMemo(() => {
     const contextCodes = Array.from(activeUnitCodeSet);
     if (contextCodes.length > 0) return contextCodes;
@@ -3369,6 +3480,249 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     remedial: 'bg-amber-900 text-amber-50',
   };
 
+  const renderStandardMissionTile = (
+    label: string,
+    value: React.ReactNode,
+    className = '',
+  ) => (
+    <div className={`min-h-[104px] rounded-lg border border-slate-700 bg-slate-950/80 p-3 ${className}`}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">{label}</p>
+      <div className="mt-3 text-sm font-semibold text-slate-100">{value}</div>
+    </div>
+  );
+
+  const renderStandardMissionInput = (
+    value: string,
+    onChange: (value: string) => void,
+    placeholder = '',
+  ) => (
+    <input
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      onKeyDown={event => event.stopPropagation()}
+      placeholder={placeholder}
+      className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400"
+    />
+  );
+
+  const renderStandardMissionNumberInput = (
+    value: number,
+    onChange: (value: number) => void,
+    min = 0,
+  ) => (
+    <input
+      type="number"
+      min={min}
+      value={Number.isFinite(value) ? value : min}
+      onChange={(event) => onChange(Math.max(min, Math.floor(Number(event.target.value) || min)))}
+      onKeyDown={event => event.stopPropagation()}
+      className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400"
+    />
+  );
+
+  const renderSavedSpecialEvents = () => {
+    if (displayedStandardMissionProfiles.length === 0) {
+      return (
+        <div className="mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
+          No saved standard missions for this unit context.
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4 space-y-3">
+        {displayedStandardMissionProfiles.map((profile) => {
+          const isOpen = openStandardMissionIds.has(profile.id);
+          const isEditing = editingStandardMissionId === profile.id;
+          const unitLabel = profile.unitCode || profile.compositeUnitCode || activeUnitCode || 'Unit';
+          const missionName = String(getStandardMissionDraftValue(profile, 'missionName') || '').trim();
+          const shortTitle = String(getStandardMissionDraftValue(profile, 'shortTitle') || '').trim();
+          const resourceType = getStandardMissionDraftValue(profile, 'resourceType');
+          const departureLocationCode = String(getStandardMissionDraftValue(profile, 'departureLocationCode') || '').trim().toUpperCase();
+          const arrivalLocationCode = String(getStandardMissionDraftValue(profile, 'arrivalLocationCode') || '').trim().toUpperCase();
+          const durationMinutes = Number(getStandardMissionDraftValue(profile, 'durationMinutes')) || 0;
+          const preFlightMinutes = Number(getStandardMissionDraftValue(profile, 'preFlightMinutes')) || 0;
+          const postFlightMinutes = Number(getStandardMissionDraftValue(profile, 'postFlightMinutes')) || 0;
+          const config = String(getStandardMissionDraftValue(profile, 'config') || 'ANY').trim() || 'ANY';
+          const formationAircraft = Number(getStandardMissionDraftValue(profile, 'formationAircraft')) || 1;
+          const isFormation = Boolean(getStandardMissionDraftValue(profile, 'isFormation'));
+          const crewMode = String(getStandardMissionDraftValue(profile, 'crewCompositionMode') || 'STANDARD');
+          const callsignPrefix = String(getStandardMissionDraftValue(profile, 'defaultCallsignPrefix') || '').trim();
+
+          return (
+            <div key={profile.id} className="rounded-lg border border-slate-700 bg-slate-950/55">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => toggleStandardMissionOpen(profile.id)}
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-400/30 bg-cyan-500/10 text-xs font-bold text-cyan-200">
+                    {isOpen ? 'v' : '>'}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-slate-100">{missionName || 'Unnamed Standard Mission'}</span>
+                    <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/70">{unitLabel}</span>
+                  </span>
+                </button>
+                <div className="flex items-center gap-2">
+                  {temporaryStandardMissionOverrides[profile.id] && (
+                    <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200">
+                      Today only
+                    </span>
+                  )}
+                  {isEditing ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setPendingStandardMissionSaveId(profile.id)}
+                        className="rounded-md border border-emerald-400/50 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/25"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => cancelStandardMissionEdit(profile.id)}
+                        className="rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => beginStandardMissionEdit(profile)}
+                      className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {isOpen && (
+                <div className="border-t border-slate-800 px-4 pb-4 pt-3">
+                  {pendingStandardMissionSaveId === profile.id && (
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3">
+                      <p className="text-sm font-semibold text-amber-100">Save these Standard Mission changes permanently, or today only?</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => commitStandardMissionDraft(profile, true)}
+                          className="rounded-md border border-emerald-400/50 bg-emerald-500/20 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/30"
+                        >
+                          Permanent
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => commitStandardMissionDraft(profile, false)}
+                          className="rounded-md border border-cyan-400/50 bg-cyan-500/15 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/25"
+                        >
+                          Today Only
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    {renderStandardMissionTile('Mission', isEditing ? (
+                      <div className="space-y-2">
+                        {renderStandardMissionInput(missionName, value => updateStandardMissionDraft(profile.id, { missionName: value }), 'Mission name')}
+                        {renderStandardMissionInput(shortTitle, value => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), 'Short title')}
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="block">{missionName || 'Unnamed Standard Mission'}</span>
+                        <span className="mt-1 block text-xs text-cyan-200/70">{shortTitle || 'No short title'}</span>
+                      </div>
+                    ))}
+                    {renderStandardMissionTile('Unit / Aircraft', (
+                      <div>
+                        <span className="block">{unitLabel}</span>
+                        <span className="mt-1 block text-xs text-slate-400">{profile.aircraftTypeCode || aircraftTypeCode || 'Aircraft'}</span>
+                      </div>
+                    ))}
+                    {renderStandardMissionTile('Type / CONFIG', isEditing ? (
+                      <div className="space-y-2">
+                        <select
+                          value={resourceType}
+                          onChange={event => updateStandardMissionDraft(profile.id, { resourceType: event.target.value as StandardMissionProfile['resourceType'] })}
+                          className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400"
+                        >
+                          {['Flight', 'FTD', 'CPT', 'Ground'].map(option => <option key={option} value={option}>{option}</option>)}
+                        </select>
+                        {renderStandardMissionInput(config, value => updateStandardMissionDraft(profile.id, { config: value.toUpperCase() }), 'CONFIG')}
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="block">{resourceType}</span>
+                        <span className="mt-1 block text-xs text-slate-400">{config}</span>
+                      </div>
+                    ))}
+                    {renderStandardMissionTile('Route', isEditing ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {renderStandardMissionInput(departureLocationCode, value => updateStandardMissionDraft(profile.id, { departureLocationCode: value.toUpperCase() }), 'DEP')}
+                        {renderStandardMissionInput(arrivalLocationCode, value => updateStandardMissionDraft(profile.id, { arrivalLocationCode: value.toUpperCase() }), 'ARR')}
+                      </div>
+                    ) : `${departureLocationCode || '-'} -> ${arrivalLocationCode || '-'}`)}
+                    {renderStandardMissionTile('Duration', isEditing ? (
+                      renderStandardMissionNumberInput(durationMinutes, value => updateStandardMissionDraft(profile.id, { durationMinutes: value }))
+                    ) : formatMissionMinutes(durationMinutes))}
+                    {renderStandardMissionTile('Pre / Post', isEditing ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {renderStandardMissionNumberInput(preFlightMinutes, value => updateStandardMissionDraft(profile.id, { preFlightMinutes: value }))}
+                        {renderStandardMissionNumberInput(postFlightMinutes, value => updateStandardMissionDraft(profile.id, { postFlightMinutes: value }))}
+                      </div>
+                    ) : `${formatMissionMinutes(preFlightMinutes)} / ${formatMissionMinutes(postFlightMinutes)}`)}
+                    {renderStandardMissionTile('Crew / Formation', isEditing ? (
+                      <div className="space-y-2">
+                        <select
+                          value={crewMode}
+                          onChange={event => updateStandardMissionDraft(profile.id, { crewCompositionMode: event.target.value as StandardMissionProfile['crewCompositionMode'] })}
+                          className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400"
+                        >
+                          <option value="STANDARD">Standard Crew</option>
+                          <option value="ALTERNATE">Alternate Crew</option>
+                          <option value="CUSTOM">Custom Crew</option>
+                        </select>
+                        <label className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                          <input
+                            type="checkbox"
+                            checked={isFormation}
+                            onChange={event => updateStandardMissionDraft(profile.id, { isFormation: event.target.checked })}
+                          />
+                          Formation
+                        </label>
+                        {renderStandardMissionNumberInput(formationAircraft, value => updateStandardMissionDraft(profile.id, { formationAircraft: value }), 1)}
+                      </div>
+                    ) : `${crewMode.replace('_', ' ')} / ${isFormation ? `${formationAircraft} aircraft` : 'Single aircraft'}`)}
+                    {renderStandardMissionTile('Callsign / Notes', isEditing ? (
+                      <div className="space-y-2">
+                        {renderStandardMissionInput(callsignPrefix, value => updateStandardMissionDraft(profile.id, { defaultCallsignPrefix: value }), 'Callsign')}
+                        <textarea
+                          value={String(getStandardMissionDraftValue(profile, 'description') || '')}
+                          onChange={event => updateStandardMissionDraft(profile.id, { description: event.target.value })}
+                          onKeyDown={event => event.stopPropagation()}
+                          className="h-16 w-full resize-none rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-xs font-semibold text-slate-100 outline-none focus:border-cyan-400"
+                          placeholder="Description"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="block">{callsignPrefix || 'No callsign prefix'}</span>
+                        <span className="mt-1 line-clamp-2 block text-xs text-slate-400">{profile.description || 'No description'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const PriorityEventTable: React.FC<{ events: ScheduleEvent[] }> = ({ events }) => {
     const groupedEvents = {
       tasking: events.filter(event => getPriorityEventGroup(event) === 'tasking'),
@@ -4231,9 +4585,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
         <div className="saved-special-events-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <h2 className="text-xl font-semibold text-sky-400">Saved Special Events</h2>
-            <div className="mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
-                No saved special events.
-            </div>
+            {renderSavedSpecialEvents()}
         </div>
 
         {!isFixedCrewModel && <div className="rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
