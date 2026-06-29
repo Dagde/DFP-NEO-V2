@@ -250,6 +250,7 @@ export interface AirCombatTrainingReport {
   dcoResult?: '' | 'DCO' | 'DPCO' | 'DNCO';
   notes?: string;
   status?: 'Draft' | 'Complete';
+  dashboardAcknowledgedAt?: string;
   createdAt: string;
   createdBy?: string;
   updatedAt?: string;
@@ -418,6 +419,7 @@ export interface SyllabusItemDetail {
   resourceNumber?: number;
   acceptableAircraftConfigs?: string[];
   assessedElements?: string[];
+  assessmentRequired?: boolean;
   notes?: string;
   resourcesHuman: string[];
   crewRequirement?: CrewRequirement;

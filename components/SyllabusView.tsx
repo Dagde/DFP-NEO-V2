@@ -147,7 +147,10 @@ const AssessedElementsWindow: React.FC<{
     isEditing: boolean;
     onChange: (elements: string[]) => void;
     onAddElement?: () => void;
-}> = ({ selectedElements, availableElements, isEditing, onChange, onAddElement }) => {
+    showAssessmentRequired?: boolean;
+    assessmentRequired?: boolean;
+    onAssessmentRequiredChange?: (required: boolean) => void;
+}> = ({ selectedElements, availableElements, isEditing, onChange, onAddElement, showAssessmentRequired = false, assessmentRequired = false, onAssessmentRequiredChange }) => {
     const selected = normaliseAssessedElements(selectedElements, availableElements);
     const selectedSet = new Set(selected.map(item => item.toLowerCase()));
     const toggle = (element: string) => {
@@ -165,7 +168,20 @@ const AssessedElementsWindow: React.FC<{
                 {isEditing ? (
                     <>
                         <div className="mb-3 flex items-center justify-between gap-3">
-                            <p className="text-xs text-gray-400">Select the Scoring Matrix elements that appear on this event's Training Report.</p>
+                            <div className="space-y-2">
+                                {showAssessmentRequired && (
+                                    <label className="flex cursor-pointer items-center gap-2 rounded border border-amber-500/30 bg-amber-950/20 px-3 py-2 text-xs font-semibold text-amber-100">
+                                        <input
+                                            type="checkbox"
+                                            checked={!!assessmentRequired}
+                                            onChange={(event) => onAssessmentRequiredChange?.(event.target.checked)}
+                                            className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-amber-500 focus:ring-amber-500"
+                                        />
+                                        <span>Assessment required</span>
+                                    </label>
+                                )}
+                                <p className="text-xs text-gray-400">Select the Scoring Matrix elements that appear on this event's Training Report.</p>
+                            </div>
                             {onAddElement && (
                                 <button type="button" onClick={onAddElement} className="shrink-0 rounded border border-sky-600 bg-sky-900/60 px-3 py-1.5 text-xs font-semibold text-sky-100 hover:bg-sky-800">
                                     Add Element
@@ -188,6 +204,11 @@ const AssessedElementsWindow: React.FC<{
                     </>
                 ) : (
                     <div className="flex flex-wrap gap-2">
+                        {showAssessmentRequired && assessmentRequired && (
+                            <span className="rounded border border-amber-500/50 bg-amber-950/50 px-2.5 py-1 text-xs font-semibold text-amber-100">
+                                Assessment required
+                            </span>
+                        )}
                         {selected.map(element => (
                             <span key={element} className="rounded border border-sky-700/50 bg-sky-950/50 px-2.5 py-1 text-xs font-semibold text-sky-100">
                                 {element}
@@ -825,6 +846,9 @@ const DetailView: React.FC<{
             isEditing={isEditing}
             onChange={(elements) => handleFieldChange('assessedElements', elements)}
             onAddElement={onAddScoringMatrixElement}
+            showAssessmentRequired={isAirCombatModel || isFixedCrewModel}
+            assessmentRequired={currentItem.assessmentRequired === true}
+            onAssessmentRequiredChange={(required) => handleFieldChange('assessmentRequired', required)}
         />
 
            <fieldset className="p-4 border border-gray-700 rounded-lg">

@@ -205,6 +205,7 @@ export const normaliseAirCombatTrainingReports = (preferences?: PersonnelPrefere
       dcoResult: ['DCO', 'DPCO', 'DNCO'].includes(report.dcoResult) ? report.dcoResult : '',
       notes: report.notes ? String(report.notes) : undefined,
       status: report.status === 'Complete' ? 'Complete' : 'Draft',
+      dashboardAcknowledgedAt: report.dashboardAcknowledgedAt ? String(report.dashboardAcknowledgedAt) : undefined,
       createdAt: String(report.createdAt || ''),
       createdBy: report.createdBy ? String(report.createdBy) : undefined,
       updatedAt: report.updatedAt ? String(report.updatedAt) : undefined,

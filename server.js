@@ -502,6 +502,7 @@ async function ensureSyllabusTablesExist(db) {
         "resourceNumber"       INTEGER NOT NULL DEFAULT 1,
         "acceptableAircraftConfigs" TEXT[] NOT NULL DEFAULT ARRAY['ANY']::text[],
         "assessedElements"     TEXT[] NOT NULL DEFAULT ARRAY['Airmanship','Preparation','Technique']::text[],
+        "assessmentRequired"   BOOLEAN NOT NULL DEFAULT false,
         "resourcesHuman"       TEXT[] NOT NULL DEFAULT '{}',
         "eventDetailsCommon"   TEXT[] NOT NULL DEFAULT '{}',
         "eventDetailsSortie"   TEXT[] NOT NULL DEFAULT '{}',
@@ -532,6 +533,7 @@ async function ensureSyllabusTablesExist(db) {
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "resourceNumber" INTEGER NOT NULL DEFAULT 1`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "acceptableAircraftConfigs" TEXT[] NOT NULL DEFAULT ARRAY['ANY']::text[]`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "assessedElements" TEXT[] NOT NULL DEFAULT ARRAY['Airmanship','Preparation','Technique']::text[]`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "assessmentRequired" BOOLEAN NOT NULL DEFAULT false`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "unit" TEXT`);
     await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "SyllabusItem_code_key" ON "SyllabusItem"("code")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusItem_sortOrder_idx" ON "SyllabusItem"("sortOrder")`);
@@ -4075,6 +4077,7 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
         resourceCount: item.resourceCount,
         acceptableAircraftConfigs: item.acceptableAircraftConfigs,
         assessedElements: item.assessedElements,
+        assessmentRequired: item.assessmentRequired === true,
         resourcesHuman: item.resourcesHuman,
         flightOrSimHours: item.flightOrSimHours,
         totalEventHours: item.totalEventHours,
@@ -6290,18 +6293,18 @@ app.post('/api/syllabus', async (req, res) => {
     await db.$executeRawUnsafe(`
       INSERT INTO "SyllabusItem" (
         "id","code","eventDescription","phase","module","type","sortieType","dayNight",
-        "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourceNumber","acceptableAircraftConfigs","assessedElements","resourcesHuman",
+        "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourceNumber","acceptableAircraftConfigs","assessedElements","assessmentRequired","resourcesHuman",
         "eventDetailsCommon","eventDetailsSortie","flightOrSimHours","totalEventHours","duration",
         "preFlightTime","postFlightTime","prerequisites","prerequisitesGround","prerequisitesFlying",
         "location","unit","sortOrder","lmpType","twrDiReqd","cctOnly","isRemedial","isActive","version",
         "notes","createdBy","createdAt","updatedAt"
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,
-        $9,$10,$11,$12,$13,$14,$15,$16,
-        $17,$18,$19,$20,$21,
-        $22,$23,$24,$25,$26,
-        $27,$28,$29,$30,$31,$32,$33,$34,$35,
-        $36,$37,NOW(),NOW()
+        $9,$10,$11,$12,$13,$14,$15,$16,$17,
+        $18,$19,$20,$21,$22,
+        $23,$24,$25,$26,$27,
+        $28,$29,$30,$31,$32,$33,$34,$35,$36,
+        $37,$38,NOW(),NOW()
       )`,
       id, finalCode, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
       itemData.sortieType || null, itemData.dayNight || 'Day',
@@ -6309,6 +6312,7 @@ app.post('/api/syllabus', async (req, res) => {
       itemData.resourcesPhysical || [], Math.max(0, Math.round(Number(itemData.resourceNumber ?? (itemData.resourcesPhysical?.length ? 1 : 0)) || 0)),
       Array.isArray(itemData.acceptableAircraftConfigs) && itemData.acceptableAircraftConfigs.length ? itemData.acceptableAircraftConfigs : ['ANY'],
       Array.isArray(itemData.assessedElements) && itemData.assessedElements.length ? itemData.assessedElements : ['Airmanship', 'Preparation', 'Technique'],
+      itemData.assessmentRequired === true,
       itemData.resourcesHuman || [],
       itemData.eventDetailsCommon || [], itemData.eventDetailsSortie || [],
       itemData.flightOrSimHours || 0, itemData.totalEventHours || 1, itemData.duration || 1,
@@ -6364,7 +6368,7 @@ app.put('/api/syllabus/:id', async (req, res) => {
     // Build SET clauses, casting array fields and boolean fields properly
     const ARRAY_FIELDS = ['courses','methodOfDelivery','methodOfAssessment','resourcesPhysical','acceptableAircraftConfigs','assessedElements','resourcesHuman',
                           'eventDetailsCommon','eventDetailsSortie','prerequisites','prerequisitesGround','prerequisitesFlying'];
-    const BOOL_FIELDS = ['isActive','isRemedial'];
+    const BOOL_FIELDS = ['isActive','isRemedial','assessmentRequired'];
     const INT_FIELDS = ['resourceNumber'];
 
     const setClauses = fields.map((f, i) => {

@@ -281,6 +281,7 @@ type AirCombatTrainingReportDraft = {
     assignment?: AirCombatTrainingAssignment;
     item?: SyllabusItemDetail;
     sourceEvent?: ScheduleEvent;
+    initialReport?: AirCombatTrainingReport;
 };
 
 type DfpMiniTimelineDragState = DfpMiniTimelineDragTarget & {
@@ -27210,19 +27211,20 @@ const App: React.FC = () => {
         );
     };
 
-    const generateAirCombatPostFlightDraftTrainingReport = async (
+    const generateAssessmentRequiredDraftTrainingReport = async (
         sourceEvent: ScheduleEvent,
-        dcoResult: 'DCO' | 'DPCO',
+        dcoResult: 'DCO',
     ) => {
-        if (normaliseOperationalModel(activeOperationalModel) !== 'air_combat') return;
+        const operationalModel = normaliseOperationalModel(activeOperationalModel);
+        if (operationalModel !== 'air_combat' && operationalModel !== 'fixed_crew') return;
 
-        const staffName = sourceEvent.pilot || sourceEvent.crew || '';
+        const staffName = sourceEvent.fixedCrewPic || sourceEvent.pilot || sourceEvent.instructor || sourceEvent.crew || '';
         const eventCode = String(sourceEvent.flightNumber || sourceEvent.eventCode || '').trim();
         if (!staffName || !eventCode) return;
 
         const staff = allInstructorsData.find(person => person.name === staffName);
         if (!staff) {
-            console.warn(`[PostFlight] Air Combat draft report skipped: staff not found for ${staffName}`);
+            console.warn(`[PostFlight] Training report skipped: staff not found for ${staffName}`);
             return;
         }
 
@@ -27232,7 +27234,11 @@ const App: React.FC = () => {
             (item.lmpType === 'Staff CAT' || item.lmpType === 'Master LMP' || !item.lmpType)
         ));
         if (!matchingItem) {
-            console.log(`[PostFlight] Air Combat draft report skipped: ${eventCode} is not a course/training package syllabus event`);
+            console.log(`[PostFlight] Training report skipped: ${eventCode} is not a course/training package syllabus event`);
+            return;
+        }
+        if (matchingItem.assessmentRequired !== true) {
+            console.log(`[PostFlight] Training report skipped: ${eventCode} does not have Assessment required selected`);
             return;
         }
 
@@ -27334,11 +27340,11 @@ const App: React.FC = () => {
             prev && 'idNumber' in prev && prev.idNumber === updatedStaff.idNumber ? updatedStaff : prev
         ));
         logAudit(
-            'Air Combat Training Reports',
+            'Training Reports',
             existingReport ? 'Edit' : 'Create',
             `${existingReport ? 'Updated' : 'Generated'} draft ${report.reportName} from post-flight ${dcoResult} for ${report.staffName} - Event: ${report.eventCode}`
         );
-        console.log(`[PostFlight] ✅ Air Combat draft training report ${existingReport ? 'updated' : 'generated'} for ${staff.name} — ${eventCode} (${dcoResult})`);
+        console.log(`[PostFlight] ✅ Draft training report ${existingReport ? 'updated' : 'generated'} for ${staff.name} — ${eventCode} (${dcoResult})`);
     };
 
     const handleViewLogbook = useCallback((person: Instructor | Trainee) => {
@@ -37020,9 +37026,23 @@ appliedUpdates.forEach(update => {
                 Object.values(publishedSchedules).forEach(scheduleEvents => {
                     allPublishedEvents.push(...scheduleEvents);
                 });
+                const dashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
+                const normaliseDashboardName = (value?: string | null) => String(value || '')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, ' ');
+                const pendingTrainingReports = allInstructorsData.flatMap(staff => (
+                    normaliseAirCombatTrainingReports(staff.preferences)
+                        .filter(report => (
+                            report.status !== 'Complete' &&
+                            !report.dashboardAcknowledgedAt &&
+                            normaliseDashboardName(report.staffName) === normaliseDashboardName(dashboardUserName)
+                        ))
+                        .map(report => ({ report, staff }))
+                ));
 
                 return <MyDashboard
-                            userName={sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName}
+                            userName={dashboardUserName}
                             userRank={sessionUser?.militaryRank || sessionUser?.role || 'FLTLT'}
                             events={eventsForDate.filter(e => e.instructor === currentUserName)}
                             onSelectEvent={handleOpenModal}
@@ -37032,6 +37052,30 @@ appliedUpdates.forEach(update => {
                             onSelectMySct={handleSelectMySct}
                             sctRequests={[...sctFlights, ...sctFtds]}
                             pt051Assessments={pt051Assessments}
+                            trainingReportsToComplete={pendingTrainingReports}
+                            onSelectTrainingReport={(entry) => {
+                                const sourceEvent = allPublishedEvents.find(event => (
+                                    event.id === entry.report.eventId ||
+                                    (
+                                        event.date === entry.report.date &&
+                                        String(event.flightNumber || event.eventCode || '').trim().toUpperCase() === String(entry.report.eventCode || '').trim().toUpperCase() &&
+                                        [event.fixedCrewPic, event.pilot, event.instructor, event.crew].some(name => normaliseDashboardName(name) === normaliseDashboardName(entry.report.staffName))
+                                    )
+                                ));
+                                const matchingItem = syllabusDetails.find(item => (
+                                    String(item.code || '').trim().toUpperCase() === String(entry.report.eventCode || '').trim().toUpperCase()
+                                ));
+                                const assignment = matchingItem
+                                    ? getAirCombatAssignmentFromItem(matchingItem, school, entry.staff.unit || activeUnitCode, currentUserName)
+                                    : undefined;
+                                setAirCombatTrainingReportDraft({
+                                    staff: entry.staff,
+                                    assignment,
+                                    item: matchingItem,
+                                    sourceEvent,
+                                    initialReport: entry.report,
+                                });
+                            }}
                             onSelectPt051={(assessment) => {
                                 console.log('🔍 Dashboard PT-051 clicked:', assessment);
                                 console.log('Looking for event ID:', assessment.eventId);
@@ -38029,14 +38073,14 @@ appliedUpdates.forEach(update => {
 
                                     // ── End DCO-based EventCompletion tracking ──────────────────────────
 
-                                    if (eventForPostFlight && (data.result === 'DCO' || data.result === 'DPCO')) {
+                                    if (eventForPostFlight && data.result === 'DCO') {
                                         try {
-                                            await generateAirCombatPostFlightDraftTrainingReport(
+                                            await generateAssessmentRequiredDraftTrainingReport(
                                                 eventForPostFlight,
-                                                data.result as 'DCO' | 'DPCO'
+                                                data.result as 'DCO'
                                             );
                                         } catch (airCombatReportErr) {
-                                            console.warn('[PostFlight] Air Combat draft training report generation failed:', airCombatReportErr);
+                                            console.warn('[PostFlight] Assessment-required draft training report generation failed:', airCombatReportErr);
                                         }
                                     }
 
@@ -38984,7 +39028,7 @@ appliedUpdates.forEach(update => {
 
                         handleNavigation('PT051');
                     }}
-                    onOpenTrainingReport={normaliseOperationalModel(activeOperationalModel) === 'air_combat'
+                    onOpenTrainingReport={['air_combat', 'fixed_crew'].includes(normaliseOperationalModel(activeOperationalModel))
                         ? handleOpenAirCombatTrainingReportFromFlightDetails
                         : undefined}
                     onOpenAuth={(e) => {
@@ -39504,6 +39548,7 @@ appliedUpdates.forEach(update => {
                 assignment={airCombatTrainingReportDraft.assignment}
                 item={airCombatTrainingReportDraft.item}
                 sourceEvent={airCombatTrainingReportDraft.sourceEvent}
+                initialReport={airCombatTrainingReportDraft.initialReport}
                 reportName={getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode).displayName}
                 trainingReportTemplate={getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode)}
                 currentUserName={currentUserName}

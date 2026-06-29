@@ -4290,6 +4290,7 @@ const normaliseAirCombatTrainingReports = (preferences) => {
     dcoResult: ["DCO", "DPCO", "DNCO"].includes(report.dcoResult) ? report.dcoResult : "",
     notes: report.notes ? String(report.notes) : void 0,
     status: report.status === "Complete" ? "Complete" : "Draft",
+    dashboardAcknowledgedAt: report.dashboardAcknowledgedAt ? String(report.dashboardAcknowledgedAt) : void 0,
     createdAt: String(report.createdAt || ""),
     createdBy: report.createdBy ? String(report.createdBy) : void 0,
     updatedAt: report.updatedAt ? String(report.updatedAt) : void 0,
@@ -19544,13 +19545,13 @@ ${swapNote}` : swapNote
     return traineesData.find((t) => t.fullName === traineeFullName) || null;
   }, [event.flightType, event.student, event.pilot, traineesData]);
   const trainingReportStaffObject = reactExports.useMemo(() => {
-    const candidateNames = [event.pilot, event.crew, event.instructor].map((name) => String(name || "").trim()).filter(Boolean);
+    const candidateNames = [event.fixedCrewPic, event.pilot, event.crew, event.instructor].map((name) => String(name || "").trim()).filter(Boolean);
     for (const candidateName of candidateNames) {
       const staff = instructorsData.find((instructor) => instructor.name === candidateName);
       if (staff) return staff;
     }
     return null;
-  }, [event.crew, event.instructor, event.pilot, instructorsData]);
+  }, [event.crew, event.fixedCrewPic, event.instructor, event.pilot, instructorsData]);
   const handleSyllabusFocus = () => {
     if (isOracleContext && !crew[0]?.student && !crew[0]?.instructor) {
       setSyllabusSelectionError(true);
@@ -25514,7 +25515,9 @@ const MyDashboard = ({
   onSelectMySct,
   sctRequests,
   pt051Assessments,
-  onSelectPt051
+  onSelectPt051,
+  trainingReportsToComplete = [],
+  onSelectTrainingReport
 }) => {
   const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
   const mySctRequests = sctRequests.filter((req) => req.name === userName.split(" ").reverse().join(", "));
@@ -25582,23 +25585,42 @@ const MyDashboard = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-amber-400 mb-4", children: "Reports to be completed" }),
-        incompletePt051s.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: incompletePt051s.map((assessment) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => onSelectPt051(assessment),
-            className: "w-full text-left",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: assessment.flightNumber }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: assessment.trainedFullName })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(assessment.date) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Pending" })
+        incompletePt051s.length > 0 || trainingReportsToComplete.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-2", children: [
+          incompletePt051s.map((assessment) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => onSelectPt051(assessment),
+              className: "w-full text-left",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: assessment.flightNumber }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: assessment.trainedFullName })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(assessment.date) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Pending" })
+                ] })
               ] })
-            ] })
-          }
-        ) }, assessment.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-4", children: "No pending reports." })
+            }
+          ) }, assessment.id)),
+          trainingReportsToComplete.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => onSelectTrainingReport?.(entry),
+              className: "w-full text-left",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: entry.report.eventCode }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: entry.report.staffName })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(entry.report.date) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Training Report" })
+                ] })
+              ] })
+            }
+          ) }, entry.report.id))
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-4", children: "No pending reports." })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
@@ -43074,7 +43096,7 @@ const API_BASE$1 = "/api";
 const CACHE_KEY = "dfp-syllabus-cache";
 const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
 const CACHE_TTL_MS = 30 * 60 * 1e3;
-const CACHE_VERSION = "12";
+const CACHE_VERSION = "13";
 const CACHE_VERSION_KEY = "dfp-syllabus-cache-version";
 function getCachedSyllabus() {
   try {
@@ -43122,7 +43144,8 @@ function populatePrerequisites$1(items) {
     const itemWithDefaults = {
       ...item,
       acceptableAircraftConfigs: Array.isArray(item.acceptableAircraftConfigs) && item.acceptableAircraftConfigs.length > 0 ? item.acceptableAircraftConfigs : ["ANY"],
-      assessedElements: Array.isArray(item.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : ["Airmanship", "Preparation", "Technique"]
+      assessedElements: Array.isArray(item.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : ["Airmanship", "Preparation", "Technique"],
+      assessmentRequired: item.assessmentRequired === true
     };
     const hasExplicitPrereqs = item.prerequisitesGround && item.prerequisitesGround.length > 0 || item.prerequisitesFlying && item.prerequisitesFlying.length > 0;
     if (hasExplicitPrereqs || item.lmpType === "Master LMP") {
@@ -43145,6 +43168,7 @@ function populatePrerequisites$1(items) {
     return {
       ...item,
       acceptableAircraftConfigs: itemWithDefaults.acceptableAircraftConfigs,
+      assessmentRequired: itemWithDefaults.assessmentRequired,
       prerequisitesGround,
       prerequisitesFlying,
       prerequisites: [...prerequisitesGround, ...prerequisitesFlying]
@@ -43340,7 +43364,7 @@ const normaliseAssessedElements = (elements, availableElements = []) => {
   const selected = source.map((item) => String(item || "").trim()).filter(Boolean).filter((item, index, arr) => arr.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index).filter((item) => available.size === 0 || available.has(item.toLowerCase()));
   return selected.length > 0 ? selected : DEFAULT_ASSESSED_ELEMENTS;
 };
-const AssessedElementsWindow = ({ selectedElements, availableElements, isEditing, onChange, onAddElement }) => {
+const AssessedElementsWindow = ({ selectedElements, availableElements, isEditing, onChange, onAddElement, showAssessmentRequired = false, assessmentRequired = false, onAssessmentRequiredChange }) => {
   const selected = normaliseAssessedElements(selectedElements, availableElements);
   const selectedSet = new Set(selected.map((item) => item.toLowerCase()));
   const toggle = (element) => {
@@ -43352,7 +43376,21 @@ const AssessedElementsWindow = ({ selectedElements, availableElements, isEditing
     /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Assessed Elements" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 rounded-lg bg-gray-900/45 p-3", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Select the Scoring Matrix elements that appear on this event's Training Report." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+          showAssessmentRequired && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded border border-amber-500/30 bg-amber-950/20 px-3 py-2 text-xs font-semibold text-amber-100", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: !!assessmentRequired,
+                onChange: (event) => onAssessmentRequiredChange?.(event.target.checked),
+                className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-amber-500 focus:ring-amber-500"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Assessment required" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Select the Scoring Matrix elements that appear on this event's Training Report." })
+        ] }),
         onAddElement && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onAddElement, className: "shrink-0 rounded border border-sky-600 bg-sky-900/60 px-3 py-1.5 text-xs font-semibold text-sky-100 hover:bg-sky-800", children: "Add Element" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: availableElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded border border-gray-700 bg-gray-950/70 px-3 py-2 text-xs text-gray-100 hover:border-sky-600/70", children: [
@@ -43367,7 +43405,10 @@ const AssessedElementsWindow = ({ selectedElements, availableElements, isEditing
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: element })
       ] }, element)) })
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: selected.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-sky-700/50 bg-sky-950/50 px-2.5 py-1 text-xs font-semibold text-sky-100", children: element }, element)) }) })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
+      showAssessmentRequired && assessmentRequired && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-500/50 bg-amber-950/50 px-2.5 py-1 text-xs font-semibold text-amber-100", children: "Assessment required" }),
+      selected.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-sky-700/50 bg-sky-950/50 px-2.5 py-1 text-xs font-semibold text-sky-100", children: element }, element))
+    ] }) })
   ] });
 };
 const getAirCombatLinkedEventCode$1 = (item) => {
@@ -43981,7 +44022,10 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
         availableElements: scoringMatrixElements,
         isEditing,
         onChange: (elements) => handleFieldChange("assessedElements", elements),
-        onAddElement: onAddScoringMatrixElement
+        onAddElement: onAddScoringMatrixElement,
+        showAssessmentRequired: isAirCombatModel || isFixedCrewModel,
+        assessmentRequired: currentItem.assessmentRequired === true,
+        onAssessmentRequiredChange: (required) => handleFieldChange("assessmentRequired", required)
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
@@ -46266,6 +46310,7 @@ const AirCombatTrainingReportModal = ({
   assignment,
   item,
   sourceEvent,
+  initialReport,
   reportName = "PT-051",
   trainingReportTemplate = null,
   currentUserName = "",
@@ -46286,21 +46331,21 @@ const AirCombatTrainingReportModal = ({
     const label = gradeLabelMap.get(value) || `Grade ${value}`;
     return reportTemplate.grades.showNumbers ? `${value} - ${label}` : label;
   };
-  const eventCode2 = item?.code || sourceEvent?.flightNumber || "";
-  const eventDescription = item?.eventDescription || sourceEvent?.notes || item?.module || "";
-  const eventType = item?.type || sourceEvent?.type || "";
-  const defaultDate = sourceEvent?.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  const defaultStart = Number(sourceEvent?.startTime ?? 8);
-  const defaultDuration = Number(sourceEvent?.duration ?? item?.totalEventHours ?? item?.duration ?? item?.flightOrSimHours ?? 1);
-  const [date, setDate] = reactExports.useState(defaultDate);
-  const [instructorName, setInstructorName] = reactExports.useState(sourceEvent?.instructor || currentUserName || "");
-  const [overallGrade, setOverallGrade] = reactExports.useState("");
-  const [overallResult, setOverallResult] = reactExports.useState("");
-  const [dcoResult, setDcoResult] = reactExports.useState("");
-  const [notes, setNotes] = reactExports.useState("");
+  const eventCode2 = item?.code || sourceEvent?.flightNumber || initialReport?.eventCode || "";
+  const eventDescription = item?.eventDescription || sourceEvent?.notes || initialReport?.eventDescription || item?.module || "";
+  const eventType = item?.type || sourceEvent?.type || initialReport?.eventType || "";
+  const defaultDate = sourceEvent?.date || initialReport?.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  const defaultStart = Number(sourceEvent?.startTime ?? initialReport?.startTime ?? 8);
+  const defaultDuration = Number(sourceEvent?.duration ?? initialReport?.duration ?? item?.totalEventHours ?? item?.duration ?? item?.flightOrSimHours ?? 1);
+  const [date, setDate] = reactExports.useState(initialReport?.date || defaultDate);
+  const [instructorName, setInstructorName] = reactExports.useState(initialReport?.instructorName || sourceEvent?.instructor || currentUserName || "");
+  const [overallGrade, setOverallGrade] = reactExports.useState(initialReport?.overallGrade || "");
+  const [overallResult, setOverallResult] = reactExports.useState(initialReport?.overallResult || "");
+  const [dcoResult, setDcoResult] = reactExports.useState(initialReport?.dcoResult || "");
+  const [notes, setNotes] = reactExports.useState(initialReport?.notes || "");
   const [isSaving2, setIsSaving] = reactExports.useState(false);
   const [saveError, setSaveError] = reactExports.useState("");
-  const reportId = reactExports.useMemo(() => `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode2}-${Date.now()}`, [eventCode2, item?.id, sourceEvent?.id, staff.idNumber]);
+  const reportId = reactExports.useMemo(() => initialReport?.id || `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode2}-${Date.now()}`, [eventCode2, initialReport?.id, item?.id, sourceEvent?.id, staff.idNumber]);
   const detailCell = (label, value) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-white", children: value || "-" })
@@ -46436,16 +46481,17 @@ const AirCombatTrainingReportModal = ({
                 date,
                 startTime: defaultStart,
                 duration: defaultDuration,
-                resourceId: sourceEvent?.resourceId,
-                callsign: sourceEvent?.callsign || staff.callsign,
+                resourceId: sourceEvent?.resourceId || initialReport?.resourceId,
+                callsign: sourceEvent?.callsign || initialReport?.callsign || staff.callsign,
                 instructorName,
                 overallGrade,
                 overallResult,
                 dcoResult,
                 notes,
                 status: "Draft",
-                createdAt: now,
-                createdBy: currentUserName,
+                dashboardAcknowledgedAt: now,
+                createdAt: initialReport?.createdAt || now,
+                createdBy: initialReport?.createdBy || currentUserName,
                 updatedAt: now,
                 updatedBy: currentUserName
               });
@@ -94223,19 +94269,24 @@ ${error instanceof Error ? error.message : String(error)}`,
       `Created ${report.reportName} Air Combat training report for ${report.staffName} - Event: ${report.eventCode}`
     );
   };
-  const generateAirCombatPostFlightDraftTrainingReport = async (sourceEvent, dcoResult) => {
-    if (normaliseOperationalModel(activeOperationalModel) !== "air_combat") return;
-    const staffName = sourceEvent.pilot || sourceEvent.crew || "";
+  const generateAssessmentRequiredDraftTrainingReport = async (sourceEvent, dcoResult) => {
+    const operationalModel2 = normaliseOperationalModel(activeOperationalModel);
+    if (operationalModel2 !== "air_combat" && operationalModel2 !== "fixed_crew") return;
+    const staffName = sourceEvent.fixedCrewPic || sourceEvent.pilot || sourceEvent.instructor || sourceEvent.crew || "";
     const eventCode2 = String(sourceEvent.flightNumber || sourceEvent.eventCode || "").trim();
     if (!staffName || !eventCode2) return;
     const staff = allInstructorsData.find((person) => person.name === staffName);
     if (!staff) {
-      console.warn(`[PostFlight] Air Combat draft report skipped: staff not found for ${staffName}`);
+      console.warn(`[PostFlight] Training report skipped: staff not found for ${staffName}`);
       return;
     }
     const matchingItem = syllabusDetails.find((item) => item.isActive !== false && String(item.code || "").trim().toUpperCase() === eventCode2.toUpperCase() && (item.lmpType === "Staff CAT" || item.lmpType === "Master LMP" || !item.lmpType));
     if (!matchingItem) {
-      console.log(`[PostFlight] Air Combat draft report skipped: ${eventCode2} is not a course/training package syllabus event`);
+      console.log(`[PostFlight] Training report skipped: ${eventCode2} is not a course/training package syllabus event`);
+      return;
+    }
+    if (matchingItem.assessmentRequired !== true) {
+      console.log(`[PostFlight] Training report skipped: ${eventCode2} does not have Assessment required selected`);
       return;
     }
     const preferences = { ...staff.preferences || {} };
@@ -94315,11 +94366,11 @@ ${error instanceof Error ? error.message : String(error)}`,
     setInstructorsData((prev) => prev.map((person) => dbId ? person.id === dbId ? updatedStaff : person : person.idNumber === updatedStaff.idNumber ? updatedStaff : person));
     setSelectedPersonForProfile((prev) => prev && "idNumber" in prev && prev.idNumber === updatedStaff.idNumber ? updatedStaff : prev);
     logAudit(
-      "Air Combat Training Reports",
+      "Training Reports",
       existingReport ? "Edit" : "Create",
       `${existingReport ? "Updated" : "Generated"} draft ${report.reportName} from post-flight ${dcoResult} for ${report.staffName} - Event: ${report.eventCode}`
     );
-    console.log(`[PostFlight] ✅ Air Combat draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode2} (${dcoResult})`);
+    console.log(`[PostFlight] ✅ Draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode2} (${dcoResult})`);
   };
   const handleViewLogbook = reactExports.useCallback((person) => {
     setSelectedPersonForLogbook(person);
@@ -102256,10 +102307,13 @@ ${error instanceof Error ? error.message : String(error)}`,
         Object.values(publishedSchedules).forEach((scheduleEvents) => {
           allPublishedEvents.push(...scheduleEvents);
         });
+        const dashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
+        const normaliseDashboardName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+        const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && normaliseDashboardName(report.staffName) === normaliseDashboardName(dashboardUserName)).map((report) => ({ report, staff })));
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           MyDashboard,
           {
-            userName: sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName,
+            userName: dashboardUserName,
             userRank: sessionUser?.militaryRank || sessionUser?.role || "FLTLT",
             events: eventsForDate.filter((e) => e.instructor === currentUserName),
             onSelectEvent: handleOpenModal,
@@ -102269,6 +102323,19 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSelectMySct: handleSelectMySct,
             sctRequests: [...sctFlights, ...sctFtds],
             pt051Assessments,
+            trainingReportsToComplete: pendingTrainingReports,
+            onSelectTrainingReport: (entry) => {
+              const sourceEvent = allPublishedEvents.find((event) => event.id === entry.report.eventId || event.date === entry.report.date && String(event.flightNumber || event.eventCode || "").trim().toUpperCase() === String(entry.report.eventCode || "").trim().toUpperCase() && [event.fixedCrewPic, event.pilot, event.instructor, event.crew].some((name) => normaliseDashboardName(name) === normaliseDashboardName(entry.report.staffName)));
+              const matchingItem = syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === String(entry.report.eventCode || "").trim().toUpperCase());
+              const assignment = matchingItem ? getAirCombatAssignmentFromItem(matchingItem, school, entry.staff.unit || activeUnitCode, currentUserName) : void 0;
+              setAirCombatTrainingReportDraft({
+                staff: entry.staff,
+                assignment,
+                item: matchingItem,
+                sourceEvent,
+                initialReport: entry.report
+              });
+            },
             onSelectPt051: (assessment) => {
               console.log("🔍 Dashboard PT-051 clicked:", assessment);
               console.log("Looking for event ID:", assessment.eventId);
@@ -103177,14 +103244,14 @@ Do you want to replace the existing entry?`,
                     console.warn("[PostFlight] EventCompletion fetch threw:", ecErr);
                   }
                 }
-                if (eventForPostFlight && (data.result === "DCO" || data.result === "DPCO")) {
+                if (eventForPostFlight && data.result === "DCO") {
                   try {
-                    await generateAirCombatPostFlightDraftTrainingReport(
+                    await generateAssessmentRequiredDraftTrainingReport(
                       eventForPostFlight,
                       data.result
                     );
                   } catch (airCombatReportErr) {
-                    console.warn("[PostFlight] Air Combat draft training report generation failed:", airCombatReportErr);
+                    console.warn("[PostFlight] Assessment-required draft training report generation failed:", airCombatReportErr);
                   }
                 }
                 if (data.currencyUpdates && Object.keys(data.currencyUpdates).length > 0) {
@@ -104055,7 +104122,7 @@ Do you want to replace the existing entry?`,
             logAudit("Flight Detail", "View", `Viewed PT-051 for ${trainee.fullName} - Event: ${selectedEvent.flightNumber} (${selectedEvent.date})`);
             handleNavigation("PT051");
           },
-          onOpenTrainingReport: normaliseOperationalModel(activeOperationalModel) === "air_combat" ? handleOpenAirCombatTrainingReportFromFlightDetails : void 0,
+          onOpenTrainingReport: ["air_combat", "fixed_crew"].includes(normaliseOperationalModel(activeOperationalModel)) ? handleOpenAirCombatTrainingReportFromFlightDetails : void 0,
           onOpenAuth: (e) => {
             const latestEvent = events.find((ev) => ev.id === e.id) || e;
             setEventForAuth(latestEvent);
@@ -104541,6 +104608,7 @@ Do you want to replace the existing entry?`,
         assignment: airCombatTrainingReportDraft.assignment,
         item: airCombatTrainingReportDraft.item,
         sourceEvent: airCombatTrainingReportDraft.sourceEvent,
+        initialReport: airCombatTrainingReportDraft.initialReport,
         reportName: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode).displayName,
         trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode),
         currentUserName,

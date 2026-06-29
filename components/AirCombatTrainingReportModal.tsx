@@ -11,6 +11,7 @@ interface AirCombatTrainingReportModalProps {
   assignment?: AirCombatTrainingAssignment;
   item?: SyllabusItemDetail;
   sourceEvent?: ScheduleEvent;
+  initialReport?: AirCombatTrainingReport;
   reportName?: string;
   trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
   currentUserName?: string;
@@ -32,6 +33,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   assignment,
   item,
   sourceEvent,
+  initialReport,
   reportName = 'PT-051',
   trainingReportTemplate = null,
   currentUserName = '',
@@ -54,25 +56,25 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     const label = gradeLabelMap.get(value) || `Grade ${value}`;
     return reportTemplate.grades.showNumbers ? `${value} - ${label}` : label;
   };
-  const eventCode = item?.code || sourceEvent?.flightNumber || '';
-  const eventDescription = item?.eventDescription || sourceEvent?.notes || item?.module || '';
-  const eventType = item?.type || sourceEvent?.type || '';
-  const defaultDate = sourceEvent?.date || new Date().toISOString().slice(0, 10);
-  const defaultStart = Number(sourceEvent?.startTime ?? 8);
-  const defaultDuration = Number(sourceEvent?.duration ?? item?.totalEventHours ?? item?.duration ?? item?.flightOrSimHours ?? 1);
+  const eventCode = item?.code || sourceEvent?.flightNumber || initialReport?.eventCode || '';
+  const eventDescription = item?.eventDescription || sourceEvent?.notes || initialReport?.eventDescription || item?.module || '';
+  const eventType = item?.type || sourceEvent?.type || initialReport?.eventType || '';
+  const defaultDate = sourceEvent?.date || initialReport?.date || new Date().toISOString().slice(0, 10);
+  const defaultStart = Number(sourceEvent?.startTime ?? initialReport?.startTime ?? 8);
+  const defaultDuration = Number(sourceEvent?.duration ?? initialReport?.duration ?? item?.totalEventHours ?? item?.duration ?? item?.flightOrSimHours ?? 1);
 
-  const [date, setDate] = useState(defaultDate);
-  const [instructorName, setInstructorName] = useState(sourceEvent?.instructor || currentUserName || '');
-  const [overallGrade, setOverallGrade] = useState('');
-  const [overallResult, setOverallResult] = useState<'' | 'P' | 'F'>('');
-  const [dcoResult, setDcoResult] = useState<'' | 'DCO' | 'DPCO' | 'DNCO'>('');
-  const [notes, setNotes] = useState('');
+  const [date, setDate] = useState(initialReport?.date || defaultDate);
+  const [instructorName, setInstructorName] = useState(initialReport?.instructorName || sourceEvent?.instructor || currentUserName || '');
+  const [overallGrade, setOverallGrade] = useState(initialReport?.overallGrade || '');
+  const [overallResult, setOverallResult] = useState<'' | 'P' | 'F'>(initialReport?.overallResult || '');
+  const [dcoResult, setDcoResult] = useState<'' | 'DCO' | 'DPCO' | 'DNCO'>(initialReport?.dcoResult || '');
+  const [notes, setNotes] = useState(initialReport?.notes || '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
   const reportId = useMemo(() => (
-    `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode}-${Date.now()}`
-  ), [eventCode, item?.id, sourceEvent?.id, staff.idNumber]);
+    initialReport?.id || `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode}-${Date.now()}`
+  ), [eventCode, initialReport?.id, item?.id, sourceEvent?.id, staff.idNumber]);
 
   const detailCell = (label: string, value?: React.ReactNode) => (
     <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
@@ -206,16 +208,17 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                   date,
                   startTime: defaultStart,
                   duration: defaultDuration,
-                  resourceId: sourceEvent?.resourceId,
-                  callsign: sourceEvent?.callsign || staff.callsign,
+                  resourceId: sourceEvent?.resourceId || initialReport?.resourceId,
+                  callsign: sourceEvent?.callsign || initialReport?.callsign || staff.callsign,
                   instructorName,
                   overallGrade,
                   overallResult,
                   dcoResult,
                   notes,
                   status: 'Draft',
-                  createdAt: now,
-                  createdBy: currentUserName,
+                  dashboardAcknowledgedAt: now,
+                  createdAt: initialReport?.createdAt || now,
+                  createdBy: initialReport?.createdBy || currentUserName,
                   updatedAt: now,
                   updatedBy: currentUserName,
                 });

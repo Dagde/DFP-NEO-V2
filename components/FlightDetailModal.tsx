@@ -2409,7 +2409,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     }, [event.flightType, event.student, event.pilot, traineesData]);
 
     const trainingReportStaffObject = useMemo(() => {
-        const candidateNames = [event.pilot, event.crew, event.instructor]
+        const candidateNames = [event.fixedCrewPic, event.pilot, event.crew, event.instructor]
             .map(name => String(name || '').trim())
             .filter(Boolean);
         for (const candidateName of candidateNames) {
@@ -2417,7 +2417,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             if (staff) return staff;
         }
         return null;
-    }, [event.crew, event.instructor, event.pilot, instructorsData]);
+    }, [event.crew, event.fixedCrewPic, event.instructor, event.pilot, instructorsData]);
 
     const handleSyllabusFocus = () => {
         if (isOracleContext && !crew[0]?.student && !crew[0]?.instructor) {

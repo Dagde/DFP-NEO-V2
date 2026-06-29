@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ScheduleEvent, SctRequest, Pt051Assessment } from '../types';
+import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, Pt051Assessment } from '../types';
 import TafWeatherWidget from './TafWeatherWidget';
 
 interface MyDashboardProps {
@@ -14,6 +14,8 @@ interface MyDashboardProps {
     sctRequests: SctRequest[];
     pt051Assessments: Map<string, Pt051Assessment>;
     onSelectPt051: (assessment: Pt051Assessment) => void;
+    trainingReportsToComplete?: Array<{ report: AirCombatTrainingReport; staff: Instructor }>;
+    onSelectTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void;
 }
 
 const formatTime = (time: number) => {
@@ -47,7 +49,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     onSelectMySct, 
     sctRequests, 
     pt051Assessments, 
-    onSelectPt051 
+    onSelectPt051,
+    trainingReportsToComplete = [],
+    onSelectTrainingReport,
 }) => {
     const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
     
@@ -152,7 +156,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 {/* Reports to be completed */}
                 <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
                     <h2 className="text-xl font-semibold text-amber-400 mb-4">Reports to be completed</h2>
-                    {incompletePt051s.length > 0 ? (
+                    {incompletePt051s.length > 0 || trainingReportsToComplete.length > 0 ? (
                         <ul className="space-y-2">
                             {incompletePt051s.map(assessment => (
                                 <li key={assessment.id} className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors">
@@ -169,6 +173,27 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                 <p className="text-sm text-gray-300 font-mono">{formatDate(assessment.date)}</p>
                                                 <span className="inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300">
                                                     Pending
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </li>
+                            ))}
+                            {trainingReportsToComplete.map(entry => (
+                                <li key={entry.report.id} className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors">
+                                    <button
+                                        onClick={() => onSelectTrainingReport?.(entry)}
+                                        className="w-full text-left"
+                                    >
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <p className="font-semibold text-white">{entry.report.eventCode}</p>
+                                                <p className="text-sm text-gray-400">{entry.report.staffName}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm text-gray-300 font-mono">{formatDate(entry.report.date)}</p>
+                                                <span className="inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300">
+                                                    Training Report
                                                 </span>
                                             </div>
                                         </div>
