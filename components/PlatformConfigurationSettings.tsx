@@ -327,6 +327,151 @@ const createClientRecordId = (prefix: string): string => (
   `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 );
 
+const normaliseSeparationUnitCode = (value: unknown): string => (
+  String(value || '').trim().toUpperCase()
+);
+
+const parseCompositeUnitCodes = (value: unknown): string[] => Array.from(new Set(
+  String(value || '')
+    .split(/[+/,;&|]+/)
+    .map(normaliseSeparationUnitCode)
+    .filter(Boolean)
+));
+
+const getCompositeCoverageCodes = (profile: { unitCode?: string; compositeUnitCode?: string }): string[] => {
+  const compositeCodes = parseCompositeUnitCodes(profile.compositeUnitCode);
+  if (compositeCodes.length > 1) return compositeCodes;
+  const unitCodes = parseCompositeUnitCodes(profile.unitCode);
+  return unitCodes.length > 1 ? unitCodes : [];
+};
+
+const getCompositeUnitLabel = (profile: { unitCode?: string; compositeUnitCode?: string }, unitCodes: string[]): string => (
+  normaliseSeparationUnitCode(profile.compositeUnitCode)
+  || (unitCodes.length > 1 ? unitCodes.join('+') : '')
+);
+
+const cloneCompositeProfileForUnit = <T extends {
+  id: string;
+  unitCode?: string;
+  compositeUnitCode?: string;
+  compositeProfileId?: string;
+}>(profile: T, unitCode: string, compositeUnitCode: string, compositeProfileId: string, existingIds: Set<string>): T => {
+  const baseId = compositeProfileId || profile.id || createClientRecordId('composite-profile');
+  let id = `${baseId}-${unitCode.toLowerCase()}`;
+  if (existingIds.has(id)) id = `${id}-${Math.random().toString(36).slice(2, 6)}`;
+  existingIds.add(id);
+  return {
+    ...profile,
+    id,
+    unitCode,
+    compositeUnitCode,
+    compositeProfileId: baseId,
+  };
+};
+
+const ensureCompositeProfileUnitCoverage = <T extends {
+  id: string;
+  unitCode?: string;
+  compositeUnitCode?: string;
+  compositeProfileId?: string;
+}>(profiles: T[]): T[] => {
+  const next = profiles.map((profile) => {
+    const memberUnitCodes = getCompositeCoverageCodes(profile);
+    if (memberUnitCodes.length <= 1) return profile;
+    return {
+      ...profile,
+      compositeUnitCode: getCompositeUnitLabel(profile, memberUnitCodes),
+      compositeProfileId: profile.compositeProfileId || profile.id,
+    };
+  });
+  const existingIds = new Set(next.map((profile) => profile.id));
+  const clones: T[] = [];
+
+  next.forEach((profile) => {
+    const memberUnitCodes = getCompositeCoverageCodes(profile);
+    if (memberUnitCodes.length <= 1) return;
+    const compositeUnitCode = getCompositeUnitLabel(profile, memberUnitCodes);
+    const compositeProfileId = profile.compositeProfileId || profile.id;
+    const group = [...next, ...clones].filter((candidate) => (
+      candidate.compositeProfileId === compositeProfileId
+      || candidate.id === compositeProfileId
+    ));
+    memberUnitCodes.forEach((unitCode) => {
+      const hasUnitRecord = group.some((candidate) => (
+        normaliseSeparationUnitCode(candidate.unitCode) === unitCode
+      ));
+      if (hasUnitRecord) return;
+      clones.push(cloneCompositeProfileForUnit(profile, unitCode, compositeUnitCode, compositeProfileId, existingIds));
+    });
+  });
+
+  return clones.length > 0 ? [...next, ...clones] : next;
+};
+
+const buildSeparationReadyConfig = (source: PlatformConfig): PlatformConfig => {
+  const organisations = source.organisations.map((organisation, organisationIndex) => {
+    if (organisationIndex !== 0) return organisation;
+    const settings = organisation.settings || {};
+    const crewCompositionSettings = normaliseCrewCompositionSettings(settings.crewCompositionSettings || null);
+    const standardMissionProfiles = normaliseStandardMissionProfiles(settings.standardMissionProfiles || null);
+    const nextCrewCompositionSettings = normaliseCrewCompositionSettings({
+      alternateCompositions: ensureCompositeProfileUnitCoverage(crewCompositionSettings.alternateCompositions),
+      currencyProfiles: ensureCompositeProfileUnitCoverage(crewCompositionSettings.currencyProfiles),
+    });
+    const nextStandardMissionProfiles = normaliseStandardMissionProfiles({
+      profiles: ensureCompositeProfileUnitCoverage(standardMissionProfiles),
+    });
+    return {
+      ...organisation,
+      settings: {
+        ...settings,
+        crewCompositionSettings: nextCrewCompositionSettings,
+        standardMissionProfiles: { profiles: nextStandardMissionProfiles },
+      },
+    };
+  });
+  return { ...source, organisations };
+};
+
+const countMissingCompositeUnitProfileClones = (profiles: Array<{ unitCode?: string; compositeUnitCode?: string; compositeProfileId?: string }>): number => {
+  const countedGroups = new Set<string>();
+  return profiles.reduce((count, profile, index) => {
+    const memberUnitCodes = getCompositeCoverageCodes(profile);
+    if (memberUnitCodes.length <= 1) return count;
+    const compositeProfileId = profile.compositeProfileId || '';
+    const groupKey = compositeProfileId || `${normaliseSeparationUnitCode(profile.compositeUnitCode)}-${index}`;
+    if (countedGroups.has(groupKey)) return count;
+    countedGroups.add(groupKey);
+    const group = profiles.filter((candidate) => (
+      compositeProfileId
+        ? candidate.compositeProfileId === compositeProfileId
+        : normaliseSeparationUnitCode(candidate.compositeUnitCode) === normaliseSeparationUnitCode(profile.compositeUnitCode)
+    ));
+    const missing = memberUnitCodes.filter((unitCode) => !group.some((candidate) => (
+      normaliseSeparationUnitCode(candidate.unitCode) === unitCode
+    )));
+    return count + missing.length;
+  }, 0);
+};
+
+const getPendingCompositePlannerStorageKeys = (): string[] => {
+  try {
+    if (typeof localStorage === 'undefined') return [];
+    const keys: string[] = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index) || '';
+      if (key.startsWith('dfp_highest_priority_events_v1:') && /[+]/.test(key)) {
+        const raw = localStorage.getItem(key);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(parsed) && parsed.length > 0) keys.push(key);
+      }
+    }
+    return keys;
+  } catch {
+    return [];
+  }
+};
+
 const ACCREDITATION_STATUS_OPTIONS = [
   'Not started',
   'In preparation',
@@ -806,6 +951,9 @@ const buildConfigurationHealth = (
   const activeResourcePools = config.resourcePools.filter(isActiveRecord);
   const activeLicences = config.licenses.filter(isActiveRecord);
   const activeUserAccess = config.userAccess.filter(isActiveRecord);
+  const organisationSettings = config.organisations[0]?.settings || {};
+  const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
+  const standardMissionProfiles = normaliseStandardMissionProfiles(organisationSettings.standardMissionProfiles || null);
 
   const activeOrganisationCodes = new Set(activeOrganisations.map((org) => toIdentifier(org.code)));
   const activeLocationCodes = new Set(activeLocations.map((location) => toIdentifier(location.code)));
@@ -877,6 +1025,29 @@ const buildConfigurationHealth = (
     if (matchingPools.length === 0) {
       add('WARNING', 'Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource counts may fall back to legacy defaults until a matching pool is configured.', `unit-${unitCode}-pools`);
     }
+
+    const operationalModel = getUnitOperationalModel(unit);
+    if (operationalModel === 'fixed_crew') {
+      const unitRuntimePools = activeResourcePools.filter((pool) => (
+        toIdentifier(pool.unitCode) === unitCode &&
+        pool.settings?.applyToV2Runtime === true
+      ));
+      const sharedOrLocationRuntimePools = activeResourcePools.filter((pool) => (
+        toIdentifier(pool.locationCode) === locationCode &&
+        pool.settings?.applyToV2Runtime === true &&
+        (!toIdentifier(pool.unitCode) || String(pool.poolType || '').trim().toLowerCase() === 'shared')
+      ));
+      if (unitRuntimePools.length === 0 && sharedOrLocationRuntimePools.length > 0) {
+        add(
+          'WARNING',
+          'Unit Separation',
+          `${unitCode} will use shared resource capacity`,
+          `${unitCode} is a Fixed Crew unit without its own runtime resource pool. It can still schedule by falling back to shared/location capacity, but separated-unit builds may not reflect a dedicated unit allocation.`,
+          `unit-${unitCode}-separation-resource-pool`,
+          'Open Aircraft & Resource Pools and add or enable a unit-specific runtime pool if this unit needs independent aircraft, FTD or CPT capacity after separation.'
+        );
+      }
+    }
   });
 
   if (activeUnits.length > 0 && !items.some((item) => item.area === 'Units' && item.severity === 'CRITICAL')) {
@@ -912,6 +1083,35 @@ const buildConfigurationHealth = (
     add('WARNING', 'Resource Pools', 'No pool is wired to the live DFP', 'At least one resource pool should have "Apply to V2 runtime" enabled so the DFP uses platform configuration rather than legacy defaults.', 'runtime-pool-none');
   } else if (!items.some((item) => item.area === 'Resource Pools' && item.severity === 'CRITICAL')) {
     add('OK', 'Resource Pools', 'Runtime resource pools are configured', `${runtimePools.length} active resource pool${runtimePools.length === 1 ? '' : 's'} feed the live DFP runtime.`, 'runtime-pool-active');
+  }
+
+  const missingAlternateClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.alternateCompositions);
+  const missingCurrencyClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.currencyProfiles);
+  const missingMissionClones = countMissingCompositeUnitProfileClones(standardMissionProfiles);
+  const missingCompositeClones = missingAlternateClones + missingCurrencyClones + missingMissionClones;
+  if (missingCompositeClones > 0) {
+    add(
+      'WARNING',
+      'Unit Separation',
+      'Combined-unit profiles need per-unit copies',
+      `${missingCompositeClones} Standard Mission, Alternate Crew or Currency Profile unit record${missingCompositeClones === 1 ? '' : 's'} will be backfilled on the next platform save so separated units can continue to see them.`,
+      'unit-separation-profile-clones',
+      'Click Save on any Platform & Deployment or Crew Composition settings page. The save process creates missing per-unit copies while preserving the combined-unit profile group.'
+    );
+  } else {
+    add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Combined Standard Missions, Alternate Crew profiles and Currency Profiles have per-unit records where needed.', 'unit-separation-profiles-ok');
+  }
+
+  const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
+  if (pendingCompositePlannerKeys.length > 0) {
+    add(
+      'WARNING',
+      'Unit Separation',
+      'Pending combined Build Planner rows exist',
+      `${pendingCompositePlannerKeys.length} combined-unit Highest Priority event list${pendingCompositePlannerKeys.length === 1 ? '' : 's'} still has pending rows. Those rows are stored under the combined unit context and will not automatically appear in separated unit planners.`,
+      'unit-separation-pending-priority',
+      'Publish, delete, or manually recreate pending combined-unit Highest Priority rows in the intended unit before relying on separated builds.'
+    );
   }
 
   activeUserAccess.forEach((access) => {
@@ -2989,9 +3189,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     restoreSection?: string,
     options?: { reloadPage?: boolean; successMessage?: string },
   ) => {
-    const configToSave = configOverride && Array.isArray(configOverride.locations)
-      ? configOverride
-      : config;
+    const configToSave = buildSeparationReadyConfig(
+      configOverride && Array.isArray(configOverride.locations)
+        ? configOverride
+        : config
+    );
     const reloadPage = options?.reloadPage ?? true;
     if (!canEdit) return false;
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);

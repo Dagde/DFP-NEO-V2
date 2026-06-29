@@ -5193,6 +5193,75 @@ const loadHighestPriorityEventsFromStorage = (storageKey: string): ScheduleEvent
     }
 };
 
+const normaliseHighestPriorityUnitCode = (value: unknown): string => (
+    String(value || '').trim().toUpperCase()
+);
+
+const parseHighestPriorityUnitCodes = (value: unknown): string[] => Array.from(new Set(
+    String(value || '')
+        .split(/[+/,;&|]+/)
+        .map(normaliseHighestPriorityUnitCode)
+        .filter(Boolean)
+));
+
+const highestPriorityEventBelongsToUnit = (event: ScheduleEvent, unitCode: string): boolean => {
+    const targetUnit = normaliseHighestPriorityUnitCode(unitCode);
+    if (!targetUnit) return false;
+    const source = event as any;
+    const explicitUnitFields = [
+        source.unitCode,
+        source.crewUnitCode,
+        source.fixedCrewUnitCode,
+        source.taskingUnitCode,
+        source.standardMissionUnitCode,
+    ].map(normaliseHighestPriorityUnitCode).filter(Boolean);
+    if (explicitUnitFields.includes(targetUnit)) return true;
+
+    const displayFields = [
+        source.fixedCrewGroup,
+        source.fixedCrewDisplayLabel,
+        source.crewGroup,
+        source.crewDisplayLabel,
+        source.notes,
+    ].map((value) => String(value || '').toUpperCase());
+    return displayFields.some((value) => (
+        value.includes(`/${targetUnit}`) ||
+        value.includes(` ${targetUnit}`) ||
+        value.includes(`-${targetUnit}`)
+    ));
+};
+
+const loadHighestPriorityEventsForUnitContext = (locationCode: string, unitCode: string): ScheduleEvent[] => {
+    const targetLocation = normaliseHighestPriorityUnitCode(locationCode || 'UNKNOWN');
+    const targetUnit = normaliseHighestPriorityUnitCode(unitCode || 'UNKNOWN');
+    const baseKey = buildHighestPriorityEventsStorageKey(targetLocation, targetUnit);
+    const baseEvents = loadHighestPriorityEventsFromStorage(baseKey);
+    if (parseHighestPriorityUnitCodes(targetUnit).length > 1) return baseEvents;
+
+    try {
+        if (typeof localStorage === 'undefined') return baseEvents;
+        const merged = [...baseEvents];
+        const seenIds = new Set(merged.map((event) => event.id));
+        const prefix = `${HIGHEST_PRIORITY_EVENTS_STORAGE_PREFIX}:${targetLocation}:`;
+        for (let index = 0; index < localStorage.length; index += 1) {
+            const key = localStorage.key(index) || '';
+            if (!key.startsWith(prefix) || key === baseKey) continue;
+            const sourceUnitKey = normaliseHighestPriorityUnitCode(key.slice(prefix.length));
+            const sourceUnits = parseHighestPriorityUnitCodes(sourceUnitKey);
+            if (sourceUnits.length <= 1 || !sourceUnits.includes(targetUnit)) continue;
+            loadHighestPriorityEventsFromStorage(key).forEach((event) => {
+                if (seenIds.has(event.id) || !highestPriorityEventBelongsToUnit(event, targetUnit)) return;
+                merged.push(event);
+                seenIds.add(event.id);
+            });
+        }
+        return merged;
+    } catch (error) {
+        console.warn('[HighestPriorityEvents] Failed to recover combined-unit priority rows', error);
+        return baseEvents;
+    }
+};
+
 const isRemedialEventCode = (value?: string): boolean =>
     !!value && REMEDIAL_EVENT_CODE_REGEX.test(value);
 
@@ -23419,14 +23488,14 @@ const App: React.FC = () => {
     );
     const skipNextHighestPriorityPersistRef = useRef(false);
     const [highestPriorityEvents, setHighestPriorityEvents] = useState<ScheduleEvent[]>(() => (
-        loadHighestPriorityEventsFromStorage(buildHighestPriorityEventsStorageKey(initialOperationalContext.location, initialOperationalContext.unit))
+        loadHighestPriorityEventsForUnitContext(initialOperationalContext.location, initialOperationalContext.unit)
     ));
     const [instructorPriority, setInstructorPriority] = useState<InstructorPriorityConfig>(DEFAULT_INSTRUCTOR_PRIORITY_CONFIG);
 
     useEffect(() => {
         skipNextHighestPriorityPersistRef.current = true;
-        setHighestPriorityEvents(loadHighestPriorityEventsFromStorage(highestPriorityEventsStorageKey));
-    }, [highestPriorityEventsStorageKey]);
+        setHighestPriorityEvents(loadHighestPriorityEventsForUnitContext(school, activeUnitCode));
+    }, [activeUnitCode, highestPriorityEventsStorageKey, school]);
 
     useEffect(() => {
         if (skipNextHighestPriorityPersistRef.current) {
