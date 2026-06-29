@@ -672,6 +672,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                     .priorities-content .fixed-crew-course-package-priority-card,
                     .priorities-content .tasking-events-card,
                     .priorities-content .specific-currency-card,
+                    .priorities-content .saved-special-events-card,
                     .priorities-content .bulk-currency-card,
                     .priorities-content .consolidated-currency-card,
                     .priorities-content .highest-priority-events-card,
@@ -692,9 +693,10 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                     .section-directed-events > .tasking-events-card { order: 2; }
                     .section-directed-events > .consolidated-currency-card { order: 3; }
                     .section-directed-events > .specific-currency-card { order: 4; }
-                    .section-directed-events > .bulk-currency-card { order: 5; }
-                    .section-directed-events > .optional-currency-card { order: 6; }
-                    .section-directed-events > .remedial-priority-card { order: 7; }
+                    .section-directed-events > .saved-special-events-card { order: 5; }
+                    .section-directed-events > .bulk-currency-card { order: 6; }
+                    .section-directed-events > .optional-currency-card { order: 7; }
+                    .section-directed-events > .remedial-priority-card { order: 8; }
                     ` : isFixedCrewModel && fixedCrewPlannerMode === 'build-priorities' ? `
                     .priorities-content {
                         display: flex;
