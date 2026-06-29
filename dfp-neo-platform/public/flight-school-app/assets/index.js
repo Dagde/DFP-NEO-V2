@@ -30550,6 +30550,10 @@ const PrioritiesView = ({
           sctFtds.length > 0 && renderSctRequestTable("ftd", sctFtds)
         ] }) })
       ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "saved-special-events-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Saved Special Events" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No saved special events." })
+      ] }),
       !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
