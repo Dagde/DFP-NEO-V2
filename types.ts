@@ -248,6 +248,15 @@ export interface AirCombatTrainingReport {
   overallGrade?: string;
   overallResult?: '' | 'P' | 'F';
   dcoResult?: '' | 'DCO' | 'DPCO' | 'DNCO';
+  assessedElementScores?: Array<{
+    element: string;
+    grade?: string;
+    comment?: string;
+  }>;
+  groundSchoolAssessment?: {
+    isAssessment: boolean;
+    result?: string;
+  };
   notes?: string;
   status?: 'Draft' | 'Complete';
   dashboardAcknowledgedAt?: string;

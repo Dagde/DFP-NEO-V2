@@ -17,6 +17,7 @@ interface AirCombatTrainingReportModalProps {
   currentUserName?: string;
   locationCode?: string;
   unitCode?: string;
+  formatResourceLabel?: (resourceId: string) => string;
   onCancel: () => void;
   onSave: (report: AirCombatTrainingReport) => Promise<void> | void;
 }
@@ -91,6 +92,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   currentUserName = '',
   locationCode = '',
   unitCode = '',
+  formatResourceLabel,
   onCancel,
   onSave,
 }) => {
@@ -114,6 +116,10 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const defaultDate = sourceEvent?.date || initialReport?.date || new Date().toISOString().slice(0, 10);
   const defaultStart = Number(sourceEvent?.startTime ?? initialReport?.startTime ?? 8);
   const defaultDuration = Number(sourceEvent?.duration ?? initialReport?.duration ?? item?.totalEventHours ?? item?.duration ?? item?.flightOrSimHours ?? 1);
+  const rawResourceId = sourceEvent?.resourceId || initialReport?.resourceId || '';
+  const displayResourceId = rawResourceId
+    ? (formatResourceLabel?.(rawResourceId) || rawResourceId)
+    : '-';
 
   const [date, setDate] = useState(initialReport?.date || defaultDate);
   const [instructorName, setInstructorName] = useState(initialReport?.instructorName || sourceEvent?.instructor || currentUserName || '');
@@ -146,12 +152,38 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
       : ['Airmanship', 'Preparation', 'Technique'];
     return Array.from(new Set(source.map(element => String(element || '').trim()).filter(Boolean)));
   }, [item?.assessedElements]);
+  const [elementScores, setElementScores] = useState<Array<{ element: string; grade: string; comment: string }>>(() => {
+    const existingScores = Array.isArray(initialReport?.assessedElementScores) ? initialReport.assessedElementScores : [];
+    return assessmentElements.map((element) => {
+      const match = existingScores.find(score => String(score.element || '').trim().toLowerCase() === element.toLowerCase());
+      return {
+        element,
+        grade: String(match?.grade || ''),
+        comment: String(match?.comment || ''),
+      };
+    });
+  });
+  const [groundSchoolAssessment, setGroundSchoolAssessment] = useState<{ isAssessment: boolean; result: string }>(() => ({
+    isAssessment: initialReport?.groundSchoolAssessment?.isAssessment === true,
+    result: String(initialReport?.groundSchoolAssessment?.result || ''),
+  }));
   const updateCommentSection = (key: CommentSectionKey, value: string) => {
     setCommentSections(prev => ({ ...prev, [key]: value }));
     if (key === 'assessor') {
       setInstructorName(value);
     }
   };
+  const updateElementScore = (element: string, patch: Partial<{ grade: string; comment: string }>) => {
+    setElementScores(prev => {
+      const next = prev.some(score => score.element === element)
+        ? prev.map(score => (score.element === element ? { ...score, ...patch } : score))
+        : [...prev, { element, grade: '', comment: '', ...patch }];
+      return next;
+    });
+  };
+  const getElementScore = (element: string) => (
+    elementScores.find(score => score.element === element) || { element, grade: '', comment: '' }
+  );
   const gradeOptions = reportTemplate.grades.options.map(option => String(option.value));
   const stopEditableKeyPropagation = (event: React.KeyboardEvent<HTMLElement>) => {
     const target = event.target as HTMLElement | null;
@@ -195,7 +227,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                 </dd>
               </div>
               {detailCell(overviewFields.timing, `${formatDecimalTime(defaultStart)} - ${formatDecimalTime(defaultStart + defaultDuration)} (${defaultDuration}h)`)}
-              {detailCell(overviewFields.resource, sourceEvent?.resourceId || '-')}
+              {detailCell(overviewFields.resource, displayResourceId)}
               {detailCell(overviewFields.callsign, sourceEvent?.callsign || staff.callsign || '-')}
               {detailCell(overviewFields.unit, unitCode || staff.unit || '-')}
               <div>
@@ -342,6 +374,35 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
           </div>
 
           <fieldset className="rounded-lg border border-gray-700 p-4">
+            <legend className="px-2 text-sm font-semibold text-gray-300">Ground School Assessment</legend>
+            <div className="grid gap-3 lg:grid-cols-[180px_1fr]">
+              <label className="flex items-center gap-2 rounded border border-gray-700 bg-gray-950/50 px-3 py-2 text-sm font-semibold text-white">
+                <input
+                  type="checkbox"
+                  checked={groundSchoolAssessment.isAssessment}
+                  onChange={(event) => setGroundSchoolAssessment(prev => ({ ...prev, isAssessment: event.target.checked }))}
+                  className="h-4 w-4 accent-sky-500"
+                />
+                Assessment
+              </label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {gradeOptions.map(grade => (
+                  <button
+                    key={grade}
+                    type="button"
+                    disabled={!groundSchoolAssessment.isAssessment}
+                    onClick={() => setGroundSchoolAssessment(prev => ({ ...prev, result: grade }))}
+                    className={`min-h-[40px] rounded border px-2 text-sm font-black disabled:cursor-not-allowed disabled:opacity-40 ${groundSchoolAssessment.result === grade ? 'border-sky-400 bg-sky-500/20 text-sky-100' : 'border-gray-700 bg-gray-950/50 text-white'}`}
+                    title={formatGradeOption(Number(grade))}
+                  >
+                    {reportTemplate.grades.showNumbers ? grade : formatGradeOption(Number(grade))}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset className="rounded-lg border border-gray-700 p-4">
             <legend className="px-2 text-sm font-semibold text-gray-300">{reportTemplate.modules.assessmentMatrix.title}</legend>
             <div className="mt-2 overflow-x-auto rounded-md border border-gray-800/80">
               <table className="min-w-[760px] w-full table-fixed border-collapse">
@@ -367,10 +428,28 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                       <td className="py-3 pr-3 align-middle font-semibold text-white">{element}</td>
                       {gradeOptions.map(grade => (
                         <td key={grade} className="border-l border-gray-800 px-1 py-3 text-center align-middle">
-                          <span className="inline-flex h-4 w-4 rounded-full border border-gray-600 bg-gray-900" aria-hidden="true" />
+                          <label className="inline-flex cursor-pointer items-center justify-center">
+                            <input
+                              type="radio"
+                              name={`training-report-element-${element}`}
+                              value={grade}
+                              checked={getElementScore(element).grade === grade}
+                              onChange={() => updateElementScore(element, { grade })}
+                              className="h-4 w-4 accent-sky-500"
+                              title={formatGradeOption(Number(grade))}
+                            />
+                          </label>
                         </td>
                       ))}
-                      <td className="py-3 pl-3 pr-2 align-middle text-sm text-gray-500">Use comment fields above.</td>
+                      <td className="py-3 pl-3 pr-2 align-middle">
+                        <textarea
+                          value={getElementScore(element).comment}
+                          onChange={(event) => updateElementScore(element, { comment: event.target.value })}
+                          rows={2}
+                          className="w-full resize-none rounded border border-gray-700 bg-gray-950/70 p-2 text-xs text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                          placeholder="Element comments"
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -419,6 +498,8 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                   overallGrade,
                   overallResult,
                   dcoResult,
+                  assessedElementScores: elementScores,
+                  groundSchoolAssessment,
                   notes: buildReportComments(commentSections),
                   status: 'Draft',
                   dashboardAcknowledgedAt: now,

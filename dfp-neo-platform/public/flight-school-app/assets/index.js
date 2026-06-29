@@ -4288,6 +4288,15 @@ const normaliseAirCombatTrainingReports = (preferences) => {
     overallGrade: report.overallGrade ? String(report.overallGrade) : void 0,
     overallResult: report.overallResult === "P" || report.overallResult === "F" ? report.overallResult : "",
     dcoResult: ["DCO", "DPCO", "DNCO"].includes(report.dcoResult) ? report.dcoResult : "",
+    assessedElementScores: Array.isArray(report.assessedElementScores) ? report.assessedElementScores.map((score) => ({
+      element: String(score.element || "").trim(),
+      grade: score.grade === void 0 || score.grade === null ? "" : String(score.grade),
+      comment: score.comment ? String(score.comment) : ""
+    })).filter((score) => score.element) : void 0,
+    groundSchoolAssessment: report.groundSchoolAssessment ? {
+      isAssessment: report.groundSchoolAssessment.isAssessment === true,
+      result: report.groundSchoolAssessment.result ? String(report.groundSchoolAssessment.result) : ""
+    } : void 0,
     notes: report.notes ? String(report.notes) : void 0,
     status: report.status === "Complete" ? "Complete" : "Draft",
     dashboardAcknowledgedAt: report.dashboardAcknowledgedAt ? String(report.dashboardAcknowledgedAt) : void 0,
@@ -46391,6 +46400,7 @@ const AirCombatTrainingReportModal = ({
   currentUserName = "",
   locationCode = "",
   unitCode = "",
+  formatResourceLabel: formatResourceLabel2,
   onCancel,
   onSave
 }) => {
@@ -46412,6 +46422,8 @@ const AirCombatTrainingReportModal = ({
   const defaultDate = sourceEvent?.date || initialReport?.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
   const defaultStart = Number(sourceEvent?.startTime ?? initialReport?.startTime ?? 8);
   const defaultDuration = Number(sourceEvent?.duration ?? initialReport?.duration ?? item?.totalEventHours ?? item?.duration ?? item?.flightOrSimHours ?? 1);
+  const rawResourceId = sourceEvent?.resourceId || initialReport?.resourceId || "";
+  const displayResourceId = rawResourceId ? formatResourceLabel2?.(rawResourceId) || rawResourceId : "-";
   const [date, setDate] = reactExports.useState(initialReport?.date || defaultDate);
   const [instructorName, setInstructorName] = reactExports.useState(initialReport?.instructorName || sourceEvent?.instructor || currentUserName || "");
   const [overallGrade, setOverallGrade] = reactExports.useState(initialReport?.overallGrade || "");
@@ -46435,12 +46447,34 @@ const AirCombatTrainingReportModal = ({
     const source = Array.isArray(item?.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : ["Airmanship", "Preparation", "Technique"];
     return Array.from(new Set(source.map((element) => String(element || "").trim()).filter(Boolean)));
   }, [item?.assessedElements]);
+  const [elementScores, setElementScores] = reactExports.useState(() => {
+    const existingScores = Array.isArray(initialReport?.assessedElementScores) ? initialReport.assessedElementScores : [];
+    return assessmentElements.map((element) => {
+      const match = existingScores.find((score) => String(score.element || "").trim().toLowerCase() === element.toLowerCase());
+      return {
+        element,
+        grade: String(match?.grade || ""),
+        comment: String(match?.comment || "")
+      };
+    });
+  });
+  const [groundSchoolAssessment, setGroundSchoolAssessment] = reactExports.useState(() => ({
+    isAssessment: initialReport?.groundSchoolAssessment?.isAssessment === true,
+    result: String(initialReport?.groundSchoolAssessment?.result || "")
+  }));
   const updateCommentSection = (key, value) => {
     setCommentSections((prev) => ({ ...prev, [key]: value }));
     if (key === "assessor") {
       setInstructorName(value);
     }
   };
+  const updateElementScore = (element, patch) => {
+    setElementScores((prev) => {
+      const next = prev.some((score) => score.element === element) ? prev.map((score) => score.element === element ? { ...score, ...patch } : score) : [...prev, { element, grade: "", comment: "", ...patch }];
+      return next;
+    });
+  };
+  const getElementScore = (element) => elementScores.find((score) => score.element === element) || { element, grade: "", comment: "" };
   const gradeOptions = reportTemplate.grades.options.map((option) => String(option.value));
   const stopEditableKeyPropagation2 = (event) => {
     const target = event.target;
@@ -46486,7 +46520,7 @@ const AirCombatTrainingReportModal = ({
             ) })
           ] }),
           detailCell(overviewFields.timing, `${formatDecimalTime(defaultStart)} - ${formatDecimalTime(defaultStart + defaultDuration)} (${defaultDuration}h)`),
-          detailCell(overviewFields.resource, sourceEvent?.resourceId || "-"),
+          detailCell(overviewFields.resource, displayResourceId),
           detailCell(overviewFields.callsign, sourceEvent?.callsign || staff.callsign || "-"),
           detailCell(overviewFields.unit, unitCode || staff.unit || "-"),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -46649,6 +46683,35 @@ const AirCombatTrainingReportModal = ({
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "rounded-lg border border-gray-700 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Ground School Assessment" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[180px_1fr]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 rounded border border-gray-700 bg-gray-950/50 px-3 py-2 text-sm font-semibold text-white", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: groundSchoolAssessment.isAssessment,
+                onChange: (event) => setGroundSchoolAssessment((prev) => ({ ...prev, isAssessment: event.target.checked })),
+                className: "h-4 w-4 accent-sky-500"
+              }
+            ),
+            "Assessment"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2 sm:grid-cols-4", children: gradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              disabled: !groundSchoolAssessment.isAssessment,
+              onClick: () => setGroundSchoolAssessment((prev) => ({ ...prev, result: grade })),
+              className: `min-h-[40px] rounded border px-2 text-sm font-black disabled:cursor-not-allowed disabled:opacity-40 ${groundSchoolAssessment.result === grade ? "border-sky-400 bg-sky-500/20 text-sky-100" : "border-gray-700 bg-gray-950/50 text-white"}`,
+              title: formatGradeOption(Number(grade)),
+              children: reportTemplate.grades.showNumbers ? grade : formatGradeOption(Number(grade))
+            },
+            grade
+          )) })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "rounded-lg border border-gray-700 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.assessmentMatrix.title }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[760px] w-full table-fixed border-collapse", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
@@ -46663,8 +46726,28 @@ const AirCombatTrainingReportModal = ({
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: assessmentElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
-            gradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border-l border-gray-800 px-1 py-3 text-center align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex h-4 w-4 rounded-full border border-gray-600 bg-gray-900", "aria-hidden": "true" }) }, grade)),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pl-3 pr-2 align-middle text-sm text-gray-500", children: "Use comment fields above." })
+            gradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border-l border-gray-800 px-1 py-3 text-center align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "inline-flex cursor-pointer items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "radio",
+                name: `training-report-element-${element}`,
+                value: grade,
+                checked: getElementScore(element).grade === grade,
+                onChange: () => updateElementScore(element, { grade }),
+                className: "h-4 w-4 accent-sky-500",
+                title: formatGradeOption(Number(grade))
+              }
+            ) }) }, grade)),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pl-3 pr-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "textarea",
+              {
+                value: getElementScore(element).comment,
+                onChange: (event) => updateElementScore(element, { comment: event.target.value }),
+                rows: 2,
+                className: "w-full resize-none rounded border border-gray-700 bg-gray-950/70 p-2 text-xs text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
+                placeholder: "Element comments"
+              }
+            ) })
           ] }, element)) })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "Assessed elements are drawn from the selected course/package settings." })
@@ -46707,6 +46790,8 @@ const AirCombatTrainingReportModal = ({
                 overallGrade,
                 overallResult,
                 dcoResult,
+                assessedElementScores: elementScores,
+                groundSchoolAssessment,
                 notes: buildReportComments(commentSections),
                 status: "Draft",
                 dashboardAcknowledgedAt: now,
@@ -104842,6 +104927,7 @@ Do you want to replace the existing entry?`,
         currentUserName,
         locationCode: school,
         unitCode: airCombatTrainingReportDraft.staff.unit || activeUnitCode,
+        formatResourceLabel: formatResourceDisplayLabel,
         onCancel: () => setAirCombatTrainingReportDraft(null),
         onSave: handleSaveAirCombatTrainingReport
       }

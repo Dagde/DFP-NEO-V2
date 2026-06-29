@@ -39567,6 +39567,7 @@ appliedUpdates.forEach(update => {
                 currentUserName={currentUserName}
                 locationCode={school}
                 unitCode={airCombatTrainingReportDraft.staff.unit || activeUnitCode}
+                formatResourceLabel={formatResourceDisplayLabel}
                 onCancel={() => setAirCombatTrainingReportDraft(null)}
                 onSave={handleSaveAirCombatTrainingReport}
             />

@@ -203,6 +203,21 @@ export const normaliseAirCombatTrainingReports = (preferences?: PersonnelPrefere
       overallGrade: report.overallGrade ? String(report.overallGrade) : undefined,
       overallResult: report.overallResult === 'P' || report.overallResult === 'F' ? report.overallResult : '',
       dcoResult: ['DCO', 'DPCO', 'DNCO'].includes(report.dcoResult) ? report.dcoResult : '',
+      assessedElementScores: Array.isArray(report.assessedElementScores)
+        ? report.assessedElementScores
+          .map((score: any) => ({
+            element: String(score.element || '').trim(),
+            grade: score.grade === undefined || score.grade === null ? '' : String(score.grade),
+            comment: score.comment ? String(score.comment) : '',
+          }))
+          .filter((score: any) => score.element)
+        : undefined,
+      groundSchoolAssessment: report.groundSchoolAssessment
+        ? {
+          isAssessment: report.groundSchoolAssessment.isAssessment === true,
+          result: report.groundSchoolAssessment.result ? String(report.groundSchoolAssessment.result) : '',
+        }
+        : undefined,
       notes: report.notes ? String(report.notes) : undefined,
       status: report.status === 'Complete' ? 'Complete' : 'Draft',
       dashboardAcknowledgedAt: report.dashboardAcknowledgedAt ? String(report.dashboardAcknowledgedAt) : undefined,
