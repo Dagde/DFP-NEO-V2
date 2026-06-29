@@ -162,7 +162,8 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         'events-builder': [
             { label: 'Highest Priority Table', target: '.highest-priority-events-card' },
             { label: 'Tasking Section', target: '.tasking-events-card' },
-            { label: 'Currency Section', target: '.consolidated-currency-card' },
+            { label: 'Specific Currency Requests', target: '.specific-currency-card' },
+            { label: 'Saved Special Events', target: '.saved-special-events-card' },
         ],
         'deployments': [
             { label: 'Deployment Builder', target: '.deployment-builder-card' },
