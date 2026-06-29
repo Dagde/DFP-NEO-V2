@@ -43374,41 +43374,44 @@ const AssessedElementsWindow = ({ selectedElements, availableElements, isEditing
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Assessed Elements" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 rounded-lg bg-gray-900/45 p-3", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-          showAssessmentRequired && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded border border-amber-500/30 bg-amber-950/20 px-3 py-2 text-xs font-semibold text-amber-100", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: !!assessmentRequired,
-                onChange: (event) => onAssessmentRequiredChange?.(event.target.checked),
-                className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-amber-500 focus:ring-amber-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Assessment required" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Select the Scoring Matrix elements that appear on this event's Training Report." })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 rounded-lg bg-gray-900/45 p-3", children: [
+      showAssessmentRequired && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-950/20 px-3 py-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-amber-100", children: "Assessment required" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 text-[11px] text-gray-400", children: "Creates a draft training report after DCO post-flight completion." })
         ] }),
-        onAddElement && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onAddElement, className: "shrink-0 rounded border border-sky-600 bg-sky-900/60 px-3 py-1.5 text-xs font-semibold text-sky-100 hover:bg-sky-800", children: "Add Element" })
+        isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 text-xs font-semibold text-amber-100", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: !!assessmentRequired,
+              onChange: (event) => onAssessmentRequiredChange?.(event.target.checked),
+              className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-amber-500 focus:ring-amber-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: assessmentRequired ? "On" : "Off" })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${assessmentRequired ? "border border-emerald-500/40 bg-emerald-950/40 text-emerald-200" : "border border-gray-600 bg-gray-950/60 text-gray-400"}`, children: assessmentRequired ? "On" : "Off" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: availableElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded border border-gray-700 bg-gray-950/70 px-3 py-2 text-xs text-gray-100 hover:border-sky-600/70", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            type: "checkbox",
-            checked: selectedSet.has(element.toLowerCase()),
-            onChange: () => toggle(element),
-            className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: element })
-      ] }, element)) })
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
-      showAssessmentRequired && assessmentRequired && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-500/50 bg-amber-950/50 px-2.5 py-1 text-xs font-semibold text-amber-100", children: "Assessment required" }),
-      selected.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-sky-700/50 bg-sky-950/50 px-2.5 py-1 text-xs font-semibold text-sky-100", children: element }, element))
-    ] }) })
+      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Select the Scoring Matrix elements that appear on this event's Training Report." }) }),
+          onAddElement && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onAddElement, className: "shrink-0 rounded border border-sky-600 bg-sky-900/60 px-3 py-1.5 text-xs font-semibold text-sky-100 hover:bg-sky-800", children: "Add Element" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: availableElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded border border-gray-700 bg-gray-950/70 px-3 py-2 text-xs text-gray-100 hover:border-sky-600/70", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: selectedSet.has(element.toLowerCase()),
+              onChange: () => toggle(element),
+              className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: element })
+        ] }, element)) })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: selected.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-sky-700/50 bg-sky-950/50 px-2.5 py-1 text-xs font-semibold text-sky-100", children: element }, element)) })
+    ] })
   ] });
 };
 const getAirCombatLinkedEventCode$1 = (item) => {
