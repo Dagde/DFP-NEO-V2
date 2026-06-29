@@ -21490,11 +21490,13 @@ const App: React.FC = () => {
         setAuthUser(null);
         setAuthSessionToken('');
         setCurrentUserName('Bloggs, Joe');
+        setDashboardTestUserName('');
         setSessionUser(null);
     };
 
     // Current User State (for permission checking)
     const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
+    const [dashboardTestUserName, setDashboardTestUserName] = useState<string>('');
     const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
 
     // Session user info (populated from auth)
@@ -37026,11 +37028,16 @@ appliedUpdates.forEach(update => {
                 Object.values(publishedSchedules).forEach(scheduleEvents => {
                     allPublishedEvents.push(...scheduleEvents);
                 });
-                const dashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
                 const normaliseDashboardName = (value?: string | null) => String(value || '')
                     .trim()
                     .toLowerCase()
                     .replace(/\s+/g, ' ');
+                const sessionDashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
+                const defaultDashboardStaff = allInstructorsData.find(staff => normaliseDashboardName(staff.name) === 'burns, alexander');
+                const dashboardUserName = dashboardTestUserName || defaultDashboardStaff?.name || sessionDashboardUserName;
+                const dashboardStaff = allInstructorsData.find(staff => (
+                    normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName)
+                ));
                 const pendingTrainingReports = allInstructorsData.flatMap(staff => (
                     normaliseAirCombatTrainingReports(staff.preferences)
                         .filter(report => (
@@ -37043,8 +37050,11 @@ appliedUpdates.forEach(update => {
 
                 return <MyDashboard
                             userName={dashboardUserName}
-                            userRank={sessionUser?.militaryRank || sessionUser?.role || 'FLTLT'}
-                            events={eventsForDate.filter(e => e.instructor === currentUserName)}
+                            userRank={dashboardStaff?.rank || sessionUser?.militaryRank || sessionUser?.role || 'FLTLT'}
+                            events={eventsForDate.filter(e => (
+                                [e.instructor, e.pilot, e.fixedCrewPic, e.crew]
+                                    .some(name => normaliseDashboardName(name) === normaliseDashboardName(dashboardUserName))
+                            ))}
                             onSelectEvent={handleOpenModal}
                             onNavigate={handleNavigation}
                             onSelectMyProfile={handleSelectMyProfile}
@@ -37053,6 +37063,9 @@ appliedUpdates.forEach(update => {
                             sctRequests={[...sctFlights, ...sctFtds]}
                             pt051Assessments={pt051Assessments}
                             trainingReportsToComplete={pendingTrainingReports}
+                            staffOptions={allInstructorsData}
+                            selectedStaffName={dashboardUserName}
+                            onSelectStaffName={setDashboardTestUserName}
                             onSelectTrainingReport={(entry) => {
                                 const sourceEvent = allPublishedEvents.find(event => (
                                     event.id === entry.report.eventId ||

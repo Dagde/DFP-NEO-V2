@@ -16,6 +16,9 @@ interface MyDashboardProps {
     onSelectPt051: (assessment: Pt051Assessment) => void;
     trainingReportsToComplete?: Array<{ report: AirCombatTrainingReport; staff: Instructor }>;
     onSelectTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void;
+    staffOptions?: Instructor[];
+    selectedStaffName?: string;
+    onSelectStaffName?: (staffName: string) => void;
 }
 
 const formatTime = (time: number) => {
@@ -38,6 +41,19 @@ const formatDate = (dateString: string | undefined): string => {
     }
 };
 
+const DASHBOARD_RANK_ORDER = ['WGCDR', 'SQNLDR', 'FLTLT', 'FLGOFF', 'PLTOFF', 'Mr'];
+
+const getDashboardRankWeight = (rank?: string): number => {
+    const index = DASHBOARD_RANK_ORDER.indexOf(String(rank || ''));
+    return index === -1 ? DASHBOARD_RANK_ORDER.length : index;
+};
+
+const formatDashboardStaffName = (staff: Instructor): string => {
+    const [lastName, firstName] = String(staff.name || '').split(',').map(part => part.trim());
+    const displayName = firstName ? `${firstName} ${lastName}` : staff.name;
+    return `${staff.rank || ''} ${displayName}`.trim();
+};
+
 const MyDashboard: React.FC<MyDashboardProps> = ({ 
     userName, 
     userRank, 
@@ -52,8 +68,27 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     onSelectPt051,
     trainingReportsToComplete = [],
     onSelectTrainingReport,
+    staffOptions = [],
+    selectedStaffName,
+    onSelectStaffName,
 }) => {
     const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
+    const groupedStaffOptions = useMemo(() => {
+        const sortedStaff = [...staffOptions]
+            .filter(staff => staff?.name)
+            .sort((a, b) => (
+                String(a.unit || 'No Unit').localeCompare(String(b.unit || 'No Unit')) ||
+                getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) ||
+                String(a.name || '').localeCompare(String(b.name || ''))
+            ));
+        const groups = new Map<string, Instructor[]>();
+        sortedStaff.forEach(staff => {
+            const unit = String(staff.unit || 'No Unit');
+            groups.set(unit, [...(groups.get(unit) || []), staff]);
+        });
+        return Array.from(groups.entries()).map(([unit, staff]) => ({ unit, staff }));
+    }, [staffOptions]);
+    const dashboardSelectedName = selectedStaffName || userName;
     
     const mySctRequests = sctRequests.filter(req => req.name === userName.split(' ').reverse().join(', '));
     
@@ -106,7 +141,28 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         <div className="flex flex-col bg-gray-900 overflow-y-auto p-6 space-y-6">
             <header>
                 <h1 className="text-3xl font-bold text-white">My Dashboard</h1>
-                <p className="text-lg text-gray-400">Welcome, {userRank} {userName}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <span className="text-lg text-gray-400">Welcome,</span>
+                    {groupedStaffOptions.length > 0 && onSelectStaffName ? (
+                        <select
+                            value={dashboardSelectedName}
+                            onChange={(event) => onSelectStaffName(event.target.value)}
+                            className="min-w-[280px] rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-lg font-semibold text-white shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                        >
+                            {groupedStaffOptions.map(group => (
+                                <optgroup key={group.unit} label={group.unit}>
+                                    {group.staff.map(staff => (
+                                        <option key={`${staff.unit || 'unit'}-${staff.idNumber}-${staff.name}`} value={staff.name}>
+                                            {formatDashboardStaffName(staff)}
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            ))}
+                        </select>
+                    ) : (
+                        <span className="text-lg text-gray-400">{userRank} {userName}</span>
+                    )}
+                </div>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -25504,6 +25504,16 @@ const formatDate$2 = (dateString) => {
     return "-";
   }
 };
+const DASHBOARD_RANK_ORDER = ["WGCDR", "SQNLDR", "FLTLT", "FLGOFF", "PLTOFF", "Mr"];
+const getDashboardRankWeight = (rank) => {
+  const index = DASHBOARD_RANK_ORDER.indexOf(String(rank || ""));
+  return index === -1 ? DASHBOARD_RANK_ORDER.length : index;
+};
+const formatDashboardStaffName = (staff) => {
+  const [lastName, firstName] = String(staff.name || "").split(",").map((part) => part.trim());
+  const displayName = firstName ? `${firstName} ${lastName}` : staff.name;
+  return `${staff.rank || ""} ${displayName}`.trim();
+};
 const MyDashboard = ({
   userName,
   userRank,
@@ -25517,9 +25527,22 @@ const MyDashboard = ({
   pt051Assessments,
   onSelectPt051,
   trainingReportsToComplete = [],
-  onSelectTrainingReport
+  onSelectTrainingReport,
+  staffOptions = [],
+  selectedStaffName,
+  onSelectStaffName
 }) => {
   const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
+  const groupedStaffOptions = reactExports.useMemo(() => {
+    const sortedStaff2 = [...staffOptions].filter((staff) => staff?.name).sort((a, b) => String(a.unit || "No Unit").localeCompare(String(b.unit || "No Unit")) || getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || String(a.name || "").localeCompare(String(b.name || "")));
+    const groups = /* @__PURE__ */ new Map();
+    sortedStaff2.forEach((staff) => {
+      const unit = String(staff.unit || "No Unit");
+      groups.set(unit, [...groups.get(unit) || [], staff]);
+    });
+    return Array.from(groups.entries()).map(([unit, staff]) => ({ unit, staff }));
+  }, [staffOptions]);
+  const dashboardSelectedName = selectedStaffName || userName;
   const mySctRequests = sctRequests.filter((req) => req.name === userName.split(" ").reverse().join(", "));
   const incompletePt051s = React.useMemo(() => {
     const fullUserName = `${userName.split(" ").reverse().join(", ")}`;
@@ -25553,11 +25576,21 @@ const MyDashboard = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-900 overflow-y-auto p-6 space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "My Dashboard" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-lg text-gray-400", children: [
-        "Welcome, ",
-        userRank,
-        " ",
-        userName
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap items-center gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg text-gray-400", children: "Welcome," }),
+        groupedStaffOptions.length > 0 && onSelectStaffName ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "select",
+          {
+            value: dashboardSelectedName,
+            onChange: (event) => onSelectStaffName(event.target.value),
+            className: "min-w-[280px] rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-lg font-semibold text-white shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30",
+            children: groupedStaffOptions.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.staff.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatDashboardStaffName(staff) }, `${staff.unit || "unit"}-${staff.idNumber}-${staff.name}`)) }, group.unit))
+          }
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-lg text-gray-400", children: [
+          userRank,
+          " ",
+          userName
+        ] })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
@@ -89737,9 +89770,11 @@ const App = () => {
     setAuthUser(null);
     setAuthSessionToken("");
     setCurrentUserName("Bloggs, Joe");
+    setDashboardTestUserName("");
     setSessionUser(null);
   };
   const [currentUserName, setCurrentUserName] = reactExports.useState("Bloggs, Joe");
+  const [dashboardTestUserName, setDashboardTestUserName] = reactExports.useState("");
   const currentUser2 = instructorsData.find((inst) => inst.name === currentUserName) || instructorsData[0];
   const [sessionUser, setSessionUser] = reactExports.useState(null);
   const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig, [
@@ -102310,15 +102345,18 @@ ${error instanceof Error ? error.message : String(error)}`,
         Object.values(publishedSchedules).forEach((scheduleEvents) => {
           allPublishedEvents.push(...scheduleEvents);
         });
-        const dashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
         const normaliseDashboardName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+        const sessionDashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
+        const defaultDashboardStaff = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === "burns, alexander");
+        const dashboardUserName = dashboardTestUserName || defaultDashboardStaff?.name || sessionDashboardUserName;
+        const dashboardStaff = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName));
         const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && normaliseDashboardName(report.staffName) === normaliseDashboardName(dashboardUserName)).map((report) => ({ report, staff })));
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           MyDashboard,
           {
             userName: dashboardUserName,
-            userRank: sessionUser?.militaryRank || sessionUser?.role || "FLTLT",
-            events: eventsForDate.filter((e) => e.instructor === currentUserName),
+            userRank: dashboardStaff?.rank || sessionUser?.militaryRank || sessionUser?.role || "FLTLT",
+            events: eventsForDate.filter((e) => [e.instructor, e.pilot, e.fixedCrewPic, e.crew].some((name) => normaliseDashboardName(name) === normaliseDashboardName(dashboardUserName))),
             onSelectEvent: handleOpenModal,
             onNavigate: handleNavigation,
             onSelectMyProfile: handleSelectMyProfile,
@@ -102327,6 +102365,9 @@ ${error instanceof Error ? error.message : String(error)}`,
             sctRequests: [...sctFlights, ...sctFtds],
             pt051Assessments,
             trainingReportsToComplete: pendingTrainingReports,
+            staffOptions: allInstructorsData,
+            selectedStaffName: dashboardUserName,
+            onSelectStaffName: setDashboardTestUserName,
             onSelectTrainingReport: (entry) => {
               const sourceEvent = allPublishedEvents.find((event) => event.id === entry.report.eventId || event.date === entry.report.date && String(event.flightNumber || event.eventCode || "").trim().toUpperCase() === String(entry.report.eventCode || "").trim().toUpperCase() && [event.fixedCrewPic, event.pilot, event.instructor, event.crew].some((name) => normaliseDashboardName(name) === normaliseDashboardName(entry.report.staffName)));
               const matchingItem = syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === String(entry.report.eventCode || "").trim().toUpperCase());
