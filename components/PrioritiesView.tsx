@@ -3541,11 +3541,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           const departureLocationCode = String(getStandardMissionDraftValue(profile, 'departureLocationCode') || '').trim().toUpperCase();
           const arrivalLocationCode = String(getStandardMissionDraftValue(profile, 'arrivalLocationCode') || '').trim().toUpperCase();
           const durationMinutes = Number(getStandardMissionDraftValue(profile, 'durationMinutes')) || 0;
-          const preFlightMinutes = Number(getStandardMissionDraftValue(profile, 'preFlightMinutes')) || 0;
-          const postFlightMinutes = Number(getStandardMissionDraftValue(profile, 'postFlightMinutes')) || 0;
           const config = String(getStandardMissionDraftValue(profile, 'config') || 'ANY').trim() || 'ANY';
           const formationAircraft = Number(getStandardMissionDraftValue(profile, 'formationAircraft')) || 1;
-          const isFormation = Boolean(getStandardMissionDraftValue(profile, 'isFormation'));
           const crewMode = String(getStandardMissionDraftValue(profile, 'crewCompositionMode') || 'STANDARD');
           const callsignPrefix = String(getStandardMissionDraftValue(profile, 'defaultCallsignPrefix') || '').trim();
 
@@ -3668,34 +3665,23 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     {renderStandardMissionTile('Duration', isEditing ? (
                       renderStandardMissionNumberInput(durationMinutes, value => updateStandardMissionDraft(profile.id, { durationMinutes: value }))
                     ) : formatMissionMinutes(durationMinutes))}
-                    {renderStandardMissionTile('Pre / Post', isEditing ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        {renderStandardMissionNumberInput(preFlightMinutes, value => updateStandardMissionDraft(profile.id, { preFlightMinutes: value }))}
-                        {renderStandardMissionNumberInput(postFlightMinutes, value => updateStandardMissionDraft(profile.id, { postFlightMinutes: value }))}
-                      </div>
-                    ) : `${formatMissionMinutes(preFlightMinutes)} / ${formatMissionMinutes(postFlightMinutes)}`)}
-                    {renderStandardMissionTile('Crew / Formation', isEditing ? (
-                      <div className="space-y-2">
-                        <select
-                          value={crewMode}
-                          onChange={event => updateStandardMissionDraft(profile.id, { crewCompositionMode: event.target.value as StandardMissionProfile['crewCompositionMode'] })}
-                          className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400"
-                        >
-                          <option value="STANDARD">Standard Crew</option>
-                          <option value="ALTERNATE">Alternate Crew</option>
-                          <option value="CUSTOM">Custom Crew</option>
-                        </select>
-                        <label className="flex items-center gap-2 text-xs font-semibold text-slate-300">
-                          <input
-                            type="checkbox"
-                            checked={isFormation}
-                            onChange={event => updateStandardMissionDraft(profile.id, { isFormation: event.target.checked })}
-                          />
-                          Formation
-                        </label>
-                        {renderStandardMissionNumberInput(formationAircraft, value => updateStandardMissionDraft(profile.id, { formationAircraft: value }), 1)}
-                      </div>
-                    ) : `${crewMode.replace('_', ' ')} / ${isFormation ? `${formationAircraft} aircraft` : 'Single aircraft'}`)}
+                    {renderStandardMissionTile('Crew Composition', isEditing ? (
+                      <select
+                        value={crewMode}
+                        onChange={event => updateStandardMissionDraft(profile.id, { crewCompositionMode: event.target.value as StandardMissionProfile['crewCompositionMode'] })}
+                        className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400"
+                      >
+                        <option value="STANDARD">Standard Crew</option>
+                        <option value="ALTERNATE">Alternate Crew</option>
+                        <option value="CUSTOM">Custom Crew</option>
+                      </select>
+                    ) : crewMode.replace('_', ' '))}
+                    {renderStandardMissionTile('No. of Aircraft', isEditing ? (
+                      renderStandardMissionNumberInput(formationAircraft, value => updateStandardMissionDraft(profile.id, {
+                        formationAircraft: value,
+                        isFormation: value > 1,
+                      }), 1)
+                    ) : `${formationAircraft} ${formationAircraft === 1 ? 'aircraft' : 'aircraft'}`)}
                     {renderStandardMissionTile('Callsign / Notes', isEditing ? (
                       <div className="space-y-2">
                         {renderStandardMissionInput(callsignPrefix, value => updateStandardMissionDraft(profile.id, { defaultCallsignPrefix: value }), 'Callsign')}
