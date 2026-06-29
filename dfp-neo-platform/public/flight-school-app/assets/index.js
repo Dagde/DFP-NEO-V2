@@ -28079,6 +28079,19 @@ const PrioritiesView = ({
       return next;
     });
   };
+  const getStandardMissionCrewRequirement = (profile) => {
+    const mode = String(getStandardMissionDraftValue(profile, "crewCompositionMode") || "STANDARD").toUpperCase();
+    const rawRoleRequirements = getStandardMissionDraftValue(profile, "roleRequirements");
+    const roleRequirements = Array.isArray(rawRoleRequirements) ? rawRoleRequirements : [];
+    return mode === "CUSTOM" ? {
+      mode: "custom",
+      roles: roleRequirements.map((requirement) => ({
+        role: requirement.role,
+        count: requirement.count,
+        eligibleRoles: [requirement.role]
+      }))
+    } : { mode: "aircraft_default" };
+  };
   const activeCallsignUnitCodes = reactExports.useMemo(() => {
     const contextCodes = Array.from(activeUnitCodeSet);
     if (contextCodes.length > 0) return contextCodes;
@@ -28101,6 +28114,11 @@ const PrioritiesView = ({
     () => Array.from({ length: 101 }, (_, value) => ({ value, label: formatUnitCallsignNumber(value) })),
     []
   );
+  const unitCallsignEntriesByUnit = reactExports.useMemo(() => unitCallsignEntries.reduce((groups, entry) => {
+    const groupLabel = String(entry.unitCode || "Unit").trim() || "Unit";
+    groups.set(groupLabel, [...groups.get(groupLabel) || [], entry]);
+    return groups;
+  }, /* @__PURE__ */ new Map()), [unitCallsignEntries]);
   const currencyProfilesForContext = reactExports.useMemo(() => {
     const settings = normaliseCrewCompositionSettings(crewCompositionSettings || null);
     const contextCodes = Array.from(activeUnitCodeSet);
@@ -29870,6 +29888,15 @@ const PrioritiesView = ({
       const formationAircraft = Number(getStandardMissionDraftValue(profile, "formationAircraft")) || 1;
       const crewMode = String(getStandardMissionDraftValue(profile, "crewCompositionMode") || "STANDARD");
       const callsignPrefix = String(getStandardMissionDraftValue(profile, "defaultCallsignPrefix") || "").trim();
+      const routeDepSuggestions = getTaskingAirfieldSuggestions(departureLocationCode, taskingAirfieldLookup);
+      const routeArrSuggestions = getTaskingAirfieldSuggestions(arrivalLocationCode, taskingAirfieldLookup);
+      const alternateCrewPresetsByUnit = crewRequirementPresets.filter((preset) => preset.kind === "alternate").reduce((groups, preset) => {
+        const groupLabel = String(preset.groupLabel || "Unit").trim() || "Unit";
+        groups.set(groupLabel, [...groups.get(groupLabel) || [], preset]);
+        return groups;
+      }, /* @__PURE__ */ new Map());
+      const selectedCrewCompositionId = String(getStandardMissionDraftValue(profile, "selectedCrewCompositionId") || "").trim();
+      const selectedAlternatePresetId = crewRequirementPresets.find((preset) => preset.kind === "alternate" && (preset.id === selectedCrewCompositionId || preset.id.replace(/^alternate:/, "") === selectedCrewCompositionId))?.id || "";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/55", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 px-4 py-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -29965,35 +29992,111 @@ const PrioritiesView = ({
                   children: ["Flight", "FTD", "CPT", "Ground"].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
                 }
               ),
-              renderStandardMissionInput(config, (value) => updateStandardMissionDraft(profile.id, { config: value.toUpperCase() }), "CONFIG")
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:w-full [&_select]:rounded-md [&_select]:border-slate-700 [&_select]:bg-slate-950 [&_select]:px-2 [&_select]:py-2 [&_select]:text-sm [&_select]:font-semibold [&_select]:text-slate-100", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                AircraftConfigSelect,
+                {
+                  value: aircraftConfigOptions.some((definition) => definition.id === config) ? config : BASE_AIRCRAFT_CONFIG.id,
+                  definitions: aircraftConfigOptions,
+                  onChange: (value) => updateStandardMissionDraft(profile.id, { config: value })
+                }
+              ) })
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: resourceType }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-slate-400", children: config })
             ] })),
             renderStandardMissionTile("Route", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
-              renderStandardMissionInput(departureLocationCode, (value) => updateStandardMissionDraft(profile.id, { departureLocationCode: value.toUpperCase() }), "DEP"),
-              renderStandardMissionInput(arrivalLocationCode, (value) => updateStandardMissionDraft(profile.id, { arrivalLocationCode: value.toUpperCase() }), "ARR")
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_input]:h-9 [&_input]:rounded-md [&_input]:border-slate-700 [&_input]:bg-slate-950 [&_input]:text-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                TaskingAirfieldCodeInput,
+                {
+                  value: departureLocationCode,
+                  suggestions: routeDepSuggestions,
+                  onChange: (value) => updateStandardMissionDraft(profile.id, { departureLocationCode: value.toUpperCase() })
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_input]:h-9 [&_input]:rounded-md [&_input]:border-slate-700 [&_input]:bg-slate-950 [&_input]:text-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                TaskingAirfieldCodeInput,
+                {
+                  value: arrivalLocationCode,
+                  suggestions: routeArrSuggestions,
+                  onChange: (value) => updateStandardMissionDraft(profile.id, { arrivalLocationCode: value.toUpperCase() })
+                }
+              ) })
             ] }) : `${departureLocationCode || "-"} -> ${arrivalLocationCode || "-"}`),
             renderStandardMissionTile("Duration", isEditing ? renderStandardMissionNumberInput(durationMinutes, (value) => updateStandardMissionDraft(profile.id, { durationMinutes: value })) : formatMissionMinutes(durationMinutes)),
-            renderStandardMissionTile("Crew Composition", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                value: crewMode,
-                onChange: (event) => updateStandardMissionDraft(profile.id, { crewCompositionMode: event.target.value }),
-                className: "w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "STANDARD", children: "Standard Crew" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ALTERNATE", children: "Alternate Crew" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "CUSTOM", children: "Custom Crew" })
-                ]
-              }
-            ) : crewMode.replace("_", " ")),
+            renderStandardMissionTile("Crew Composition", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: crewMode,
+                  onChange: (event) => updateStandardMissionDraft(profile.id, {
+                    crewCompositionMode: event.target.value,
+                    ...event.target.value === "STANDARD" ? { selectedCrewCompositionId: "", roleRequirements: [] } : {}
+                  }),
+                  className: "w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "STANDARD", children: "Standard Crew" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ALTERNATE", children: "Alternate Crew" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "CUSTOM", children: "Custom Crew" })
+                  ]
+                }
+              ),
+              crewMode === "ALTERNATE" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: selectedAlternatePresetId,
+                  onChange: (event) => {
+                    const preset = crewRequirementPresets.find((candidate) => candidate.id === event.target.value);
+                    updateStandardMissionDraft(profile.id, {
+                      selectedCrewCompositionId: preset?.id.replace(/^alternate:/, "") || "",
+                      roleRequirements: preset?.roles?.map((role) => ({
+                        role: role.role,
+                        count: role.count
+                      })) || []
+                    });
+                  },
+                  className: "w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select alternate crew" }),
+                    Array.from(alternateCrewPresetsByUnit.entries()).map(([unitCode, presets]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unitCode, children: presets.map((preset) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: preset.id, children: preset.label }, preset.id)) }, unitCode))
+                  ]
+                }
+              ),
+              crewMode === "CUSTOM" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&>div]:border-slate-700 [&>div]:bg-slate-950/70", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                CrewRequirementEditor,
+                {
+                  value: getStandardMissionCrewRequirement(profile),
+                  aircraftCrewComposition,
+                  crewRequirementPresets,
+                  crewPositionTerminology,
+                  operationalModel: operationalModel2,
+                  compact: true,
+                  onChange: (crewRequirement) => updateStandardMissionDraft(profile.id, {
+                    crewCompositionMode: "CUSTOM",
+                    roleRequirements: (crewRequirement.roles || []).map((role) => ({
+                      role: role.role,
+                      count: role.count
+                    }))
+                  })
+                }
+              ) })
+            ] }) : crewMode.replace("_", " ")),
             renderStandardMissionTile("No. of Aircraft", isEditing ? renderStandardMissionNumberInput(formationAircraft, (value) => updateStandardMissionDraft(profile.id, {
               formationAircraft: value,
               isFormation: value > 1
             }), 1) : `${formationAircraft} ${formationAircraft === 1 ? "aircraft" : "aircraft"}`),
             renderStandardMissionTile("Callsign / Notes", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              renderStandardMissionInput(callsignPrefix, (value) => updateStandardMissionDraft(profile.id, { defaultCallsignPrefix: value }), "Callsign"),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: callsignPrefix,
+                  onChange: (event) => updateStandardMissionDraft(profile.id, { defaultCallsignPrefix: event.target.value }),
+                  className: "w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select callsign" }),
+                    Array.from(unitCallsignEntriesByUnit.entries()).map(([unitCode, entries]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unitCode, children: entries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: entry.callsign }, entry.id)) }, unitCode))
+                  ]
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "textarea",
                 {

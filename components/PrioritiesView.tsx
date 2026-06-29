@@ -1265,6 +1265,23 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       return next;
     });
   };
+  const getStandardMissionCrewRequirement = (profile: StandardMissionProfile): CrewRequirement => {
+    const mode = String(getStandardMissionDraftValue(profile, 'crewCompositionMode') || 'STANDARD').toUpperCase();
+    const rawRoleRequirements = getStandardMissionDraftValue(profile, 'roleRequirements') as StandardMissionProfile['roleRequirements'];
+    const roleRequirements = Array.isArray(rawRoleRequirements)
+      ? rawRoleRequirements
+      : [];
+    return mode === 'CUSTOM'
+      ? {
+          mode: 'custom',
+          roles: roleRequirements.map(requirement => ({
+            role: requirement.role,
+            count: requirement.count,
+            eligibleRoles: [requirement.role],
+          })),
+        }
+      : { mode: 'aircraft_default' };
+  };
   const activeCallsignUnitCodes = useMemo(() => {
     const contextCodes = Array.from(activeUnitCodeSet);
     if (contextCodes.length > 0) return contextCodes;
@@ -1294,6 +1311,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     () => Array.from({ length: 101 }, (_, value) => ({ value, label: formatUnitCallsignNumber(value) })),
     [],
   );
+  const unitCallsignEntriesByUnit = useMemo(() => unitCallsignEntries.reduce((groups, entry) => {
+    const groupLabel = String(entry.unitCode || 'Unit').trim() || 'Unit';
+    groups.set(groupLabel, [...(groups.get(groupLabel) || []), entry]);
+    return groups;
+  }, new Map<string, UnitCallsignEntry[]>()), [unitCallsignEntries]);
   const currencyProfilesForContext = useMemo<CurrencyProfile[]>(() => {
     const settings = normaliseCrewCompositionSettings(crewCompositionSettings || null);
     const contextCodes = Array.from(activeUnitCodeSet);
@@ -3545,6 +3567,20 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           const formationAircraft = Number(getStandardMissionDraftValue(profile, 'formationAircraft')) || 1;
           const crewMode = String(getStandardMissionDraftValue(profile, 'crewCompositionMode') || 'STANDARD');
           const callsignPrefix = String(getStandardMissionDraftValue(profile, 'defaultCallsignPrefix') || '').trim();
+          const routeDepSuggestions = getTaskingAirfieldSuggestions(departureLocationCode, taskingAirfieldLookup);
+          const routeArrSuggestions = getTaskingAirfieldSuggestions(arrivalLocationCode, taskingAirfieldLookup);
+          const alternateCrewPresetsByUnit = crewRequirementPresets
+            .filter(preset => preset.kind === 'alternate')
+            .reduce((groups, preset) => {
+              const groupLabel = String(preset.groupLabel || 'Unit').trim() || 'Unit';
+              groups.set(groupLabel, [...(groups.get(groupLabel) || []), preset]);
+              return groups;
+            }, new Map<string, CrewRequirementPreset[]>());
+          const selectedCrewCompositionId = String(getStandardMissionDraftValue(profile, 'selectedCrewCompositionId') || '').trim();
+          const selectedAlternatePresetId = crewRequirementPresets.find(preset => (
+            preset.kind === 'alternate'
+            && (preset.id === selectedCrewCompositionId || preset.id.replace(/^alternate:/, '') === selectedCrewCompositionId)
+          ))?.id || '';
 
           return (
             <div key={profile.id} className="rounded-lg border border-slate-700 bg-slate-950/55">
@@ -3648,7 +3684,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         >
                           {['Flight', 'FTD', 'CPT', 'Ground'].map(option => <option key={option} value={option}>{option}</option>)}
                         </select>
-                        {renderStandardMissionInput(config, value => updateStandardMissionDraft(profile.id, { config: value.toUpperCase() }), 'CONFIG')}
+                        <div className="[&_select]:w-full [&_select]:rounded-md [&_select]:border-slate-700 [&_select]:bg-slate-950 [&_select]:px-2 [&_select]:py-2 [&_select]:text-sm [&_select]:font-semibold [&_select]:text-slate-100">
+                          <AircraftConfigSelect
+                            value={aircraftConfigOptions.some(definition => definition.id === config) ? config : BASE_AIRCRAFT_CONFIG.id}
+                            definitions={aircraftConfigOptions}
+                            onChange={value => updateStandardMissionDraft(profile.id, { config: value })}
+                          />
+                        </div>
                       </div>
                     ) : (
                       <div>
@@ -3658,23 +3700,84 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     ))}
                     {renderStandardMissionTile('Route', isEditing ? (
                       <div className="grid grid-cols-2 gap-2">
-                        {renderStandardMissionInput(departureLocationCode, value => updateStandardMissionDraft(profile.id, { departureLocationCode: value.toUpperCase() }), 'DEP')}
-                        {renderStandardMissionInput(arrivalLocationCode, value => updateStandardMissionDraft(profile.id, { arrivalLocationCode: value.toUpperCase() }), 'ARR')}
+                        <div className="[&_input]:h-9 [&_input]:rounded-md [&_input]:border-slate-700 [&_input]:bg-slate-950 [&_input]:text-sm">
+                          <TaskingAirfieldCodeInput
+                            value={departureLocationCode}
+                            suggestions={routeDepSuggestions}
+                            onChange={value => updateStandardMissionDraft(profile.id, { departureLocationCode: value.toUpperCase() })}
+                          />
+                        </div>
+                        <div className="[&_input]:h-9 [&_input]:rounded-md [&_input]:border-slate-700 [&_input]:bg-slate-950 [&_input]:text-sm">
+                          <TaskingAirfieldCodeInput
+                            value={arrivalLocationCode}
+                            suggestions={routeArrSuggestions}
+                            onChange={value => updateStandardMissionDraft(profile.id, { arrivalLocationCode: value.toUpperCase() })}
+                          />
+                        </div>
                       </div>
                     ) : `${departureLocationCode || '-'} -> ${arrivalLocationCode || '-'}`)}
                     {renderStandardMissionTile('Duration', isEditing ? (
                       renderStandardMissionNumberInput(durationMinutes, value => updateStandardMissionDraft(profile.id, { durationMinutes: value }))
                     ) : formatMissionMinutes(durationMinutes))}
                     {renderStandardMissionTile('Crew Composition', isEditing ? (
-                      <select
-                        value={crewMode}
-                        onChange={event => updateStandardMissionDraft(profile.id, { crewCompositionMode: event.target.value as StandardMissionProfile['crewCompositionMode'] })}
-                        className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400"
-                      >
-                        <option value="STANDARD">Standard Crew</option>
-                        <option value="ALTERNATE">Alternate Crew</option>
-                        <option value="CUSTOM">Custom Crew</option>
-                      </select>
+                      <div className="space-y-2">
+                        <select
+                          value={crewMode}
+                          onChange={event => updateStandardMissionDraft(profile.id, {
+                            crewCompositionMode: event.target.value as StandardMissionProfile['crewCompositionMode'],
+                            ...(event.target.value === 'STANDARD' ? { selectedCrewCompositionId: '', roleRequirements: [] } : {}),
+                          })}
+                          className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400"
+                        >
+                          <option value="STANDARD">Standard Crew</option>
+                          <option value="ALTERNATE">Alternate Crew</option>
+                          <option value="CUSTOM">Custom Crew</option>
+                        </select>
+                        {crewMode === 'ALTERNATE' && (
+                          <select
+                            value={selectedAlternatePresetId}
+                            onChange={event => {
+                              const preset = crewRequirementPresets.find(candidate => candidate.id === event.target.value);
+                              updateStandardMissionDraft(profile.id, {
+                                selectedCrewCompositionId: preset?.id.replace(/^alternate:/, '') || '',
+                                roleRequirements: preset?.roles?.map(role => ({
+                                  role: role.role,
+                                  count: role.count,
+                                })) || [],
+                              });
+                            }}
+                            className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400"
+                          >
+                            <option value="">Select alternate crew</option>
+                            {Array.from(alternateCrewPresetsByUnit.entries()).map(([unitCode, presets]) => (
+                              <optgroup key={unitCode} label={unitCode}>
+                                {presets.map(preset => (
+                                  <option key={preset.id} value={preset.id}>{preset.label}</option>
+                                ))}
+                              </optgroup>
+                            ))}
+                          </select>
+                        )}
+                        {crewMode === 'CUSTOM' && (
+                          <div className="[&>div]:border-slate-700 [&>div]:bg-slate-950/70">
+                            <CrewRequirementEditor
+                              value={getStandardMissionCrewRequirement(profile)}
+                              aircraftCrewComposition={aircraftCrewComposition}
+                              crewRequirementPresets={crewRequirementPresets}
+                              crewPositionTerminology={crewPositionTerminology}
+                              operationalModel={operationalModel}
+                              compact
+                              onChange={(crewRequirement) => updateStandardMissionDraft(profile.id, {
+                                crewCompositionMode: 'CUSTOM',
+                                roleRequirements: (crewRequirement.roles || []).map(role => ({
+                                  role: role.role,
+                                  count: role.count,
+                                })),
+                              })}
+                            />
+                          </div>
+                        )}
+                      </div>
                     ) : crewMode.replace('_', ' '))}
                     {renderStandardMissionTile('No. of Aircraft', isEditing ? (
                       renderStandardMissionNumberInput(formationAircraft, value => updateStandardMissionDraft(profile.id, {
@@ -3684,7 +3787,20 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     ) : `${formationAircraft} ${formationAircraft === 1 ? 'aircraft' : 'aircraft'}`)}
                     {renderStandardMissionTile('Callsign / Notes', isEditing ? (
                       <div className="space-y-2">
-                        {renderStandardMissionInput(callsignPrefix, value => updateStandardMissionDraft(profile.id, { defaultCallsignPrefix: value }), 'Callsign')}
+                        <select
+                          value={callsignPrefix}
+                          onChange={event => updateStandardMissionDraft(profile.id, { defaultCallsignPrefix: event.target.value })}
+                          className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400"
+                        >
+                          <option value="">Select callsign</option>
+                          {Array.from(unitCallsignEntriesByUnit.entries()).map(([unitCode, entries]) => (
+                            <optgroup key={unitCode} label={unitCode}>
+                              {entries.map(entry => (
+                                <option key={entry.id} value={entry.callsign}>{entry.callsign}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
                         <textarea
                           value={String(getStandardMissionDraftValue(profile, 'description') || '')}
                           onChange={event => updateStandardMissionDraft(profile.id, { description: event.target.value })}
