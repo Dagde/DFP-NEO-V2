@@ -16,6 +16,7 @@ interface AirCombatTrainingReportModalProps {
   recentEvents?: ScheduleEvent[];
   syllabusDetails?: SyllabusItemDetail[];
   initialReport?: AirCombatTrainingReport;
+  startInEditMode?: boolean;
   reportName?: string;
   trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
   currentUserName?: string;
@@ -104,6 +105,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   recentEvents = [],
   syllabusDetails = [],
   initialReport,
+  startInEditMode = false,
   reportName = 'PT-051',
   trainingReportTemplate = null,
   currentUserName = '',
@@ -137,7 +139,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const formatGradeNumber = (value: number | string): string => (
     String(value).toUpperCase() === 'DEMO' ? 'DEMO' : String(value)
   );
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(startInEditMode);
   const [selectedSourceEvent, setSelectedSourceEvent] = useState<ScheduleEvent | undefined>(sourceEvent);
   const activeSourceEvent = selectedSourceEvent || sourceEvent;
   const selectedEventCode = String(activeSourceEvent?.flightNumber || activeSourceEvent?.eventCode || initialReport?.eventCode || '').trim();
@@ -396,7 +398,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
             </div>
             <div className="flex items-center gap-[1px]">
               <button type="button" onClick={() => window.print()} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Print</button>
-              <button type="button" onClick={() => setIsEditMode(prev => !prev)} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Edit</button>
+              <button type="button" onClick={() => setIsEditMode(prev => !prev)} className={`flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold ${isEditMode ? 'active text-sky-900' : ''}`}>Edit</button>
               <button type="button" onClick={saveReport} disabled={isSaving || !eventCode} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40">Save</button>
               <button type="button" className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Delete</button>
               <button type="button" onClick={onCancel} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Back</button>

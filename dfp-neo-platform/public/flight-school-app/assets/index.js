@@ -46481,6 +46481,7 @@ const AirCombatTrainingReportModal = ({
   recentEvents = [],
   syllabusDetails = [],
   initialReport,
+  startInEditMode = false,
   reportName = "PT-051",
   trainingReportTemplate = null,
   currentUserName = "",
@@ -46510,7 +46511,7 @@ const AirCombatTrainingReportModal = ({
     return reportTemplate.grades.showNumbers ? label : formatGradeOption(value);
   };
   const formatGradeNumber = (value) => String(value).toUpperCase() === "DEMO" ? "DEMO" : String(value);
-  const [isEditMode, setIsEditMode] = reactExports.useState(false);
+  const [isEditMode, setIsEditMode] = reactExports.useState(startInEditMode);
   const [selectedSourceEvent, setSelectedSourceEvent] = reactExports.useState(sourceEvent);
   const activeSourceEvent = selectedSourceEvent || sourceEvent;
   const selectedEventCode = String(activeSourceEvent?.flightNumber || activeSourceEvent?.eventCode || initialReport?.eventCode || "").trim();
@@ -46743,7 +46744,7 @@ const AirCombatTrainingReportModal = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => window.print(), className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Print" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsEditMode((prev) => !prev), className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Edit" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsEditMode((prev) => !prev), className: `flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold ${isEditMode ? "active text-sky-900" : ""}`, children: "Edit" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: saveReport, disabled: isSaving2 || !eventCode2, className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40", children: "Save" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Delete" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Back" }),
@@ -94762,7 +94763,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     setAirCombatTrainingReportDraft({ staff, assignment, item, sourceEvent: reportEvent });
   };
   const handleAddTrainingReportForStaff = (staff) => {
-    setAirCombatTrainingReportDraft({ staff });
+    setAirCombatTrainingReportDraft({ staff, startInEditMode: true });
   };
   const handleOpenAirCombatTrainingReportFromFlightDetails = async (staff, sourceEvent) => {
     const matchingItem = syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === String(sourceEvent.flightNumber || "").trim().toUpperCase());
@@ -105230,6 +105231,7 @@ Do you want to replace the existing entry?`,
         recentEvents: getRecentTrainingReportEventsForStaff(airCombatTrainingReportDraft.staff),
         syllabusDetails,
         initialReport: airCombatTrainingReportDraft.initialReport,
+        startInEditMode: airCombatTrainingReportDraft.startInEditMode === true,
         reportName: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode).displayName,
         trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode),
         currentUserName,

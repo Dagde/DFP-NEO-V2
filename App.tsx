@@ -282,6 +282,7 @@ type AirCombatTrainingReportDraft = {
     item?: SyllabusItemDetail;
     sourceEvent?: ScheduleEvent;
     initialReport?: AirCombatTrainingReport;
+    startInEditMode?: boolean;
 };
 
 type DfpMiniTimelineDragState = DfpMiniTimelineDragTarget & {
@@ -27139,7 +27140,7 @@ const App: React.FC = () => {
     };
 
     const handleAddTrainingReportForStaff = (staff: Instructor) => {
-        setAirCombatTrainingReportDraft({ staff });
+        setAirCombatTrainingReportDraft({ staff, startInEditMode: true });
     };
 
     const handleOpenAirCombatTrainingReportFromFlightDetails = async (
@@ -39645,6 +39646,7 @@ appliedUpdates.forEach(update => {
                 recentEvents={getRecentTrainingReportEventsForStaff(airCombatTrainingReportDraft.staff)}
                 syllabusDetails={syllabusDetails}
                 initialReport={airCombatTrainingReportDraft.initialReport}
+                startInEditMode={airCombatTrainingReportDraft.startInEditMode === true}
                 reportName={getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode).displayName}
                 trainingReportTemplate={getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode)}
                 currentUserName={currentUserName}
