@@ -183,7 +183,11 @@ const LogbookView: React.FC<LogbookViewProps> = ({ person, events, onBack, resou
           const snap: any = entry.captainLogSnapshot || entry.crewLogSnapshot;
           if (!snap || typeof snap !== 'object') continue;
 
-          const role = entry.personRole === 'instructor' ? 'Captain' : 'Crew';
+          const role = entry.personRole === 'instructor' || entry.personRole === 'fixed_crew_pic'
+            ? 'Captain'
+            : entry.personRole === 'fixed_crew_p2'
+              ? 'P2'
+              : 'Crew';
 
           logRows.push({
             year:      snap.year      || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : ''),

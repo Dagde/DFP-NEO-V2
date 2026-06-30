@@ -4732,7 +4732,7 @@ const LogbookView = ({ person, events, onBack, resourceDisplayNames = DEFAULT_RE
       for (const entry of entries) {
         const snap2 = entry.captainLogSnapshot || entry.crewLogSnapshot;
         if (!snap2 || typeof snap2 !== "object") continue;
-        const role = entry.personRole === "instructor" ? "Captain" : "Crew";
+        const role = entry.personRole === "instructor" || entry.personRole === "fixed_crew_pic" ? "Captain" : entry.personRole === "fixed_crew_p2" ? "P2" : "Crew";
         logRows.push({
           year: snap2.year || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : ""),
           date: snap2.date || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : ""),
@@ -39725,6 +39725,11 @@ const eventIncludesStaff = (event, staffName) => {
   const target = staffName.trim().toLowerCase();
   return Boolean(target) && getEventPeople$1(event).some((person) => person.toLowerCase() === target);
 };
+const getLogbookEntryRoleLabel = (personRole) => {
+  if (personRole === "instructor" || personRole === "fixed_crew_pic") return "Captain";
+  if (personRole === "fixed_crew_p2") return "P2";
+  return "Crew";
+};
 const InstructorProfileFlyout = ({
   instructor,
   onClose,
@@ -40480,7 +40485,7 @@ const InstructorProfileFlyout = ({
                         const snap2 = entry.captainLogSnapshot || entry.crewLogSnapshot || {};
                         const yr = snap2.year || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : "");
                         const dt = snap2.date || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "");
-                        const role2 = entry.personRole === "instructor" ? "Captain" : "Crew";
+                        const role2 = getLogbookEntryRoleLabel(entry.personRole);
                         return `<tr><td>${role2}</td><td>${entry.eventCode || ""}</td><td>${yr}</td><td>${dt}</td><td>${snap2.type || entry.eventType || ""}</td><td>${snap2.tail || entry.aircraftNumber || ""}</td><td>${snap2.captain || ""}</td><td>${snap2.crew || ""}</td><td style="min-width:120px">${snap2.duty || entry.duty || ""}</td><td>${snap2.dayP1 || ""}</td><td>${snap2.dayP2 || ""}</td><td>${snap2.dayDual || ""}</td><td>${snap2.nightP1 || ""}</td><td>${snap2.nightP2 || ""}</td><td>${snap2.nightDual || ""}</td><td>${snap2.total || entry.totalTime || ""}</td><td>${snap2.captTime || entry.captainTime || ""}</td><td>${snap2.instTime || entry.instructorTime || ""}</td><td>${snap2.simIf || ""}</td><td>${snap2.simActual || entry.ifActualTime || ""}</td><td>${snap2.app2D || ""}</td><td>${snap2.app3D || ""}</td><td>${snap2.simP1 || ""}</td><td>${snap2.simP2 || ""}</td><td>${snap2.simDual || ""}</td><td>${snap2.simTotal || ""}</td></tr>`;
                       }).join("");
                       const w = window.open("", "_blank", "width=1400,height=800");
@@ -40509,7 +40514,7 @@ const InstructorProfileFlyout = ({
               const filteredEntries = logbookEntries.filter((e) => (e.eventDate || "").slice(0, 7) === logbookMonth);
               const rows = filteredEntries.map((entry) => {
                 const snap2 = entry.captainLogSnapshot || entry.crewLogSnapshot || {};
-                const role2 = entry.personRole === "instructor" ? "Captain" : "Crew";
+                const role2 = getLogbookEntryRoleLabel(entry.personRole);
                 const yr = snap2.year || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : "");
                 const dt = snap2.date || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "");
                 const total = snap2.total || (entry.totalTime != null ? String(entry.totalTime) : "");
@@ -104113,6 +104118,66 @@ Do you want to replace the existing entry?`,
                   const parsedIneff = parseFloat(data.ineffectiveTime || "") || void 0;
                   const parsedCapt = parseFloat(data.captainTime || "") || void 0;
                   const parsedInst = parseFloat(data.instructorTime || "") || void 0;
+                  const normaliseLogbookName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+                  const formatLogbookHours = (value) => value > 0 ? value.toFixed(1) : "";
+                  const getFixedCrewGroupCode = (value) => {
+                    const raw = String(value || "").trim().toUpperCase();
+                    if (!raw) return "";
+                    const parts = raw.split("::").map((part) => part.trim()).filter(Boolean);
+                    return (parts[1] || parts[0]).replace(/^CREW\s*/i, "").trim();
+                  };
+                  const getFixedCrewRosterForEvent = () => {
+                    const roster = /* @__PURE__ */ new Map();
+                    const addByName = (name) => {
+                      const normalised = normaliseLogbookName(name);
+                      if (!normalised || normalised === "tba") return;
+                      const staff = instructorsData.find((person) => normaliseLogbookName(person.name) === normalised);
+                      if (staff) roster.set(normaliseLogbookName(staff.name), staff);
+                    };
+                    addByName(pfEvt.fixedCrewPic || pfEvt.pilot || pfEvt.instructor);
+                    (Array.isArray(pfEvt.crewSelectionOrder) ? pfEvt.crewSelectionOrder : []).forEach(addByName);
+                    (Array.isArray(pfEvt.attendees) ? pfEvt.attendees : []).forEach(addByName);
+                    String(pfEvt.crew || "").split(/[,;/]/).map((name) => name.trim()).filter(Boolean).forEach(addByName);
+                    const crewCode = getFixedCrewGroupCode(pfEvt.fixedCrewGroup || pfEvt.group || pfEvt.crew);
+                    if (crewCode) {
+                      instructorsData.filter((person) => String(person.crew || "").trim().toUpperCase() === crewCode).forEach((person) => roster.set(normaliseLogbookName(person.name), person));
+                    }
+                    return Array.from(roster.values());
+                  };
+                  const isPilotStaffForLogbook = (person) => {
+                    const role = String(person.role || "").trim().toLowerCase();
+                    return role === "pilot" || role.includes("pilot");
+                  };
+                  const splitDayNightHours = () => {
+                    const total = parsedTotal || 0;
+                    if (total <= 0) return { day: 0, night: 0 };
+                    const takeoff = timeStringToHours(data.takeoffTime || "");
+                    const landingRaw = timeStringToHours(data.landTime || "");
+                    let start = Number.isFinite(Number(takeoff)) ? Number(takeoff) : Number(pfEvt.startTime || 0);
+                    let end = Number.isFinite(Number(landingRaw)) ? Number(landingRaw) : start + total;
+                    if (end <= start) end += 24;
+                    const sunTimes = getSunTimesForDate(pfEvt.date);
+                    const firstLight = Number(sunTimes?.firstLightDecimal);
+                    const lastLight = Number(sunTimes?.lastLightDecimal);
+                    if (!Number.isFinite(firstLight) || !Number.isFinite(lastLight)) {
+                      const fallbackNight = parsedNight || 0;
+                      return { day: Math.max(0, total - fallbackNight), night: fallbackNight };
+                    }
+                    const dayWindows = [
+                      { start: firstLight, end: lastLight },
+                      { start: firstLight + 24, end: lastLight + 24 }
+                    ];
+                    const day = dayWindows.reduce((sum, window2) => {
+                      const overlapStart = Math.max(start, window2.start);
+                      const overlapEnd = Math.min(end, window2.end);
+                      return sum + Math.max(0, overlapEnd - overlapStart);
+                    }, 0);
+                    const clampedDay = Math.min(total, Math.max(0, day));
+                    return {
+                      day: clampedDay,
+                      night: Math.max(0, total - clampedDay)
+                    };
+                  };
                   const flightLogBase = {
                     scheduleEventId: pfEvt.id,
                     eventCode: pfEvt.flightNumber || pfEvt.id,
@@ -104138,39 +104203,101 @@ Do you want to replace the existing entry?`,
                     tacanCount: data.approaches?.tacan || 0,
                     vorCount: data.approaches?.vor || 0
                   };
-                  if (pfEvt.student) {
-                    const pfTraineeForLog = traineesData.find((t) => t.name === pfEvt.student || t.fullName === pfEvt.student);
-                    const traineeLogPayload = {
-                      ...flightLogBase,
-                      traineeId: pfTraineeForLog?.id || void 0,
-                      personName: pfEvt.student,
-                      personRole: "trainee",
-                      // Solo trainee gets captainTime = totalTime (PIC only)
-                      // Dual trainee gets captainTime from user-entered captainTime field
-                      captainTime: isSoloFlight ? parsedTotal : parsedCapt || void 0,
-                      instructorTime: void 0,
-                      // Full logbook row snapshots (auto-filled + any manual overrides)
-                      captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : void 0,
-                      crewLogSnapshot: data.crewLog && Object.keys(data.crewLog).length > 0 ? data.crewLog : void 0
+                  const fixedCrewRoster = getFixedCrewRosterForEvent();
+                  const isFixedCrewPostFlight = normaliseOperationalModel(activeOperationalModel) === "fixed_crew" && fixedCrewRoster.length > 0;
+                  if (isFixedCrewPostFlight) {
+                    const picName = normaliseLogbookName(pfEvt.fixedCrewPic || pfEvt.pilot || pfEvt.instructor);
+                    const { day, night } = splitDayNightHours();
+                    const captainDisplay = pfEvt.fixedCrewPic || pfEvt.pilot || pfEvt.instructor || "";
+                    const crewDisplay = fixedCrewRoster.map((person) => person.name).filter((name) => normaliseLogbookName(name) !== picName).join(", ");
+                    const dateObj = /* @__PURE__ */ new Date(`${pfEvt.date}T00:00:00`);
+                    const baseSnapshot = {
+                      year: Number.isFinite(dateObj.getTime()) ? dateObj.getFullYear().toString() : "",
+                      date: Number.isFinite(dateObj.getTime()) ? dateObj.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "",
+                      type: data.isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft,
+                      tail: data.aircraftNumber || "",
+                      captain: captainDisplay,
+                      crew: crewDisplay,
+                      duty: data.duty || "",
+                      total: parsedTotal ? parsedTotal.toFixed(1) : "",
+                      simIf: "",
+                      simActual: "",
+                      app2D: "",
+                      app3D: "",
+                      simP1: "",
+                      simP2: "",
+                      simDual: "",
+                      simTotal: ""
                     };
-                    console.log("[PostFlight] Trainee FlightLog payload:", JSON.stringify(traineeLogPayload, null, 2));
-                    await saveFlightLogEntry(traineeLogPayload, "trainee");
-                  }
-                  if (pfEvt.instructor) {
-                    const pfInstrForLog = instructorsData.find((i) => i.name === pfEvt.instructor);
-                    const instrLogPayload = {
-                      ...flightLogBase,
-                      personnelId: pfInstrForLog?.id || void 0,
-                      personName: pfEvt.instructor,
-                      personRole: "instructor",
-                      captainTime: void 0,
-                      instructorTime: parsedInst,
-                      // Full logbook row snapshots (auto-filled + any manual overrides)
-                      captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : void 0,
-                      crewLogSnapshot: data.crewLog && Object.keys(data.crewLog).length > 0 ? data.crewLog : void 0
-                    };
-                    console.log("[PostFlight] Instructor FlightLog payload:", JSON.stringify(instrLogPayload, null, 2));
-                    await saveFlightLogEntry(instrLogPayload, "instructor");
+                    for (const staff of fixedCrewRoster) {
+                      const isPic = normaliseLogbookName(staff.name) === picName;
+                      const isP2 = !isPic && isPilotStaffForLogbook(staff);
+                      const personRole = isPic ? "fixed_crew_pic" : isP2 ? "fixed_crew_p2" : "fixed_crew_crew";
+                      const snapshot = {
+                        ...baseSnapshot,
+                        dayP1: isPic ? formatLogbookHours(day) : "",
+                        dayP2: isP2 ? formatLogbookHours(day) : "",
+                        dayDual: "",
+                        nightP1: isPic ? formatLogbookHours(night) : "",
+                        nightP2: isP2 ? formatLogbookHours(night) : "",
+                        nightDual: "",
+                        captTime: isPic && parsedTotal ? parsedTotal.toFixed(1) : "",
+                        instTime: ""
+                      };
+                      await saveFlightLogEntry({
+                        ...flightLogBase,
+                        personnelId: staff.id || void 0,
+                        personName: staff.name,
+                        personRole,
+                        captainTime: isPic ? parsedTotal : void 0,
+                        instructorTime: void 0,
+                        nightTime: isPic || isP2 ? Number(night.toFixed(1)) : void 0,
+                        ifActualTime: isPic ? parsedIfAct : void 0,
+                        ifSimTime: isPic ? parsedIfSim : void 0,
+                        ineffectiveTime: isPic ? parsedIneff : void 0,
+                        ilsCount: isPic ? data.approaches?.ils || 0 : 0,
+                        rnpCount: isPic ? data.approaches?.rnp || 0 : 0,
+                        tacanCount: isPic ? data.approaches?.tacan || 0 : 0,
+                        vorCount: isPic ? data.approaches?.vor || 0 : 0,
+                        captainLogSnapshot: isPic ? snapshot : void 0,
+                        crewLogSnapshot: !isPic ? snapshot : void 0
+                      }, `fixed crew ${personRole}`);
+                    }
+                  } else {
+                    if (pfEvt.student) {
+                      const pfTraineeForLog = traineesData.find((t) => t.name === pfEvt.student || t.fullName === pfEvt.student);
+                      const traineeLogPayload = {
+                        ...flightLogBase,
+                        traineeId: pfTraineeForLog?.id || void 0,
+                        personName: pfEvt.student,
+                        personRole: "trainee",
+                        // Solo trainee gets captainTime = totalTime (PIC only)
+                        // Dual trainee gets captainTime from user-entered captainTime field
+                        captainTime: isSoloFlight ? parsedTotal : parsedCapt || void 0,
+                        instructorTime: void 0,
+                        // Full logbook row snapshots (auto-filled + any manual overrides)
+                        captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : void 0,
+                        crewLogSnapshot: data.crewLog && Object.keys(data.crewLog).length > 0 ? data.crewLog : void 0
+                      };
+                      console.log("[PostFlight] Trainee FlightLog payload:", JSON.stringify(traineeLogPayload, null, 2));
+                      await saveFlightLogEntry(traineeLogPayload, "trainee");
+                    }
+                    if (pfEvt.instructor) {
+                      const pfInstrForLog = instructorsData.find((i) => i.name === pfEvt.instructor);
+                      const instrLogPayload = {
+                        ...flightLogBase,
+                        personnelId: pfInstrForLog?.id || void 0,
+                        personName: pfEvt.instructor,
+                        personRole: "instructor",
+                        captainTime: void 0,
+                        instructorTime: parsedInst,
+                        // Full logbook row snapshots (auto-filled + any manual overrides)
+                        captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : void 0,
+                        crewLogSnapshot: data.crewLog && Object.keys(data.crewLog).length > 0 ? data.crewLog : void 0
+                      };
+                      console.log("[PostFlight] Instructor FlightLog payload:", JSON.stringify(instrLogPayload, null, 2));
+                      await saveFlightLogEntry(instrLogPayload, "instructor");
+                    }
                   }
                 }
                 const isCurrencyPostFlightEvent = !!eventForPostFlight && (eventForPostFlight.eventCategory === "currency" || !!eventForPostFlight.currencyDraftId || eventForPostFlight.flightNumber === "CURR");

@@ -291,6 +291,12 @@ const getStaffEventRole = (event: ScheduleEvent, staffName: string): string => {
   return 'Staff';
 };
 
+const getLogbookEntryRoleLabel = (personRole?: string): string => {
+  if (personRole === 'instructor' || personRole === 'fixed_crew_pic') return 'Captain';
+  if (personRole === 'fixed_crew_p2') return 'P2';
+  return 'Crew';
+};
+
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
@@ -1096,7 +1102,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                             const snap: any = entry.captainLogSnapshot || entry.crewLogSnapshot || {};
                             const yr = snap.year || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : '');
                             const dt = snap.date || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '');
-                            const role = entry.personRole === 'instructor' ? 'Captain' : 'Crew';
+                            const role = getLogbookEntryRoleLabel(entry.personRole);
                             return `<tr><td>${role}</td><td>${entry.eventCode||''}</td><td>${yr}</td><td>${dt}</td><td>${snap.type||entry.eventType||''}</td><td>${snap.tail||entry.aircraftNumber||''}</td><td>${snap.captain||''}</td><td>${snap.crew||''}</td><td style="min-width:120px">${snap.duty||entry.duty||''}</td><td>${snap.dayP1||''}</td><td>${snap.dayP2||''}</td><td>${snap.dayDual||''}</td><td>${snap.nightP1||''}</td><td>${snap.nightP2||''}</td><td>${snap.nightDual||''}</td><td>${snap.total||entry.totalTime||''}</td><td>${snap.captTime||entry.captainTime||''}</td><td>${snap.instTime||entry.instructorTime||''}</td><td>${snap.simIf||''}</td><td>${snap.simActual||entry.ifActualTime||''}</td><td>${snap.app2D||''}</td><td>${snap.app3D||''}</td><td>${snap.simP1||''}</td><td>${snap.simP2||''}</td><td>${snap.simDual||''}</td><td>${snap.simTotal||''}</td></tr>`;
                           }).join('');
                           const w = window.open('','_blank','width=1400,height=800');
@@ -1120,7 +1126,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     const filteredEntries = logbookEntries.filter((e: any) => (e.eventDate || '').slice(0, 7) === logbookMonth);
                     const rows: any[] = filteredEntries.map((entry: any) => {
                       const snap: any = entry.captainLogSnapshot || entry.crewLogSnapshot || {};
-                      const role = entry.personRole === 'instructor' ? 'Captain' : 'Crew';
+                      const role = getLogbookEntryRoleLabel(entry.personRole);
                       const yr = snap.year || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : '');
                       const dt = snap.date || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '');
                       // Fallback to raw entry fields when snapshot values are missing

@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/flight-log — upsert a flight log entry
-// Uses scheduleEventId + personRole as the natural upsert key
+// Uses scheduleEventId + personRole + personName as the natural upsert key
 // so re-saving the same post-flight form overwrites rather than duplicates.
 export async function POST(request: NextRequest) {
   try {
@@ -110,9 +110,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upsert: find existing row for this sortie + person role, then update or create
+    // Upsert: find existing row for this sortie + person, then update or create.
+    // Fixed Crew events can have multiple staff in the same broad role, so personName
+    // must be part of the natural key.
     const existing = await (prisma as any).flightLogEntry.findFirst({
-      where: { scheduleEventId, personRole },
+      where: { scheduleEventId, personRole, personName },
     });
 
     const data: any = {
