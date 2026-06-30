@@ -2924,17 +2924,19 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         </div>
                                     )}
                                     
-                                    <div className="relative w-[75px]">
-                                        {isFrozen && (
-                                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
-                                        )}
-                                        <button
-                                            onClick={handleLmpClick}
-                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
-                                        >
-                                            <span className="text-center leading-tight">LMP</span>
-                                        </button>
-                                    </div>
+                                    {!isFixedCrewModel && (
+                                        <div className="relative w-[75px]">
+                                            {isFrozen && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
+                                            <button
+                                                onClick={handleLmpClick}
+                                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                            >
+                                                <span className="text-center leading-tight">LMP</span>
+                                            </button>
+                                        </div>
+                                    )}
                                     {/* PT-051 button - frozen unless pt051Entries is allowed */}
                                     {traineeObject && (
                                         <div className="relative w-[75px]">
@@ -2949,7 +2951,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             </button>
                                         </div>
                                     )}
-                                    {onOpenTrainingReport && trainingReportStaffObject && (
+                                    {!isFixedCrewModel && onOpenTrainingReport && trainingReportStaffObject && (
                                         <div className="relative w-[75px]">
                                             {isFrozen && !freezeAllowedActions.pt051Entries && (
                                                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
@@ -3688,6 +3690,19 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             )}
                                             <button onClick={handlePostFlightClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
                                                 <span className="text-center leading-tight">Post<br/>Flight</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                    {isFixedCrewModel && (
+                                        <div className="relative w-[75px]">
+                                            {isFrozen && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
+                                            <button
+                                                onClick={handleLmpClick}
+                                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                            >
+                                                <span className="text-center leading-tight">LMP</span>
                                             </button>
                                         </div>
                                     )}
