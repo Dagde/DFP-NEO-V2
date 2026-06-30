@@ -45,6 +45,17 @@ const stripResourceLineNumber = (resourceLabel: string): string => (
   String(resourceLabel || '').replace(/\s+\d+$/, '').trim()
 );
 
+const formatTrainingReportDate = (dateString?: string): string => {
+  if (!dateString) return '-';
+  const [year, month, day] = String(dateString).split('-').map(Number);
+  if (!year || !month || !day) return dateString;
+  return new Date(year, month - 1, day).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: '2-digit',
+  });
+};
+
 const COMMENT_SECTION_KEYS = ['assessor', 'weather', 'profile', 'overall', 'nest', 'notes'] as const;
 type CommentSectionKey = typeof COMMENT_SECTION_KEYS[number];
 
@@ -268,7 +279,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                       }}
                       className="grid w-full grid-cols-[82px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-2 border-b border-gray-800 px-2 py-2 text-left text-[11px] last:border-b-0 hover:bg-sky-950/40"
                     >
-                      <span className="font-mono text-gray-300">{event.date || '-'}</span>
+                      <span className="font-mono text-gray-300">{formatTrainingReportDate(event.date)}</span>
                       <span className="truncate text-white">{getRecentEventPic(event)}</span>
                       <span className="truncate text-gray-300">{getRecentEventCoPilot(event)}</span>
                       <span className="truncate font-semibold text-sky-200">{getRecentEventTitle(event)}</span>

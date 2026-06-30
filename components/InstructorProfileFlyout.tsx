@@ -1265,7 +1265,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <p className="mt-0.5 text-xs text-gray-400">Training reports saved against this staff member and unit.</p>
                     </div>
                     <div className="flex items-center gap-px">
-                      <button type="button" onClick={() => onAddTrainingReport?.(instructor)} className={airCombatPanelButtonClass}>+ Add<br />TR</button>
+                      <button type="button" onClick={() => onAddTrainingReport?.(instructor)} className={airCombatPanelButtonClass}>Add<br />Training<br />Report</button>
                       <AuditButton pageName="Air Combat Training Reports" />
                       <button onClick={() => setActiveTab(null)} className={airCombatPanelButtonClass}>Close</button>
                     </div>

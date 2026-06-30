@@ -25701,7 +25701,7 @@ const MyDashboard = ({
     staffPickerEntry && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-lg rounded-lg border border-gray-600 bg-gray-900 p-4 shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: staffPickerEntry.mode === "reassign" ? "Re-Assign Report" : "Select Staff" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: staffPickerEntry.mode === "reassign" ? "Re-Assign Report" : "Select Staff Member to Assess" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
             "Flight ",
             staffPickerEntry.report.callsign || staffPickerEntry.report.eventCode
@@ -40675,9 +40675,11 @@ const InstructorProfileFlyout = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-px", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: () => onAddTrainingReport?.(instructor), className: airCombatPanelButtonClass, children: [
-                  "+ Add",
+                  "Add",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                  "TR"
+                  "Training",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Report"
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Air Combat Training Reports" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: airCombatPanelButtonClass, children: "Close" })
@@ -46490,6 +46492,16 @@ const formatTimeToHHMM = (time) => {
   return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
 };
 const stripResourceLineNumber = (resourceLabel) => String(resourceLabel || "").replace(/\s+\d+$/, "").trim();
+const formatTrainingReportDate = (dateString) => {
+  if (!dateString) return "-";
+  const [year, month, day] = String(dateString).split("-").map(Number);
+  if (!year || !month || !day) return dateString;
+  return new Date(year, month - 1, day).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "2-digit"
+  });
+};
 const parseReportComments = (raw) => {
   const defaults = {
     assessor: "",
@@ -46656,7 +46668,7 @@ const AirCombatTrainingReportModal = ({
           },
           className: "grid w-full grid-cols-[82px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-2 border-b border-gray-800 px-2 py-2 text-left text-[11px] last:border-b-0 hover:bg-sky-950/40",
           children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300", children: event.date || "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300", children: formatTrainingReportDate(event.date) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-white", children: getRecentEventPic(event) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-gray-300", children: getRecentEventCoPilot(event) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-sky-200", children: getRecentEventTitle(event) })
