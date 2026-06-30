@@ -1,6 +1,6 @@
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, ScheduleEvent, SyllabusItemDetail, AirCombatTrainingAssignment } from '../types';
+import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, ScheduleEvent, SyllabusItemDetail, AirCombatTrainingAssignment, AirCombatTrainingReport } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import AuditButton from './AuditButton';
@@ -8,8 +8,10 @@ import { InsertEventModal, LmpEventEditModal, type InsertLmpEventRequest } from 
 import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
   DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -583,6 +585,51 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     normaliseAirCombatTrainingReports(instructor.preferences)
       .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')) || String(right.createdAt || '').localeCompare(String(left.createdAt || '')))
   ), [instructor.preferences]);
+  const handleDeleteTrainingReport = useCallback(async (report: AirCombatTrainingReport) => {
+    const password = await showDarkPrompt({
+      title: 'Delete Training Report',
+      message: `Enter your password to delete ${report.reportName || 'this training report'} for ${report.eventCode || 'this event'}.`,
+      inputLabel: 'Password',
+      inputType: 'password',
+      inputPlaceholder: 'Enter password',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'warning',
+    });
+    if (!password) return;
+
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert('The password was not accepted. The training report was not deleted.', 'Password Required', 'warning');
+        return;
+      }
+    } catch {
+      await showDarkAlert('The app could not verify your password. The training report was not deleted.', 'Password Check Failed', 'error');
+      return;
+    }
+
+    const preferences = { ...(instructor.preferences || {}) };
+    const existingReports = normaliseAirCombatTrainingReports(preferences);
+    const updatedReports = existingReports.filter(existing => existing.id !== report.id);
+    const updatedInstructor: Instructor = {
+      ...instructor,
+      preferences: {
+        ...preferences,
+        airCombat: {
+          ...(preferences.airCombat || {}),
+          trainingReports: updatedReports,
+        },
+      },
+    };
+
+    onUpdateInstructor(updatedInstructor);
+    logAudit(
+      'Air Combat Training Reports',
+      'Delete',
+      `Deleted ${report.reportName || 'training report'} for ${instructor.name} - Event: ${report.eventCode || 'Unknown'}`
+    );
+  }, [instructor, onUpdateInstructor]);
   const totalAirCombatSequenceEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.totalCount, 0);
   const totalAirCombatCompletedEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.completedCount, 0);
   const airCombatPanelButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
@@ -1244,6 +1291,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                               <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300">Result</th>
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Instructor</th>
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Unit</th>
+                              <th className="px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-gray-300">Delete</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-700 bg-gray-800">
@@ -1272,11 +1320,20 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                   </td>
                                   <td className="whitespace-nowrap px-4 py-2 text-xs text-gray-300">{report.instructorName || '-'}</td>
                                   <td className="whitespace-nowrap px-4 py-2 text-xs text-gray-400">{report.locationCode || instructor.location || '-'} / {report.unitCode || instructor.unit || '-'}</td>
+                                  <td className="whitespace-nowrap px-4 py-2 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteTrainingReport(report)}
+                                      className="h-7 min-w-[54px] rounded-md btn-aluminium-brushed px-2 text-[10px] font-semibold text-red-700"
+                                    >
+                                      Delete
+                                    </button>
+                                  </td>
                                 </tr>
                               );
                             }) : (
                               <tr>
-                                <td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-500">
+                                <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">
                                   No training reports saved for this staff member.
                                 </td>
                               </tr>

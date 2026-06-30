@@ -39986,6 +39986,48 @@ const InstructorProfileFlyout = ({
     item: summary.sequenceItems.find((item) => normaliseTrainingCode(item.code) === normaliseTrainingCode(event.flightNumber)) || null
   }))).sort((left, right) => getEventDateValue(right.event) - getEventDateValue(left.event) || Number(right.event.startTime || 0) - Number(left.event.startTime || 0)), [airCombatTrainingSummaries]);
   const airCombatStoredTrainingReports = reactExports.useMemo(() => normaliseAirCombatTrainingReports(instructor.preferences).sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")) || String(right.createdAt || "").localeCompare(String(left.createdAt || ""))), [instructor.preferences]);
+  const handleDeleteTrainingReport = reactExports.useCallback(async (report) => {
+    const password = await showDarkPrompt({
+      title: "Delete Training Report",
+      message: `Enter your password to delete ${report.reportName || "this training report"} for ${report.eventCode || "this event"}.`,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted. The training report was not deleted.", "Password Required", "warning");
+        return;
+      }
+    } catch {
+      await showDarkAlert("The app could not verify your password. The training report was not deleted.", "Password Check Failed", "error");
+      return;
+    }
+    const preferences = { ...instructor.preferences || {} };
+    const existingReports = normaliseAirCombatTrainingReports(preferences);
+    const updatedReports = existingReports.filter((existing) => existing.id !== report.id);
+    const updatedInstructor = {
+      ...instructor,
+      preferences: {
+        ...preferences,
+        airCombat: {
+          ...preferences.airCombat || {},
+          trainingReports: updatedReports
+        }
+      }
+    };
+    onUpdateInstructor(updatedInstructor);
+    logAudit(
+      "Air Combat Training Reports",
+      "Delete",
+      `Deleted ${report.reportName || "training report"} for ${instructor.name} - Event: ${report.eventCode || "Unknown"}`
+    );
+  }, [instructor, onUpdateInstructor]);
   const totalAirCombatSequenceEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.totalCount, 0);
   const totalAirCombatCompletedEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.completedCount, 0);
   const airCombatPanelButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
@@ -40664,7 +40706,8 @@ const InstructorProfileFlyout = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Report" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Result" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Instructor" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Unit" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Unit" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Delete" })
                 ] }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 bg-gray-800", children: airCombatStoredTrainingReports.length > 0 ? airCombatStoredTrainingReports.map((report) => {
                   const isComplete = report.status === "Complete";
@@ -40685,9 +40728,18 @@ const InstructorProfileFlyout = ({
                       report.locationCode || instructor.location || "-",
                       " / ",
                       report.unitCode || instructor.unit || "-"
-                    ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => handleDeleteTrainingReport(report),
+                        className: "h-7 min-w-[54px] rounded-md btn-aluminium-brushed px-2 text-[10px] font-semibold text-red-700",
+                        children: "Delete"
+                      }
+                    ) })
                   ] }, report.id);
-                }) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, className: "px-4 py-10 text-center text-sm text-gray-500", children: "No training reports saved for this staff member." }) }) })
+                }) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 8, className: "px-4 py-10 text-center text-sm text-gray-500", children: "No training reports saved for this staff member." }) }) })
               ] }) })
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400", children: "Staff training reports are not configured for this operational model." })
           ] }),
