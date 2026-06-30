@@ -285,6 +285,24 @@ type AirCombatTrainingReportDraft = {
     startInEditMode?: boolean;
 };
 
+type TrainingReportFlightLogEntry = {
+    id?: string;
+    scheduleEventId?: string;
+    eventCode?: string;
+    eventDate?: string;
+    eventType?: string;
+    aircraftNumber?: string;
+    fromIcao?: string;
+    toIcao?: string;
+    duty?: string;
+    takeoffTime?: string;
+    landTime?: string;
+    totalTime?: number;
+    personName?: string;
+    captainLogSnapshot?: Record<string, any>;
+    crewLogSnapshot?: Record<string, any>;
+};
+
 type DfpMiniTimelineDragState = DfpMiniTimelineDragTarget & {
     label: string;
     originalTime: number;
@@ -24278,6 +24296,7 @@ const App: React.FC = () => {
     const [selectedScoreForDetail, setSelectedScoreForDetail] = useState<Score | null>(null);
     const [eventForPt051, setEventForPt051] = useState<ScheduleEvent | null>(null);
     const [airCombatTrainingReportDraft, setAirCombatTrainingReportDraft] = useState<AirCombatTrainingReportDraft | null>(null);
+    const [trainingReportRecentLogEvents, setTrainingReportRecentLogEvents] = useState<ScheduleEvent[]>([]);
     const [loadedPt051Keys, setLoadedPt051Keys] = useState<Set<string>>(new Set());
     const [selectedPersonForCurrency, setSelectedPersonForCurrency] = useState<Instructor | Trainee | null>(null);
     const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = useState<'instructor' | 'trainee'>('instructor');
@@ -27471,6 +27490,68 @@ const App: React.FC = () => {
             ))
             .slice(0, 5);
     };
+
+    const mapFlightLogEntryToTrainingReportEvent = (entry: TrainingReportFlightLogEntry): ScheduleEvent => {
+        const snapshot = entry.captainLogSnapshot || entry.crewLogSnapshot || {};
+        const startTime = timeStringToHours(entry.takeoffTime) ?? 8;
+        const landTime = timeStringToHours(entry.landTime);
+        const duration = Number(entry.totalTime) || (
+            landTime !== null
+                ? Math.max(0.25, landTime >= startTime ? landTime - startTime : landTime + 24 - startTime)
+                : 1
+        );
+        const eventCode = String(entry.eventCode || snapshot.event || '').trim();
+        return {
+            id: String(entry.scheduleEventId || entry.id || `flight-log-${entry.eventDate || ''}-${eventCode}`),
+            date: String(entry.eventDate || new Date().toISOString().slice(0, 10)),
+            type: String(entry.eventType || '').toLowerCase() === 'ftd' ? 'ftd' : 'flight',
+            instructor: String(snapshot.captain || '').trim() || currentUserName || undefined,
+            pilot: String(snapshot.captain || '').trim() || undefined,
+            crew: String(snapshot.crew || entry.personName || '').trim() || undefined,
+            flightNumber: eventCode || 'Flight',
+            duration,
+            startTime,
+            resourceId: String(snapshot.type || entry.aircraftNumber || '').trim(),
+            color: '#0ea5e9',
+            flightType: 'Dual',
+            locationType: 'Local',
+            origin: String(entry.fromIcao || '').trim(),
+            destination: String(entry.toIcao || '').trim(),
+            callsign: String(entry.duty || snapshot.duty || '').trim(),
+            aircraftNumber: String(entry.aircraftNumber || snapshot.tail || '').trim(),
+        };
+    };
+
+    useEffect(() => {
+        const staff = airCombatTrainingReportDraft?.staff;
+        if (!staff) {
+            setTrainingReportRecentLogEvents([]);
+            return;
+        }
+        let cancelled = false;
+        const loadRecentLogbookFlights = async () => {
+            try {
+                const response = await fetch(`/api/flight-log?personName=${encodeURIComponent(staff.name)}`, { credentials: 'include' });
+                if (!response.ok) throw new Error(`Flight log lookup failed (${response.status})`);
+                const json = await response.json();
+                const entries = Array.isArray(json.entries) ? json.entries as TrainingReportFlightLogEntry[] : [];
+                const events = entries
+                    .filter(entry => entry.eventDate && entry.eventCode)
+                    .sort((left, right) => (
+                        new Date(`${right.eventDate || ''}T00:00:00`).getTime() - new Date(`${left.eventDate || ''}T00:00:00`).getTime() ||
+                        Number(timeStringToHours(right.takeoffTime) || 0) - Number(timeStringToHours(left.takeoffTime) || 0)
+                    ))
+                    .slice(0, 5)
+                    .map(mapFlightLogEntryToTrainingReportEvent);
+                if (!cancelled) setTrainingReportRecentLogEvents(events);
+            } catch (error) {
+                console.warn('[TrainingReport] Recent flight log lookup failed:', error);
+                if (!cancelled) setTrainingReportRecentLogEvents([]);
+            }
+        };
+        loadRecentLogbookFlights();
+        return () => { cancelled = true; };
+    }, [airCombatTrainingReportDraft?.staff.name]);
 
     const handleViewLogbook = useCallback((person: Instructor | Trainee) => {
         setSelectedPersonForLogbook(person);
@@ -39834,7 +39915,15 @@ appliedUpdates.forEach(update => {
                 assignment={airCombatTrainingReportDraft.assignment}
                 item={airCombatTrainingReportDraft.item}
                 sourceEvent={airCombatTrainingReportDraft.sourceEvent}
-                recentEvents={getRecentTrainingReportEventsForStaff(airCombatTrainingReportDraft.staff)}
+                recentEvents={[
+                    ...trainingReportRecentLogEvents,
+                    ...getRecentTrainingReportEventsForStaff(airCombatTrainingReportDraft.staff),
+                ].filter((event, index, allEvents) => {
+                    const key = event.id || `${event.date}-${event.flightNumber}-${event.startTime}-${event.resourceId}`;
+                    return allEvents.findIndex(candidate => (
+                        (candidate.id || `${candidate.date}-${candidate.flightNumber}-${candidate.startTime}-${candidate.resourceId}`) === key
+                    )) === index;
+                }).slice(0, 5)}
                 syllabusDetails={syllabusDetails}
                 initialReport={airCombatTrainingReportDraft.initialReport}
                 startInEditMode={airCombatTrainingReportDraft.startInEditMode === true}

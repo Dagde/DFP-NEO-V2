@@ -92714,6 +92714,7 @@ ${"=".repeat(60)}`);
   const [selectedScoreForDetail, setSelectedScoreForDetail] = reactExports.useState(null);
   const [eventForPt051, setEventForPt051] = reactExports.useState(null);
   const [airCombatTrainingReportDraft, setAirCombatTrainingReportDraft] = reactExports.useState(null);
+  const [trainingReportRecentLogEvents, setTrainingReportRecentLogEvents] = reactExports.useState([]);
   const [loadedPt051Keys, setLoadedPt051Keys] = reactExports.useState(/* @__PURE__ */ new Set());
   const [selectedPersonForCurrency, setSelectedPersonForCurrency] = reactExports.useState(null);
   const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = reactExports.useState("instructor");
@@ -95191,6 +95192,57 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
     return Array.from(deduped.values()).sort((left, right) => (/* @__PURE__ */ new Date(`${right.date || ""}T00:00:00`)).getTime() - (/* @__PURE__ */ new Date(`${left.date || ""}T00:00:00`)).getTime() || Number(right.startTime || 0) - Number(left.startTime || 0)).slice(0, 5);
   };
+  const mapFlightLogEntryToTrainingReportEvent = (entry) => {
+    const snapshot = entry.captainLogSnapshot || entry.crewLogSnapshot || {};
+    const startTime = timeStringToHours(entry.takeoffTime) ?? 8;
+    const landTime = timeStringToHours(entry.landTime);
+    const duration = Number(entry.totalTime) || (landTime !== null ? Math.max(0.25, landTime >= startTime ? landTime - startTime : landTime + 24 - startTime) : 1);
+    const eventCode2 = String(entry.eventCode || snapshot.event || "").trim();
+    return {
+      id: String(entry.scheduleEventId || entry.id || `flight-log-${entry.eventDate || ""}-${eventCode2}`),
+      date: String(entry.eventDate || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)),
+      type: String(entry.eventType || "").toLowerCase() === "ftd" ? "ftd" : "flight",
+      instructor: String(snapshot.captain || "").trim() || currentUserName || void 0,
+      pilot: String(snapshot.captain || "").trim() || void 0,
+      crew: String(snapshot.crew || entry.personName || "").trim() || void 0,
+      flightNumber: eventCode2 || "Flight",
+      duration,
+      startTime,
+      resourceId: String(snapshot.type || entry.aircraftNumber || "").trim(),
+      color: "#0ea5e9",
+      flightType: "Dual",
+      locationType: "Local",
+      origin: String(entry.fromIcao || "").trim(),
+      destination: String(entry.toIcao || "").trim(),
+      callsign: String(entry.duty || snapshot.duty || "").trim(),
+      aircraftNumber: String(entry.aircraftNumber || snapshot.tail || "").trim()
+    };
+  };
+  reactExports.useEffect(() => {
+    const staff = airCombatTrainingReportDraft?.staff;
+    if (!staff) {
+      setTrainingReportRecentLogEvents([]);
+      return;
+    }
+    let cancelled = false;
+    const loadRecentLogbookFlights = async () => {
+      try {
+        const response = await fetch(`/api/flight-log?personName=${encodeURIComponent(staff.name)}`, { credentials: "include" });
+        if (!response.ok) throw new Error(`Flight log lookup failed (${response.status})`);
+        const json = await response.json();
+        const entries = Array.isArray(json.entries) ? json.entries : [];
+        const events2 = entries.filter((entry) => entry.eventDate && entry.eventCode).sort((left, right) => (/* @__PURE__ */ new Date(`${right.eventDate || ""}T00:00:00`)).getTime() - (/* @__PURE__ */ new Date(`${left.eventDate || ""}T00:00:00`)).getTime() || Number(timeStringToHours(right.takeoffTime) || 0) - Number(timeStringToHours(left.takeoffTime) || 0)).slice(0, 5).map(mapFlightLogEntryToTrainingReportEvent);
+        if (!cancelled) setTrainingReportRecentLogEvents(events2);
+      } catch (error) {
+        console.warn("[TrainingReport] Recent flight log lookup failed:", error);
+        if (!cancelled) setTrainingReportRecentLogEvents([]);
+      }
+    };
+    loadRecentLogbookFlights();
+    return () => {
+      cancelled = true;
+    };
+  }, [airCombatTrainingReportDraft?.staff.name]);
   const handleViewLogbook = reactExports.useCallback((person) => {
     setSelectedPersonForLogbook(person);
     handleNavigation("Logbook");
@@ -105572,7 +105624,13 @@ Do you want to replace the existing entry?`,
         assignment: airCombatTrainingReportDraft.assignment,
         item: airCombatTrainingReportDraft.item,
         sourceEvent: airCombatTrainingReportDraft.sourceEvent,
-        recentEvents: getRecentTrainingReportEventsForStaff(airCombatTrainingReportDraft.staff),
+        recentEvents: [
+          ...trainingReportRecentLogEvents,
+          ...getRecentTrainingReportEventsForStaff(airCombatTrainingReportDraft.staff)
+        ].filter((event, index, allEvents) => {
+          const key = event.id || `${event.date}-${event.flightNumber}-${event.startTime}-${event.resourceId}`;
+          return allEvents.findIndex((candidate) => (candidate.id || `${candidate.date}-${candidate.flightNumber}-${candidate.startTime}-${candidate.resourceId}`) === key) === index;
+        }).slice(0, 5),
         syllabusDetails,
         initialReport: airCombatTrainingReportDraft.initialReport,
         startInEditMode: airCombatTrainingReportDraft.startInEditMode === true,
