@@ -46514,16 +46514,23 @@ const AirCombatTrainingReportModal = ({
   const [isEditMode, setIsEditMode] = reactExports.useState(startInEditMode);
   const [selectedSourceEvent, setSelectedSourceEvent] = reactExports.useState(sourceEvent);
   const activeSourceEvent = selectedSourceEvent || sourceEvent;
-  const selectedEventCode = String(activeSourceEvent?.flightNumber || activeSourceEvent?.eventCode || initialReport?.eventCode || "").trim();
+  const [eventCodeField, setEventCodeField] = reactExports.useState(initialReport?.eventCode || item?.code || sourceEvent?.flightNumber || sourceEvent?.eventCode || "");
+  const selectedEventCode = String(eventCodeField || activeSourceEvent?.flightNumber || activeSourceEvent?.eventCode || initialReport?.eventCode || "").trim();
   const matchedItem = reactExports.useMemo(() => item || syllabusDetails.find((candidate) => String(candidate.code || "").trim().toUpperCase() === selectedEventCode.toUpperCase()), [item, selectedEventCode, syllabusDetails]);
   const effectiveAssignment = reactExports.useMemo(() => assignment || (matchedItem ? getAirCombatAssignmentFromItem(matchedItem, locationCode, unitCode || staff.unit, currentUserName) : void 0), [assignment, currentUserName, locationCode, matchedItem, staff.unit, unitCode]);
-  const eventCode2 = matchedItem?.code || selectedEventCode || "";
-  const eventDescription = matchedItem?.eventDescription || activeSourceEvent?.notes || initialReport?.eventDescription || matchedItem?.module || "";
-  const eventType = matchedItem?.type || activeSourceEvent?.type || initialReport?.eventType || "";
+  const [eventDescriptionField, setEventDescriptionField] = reactExports.useState(initialReport?.eventDescription || item?.eventDescription || sourceEvent?.notes || item?.module || "");
+  const [eventTypeField, setEventTypeField] = reactExports.useState(initialReport?.eventType || item?.type || sourceEvent?.type || "");
+  const [trainingCodeField, setTrainingCodeField] = reactExports.useState(initialReport?.trainingCode || assignment?.code || item?.phase || "");
+  const [resourceIdField, setResourceIdField] = reactExports.useState(initialReport?.resourceId || sourceEvent?.resourceId || "");
+  const [callsignField, setCallsignField] = reactExports.useState(initialReport?.callsign || sourceEvent?.callsign || staff.callsign || "");
+  const eventCode2 = eventCodeField || matchedItem?.code || selectedEventCode || "";
+  const eventDescription = eventDescriptionField || matchedItem?.eventDescription || activeSourceEvent?.notes || initialReport?.eventDescription || matchedItem?.module || "";
+  const eventType = eventTypeField || matchedItem?.type || activeSourceEvent?.type || initialReport?.eventType || "";
+  const trainingCode = trainingCodeField || effectiveAssignment?.code || matchedItem?.phase || "";
   const defaultDate = activeSourceEvent?.date || initialReport?.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
   const defaultStart = Number(activeSourceEvent?.startTime ?? initialReport?.startTime ?? 8);
   const defaultDuration = Number(activeSourceEvent?.duration ?? initialReport?.duration ?? matchedItem?.totalEventHours ?? matchedItem?.duration ?? matchedItem?.flightOrSimHours ?? 1);
-  const rawResourceId = activeSourceEvent?.resourceId || initialReport?.resourceId || "";
+  const rawResourceId = resourceIdField || activeSourceEvent?.resourceId || initialReport?.resourceId || "";
   const displayResourceId = rawResourceId ? stripResourceLineNumber(formatResourceLabel2?.(rawResourceId) || rawResourceId) : "-";
   const [date, setDate] = reactExports.useState(initialReport?.date || defaultDate);
   const [startTime, setStartTime] = reactExports.useState(defaultStart);
@@ -46543,20 +46550,42 @@ const AirCombatTrainingReportModal = ({
   const [saveError, setSaveError] = reactExports.useState("");
   const [saveStatus, setSaveStatus] = reactExports.useState("Saved");
   const reportId = reactExports.useMemo(() => initialReport?.id || `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode2}-${Date.now()}`, [eventCode2, initialReport?.id, item?.id, sourceEvent?.id, staff.idNumber]);
+  const editInputClass = "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-500";
+  const renderEventDataField = (label, value, onChange, fallback = "-") => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: isEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        value,
+        onChange: (event) => {
+          onChange(event.target.value);
+          setSaveStatus("Unsaved");
+        },
+        className: editInputClass
+      }
+    ) : value || fallback })
+  ] });
   const assessmentElements = reactExports.useMemo(() => {
     const source = Array.isArray(matchedItem?.assessedElements) && matchedItem.assessedElements.length > 0 ? matchedItem.assessedElements : ["Airmanship", "Preparation", "Technique"];
     return Array.from(new Set(source.map((element) => String(element || "").trim()).filter(Boolean)));
   }, [matchedItem?.assessedElements]);
   const selectRecentEvent = (event) => {
     const nextDuration = Number(event.duration || matchedItem?.duration || 1);
+    const nextEventCode = String(event.flightNumber || event.eventCode || "").trim();
+    const nextItem = syllabusDetails.find((candidate) => String(candidate.code || "").trim().toUpperCase() === nextEventCode.toUpperCase());
     setSelectedSourceEvent(event);
+    setEventCodeField(nextEventCode);
+    setEventDescriptionField(nextItem?.eventDescription || event.notes || nextItem?.module || "");
+    setEventTypeField(nextItem?.type || event.type || "");
+    setTrainingCodeField(nextItem?.phase || nextItem?.courses?.find(Boolean) || "");
+    setResourceIdField(event.resourceId || "");
+    setCallsignField(event.callsign || "");
     setDate(event.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
     setStartTime(Number(event.startTime || 8));
     setEndTime(Number(event.startTime || 8) + Math.max(0.25, nextDuration));
     setInstructorName(event.instructor || currentUserName || "");
     setCommentSections((prev) => ({ ...prev, assessor: event.instructor || currentUserName || prev.assessor }));
     setSaveStatus("Unsaved");
-    setIsEditMode(false);
   };
   const [elementScores, setElementScores] = reactExports.useState(() => {
     const existingScores = Array.isArray(initialReport?.assessedElementScores) ? initialReport.assessedElementScores : [];
@@ -46630,7 +46659,7 @@ const AirCombatTrainingReportModal = ({
         unitCode: unitCode || staff.unit,
         trainingKey: effectiveAssignment?.trainingKey,
         trainingKind: effectiveAssignment?.kind,
-        trainingCode: effectiveAssignment?.code || matchedItem?.phase,
+        trainingCode,
         trainingTitle: effectiveAssignment?.title || matchedItem?.module,
         eventId: activeSourceEvent?.id || matchedItem?.id,
         eventCode: eventCode2,
@@ -46639,8 +46668,8 @@ const AirCombatTrainingReportModal = ({
         date,
         startTime,
         duration,
-        resourceId: activeSourceEvent?.resourceId || initialReport?.resourceId,
-        callsign: activeSourceEvent?.callsign || initialReport?.callsign || staff.callsign,
+        resourceId: resourceIdField || activeSourceEvent?.resourceId || initialReport?.resourceId,
+        callsign: callsignField || activeSourceEvent?.callsign || initialReport?.callsign || staff.callsign,
         instructorName,
         dashboardAssigneeName: initialReport?.dashboardAssigneeName || currentUserName || instructorName,
         overallGrade,
@@ -46678,8 +46707,12 @@ const AirCombatTrainingReportModal = ({
               {
                 type: "text",
                 value: eventCode2,
-                readOnly: true,
-                className: "mb-2 w-full border-b-2 border-gray-600 bg-transparent text-2xl font-bold text-white outline-none"
+                readOnly: !isEditMode,
+                onChange: (event) => {
+                  setEventCodeField(event.target.value);
+                  setSaveStatus("Unsaved");
+                },
+                className: `mb-2 w-full border-b-2 bg-transparent text-2xl font-bold text-white outline-none ${isEditMode ? "border-sky-500" : "border-gray-600"}`
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 text-sm text-gray-400", children: [
@@ -46780,14 +46813,8 @@ const AirCombatTrainingReportModal = ({
                 event.id
               )) })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.event }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: eventCode2 || "N/A" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.type }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white", children: eventDescription || eventType || "N/A" })
-            ] }),
+            renderEventDataField(overviewFields.event, eventCode2, setEventCodeField, "N/A"),
+            renderEventDataField(overviewFields.type, eventDescription, setEventDescriptionField, eventType || "N/A"),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Staff" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("dd", { className: "mt-1 text-sm font-semibold text-white", children: [
@@ -46796,10 +46823,7 @@ const AirCombatTrainingReportModal = ({
                 staff.name
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.training }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: assignment?.code || item?.phase || "-" })
-            ] }),
+            renderEventDataField(overviewFields.training, trainingCode, setTrainingCodeField),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.date }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: date, onChange: (event) => {
@@ -46815,14 +46839,8 @@ const AirCombatTrainingReportModal = ({
                 formatDecimalTime(endTime)
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.resource }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: displayResourceId })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.callsign }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: activeSourceEvent?.callsign || staff.callsign || "-" })
-            ] }),
+            renderEventDataField(overviewFields.resource, isEditMode ? resourceIdField : displayResourceId, setResourceIdField),
+            renderEventDataField(overviewFields.callsign, callsignField || activeSourceEvent?.callsign || staff.callsign || "", setCallsignField),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.assessor }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: instructorName, onChange: (event) => {
