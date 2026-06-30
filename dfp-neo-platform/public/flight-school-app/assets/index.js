@@ -65156,6 +65156,38 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     }
     return cleanName.split(",")[0];
   };
+  const normalisePostFlightName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const getFixedCrewGroupCode = (value) => {
+    const raw = String(value || "").trim().toUpperCase();
+    if (!raw) return "";
+    const parts = raw.split("::").map((part) => part.trim()).filter(Boolean);
+    return (parts[1] || parts[0]).replace(/^CREW\s*/i, "").trim();
+  };
+  const isPilotStaff = (staff) => {
+    const role = String(staff?.role || "").trim().toLowerCase();
+    return role === "pilot" || role.includes("pilot");
+  };
+  const fixedCrewRoster = reactExports.useMemo(() => {
+    const roster = /* @__PURE__ */ new Map();
+    const addByName = (name) => {
+      const normalised = normalisePostFlightName(name);
+      if (!normalised || normalised === "tba") return;
+      const staff = instructorsData.find((person2) => normalisePostFlightName(person2.name) === normalised);
+      if (staff) roster.set(normalisePostFlightName(staff.name), staff);
+    };
+    addByName(event.fixedCrewPic || event.pilot || event.instructor);
+    (Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder : []).forEach(addByName);
+    (Array.isArray(event.attendees) ? event.attendees : []).forEach(addByName);
+    String(event.crew || "").split(/[,;/]/).map((name) => name.trim()).filter(Boolean).forEach(addByName);
+    const crewCode = getFixedCrewGroupCode(event.fixedCrewGroup || event.group || event.crew);
+    if (crewCode) {
+      instructorsData.filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewCode).forEach((staff) => roster.set(normalisePostFlightName(staff.name), staff));
+    }
+    return Array.from(roster.values());
+  }, [event, instructorsData]);
+  const fixedCrewPicName = normalisePostFlightName(event.fixedCrewPic || event.pilot || event.instructor);
+  const fixedCrewCoPilotNames = fixedCrewRoster.filter((staff) => normalisePostFlightName(staff.name) !== fixedCrewPicName && isPilotStaff(staff)).map((staff) => staff.name);
+  const isFixedCrewLogbookPreview = fixedCrewRoster.length > 0 && (event.fixedCrewGroup || event.fixedCrewPic || event.crewSelectionOrder?.length);
   const totalTime = reactExports.useMemo(() => {
     const parseTime = (tStr) => {
       const clean = tStr.replace(":", "");
@@ -65452,15 +65484,17 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     aircraftNumberSettings,
     duty
   ]);
-  const getLogbookData = (role) => {
+  const getLogbookData = (role = "Crew") => {
     const total = parseFloat(totalTime) || 0;
     const ifActual = parseFloat(ifActualTime) || 0;
     const ifSim = parseFloat(ifSimTime) || 0;
     const app2D = (rnpChecked ? rnpCount : 0) + (tacanChecked ? tacanCount : 0) + (vorChecked ? vorCount : 0);
     const app3D = ilsChecked ? ilsCount : 0;
     let dayP1 = 0;
+    let dayP2 = 0;
     let dayDual = 0;
     let nightP1 = 0;
+    let nightP2 = 0;
     let nightDual = 0;
     let simDual = 0;
     let simTotal = 0;
@@ -65481,6 +65515,9 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
           if (isDual) {
             logInstTime = instructorTime || totalTime;
           }
+        } else if (role === "P2") {
+          dayP2 = day;
+          nightP2 = night;
         } else if (role === "Crew") {
           if (isDual) {
             dayDual = day;
@@ -65503,8 +65540,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     const dateObj = new Date(event.date);
     const yearStr = dateObj.getFullYear().toString();
     const dateStr = dateObj.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
-    const captainName = (event.instructor || event.pilot)?.split(" – ")[0]?.split(",")[0] || "";
-    const crewName = event.student?.split(" – ")[0]?.split(",")[0] || (isSolo ? "Solo" : "");
+    const captainName = isFixedCrewLogbookPreview ? (event.fixedCrewPic || event.pilot || event.instructor || "").split(" – ")[0]?.split(",")[0] || "" : (event.instructor || event.pilot)?.split(" – ")[0]?.split(",")[0] || "";
+    const crewName = isFixedCrewLogbookPreview ? fixedCrewCoPilotNames.map((name) => name.split(" – ")[0]?.split(",")[0]).join(", ") : event.student?.split(" – ")[0]?.split(",")[0] || (isSolo ? "Solo" : "");
     return {
       year: yearStr,
       date: dateStr,
@@ -65514,10 +65551,10 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       crew: crewName,
       duty,
       dayP1: dayP1 > 0 ? dayP1.toFixed(1) : "",
-      dayP2: "",
+      dayP2: dayP2 > 0 ? dayP2.toFixed(1) : "",
       dayDual: dayDual > 0 ? dayDual.toFixed(1) : "",
       nightP1: nightP1 > 0 ? nightP1.toFixed(1) : "",
-      nightP2: "",
+      nightP2: nightP2 > 0 ? nightP2.toFixed(1) : "",
       nightDual: nightDual > 0 ? nightDual.toFixed(1) : "",
       total: flightTotal > 0 ? flightTotal.toFixed(1) : "",
       captTime: logCaptTime,
@@ -65532,6 +65569,14 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       simTotal: simTotal > 0 ? simTotal.toFixed(1) : ""
     };
   };
+  const fixedCrewPreviewRows = isFixedCrewLogbookPreview ? fixedCrewRoster.map((staff) => {
+    const isPic = normalisePostFlightName(staff.name) === fixedCrewPicName;
+    const isP2 = !isPic && isPilotStaff(staff);
+    return {
+      title: `${isPic ? "Capt" : isP2 ? "P2" : "Crew"} (${getFormattedName(staff.name)})`,
+      data: getLogbookData(isPic ? "Captain" : isP2 ? "P2" : "FixedCrewCrew")
+    };
+  }) : [];
   reactExports.useEffect(() => {
     if (!initialFormState.current) return;
     const currentState = {
@@ -66271,22 +66316,33 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
               ] })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
+          isFixedCrewLogbookPreview ? fixedCrewPreviewRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             EditableLogbookRow,
             {
-              title: `Capt (${getFormattedName(event.instructor || event.pilot)})`,
-              overrides: captLogOverride,
-              onChange: handleCaptLogChange
-            }
-          ),
-          !isSolo && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            EditableLogbookRow,
-            {
-              title: `Crew (${getFormattedName(event.student)})`,
-              overrides: crewLogOverride,
-              onChange: handleCrewLogChange
-            }
-          )
+              title: row.title,
+              overrides: row.data,
+              onChange: () => {
+              }
+            },
+            row.title
+          )) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              EditableLogbookRow,
+              {
+                title: `Capt (${getFormattedName(event.instructor || event.pilot)})`,
+                overrides: captLogOverride,
+                onChange: handleCaptLogChange
+              }
+            ),
+            !isSolo && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              EditableLogbookRow,
+              {
+                title: `Crew (${getFormattedName(event.student)})`,
+                overrides: crewLogOverride,
+                onChange: handleCrewLogChange
+              }
+            )
+          ] })
         ] }) }) })
       ] })
     ] }),
@@ -90172,6 +90228,27 @@ const App = () => {
       return null;
     }
   }, [activeLocationSolarProfile]);
+  const getSunTimesForAirfieldDate = reactExports.useCallback((targetDate, airfieldCode) => {
+    const normalisedAirfield = String(airfieldCode || school || "").trim().toUpperCase();
+    const configuredLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedAirfield));
+    const fallbackProfile = getDefaultAirfieldSolarProfile(normalisedAirfield) || getDefaultAirfieldSolarProfile(configuredLocation?.code) || getDefaultAirfieldSolarProfile(configuredLocation?.name) || getDefaultAirfieldSolarProfile(school);
+    const latitude = configuredLocation?.latitude ?? configuredLocation?.settings?.latitude ?? fallbackProfile?.latitude ?? null;
+    const longitude = configuredLocation?.longitude ?? configuredLocation?.settings?.longitude ?? fallbackProfile?.longitude ?? null;
+    const timezone = configuredLocation?.timezone ?? configuredLocation?.timeZone ?? configuredLocation?.settings?.timezone ?? fallbackProfile?.timezone ?? null;
+    if (!Number.isFinite(Number(latitude)) || !Number.isFinite(Number(longitude)) || !timezone) {
+      return getSunTimesForDate(targetDate);
+    }
+    try {
+      return getSunTimes(targetDate, Number(latitude), Number(longitude), String(timezone));
+    } catch (error) {
+      console.warn("[SunTimes] Could not calculate FL/LL for post-flight departure airfield:", {
+        date: targetDate,
+        airfield: normalisedAirfield,
+        error
+      });
+      return getSunTimesForDate(targetDate);
+    }
+  }, [getLocationSelectorAliases, getSunTimesForDate, platformConfig, school]);
   const selectedDfpSunTimes = reactExports.useMemo(() => getSunTimesForDate(date), [date, getSunTimesForDate]);
   const selectedDfpDaylightTimes = reactExports.useMemo(() => ({
     firstLight: selectedDfpSunTimes?.hasFirstLight ? selectedDfpSunTimes.firstLight : null,
@@ -103924,6 +104001,18 @@ Do you want to replace the existing entry?`,
                           "warning"
                         );
                         if (!replaceExisting) return false;
+                        const existingEntries = Array.isArray(duplicateData.entries) ? duplicateData.entries : [];
+                        for (const entry of existingEntries) {
+                          if (!entry?.id) continue;
+                          try {
+                            await fetch(`/api/flight-log/${encodeURIComponent(entry.id)}`, {
+                              method: "DELETE",
+                              credentials: "include"
+                            });
+                          } catch (deleteErr) {
+                            console.warn("[PostFlight] Failed to delete existing flight log entry before replace:", entry.id, deleteErr);
+                          }
+                        }
                       }
                     }
                   } catch (duplicateErr) {
@@ -104156,7 +104245,7 @@ Do you want to replace the existing entry?`,
                     let start = Number.isFinite(Number(takeoff)) ? Number(takeoff) : Number(pfEvt.startTime || 0);
                     let end = Number.isFinite(Number(landingRaw)) ? Number(landingRaw) : start + total;
                     if (end <= start) end += 24;
-                    const sunTimes = getSunTimesForDate(pfEvt.date);
+                    const sunTimes = getSunTimesForAirfieldDate(pfEvt.date, data.from || pfEvt.origin || school);
                     const firstLight = Number(sunTimes?.firstLightDecimal);
                     const lastLight = Number(sunTimes?.lastLightDecimal);
                     if (!Number.isFinite(firstLight) || !Number.isFinite(lastLight)) {
@@ -104209,7 +104298,7 @@ Do you want to replace the existing entry?`,
                     const picName = normaliseLogbookName(pfEvt.fixedCrewPic || pfEvt.pilot || pfEvt.instructor);
                     const { day, night } = splitDayNightHours();
                     const captainDisplay = pfEvt.fixedCrewPic || pfEvt.pilot || pfEvt.instructor || "";
-                    const crewDisplay = fixedCrewRoster.map((person) => person.name).filter((name) => normaliseLogbookName(name) !== picName).join(", ");
+                    const coPilotDisplay = fixedCrewRoster.filter((person) => normaliseLogbookName(person.name) !== picName && isPilotStaffForLogbook(person)).map((person) => person.name).join(", ");
                     const dateObj = /* @__PURE__ */ new Date(`${pfEvt.date}T00:00:00`);
                     const baseSnapshot = {
                       year: Number.isFinite(dateObj.getTime()) ? dateObj.getFullYear().toString() : "",
@@ -104217,7 +104306,7 @@ Do you want to replace the existing entry?`,
                       type: data.isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft,
                       tail: data.aircraftNumber || "",
                       captain: captainDisplay,
-                      crew: crewDisplay,
+                      crew: coPilotDisplay,
                       duty: data.duty || "",
                       total: parsedTotal ? parsedTotal.toFixed(1) : "",
                       simIf: "",

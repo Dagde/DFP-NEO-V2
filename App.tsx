@@ -21205,6 +21205,34 @@ const App: React.FC = () => {
         }
     }, [activeLocationSolarProfile]);
 
+    const getSunTimesForAirfieldDate = useCallback((targetDate: string, airfieldCode?: string | null) => {
+        const normalisedAirfield = String(airfieldCode || school || '').trim().toUpperCase();
+        const configuredLocation = (platformConfig?.locations || [])
+            .filter((location: any) => location.status !== 'INACTIVE')
+            .find((location: any) => getLocationSelectorAliases(location).includes(normalisedAirfield));
+        const fallbackProfile =
+            getDefaultAirfieldSolarProfile(normalisedAirfield)
+            || getDefaultAirfieldSolarProfile(configuredLocation?.code)
+            || getDefaultAirfieldSolarProfile(configuredLocation?.name)
+            || getDefaultAirfieldSolarProfile(school);
+        const latitude = configuredLocation?.latitude ?? configuredLocation?.settings?.latitude ?? fallbackProfile?.latitude ?? null;
+        const longitude = configuredLocation?.longitude ?? configuredLocation?.settings?.longitude ?? fallbackProfile?.longitude ?? null;
+        const timezone = configuredLocation?.timezone ?? configuredLocation?.timeZone ?? configuredLocation?.settings?.timezone ?? fallbackProfile?.timezone ?? null;
+        if (!Number.isFinite(Number(latitude)) || !Number.isFinite(Number(longitude)) || !timezone) {
+            return getSunTimesForDate(targetDate);
+        }
+        try {
+            return getSunTimes(targetDate, Number(latitude), Number(longitude), String(timezone));
+        } catch (error) {
+            console.warn('[SunTimes] Could not calculate FL/LL for post-flight departure airfield:', {
+                date: targetDate,
+                airfield: normalisedAirfield,
+                error,
+            });
+            return getSunTimesForDate(targetDate);
+        }
+    }, [getLocationSelectorAliases, getSunTimesForDate, platformConfig, school]);
+
     const selectedDfpSunTimes = useMemo(() => getSunTimesForDate(date), [date, getSunTimesForDate]);
 
     const selectedDfpDaylightTimes = useMemo(() => ({
@@ -38087,6 +38115,18 @@ appliedUpdates.forEach(update => {
                                                         'warning'
                                                     );
                                                     if (!replaceExisting) return false;
+                                                    const existingEntries = Array.isArray(duplicateData.entries) ? duplicateData.entries : [];
+                                                    for (const entry of existingEntries) {
+                                                        if (!entry?.id) continue;
+                                                        try {
+                                                            await fetch(`/api/flight-log/${encodeURIComponent(entry.id)}`, {
+                                                                method: 'DELETE',
+                                                                credentials: 'include',
+                                                            });
+                                                        } catch (deleteErr) {
+                                                            console.warn('[PostFlight] Failed to delete existing flight log entry before replace:', entry.id, deleteErr);
+                                                        }
+                                                    }
                                                 }
                                             }
                                         } catch (duplicateErr) {
@@ -38388,7 +38428,7 @@ appliedUpdates.forEach(update => {
                                             let end = Number.isFinite(Number(landingRaw)) ? Number(landingRaw) : start + total;
                                             if (end <= start) end += 24;
 
-                                            const sunTimes = getSunTimesForDate(pfEvt.date);
+                                            const sunTimes = getSunTimesForAirfieldDate(pfEvt.date, data.from || pfEvt.origin || school);
                                             const firstLight = Number(sunTimes?.firstLightDecimal);
                                             const lastLight = Number(sunTimes?.lastLightDecimal);
                                             if (!Number.isFinite(firstLight) || !Number.isFinite(lastLight)) {
@@ -38444,9 +38484,9 @@ appliedUpdates.forEach(update => {
                                             const picName = normaliseLogbookName(pfEvt.fixedCrewPic || pfEvt.pilot || pfEvt.instructor);
                                             const { day, night } = splitDayNightHours();
                                             const captainDisplay = pfEvt.fixedCrewPic || pfEvt.pilot || pfEvt.instructor || '';
-                                            const crewDisplay = fixedCrewRoster
+                                            const coPilotDisplay = fixedCrewRoster
+                                                .filter(person => normaliseLogbookName(person.name) !== picName && isPilotStaffForLogbook(person))
                                                 .map(person => person.name)
-                                                .filter(name => normaliseLogbookName(name) !== picName)
                                                 .join(', ');
                                             const dateObj = new Date(`${pfEvt.date}T00:00:00`);
                                             const baseSnapshot = {
@@ -38455,7 +38495,7 @@ appliedUpdates.forEach(update => {
                                                 type: data.isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft,
                                                 tail: data.aircraftNumber || '',
                                                 captain: captainDisplay,
-                                                crew: crewDisplay,
+                                                crew: coPilotDisplay,
                                                 duty: data.duty || '',
                                                 total: parsedTotal ? parsedTotal.toFixed(1) : '',
                                                 simIf: '',

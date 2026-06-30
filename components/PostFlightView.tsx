@@ -132,6 +132,47 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
         return cleanName.split(',')[0];
     };
+    const normalisePostFlightName = (value?: string | null): string => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const getFixedCrewGroupCode = (value?: string | null): string => {
+        const raw = String(value || '').trim().toUpperCase();
+        if (!raw) return '';
+        const parts = raw.split('::').map(part => part.trim()).filter(Boolean);
+        return (parts[1] || parts[0]).replace(/^CREW\s*/i, '').trim();
+    };
+    const isPilotStaff = (staff?: Instructor | null): boolean => {
+        const role = String(staff?.role || '').trim().toLowerCase();
+        return role === 'pilot' || role.includes('pilot');
+    };
+    const fixedCrewRoster = useMemo(() => {
+        const roster = new Map<string, Instructor>();
+        const addByName = (name?: string | null) => {
+            const normalised = normalisePostFlightName(name);
+            if (!normalised || normalised === 'tba') return;
+            const staff = instructorsData.find(person => normalisePostFlightName(person.name) === normalised);
+            if (staff) roster.set(normalisePostFlightName(staff.name), staff);
+        };
+        addByName(event.fixedCrewPic || event.pilot || event.instructor);
+        (Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder : []).forEach(addByName);
+        (Array.isArray(event.attendees) ? event.attendees : []).forEach(addByName);
+        String(event.crew || '')
+            .split(/[,;/]/)
+            .map(name => name.trim())
+            .filter(Boolean)
+            .forEach(addByName);
+
+        const crewCode = getFixedCrewGroupCode(event.fixedCrewGroup || event.group || event.crew);
+        if (crewCode) {
+            instructorsData
+                .filter(staff => String(staff.crew || '').trim().toUpperCase() === crewCode)
+                .forEach(staff => roster.set(normalisePostFlightName(staff.name), staff));
+        }
+        return Array.from(roster.values());
+    }, [event, instructorsData]);
+    const fixedCrewPicName = normalisePostFlightName(event.fixedCrewPic || event.pilot || event.instructor);
+    const fixedCrewCoPilotNames = fixedCrewRoster
+        .filter(staff => normalisePostFlightName(staff.name) !== fixedCrewPicName && isPilotStaff(staff))
+        .map(staff => staff.name);
+    const isFixedCrewLogbookPreview = fixedCrewRoster.length > 0 && (event.fixedCrewGroup || event.fixedCrewPic || event.crewSelectionOrder?.length);
 
      // Derived Total Time
     const totalTime = useMemo(() => {
@@ -457,7 +498,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, duty]);
 
     // --- LOGBOOK CALCULATION LOGIC ---
-    const getLogbookData = (role: 'Captain' | 'Crew') => {
+    const getLogbookData = (role: 'Captain' | 'Crew' | 'P2' | 'FixedCrewCrew' = 'Crew') => {
         const total = parseFloat(totalTime) || 0;
         const ifActual = parseFloat(ifActualTime) || 0;
         const ifSim = parseFloat(ifSimTime) || 0;
@@ -468,8 +509,10 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
         // Time variables
         let dayP1 = 0;
+        let dayP2 = 0;
         let dayDual = 0;
         let nightP1 = 0;
+        let nightP2 = 0;
         let nightDual = 0;
 
         let simP1 = 0;
@@ -499,6 +542,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                     if (isDual) {
                         logInstTime = instructorTime || totalTime;
                     }
+                } else if (role === 'P2') {
+                    dayP2 = day;
+                    nightP2 = night;
                 } else if (role === 'Crew') {
                     // Crew (Student) logs Dual in Dual scenarios
                     if (isDual) {
@@ -528,8 +574,12 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         const dateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 
         // Personnel Names
-        const captainName = (event.instructor || event.pilot)?.split(' – ')[0]?.split(',')[0] || '';
-        const crewName = event.student?.split(' – ')[0]?.split(',')[0] || (isSolo ? 'Solo' : '');
+        const captainName = isFixedCrewLogbookPreview
+            ? (event.fixedCrewPic || event.pilot || event.instructor || '').split(' – ')[0]?.split(',')[0] || ''
+            : (event.instructor || event.pilot)?.split(' – ')[0]?.split(',')[0] || '';
+        const crewName = isFixedCrewLogbookPreview
+            ? fixedCrewCoPilotNames.map(name => name.split(' – ')[0]?.split(',')[0]).join(', ')
+            : event.student?.split(' – ')[0]?.split(',')[0] || (isSolo ? 'Solo' : '');
 
         return {
             year: yearStr,
@@ -540,10 +590,10 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             crew: crewName,
             duty: duty,
             dayP1: dayP1 > 0 ? dayP1.toFixed(1) : '',
-            dayP2: '',
+            dayP2: dayP2 > 0 ? dayP2.toFixed(1) : '',
             dayDual: dayDual > 0 ? dayDual.toFixed(1) : '',
             nightP1: nightP1 > 0 ? nightP1.toFixed(1) : '',
-            nightP2: '',
+            nightP2: nightP2 > 0 ? nightP2.toFixed(1) : '',
             nightDual: nightDual > 0 ? nightDual.toFixed(1) : '',
             total: flightTotal > 0 ? flightTotal.toFixed(1) : '',
             captTime: logCaptTime,
@@ -558,6 +608,16 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             simTotal: simTotal > 0 ? simTotal.toFixed(1) : '',
         };
     };
+    const fixedCrewPreviewRows = isFixedCrewLogbookPreview
+        ? fixedCrewRoster.map(staff => {
+            const isPic = normalisePostFlightName(staff.name) === fixedCrewPicName;
+            const isP2 = !isPic && isPilotStaff(staff);
+            return {
+                title: `${isPic ? 'Capt' : isP2 ? 'P2' : 'Crew'} (${getFormattedName(staff.name)})`,
+                data: getLogbookData(isPic ? 'Captain' : isP2 ? 'P2' : 'FixedCrewCrew'),
+            };
+        })
+        : [];
 
 
     // Determine if any data has changed
@@ -1490,17 +1550,30 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                                 </div>
                             </div>
                             {/* Data rows — one per person */}
-                            <EditableLogbookRow
-                                title={`Capt (${getFormattedName(event.instructor || event.pilot)})`}
-                                overrides={captLogOverride}
-                                onChange={handleCaptLogChange}
-                            />
-                            {!isSolo && (
-                                <EditableLogbookRow
-                                    title={`Crew (${getFormattedName(event.student)})`}
-                                    overrides={crewLogOverride}
-                                    onChange={handleCrewLogChange}
-                                />
+                            {isFixedCrewLogbookPreview ? (
+                                fixedCrewPreviewRows.map(row => (
+                                    <EditableLogbookRow
+                                        key={row.title}
+                                        title={row.title}
+                                        overrides={row.data}
+                                        onChange={() => {}}
+                                    />
+                                ))
+                            ) : (
+                                <>
+                                    <EditableLogbookRow
+                                        title={`Capt (${getFormattedName(event.instructor || event.pilot)})`}
+                                        overrides={captLogOverride}
+                                        onChange={handleCaptLogChange}
+                                    />
+                                    {!isSolo && (
+                                        <EditableLogbookRow
+                                            title={`Crew (${getFormattedName(event.student)})`}
+                                            overrides={crewLogOverride}
+                                            onChange={handleCrewLogChange}
+                                        />
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
