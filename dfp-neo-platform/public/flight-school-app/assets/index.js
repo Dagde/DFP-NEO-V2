@@ -46666,12 +46666,12 @@ const AirCombatTrainingReportModal = ({
             clickEvent.preventDefault();
             selectRecentEvent(event);
           },
-          className: "grid w-full grid-cols-[82px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-2 border-b border-gray-800 px-2 py-2 text-left text-[11px] last:border-b-0 hover:bg-sky-950/40",
+          className: "grid w-full grid-cols-[82px_minmax(0,1fr)_minmax(0,1fr)] gap-x-2 gap-y-1 border-b border-gray-800 px-2 py-2 text-left text-[11px] last:border-b-0 hover:bg-sky-950/40",
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300", children: formatTrainingReportDate(event.date) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-white", children: getRecentEventPic(event) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-gray-300", children: getRecentEventCoPilot(event) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-sky-200", children: getRecentEventTitle(event) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "col-span-3 whitespace-normal break-words text-[12px] font-semibold leading-snug text-sky-200", children: getRecentEventTitle(event) })
           ]
         },
         event.id
