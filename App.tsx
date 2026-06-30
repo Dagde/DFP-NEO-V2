@@ -27412,9 +27412,11 @@ const App: React.FC = () => {
         )) || entry.staff;
         const preferences = { ...(sourceStaff.preferences || {}) };
         const existingReports = normaliseAirCombatTrainingReports(preferences);
+        const assigneeLabel = `${assignee.rank || ''} ${assignee.name}`.trim();
         const updatedReport: AirCombatTrainingReport = {
             ...entry.report,
             dashboardAssigneeName: assignee.name,
+            instructorName: assigneeLabel,
             dashboardAcknowledgedAt: undefined,
             updatedAt: new Date().toISOString(),
             updatedBy: currentUserName,

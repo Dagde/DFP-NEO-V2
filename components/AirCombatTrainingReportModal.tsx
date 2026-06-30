@@ -315,8 +315,9 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     setDate(event.date || new Date().toISOString().slice(0, 10));
     setStartTime(Number(event.startTime || 8));
     setEndTime(Number(event.startTime || 8) + Math.max(0.25, nextDuration));
-    setInstructorName(event.instructor || currentUserName || '');
-    setCommentSections(prev => ({ ...prev, assessor: event.instructor || currentUserName || prev.assessor }));
+    const selectedAssessor = initialReport?.instructorName || initialReport?.dashboardAssigneeName || event.instructor || currentUserName || '';
+    setInstructorName(selectedAssessor);
+    setCommentSections(prev => ({ ...prev, assessor: selectedAssessor || prev.assessor }));
     setSaveStatus('Unsaved');
     setShowRecentEventPicker(false);
   };

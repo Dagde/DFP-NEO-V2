@@ -213,6 +213,8 @@ export const normaliseFixedCrewStaffRole = (role: unknown, unit: unknown): strin
       roleCode === 'AEA'
       || roleCode === 'ACOUSTIC ELECTRONICS ANALYST'
       || roleCode === 'AIRBORNE ELECTRONICS ANALYST'
+      || roleCode === 'ELECTRONIC AIRBORNE ANALYST'
+      || roleCode === 'ELECTRONICS AIRBORNE ANALYST'
     )
   ) {
     return 'AWO';

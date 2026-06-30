@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, Pt051Assessment } from '../types';
 import TafWeatherWidget from './TafWeatherWidget';
+import { normaliseFixedCrewStaffRole } from '../utils/crewPositionTerminology';
 
 interface MyDashboardProps {
     userName: string;
@@ -99,6 +100,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         if (value.includes('mission') || value.includes('crew')) return 'text-amber-300 border-amber-500/30';
         return 'text-gray-300 border-gray-600';
     };
+    const formatStaffRole = (staff: Instructor): string => (
+        normaliseFixedCrewStaffRole(staff.role, staff.unit) || 'Staff'
+    );
     const sameUnitStaff = useMemo(() => {
         if (!staffPickerEntry) return [];
         const unit = String(staffPickerEntry.staff.unit || staffPickerEntry.report.unitCode || '').trim();
@@ -259,14 +263,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         onClick={() => setStaffPickerEntry({ ...entry, mode: 'open' })}
                                         className="min-w-0 flex-1 text-left"
                                     >
-                                        <div className="flex justify-between items-center">
-                                            <div>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="min-w-0">
                                                 <p className="font-semibold text-white">{entry.report.eventCode}</p>
-                                                <p className="text-sm text-gray-400">Report to complete from flight {entry.report.callsign || entry.report.eventCode}</p>
+                                                <p className="truncate text-sm text-gray-400">Report to complete from flight {entry.report.callsign || entry.report.eventCode}</p>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-sm text-gray-300 font-mono">{formatDate(entry.report.date)}</p>
-                                                <span className="inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300">
+                                            <div className="flex shrink-0 items-center justify-end gap-1.5 text-right">
+                                                <span className="whitespace-nowrap text-[10px] font-mono text-gray-300">{formatDate(entry.report.date)}</span>
+                                                <span className="inline-flex h-5 items-center whitespace-nowrap rounded-full bg-amber-500/20 px-1.5 text-[9px] font-semibold text-amber-300">
                                                     Training Report
                                                 </span>
                                             </div>
@@ -275,7 +279,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     <button
                                         type="button"
                                         onClick={() => setStaffPickerEntry({ ...entry, mode: 'reassign' })}
-                                        className="h-8 shrink-0 rounded-md border border-gray-600 bg-gray-900 px-2 text-[10px] font-bold text-gray-200 hover:border-sky-400"
+                                        className="btn-aluminium-brushed flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]"
                                     >
                                         Re-Assign
                                     </button>
@@ -323,10 +327,10 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         }
                                         setStaffPickerEntry(null);
                                     }}
-                                    className={`flex w-full items-center justify-between rounded border bg-gray-800 px-3 py-2 text-left hover:bg-gray-700 ${roleTone(staff.role)}`}
+                                    className={`flex w-full items-center justify-between rounded border bg-gray-800 px-3 py-2 text-left hover:bg-gray-700 ${roleTone(formatStaffRole(staff))}`}
                                 >
                                     <span className="text-sm font-semibold">{staff.rank} {staff.name}</span>
-                                    <span className="text-[10px] font-bold uppercase">{staff.role || 'Staff'}</span>
+                                    <span className="text-[10px] font-bold uppercase">{formatStaffRole(staff)}</span>
                                 </button>
                             ))}
                         </div>

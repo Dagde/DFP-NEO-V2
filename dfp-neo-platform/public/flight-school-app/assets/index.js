@@ -2971,7 +2971,7 @@ const normaliseFixedCrewStaffRole = (role, unit) => {
   const unitCode = String(unit || "").trim().toUpperCase().replace(/[\s-]+/g, "");
   const roleCode = rawRole.toUpperCase().replace(/[\s-]+/g, " ");
   const isFixedCrewMaritimeUnit = unitCode === "11SQN" || unitCode === "12SQN";
-  if (isFixedCrewMaritimeUnit && (roleCode === "AEA" || roleCode === "ACOUSTIC ELECTRONICS ANALYST" || roleCode === "AIRBORNE ELECTRONICS ANALYST")) {
+  if (isFixedCrewMaritimeUnit && (roleCode === "AEA" || roleCode === "ACOUSTIC ELECTRONICS ANALYST" || roleCode === "AIRBORNE ELECTRONICS ANALYST" || roleCode === "ELECTRONIC AIRBORNE ANALYST" || roleCode === "ELECTRONICS AIRBORNE ANALYST")) {
     return "AWO";
   }
   return rawRole;
@@ -25556,12 +25556,13 @@ const MyDashboard = ({
   const dashboardSelectedName = selectedStaffName || userName;
   const [staffPickerEntry, setStaffPickerEntry] = reactExports.useState(null);
   const roleTone = (role) => {
-    const value = String(role || "").toLowerCase();
+    const value = String(role).toLowerCase();
     if (value.includes("pilot")) return "text-sky-300 border-sky-500/30";
     if (value.includes("awo") || value.includes("mpro") || value.includes("ewo")) return "text-emerald-300 border-emerald-500/30";
     if (value.includes("mission") || value.includes("crew")) return "text-amber-300 border-amber-500/30";
     return "text-gray-300 border-gray-600";
   };
+  const formatStaffRole = (staff) => normaliseFixedCrewStaffRole(staff.role, staff.unit) || "Staff";
   const sameUnitStaff = reactExports.useMemo(() => {
     if (!staffPickerEntry) return [];
     const unit = String(staffPickerEntry.staff.unit || staffPickerEntry.report.unitCode || "").trim();
@@ -25666,17 +25667,17 @@ const MyDashboard = ({
               {
                 onClick: () => setStaffPickerEntry({ ...entry, mode: "open" }),
                 className: "min-w-0 flex-1 text-left",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: entry.report.eventCode }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "truncate text-sm text-gray-400", children: [
                       "Report to complete from flight ",
                       entry.report.callsign || entry.report.eventCode
                     ] })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(entry.report.date) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Training Report" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center justify-end gap-1.5 text-right", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-nowrap text-[10px] font-mono text-gray-300", children: formatDate$2(entry.report.date) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex h-5 items-center whitespace-nowrap rounded-full bg-amber-500/20 px-1.5 text-[9px] font-semibold text-amber-300", children: "Training Report" })
                   ] })
                 ] })
               }
@@ -25686,7 +25687,7 @@ const MyDashboard = ({
               {
                 type: "button",
                 onClick: () => setStaffPickerEntry({ ...entry, mode: "reassign" }),
-                className: "h-8 shrink-0 rounded-md border border-gray-600 bg-gray-900 px-2 text-[10px] font-bold text-gray-200 hover:border-sky-400",
+                className: "btn-aluminium-brushed flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]",
                 children: "Re-Assign"
               }
             )
@@ -25721,14 +25722,14 @@ const MyDashboard = ({
             }
             setStaffPickerEntry(null);
           },
-          className: `flex w-full items-center justify-between rounded border bg-gray-800 px-3 py-2 text-left hover:bg-gray-700 ${roleTone(staff.role)}`,
+          className: `flex w-full items-center justify-between rounded border bg-gray-800 px-3 py-2 text-left hover:bg-gray-700 ${roleTone(formatStaffRole(staff))}`,
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm font-semibold", children: [
               staff.rank,
               " ",
               staff.name
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold uppercase", children: staff.role || "Staff" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold uppercase", children: formatStaffRole(staff) })
           ]
         },
         `${staff.unit || "unit"}-${staff.idNumber}-${staff.name}`
@@ -46692,8 +46693,9 @@ const AirCombatTrainingReportModal = ({
     setDate(event.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
     setStartTime(Number(event.startTime || 8));
     setEndTime(Number(event.startTime || 8) + Math.max(0.25, nextDuration));
-    setInstructorName(event.instructor || currentUserName || "");
-    setCommentSections((prev) => ({ ...prev, assessor: event.instructor || currentUserName || prev.assessor }));
+    const selectedAssessor = initialReport?.instructorName || initialReport?.dashboardAssigneeName || event.instructor || currentUserName || "";
+    setInstructorName(selectedAssessor);
+    setCommentSections((prev) => ({ ...prev, assessor: selectedAssessor || prev.assessor }));
     setSaveStatus("Unsaved");
     setShowRecentEventPicker(false);
   };
@@ -95139,9 +95141,11 @@ ${error instanceof Error ? error.message : String(error)}`,
     const sourceStaff = allInstructorsData.find((person) => entry.staff.id ? person.id === entry.staff.id : person.idNumber === entry.staff.idNumber) || entry.staff;
     const preferences = { ...sourceStaff.preferences || {} };
     const existingReports = normaliseAirCombatTrainingReports(preferences);
+    const assigneeLabel = `${assignee.rank || ""} ${assignee.name}`.trim();
     const updatedReport = {
       ...entry.report,
       dashboardAssigneeName: assignee.name,
+      instructorName: assigneeLabel,
       dashboardAcknowledgedAt: void 0,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       updatedBy: currentUserName
