@@ -80893,7 +80893,23 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         } : null
       };
     }).filter((item) => Boolean(item.event));
-    const trainingItemLimit = Math.max(1, crewGroups.size * 2);
+    const fixedCrewTrainingItemLimit = Math.max(1, crewGroups.size * 2);
+    const pooledCrewConfiguredCrewSize = Math.max(
+      2,
+      Number(buildAircraftCrewComposition.crewCount) || 0,
+      Array.isArray(buildAircraftCrewComposition.seats) ? buildAircraftCrewComposition.seats.length : 0
+    );
+    const pooledCrewStaffCapacityLimit = Math.max(1, Math.floor(pooledCrewStaff.length / pooledCrewConfiguredCrewSize));
+    const pooledCrewResourceCapacityLimit = Math.max(1, (availableAircraftCount + ftdCount + cptCount) * 2);
+    const pooledCrewTrainingItemLimit = Math.max(
+      1,
+      Math.min(
+        schedulableTrainingItems.length || 1,
+        pooledCrewStaffCapacityLimit,
+        pooledCrewResourceCapacityLimit
+      )
+    );
+    const trainingItemLimit = isPooledCrewBuild ? pooledCrewTrainingItemLimit : fixedCrewTrainingItemLimit;
     const itemsByTrainingStream = /* @__PURE__ */ new Map();
     schedulableTrainingItems.sort(
       (left, right) => left.stream.kind.localeCompare(right.stream.kind) || Number(left.item.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.item.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.item.orderKey || "").localeCompare(right.item.orderKey || "") || left.item.code.localeCompare(right.item.code)
@@ -81032,6 +81048,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       packageInputs: {
         activeUnitStaffCatItems: activeFixedCrewTrainingSyllabusItems.filter((entry) => entry.stream.kind === "training_package").length,
         activeUnitCourseItems: activeFixedCrewTrainingSyllabusItems.filter((entry) => entry.stream.kind === "course").length,
+        trainingItemLimit,
+        trainingItemLimitBasis: isPooledCrewBuild ? {
+          model: "pooled_crew",
+          staffCapacityLimit: pooledCrewStaffCapacityLimit,
+          resourceCapacityLimit: pooledCrewResourceCapacityLimit,
+          configuredCrewSize: pooledCrewConfiguredCrewSize
+        } : {
+          model: "fixed_crew",
+          crewGroups: crewGroups.size,
+          fixedCrewTrainingItemLimit
+        },
         configuredTrainingStreams: configuredFixedCrewTrainingPriorities.length,
         enabledTrainingStreams: configuredFixedCrewTrainingPriorities.filter((stream) => stream.enabled && stream.weight > 0).length,
         schedulableTrainingItemsByKind,
