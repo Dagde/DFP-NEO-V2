@@ -90,6 +90,11 @@ export const normaliseOperationalModel = (value: unknown): OperationalModelCode 
   return DEFAULT_OPERATIONAL_MODEL;
 };
 
+export const isFixedCrewLikeOperationalModel = (value: unknown): boolean => {
+  const model = normaliseOperationalModel(value);
+  return model === 'fixed_crew' || model === 'pooled_crew';
+};
+
 export const getUnitOperationalModel = (unit?: Partial<PlatformUnit> | null): OperationalModelCode => (
   normaliseOperationalModel(unit?.operationalModel || unit?.settings?.operationalModel)
 );

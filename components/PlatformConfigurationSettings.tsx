@@ -7,6 +7,7 @@ import {
   DEFAULT_MASTER_LMP_ACCESS_RULES,
   getUnitOperationalModel,
   getLocationResourcePool,
+  isFixedCrewLikeOperationalModel,
   normaliseOperationalModel,
   normaliseMasterLmpAccessRules,
   type PlatformMasterLmpAccessRule,
@@ -1027,7 +1028,7 @@ const buildConfigurationHealth = (
     }
 
     const operationalModel = getUnitOperationalModel(unit);
-    if (operationalModel === 'fixed_crew') {
+    if (isFixedCrewLikeOperationalModel(operationalModel)) {
       const unitRuntimePools = activeResourcePools.filter((pool) => (
         toIdentifier(pool.unitCode) === unitCode &&
         pool.settings?.applyToV2Runtime === true
@@ -3654,7 +3655,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       .map((aircraftCode) => String(aircraftCode || '').trim().toUpperCase())
       .filter(Boolean),
   ));
-  const fixedCrewContext = normaliseOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel) === 'fixed_crew';
+  const fixedCrewContext = isFixedCrewLikeOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel);
   const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
   const standardMissionProfilesForContext = uniqueProfilesByCompositeGroup(
     standardMissionProfiles.filter(isProfileInActiveUnitContext),

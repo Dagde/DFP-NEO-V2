@@ -17,7 +17,7 @@ import {
     normaliseSelectedAircraftConfigurations,
     type AircraftConfigurationDefinition,
 } from '../utils/aircraftConfigurationSettings';
-import { normaliseOperationalModel } from '../utils/platformConfigService';
+import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import {
     formatFixedCrewManifestStatus,
@@ -502,7 +502,7 @@ const DetailView: React.FC<{
     const currentItem = isEditing ? editedItem : item;
     if (!currentItem) return null;
     const currentItemKey = currentItem.id || currentItem.code;
-    const isFixedCrewModel = normaliseOperationalModel(operationalModel) === 'fixed_crew';
+    const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
     const fixedCrewBriefingTimes = getFixedCrewCoursePackageBriefingTimes();
     const currentBriefingTimes = isFixedCrewModel
         ? fixedCrewBriefingTimes
@@ -987,8 +987,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const activeCollectionSelectLabel = isTrainingPackagesTab ? 'Package:' : 'Course:';
   const activeOperationalModel = normaliseOperationalModel(operationalModel);
   const isAirCombatModel = activeOperationalModel === 'air_combat';
-  const isFixedCrewModel = activeOperationalModel === 'fixed_crew';
-  const usesPackageTab = activeOperationalModel === 'air_combat' || activeOperationalModel === 'fixed_crew';
+  const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
+  const usesPackageTab = activeOperationalModel === 'air_combat' || isFixedCrewModel;
   const normaliseUnitTabCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
   const fixedCrewUnitTabs = useMemo(() => (
       Array.from(new Set(sharedUnitTabs.map(normaliseUnitTabCode).filter(Boolean)))

@@ -25,6 +25,7 @@ import type { TileStatusSettings } from '../utils/tileStatusSettings';
 import type { FixedCrewTileColourMode } from '../utils/fixedCrewTileColours';
 import type { DispatchStaggerSettings } from '../utils/dispatchStagger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 
 interface SettingsViewWithMenuProps {
     locations: string[];
@@ -1364,7 +1365,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     };
 
     const getGroupId = (label: string) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-    const isFixedCrewSettingsContext = String(props.activeOperationalModel || '').trim().toLowerCase() === 'fixed_crew';
+    const isFixedCrewSettingsContext = isFixedCrewLikeOperationalModel(props.activeOperationalModel);
     const isSectionAvailable = (section: SettingsMenuSection) => (
         section !== 'standard-missions' || isFixedCrewSettingsContext
     );

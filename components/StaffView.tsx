@@ -7,6 +7,7 @@ import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
+import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 
 interface StaffViewProps {
   // Props for InstructorListView
@@ -81,7 +82,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
   }, [activeUnitTab, sharedUnitTabs]);
   const { isFrozen } = useSystemFreeze();
   console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
-  const isFixedCrewModel = String(props.operationalModel || '').trim().toLowerCase() === 'fixed_crew';
+  const isFixedCrewModel = isFixedCrewLikeOperationalModel(props.operationalModel);
   const shouldShowUnitTabs = isFixedCrewModel && sharedUnitTabs.length > 1;
   useEffect(() => {
     if (!isFixedCrewModel && activeTab === 'crewSchedule') {

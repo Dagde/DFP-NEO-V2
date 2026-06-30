@@ -38,6 +38,7 @@ import {
     type DispatchStaggerSettings,
 } from '../utils/dispatchStagger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 
 
 declare var XLSX: any;
@@ -527,7 +528,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     
     // Permission Check - Only Super Admin, Admin, and Scheduler can edit Settings
     const canEditSettings = ['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission);
-    const isFixedCrewModel = String(activeOperationalModel || '').trim().toLowerCase() === 'fixed_crew';
+    const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
     const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
     const handleDispatchStaggerChange = (updates: Partial<DispatchStaggerSettings>) => {
         if (!onUpdateDispatchStaggerSettings) return;

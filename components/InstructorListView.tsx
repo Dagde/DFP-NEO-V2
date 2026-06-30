@@ -11,7 +11,7 @@ import ArchivedInstructorsFlyout from './ArchivedInstructorsFlyout';
 import AuditButton from './AuditButton';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
-import { normaliseOperationalModel } from '../utils/platformConfigService';
+import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { findCrewPositionEntry, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
@@ -247,7 +247,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const activeOperationalModel = normaliseOperationalModel(operationalModel);
   const isAirCombatModel = activeOperationalModel === 'air_combat';
-  const isFixedCrewModel = activeOperationalModel === 'fixed_crew';
+  const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
   const useRoleColours = isAirCombatModel || isFixedCrewModel;
   const useOperationalStaffListBorder = isAirCombatModel || isFixedCrewModel;
 

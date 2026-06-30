@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTheme, AppTheme } from '../context/ThemeContext';
 import type { FixedCrewTileColourMode } from '../utils/fixedCrewTileColours';
+import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 
 interface AppearanceSettingsProps {
     activeOperationalModel?: string;
@@ -16,7 +17,7 @@ const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
     onUpdateFixedCrewTileColourMode,
 }) => {
     const { theme, setTheme } = useTheme();
-    const isFixedCrewModel = activeOperationalModel === 'fixed_crew';
+    const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
 
     const options: { value: AppTheme; label: string; description: string; tags: string[] }[] = [
         {

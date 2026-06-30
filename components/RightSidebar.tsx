@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
+import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 
 interface RightSidebarProps {
     activeView: string;
@@ -38,7 +39,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 }) => {
   const nextDayBuildSubViews = ['NextDayBuild', 'Priorities', 'ProgramData', 'BuildAnalysis', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'];
   const isNextDayBuildSectionActive = nextDayBuildSubViews.includes(activeView);
-  const isFixedCrewModel = String(operationalModel || '').trim().toLowerCase() === 'fixed_crew';
+  const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
 
   const dashboardViews = ['MyDashboard', 'SupervisorDashboard'];
   const isAnyDashboardActive = dashboardViews.includes(activeView);

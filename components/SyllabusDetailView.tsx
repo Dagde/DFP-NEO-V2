@@ -1,6 +1,7 @@
 import React from 'react';
 import { SyllabusItemDetail } from '../types';
 import { getFixedCrewCoursePackageBriefingTimes } from '../utils/fixedCrewTraining';
+import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 
 interface SyllabusDetailViewProps {
     item: SyllabusItemDetail;
@@ -10,7 +11,7 @@ interface SyllabusDetailViewProps {
 
 const SyllabusDetailView: React.FC<SyllabusDetailViewProps> = ({ item, onBack, operationalModel }) => {
     const fixedCrewBriefingTimes = getFixedCrewCoursePackageBriefingTimes();
-    const isFixedCrewModel = operationalModel === 'fixed_crew';
+    const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
     const preFlightTime = isFixedCrewModel ? fixedCrewBriefingTimes.preFlightTime : item.preFlightTime;
     const postFlightTime = isFixedCrewModel ? fixedCrewBriefingTimes.postFlightTime : item.postFlightTime;
 

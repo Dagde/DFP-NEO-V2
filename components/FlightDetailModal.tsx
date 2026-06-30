@@ -28,7 +28,7 @@ import {
     normaliseFixedCrewStaffRole,
     type CrewPositionTerminology,
 } from '../utils/crewPositionTerminology';
-import { normaliseOperationalModel } from '../utils/platformConfigService';
+import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 import {
     getQualificationsForOperationalModel,
     normaliseAssignedQualificationIds,
@@ -707,7 +707,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [activeCrewConflictName, setActiveCrewConflictName] = useState<string | null>(null);
     const isOracleContext = !!oracleContextForModal;
     const instructorList = oracleContextForModal?.availableInstructors || instructors;
-    const isFixedCrewModel = normaliseOperationalModel(operationalModel) === 'fixed_crew';
+    const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
     const normalisedEventType = String(eventType || '').trim().toLowerCase();
     const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === 'flight' || normalisedEventType === 'ftd');
     const activeUnitNormalised = String(activeUnitCode || '').trim().toUpperCase();

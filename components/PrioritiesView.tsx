@@ -57,6 +57,7 @@ import {
   timeFieldToHours,
   type FixedCrewAvailabilityWindow,
 } from '../utils/fixedCrewAvailability';
+import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 
 type FixedCrewTrainingStreamDisplay = FixedCrewTrainingStreamPriority & { eventCount?: number };
 type PriorityAllocationModel = 'flight_school' | 'air_combat' | 'fixed_crew';
@@ -1081,7 +1082,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [dutyPeriodTimestamp, setDutyPeriodTimestamp] = useState(new Date().toLocaleString());
   const [turnaroundTimestamp, setTurnaroundTimestamp] = useState(new Date().toLocaleString());
   const isAirCombatModel = String(operationalModel || '').trim().toLowerCase() === 'air_combat';
-  const isFixedCrewModel = String(operationalModel || '').trim().toLowerCase() === 'fixed_crew';
+  const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
   const defaultTaskingDuration = isFixedCrewModel ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS : 1;
   const defaultCurrencyDuration = isFixedCrewModel ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : 1.2;
   const [openStandardMissionIds, setOpenStandardMissionIds] = useState<Set<string>>(new Set());

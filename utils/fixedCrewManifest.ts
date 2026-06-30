@@ -1,7 +1,7 @@
 import type { SyllabusItemDetail } from '../types';
 import type { AircraftCrewComposition } from './aircraftCrewComposition';
 import { getCrewRequirementCount } from './crewRequirements';
-import { normaliseOperationalModel } from './platformConfigService';
+import { isFixedCrewLikeOperationalModel } from './platformConfigService';
 import {
   getQualificationsForOperationalModel,
   normaliseQualificationToken,
@@ -57,7 +57,7 @@ export const getFixedCrewManifestReadiness = (
     staffQualificationCatalogue?: StaffQualificationCatalogue;
   } = {},
 ): FixedCrewManifestReadiness => {
-  const isFixedCrewModel = normaliseOperationalModel(options.operationalModel) === 'fixed_crew';
+  const isFixedCrewModel = isFixedCrewLikeOperationalModel(options.operationalModel);
   const isCrewedEvent = isFixedCrewFlightOrSimEvent(item);
   const picRequired = isFixedCrewModel && isCrewedEvent;
   const picQualificationConfigured = hasFixedCrewPicQualification(options.staffQualificationCatalogue);

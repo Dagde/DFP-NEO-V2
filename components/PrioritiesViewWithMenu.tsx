@@ -15,6 +15,7 @@ import type { CrewCompositionSettings } from '../utils/crewCompositionProfiles';
 import type { UnitCallsignSettings } from '../utils/unitCallsigns';
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 
 interface PrioritiesViewWithMenuProps {
   school: string;
@@ -117,7 +118,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     const mainScrollRef = useRef<HTMLElement | null>(null);
     const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
     const locationDisplayName = props.school === 'ESL' ? 'East Sale' : props.school === 'PEA' ? 'Pearce' : props.school;
-    const isFixedCrewModel = String(props.operationalModel || '').trim().toLowerCase() === 'fixed_crew';
+    const isFixedCrewModel = isFixedCrewLikeOperationalModel(props.operationalModel);
     const effectiveInstructorPriority = isFixedCrewModel
         ? { ...props.instructorPriority, enabled: false }
         : props.instructorPriority;

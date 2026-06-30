@@ -6,7 +6,7 @@ import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import PersonnelColumn from './PersonnelColumn';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
-import { normaliseOperationalModel } from '../utils/platformConfigService';
+import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 
 interface NextDayInstructorScheduleViewProps {
@@ -305,7 +305,7 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
     setTimeout(() => { didDragRef.current = false; }, 0);
   };
 
-  const showUnitHeadings = normaliseOperationalModel(operationalModel) === 'fixed_crew'
+  const showUnitHeadings = isFixedCrewLikeOperationalModel(operationalModel)
     && new Set(instructors.map(instructor => String(instructor.unit || '').trim()).filter(Boolean)).size > 1;
   const scheduleRows = useMemo<NextDayInstructorScheduleRow[]>(() => {
     if (!showUnitHeadings) return instructors.map(instructor => ({ type: 'person', instructor }));

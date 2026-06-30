@@ -13,7 +13,7 @@ import {
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { DEFAULT_AIRCRAFT_CREW_COMPOSITION, normaliseAircraftCrewComposition, type AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewCompositionSettings, CurrencyProfile } from '../utils/crewCompositionProfiles';
-import { normaliseOperationalModel } from '../utils/platformConfigService';
+import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 import {
   getQualificationsForOperationalModel,
   normaliseAssignedQualificationIds,
@@ -1130,7 +1130,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       ? definitions
       : [BASE_AIRCRAFT_CONFIG, ...definitions];
   }, [aircraftConfigurationDefinitions]);
-  const isFixedCrewModel = normaliseOperationalModel(operationalModel) === 'fixed_crew';
+  const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
   const isEditingExistingEvent = Boolean(initialEvent?.id && initialEvent?.resourceId);
   const existingFormationEvents = useMemo(() => {
     if (!initialEvent?.formationId) return initialEvent ? [initialEvent] : [];

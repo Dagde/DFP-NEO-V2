@@ -25,6 +25,7 @@ import {
     hasMasterLmpAccess,
     hasPlatformPermission,
     hasPlatformModuleAccess,
+    isFixedCrewLikeOperationalModel,
     loadPlatformConfigFromDB,
     normaliseOperationalModel,
     PlatformConfig,
@@ -579,7 +580,7 @@ const DfpSidePanelTimeline: React.FC<{
     const [selectedPackageName, setSelectedPackageName] = useState('');
     const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel);
     const isAirCombatNeoAssist = normalisedAssistOperationalModel === 'air_combat';
-    const isFixedCrewNeoAssist = normalisedAssistOperationalModel === 'fixed_crew';
+    const isFixedCrewNeoAssist = isFixedCrewLikeOperationalModel(normalisedAssistOperationalModel);
     const defaultAssistTaskDuration = isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS : 1.2;
     const defaultAssistCurrencyDuration = isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : 1.2;
     const [assistTaskDate, setAssistTaskDate] = useState(date);
@@ -7439,7 +7440,7 @@ function generateDfpInternal(
             placements: [],
         },
         fixedCrewPriority: {
-            enabled: buildOperationalModel === 'fixed_crew',
+            enabled: isFixedCrewLikeOperationalModel(buildOperationalModel),
             model: buildOperationalModel,
             context: {
                 locationCode: school,
@@ -7479,7 +7480,7 @@ function generateDfpInternal(
             performance: null as any,
             rejectionReasons: {},
             summary: null,
-            conclusion: buildOperationalModel === 'fixed_crew'
+            conclusion: isFixedCrewLikeOperationalModel(buildOperationalModel)
                 ? ['Build report was saved before the Fixed Crew scheduler stage completed. Check attempts and rejectionReasons for the earlier failure point.']
                 : [`Fixed Crew scheduler did not run because active model was ${buildOperationalModel || 'blank'}.`],
         },
@@ -9735,7 +9736,7 @@ function generateDfpInternal(
         return null;
     };
 
-    if (buildOperationalModel === 'fixed_crew') {
+    if (isFixedCrewLikeOperationalModel(buildOperationalModel)) {
         return runFixedCrewBuild();
     }
 
@@ -20889,7 +20890,7 @@ const App: React.FC = () => {
     const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel('flight_school');
     const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
     const fixedCrewSharedResourceUnitTabs = useMemo(() => (
-        activeOperationalModel === 'fixed_crew' && organisationSettings.fleetSharingEnabled && activeContextUnitCodes.length > 1
+        isFixedCrewLikeOperationalModel(activeOperationalModel) && organisationSettings.fleetSharingEnabled && activeContextUnitCodes.length > 1
             ? activeContextUnitCodes
             : []
     ), [activeContextUnitCodes, activeOperationalModel, organisationSettings.fleetSharingEnabled]);
@@ -21783,10 +21784,10 @@ const App: React.FC = () => {
     const visibleSyllabusDetails = useMemo(() => {
         const normaliseContextCode = (value?: string | null) => String(value || '').trim().toUpperCase();
         const activeUnit = normaliseContextCode(activeUnitCode);
-        const activeUnits = activeOperationalModel === 'fixed_crew' && activeContextUnitCodes.length > 1
+        const activeUnits = isFixedCrewLikeOperationalModel(activeOperationalModel) && activeContextUnitCodes.length > 1
             ? new Set(activeContextUnitCodes.map(normaliseContextCode))
             : new Set([activeUnit]);
-        const baseVisibleItems = activeOperationalModel === 'fixed_crew' && activeContextUnitCodes.length > 1
+        const baseVisibleItems = isFixedCrewLikeOperationalModel(activeOperationalModel) && activeContextUnitCodes.length > 1
             ? activeContextUnitCodes.flatMap(unitCode => filterSyllabusForMasterLmpAccess(syllabusDetails, 'View', unitCode))
             : filterSyllabusForMasterLmpAccess(syllabusDetails, 'View', activeUnitCode);
         const seen = new Set<string>();
@@ -21800,7 +21801,7 @@ const App: React.FC = () => {
             .filter((item) => {
                 if (item.lmpType !== 'Staff CAT') return true;
                 const packageUnit = normaliseContextCode((item as any).unit);
-                if (activeOperationalModel === 'fixed_crew') return activeUnits.has(packageUnit);
+                if (isFixedCrewLikeOperationalModel(activeOperationalModel)) return activeUnits.has(packageUnit);
                 if (activeOperationalModel !== 'air_combat') return false;
                 return !packageUnit || packageUnit === activeUnit;
             });
@@ -21812,9 +21813,9 @@ const App: React.FC = () => {
         return syllabusDetails.filter((item) => {
             if (item.lmpType !== 'Staff CAT' || item.isActive === false || isSyllabusCourseShell(item)) return false;
             const packageUnit = normaliseContextCode((item as any).unit);
-            if (activeOperationalModel === 'fixed_crew') {
+            if (isFixedCrewLikeOperationalModel(activeOperationalModel)) {
                 if (!packageUnit || packageUnit === activeUnit) return false;
-                return getPackageUnitModel(packageUnit) === 'fixed_crew';
+                return isFixedCrewLikeOperationalModel(getPackageUnitModel(packageUnit));
             }
             if (activeOperationalModel === 'air_combat') {
                 if (!packageUnit) return true;
@@ -25128,7 +25129,7 @@ const App: React.FC = () => {
     }, [eventsForDate]);
 
     const fixedCrewTileColourKeyItems = useMemo(() => {
-        if (activeOperationalModel !== 'fixed_crew') return [];
+        if (!isFixedCrewLikeOperationalModel(activeOperationalModel)) return [];
         if (activeFixedCrewTileColourMode !== 'crew') {
             return buildFixedCrewTileColourKey(eventsForDate, activeFixedCrewTileColourMode);
         }
@@ -25667,7 +25668,7 @@ const App: React.FC = () => {
                 else if (startsBeforeToday) segmentType = 'end';
                 else if (endsAfterToday) segmentType = 'start';
 
-                const displayEvent = activeOperationalModel === 'fixed_crew'
+                const displayEvent = isFixedCrewLikeOperationalModel(activeOperationalModel)
                     ? applyFixedCrewTileColour(event, activeFixedCrewTileColourMode)
                     : event;
 
@@ -26711,9 +26712,9 @@ const App: React.FC = () => {
     const canRunValidation = canUsePlatformPermission('dfp.validation');
     const canPublishDfp = canUsePlatformPermission('dfp.publish');
     const canRunNeoBuild = canUsePlatformPermission('neo.run');
-    const isNeoCapableOperationalModel = activeOperationalModel === 'flight_school' || activeOperationalModel === 'air_combat' || activeOperationalModel === 'fixed_crew';
+    const isNeoCapableOperationalModel = activeOperationalModel === 'flight_school' || activeOperationalModel === 'air_combat' || isFixedCrewLikeOperationalModel(activeOperationalModel);
     const canRunNeoBuildForActiveModel = canRunNeoBuild && isNeoCapableOperationalModel;
-    const modelUnavailableLeftViews = activeOperationalModel === 'air_combat' || activeOperationalModel === 'fixed_crew' ? ['Trainee'] : [];
+    const modelUnavailableLeftViews = activeOperationalModel === 'air_combat' || isFixedCrewLikeOperationalModel(activeOperationalModel) ? ['Trainee'] : [];
     const modelUnavailableRightViews = activeOperationalModel === 'air_combat' ? ['NextDayTraineeSchedule'] : [];
     const canViewOwnTraineeProfile = canUsePlatformPermission('trainee.profile.own');
     const canViewOtherTraineeProfiles = canUsePlatformPermission('trainee.profile.others');
@@ -27300,7 +27301,7 @@ const App: React.FC = () => {
         dcoResult: 'DCO',
     ) => {
         const operationalModel = normaliseOperationalModel(activeOperationalModel);
-        if (operationalModel !== 'air_combat' && operationalModel !== 'fixed_crew') return;
+        if (operationalModel !== 'air_combat' && !isFixedCrewLikeOperationalModel(operationalModel)) return;
 
         const staffName = sourceEvent.fixedCrewPic || sourceEvent.pilot || sourceEvent.instructor || sourceEvent.crew || '';
         const eventCode = String(sourceEvent.flightNumber || sourceEvent.eventCode || '').trim();
@@ -29969,7 +29970,7 @@ const App: React.FC = () => {
             (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
         );
         console.log('🔍 Found SCT flights to include:', highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
-        const fixedCrewCurrencyEventDuration = normaliseOperationalModel(activeOperationalModel) === 'fixed_crew'
+        const fixedCrewCurrencyEventDuration = isFixedCrewLikeOperationalModel(activeOperationalModel)
             ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS
             : null;
 
@@ -30776,7 +30777,7 @@ const App: React.FC = () => {
     );
 
     const resolveFixedCrewPicPriorityEventsWithoutCrew = async (events: ScheduleEvent[]): Promise<ScheduleEvent[] | null> => {
-        if (activeOperationalModel !== 'fixed_crew') return events;
+        if (!isFixedCrewLikeOperationalModel(activeOperationalModel)) return events;
 
         const normalisePromptUnitCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
         const normalisePromptCrewKey = (value?: string | null): string => String(value || '').replace(/^CREW\s*/i, '').trim().toUpperCase();
@@ -31564,7 +31565,7 @@ const App: React.FC = () => {
         }
         console.log('🔍 [NEO BUILD CONFIG DEBUG] traineesData (filtered):', traineesInBuild.length, '| mockData count:', traineesInBuild.filter((t: any) => (t as any)._dataSource !== 'database').length, '| DB count:', traineesInBuild.filter((t: any) => (t as any)._dataSource === 'database').length);
         console.log('🔍 [NEO BUILD CONFIG DEBUG] Instructors sample:', instructorsInBuild.slice(0, 5).map((i: any) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, src: (i as any)._dataSource })));
-        const effectiveInstructorPriority = activeOperationalModel === 'fixed_crew'
+        const effectiveInstructorPriority = isFixedCrewLikeOperationalModel(activeOperationalModel)
             ? { ...instructorPriority, enabled: false }
             : instructorPriority;
 
@@ -35749,7 +35750,7 @@ appliedUpdates.forEach(update => {
     }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isNeoCapableOperationalModel, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
 
     const handleQuickTile = useCallback(() => {
-        if (activeOperationalModel !== 'fixed_crew') {
+        if (!isFixedCrewLikeOperationalModel(activeOperationalModel)) {
             handleToggleOracleMode();
             return;
         }
@@ -38614,7 +38615,7 @@ appliedUpdates.forEach(update => {
                                             vorCount:        data.approaches?.vor   || 0,
                                         };
                                         const fixedCrewRoster = getFixedCrewRosterForEvent();
-                                        const isFixedCrewPostFlight = normaliseOperationalModel(activeOperationalModel) === 'fixed_crew' && fixedCrewRoster.length > 0;
+                                        const isFixedCrewPostFlight = isFixedCrewLikeOperationalModel(activeOperationalModel) && fixedCrewRoster.length > 0;
 
                                         if (isFixedCrewPostFlight) {
                                             const picName = normaliseLogbookName(pfEvt.fixedCrewPic || pfEvt.pilot || pfEvt.instructor);
@@ -39370,7 +39371,7 @@ appliedUpdates.forEach(update => {
                     eventsForDate={eventsForDate}
                     instructors={instructorsData.map(i => i.name)}
                     trainees={allTraineesData.map(t => t.fullName)}
-                    syllabusDetails={activeOperationalModel === 'fixed_crew' ? visibleSyllabusDetails : syllabusDetails}
+                    syllabusDetails={isFixedCrewLikeOperationalModel(activeOperationalModel) ? visibleSyllabusDetails : syllabusDetails}
                     school={school}
                     traineesData={traineesData}
                     instructorsData={instructorsData}
@@ -39440,7 +39441,7 @@ appliedUpdates.forEach(update => {
 
                         handleNavigation('PT051');
                     }}
-                    onOpenTrainingReport={['air_combat', 'fixed_crew'].includes(normaliseOperationalModel(activeOperationalModel))
+                    onOpenTrainingReport={(normaliseOperationalModel(activeOperationalModel) === 'air_combat' || isFixedCrewLikeOperationalModel(activeOperationalModel))
                         ? handleOpenAirCombatTrainingReportFromFlightDetails
                         : undefined}
                     onOpenAuth={(e) => {

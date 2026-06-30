@@ -18,7 +18,7 @@ import {
   getRankOptionsForGroup,
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
-import { normaliseOperationalModel } from '../utils/platformConfigService';
+import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { normaliseAirCombatTrainingAssignments, normaliseAirCombatTrainingReports } from '../utils/airCombatTraining';
 import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
@@ -462,7 +462,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   }, [traineesData, instructor.name]);
   const activeOperationalModel = normaliseOperationalModel(operationalModel);
   const isAirCombatModel = activeOperationalModel === 'air_combat';
-  const isStaffTrainingReportModel = isAirCombatModel || activeOperationalModel === 'fixed_crew';
+  const isStaffTrainingReportModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeOperationalModel);
   const assignedTraining = useMemo(
     () => normaliseAirCombatTrainingAssignments(instructor.preferences),
     [instructor.preferences],
