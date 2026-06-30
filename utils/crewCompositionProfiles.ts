@@ -1,4 +1,4 @@
-import type { OperationalModelCode } from './platformConfigService';
+import { normaliseOperationalModel, type OperationalModelCode } from './platformConfigService';
 
 export interface CrewCompositionRoleRequirement {
   role: string;
@@ -39,7 +39,7 @@ export interface CrewCompositionSettings {
   currencyProfiles: CurrencyProfile[];
 }
 
-const SUPPORTED_MODELS: OperationalModelCode[] = ['air_combat', 'fixed_crew', 'air_mobility'];
+const SUPPORTED_MODELS: OperationalModelCode[] = ['air_combat', 'fixed_crew', 'pooled_crew'];
 
 const normaliseCode = (value: unknown, fallback: string): string => {
   const token = String(value || '')
@@ -112,9 +112,9 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
     usedCodes.add(code);
 
     const operationalModels = Array.isArray(row?.operationalModels)
-      ? row.operationalModels.filter((model: unknown): model is OperationalModelCode => (
-        SUPPORTED_MODELS.includes(model as OperationalModelCode)
-      ))
+      ? Array.from(new Set(row.operationalModels
+        .map((model: unknown) => normaliseOperationalModel(model))
+        .filter((model: OperationalModelCode) => SUPPORTED_MODELS.includes(model))))
       : SUPPORTED_MODELS;
 
     return {

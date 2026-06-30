@@ -40,7 +40,7 @@ export const DEFAULT_TASK_PROFILE_CONFIG: TaskProfileConfig = {
     'Border Security Patrol',
     'Search and Rescue Coordination',
   ],
-  air_mobility: [
+  pooled_crew: [
     'Tactical Airlift',
     'Strategic Airlift',
     'Personnel Transport',
@@ -58,7 +58,7 @@ export const DEFAULT_TASK_PROFILE_ABBREVIATIONS: TaskProfileAbbreviationConfig =
   flight_school: {},
   air_combat: {},
   fixed_crew: {},
-  air_mobility: {},
+  pooled_crew: {},
 };
 
 const uniqueProfiles = (profiles: unknown[]): string[] => {
@@ -73,6 +73,18 @@ const uniqueProfiles = (profiles: unknown[]): string[] => {
     result.push(value);
   });
   return result;
+};
+
+const getTaskProfileSettingAliases = (option: { value: OperationalModelCode; label: string }): string[] => {
+  const aliases = [
+    option.value,
+    option.label,
+    option.label.replace(/\s+Model$/i, ''),
+  ];
+  if (option.value === 'pooled_crew') {
+    aliases.push('air_mobility', 'Air Mobility Model', 'Air Mobility');
+  }
+  return aliases;
 };
 
 export const parseTaskProfileText = (text: string): string[] => {
@@ -111,11 +123,7 @@ export const formatTaskProfileAbbreviationText = (abbreviations: Record<string, 
 export const normaliseTaskProfileConfig = (value: unknown): TaskProfileConfig => {
   const source = (value && typeof value === 'object') ? value as Record<string, unknown> : {};
   return OPERATIONAL_MODEL_OPTIONS.reduce((config, option) => {
-    const aliases = [
-      option.value,
-      option.label,
-      option.label.replace(/\s+Model$/i, ''),
-    ];
+    const aliases = getTaskProfileSettingAliases(option);
     const raw = aliases.map((alias) => source[alias]).find((candidate) => candidate !== undefined);
     const profiles = raw === undefined
       ? DEFAULT_TASK_PROFILE_CONFIG[option.value]
@@ -134,11 +142,7 @@ export const normaliseTaskProfileConfig = (value: unknown): TaskProfileConfig =>
 export const normaliseTaskProfileAbbreviationConfig = (value: unknown): TaskProfileAbbreviationConfig => {
   const source = (value && typeof value === 'object') ? value as Record<string, unknown> : {};
   return OPERATIONAL_MODEL_OPTIONS.reduce((config, option) => {
-    const aliases = [
-      option.value,
-      option.label,
-      option.label.replace(/\s+Model$/i, ''),
-    ];
+    const aliases = getTaskProfileSettingAliases(option);
     const raw = aliases.map((alias) => source[alias]).find((candidate) => candidate !== undefined);
     const abbreviations = raw === undefined
       ? DEFAULT_TASK_PROFILE_ABBREVIATIONS[option.value]

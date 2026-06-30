@@ -2041,14 +2041,15 @@ const OPERATIONAL_MODEL_OPTIONS = [
   { value: "flight_school", label: "Flight School Model" },
   { value: "air_combat", label: "Air Combat Model" },
   { value: "fixed_crew", label: "Fixed Crew Model" },
-  { value: "air_mobility", label: "Air Mobility Model" }
+  { value: "pooled_crew", label: "Pooled Crew Model" }
 ];
 const operationalModelLabels = new Map(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
 const normaliseOperationalModel = (value) => {
   const token = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
   if (token === "air_combat" || token === "fighter" || token === "fighter_model") return "air_combat";
   if (token === "fixed_crew" || token === "crewed" || token === "crewed_model") return "fixed_crew";
-  if (token === "air_mobility" || token === "airlift" || token === "mobility") return "air_mobility";
+  if (token === "pooled_crew" || token === "pooledcrew" || token === "pooled" || token === "pooled_crew_model") return "pooled_crew";
+  if (token === "air_mobility" || token === "airlift" || token === "mobility") return "pooled_crew";
   return DEFAULT_OPERATIONAL_MODEL;
 };
 const getUnitOperationalModel = (unit) => normaliseOperationalModel(unit?.operationalModel || unit?.settings?.operationalModel);
@@ -2587,7 +2588,7 @@ const DEFAULT_TASK_PROFILE_CONFIG = {
     "Border Security Patrol",
     "Search and Rescue Coordination"
   ],
-  air_mobility: [
+  pooled_crew: [
     "Tactical Airlift",
     "Strategic Airlift",
     "Personnel Transport",
@@ -2612,6 +2613,17 @@ const uniqueProfiles = (profiles) => {
     result.push(value);
   });
   return result;
+};
+const getTaskProfileSettingAliases = (option) => {
+  const aliases = [
+    option.value,
+    option.label,
+    option.label.replace(/\s+Model$/i, "")
+  ];
+  if (option.value === "pooled_crew") {
+    aliases.push("air_mobility", "Air Mobility Model", "Air Mobility");
+  }
+  return aliases;
 };
 const parseTaskProfileText = (text) => {
   const sourceText = String(text || "");
@@ -2638,11 +2650,7 @@ const formatTaskProfileAbbreviationText = (abbreviations) => Object.entries(abbr
 const normaliseTaskProfileConfig = (value) => {
   const source = value && typeof value === "object" ? value : {};
   return OPERATIONAL_MODEL_OPTIONS.reduce((config, option) => {
-    const aliases = [
-      option.value,
-      option.label,
-      option.label.replace(/\s+Model$/i, "")
-    ];
+    const aliases = getTaskProfileSettingAliases(option);
     const raw = aliases.map((alias) => source[alias]).find((candidate) => candidate !== void 0);
     const profiles = raw === void 0 ? DEFAULT_TASK_PROFILE_CONFIG[option.value] : Array.isArray(raw) ? uniqueProfiles(raw) : typeof raw === "string" ? parseTaskProfileText(raw) : [];
     return {
@@ -2851,12 +2859,12 @@ const getAircraftTypeCrewComposition = (platformConfig, aircraftTypeCode) => {
 };
 const DEFAULT_CREW_POSITION_TERMINOLOGY = {
   positions: [
-    { id: "pilot", genericName: "Pilot", label: "Pilot", operationalModels: ["flight_school", "air_combat", "fixed_crew", "air_mobility"] },
+    { id: "pilot", genericName: "Pilot", label: "Pilot", operationalModels: ["flight_school", "air_combat", "fixed_crew", "pooled_crew"] },
     { id: "combat-systems-operator", genericName: "Combat Systems Operator", label: "Combat Systems Operator", operationalModels: ["air_combat"] },
-    { id: "airborne-mission-commander", genericName: "Airborne Mission Commander", label: "Airborne Mission Commander", operationalModels: ["fixed_crew", "air_mobility"] },
-    { id: "flight-engineer", genericName: "Flight Engineer", label: "Flight Engineer", operationalModels: ["fixed_crew", "air_mobility"] },
-    { id: "loadmaster", genericName: "Loadmaster", label: "Loadmaster", operationalModels: ["air_mobility"] },
-    { id: "crew", genericName: "Crew", label: "Crew", operationalModels: ["flight_school", "air_combat", "fixed_crew", "air_mobility"] }
+    { id: "airborne-mission-commander", genericName: "Airborne Mission Commander", label: "Airborne Mission Commander", operationalModels: ["fixed_crew", "pooled_crew"] },
+    { id: "flight-engineer", genericName: "Flight Engineer", label: "Flight Engineer", operationalModels: ["fixed_crew", "pooled_crew"] },
+    { id: "loadmaster", genericName: "Loadmaster", label: "Loadmaster", operationalModels: ["pooled_crew"] },
+    { id: "crew", genericName: "Crew", label: "Crew", operationalModels: ["flight_school", "air_combat", "fixed_crew", "pooled_crew"] }
   ]
 };
 const ALL_OPERATIONAL_MODEL_CODES$1 = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
@@ -3722,7 +3730,7 @@ const getUnitTrainingReportPhraseBank = (config, unitCode, fallbackPhraseBank) =
   const source = unit?.settings?.trainingReportPhraseBank || organisationPhraseBank || fallbackPhraseBank || DEFAULT_PHRASE_BANK;
   return JSON.parse(JSON.stringify(source));
 };
-const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "air_mobility"];
+const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "pooled_crew"];
 const normaliseCode$3 = (value, fallback) => {
   const token = String(value || "").trim().toUpperCase().replace(/[^A-Z]+/g, "").slice(0, 3);
   return token || fallback.slice(0, 3);
@@ -3773,7 +3781,7 @@ const normaliseCrewCompositionSettings = (value) => {
     let code = normaliseCode$3(row?.code || row?.name, fallbackCode);
     code = nextAvailableThreeLetterCode(code, usedCodes);
     usedCodes.add(code);
-    const operationalModels = Array.isArray(row?.operationalModels) ? row.operationalModels.filter((model) => SUPPORTED_MODELS.includes(model)) : SUPPORTED_MODELS;
+    const operationalModels = Array.isArray(row?.operationalModels) ? Array.from(new Set(row.operationalModels.map((model) => normaliseOperationalModel(model)).filter((model) => SUPPORTED_MODELS.includes(model)))) : SUPPORTED_MODELS;
     return {
       id: String(row?.id || `alternate-crew-${index + 1}`),
       code,
@@ -3894,7 +3902,7 @@ const DEFAULT_STAFF_QUALIFICATIONS = {
       id: "pic",
       name: "PIC",
       code: "PIC",
-      operationalModels: ["flight_school", "air_combat", "fixed_crew", "air_mobility"],
+      operationalModels: ["flight_school", "air_combat", "fixed_crew", "pooled_crew"],
       roleRestrictions: ["Pilot"],
       status: "ACTIVE"
     },
@@ -3918,7 +3926,7 @@ const DEFAULT_STAFF_QUALIFICATIONS = {
       id: "crew-commander",
       name: "Crew Commander",
       code: "Crew Commander",
-      operationalModels: ["fixed_crew", "air_mobility"],
+      operationalModels: ["fixed_crew", "pooled_crew"],
       roleRestrictions: ["Pilot"],
       status: "ACTIVE"
     },
@@ -3926,7 +3934,7 @@ const DEFAULT_STAFF_QUALIFICATIONS = {
       id: "operational-captain",
       name: "Operational Captain",
       code: "Operational Captain",
-      operationalModels: ["fixed_crew", "air_mobility"],
+      operationalModels: ["fixed_crew", "pooled_crew"],
       roleRestrictions: ["Pilot"],
       status: "ACTIVE"
     }
@@ -58358,7 +58366,7 @@ const PlatformConfigurationSettings = ({
         aircraftTypeCode: aircraftTypeCode.trim().toUpperCase(),
         name,
         description: "",
-        operationalModels: ["air_combat", "fixed_crew", "air_mobility"],
+        operationalModels: ["air_combat", "fixed_crew", "pooled_crew"],
         roleRequirements: [{ role, count: 1 }],
         status: "ACTIVE"
       }))
@@ -60312,7 +60320,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Crew Composition",
-          subtitle: "Aircraft-specific role labels, standard crew and alternate tasking crew makeups for Air Combat, Fixed Crew and Air Mobility.",
+          subtitle: "Aircraft-specific role labels, standard crew and alternate tasking crew makeups for Air Combat, Fixed Crew and Pooled Crew.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", children: crewCompositionUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: saveCrewCompositionAndKeepPosition, disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Save" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setCrewCompositionUnlocked(false), disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Exit" })
@@ -60369,7 +60377,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
                 "These are the role keys currently used by ",
                 activeCrewCompositionAircraftCode || "this aircraft",
-                ". Model applicability includes Flight School, Air Combat, Fixed Crew and Air Mobility."
+                ". Model applicability includes Flight School, Air Combat, Fixed Crew and Pooled Crew."
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addCrewPositionEntry, disabled: !canEditCrewComposition, className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50", children: "Add Position" })

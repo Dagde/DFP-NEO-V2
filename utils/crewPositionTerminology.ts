@@ -19,12 +19,12 @@ export interface CrewPositionTerminology {
 
 export const DEFAULT_CREW_POSITION_TERMINOLOGY: CrewPositionTerminology = {
   positions: [
-    { id: 'pilot', genericName: 'Pilot', label: 'Pilot', operationalModels: ['flight_school', 'air_combat', 'fixed_crew', 'air_mobility'] },
+    { id: 'pilot', genericName: 'Pilot', label: 'Pilot', operationalModels: ['flight_school', 'air_combat', 'fixed_crew', 'pooled_crew'] },
     { id: 'combat-systems-operator', genericName: 'Combat Systems Operator', label: 'Combat Systems Operator', operationalModels: ['air_combat'] },
-    { id: 'airborne-mission-commander', genericName: 'Airborne Mission Commander', label: 'Airborne Mission Commander', operationalModels: ['fixed_crew', 'air_mobility'] },
-    { id: 'flight-engineer', genericName: 'Flight Engineer', label: 'Flight Engineer', operationalModels: ['fixed_crew', 'air_mobility'] },
-    { id: 'loadmaster', genericName: 'Loadmaster', label: 'Loadmaster', operationalModels: ['air_mobility'] },
-    { id: 'crew', genericName: 'Crew', label: 'Crew', operationalModels: ['flight_school', 'air_combat', 'fixed_crew', 'air_mobility'] },
+    { id: 'airborne-mission-commander', genericName: 'Airborne Mission Commander', label: 'Airborne Mission Commander', operationalModels: ['fixed_crew', 'pooled_crew'] },
+    { id: 'flight-engineer', genericName: 'Flight Engineer', label: 'Flight Engineer', operationalModels: ['fixed_crew', 'pooled_crew'] },
+    { id: 'loadmaster', genericName: 'Loadmaster', label: 'Loadmaster', operationalModels: ['pooled_crew'] },
+    { id: 'crew', genericName: 'Crew', label: 'Crew', operationalModels: ['flight_school', 'air_combat', 'fixed_crew', 'pooled_crew'] },
   ],
 };
 

@@ -68,7 +68,7 @@ export interface PlatformConfig {
 
 export type PlatformPermissionId = string;
 
-export type OperationalModelCode = 'flight_school' | 'air_combat' | 'fixed_crew' | 'air_mobility';
+export type OperationalModelCode = 'flight_school' | 'air_combat' | 'fixed_crew' | 'pooled_crew';
 
 export const DEFAULT_OPERATIONAL_MODEL: OperationalModelCode = 'flight_school';
 
@@ -76,7 +76,7 @@ export const OPERATIONAL_MODEL_OPTIONS: Array<{ value: OperationalModelCode; lab
   { value: 'flight_school', label: 'Flight School Model' },
   { value: 'air_combat', label: 'Air Combat Model' },
   { value: 'fixed_crew', label: 'Fixed Crew Model' },
-  { value: 'air_mobility', label: 'Air Mobility Model' },
+  { value: 'pooled_crew', label: 'Pooled Crew Model' },
 ];
 
 const operationalModelLabels = new Map(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
@@ -85,7 +85,8 @@ export const normaliseOperationalModel = (value: unknown): OperationalModelCode 
   const token = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
   if (token === 'air_combat' || token === 'fighter' || token === 'fighter_model') return 'air_combat';
   if (token === 'fixed_crew' || token === 'crewed' || token === 'crewed_model') return 'fixed_crew';
-  if (token === 'air_mobility' || token === 'airlift' || token === 'mobility') return 'air_mobility';
+  if (token === 'pooled_crew' || token === 'pooledcrew' || token === 'pooled' || token === 'pooled_crew_model') return 'pooled_crew';
+  if (token === 'air_mobility' || token === 'airlift' || token === 'mobility') return 'pooled_crew';
   return DEFAULT_OPERATIONAL_MODEL;
 };
 

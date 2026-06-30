@@ -2003,7 +2003,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         aircraftTypeCode: aircraftTypeCode.trim().toUpperCase(),
         name,
         description: '',
-        operationalModels: ['air_combat', 'fixed_crew', 'air_mobility'],
+        operationalModels: ['air_combat', 'fixed_crew', 'pooled_crew'],
         roleRequirements: [{ role, count: 1 }],
         status: 'ACTIVE',
       })),
@@ -4393,7 +4393,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-crew-composition" className={getSectionClass('platform-crew-composition')}>
         <SectionHeader
           title="Crew Composition"
-          subtitle="Aircraft-specific role labels, standard crew and alternate tasking crew makeups for Air Combat, Fixed Crew and Air Mobility."
+          subtitle="Aircraft-specific role labels, standard crew and alternate tasking crew makeups for Air Combat, Fixed Crew and Pooled Crew."
           action={canEdit ? (
             <div className="flex gap-2">
               {crewCompositionUnlocked ? (
@@ -4452,7 +4452,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Crew Position Labels / Roles</h4>
-                <p className={resourceSectionPanelHintClass}>These are the role keys currently used by {activeCrewCompositionAircraftCode || 'this aircraft'}. Model applicability includes Flight School, Air Combat, Fixed Crew and Air Mobility.</p>
+                <p className={resourceSectionPanelHintClass}>These are the role keys currently used by {activeCrewCompositionAircraftCode || 'this aircraft'}. Model applicability includes Flight School, Air Combat, Fixed Crew and Pooled Crew.</p>
               </div>
               <button type="button" onClick={addCrewPositionEntry} disabled={!canEditCrewComposition} className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">Add Position</button>
             </div>
