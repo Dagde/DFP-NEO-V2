@@ -8855,13 +8855,19 @@ function generateDfpInternal(
         const isPooledCrewPilot = (staff: Instructor): boolean => (
             String(staff.role || '').trim().toLowerCase() === 'pilot'
         );
+        const pooledCrewPublishedHistory = Object.entries(publishedSchedules || {})
+            .flatMap(([date, events]) => (events || []).map(event => ({ ...event, date })))
+            .filter(event => String(event.date || '') < buildDate)
+            .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')));
+        const pooledCrewHistoryByPerson = new Map<string, Array<ScheduleEvent & { date: string }>>();
         const buildPooledCrewHistoricalEvents = (staff: Instructor): Array<ScheduleEvent & { date: string }> => {
+            const personKey = normalisePooledCrewPersonKey(staff.name);
+            const cached = pooledCrewHistoryByPerson.get(personKey);
+            if (cached) return cached;
             const staffName = staff.name;
-            return Object.entries(publishedSchedules || {})
-                .flatMap(([date, events]) => (events || []).map(event => ({ ...event, date })))
-                .filter(event => String(event.date || '') < buildDate)
-                .filter(event => eventHasPerson(event, staffName))
-                .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')));
+            const history = pooledCrewPublishedHistory.filter(event => eventHasPerson(event, staffName));
+            pooledCrewHistoryByPerson.set(personKey, history);
+            return history;
         };
         const getDaysSincePooledCrewEvent = (date?: string | null): number | null => {
             if (!date) return null;
@@ -9056,6 +9062,16 @@ function generateDfpInternal(
                 },
             };
         };
+        const getPooledCrewGlobalPairingViability = (event: Omit<ScheduleEvent, 'date'>): { viable: boolean; reason?: string; pilotCount: number; picCount: number; coPilotCount: number; requiresPicSupervision: boolean } => {
+            const pilots = pooledCrewStaff.filter(isPooledCrewPilot);
+            const picCount = pilots.filter(staffHasPicQualification).length;
+            const coPilotCount = pilots.length - picCount;
+            const requiresPicSupervision = /upgrade|assessment|assess|check|instruct|supervis/i.test(`${event.flightNumber || ''} ${(event as any).eventTitle || ''} ${(event as any).training || ''}`);
+            if (pilots.length < 2) return { viable: false, reason: 'POOLED_CREW_NOT_ENOUGH_PILOTS', pilotCount: pilots.length, picCount, coPilotCount, requiresPicSupervision };
+            if (picCount < 1) return { viable: false, reason: 'POOLED_CREW_NO_PIC_PILOT', pilotCount: pilots.length, picCount, coPilotCount, requiresPicSupervision };
+            if (!requiresPicSupervision && coPilotCount < 1) return { viable: false, reason: 'POOLED_CREW_NO_CO_PILOT', pilotCount: pilots.length, picCount, coPilotCount, requiresPicSupervision };
+            return { viable: true, pilotCount: pilots.length, picCount, coPilotCount, requiresPicSupervision };
+        };
         const tryPlaceFixedCrewEvent = (sourceEvent: Omit<ScheduleEvent, 'date'>, source: string, fixedStartTime?: number): boolean => {
             const eventPerfStart = fixedCrewPerfNow();
             const getFixedCrewStartStepMinutes = (eventType?: string | null): number => {
@@ -9074,7 +9090,9 @@ function generateDfpInternal(
                 }
                 return starts;
             };
-            const startStepMinutes = getFixedCrewStartStepMinutes(sourceEvent.type);
+            const startStepMinutes = isPooledCrewBuild
+                ? Math.max(5, getFixedCrewStartStepMinutes(sourceEvent.type))
+                : getFixedCrewStartStepMinutes(sourceEvent.type);
             const buildFixedCrewFixedStartWaveCandidates = (
                 fixedStart: number,
                 end: number,
@@ -9161,6 +9179,31 @@ function generateDfpInternal(
                 if (fixedCrewPerf.events.length < 120) fixedCrewPerf.events.push(eventPerf);
                 return false;
             }
+            if (isPooledCrewBuild) {
+                const pairingViability = getPooledCrewGlobalPairingViability(sourceEvent);
+                if (!pairingViability.viable) {
+                    const reason = pairingViability.reason || 'POOLED_CREW_PAIRING_NOT_VIABLE';
+                    incrementFixedCrewRejection(reason);
+                    diag.pooledCrewAllocation.rejections.push({
+                        event: sourceEvent.flightNumber,
+                        source,
+                        reason,
+                        ...pairingViability,
+                    });
+                    pushFixedCrewAttempt({
+                        event: sourceEvent.flightNumber,
+                        source,
+                        outcome: 'rejected',
+                        reason,
+                        ...pairingViability,
+                    });
+                    eventPerf.outcome = 'rejected';
+                    eventPerf.reason = reason;
+                    eventPerf.elapsedMs = Math.round((fixedCrewPerfNow() - eventPerfStart) * 100) / 100;
+                    if (fixedCrewPerf.events.length < 120) fixedCrewPerf.events.push(eventPerf);
+                    return false;
+                }
+            }
             const window = getFixedCrewWindow(sourceEvent.type);
             const duration = getFixedCrewDuration(sourceEvent);
             const isSameFormationEvent = Boolean(sourceEvent.formationId || (Number(sourceEvent.formationSize) || 0) > 1);
@@ -9201,6 +9244,8 @@ function generateDfpInternal(
                         && candidateWindow.start < existingBookingWindow.end;
                 })
             );
+            let pooledCrewPlacementAttemptsForEvent = 0;
+            const maxPooledCrewPlacementAttemptsForEvent = 720;
             for (const startTime of starts) {
                 fixedCrewPerf.counters.startCandidates += 1;
                 eventPerf.startCandidates += 1;
@@ -9222,6 +9267,33 @@ function generateDfpInternal(
                         allowSameFormationTakeoff: isSameFormationEvent,
                         formationGroupId: candidate.formationId,
                     };
+                    if (isPooledCrewBuild) {
+                        pooledCrewPlacementAttemptsForEvent += 1;
+                        if (pooledCrewPlacementAttemptsForEvent > maxPooledCrewPlacementAttemptsForEvent) {
+                            const reason = 'POOLED_CREW_SEARCH_LIMIT_REACHED';
+                            incrementFixedCrewRejection(reason);
+                            diag.pooledCrewAllocation.rejections.push({
+                                event: sourceEvent.flightNumber,
+                                source,
+                                reason,
+                                attempts: pooledCrewPlacementAttemptsForEvent,
+                                limit: maxPooledCrewPlacementAttemptsForEvent,
+                            });
+                            pushFixedCrewAttempt({
+                                event: sourceEvent.flightNumber,
+                                source,
+                                outcome: 'rejected',
+                                reason,
+                                attempts: pooledCrewPlacementAttemptsForEvent,
+                                limit: maxPooledCrewPlacementAttemptsForEvent,
+                            });
+                            eventPerf.outcome = 'rejected';
+                            eventPerf.reason = reason;
+                            eventPerf.elapsedMs = Math.round((fixedCrewPerfNow() - eventPerfStart) * 100) / 100;
+                            if (fixedCrewPerf.events.length < 120) fixedCrewPerf.events.push(eventPerf);
+                            return false;
+                        }
+                    }
                     if (candidate.type === 'flight') {
                         const dispatchViolation = getAirCombatHourlyDispatchLimitViolation(candidate.startTime, 1, {
                             excludedFormationId: sameFormationDispatchOptions.formationGroupId,
