@@ -140,6 +140,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     String(value).toUpperCase() === 'DEMO' ? 'DEMO' : String(value)
   );
   const [isEditMode, setIsEditMode] = useState(startInEditMode);
+  const [showRecentEventPicker, setShowRecentEventPicker] = useState(startInEditMode);
   const [selectedSourceEvent, setSelectedSourceEvent] = useState<ScheduleEvent | undefined>(sourceEvent);
   const activeSourceEvent = selectedSourceEvent || sourceEvent;
   const [eventCodeField, setEventCodeField] = useState(initialReport?.eventCode || item?.code || sourceEvent?.flightNumber || sourceEvent?.eventCode || '');
@@ -249,6 +250,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     setInstructorName(event.instructor || currentUserName || '');
     setCommentSections(prev => ({ ...prev, assessor: event.instructor || currentUserName || prev.assessor }));
     setSaveStatus('Unsaved');
+    setShowRecentEventPicker(false);
   };
   const [elementScores, setElementScores] = useState<Array<{ element: string; grade: string; comment: string }>>(() => {
     const existingScores = Array.isArray(initialReport?.assessedElementScores) ? initialReport.assessedElementScores : [];
@@ -443,7 +445,19 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
             </div>
             <div className="flex items-center gap-[1px]">
               <button type="button" onClick={() => window.print()} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Print</button>
-              <button type="button" onClick={() => setIsEditMode(prev => !prev)} className={`flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold ${isEditMode ? 'active text-sky-900' : ''}`}>Edit</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditMode(prev => {
+                    const next = !prev;
+                    if (next) setShowRecentEventPicker(true);
+                    return next;
+                  });
+                }}
+                className={`flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold ${isEditMode ? 'active text-sky-900' : ''}`}
+              >
+                Edit
+              </button>
               <button type="button" onClick={saveReport} disabled={isSaving || !eventCode} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40">Save</button>
               <button type="button" className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Delete</button>
               <button type="button" onClick={onCancel} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Back</button>
@@ -453,29 +467,52 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
 
           <div className="p-4 md:p-6">
             <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <dl onClick={() => isEditMode && recentEvents.length > 0 && setIsEditMode(true)} className={`space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 ${isEditMode ? 'border-sky-500/60' : 'border-gray-700'}`}>
-                {isEditMode && recentEvents.length > 0 && (
+              <dl
+                onClick={() => {
+                  if (isEditMode) setShowRecentEventPicker(true);
+                }}
+                className={`space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 ${isEditMode ? 'cursor-pointer border-sky-500/60' : 'border-gray-700'}`}
+              >
+                {isEditMode && showRecentEventPicker && (
                   <div className="mb-3 rounded border border-sky-500/30 bg-gray-950/80 p-2">
-                    <div className="mb-2 text-[10px] font-bold uppercase tracking-wide text-sky-300">Recent Flights</div>
-                    <div className="space-y-1">
-                      {recentEvents.slice(0, 5).map(event => (
-                        <button
-                          key={event.id}
-                          type="button"
-                          onClick={(clickEvent) => {
-                            clickEvent.stopPropagation();
-                            selectRecentEvent(event);
-                          }}
-                          className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-left hover:border-sky-500 hover:bg-sky-950/30"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-white">{event.flightNumber || event.eventCode || 'Event'}</span>
-                            <span className="font-mono text-[10px] text-gray-400">{event.date || '-'} {formatTimeToHHMM(event.startTime)}</span>
-                          </div>
-                          <div className="truncate text-[10px] text-gray-500">{event.callsign || event.resourceId || event.notes || '-'}</div>
-                        </button>
-                      ))}
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <div className="text-[10px] font-bold uppercase tracking-wide text-sky-300">Recent Flights</div>
+                      <button
+                        type="button"
+                        onClick={(clickEvent) => {
+                          clickEvent.stopPropagation();
+                          setShowRecentEventPicker(false);
+                        }}
+                        className="text-[10px] font-semibold text-gray-500 hover:text-white"
+                      >
+                        Close
+                      </button>
                     </div>
+                    {recentEvents.length > 0 ? (
+                      <div className="space-y-1">
+                        {recentEvents.slice(0, 5).map(event => (
+                          <button
+                            key={event.id}
+                            type="button"
+                            onClick={(clickEvent) => {
+                              clickEvent.stopPropagation();
+                              selectRecentEvent(event);
+                            }}
+                            className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-left hover:border-sky-500 hover:bg-sky-950/30"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-bold text-white">{event.flightNumber || event.eventCode || 'Event'}</span>
+                              <span className="font-mono text-[10px] text-gray-400">{event.date || '-'} {formatTimeToHHMM(event.startTime)}</span>
+                            </div>
+                            <div className="truncate text-[10px] text-gray-500">{event.callsign || event.resourceId || event.notes || '-'}</div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded border border-gray-700 bg-gray-900 px-2 py-3 text-xs text-gray-400">
+                        No recent flown events found for this staff member.
+                      </div>
+                    )}
                   </div>
                 )}
                 {renderEventDataField(overviewFields.event, eventCode, setEventCodeField, 'N/A')}

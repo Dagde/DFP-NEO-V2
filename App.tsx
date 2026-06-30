@@ -27419,6 +27419,9 @@ const App: React.FC = () => {
                 event.pilot,
                 event.crew,
                 event.fixedCrewPic,
+                event.group,
+                event.fixedCrewGroup,
+                ...(Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder : []),
                 ...(Array.isArray(event.attendees) ? event.attendees : []),
             ];
             return people

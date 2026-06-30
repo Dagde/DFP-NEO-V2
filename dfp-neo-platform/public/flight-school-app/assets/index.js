@@ -46512,6 +46512,7 @@ const AirCombatTrainingReportModal = ({
   };
   const formatGradeNumber = (value) => String(value).toUpperCase() === "DEMO" ? "DEMO" : String(value);
   const [isEditMode, setIsEditMode] = reactExports.useState(startInEditMode);
+  const [showRecentEventPicker, setShowRecentEventPicker] = reactExports.useState(startInEditMode);
   const [selectedSourceEvent, setSelectedSourceEvent] = reactExports.useState(sourceEvent);
   const activeSourceEvent = selectedSourceEvent || sourceEvent;
   const [eventCodeField, setEventCodeField] = reactExports.useState(initialReport?.eventCode || item?.code || sourceEvent?.flightNumber || sourceEvent?.eventCode || "");
@@ -46586,6 +46587,7 @@ const AirCombatTrainingReportModal = ({
     setInstructorName(event.instructor || currentUserName || "");
     setCommentSections((prev) => ({ ...prev, assessor: event.instructor || currentUserName || prev.assessor }));
     setSaveStatus("Unsaved");
+    setShowRecentEventPicker(false);
   };
   const [elementScores, setElementScores] = reactExports.useState(() => {
     const existingScores = Array.isArray(initialReport?.assessedElementScores) ? initialReport.assessedElementScores : [];
@@ -46777,7 +46779,21 @@ const AirCombatTrainingReportModal = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => window.print(), className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Print" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsEditMode((prev) => !prev), className: `flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold ${isEditMode ? "active text-sky-900" : ""}`, children: "Edit" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                setIsEditMode((prev) => {
+                  const next = !prev;
+                  if (next) setShowRecentEventPicker(true);
+                  return next;
+                });
+              },
+              className: `flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold ${isEditMode ? "active text-sky-900" : ""}`,
+              children: "Edit"
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: saveReport, disabled: isSaving2 || !eventCode2, className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40", children: "Save" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Delete" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Back" }),
@@ -46786,70 +46802,93 @@ const AirCombatTrainingReportModal = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 md:p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { onClick: () => isEditMode && recentEvents.length > 0 && setIsEditMode(true), className: `space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 ${isEditMode ? "border-sky-500/60" : "border-gray-700"}`, children: [
-            isEditMode && recentEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded border border-sky-500/30 bg-gray-950/80 p-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-bold uppercase tracking-wide text-sky-300", children: "Recent Flights" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: recentEvents.slice(0, 5).map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "button",
-                {
-                  type: "button",
-                  onClick: (clickEvent) => {
-                    clickEvent.stopPropagation();
-                    selectRecentEvent(event);
-                  },
-                  className: "w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-left hover:border-sky-500 hover:bg-sky-950/30",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-white", children: event.flightNumber || event.eventCode || "Event" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-[10px] text-gray-400", children: [
-                        event.date || "-",
-                        " ",
-                        formatTimeToHHMM(event.startTime)
-                      ] })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[10px] text-gray-500", children: event.callsign || event.resourceId || event.notes || "-" })
-                  ]
-                },
-                event.id
-              )) })
-            ] }),
-            renderEventDataField(overviewFields.event, eventCode2, setEventCodeField, "N/A"),
-            renderEventDataField(overviewFields.type, eventDescription, setEventDescriptionField, eventType || "N/A"),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Staff" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("dd", { className: "mt-1 text-sm font-semibold text-white", children: [
-                staff.rank,
-                " ",
-                staff.name
-              ] })
-            ] }),
-            renderEventDataField(overviewFields.training, trainingCode, setTrainingCodeField),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.date }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: date, onChange: (event) => {
-                setDate(event.target.value);
-                setSaveStatus("Unsaved");
-              }, className: "rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" }) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.timing }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("dd", { className: "mt-1 text-sm font-semibold text-white", children: [
-                formatDecimalTime(startTime),
-                " - ",
-                formatDecimalTime(endTime)
-              ] })
-            ] }),
-            renderEventDataField(overviewFields.resource, isEditMode ? resourceIdField : displayResourceId, setResourceIdField),
-            renderEventDataField(overviewFields.callsign, callsignField || activeSourceEvent?.callsign || staff.callsign || "", setCallsignField),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.assessor }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: instructorName, onChange: (event) => {
-                setInstructorName(event.target.value);
-                updateCommentSection("assessor", event.target.value);
-                setSaveStatus("Unsaved");
-              }, className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" }) })
-            ] })
-          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "dl",
+            {
+              onClick: () => {
+                if (isEditMode) setShowRecentEventPicker(true);
+              },
+              className: `space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 ${isEditMode ? "cursor-pointer border-sky-500/60" : "border-gray-700"}`,
+              children: [
+                isEditMode && showRecentEventPicker && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded border border-sky-500/30 bg-gray-950/80 p-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-wide text-sky-300", children: "Recent Flights" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: (clickEvent) => {
+                          clickEvent.stopPropagation();
+                          setShowRecentEventPicker(false);
+                        },
+                        className: "text-[10px] font-semibold text-gray-500 hover:text-white",
+                        children: "Close"
+                      }
+                    )
+                  ] }),
+                  recentEvents.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: recentEvents.slice(0, 5).map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: (clickEvent) => {
+                        clickEvent.stopPropagation();
+                        selectRecentEvent(event);
+                      },
+                      className: "w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-left hover:border-sky-500 hover:bg-sky-950/30",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-white", children: event.flightNumber || event.eventCode || "Event" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-[10px] text-gray-400", children: [
+                            event.date || "-",
+                            " ",
+                            formatTimeToHHMM(event.startTime)
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[10px] text-gray-500", children: event.callsign || event.resourceId || event.notes || "-" })
+                      ]
+                    },
+                    event.id
+                  )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-3 text-xs text-gray-400", children: "No recent flown events found for this staff member." })
+                ] }),
+                renderEventDataField(overviewFields.event, eventCode2, setEventCodeField, "N/A"),
+                renderEventDataField(overviewFields.type, eventDescription, setEventDescriptionField, eventType || "N/A"),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Staff" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("dd", { className: "mt-1 text-sm font-semibold text-white", children: [
+                    staff.rank,
+                    " ",
+                    staff.name
+                  ] })
+                ] }),
+                renderEventDataField(overviewFields.training, trainingCode, setTrainingCodeField),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.date }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: date, onChange: (event) => {
+                    setDate(event.target.value);
+                    setSaveStatus("Unsaved");
+                  }, className: "rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" }) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.timing }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("dd", { className: "mt-1 text-sm font-semibold text-white", children: [
+                    formatDecimalTime(startTime),
+                    " - ",
+                    formatDecimalTime(endTime)
+                  ] })
+                ] }),
+                renderEventDataField(overviewFields.resource, isEditMode ? resourceIdField : displayResourceId, setResourceIdField),
+                renderEventDataField(overviewFields.callsign, callsignField || activeSourceEvent?.callsign || staff.callsign || "", setCallsignField),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.assessor }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: instructorName, onChange: (event) => {
+                    setInstructorName(event.target.value);
+                    updateCommentSection("assessor", event.target.value);
+                    setSaveStatus("Unsaved");
+                  }, className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" }) })
+                ] })
+              ]
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "rounded-lg border border-gray-600 p-4 lg:col-span-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.overallAssessment.title }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 mt-2", children: [
@@ -94996,6 +95035,9 @@ ${error instanceof Error ? error.message : String(error)}`,
         event.pilot,
         event.crew,
         event.fixedCrewPic,
+        event.group,
+        event.fixedCrewGroup,
+        ...Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder : [],
         ...Array.isArray(event.attendees) ? event.attendees : []
       ];
       return people.flatMap((person) => String(person || "").split(/[,;/]/)).some((person) => person.trim().toLowerCase() === target);
