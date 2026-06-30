@@ -10,7 +10,12 @@ import ArchiveConfirmationFlyout from './ArchiveConfirmationFlyout';
 import ArchivedInstructorsFlyout from './ArchivedInstructorsFlyout';
 import AuditButton from './AuditButton';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
-import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
+import {
+    comparePeopleByConfiguredRank,
+    getRankSortIndex,
+    splitPersonName,
+    type PersonnelDisplaySettings,
+} from '../utils/personnelDisplaySettings';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
@@ -51,6 +56,8 @@ const getStaffRoleFilterOption = (
     const roleDisplay = getStaffRoleDisplay(role, terminology, instructorLabel);
     return { value: `role:${roleDisplay.key}`, label: roleDisplay.label };
 };
+
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 const generateNewInstructorTemplate = (): Instructor => ({
     idNumber: generateRandomIdNumber(),
@@ -247,9 +254,30 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const activeOperationalModel = normaliseOperationalModel(operationalModel);
   const isAirCombatModel = activeOperationalModel === 'air_combat';
+  const isPooledCrewModel = activeOperationalModel === 'pooled_crew';
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
   const useRoleColours = isAirCombatModel || isFixedCrewModel;
   const useOperationalStaffListBorder = isAirCombatModel || isFixedCrewModel;
+
+  const getPooledCrewFlightRoleOrder = (instructor: Instructor): number => {
+      const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel);
+      const roleText = `${instructor.role || ''} ${roleDisplay.label || ''}`.trim().toLowerCase();
+      if (/\bpilot\b/.test(roleText)) return 0;
+      if (/\bload\s*master\b|\bloadmaster\b/.test(roleText)) return 1;
+      return 2;
+  };
+
+  const comparePooledCrewFlightStaff = (a: Instructor, b: Instructor): number => {
+      const rankCompare = getRankSortIndex(a.rank, personnelDisplaySettings, 'staff') - getRankSortIndex(b.rank, personnelDisplaySettings, 'staff');
+      if (rankCompare) return rankCompare;
+      const roleCompare = getPooledCrewFlightRoleOrder(a) - getPooledCrewFlightRoleOrder(b);
+      if (roleCompare) return roleCompare;
+      const aName = splitPersonName(a);
+      const bName = splitPersonName(b);
+      return collator.compare(aName.surname, bName.surname)
+          || collator.compare(aName.given, bName.given)
+          || collator.compare(aName.full, bName.full);
+  };
 
   const qfis = useMemo(() => {
       return instructorsData
@@ -312,18 +340,21 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   [qfisByUnit]);
 
   const qfisByFlight = useMemo(() => {
-      if (!isAirCombatModel) return {};
+      if (!isAirCombatModel && !isPooledCrewModel) return {};
       const groups: { [key: string]: Instructor[] } = {};
       filteredQfis.forEach(instructor => {
-          const flight = String(instructor.flight || '').trim().toUpperCase();
+          const flight = String(instructor.flight || '').trim().toUpperCase() || (isPooledCrewModel ? 'Unassigned' : '');
           if (!flight) return;
           if (!groups[flight]) {
               groups[flight] = [];
           }
           groups[flight].push(instructor);
       });
+      if (isPooledCrewModel) {
+          Object.values(groups).forEach(group => group.sort(comparePooledCrewFlightStaff));
+      }
       return groups;
-  }, [isAirCombatModel, filteredQfis]);
+  }, [isAirCombatModel, isPooledCrewModel, filteredQfis, personnelDisplaySettings, crewPositionTerminology, instructorLabel]);
 
   const sortedFlightGroups = useMemo(() =>
       Object.keys(qfisByFlight).sort((a, b) => {
@@ -742,9 +773,15 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                             {sortedUnits.map(renderInstructorUnitCard)}
                         </div>
                         <div className="flex-1 space-y-6 min-w-0">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {sortedFixedCrewGroups.map(renderFixedCrewCard)}
-                            </div>
+                            {isPooledCrewModel ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {sortedFlightGroups.map(renderFlightCard)}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {sortedFixedCrewGroups.map(renderFixedCrewCard)}
+                                </div>
+                            )}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {renderSupportStaffCards()}
                             </div>

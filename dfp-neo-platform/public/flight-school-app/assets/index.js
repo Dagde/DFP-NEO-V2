@@ -3160,7 +3160,7 @@ const DEFAULT_PERSONNEL_DISPLAY_SETTINGS = {
   civilianContractorGroupName: "Civilian Contractors",
   instructorLabel: "QFI"
 };
-const collator = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
+const collator$1 = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
 const rankKey = (rank) => String(rank || "").trim().toUpperCase();
 const splitRankGroup = (rankGroup) => String(rankGroup || "").split(/[=|]/).map((rank) => rank.trim()).filter(Boolean);
 const normaliseRankGroup = (rankGroup) => splitRankGroup(rankGroup).join(" = ");
@@ -3273,11 +3273,11 @@ const comparePeopleByConfiguredRank = (a, b, settings, group = "staff") => {
     const bRank = getRankSortIndex(b.rank, safe2, group);
     if (aRank !== bRank) return aRank - bRank;
     if (aRank >= 1e4 || bRank >= 1e4) {
-      const rankCompare = collator.compare(String(a.rank || ""), String(b.rank || ""));
+      const rankCompare = collator$1.compare(String(a.rank || ""), String(b.rank || ""));
       if (rankCompare) return rankCompare;
     }
   }
-  return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
+  return collator$1.compare(aName.surname, bName.surname) || collator$1.compare(aName.given, bName.given) || collator$1.compare(aName.full, bName.full);
 };
 const DEFAULT_PHRASE_BANK = {
   "Airmanship": {
@@ -42124,6 +42124,7 @@ const getStaffRoleFilterOption = (role, terminology, instructorLabel) => {
   const roleDisplay = getStaffRoleDisplay(role, terminology, instructorLabel);
   return { value: `role:${roleDisplay.key}`, label: roleDisplay.label };
 };
+const collator = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
 const generateNewInstructorTemplate = () => ({
   idNumber: generateRandomIdNumber$1(),
   name: "",
@@ -42243,9 +42244,26 @@ const InstructorListView = ({
   }, [instructorsData]);
   const activeOperationalModel = normaliseOperationalModel(operationalModel2);
   const isAirCombatModel = activeOperationalModel === "air_combat";
+  const isPooledCrewModel = activeOperationalModel === "pooled_crew";
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
   const useRoleColours = isAirCombatModel || isFixedCrewModel;
   const useOperationalStaffListBorder = isAirCombatModel || isFixedCrewModel;
+  const getPooledCrewFlightRoleOrder = (instructor) => {
+    const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel);
+    const roleText = `${instructor.role || ""} ${roleDisplay.label || ""}`.trim().toLowerCase();
+    if (/\bpilot\b/.test(roleText)) return 0;
+    if (/\bload\s*master\b|\bloadmaster\b/.test(roleText)) return 1;
+    return 2;
+  };
+  const comparePooledCrewFlightStaff = (a, b) => {
+    const rankCompare = getRankSortIndex(a.rank, personnelDisplaySettings, "staff") - getRankSortIndex(b.rank, personnelDisplaySettings, "staff");
+    if (rankCompare) return rankCompare;
+    const roleCompare = getPooledCrewFlightRoleOrder(a) - getPooledCrewFlightRoleOrder(b);
+    if (roleCompare) return roleCompare;
+    const aName = splitPersonName(a);
+    const bName = splitPersonName(b);
+    return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
+  };
   const qfis = reactExports.useMemo(() => {
     return instructorsData.filter((i) => {
       const isQFI = isQfiRole(i);
@@ -42296,18 +42314,21 @@ const InstructorListView = ({
     [qfisByUnit]
   );
   const qfisByFlight = reactExports.useMemo(() => {
-    if (!isAirCombatModel) return {};
+    if (!isAirCombatModel && !isPooledCrewModel) return {};
     const groups = {};
     filteredQfis.forEach((instructor) => {
-      const flight = String(instructor.flight || "").trim().toUpperCase();
+      const flight = String(instructor.flight || "").trim().toUpperCase() || (isPooledCrewModel ? "Unassigned" : "");
       if (!flight) return;
       if (!groups[flight]) {
         groups[flight] = [];
       }
       groups[flight].push(instructor);
     });
+    if (isPooledCrewModel) {
+      Object.values(groups).forEach((group) => group.sort(comparePooledCrewFlightStaff));
+    }
     return groups;
-  }, [isAirCombatModel, filteredQfis]);
+  }, [isAirCombatModel, isPooledCrewModel, filteredQfis, personnelDisplaySettings, crewPositionTerminology, instructorLabel]);
   const sortedFlightGroups = reactExports.useMemo(
     () => Object.keys(qfisByFlight).sort((a, b) => {
       const simpleFlightPattern = /^[A-Z]$/;
@@ -42643,7 +42664,7 @@ const InstructorListView = ({
       ] }) : isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col xl:flex-row gap-6 max-w-[1920px] mx-auto", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:block xl:w-[360px] xl:flex-shrink-0 gap-6 xl:space-y-6", children: sortedUnits.map(renderInstructorUnitCard) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 space-y-6 min-w-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: sortedFixedCrewGroups.map(renderFixedCrewCard) }),
+          isPooledCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: sortedFlightGroups.map(renderFlightCard) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: sortedFixedCrewGroups.map(renderFixedCrewCard) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: renderSupportStaffCards() })
         ] })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-[1920px] mx-auto", children: [
