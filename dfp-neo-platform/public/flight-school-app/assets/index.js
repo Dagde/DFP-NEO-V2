@@ -89453,14 +89453,66 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   dayNightSeparatedEvents.filter(eventMatchesTaskTrace).forEach((event) => traceTaskProvenance("finalCleanup", "after-day-night-guard", event));
   const conflictSafeEvents = repairGeneratedGroundConflicts(dayNightSeparatedEvents);
   conflictSafeEvents.filter(eventMatchesTaskTrace).forEach((event) => traceTaskProvenance("finalCleanup", "after-ground-repair", event));
+  const pooledCrewMinimumManifestCount = Math.max(
+    2,
+    Number(buildAircraftCrewComposition.crewCount) || 0,
+    Array.isArray(buildAircraftCrewComposition.seats) ? buildAircraftCrewComposition.seats.length : 0
+  );
+  const pooledCrewManifestGuard = [];
+  const finalCrewSafeEvents = buildOperationalModel === "pooled_crew" ? conflictSafeEvents.map((event) => {
+    const isPooledCrewEvent = String(event.crew || event.group || "").trim() === "Pooled Crew" || String(event._source || "").startsWith("fixed-crew");
+    const isCrewedPooledEvent = isPooledCrewEvent && ["flight", "ftd", "cpt"].includes(String(event.type || ""));
+    if (!isCrewedPooledEvent) return event;
+    const manifest = Array.from(new Set([
+      ...event.attendees || [],
+      ...event.crewSelectionOrder || [],
+      ...getPersonnel(event)
+    ].map((name) => String(name || "").trim()).filter(Boolean)));
+    if (manifest.length < pooledCrewMinimumManifestCount) {
+      pooledCrewManifestGuard.push({
+        action: "removed",
+        reason: "POOLED_CREW_BELOW_MINIMUM_CREW",
+        event: event.flightNumber,
+        resourceId: event.resourceId,
+        startTime: event.startTime,
+        minimumCrew: pooledCrewMinimumManifestCount,
+        manifest
+      });
+      return null;
+    }
+    if (event.flightType === "Solo" || event.soloOrDual === "Solo" || !event.flightType || !event.soloOrDual) {
+      pooledCrewManifestGuard.push({
+        action: "forced-dual",
+        reason: "POOLED_CREW_MINIMUM_CREW_REQUIRES_DUAL",
+        event: event.flightNumber,
+        resourceId: event.resourceId,
+        startTime: event.startTime,
+        minimumCrew: pooledCrewMinimumManifestCount,
+        manifest
+      });
+    }
+    return {
+      ...event,
+      crew: event.crew || "Pooled Crew",
+      group: event.group || "Pooled Crew",
+      attendees: manifest,
+      crewSelectionOrder: manifest,
+      crewRequirement: event.crewRequirement || { mode: "aircraft_default" },
+      flightType: "Dual",
+      soloOrDual: "Dual"
+    };
+  }).filter((event) => Boolean(event)) : conflictSafeEvents;
   neoBuildDiag.finalCleanup = {
     beforeDayNightGuard: generatedEventsBeforeFinalCleanup,
     afterDayNightGuard: dayNightSeparatedEvents.length,
     removedByDayNightGuard: generatedEventsBeforeFinalCleanup - dayNightSeparatedEvents.length,
     afterGroundRepair: conflictSafeEvents.length,
-    removedByGroundRepair: dayNightSeparatedEvents.length - conflictSafeEvents.length
+    removedByGroundRepair: dayNightSeparatedEvents.length - conflictSafeEvents.length,
+    afterPooledCrewManifestGuard: finalCrewSafeEvents.length,
+    removedByPooledCrewManifestGuard: conflictSafeEvents.length - finalCrewSafeEvents.length,
+    pooledCrewManifestGuard
   };
-  const sortedEvents = [...conflictSafeEvents].sort((a, b) => {
+  const sortedEvents = [...finalCrewSafeEvents].sort((a, b) => {
     const orderA = resourceOrderMap.get(a.resourceId) ?? 9999;
     const orderB = resourceOrderMap.get(b.resourceId) ?? 9999;
     if (orderA !== orderB) {

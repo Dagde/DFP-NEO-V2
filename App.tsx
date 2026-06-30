@@ -19941,16 +19941,74 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     conflictSafeEvents
         .filter(eventMatchesTaskTrace)
         .forEach(event => traceTaskProvenance('finalCleanup', 'after-ground-repair', event));
+    const pooledCrewMinimumManifestCount = Math.max(
+        2,
+        Number(buildAircraftCrewComposition.crewCount) || 0,
+        Array.isArray(buildAircraftCrewComposition.seats) ? buildAircraftCrewComposition.seats.length : 0,
+    );
+    const pooledCrewManifestGuard: any[] = [];
+    const finalCrewSafeEvents = buildOperationalModel === 'pooled_crew'
+        ? conflictSafeEvents
+            .map(event => {
+                const isPooledCrewEvent = String(event.crew || event.group || '').trim() === 'Pooled Crew'
+                    || String((event as any)._source || '').startsWith('fixed-crew');
+                const isCrewedPooledEvent = isPooledCrewEvent && ['flight', 'ftd', 'cpt'].includes(String(event.type || ''));
+                if (!isCrewedPooledEvent) return event;
+
+                const manifest = Array.from(new Set([
+                    ...((event.attendees || []) as string[]),
+                    ...(((event as any).crewSelectionOrder || []) as string[]),
+                    ...getPersonnel(event),
+                ].map(name => String(name || '').trim()).filter(Boolean)));
+                if (manifest.length < pooledCrewMinimumManifestCount) {
+                    pooledCrewManifestGuard.push({
+                        action: 'removed',
+                        reason: 'POOLED_CREW_BELOW_MINIMUM_CREW',
+                        event: event.flightNumber,
+                        resourceId: event.resourceId,
+                        startTime: event.startTime,
+                        minimumCrew: pooledCrewMinimumManifestCount,
+                        manifest,
+                    });
+                    return null;
+                }
+                if (event.flightType === 'Solo' || (event as any).soloOrDual === 'Solo' || !event.flightType || !(event as any).soloOrDual) {
+                    pooledCrewManifestGuard.push({
+                        action: 'forced-dual',
+                        reason: 'POOLED_CREW_MINIMUM_CREW_REQUIRES_DUAL',
+                        event: event.flightNumber,
+                        resourceId: event.resourceId,
+                        startTime: event.startTime,
+                        minimumCrew: pooledCrewMinimumManifestCount,
+                        manifest,
+                    });
+                }
+                return {
+                    ...event,
+                    crew: event.crew || 'Pooled Crew',
+                    group: event.group || 'Pooled Crew',
+                    attendees: manifest,
+                    crewSelectionOrder: manifest,
+                    crewRequirement: (event as any).crewRequirement || { mode: 'aircraft_default' },
+                    flightType: 'Dual' as const,
+                    soloOrDual: 'Dual' as const,
+                };
+            })
+            .filter((event): event is Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string } => Boolean(event))
+        : conflictSafeEvents;
     neoBuildDiag.finalCleanup = {
         beforeDayNightGuard: generatedEventsBeforeFinalCleanup,
         afterDayNightGuard: dayNightSeparatedEvents.length,
         removedByDayNightGuard: generatedEventsBeforeFinalCleanup - dayNightSeparatedEvents.length,
         afterGroundRepair: conflictSafeEvents.length,
         removedByGroundRepair: dayNightSeparatedEvents.length - conflictSafeEvents.length,
+        afterPooledCrewManifestGuard: finalCrewSafeEvents.length,
+        removedByPooledCrewManifestGuard: conflictSafeEvents.length - finalCrewSafeEvents.length,
+        pooledCrewManifestGuard,
     };
 
     // Sort events by resource order, then by start time
-    const sortedEvents = [...conflictSafeEvents].sort((a, b) => {
+    const sortedEvents = [...finalCrewSafeEvents].sort((a, b) => {
         const orderA = resourceOrderMap.get(a.resourceId) ?? 9999;
         const orderB = resourceOrderMap.get(b.resourceId) ?? 9999;
 
