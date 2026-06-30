@@ -218,13 +218,9 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const getRecentEventCoPilot = (event: ScheduleEvent): string => (
     String(event.crew || (Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder.find(name => name !== getRecentEventPic(event)) : '') || '').trim() || '-'
   );
-  const getRecentEventTitle = (event: ScheduleEvent): string => {
-    const code = String(event.flightNumber || (event as any).eventCode || '').trim();
-    const matched = syllabusDetails.find(candidate => (
-      String(candidate.code || '').trim().toUpperCase() === code.toUpperCase()
-    ));
-    return String(matched?.eventDescription || (event as any).notes || matched?.module || code || 'Event').trim();
-  };
+  const getRecentEventShortCode = (event: ScheduleEvent): string => (
+    String(event.flightNumber || (event as any).eventCode || '').trim() || 'Event'
+  );
   const renderEventDataField = (
     label: string,
     value: string,
@@ -277,12 +273,12 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                         clickEvent.preventDefault();
                         selectRecentEvent(event);
                       }}
-                      className="grid w-full grid-cols-[82px_minmax(0,1fr)_minmax(0,1fr)] gap-x-2 gap-y-1 border-b border-gray-800 px-2 py-2 text-left text-[11px] last:border-b-0 hover:bg-sky-950/40"
+                      className="grid w-full grid-cols-[74px_minmax(0,1fr)_minmax(0,1fr)_64px] gap-x-1 border-b border-gray-800 px-2 py-2 text-left text-[11px] last:border-b-0 hover:bg-sky-950/40"
                     >
                       <span className="font-mono text-gray-300">{formatTrainingReportDate(event.date)}</span>
                       <span className="truncate text-white">{getRecentEventPic(event)}</span>
                       <span className="truncate text-gray-300">{getRecentEventCoPilot(event)}</span>
-                      <span className="col-span-3 whitespace-normal break-words text-[12px] font-semibold leading-snug text-sky-200">{getRecentEventTitle(event)}</span>
+                      <span className="truncate font-semibold text-sky-200">{getRecentEventShortCode(event)}</span>
                     </button>
                   ))
                 ) : (

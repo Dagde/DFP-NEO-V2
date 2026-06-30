@@ -46622,11 +46622,7 @@ const AirCombatTrainingReportModal = ({
   const editInputClass = "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-500";
   const getRecentEventPic = (event) => String(event.fixedCrewPic || event.pilot || event.instructor || "").trim() || "-";
   const getRecentEventCoPilot = (event) => String(event.crew || (Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder.find((name) => name !== getRecentEventPic(event)) : "") || "").trim() || "-";
-  const getRecentEventTitle = (event) => {
-    const code = String(event.flightNumber || event.eventCode || "").trim();
-    const matched = syllabusDetails.find((candidate) => String(candidate.code || "").trim().toUpperCase() === code.toUpperCase());
-    return String(matched?.eventDescription || event.notes || matched?.module || code || "Event").trim();
-  };
+  const getRecentEventShortCode = (event) => String(event.flightNumber || event.eventCode || "").trim() || "Event";
   const renderEventDataField = (label, value, onChange, fallback = "-") => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: isEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -46666,12 +46662,12 @@ const AirCombatTrainingReportModal = ({
             clickEvent.preventDefault();
             selectRecentEvent(event);
           },
-          className: "grid w-full grid-cols-[82px_minmax(0,1fr)_minmax(0,1fr)] gap-x-2 gap-y-1 border-b border-gray-800 px-2 py-2 text-left text-[11px] last:border-b-0 hover:bg-sky-950/40",
+          className: "grid w-full grid-cols-[74px_minmax(0,1fr)_minmax(0,1fr)_64px] gap-x-1 border-b border-gray-800 px-2 py-2 text-left text-[11px] last:border-b-0 hover:bg-sky-950/40",
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300", children: formatTrainingReportDate(event.date) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-white", children: getRecentEventPic(event) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-gray-300", children: getRecentEventCoPilot(event) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "col-span-3 whitespace-normal break-words text-[12px] font-semibold leading-snug text-sky-200", children: getRecentEventTitle(event) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-sky-200", children: getRecentEventShortCode(event) })
           ]
         },
         event.id
