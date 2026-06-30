@@ -81197,7 +81197,62 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       noPicFastRejects: fixedCrewPerf.counters.noPicFastRejects,
       placements: fixedCrewPerf.counters.placements
     });
-    const sortedFixedCrewEvents = [...generatedEvents].sort(
+    const pooledCrewMinimumManifestCount2 = Math.max(
+      2,
+      Number(buildAircraftCrewComposition.crewCount) || 0,
+      Array.isArray(buildAircraftCrewComposition.seats) ? buildAircraftCrewComposition.seats.length : 0
+    );
+    const pooledCrewManifestGuard2 = [];
+    const fixedCrewFinalEvents = isPooledCrewBuild ? generatedEvents.map((event) => {
+      const isPooledCrewEvent = String(event.crew || event.group || "").trim() === "Pooled Crew" || String(event._source || "").startsWith("fixed-crew");
+      const isCrewedPooledEvent = isPooledCrewEvent && ["flight", "ftd", "cpt"].includes(String(event.type || ""));
+      if (!isCrewedPooledEvent) return event;
+      const manifest = Array.from(new Set([
+        ...event.attendees || [],
+        ...event.crewSelectionOrder || [],
+        ...getPersonnel(event)
+      ].map((name) => String(name || "").trim()).filter(Boolean)));
+      if (manifest.length < pooledCrewMinimumManifestCount2) {
+        pooledCrewManifestGuard2.push({
+          action: "removed",
+          reason: "POOLED_CREW_BELOW_MINIMUM_CREW",
+          event: event.flightNumber,
+          resourceId: event.resourceId,
+          startTime: event.startTime,
+          minimumCrew: pooledCrewMinimumManifestCount2,
+          manifest
+        });
+        return null;
+      }
+      if (event.flightType === "Solo" || event.soloOrDual === "Solo" || !event.flightType || !event.soloOrDual) {
+        pooledCrewManifestGuard2.push({
+          action: "forced-dual",
+          reason: "POOLED_CREW_MINIMUM_CREW_REQUIRES_DUAL",
+          event: event.flightNumber,
+          resourceId: event.resourceId,
+          startTime: event.startTime,
+          minimumCrew: pooledCrewMinimumManifestCount2,
+          manifest
+        });
+      }
+      return {
+        ...event,
+        crew: event.crew || "Pooled Crew",
+        group: event.group || "Pooled Crew",
+        attendees: manifest,
+        crewSelectionOrder: manifest,
+        crewRequirement: event.crewRequirement || { mode: "aircraft_default" },
+        flightType: "Dual",
+        soloOrDual: "Dual"
+      };
+    }).filter((event) => Boolean(event)) : generatedEvents;
+    diag.pooledCrewManifestGuard = {
+      minimumCrew: pooledCrewMinimumManifestCount2,
+      removedEvents: pooledCrewManifestGuard2.filter((entry) => entry.action === "removed").length,
+      forcedDualEvents: pooledCrewManifestGuard2.filter((entry) => entry.action === "forced-dual").length,
+      actions: pooledCrewManifestGuard2
+    };
+    const sortedFixedCrewEvents = [...fixedCrewFinalEvents].sort(
       (left, right) => left.resourceId.localeCompare(right.resourceId, void 0, { numeric: true }) || left.startTime - right.startTime
     );
     diag.summary = {
@@ -81226,11 +81281,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         startTime: event.startTime,
         duration: event.duration,
         pilot: event.pilot,
+        instructor: event.instructor,
+        student: event.student,
         crew: event.crew,
+        group: event.group,
+        flightType: event.flightType,
+        soloOrDual: event.soloOrDual,
         fixedCrewGroup: event.fixedCrewGroup,
         fixedCrewPic: event.fixedCrewPic,
         eventCategory: event.eventCategory,
         attendees: event.attendees,
+        crewSelectionOrder: event.crewSelectionOrder,
         source: event._source
       }))
     };
