@@ -92724,6 +92724,7 @@ ${"=".repeat(60)}`);
   const [selectedScoreForDetail, setSelectedScoreForDetail] = reactExports.useState(null);
   const [eventForPt051, setEventForPt051] = reactExports.useState(null);
   const [airCombatTrainingReportDraft, setAirCombatTrainingReportDraft] = reactExports.useState(null);
+  const [pendingDashboardTrainingReportContext, setPendingDashboardTrainingReportContext] = reactExports.useState(null);
   const [trainingReportRecentLogEvents, setTrainingReportRecentLogEvents] = reactExports.useState([]);
   const [loadedPt051Keys, setLoadedPt051Keys] = reactExports.useState(/* @__PURE__ */ new Set());
   const [selectedPersonForCurrency, setSelectedPersonForCurrency] = reactExports.useState(null);
@@ -94973,6 +94974,22 @@ ${error instanceof Error ? error.message : String(error)}`,
     setAirCombatTrainingReportDraft({ staff, assignment, item, sourceEvent: reportEvent });
   };
   const handleAddTrainingReportForStaff = (staff) => {
+    const pendingContext = pendingDashboardTrainingReportContext;
+    const normaliseStaffName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const isPendingContextForStaff = pendingContext && (pendingContext.staffIdNumber === staff.idNumber || normaliseStaffName(pendingContext.staffName) === normaliseStaffName(staff.name));
+    if (isPendingContextForStaff) {
+      const initialReport = {
+        ...pendingContext.report,
+        staffIdNumber: staff.idNumber,
+        staffName: staff.name,
+        unitCode: staff.unit || pendingContext.report.unitCode || activeUnitCode,
+        instructorName: pendingContext.assessorName || pendingContext.report.instructorName || pendingContext.report.dashboardAssigneeName || currentUserName,
+        dashboardAssigneeName: pendingContext.report.dashboardAssigneeName || pendingContext.assessorName
+      };
+      setAirCombatTrainingReportDraft({ staff, initialReport, startInEditMode: true });
+      setPendingDashboardTrainingReportContext(null);
+      return;
+    }
     setAirCombatTrainingReportDraft({ staff, startInEditMode: true });
   };
   const handleOpenAirCombatTrainingReportFromFlightDetails = async (staff, sourceEvent) => {
@@ -103215,6 +103232,14 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSelectStaffName: setDashboardTestUserName,
             onSelectTrainingReport: (entry) => {
               const selectedStaff = allInstructorsData.find((staff) => entry.staff.id ? staff.id === entry.staff.id : staff.idNumber === entry.staff.idNumber) || entry.staff;
+              const reportAssignee = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(entry.report.dashboardAssigneeName || dashboardUserName)) || dashboardStaff;
+              const assessorName = reportAssignee ? `${reportAssignee.rank || ""} ${reportAssignee.name}`.trim() : entry.report.instructorName || entry.report.dashboardAssigneeName || dashboardUserName;
+              setPendingDashboardTrainingReportContext({
+                staffIdNumber: selectedStaff.idNumber,
+                staffName: selectedStaff.name,
+                report: entry.report,
+                assessorName
+              });
               setSelectedPersonForProfile(selectedStaff);
               setProfileInitialTab("trainingReports");
               handleNavigation("Instructors");

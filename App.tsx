@@ -285,6 +285,13 @@ type AirCombatTrainingReportDraft = {
     startInEditMode?: boolean;
 };
 
+type PendingDashboardTrainingReportContext = {
+    staffIdNumber: number;
+    staffName: string;
+    report: AirCombatTrainingReport;
+    assessorName?: string;
+};
+
 type TrainingReportFlightLogEntry = {
     id?: string;
     scheduleEventId?: string;
@@ -24296,6 +24303,7 @@ const App: React.FC = () => {
     const [selectedScoreForDetail, setSelectedScoreForDetail] = useState<Score | null>(null);
     const [eventForPt051, setEventForPt051] = useState<ScheduleEvent | null>(null);
     const [airCombatTrainingReportDraft, setAirCombatTrainingReportDraft] = useState<AirCombatTrainingReportDraft | null>(null);
+    const [pendingDashboardTrainingReportContext, setPendingDashboardTrainingReportContext] = useState<PendingDashboardTrainingReportContext | null>(null);
     const [trainingReportRecentLogEvents, setTrainingReportRecentLogEvents] = useState<ScheduleEvent[]>([]);
     const [loadedPt051Keys, setLoadedPt051Keys] = useState<Set<string>>(new Set());
     const [selectedPersonForCurrency, setSelectedPersonForCurrency] = useState<Instructor | Trainee | null>(null);
@@ -27187,6 +27195,28 @@ const App: React.FC = () => {
     };
 
     const handleAddTrainingReportForStaff = (staff: Instructor) => {
+        const pendingContext = pendingDashboardTrainingReportContext;
+        const normaliseStaffName = (value?: string | null) => String(value || '')
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, ' ');
+        const isPendingContextForStaff = pendingContext && (
+            pendingContext.staffIdNumber === staff.idNumber ||
+            normaliseStaffName(pendingContext.staffName) === normaliseStaffName(staff.name)
+        );
+        if (isPendingContextForStaff) {
+            const initialReport: AirCombatTrainingReport = {
+                ...pendingContext.report,
+                staffIdNumber: staff.idNumber,
+                staffName: staff.name,
+                unitCode: staff.unit || pendingContext.report.unitCode || activeUnitCode,
+                instructorName: pendingContext.assessorName || pendingContext.report.instructorName || pendingContext.report.dashboardAssigneeName || currentUserName,
+                dashboardAssigneeName: pendingContext.report.dashboardAssigneeName || pendingContext.assessorName,
+            };
+            setAirCombatTrainingReportDraft({ staff, initialReport, startInEditMode: true });
+            setPendingDashboardTrainingReportContext(null);
+            return;
+        }
         setAirCombatTrainingReportDraft({ staff, startInEditMode: true });
     };
 
@@ -37278,6 +37308,18 @@ appliedUpdates.forEach(update => {
                                         ? (staff as any).id === (entry.staff as any).id
                                         : staff.idNumber === entry.staff.idNumber
                                 )) || entry.staff;
+                                const reportAssignee = allInstructorsData.find(staff => (
+                                    normaliseDashboardName(staff.name) === normaliseDashboardName(entry.report.dashboardAssigneeName || dashboardUserName)
+                                )) || dashboardStaff;
+                                const assessorName = reportAssignee
+                                    ? `${reportAssignee.rank || ''} ${reportAssignee.name}`.trim()
+                                    : entry.report.instructorName || entry.report.dashboardAssigneeName || dashboardUserName;
+                                setPendingDashboardTrainingReportContext({
+                                    staffIdNumber: selectedStaff.idNumber,
+                                    staffName: selectedStaff.name,
+                                    report: entry.report,
+                                    assessorName,
+                                });
                                 setSelectedPersonForProfile(selectedStaff);
                                 setProfileInitialTab('trainingReports');
                                 handleNavigation('Instructors');
