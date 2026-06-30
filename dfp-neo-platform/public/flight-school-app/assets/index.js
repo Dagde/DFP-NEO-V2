@@ -7518,12 +7518,25 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isAirCombatCrewEvent = event._source === "air-combat-priority-formation" || event.type === "flight" && !!event.pilot && !!event.crew && !event.student && !event.instructor;
   const isFixedCrewCrewEvent = !!event.fixedCrewGroup;
+  const isPooledCrewEvent = String(event.crew || event.group || "").trim() === "Pooled Crew";
   const isTwrDiEvent = event.eventCategory === "twr_di";
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
   const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
   const picName = isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
+  const pooledCrewSecondaryName = (() => {
+    if (!isPooledCrewEvent) return "";
+    const normaliseName2 = (value) => String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const picKey = normaliseName2(picName || event.pilot || event.instructor);
+    const manifest = [
+      event.student,
+      ...event.crewSelectionOrder || [],
+      ...event.attendees || [],
+      event.crew
+    ].map((name) => String(name || "").trim()).filter((name) => name && name !== "Pooled Crew" && normaliseName2(name) !== picKey);
+    return Array.from(new Set(manifest))[0] || "";
+  })();
   const fixedCrewDisplay = isFixedCrewCrewEvent ? formatFixedCrewDisplayGroup$3(event.fixedCrewGroup) : "";
-  const studentName = isFixedCrewCrewEvent ? fixedCrewDisplay : isTaskingEvent2 || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
+  const studentName = isPooledCrewEvent ? pooledCrewSecondaryName : isFixedCrewCrewEvent ? fixedCrewDisplay : isTaskingEvent2 || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
   let displayPicNameForRender = picName;
   let displayStudentNameForRender = studentName;
   if (isStbyEvent) {
@@ -7570,6 +7583,9 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     if (isFixedCrewCrewEvent && fixedCrewDisplay) {
       return fixedCrewDisplay;
     }
+    if (isPooledCrewEvent) {
+      return pooledCrewSecondaryName || "Pooled Crew";
+    }
     if (event.flightType === "Solo") {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold", style: { fontSize: isSmallTile ? "10px" : `${scaledFontSize * 0.85}px` }, children: "SOLO" });
     }
@@ -7582,10 +7598,10 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     if ((isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent) && event.flightType === "Dual" && event.crew) {
       return event.crew.split(" – ")[0];
     }
-    if (event.pilot && event.student && event.pilot === event.student) {
+    if (!isPooledCrewEvent && event.pilot && event.student && event.pilot === event.student) {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold", style: { fontSize: isSmallTile ? "10px" : `${scaledFontSize * 0.85}px` }, children: "SOLO" });
     }
-    if (event.groupTraineeIds && event.groupTraineeIds.length > 1 || event.attendees && event.attendees.length > 1 || event.student === "Multiple") {
+    if (!isPooledCrewEvent && (event.groupTraineeIds && event.groupTraineeIds.length > 1 || event.attendees && event.attendees.length > 1 || event.student === "Multiple")) {
       return "Group";
     }
     if (event.student && event.student !== "Multiple") {

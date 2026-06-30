@@ -315,6 +315,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const isAirCombatCrewEvent = (event as any)._source === 'air-combat-priority-formation'
       || (event.type === 'flight' && !!event.pilot && !!event.crew && !event.student && !event.instructor);
   const isFixedCrewCrewEvent = !!(event as any).fixedCrewGroup;
+  const isPooledCrewEvent = String(event.crew || event.group || '').trim() === 'Pooled Crew';
   const isTwrDiEvent = event.eventCategory === 'twr_di';
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
   const aircraftNumberDisplay = event.aircraftNumber
@@ -324,10 +325,26 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   
   
   const picName = isTaskingEvent || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : (isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor));
+  const pooledCrewSecondaryName = (() => {
+      if (!isPooledCrewEvent) return '';
+      const normaliseName = (value?: string) => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      const picKey = normaliseName(picName || event.pilot || event.instructor);
+      const manifest = [
+          event.student,
+          ...(((event as any).crewSelectionOrder || []) as string[]),
+          ...((event.attendees || []) as string[]),
+          event.crew,
+      ]
+          .map(name => String(name || '').trim())
+          .filter(name => name && name !== 'Pooled Crew' && normaliseName(name) !== picKey);
+      return Array.from(new Set(manifest))[0] || '';
+  })();
   const fixedCrewDisplay = isFixedCrewCrewEvent
       ? formatFixedCrewDisplayGroup((event as any).fixedCrewGroup)
       : '';
-  const studentName = isFixedCrewCrewEvent
+  const studentName = isPooledCrewEvent
+      ? pooledCrewSecondaryName
+      : isFixedCrewCrewEvent
       ? fixedCrewDisplay
       : isTaskingEvent || isAirCombatCrewEvent
       ? (event.flightType === 'Solo' ? '' : event.crew || event.student || '')
@@ -398,6 +415,10 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
             return fixedCrewDisplay;
         }
 
+        if (isPooledCrewEvent) {
+            return pooledCrewSecondaryName || 'Pooled Crew';
+        }
+
         // Check for SOLO flights - applies to ALL event types
         if (event.flightType === 'Solo') {
             return (
@@ -427,16 +448,16 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
         // FALLBACK: Detect SOLO flights by checking if pilot and student are the same person
         // This handles cases where flightType is not set correctly in the database
-        if (event.pilot && event.student && event.pilot === event.student) {
+        if (!isPooledCrewEvent && event.pilot && event.student && event.pilot === event.student) {
             return (
                 <span className="bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold" style={{fontSize: isSmallTile ? '10px' : `${scaledFontSize * 0.85}px`}}>
                     SOLO
                 </span>
             );
         }
-      if ((event.groupTraineeIds && event.groupTraineeIds.length > 1) || 
-          (event.attendees && event.attendees.length > 1) || 
-          event.student === 'Multiple') {
+      if (!isPooledCrewEvent && ((event.groupTraineeIds && event.groupTraineeIds.length > 1) ||
+          (event.attendees && event.attendees.length > 1) ||
+          event.student === 'Multiple')) {
           return 'Group';
       }
       
