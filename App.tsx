@@ -38839,6 +38839,7 @@ appliedUpdates.forEach(update => {
                                 currencyRequirements={currencyRequirements}
                                 resourceDisplayNames={resourceDisplayNames}
                                 aircraftNumberSettings={aircraftNumberSettings}
+                                personnelDisplaySettings={personnelDisplaySettings}
                            />;
                 }
                 return null;

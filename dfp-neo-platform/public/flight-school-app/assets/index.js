@@ -65092,7 +65092,7 @@ const LocalityChangeFlyout = ({ locality }) => {
 };
 const POST_FLIGHT_FORM_STORAGE_PREFIX = "dfpNeo.postFlightFormSnapshot.";
 const getPostFlightFormStorageKey = (eventId) => eventId ? `${POST_FLIGHT_FORM_STORAGE_PREFIX}${eventId}` : "";
-const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
+const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings }) => {
   const { freezeState, checkAndWarn } = useSystemFreeze$1();
   reactExports.useMemo(() => {
     const personName = event.student || event.pilot;
@@ -65185,6 +65185,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     const role = String(staff?.role || "").trim().toLowerCase();
     return role === "pilot" || role.includes("pilot");
   };
+  const getFixedCrewPreviewRole = (staff) => normaliseFixedCrewStaffRole(staff?.role, staff?.unit).trim() || "Crew";
   const fixedCrewRoster = reactExports.useMemo(() => {
     const roster = /* @__PURE__ */ new Map();
     const addByName = (name) => {
@@ -65206,6 +65207,19 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   const fixedCrewPicName = normalisePostFlightName(event.fixedCrewPic || event.pilot || event.instructor);
   const fixedCrewCoPilotNames = fixedCrewRoster.filter((staff) => normalisePostFlightName(staff.name) !== fixedCrewPicName && isPilotStaff(staff)).map((staff) => staff.name);
   const isFixedCrewLogbookPreview = fixedCrewRoster.length > 0 && (event.fixedCrewGroup || event.fixedCrewPic || event.crewSelectionOrder?.length);
+  const fixedCrewLogbookPreviewRoster = reactExports.useMemo(() => fixedCrewRoster.slice().sort((a, b) => {
+    const aIsPic = normalisePostFlightName(a.name) === fixedCrewPicName;
+    const bIsPic = normalisePostFlightName(b.name) === fixedCrewPicName;
+    if (aIsPic !== bIsPic) return aIsPic ? -1 : 1;
+    const aIsPilot = isPilotStaff(a);
+    const bIsPilot = isPilotStaff(b);
+    if (aIsPilot !== bIsPilot) return aIsPilot ? -1 : 1;
+    if (!aIsPilot && !bIsPilot) {
+      const roleCompare = getFixedCrewPreviewRole(a).localeCompare(getFixedCrewPreviewRole(b));
+      if (roleCompare) return roleCompare;
+    }
+    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings || void 0, "staff");
+  }), [fixedCrewPicName, fixedCrewRoster, personnelDisplaySettings]);
   const totalTime = reactExports.useMemo(() => {
     const parseTime = (tStr) => {
       const clean = tStr.replace(":", "");
@@ -65587,7 +65601,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       simTotal: simTotal > 0 ? simTotal.toFixed(1) : ""
     };
   };
-  const fixedCrewPreviewRows = isFixedCrewLogbookPreview ? fixedCrewRoster.map((staff) => {
+  const fixedCrewPreviewRows = isFixedCrewLogbookPreview ? fixedCrewLogbookPreviewRoster.map((staff) => {
     const isPic = normalisePostFlightName(staff.name) === fixedCrewPicName;
     const isP2 = !isPic && isPilotStaff(staff);
     return {
@@ -104581,7 +104595,8 @@ Do you want to replace the existing entry?`,
               masterCurrencies,
               currencyRequirements,
               resourceDisplayNames,
-              aircraftNumberSettings
+              aircraftNumberSettings,
+              personnelDisplaySettings
             }
           );
         }

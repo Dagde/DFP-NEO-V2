@@ -15,6 +15,11 @@ import {
     parseAircraftNumber,
     type AircraftNumberSettings,
 } from '../utils/aircraftNumberFormat';
+import { normaliseFixedCrewStaffRole } from '../utils/crewPositionTerminology';
+import {
+    comparePeopleByConfiguredRank,
+    type PersonnelDisplaySettings,
+} from '../utils/personnelDisplaySettings';
 
 interface PostFlightViewProps {
   event: ScheduleEvent;
@@ -27,6 +32,7 @@ interface PostFlightViewProps {
   currencyRequirements?: CurrencyRequirement[];
   resourceDisplayNames?: ResourceDisplayNames;
   aircraftNumberSettings?: AircraftNumberSettings;
+  personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
 }
 
 const POST_FLIGHT_FORM_STORAGE_PREFIX = 'dfpNeo.postFlightFormSnapshot.';
@@ -35,7 +41,7 @@ const getPostFlightFormStorageKey = (eventId?: string) =>
     eventId ? `${POST_FLIGHT_FORM_STORAGE_PREFIX}${eventId}` : '';
 
 // FIX: Changed to a named export to resolve module resolution errors.
-export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
+export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings }) => {
     const { freezeState, checkAndWarn } = useSystemFreeze();
     // Find trainee or pilot for header
     const person = useMemo(() => {
@@ -164,6 +170,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         const role = String(staff?.role || '').trim().toLowerCase();
         return role === 'pilot' || role.includes('pilot');
     };
+    const getFixedCrewPreviewRole = (staff?: Instructor | null): string => (
+        normaliseFixedCrewStaffRole(staff?.role, staff?.unit).trim() || 'Crew'
+    );
     const fixedCrewRoster = useMemo(() => {
         const roster = new Map<string, Instructor>();
         const addByName = (name?: string | null) => {
@@ -197,6 +206,24 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         .filter(staff => normalisePostFlightName(staff.name) !== fixedCrewPicName && isPilotStaff(staff))
         .map(staff => staff.name);
     const isFixedCrewLogbookPreview = fixedCrewRoster.length > 0 && (event.fixedCrewGroup || event.fixedCrewPic || event.crewSelectionOrder?.length);
+    const fixedCrewLogbookPreviewRoster = useMemo(() => (
+        fixedCrewRoster.slice().sort((a, b) => {
+            const aIsPic = normalisePostFlightName(a.name) === fixedCrewPicName;
+            const bIsPic = normalisePostFlightName(b.name) === fixedCrewPicName;
+            if (aIsPic !== bIsPic) return aIsPic ? -1 : 1;
+
+            const aIsPilot = isPilotStaff(a);
+            const bIsPilot = isPilotStaff(b);
+            if (aIsPilot !== bIsPilot) return aIsPilot ? -1 : 1;
+
+            if (!aIsPilot && !bIsPilot) {
+                const roleCompare = getFixedCrewPreviewRole(a).localeCompare(getFixedCrewPreviewRole(b));
+                if (roleCompare) return roleCompare;
+            }
+
+            return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings || undefined, 'staff');
+        })
+    ), [fixedCrewPicName, fixedCrewRoster, personnelDisplaySettings]);
 
      // Derived Total Time
     const totalTime = useMemo(() => {
@@ -633,7 +660,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         };
     };
     const fixedCrewPreviewRows = isFixedCrewLogbookPreview
-        ? fixedCrewRoster.map(staff => {
+        ? fixedCrewLogbookPreviewRoster.map(staff => {
             const isPic = normalisePostFlightName(staff.name) === fixedCrewPicName;
             const isP2 = !isPic && isPilotStaff(staff);
             return {
