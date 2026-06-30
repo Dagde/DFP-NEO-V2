@@ -11,7 +11,7 @@ const AddInstructorChoiceFlyout: React.FC<AddInstructorChoiceFlyoutProps> = ({ o
         <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in" onClick={onClose}>
             <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-gray-700" onClick={e => e.stopPropagation()}>
                 <div className="p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-white">Add New Instructor(s)</h2>
+                    <h2 className="text-xl font-bold text-white">Add New Staff</h2>
                     <button onClick={onClose} className="text-white hover:text-gray-300" aria-label="Close">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -19,7 +19,7 @@ const AddInstructorChoiceFlyout: React.FC<AddInstructorChoiceFlyoutProps> = ({ o
                     </button>
                 </div>
                 <div className="p-6 text-center space-y-4">
-                    <p className="text-gray-400">How would you like to add new instructors?</p>
+                    <p className="text-gray-400">How would you like to add new staff?</p>
                     <div className="flex flex-col space-y-3">
                         <button
                             onClick={onIndividual}

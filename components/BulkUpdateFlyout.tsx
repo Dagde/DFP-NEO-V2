@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getAllFiles, getFile } from '../utils/db';
 import { Instructor, InstructorRank, InstructorCategory, SeatConfig } from '../types';
 import {
@@ -155,8 +155,11 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
 }) => {
     const [repoFiles, setRepoFiles] = useState<RepoFile[]>([]);
     const [selectedFileId, setSelectedFileId] = useState<string>('');
+    const [selectedLocalFile, setSelectedLocalFile] = useState<File | null>(null);
+    const [isDragActive, setIsDragActive] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         const fetchFiles = async () => {
@@ -171,23 +174,52 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
         fetchFiles();
     }, []);
 
+    const isSpreadsheetFile = (file: File): boolean => (
+        /\.(xlsx|xls|csv)$/i.test(file.name)
+    );
+
+    const handleLocalFile = (file?: File | null) => {
+        if (!file) return;
+        if (!isSpreadsheetFile(file)) {
+            setSelectedLocalFile(null);
+            setStatusMessage('Please select an .xlsx, .xls or .csv file.');
+            return;
+        }
+        setSelectedLocalFile(file);
+        setSelectedFileId('');
+        setStatusMessage('');
+    };
+
+    const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDragActive(false);
+        handleLocalFile(event.dataTransfer.files?.[0]);
+    };
+
     const handleConfirm = async () => {
-        if (!selectedFileId) {
+        if (!selectedLocalFile && !selectedFileId) {
             setStatusMessage('Please select a file.');
             return;
         }
 
         setIsLoading(true);
-        setStatusMessage('Reading file from repository...');
+        setStatusMessage(selectedLocalFile ? 'Reading selected file...' : 'Reading file from repository...');
+        let completedSuccessfully = false;
 
         try {
-            const fileRecord = await getFile(selectedFileId);
-            if (!fileRecord) {
-                throw new Error('File not found in the repository.');
+            let data: ArrayBuffer;
+            if (selectedLocalFile) {
+                data = await selectedLocalFile.arrayBuffer();
+            } else {
+                const fileRecord = await getFile(selectedFileId);
+                if (!fileRecord) {
+                    throw new Error('File not found in the repository.');
+                }
+                data = await fileRecord.content.arrayBuffer();
             }
 
             setStatusMessage('Parsing spreadsheet...');
-            const data = await fileRecord.content.arrayBuffer();
             const workbook = XLSX.read(data, { type: 'buffer' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
@@ -329,6 +361,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
             if (createdCount === 0 && updatedCount === 0 && skippedCount === 0) finalMessage = 'No data processed.';
 
             setStatusMessage(finalMessage.trim());
+            completedSuccessfully = true;
 
         } catch (error) {
             console.error("Bulk update failed:", error);
@@ -336,7 +369,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
         } finally {
             setTimeout(() => {
                 setIsLoading(false);
-                if (!statusMessage.startsWith('Error')) {
+                if (completedSuccessfully) {
                     onClose();
                 }
             }, 3000);
@@ -348,7 +381,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
         <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in" onClick={onClose}>
             <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700" onClick={e => e.stopPropagation()}>
                 <div className="p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-white">Bulk Upload Instructors</h2>
+                    <h2 className="text-xl font-bold text-white">Bulk Upload Staff</h2>
                     <button onClick={onClose} className="text-white hover:text-gray-300" aria-label="Close">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
@@ -361,7 +394,47 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                         </div>
                     ) : (
                         <>
-                            <p className="text-gray-400 text-sm">Select a spreadsheet from the repository to create or update instructors. The system will match by ID Number.</p>
+                            <p className="text-gray-400 text-sm">Upload a spreadsheet to create or update staff. The system will match by ID Number.</p>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".xlsx,.xls,.csv"
+                                className="hidden"
+                                onChange={(event) => handleLocalFile(event.target.files?.[0])}
+                            />
+                            <div
+                                onDragEnter={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setIsDragActive(true);
+                                }}
+                                onDragOver={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    event.dataTransfer.dropEffect = 'copy';
+                                    setIsDragActive(true);
+                                }}
+                                onDragLeave={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setIsDragActive(false);
+                                }}
+                                onDrop={handleDrop}
+                                className={`rounded-lg border border-dashed p-5 text-center transition-colors ${isDragActive ? 'border-sky-300 bg-sky-500/15' : selectedLocalFile ? 'border-emerald-400/70 bg-emerald-500/10' : 'border-gray-500 bg-gray-900/40'}`}
+                            >
+                                <p className="text-sm font-semibold text-white">
+                                    {selectedLocalFile ? selectedLocalFile.name : 'Drag and drop a spreadsheet here'}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-400">Accepted formats: .xlsx, .xls, .csv</p>
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="mt-4 px-4 py-2 bg-gray-100 text-gray-900 rounded-md hover:bg-white font-semibold"
+                                >
+                                    Add File
+                                </button>
+                            </div>
+                            {!selectedLocalFile && (
                             <div>
                                 <label htmlFor="repo-file" className="block text-sm font-medium text-gray-400">File from Repository</label>
                                 <select 
@@ -377,7 +450,9 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                                     )}
                                 </select>
                             </div>
+                            )}
                             <p className="text-xs text-gray-500">Expected columns: PMKeys/ID, Srname, First name, Service, Rank, callsign number, Roles, Category, Seat config.</p>
+                            {statusMessage && <p className="text-sm text-amber-300">{statusMessage}</p>}
                         </>
                     )}
                 </div>
@@ -385,8 +460,8 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 {!isLoading && (
                     <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
                         <button onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Cancel</button>
-                        <button onClick={handleConfirm} disabled={!selectedFileId} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                            Confirm & Process
+                        <button onClick={handleConfirm} disabled={!selectedLocalFile && !selectedFileId} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                            Upload
                         </button>
                     </div>
                 )}

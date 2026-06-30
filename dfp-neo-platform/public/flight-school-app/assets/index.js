@@ -41634,11 +41634,11 @@ const InstructorProfileFlyout = ({
 const AddInstructorChoiceFlyout = ({ onClose, onIndividual, onBulk }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Add New Instructor(s)" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Add New Staff" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 text-center space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "How would you like to add new instructors?" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "How would you like to add new staff?" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col space-y-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
@@ -41756,8 +41756,11 @@ const BulkUpdateFlyout = ({
 }) => {
   const [repoFiles, setRepoFiles] = reactExports.useState([]);
   const [selectedFileId, setSelectedFileId] = reactExports.useState("");
+  const [selectedLocalFile, setSelectedLocalFile] = reactExports.useState(null);
+  const [isDragActive, setIsDragActive] = reactExports.useState(false);
   const [isLoading, setIsLoading] = reactExports.useState(false);
   const [statusMessage, setStatusMessage] = reactExports.useState("");
+  const fileInputRef = reactExports.useRef(null);
   reactExports.useEffect(() => {
     const fetchFiles = async () => {
       const files = await getAllFiles();
@@ -41769,20 +41772,44 @@ const BulkUpdateFlyout = ({
     };
     fetchFiles();
   }, []);
+  const isSpreadsheetFile = (file) => /\.(xlsx|xls|csv)$/i.test(file.name);
+  const handleLocalFile = (file) => {
+    if (!file) return;
+    if (!isSpreadsheetFile(file)) {
+      setSelectedLocalFile(null);
+      setStatusMessage("Please select an .xlsx, .xls or .csv file.");
+      return;
+    }
+    setSelectedLocalFile(file);
+    setSelectedFileId("");
+    setStatusMessage("");
+  };
+  const handleDrop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragActive(false);
+    handleLocalFile(event.dataTransfer.files?.[0]);
+  };
   const handleConfirm = async () => {
-    if (!selectedFileId) {
+    if (!selectedLocalFile && !selectedFileId) {
       setStatusMessage("Please select a file.");
       return;
     }
     setIsLoading(true);
-    setStatusMessage("Reading file from repository...");
+    setStatusMessage(selectedLocalFile ? "Reading selected file..." : "Reading file from repository...");
+    let completedSuccessfully = false;
     try {
-      const fileRecord = await getFile(selectedFileId);
-      if (!fileRecord) {
-        throw new Error("File not found in the repository.");
+      let data;
+      if (selectedLocalFile) {
+        data = await selectedLocalFile.arrayBuffer();
+      } else {
+        const fileRecord = await getFile(selectedFileId);
+        if (!fileRecord) {
+          throw new Error("File not found in the repository.");
+        }
+        data = await fileRecord.content.arrayBuffer();
       }
       setStatusMessage("Parsing spreadsheet...");
-      const data = await fileRecord.content.arrayBuffer();
       const workbook = XLSX.read(data, { type: "buffer" });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
@@ -41899,13 +41926,14 @@ const BulkUpdateFlyout = ({
       if (skippedCount > 0) finalMessage += `Skipped ${skippedCount} rows.`;
       if (createdCount === 0 && updatedCount === 0 && skippedCount === 0) finalMessage = "No data processed.";
       setStatusMessage(finalMessage.trim());
+      completedSuccessfully = true;
     } catch (error) {
       console.error("Bulk update failed:", error);
       setStatusMessage(`Error: ${error.message}`);
     } finally {
       setTimeout(() => {
         setIsLoading(false);
-        if (!statusMessage.startsWith("Error")) {
+        if (completedSuccessfully) {
           onClose();
         }
       }, 3e3);
@@ -41913,12 +41941,58 @@ const BulkUpdateFlyout = ({
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Bulk Upload Instructors" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Bulk Upload Staff" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 space-y-4", children: isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center p-8", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sky-400 font-semibold", children: statusMessage }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Select a spreadsheet from the repository to create or update instructors. The system will match by ID Number." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Upload a spreadsheet to create or update staff. The system will match by ID Number." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          ref: fileInputRef,
+          type: "file",
+          accept: ".xlsx,.xls,.csv",
+          className: "hidden",
+          onChange: (event) => handleLocalFile(event.target.files?.[0])
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          onDragEnter: (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setIsDragActive(true);
+          },
+          onDragOver: (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            event.dataTransfer.dropEffect = "copy";
+            setIsDragActive(true);
+          },
+          onDragLeave: (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setIsDragActive(false);
+          },
+          onDrop: handleDrop,
+          className: `rounded-lg border border-dashed p-5 text-center transition-colors ${isDragActive ? "border-sky-300 bg-sky-500/15" : selectedLocalFile ? "border-emerald-400/70 bg-emerald-500/10" : "border-gray-500 bg-gray-900/40"}`,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-white", children: selectedLocalFile ? selectedLocalFile.name : "Drag and drop a spreadsheet here" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Accepted formats: .xlsx, .xls, .csv" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => fileInputRef.current?.click(),
+                className: "mt-4 px-4 py-2 bg-gray-100 text-gray-900 rounded-md hover:bg-white font-semibold",
+                children: "Add File"
+              }
+            )
+          ]
+        }
+      ),
+      !selectedLocalFile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "repo-file", className: "block text-sm font-medium text-gray-400", children: "File from Repository" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "select",
@@ -41931,11 +42005,12 @@ const BulkUpdateFlyout = ({
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Expected columns: PMKeys/ID, Srname, First name, Service, Rank, callsign number, Roles, Category, Seat config." })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Expected columns: PMKeys/ID, Srname, First name, Service, Rank, callsign number, Roles, Category, Seat config." }),
+      statusMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-amber-300", children: statusMessage })
     ] }) }),
     !isLoading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleConfirm, disabled: !selectedFileId, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Confirm & Process" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleConfirm, disabled: !selectedLocalFile && !selectedFileId, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Upload" })
     ] })
   ] }) });
 };
