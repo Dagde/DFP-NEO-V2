@@ -83,6 +83,8 @@ const Header: React.FC<HeaderProps> = ({
     const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
     const disabledActionClass = 'opacity-45 cursor-not-allowed grayscale';
     const isFixedCrewModel = /fixed\s*crew/i.test(activeModelLabel || '');
+    const headerButtonClass = 'w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md';
+    const unavailableActionClass = isFixedCrewModel ? '' : disabledActionClass;
     const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ''}`;
     const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
     const hoveredContext = contextOptions.find(option => option.location === hoveredContextLocation) || contextOptions[0];
@@ -225,7 +227,7 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 1. Audit Log Button */}
                         <button 
                             onClick={() => setShowAuditFlyout(true)}
-                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+                            className={headerButtonClass}
                             title="View Audit Log"
                         >
                             <span className="text-center leading-tight">Audit Log</span>
@@ -234,7 +236,7 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 2. Multi Select Button */}
                         <button
                           onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
-                          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isMultiSelectMode ? 'active' : ''}`}
+                          className={`${headerButtonClass} ${isMultiSelectMode ? 'active' : ''}`}
                           title="Toggle multi-select mode"
                         >
                             <span className="text-center leading-tight">Multi Select</span>
@@ -243,7 +245,7 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 3. Magnifier Button */}
                         <button
                           onClick={() => setIsMagnifierEnabled(!isMagnifierEnabled)}
-                          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isMagnifierEnabled ? 'active' : ''}`}
+                          className={`${headerButtonClass} ${isMagnifierEnabled ? 'active' : ''}`}
                           aria-label="Toggle Magnifier"
                           title="Toggle Magnifier"
                         >
@@ -252,9 +254,13 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 4. Validation Check Button */}
                         <button
-                          onClick={() => setShowValidation(!showValidation)}
-                          disabled={!canRunValidation}
-                          className={`w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md ${showValidation ? 'active' : ''} ${!canRunValidation ? disabledActionClass : ''}`}
+                          onClick={() => {
+                              if (!canRunValidation) return;
+                              setShowValidation(!showValidation);
+                          }}
+                          disabled={!isFixedCrewModel && !canRunValidation}
+                          aria-disabled={!canRunValidation}
+                          className={`${headerButtonClass} ${showValidation ? 'active' : ''} ${!canRunValidation ? unavailableActionClass : ''}`}
                           title={canRunValidation ? 'Toggle validation' : 'Access denied: validation permission required'}
                         >
                             <span className="text-center leading-tight">Validation<br/>Check</span>
@@ -263,30 +269,39 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 5. Hourly Event Rate Button */}
                         <button
                           onClick={onToggleDepartureDensityOverlay}
-                          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${showDepartureDensityOverlay ? 'active' : ''}`}
+                          className={`${headerButtonClass} ${showDepartureDensityOverlay ? 'active' : ''}`}
                           title="Hourly Event Rate - Shows flight density in 1-hour window"
                         >
                             <span className="text-center leading-tight">Hourly<br/>Event Rate</span>
                         </button>
 
                         {/* 6. Aircraft Available Button */}
-                        {onToggleAircraftAvailability && (
+                        {(isFixedCrewModel || onToggleAircraftAvailability) && (
                             <button
-                              onClick={onToggleAircraftAvailability}
-                              className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${!showAircraftAvailability ? 'active' : ''}`}
-                              title="Toggle aircraft availability"
+                              onClick={() => {
+                                  if (!onToggleAircraftAvailability) return;
+                                  onToggleAircraftAvailability();
+                              }}
+                              disabled={!isFixedCrewModel && !onToggleAircraftAvailability}
+                              aria-disabled={!onToggleAircraftAvailability}
+                              className={`${headerButtonClass} ${!showAircraftAvailability ? 'active' : ''} ${!onToggleAircraftAvailability ? unavailableActionClass : ''}`}
+                              title={onToggleAircraftAvailability ? 'Toggle aircraft availability' : 'Aircraft availability is not available in this context'}
                             >
                                 <span className="text-center leading-tight">Aircraft<br/>Available</span>
                             </button>
                         )}
 
                         {/* 7. Pause Flight Ops Button */}
-                        {onPauseFlightOps && (
+                        {(isFixedCrewModel || onPauseFlightOps) && (
                             <button
-                                onClick={onPauseFlightOps}
-                                disabled={!canEditDfpTiles || !canRunNeoBuild}
-                                className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${(!canEditDfpTiles || !canRunNeoBuild) ? disabledActionClass : ''}`}
-                                title={(canEditDfpTiles && canRunNeoBuild) ? 'Pause Flight Ops' : 'Access denied: DFP edit and NEO Build permissions required'}
+                                onClick={() => {
+                                    if (!onPauseFlightOps || !canEditDfpTiles || !canRunNeoBuild) return;
+                                    onPauseFlightOps();
+                                }}
+                                disabled={!isFixedCrewModel && (!onPauseFlightOps || !canEditDfpTiles || !canRunNeoBuild)}
+                                aria-disabled={!onPauseFlightOps || !canEditDfpTiles || !canRunNeoBuild}
+                                className={`${headerButtonClass} ${(!onPauseFlightOps || !canEditDfpTiles || !canRunNeoBuild) ? unavailableActionClass : ''}`}
+                                title={(onPauseFlightOps && canEditDfpTiles && canRunNeoBuild) ? 'Pause Flight Ops' : 'Access denied: DFP edit and NEO Build permissions required'}
                             >
                                 <span className="text-center leading-tight">Pause<br/>Flight Ops</span>
                             </button>
@@ -294,9 +309,13 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 8. Add Ground Tile Button */}
                         <button 
-                            onClick={onAddGroundEvent}
-                            disabled={!canEditDfpTiles}
-                            className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${!canEditDfpTiles ? disabledActionClass : ''}`}
+                            onClick={() => {
+                                if (!canEditDfpTiles) return;
+                                onAddGroundEvent();
+                            }}
+                            disabled={!isFixedCrewModel && !canEditDfpTiles}
+                            aria-disabled={!canEditDfpTiles}
+                            className={`${headerButtonClass} ${!canEditDfpTiles ? unavailableActionClass : ''}`}
                             title={canEditDfpTiles ? 'Add Ground Tile' : 'Access denied: DFP tile edit permission required'}
                         >
                             <span className="text-center leading-tight">Add Ground<br/>Tile</span>
@@ -304,9 +323,13 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 8. Add Flight Tile Button */}
                         <button 
-                            onClick={onAddTile}
-                            disabled={!canEditDfpTiles}
-                            className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${!canEditDfpTiles ? disabledActionClass : ''}`}
+                            onClick={() => {
+                                if (!canEditDfpTiles) return;
+                                onAddTile();
+                            }}
+                            disabled={!isFixedCrewModel && !canEditDfpTiles}
+                            aria-disabled={!canEditDfpTiles}
+                            className={`${headerButtonClass} ${!canEditDfpTiles ? unavailableActionClass : ''}`}
                             title={canEditDfpTiles ? 'Add Flight Tile' : 'Access denied: DFP tile edit permission required'}
                         >
                             <span className="text-center leading-tight">Add Flight<br/>Tile</span>
@@ -314,10 +337,18 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 9. NEO - Tile / Quick Tile Button */}
                         <button
-                            onClick={isFixedCrewModel ? onQuickTile : onToggleOracleMode}
-                            disabled={isFixedCrewModel ? !canEditDfpTiles : !canRunNeoBuild}
+                            onClick={() => {
+                                if (isFixedCrewModel) {
+                                    if (!canEditDfpTiles || !onQuickTile) return;
+                                    onQuickTile();
+                                    return;
+                                }
+                                if (!canRunNeoBuild) return;
+                                onToggleOracleMode();
+                            }}
+                            disabled={!isFixedCrewModel && !canRunNeoBuild}
                             aria-disabled={isFixedCrewModel ? !canEditDfpTiles : !canRunNeoBuild}
-                            className={`relative w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode && !isFixedCrewModel ? 'active' : ''} ${isFixedCrewModel ? (!canEditDfpTiles ? disabledActionClass : '') : (!canRunNeoBuild ? disabledActionClass : '')}`}
+                            className={`relative ${headerButtonClass} ${isOracleMode && !isFixedCrewModel ? 'active' : ''} ${isFixedCrewModel ? (!canEditDfpTiles ? unavailableActionClass : '') : (!canRunNeoBuild ? unavailableActionClass : '')}`}
                             title={isFixedCrewModel ? (canEditDfpTiles ? 'Quick Tile' : 'Access denied: DFP tile edit permission required') : canRunNeoBuild ? 'NEO - Tile' : 'Access denied: NEO Build permission required'}
                         >
                             <span className={`text-center leading-tight ${isOracleMode && !isFixedCrewModel ? 'animate-pulse-neo-text' : ''}`} style={{ color: isFixedCrewModel ? '#000000' : '#fb923c' }}>
