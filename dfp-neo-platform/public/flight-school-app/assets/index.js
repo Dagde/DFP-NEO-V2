@@ -79310,6 +79310,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const runFixedCrewBuild = () => {
     const diag = neoBuildDiag.fixedCrewPriority;
     const fixedCrewUnit = buildActiveUnitCode;
+    const isPooledCrewBuild = buildOperationalModel === "pooled_crew";
     const fixedCrewContextUnits = buildActiveContextUnitCodes.length > 0 ? buildActiveContextUnitCodes : fixedCrewUnit ? [fixedCrewUnit] : [];
     const fixedCrewContextUnitSet = new Set(fixedCrewContextUnits);
     const fixedCrewUsesSharedUnitContext = fixedCrewContextUnitSet.size > 1;
@@ -79342,6 +79343,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         crewPreFilterNoPic: 0,
         crewPreFilterRoleShortfall: 0,
         crewPreFilterStaffLimit: 0,
+        pooledCrewRecipientEvaluations: 0,
+        pooledCrewPartnerEvaluations: 0,
+        pooledCrewRoleFillEvaluations: 0,
         placements: 0
       },
       timingsMs: {},
@@ -79581,6 +79585,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       };
     });
     diag.crewGroups = crewGroupSummaries;
+    diag.pooledCrewAllocation = {
+      enabled: isPooledCrewBuild,
+      model: buildOperationalModel,
+      stages: [
+        "Stage 1: select training recipient",
+        "Stage 2: select partner pilot",
+        "Stage 3: fill required non-pilot crew seats from aircraft/crew composition"
+      ],
+      allocations: [],
+      rejections: []
+    };
     const crewMembershipsByPerson = /* @__PURE__ */ new Map();
     crewGroups.forEach((members, crew) => {
       members.forEach((staff) => {
@@ -80092,6 +80107,180 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       return null;
     };
+    const pooledCrewStaff = originalInstructors.filter(isActiveFixedCrewStaff);
+    const normalisePooledCrewPersonKey = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const isPooledCrewPilot = (staff) => String(staff.role || "").trim().toLowerCase() === "pilot";
+    const buildPooledCrewHistoricalEvents = (staff) => {
+      const staffName = staff.name;
+      return Object.entries(publishedSchedules || {}).flatMap(([date, events]) => (events || []).map((event) => ({ ...event, date }))).filter((event) => String(event.date || "") < buildDate).filter((event) => eventHasPerson(event, staffName)).sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")));
+    };
+    const getDaysSincePooledCrewEvent = (date) => {
+      if (!date) return null;
+      const left = (/* @__PURE__ */ new Date(`${date}T00:00:00`)).getTime();
+      const right = (/* @__PURE__ */ new Date(`${buildDate}T00:00:00`)).getTime();
+      if (!Number.isFinite(left) || !Number.isFinite(right) || left > right) return null;
+      return Math.floor((right - left) / 864e5);
+    };
+    const isPooledCrewFlightEvent = (event) => event.type === "flight";
+    const isPooledCrewSimulatorEvent = (event) => event.type === "ftd" || event.type === "cpt";
+    const getPooledCrewStats = (staff, event) => {
+      const history = buildPooledCrewHistoricalEvents(staff);
+      const sameEventHistory = history.filter((item) => String(item.flightNumber || item.eventCode || "").trim().toUpperCase() === String(event.flightNumber || event.eventCode || "").trim().toUpperCase());
+      const lastFlight = history.find(isPooledCrewFlightEvent);
+      const lastSimulator = history.find(isPooledCrewSimulatorEvent);
+      const lastSameEvent = sameEventHistory[0];
+      const countWithin = (days, predicate) => history.filter((item) => {
+        const daysSince3 = getDaysSincePooledCrewEvent(item.date);
+        return daysSince3 !== null && daysSince3 <= days && predicate(item);
+      }).length;
+      const generatedForPerson = generatedEvents.filter((item) => eventHasPerson(item, staff.name));
+      return {
+        historyCount: history.length,
+        sameEventCount: sameEventHistory.length,
+        daysSinceSameEvent: getDaysSincePooledCrewEvent(lastSameEvent?.date),
+        daysSinceFlight: getDaysSincePooledCrewEvent(lastFlight?.date),
+        daysSinceSimulator: getDaysSincePooledCrewEvent(lastSimulator?.date),
+        flights7: countWithin(7, isPooledCrewFlightEvent),
+        sims7: countWithin(7, isPooledCrewSimulatorEvent),
+        flights30: countWithin(30, isPooledCrewFlightEvent),
+        sims30: countWithin(30, isPooledCrewSimulatorEvent),
+        flights365: countWithin(365, isPooledCrewFlightEvent),
+        sims365: countWithin(365, isPooledCrewSimulatorEvent),
+        previousAllocationFrequency: generatedForPerson.length,
+        partner30: history.filter((item) => getDaysSincePooledCrewEvent(item.date) !== null && getDaysSincePooledCrewEvent(item.date) <= 30 && !personnelNamesMatch(item.fixedCrewPic || item.pilot || item.instructor || "", staff.name)).length,
+        partner365: history.filter((item) => getDaysSincePooledCrewEvent(item.date) !== null && getDaysSincePooledCrewEvent(item.date) <= 365 && !personnelNamesMatch(item.fixedCrewPic || item.pilot || item.instructor || "", staff.name)).length
+      };
+    };
+    const pooledCrewRandomScore = (seed) => getFixedCrewStableRandomScore(seed) / 4294967295;
+    const pooledCrewScore = (stats, stage) => {
+      const noHistoryBonus = stats.historyCount === 0 ? 0 : 0;
+      const recencyNeed = Math.min(120, stats.daysSinceSameEvent ?? 120) * 2.1 + Math.min(90, stats.daysSinceFlight ?? 90) * 0.8 + Math.min(90, stats.daysSinceSimulator ?? 90) * 0.35;
+      const workloadRelief = (20 - stats.flights30 - stats.sims30) * 4 + (160 - stats.flights365 - stats.sims365) * 0.45 - (stats.flights7 + stats.sims7) * 8 - stats.previousAllocationFrequency * 12;
+      const partnerRelief = stage === "partner" ? (20 - stats.partner30) * 5 + (120 - stats.partner365) * 0.35 : 0;
+      return noHistoryBonus + recencyNeed + workloadRelief + partnerRelief;
+    };
+    const pooledCrewExplanation = (stats, stage) => {
+      const reasons = [
+        `${stats.daysSinceSameEvent ?? "no"} days since last same event`,
+        `${stats.daysSinceFlight ?? "no"} days since last flight`,
+        `${stats.flights30 + stats.sims30} event(s) in last 30 days`,
+        `${stats.flights365 + stats.sims365} event(s) in last 12 months`
+      ];
+      if (stage === "partner") reasons.push(`${stats.partner30} partner allocation(s) in last 30 days`);
+      return `Selected because: ${reasons.join(", ")}.`;
+    };
+    const selectPooledCrewCandidate = (pool, event, stage, seedSuffix) => {
+      if (pool.length === 0) return null;
+      const scored = pool.map((staff) => {
+        const stats = getPooledCrewStats(staff, event);
+        const random = pooledCrewRandomScore(`${buildDate}|${event.id || event.flightNumber}|${seedSuffix}|${staff.idNumber || staff.name}`);
+        const historicalScore = pooledCrewScore(stats, stage === "partner" ? "partner" : "recipient");
+        return {
+          staff,
+          stats,
+          score: stats.historyCount > 0 ? historicalScore : random,
+          randomFallback: stats.historyCount === 0,
+          random
+        };
+      });
+      const anyHistory = scored.some((item) => item.stats.historyCount > 0);
+      scored.sort((left, right) => {
+        if (!anyHistory) return right.random - left.random;
+        return right.score - left.score || (right.stats.daysSinceSameEvent ?? 0) - (left.stats.daysSinceSameEvent ?? 0) || left.stats.flights30 + left.stats.sims30 - (right.stats.flights30 + right.stats.sims30) || left.stats.flights365 + left.stats.sims365 - (right.stats.flights365 + right.stats.sims365) || right.random - left.random;
+      });
+      const selected = scored[0];
+      if (!selected) return null;
+      return {
+        staff: selected.staff,
+        stats: selected.stats,
+        score: Math.round(selected.score * 100) / 100,
+        randomFallback: !anyHistory,
+        explanation: selected.randomFallback ? "Selected by randomised eligible-pool fallback because no meaningful history exists yet." : pooledCrewExplanation(selected.stats, stage === "partner" ? "partner" : "recipient")
+      };
+    };
+    const selectPooledCrewForEvent = (event) => {
+      const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
+      const eventTypeForAvailability = event.type === "ground" ? "ground" : event.type;
+      const hasConflict = (staff) => generatedEvents.some((existing) => {
+        if (!eventHasPerson(existing, staff.name)) return false;
+        const existingBookingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
+        return existingBookingWindow.start < bookingWindow.end && bookingWindow.start < existingBookingWindow.end;
+      });
+      const baseEligible = pooledCrewStaff.filter((staff) => !isFixedCrewStaffUnavailableCached(staff, bookingWindow.start, bookingWindow.end, buildDate, eventTypeForAvailability)).filter((staff) => !hasConflict(staff));
+      const pilots = baseEligible.filter(isPooledCrewPilot);
+      fixedCrewPerf.counters.pooledCrewRecipientEvaluations += pilots.length;
+      const recipient = selectPooledCrewCandidate(pilots, event, "recipient", "recipient");
+      if (!recipient) {
+        diag.pooledCrewAllocation.rejections.push({ event: event.flightNumber, reason: "NO_ELIGIBLE_POOLED_CREW_RECIPIENT", eligiblePilots: pilots.length });
+        incrementFixedCrewRejection("NO_ELIGIBLE_POOLED_CREW_RECIPIENT");
+        return null;
+      }
+      const recipientIsPic = staffHasPicQualification(recipient.staff);
+      const requiresPicSupervision = /upgrade|assessment|assess|check|instruct|supervis/i.test(`${event.flightNumber || ""} ${event.eventTitle || ""} ${event.training || ""}`);
+      const partnerPool = pilots.filter((staff) => !personnelNamesMatch(staff.name, recipient.staff.name)).filter((staff) => {
+        if (!recipientIsPic) return staffHasPicQualification(staff);
+        return requiresPicSupervision ? staffHasPicQualification(staff) : !staffHasPicQualification(staff);
+      });
+      fixedCrewPerf.counters.pooledCrewPartnerEvaluations += partnerPool.length;
+      const partner = selectPooledCrewCandidate(partnerPool, event, "partner", `partner-${recipient.staff.idNumber || recipient.staff.name}`);
+      if (!partner) {
+        diag.pooledCrewAllocation.rejections.push({ event: event.flightNumber, reason: "NO_ELIGIBLE_POOLED_CREW_PARTNER", recipient: recipient.staff.name, eligiblePartners: partnerPool.length });
+        incrementFixedCrewRejection("NO_ELIGIBLE_POOLED_CREW_PARTNER");
+        return null;
+      }
+      const selected = /* @__PURE__ */ new Map();
+      const addSelected = (staff) => {
+        if (!staff) return;
+        selected.set(normalisePooledCrewPersonKey(staff.name), staff);
+      };
+      addSelected(recipient.staff);
+      addSelected(partner.staff);
+      const roleFillDiagnostics = [];
+      for (const role of getCrewRequirementRoles(event.crewRequirement, buildAircraftCrewComposition)) {
+        const eligibleRoles = getCrewRequirementRoleOptions(role);
+        const requiredCount = Math.max(0, Number(role.count) || 0);
+        let currentCount = Array.from(selected.values()).filter((staff) => eligibleRoles.some((requiredRole) => roleMatchesStaff(staff, requiredRole))).length;
+        while (currentCount < requiredCount) {
+          const rolePool = baseEligible.filter((staff) => !selected.has(normalisePooledCrewPersonKey(staff.name))).filter((staff) => eligibleRoles.some((requiredRole) => roleMatchesStaff(staff, requiredRole)));
+          fixedCrewPerf.counters.pooledCrewRoleFillEvaluations += rolePool.length;
+          const filler = selectPooledCrewCandidate(rolePool, event, "role", `role-${role.role}-${currentCount}`);
+          if (!filler) {
+            diag.pooledCrewAllocation.rejections.push({ event: event.flightNumber, reason: "POOLED_CREW_ROLE_SHORTFALL", role: role.role, required: requiredCount, available: currentCount });
+            incrementFixedCrewRejection("POOLED_CREW_ROLE_SHORTFALL");
+            return null;
+          }
+          addSelected(filler.staff);
+          roleFillDiagnostics.push({ role: role.role, staff: filler.staff.name, explanation: filler.explanation });
+          currentCount += 1;
+        }
+      }
+      const members = Array.from(selected.values());
+      const staffLimitViolations = getFixedCrewStaffLimitViolations(members, event);
+      if (staffLimitViolations.length > 0) {
+        const reason = staffLimitViolations[0]?.reason || "STAFF_EVENT_LIMIT";
+        diag.pooledCrewAllocation.rejections.push({ event: event.flightNumber, reason, staffLimitViolations });
+        incrementFixedCrewRejection(reason);
+        return null;
+      }
+      const pic = staffHasPicQualification(recipient.staff) ? recipient.staff : partner.staff;
+      const explanation = [
+        `Recipient: ${recipient.staff.name}. ${recipient.explanation}`,
+        `Partner pilot: ${partner.staff.name}. ${partner.explanation}`
+      ].join(" ");
+      return {
+        members,
+        pic,
+        recipient: recipient.staff,
+        partner: partner.staff,
+        explanation,
+        diagnostics: {
+          recipient: { name: recipient.staff.name, score: recipient.score, randomFallback: recipient.randomFallback, stats: recipient.stats, explanation: recipient.explanation },
+          partner: { name: partner.staff.name, score: partner.score, randomFallback: partner.randomFallback, stats: partner.stats, explanation: partner.explanation },
+          roleFill: roleFillDiagnostics,
+          requiresPicSupervision
+        }
+      };
+    };
     const tryPlaceFixedCrewEvent = (sourceEvent, source, fixedStartTime) => {
       const eventPerfStart = fixedCrewPerfNow();
       const getFixedCrewStartStepMinutes = (eventType) => {
@@ -80203,8 +80392,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           generatedCandidates: starts
         };
       }
-      const eligibleCrewEntries = prefilterFixedCrewCandidateEntries(sourceEvent, eventPerf);
-      if (eligibleCrewEntries.length === 0) {
+      const eligibleCrewEntries = isPooledCrewBuild ? [] : prefilterFixedCrewCandidateEntries(sourceEvent, eventPerf);
+      if (!isPooledCrewBuild && eligibleCrewEntries.length === 0) {
         incrementFixedCrewRejection("NO_ELIGIBLE_CREW_AFTER_PREFILTER");
         pushFixedCrewAttempt({ event: sourceEvent.flightNumber, source, outcome: "rejected", reason: "NO_ELIGIBLE_CREW_AFTER_PREFILTER", preFilter: eventPerf.preFilter || null });
         eventPerf.outcome = "rejected";
@@ -80306,6 +80495,116 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               resourceConflictDetail
             });
             continue;
+          }
+          if (isPooledCrewBuild) {
+            const selectPooledCrewStart = fixedCrewPerfNow();
+            const assignment2 = selectPooledCrewForEvent(candidate);
+            addFixedCrewPerfTiming("selectPooledCrew", selectPooledCrewStart);
+            if (!assignment2) {
+              pushFixedCrewAttempt({
+                event: candidate.flightNumber,
+                source,
+                startTime,
+                resourceId,
+                outcome: "rejected",
+                reason: "NO_VALID_POOLED_CREW_ALLOCATION"
+              });
+              continue;
+            }
+            const pooledCrewDisplay = "Pooled Crew";
+            const candidateWithAssignedCrew2 = {
+              ...candidate,
+              instructor: assignment2.pic.name,
+              pilot: assignment2.pic.name,
+              student: assignment2.recipient.name,
+              crew: pooledCrewDisplay,
+              attendees: assignment2.members.map((staff) => staff.name),
+              crewSelectionOrder: assignment2.members.map((staff) => staff.name),
+              fixedCrewPic: assignment2.pic.name
+            };
+            let assignedPooledCrewResourceConflictDetail = null;
+            const assignedPooledCrewResourceConflict = generatedEvents.find((existing) => {
+              assignedPooledCrewResourceConflictDetail = getPriorityResourceConflictDetail(candidateWithAssignedCrew2, existing);
+              return !!assignedPooledCrewResourceConflictDetail;
+            });
+            if (assignedPooledCrewResourceConflict) {
+              const reason = assignedPooledCrewResourceConflictDetail?.reason || "RESOURCE_CONFLICT";
+              incrementFixedCrewRejection(reason);
+              pushFixedCrewAttempt({
+                event: candidate.flightNumber,
+                source,
+                startTime,
+                resourceId,
+                pic: assignment2.pic.name,
+                recipient: assignment2.recipient.name,
+                partner: assignment2.partner?.name || null,
+                outcome: "rejected",
+                reason,
+                conflictingEvent: assignedPooledCrewResourceConflict.flightNumber,
+                resourceConflictDetail: assignedPooledCrewResourceConflictDetail
+              });
+              continue;
+            }
+            const placed2 = {
+              ...candidate,
+              color: resolveFixedCrewTileColour({
+                ...candidate,
+                crew: pooledCrewDisplay,
+                group: pooledCrewDisplay,
+                student: assignment2.recipient.name,
+                _source: source
+              }, fixedCrewTileColourMode),
+              instructor: assignment2.pic.name,
+              pilot: assignment2.pic.name,
+              student: assignment2.recipient.name,
+              crew: pooledCrewDisplay,
+              group: pooledCrewDisplay,
+              attendees: assignment2.members.map((staff) => staff.name),
+              crewSelectionOrder: assignment2.members.map((staff) => staff.name),
+              fixedCrewPic: assignment2.pic.name,
+              fixedCrewManifestStatus: "complete",
+              fixedCrewManifestNotes: assignment2.explanation,
+              flightType: "Dual",
+              soloOrDual: "Dual",
+              _source: source
+            };
+            generatedEvents.push(placed2);
+            fixedCrewPerf.counters.placements += 1;
+            fixedCrewPerf.counters.staffDailyCountCacheClears += 1;
+            fixedCrewStaffDailyCountCache.clear();
+            diag.pooledCrewAllocation.allocations.push({
+              event: placed2.flightNumber,
+              eventId: placed2.id || null,
+              source,
+              startTime,
+              resourceId,
+              duration: placed2.duration,
+              pic: assignment2.pic.name,
+              recipient: assignment2.recipient.name,
+              partner: assignment2.partner?.name || null,
+              attendees: placed2.attendees,
+              explanation: assignment2.explanation,
+              diagnostics: assignment2.diagnostics
+            });
+            pushFixedCrewPlacement({
+              event: placed2.flightNumber,
+              eventId: placed2.id || null,
+              source,
+              startTime,
+              resourceId,
+              duration: placed2.duration,
+              pic: assignment2.pic.name,
+              recipient: assignment2.recipient.name,
+              partner: assignment2.partner?.name || null,
+              attendees: placed2.attendees,
+              pooledCrewAllocation: assignment2.diagnostics
+            });
+            eventPerf.outcome = "placed";
+            eventPerf.elapsedMs = Math.round((fixedCrewPerfNow() - eventPerfStart) * 100) / 100;
+            eventPerf.pooledCrewAllocation = assignment2.diagnostics;
+            eventPerf.crewCandidateEvaluations = fixedCrewPerf.counters.pooledCrewRecipientEvaluations + fixedCrewPerf.counters.pooledCrewPartnerEvaluations + fixedCrewPerf.counters.pooledCrewRoleFillEvaluations;
+            if (fixedCrewPerf.events.length < 120) fixedCrewPerf.events.push(eventPerf);
+            return true;
           }
           const selectCrewStart = fixedCrewPerfNow();
           const assignment = selectFixedCrewForEvent(candidate, eligibleCrewEntries, true);
@@ -80438,9 +80737,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       saveNeoBuildDiag("final");
       return generatedEvents;
     }
-    if (crewGroups.size === 0) {
+    if (!isPooledCrewBuild && crewGroups.size === 0) {
       diag.summary = { placementCount: 0, rejectionReasons: diag.rejectionReasons };
       diag.conclusion = [`Fixed Crew NEO Build found no staff with a crew group in the active Fixed Crew context (${fixedCrewContextUnits.join(", ") || fixedCrewUnit || "all units"}).`];
+      saveNeoBuildDiag("final");
+      return generatedEvents;
+    }
+    if (isPooledCrewBuild && pooledCrewStaff.length === 0) {
+      diag.summary = { placementCount: 0, rejectionReasons: diag.rejectionReasons };
+      diag.conclusion = [`Pooled Crew NEO Build found no active staff in the active Pooled Crew context (${fixedCrewContextUnits.join(", ") || fixedCrewUnit || "all units"}).`];
       saveNeoBuildDiag("final");
       return generatedEvents;
     }
