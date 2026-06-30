@@ -132,6 +132,19 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
         return cleanName.split(',')[0];
     };
+    const formatLogbookPersonName = (name?: string | null): string => {
+        const cleanName = String(name || '').split(' – ')[0].trim();
+        if (!cleanName) return '';
+        const commaParts = cleanName.split(',').map(part => part.trim()).filter(Boolean);
+        if (commaParts.length >= 2) return `${commaParts[0]}, ${commaParts.slice(1).join(' ')}`;
+        const spaceParts = cleanName.split(/\s+/).filter(Boolean);
+        if (spaceParts.length >= 2) {
+            const surname = spaceParts[spaceParts.length - 1];
+            const firstNames = spaceParts.slice(0, -1).join(' ');
+            return `${surname}, ${firstNames}`;
+        }
+        return cleanName;
+    };
     const normalisePostFlightName = (value?: string | null): string => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
     const getFixedCrewGroupCode = (value?: string | null): string => {
         const raw = String(value || '').trim().toUpperCase();
@@ -575,10 +588,10 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
         // Personnel Names
         const captainName = isFixedCrewLogbookPreview
-            ? (event.fixedCrewPic || event.pilot || event.instructor || '').split(' – ')[0]?.split(',')[0] || ''
-            : (event.instructor || event.pilot)?.split(' – ')[0]?.split(',')[0] || '';
+            ? formatLogbookPersonName(event.fixedCrewPic || event.pilot || event.instructor)
+            : formatLogbookPersonName(event.instructor || event.pilot);
         const crewName = isFixedCrewLogbookPreview
-            ? fixedCrewCoPilotNames.map(name => name.split(' – ')[0]?.split(',')[0]).join(', ')
+            ? fixedCrewCoPilotNames.map(formatLogbookPersonName).join(', ')
             : event.student?.split(' – ')[0]?.split(',')[0] || (isSolo ? 'Solo' : '');
 
         return {
@@ -613,7 +626,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             const isPic = normalisePostFlightName(staff.name) === fixedCrewPicName;
             const isP2 = !isPic && isPilotStaff(staff);
             return {
-                title: `${isPic ? 'Capt' : isP2 ? 'P2' : 'Crew'} (${getFormattedName(staff.name)})`,
+                title: formatLogbookPersonName(staff.name),
                 data: getLogbookData(isPic ? 'Captain' : isP2 ? 'P2' : 'FixedCrewCrew'),
             };
         })
@@ -1019,9 +1032,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                     <LogbookCell label="Date" value={data.date} width="w-14" />
                     <LogbookCell label="Type" value={data.type} width="w-12" />
                     <LogbookCell label="Tail" subLabel="(Mark)" value={data.tail} width="w-16" />
-                    <LogbookCell label="Captain" value={data.captain} width="w-24" />
-                    <LogbookCell label="Co-Pilot /" subLabel="Crew" value={data.crew} width="w-24" />
-                    <LogbookCell label="Duty" value={data.duty} width="w-24" customTextClass="text-[8px]" />
+                    <LogbookCell label="Captain" value={data.captain} width="w-[121px]" />
+                    <LogbookCell label="Co-Pilot /" subLabel="Crew" value={data.crew} width="w-[121px]" />
+                    <LogbookCell label="Duty" value={data.duty} width="w-[121px]" customTextClass="text-[8px]" />
 
                     {/* Day Flying */}
                     <div className="flex flex-col border-r border-gray-600">
@@ -1077,7 +1090,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     }> = ({ title, overrides, onChange }) => (
         <div className="flex flex-nowrap min-w-max border-t border-gray-700">
             {/* Row label */}
-            <div className="flex items-center justify-center w-20 flex-shrink-0 border-r border-gray-600 bg-gray-800/60 px-1">
+            <div className="flex w-[100px] flex-shrink-0 items-center justify-center border-r border-gray-600 bg-gray-800/60 px-1">
                 <span className="text-[8px] font-bold text-sky-400 text-center leading-tight truncate w-full text-center">{title}</span>
             </div>
             {/* Identity */}
@@ -1085,9 +1098,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             <EditableLogbookCell fieldKey="date"    overrides={overrides} onChange={onChange} width="w-14" readOnly />
             <EditableLogbookCell fieldKey="type"    overrides={overrides} onChange={onChange} width="w-12" readOnly />
             <EditableLogbookCell fieldKey="tail"    overrides={overrides} onChange={onChange} width="w-16" readOnly />
-            <EditableLogbookCell fieldKey="captain" overrides={overrides} onChange={onChange} width="w-24" readOnly />
-            <EditableLogbookCell fieldKey="crew"    overrides={overrides} onChange={onChange} width="w-24" readOnly />
-            <EditableLogbookCell fieldKey="duty"    overrides={overrides} onChange={onChange} width="w-24" />
+            <EditableLogbookCell fieldKey="captain" overrides={overrides} onChange={onChange} width="w-[121px]" readOnly />
+            <EditableLogbookCell fieldKey="crew"    overrides={overrides} onChange={onChange} width="w-[121px]" readOnly />
+            <EditableLogbookCell fieldKey="duty"    overrides={overrides} onChange={onChange} width="w-[121px]" />
             {/* Day Flying */}
             <div className="flex flex-col border-r border-gray-600">
                 <div className="flex">
@@ -1508,14 +1521,14 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                         <div className="flex flex-col bg-gray-900 border border-gray-600 rounded-md min-w-max">
                             {/* Shared header row */}
                             <div className="flex flex-nowrap min-w-max">
-                                <div className="w-20 flex-shrink-0 border-r border-gray-600 bg-gray-900/30" />
+                                <div className="w-[100px] flex-shrink-0 border-r border-gray-600 bg-gray-900/30" />
                                 <EditableLogbookCell label="Year"     fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-10"  readOnly />
                                 <EditableLogbookCell label="Date"     fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-14"  readOnly />
                                 <EditableLogbookCell label="Type"     fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-12"  readOnly />
                                 <EditableLogbookCell label="Tail" subLabel="(Mark)" fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-16" readOnly />
-                                <EditableLogbookCell label="Captain"  fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-24"  readOnly />
-                                <EditableLogbookCell label="Co-Pilot /" subLabel="Crew" fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-24" readOnly />
-                                <EditableLogbookCell label="Duty"     fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-24"  readOnly />
+                                <EditableLogbookCell label="Captain"  fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-[121px]"  readOnly />
+                                <EditableLogbookCell label="Co-Pilot /" subLabel="Crew" fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-[121px]" readOnly />
+                                <EditableLogbookCell label="Duty"     fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-[121px]"  readOnly />
                                 <div className="flex flex-col border-r border-gray-600">
                                     <div className="text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30">Day Flying</div>
                                     <div className="flex">
@@ -1562,13 +1575,13 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             ) : (
                                 <>
                                     <EditableLogbookRow
-                                        title={`Capt (${getFormattedName(event.instructor || event.pilot)})`}
+                                        title={formatLogbookPersonName(event.instructor || event.pilot)}
                                         overrides={captLogOverride}
                                         onChange={handleCaptLogChange}
                                     />
                                     {!isSolo && (
                                         <EditableLogbookRow
-                                            title={`Crew (${getFormattedName(event.student)})`}
+                                            title={formatLogbookPersonName(event.student)}
                                             overrides={crewLogOverride}
                                             onChange={handleCrewLogChange}
                                         />

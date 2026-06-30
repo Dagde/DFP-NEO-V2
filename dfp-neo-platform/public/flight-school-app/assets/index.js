@@ -65143,18 +65143,18 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   const [isDirty, setIsDirty] = reactExports.useState(false);
   const [saveStatus, setSaveStatus] = reactExports.useState("Saved");
   const isFirstRender = reactExports.useRef(true);
-  const getFormattedName = (name) => {
-    if (!name) return "";
-    const cleanName = name.split(" – ")[0];
-    const instructor = instructorsData.find((i) => i.name === cleanName);
-    if (instructor) {
-      return `${instructor.rank} ${cleanName.split(",")[0]}`;
+  const formatLogbookPersonName = (name) => {
+    const cleanName = String(name || "").split(" – ")[0].trim();
+    if (!cleanName) return "";
+    const commaParts = cleanName.split(",").map((part) => part.trim()).filter(Boolean);
+    if (commaParts.length >= 2) return `${commaParts[0]}, ${commaParts.slice(1).join(" ")}`;
+    const spaceParts = cleanName.split(/\s+/).filter(Boolean);
+    if (spaceParts.length >= 2) {
+      const surname = spaceParts[spaceParts.length - 1];
+      const firstNames2 = spaceParts.slice(0, -1).join(" ");
+      return `${surname}, ${firstNames2}`;
     }
-    const trainee = traineesData.find((t) => t.name === cleanName || t.fullName === name);
-    if (trainee) {
-      return `${trainee.rank} ${cleanName.split(",")[0]}`;
-    }
-    return cleanName.split(",")[0];
+    return cleanName;
   };
   const normalisePostFlightName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
   const getFixedCrewGroupCode = (value) => {
@@ -65540,8 +65540,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     const dateObj = new Date(event.date);
     const yearStr = dateObj.getFullYear().toString();
     const dateStr = dateObj.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
-    const captainName = isFixedCrewLogbookPreview ? (event.fixedCrewPic || event.pilot || event.instructor || "").split(" – ")[0]?.split(",")[0] || "" : (event.instructor || event.pilot)?.split(" – ")[0]?.split(",")[0] || "";
-    const crewName = isFixedCrewLogbookPreview ? fixedCrewCoPilotNames.map((name) => name.split(" – ")[0]?.split(",")[0]).join(", ") : event.student?.split(" – ")[0]?.split(",")[0] || (isSolo ? "Solo" : "");
+    const captainName = isFixedCrewLogbookPreview ? formatLogbookPersonName(event.fixedCrewPic || event.pilot || event.instructor) : formatLogbookPersonName(event.instructor || event.pilot);
+    const crewName = isFixedCrewLogbookPreview ? fixedCrewCoPilotNames.map(formatLogbookPersonName).join(", ") : event.student?.split(" – ")[0]?.split(",")[0] || (isSolo ? "Solo" : "");
     return {
       year: yearStr,
       date: dateStr,
@@ -65573,7 +65573,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     const isPic = normalisePostFlightName(staff.name) === fixedCrewPicName;
     const isP2 = !isPic && isPilotStaff(staff);
     return {
-      title: `${isPic ? "Capt" : isP2 ? "P2" : "Crew"} (${getFormattedName(staff.name)})`,
+      title: formatLogbookPersonName(staff.name),
       data: getLogbookData(isPic ? "Captain" : isP2 ? "P2" : "FixedCrewCrew")
     };
   }) : [];
@@ -65858,14 +65858,14 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
     ] });
   };
   const EditableLogbookRow = ({ title, overrides, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap min-w-max border-t border-gray-700", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center w-20 flex-shrink-0 border-r border-gray-600 bg-gray-800/60 px-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[8px] font-bold text-sky-400 text-center leading-tight truncate w-full text-center", children: title }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex w-[100px] flex-shrink-0 items-center justify-center border-r border-gray-600 bg-gray-800/60 px-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[8px] font-bold text-sky-400 text-center leading-tight truncate w-full text-center", children: title }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { fieldKey: "year", overrides, onChange, width: "w-10", readOnly: true }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { fieldKey: "date", overrides, onChange, width: "w-14", readOnly: true }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { fieldKey: "type", overrides, onChange, width: "w-12", readOnly: true }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { fieldKey: "tail", overrides, onChange, width: "w-16", readOnly: true }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { fieldKey: "captain", overrides, onChange, width: "w-24", readOnly: true }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { fieldKey: "crew", overrides, onChange, width: "w-24", readOnly: true }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { fieldKey: "duty", overrides, onChange, width: "w-24" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { fieldKey: "captain", overrides, onChange, width: "w-[121px]", readOnly: true }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { fieldKey: "crew", overrides, onChange, width: "w-[121px]", readOnly: true }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { fieldKey: "duty", overrides, onChange, width: "w-[121px]" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col border-r border-gray-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { fieldKey: "dayP1", overrides, onChange, width: "w-10", borderColor: "border-gray-700" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { fieldKey: "dayP2", overrides, onChange, width: "w-10", borderColor: "border-gray-700" }),
@@ -66251,7 +66251,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-900 border border-gray-600 rounded-md min-w-max", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap min-w-max", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-20 flex-shrink-0 border-r border-gray-600 bg-gray-900/30" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[100px] flex-shrink-0 border-r border-gray-600 bg-gray-900/30" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: "Year", fieldKey: "__hdr__", overrides: {}, onChange: () => {
             }, width: "w-10", readOnly: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: "Date", fieldKey: "__hdr__", overrides: {}, onChange: () => {
@@ -66261,11 +66261,11 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
             /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: "Tail", subLabel: "(Mark)", fieldKey: "__hdr__", overrides: {}, onChange: () => {
             }, width: "w-16", readOnly: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: "Captain", fieldKey: "__hdr__", overrides: {}, onChange: () => {
-            }, width: "w-24", readOnly: true }),
+            }, width: "w-[121px]", readOnly: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: "Co-Pilot /", subLabel: "Crew", fieldKey: "__hdr__", overrides: {}, onChange: () => {
-            }, width: "w-24", readOnly: true }),
+            }, width: "w-[121px]", readOnly: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: "Duty", fieldKey: "__hdr__", overrides: {}, onChange: () => {
-            }, width: "w-24", readOnly: true }),
+            }, width: "w-[121px]", readOnly: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col border-r border-gray-600", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30", children: "Day Flying" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
@@ -66329,7 +66329,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               EditableLogbookRow,
               {
-                title: `Capt (${getFormattedName(event.instructor || event.pilot)})`,
+                title: formatLogbookPersonName(event.instructor || event.pilot),
                 overrides: captLogOverride,
                 onChange: handleCaptLogChange
               }
@@ -66337,7 +66337,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
             !isSolo && /* @__PURE__ */ jsxRuntimeExports.jsx(
               EditableLogbookRow,
               {
-                title: `Crew (${getFormattedName(event.student)})`,
+                title: formatLogbookPersonName(event.student),
                 overrides: crewLogOverride,
                 onChange: handleCrewLogChange
               }
