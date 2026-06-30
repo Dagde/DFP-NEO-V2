@@ -140,7 +140,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     String(value).toUpperCase() === 'DEMO' ? 'DEMO' : String(value)
   );
   const [isEditMode, setIsEditMode] = useState(startInEditMode);
-  const [showRecentEventPicker, setShowRecentEventPicker] = useState(startInEditMode);
+  const [showRecentEventPicker, setShowRecentEventPicker] = useState(false);
   const [selectedSourceEvent, setSelectedSourceEvent] = useState<ScheduleEvent | undefined>(sourceEvent);
   const activeSourceEvent = selectedSourceEvent || sourceEvent;
   const [eventCodeField, setEventCodeField] = useState(initialReport?.eventCode || item?.code || sourceEvent?.flightNumber || sourceEvent?.eventCode || '');
@@ -201,6 +201,19 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     </div>
   );
   const editInputClass = 'mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-500';
+  const getRecentEventPic = (event: ScheduleEvent): string => (
+    String((event as any).fixedCrewPic || event.pilot || event.instructor || '').trim() || '-'
+  );
+  const getRecentEventCoPilot = (event: ScheduleEvent): string => (
+    String(event.crew || (Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder.find(name => name !== getRecentEventPic(event)) : '') || '').trim() || '-'
+  );
+  const getRecentEventTitle = (event: ScheduleEvent): string => {
+    const code = String(event.flightNumber || (event as any).eventCode || '').trim();
+    const matched = syllabusDetails.find(candidate => (
+      String(candidate.code || '').trim().toUpperCase() === code.toUpperCase()
+    ));
+    return String(matched?.eventDescription || (event as any).notes || matched?.module || code || 'Event').trim();
+  };
   const renderEventDataField = (
     label: string,
     value: string,
@@ -221,6 +234,54 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
           />
         ) : (
           value || fallback
+        )}
+      </dd>
+    </div>
+  );
+  const renderEventSelectorField = () => (
+    <div className="relative">
+      <dt className="text-sm font-medium text-gray-400">{overviewFields.event}</dt>
+      <dd className="mt-1 text-sm font-semibold text-white">
+        {isEditMode ? (
+          <>
+            <input
+              value={eventCode}
+              onFocus={() => setShowRecentEventPicker(true)}
+              onClick={() => setShowRecentEventPicker(true)}
+              onBlur={() => window.setTimeout(() => setShowRecentEventPicker(false), 120)}
+              onChange={(event) => {
+                setEventCodeField(event.target.value);
+                setSaveStatus('Unsaved');
+              }}
+              className={editInputClass}
+            />
+            {showRecentEventPicker && (
+              <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-md border border-sky-500/40 bg-gray-950 shadow-xl">
+                {recentEvents.length > 0 ? (
+                  recentEvents.slice(0, 5).map(event => (
+                    <button
+                      key={event.id}
+                      type="button"
+                      onMouseDown={(clickEvent) => {
+                        clickEvent.preventDefault();
+                        selectRecentEvent(event);
+                      }}
+                      className="grid w-full grid-cols-[82px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-2 border-b border-gray-800 px-2 py-2 text-left text-[11px] last:border-b-0 hover:bg-sky-950/40"
+                    >
+                      <span className="font-mono text-gray-300">{event.date || '-'}</span>
+                      <span className="truncate text-white">{getRecentEventPic(event)}</span>
+                      <span className="truncate text-gray-300">{getRecentEventCoPilot(event)}</span>
+                      <span className="truncate font-semibold text-sky-200">{getRecentEventTitle(event)}</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-2 py-3 text-xs text-gray-400">No recent flown events found for this staff member.</div>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          eventCode || 'N/A'
         )}
       </dd>
     </div>
@@ -450,7 +511,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                 onClick={() => {
                   setIsEditMode(prev => {
                     const next = !prev;
-                    if (next) setShowRecentEventPicker(true);
+                    if (!next) setShowRecentEventPicker(false);
                     return next;
                   });
                 }}
@@ -468,54 +529,9 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
           <div className="p-4 md:p-6">
             <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
               <dl
-                onClick={() => {
-                  if (isEditMode) setShowRecentEventPicker(true);
-                }}
-                className={`space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 ${isEditMode ? 'cursor-pointer border-sky-500/60' : 'border-gray-700'}`}
+                className={`space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 ${isEditMode ? 'border-sky-500/60' : 'border-gray-700'}`}
               >
-                {isEditMode && showRecentEventPicker && (
-                  <div className="mb-3 rounded border border-sky-500/30 bg-gray-950/80 p-2">
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <div className="text-[10px] font-bold uppercase tracking-wide text-sky-300">Recent Flights</div>
-                      <button
-                        type="button"
-                        onClick={(clickEvent) => {
-                          clickEvent.stopPropagation();
-                          setShowRecentEventPicker(false);
-                        }}
-                        className="text-[10px] font-semibold text-gray-500 hover:text-white"
-                      >
-                        Close
-                      </button>
-                    </div>
-                    {recentEvents.length > 0 ? (
-                      <div className="space-y-1">
-                        {recentEvents.slice(0, 5).map(event => (
-                          <button
-                            key={event.id}
-                            type="button"
-                            onClick={(clickEvent) => {
-                              clickEvent.stopPropagation();
-                              selectRecentEvent(event);
-                            }}
-                            className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-left hover:border-sky-500 hover:bg-sky-950/30"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-bold text-white">{event.flightNumber || event.eventCode || 'Event'}</span>
-                              <span className="font-mono text-[10px] text-gray-400">{event.date || '-'} {formatTimeToHHMM(event.startTime)}</span>
-                            </div>
-                            <div className="truncate text-[10px] text-gray-500">{event.callsign || event.resourceId || event.notes || '-'}</div>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="rounded border border-gray-700 bg-gray-900 px-2 py-3 text-xs text-gray-400">
-                        No recent flown events found for this staff member.
-                      </div>
-                    )}
-                  </div>
-                )}
-                {renderEventDataField(overviewFields.event, eventCode, setEventCodeField, 'N/A')}
+                {renderEventSelectorField()}
                 {renderEventDataField(overviewFields.type, eventDescription, setEventDescriptionField, eventType || 'N/A')}
                 <div><dt className="text-sm font-medium text-gray-400">Staff</dt><dd className="mt-1 text-sm font-semibold text-white">{staff.rank} {staff.name}</dd></div>
                 {renderEventDataField(overviewFields.training, trainingCode, setTrainingCodeField)}

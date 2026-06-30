@@ -46569,7 +46569,7 @@ const AirCombatTrainingReportModal = ({
   };
   const formatGradeNumber = (value) => String(value).toUpperCase() === "DEMO" ? "DEMO" : String(value);
   const [isEditMode, setIsEditMode] = reactExports.useState(startInEditMode);
-  const [showRecentEventPicker, setShowRecentEventPicker] = reactExports.useState(startInEditMode);
+  const [showRecentEventPicker, setShowRecentEventPicker] = reactExports.useState(false);
   const [selectedSourceEvent, setSelectedSourceEvent] = reactExports.useState(sourceEvent);
   const activeSourceEvent = selectedSourceEvent || sourceEvent;
   const [eventCodeField, setEventCodeField] = reactExports.useState(initialReport?.eventCode || item?.code || sourceEvent?.flightNumber || sourceEvent?.eventCode || "");
@@ -46609,6 +46609,13 @@ const AirCombatTrainingReportModal = ({
   const [saveStatus, setSaveStatus] = reactExports.useState("Saved");
   const reportId = reactExports.useMemo(() => initialReport?.id || `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode2}-${Date.now()}`, [eventCode2, initialReport?.id, item?.id, sourceEvent?.id, staff.idNumber]);
   const editInputClass = "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-500";
+  const getRecentEventPic = (event) => String(event.fixedCrewPic || event.pilot || event.instructor || "").trim() || "-";
+  const getRecentEventCoPilot = (event) => String(event.crew || (Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder.find((name) => name !== getRecentEventPic(event)) : "") || "").trim() || "-";
+  const getRecentEventTitle = (event) => {
+    const code = String(event.flightNumber || event.eventCode || "").trim();
+    const matched = syllabusDetails.find((candidate) => String(candidate.code || "").trim().toUpperCase() === code.toUpperCase());
+    return String(matched?.eventDescription || event.notes || matched?.module || code || "Event").trim();
+  };
   const renderEventDataField = (label, value, onChange, fallback = "-") => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: isEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -46622,6 +46629,43 @@ const AirCombatTrainingReportModal = ({
         className: editInputClass
       }
     ) : value || fallback })
+  ] });
+  const renderEventSelectorField = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.event }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: isEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          value: eventCode2,
+          onFocus: () => setShowRecentEventPicker(true),
+          onClick: () => setShowRecentEventPicker(true),
+          onBlur: () => window.setTimeout(() => setShowRecentEventPicker(false), 120),
+          onChange: (event) => {
+            setEventCodeField(event.target.value);
+            setSaveStatus("Unsaved");
+          },
+          className: editInputClass
+        }
+      ),
+      showRecentEventPicker && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-md border border-sky-500/40 bg-gray-950 shadow-xl", children: recentEvents.length > 0 ? recentEvents.slice(0, 5).map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          type: "button",
+          onMouseDown: (clickEvent) => {
+            clickEvent.preventDefault();
+            selectRecentEvent(event);
+          },
+          className: "grid w-full grid-cols-[82px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-2 border-b border-gray-800 px-2 py-2 text-left text-[11px] last:border-b-0 hover:bg-sky-950/40",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300", children: event.date || "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-white", children: getRecentEventPic(event) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-gray-300", children: getRecentEventCoPilot(event) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-sky-200", children: getRecentEventTitle(event) })
+          ]
+        },
+        event.id
+      )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-3 text-xs text-gray-400", children: "No recent flown events found for this staff member." }) })
+    ] }) : eventCode2 || "N/A" })
   ] });
   const assessmentElements = reactExports.useMemo(() => {
     const source = Array.isArray(matchedItem?.assessedElements) && matchedItem.assessedElements.length > 0 ? matchedItem.assessedElements : ["Airmanship", "Preparation", "Technique"];
@@ -46843,7 +46887,7 @@ const AirCombatTrainingReportModal = ({
               onClick: () => {
                 setIsEditMode((prev) => {
                   const next = !prev;
-                  if (next) setShowRecentEventPicker(true);
+                  if (!next) setShowRecentEventPicker(false);
                   return next;
                 });
               },
@@ -46862,52 +46906,9 @@ const AirCombatTrainingReportModal = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "dl",
             {
-              onClick: () => {
-                if (isEditMode) setShowRecentEventPicker(true);
-              },
-              className: `space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 ${isEditMode ? "cursor-pointer border-sky-500/60" : "border-gray-700"}`,
+              className: `space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 ${isEditMode ? "border-sky-500/60" : "border-gray-700"}`,
               children: [
-                isEditMode && showRecentEventPicker && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded border border-sky-500/30 bg-gray-950/80 p-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-wide text-sky-300", children: "Recent Flights" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        type: "button",
-                        onClick: (clickEvent) => {
-                          clickEvent.stopPropagation();
-                          setShowRecentEventPicker(false);
-                        },
-                        className: "text-[10px] font-semibold text-gray-500 hover:text-white",
-                        children: "Close"
-                      }
-                    )
-                  ] }),
-                  recentEvents.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: recentEvents.slice(0, 5).map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: (clickEvent) => {
-                        clickEvent.stopPropagation();
-                        selectRecentEvent(event);
-                      },
-                      className: "w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-left hover:border-sky-500 hover:bg-sky-950/30",
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-white", children: event.flightNumber || event.eventCode || "Event" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-[10px] text-gray-400", children: [
-                            event.date || "-",
-                            " ",
-                            formatTimeToHHMM(event.startTime)
-                          ] })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[10px] text-gray-500", children: event.callsign || event.resourceId || event.notes || "-" })
-                      ]
-                    },
-                    event.id
-                  )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-3 text-xs text-gray-400", children: "No recent flown events found for this staff member." })
-                ] }),
-                renderEventDataField(overviewFields.event, eventCode2, setEventCodeField, "N/A"),
+                renderEventSelectorField(),
                 renderEventDataField(overviewFields.type, eventDescription, setEventDescriptionField, eventType || "N/A"),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Staff" }),
