@@ -170,7 +170,7 @@ const UnavailabilityReportModal: React.FC<UnavailabilityReportModalProps> = ({
     const formattedHeaderDate = useMemo(() => {
         const [year, month, day] = date.split('-').map(Number);
         const dateObj = new Date(Date.UTC(year, month - 1, day));
-        return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+        return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' });
     }, [date]);
 
     return (

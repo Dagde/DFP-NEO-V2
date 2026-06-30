@@ -270,7 +270,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
     if (!timestamp) return '';
     const date = new Date(timestamp);
     const day = String(date.getDate()).padStart(2, '0');
-    const month = date.toLocaleString('en-GB', { month: 'short' }).toUpperCase();
+    const month = date.toLocaleString('en-GB', { month: 'short' });
     const year = String(date.getFullYear()).slice(-2);
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');

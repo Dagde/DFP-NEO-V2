@@ -278,7 +278,7 @@ export default function DatabaseAdmin() {
                         </div>
                       </div>
                       <div className="text-xs text-gray-500">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {new Date(user.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}
                       </div>
                     </div>
                   ))}

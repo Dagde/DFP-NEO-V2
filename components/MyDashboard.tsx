@@ -34,9 +34,9 @@ const formatDate = (dateString: string | undefined): string => {
         const date = new Date(dateString + 'T00:00:00Z');
         if (isNaN(date.getTime())) return '-';
         const day = String(date.getUTCDate()).padStart(2, '0');
-        const month = date.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' }).toUpperCase();
+        const month = date.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
         const year = String(date.getUTCFullYear()).slice(-2);
-        return `${day}${month}${year}`;
+        return `${day} ${month} ${year}`;
     } catch (e) {
         return '-';
     }

@@ -117,7 +117,7 @@ export const exportAuditLogsCSV = (page?: string): string => {
   
   const headers = ['Date', 'Time', 'User', 'Action', 'Description', 'Changes', 'Page'];
   const rows = logs.map(log => [
-    log.timestamp.toLocaleDateString(),
+    log.timestamp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
     log.timestamp.toLocaleTimeString(),
     log.user,
     log.action,

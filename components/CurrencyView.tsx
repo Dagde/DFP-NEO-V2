@@ -221,10 +221,10 @@ const CurrencyView: React.FC<CurrencyViewProps> = ({
                                                         style={{ colorScheme: 'dark' }}
                                                     />
                                                 ) : (
-                                                    lastEventDate ? lastEventDate.toLocaleDateString('en-GB', { timeZone: 'UTC' }) : '---'
+                                                    lastEventDate ? lastEventDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' }) : '---'
                                                 )}
                                             </td>
-                                            <td className="px-4 py-3 text-center text-sm text-gray-300 font-mono">{expiryDate ? expiryDate.toLocaleDateString('en-GB', { timeZone: 'UTC' }) : '---'}</td>
+                                            <td className="px-4 py-3 text-center text-sm text-gray-300 font-mono">{expiryDate ? expiryDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' }) : '---'}</td>
                                             <td className={`px-4 py-3 text-center text-sm font-bold ${daysRemaining !== null ? getDaysRemainingColor(daysRemaining) : ''}`}>{daysRemaining !== null ? daysRemaining : '---'}</td>
                                             <td className="px-4 py-3 text-center text-sm text-gray-300 font-mono">---</td>
                                         </tr>

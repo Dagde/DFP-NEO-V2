@@ -37,7 +37,7 @@ function formatDateDisplay(dateStr: string): string {
   if (!dateStr) return '---';
   const d = parseDate(dateStr);
   if (!d) return dateStr;
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'UTC' });
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' });
 }
 
 function addDaysToDate(dateStr: string, days: number): string {
@@ -567,14 +567,14 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
                       />
                     ) : (
                       lastEventDate
-                        ? lastEventDate.toLocaleDateString('en-GB', { timeZone: 'UTC' })
+                        ? lastEventDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' })
                         : '---'
                     )}
                   </td>
                   {/* Expires */}
                   <td className="px-2 py-1.5 text-center text-gray-300 font-mono whitespace-nowrap">
                     {isInactive ? '---' : expiryDate
-                      ? expiryDate.toLocaleDateString('en-GB', { timeZone: 'UTC' })
+                      ? expiryDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' })
                       : '---'}
                   </td>
                   {/* Days Remaining */}

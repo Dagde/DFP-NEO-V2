@@ -597,7 +597,7 @@ const parseDateOnly = (value: any): Date | null => {
 const formatDateLabel = (value: any): string => {
   const parsed = parseDateOnly(value);
   if (!parsed) return 'Not set';
-  return parsed.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+  return parsed.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: '2-digit' });
 };
 
 const getLicenceStatusSummary = (license: any) => {

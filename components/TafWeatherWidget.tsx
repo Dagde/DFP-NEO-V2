@@ -328,7 +328,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
                                            {data.isCached && (
                                                <div className="mt-2 text-xs text-yellow-500/70 italic">
                                                    ⚠️ Old cached data - provided for display purposes only
-                                                   {data.cacheTimestamp && ` (Cached: ${new Date(data.cacheTimestamp).toLocaleDateString()})`}
+                                                   {data.cacheTimestamp && ` (Cached: ${new Date(data.cacheTimestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })})`}
                                                </div>
                                            )}
                                        </>

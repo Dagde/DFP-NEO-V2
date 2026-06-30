@@ -508,7 +508,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
                                                 setShowCalendarDropdown(false);
                                             }}
                                             className={`w-full text-left text-xs px-2 py-1 rounded hover:bg-gray-600 ${d === date ? 'bg-blue-700 text-white' : 'text-gray-300'}`}
-                                        >{new Date(`${d}T00:00:00Z`).toLocaleDateString('en-AU', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</button>
+                                        >{new Date(`${d}T00:00:00Z`).toLocaleDateString('en-AU', { weekday: 'short', day: '2-digit', month: 'short', year: '2-digit' })}</button>
                                     ))}
                                 </div>
                             </>

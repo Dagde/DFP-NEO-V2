@@ -53,7 +53,7 @@ const PT051HateSheetView: React.FC<PT051HateSheetViewProps> = ({
                   </span>
                 </div>
                 <div style={{ fontSize: '0.9em', color: '#666' }}>
-                  <div><strong>Date:</strong> {new Date(assessment.date).toLocaleDateString()}</div>
+                  <div><strong>Date:</strong> {new Date(assessment.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</div>
                   <div><strong>Instructor:</strong> {assessment.instructorName}</div>
                   {assessment.overallGrade && (
                     <div><strong>Grade:</strong> {assessment.overallGrade}</div>
@@ -117,7 +117,7 @@ const PT051HateSheetView: React.FC<PT051HateSheetViewProps> = ({
                   </span>
                 </div>
                 <div style={{ fontSize: '0.9em', color: '#666' }}>
-                  <div><strong>Date:</strong> {new Date(score.date).toLocaleDateString()}</div>
+                  <div><strong>Date:</strong> {new Date(score.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</div>
                   <div><strong>Instructor:</strong> {score.instructor}</div>
                   {score.notes && <div><strong>Notes:</strong> {score.notes}</div>}
                 </div>

@@ -219,11 +219,11 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                 <div className="space-y-2 text-sm text-gray-300">
                     <div className="flex justify-between">
                         <span className="text-gray-400">Start Date:</span>
-                        <span>{new Date(course.startDate).toLocaleDateString()}</span>
+                        <span>{new Date(course.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-gray-400">Grad Date:</span>
-                        <span>{new Date(course.gradDate).toLocaleDateString()}</span>
+                        <span>{new Date(course.gradDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-gray-400">Total Students:</span>

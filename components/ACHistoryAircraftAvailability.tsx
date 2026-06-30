@@ -322,7 +322,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   // ── Export helpers ────────────────────────────────────────────────────────────
   const formatDateFull = (dateStr: string): string => {
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('en-AU', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString('en-AU', { weekday: 'short', day: '2-digit', month: 'short', year: '2-digit' });
   };
 
   const exportCSV = () => {
@@ -962,7 +962,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
                   {todaysAverageDate && (
                     <div className="flex justify-between">
                       <span className="text-gray-500">Date:</span>
-                      <span>{new Date(todaysAverageDate + 'T00:00:00').toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      <span>{new Date(todaysAverageDate + 'T00:00:00').toLocaleDateString('en-AU', { weekday: 'short', day: '2-digit', month: 'short', year: '2-digit' })}</span>
                     </div>
                   )}
                   {todaysFlyingWindowStart && todaysFlyingWindowEnd && (
@@ -1128,7 +1128,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
                 {[...records].reverse().map((r, idx) => {
                   const d = new Date(r.date + 'T00:00:00');
                   const dayName = d.toLocaleDateString('en-AU', { weekday: 'long' });
-                  const dateDisplay = d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+                  const dateDisplay = d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: '2-digit' });
                   return (
                     <tr key={r.id} className={`border-b border-gray-700/40 hover:bg-gray-700/20 transition-colors ${idx % 2 === 1 ? 'bg-gray-800/20' : ''}`}>
                       <td className="py-2.5 px-4 text-white font-mono text-xs">{dateDisplay}</td>

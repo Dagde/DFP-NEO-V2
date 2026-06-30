@@ -491,7 +491,7 @@ const formatUnavailabilityDate = (dateValue?: string | null): string => {
     return parsedDate.toLocaleDateString('en-GB', {
         day: '2-digit',
         month: 'short',
-        year: 'numeric',
+        year: '2-digit',
         timeZone: 'UTC',
     });
 };
@@ -3739,7 +3739,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         {alertData?.sentAt && (
                                             <p className="text-gray-400 text-xs">
                                                 {new Date(alertData.sentAt).toLocaleString('en-AU', {
-                                                    day: '2-digit', month: 'short', year: 'numeric',
+                                                    day: '2-digit', month: 'short', year: '2-digit',
                                                     hour: '2-digit', minute: '2-digit', hour12: false
                                                 })}
                                             </p>

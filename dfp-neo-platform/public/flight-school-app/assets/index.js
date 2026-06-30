@@ -633,7 +633,7 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
     if (!val) return "Never";
     try {
       const d = typeof val === "number" ? new Date(val) : new Date(val);
-      return d.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
+      return d.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "2-digit" });
     } catch {
       return String(val);
     }
@@ -4933,7 +4933,7 @@ const AuditFlyout = ({
           <tbody>
             ${sortedLogs.map((log) => `
               <tr>
-                <td>${log.timestamp.toLocaleDateString()}</td>
+                <td>${log.timestamp.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}</td>
                 <td>${log.timestamp.toLocaleTimeString()}</td>
                 <td>${log.user}</td>
                 <td>${log.action}</td>
@@ -4954,7 +4954,7 @@ const AuditFlyout = ({
     const headers = ["Date", "Time", "User", "Action", "Description", "Changes", "Page"];
     const escapeCsv = (value) => `"${String(value || "").replaceAll('"', '""')}"`;
     const rows = sortedLogs.map((log) => [
-      log.timestamp.toLocaleDateString(),
+      log.timestamp.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }),
       log.timestamp.toLocaleTimeString(),
       log.user,
       log.action,
@@ -5065,7 +5065,7 @@ const AuditFlyout = ({
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: sortedLogs.map((log) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/50", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: log.timestamp.toLocaleDateString() }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: log.timestamp.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: log.timestamp.toLocaleTimeString() })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: log.user }),
@@ -10539,7 +10539,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                     setShowCalendarDropdown(false);
                   },
                   className: `w-full text-left text-xs px-2 py-1 rounded hover:bg-gray-600 ${d === date ? "bg-blue-700 text-white" : "text-gray-300"}`,
-                  children: (/* @__PURE__ */ new Date(`${d}T00:00:00Z`)).toLocaleDateString("en-AU", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })
+                  children: (/* @__PURE__ */ new Date(`${d}T00:00:00Z`)).toLocaleDateString("en-AU", { weekday: "short", day: "2-digit", month: "short", year: "2-digit" })
                 },
                 d
               )) })
@@ -11196,7 +11196,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                     setShowCalendarDropdown(false);
                   },
                   className: `w-full text-left text-xs px-2 py-1 rounded hover:bg-gray-600 ${d === date ? "bg-blue-700 text-white" : "text-gray-300"}`,
-                  children: (/* @__PURE__ */ new Date(`${d}T00:00:00Z`)).toLocaleDateString("en-AU", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })
+                  children: (/* @__PURE__ */ new Date(`${d}T00:00:00Z`)).toLocaleDateString("en-AU", { weekday: "short", day: "2-digit", month: "short", year: "2-digit" })
                 },
                 d
               )) })
@@ -12248,8 +12248,8 @@ const CurrencyPanel = ({
                 className: "h-[20px] text-[10px] bg-gray-700 border border-gray-600 rounded px-1 text-white focus:outline-none focus:ring-1 focus:ring-sky-500 w-[110px]",
                 style: { colorScheme: "dark" }
               }
-            ) : lastEventDate ? lastEventDate.toLocaleDateString("en-GB", { timeZone: "UTC" }) : "---" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-1.5 text-center text-gray-300 font-mono whitespace-nowrap", children: isInactive ? "---" : expiryDate ? expiryDate.toLocaleDateString("en-GB", { timeZone: "UTC" }) : "---" }),
+            ) : lastEventDate ? lastEventDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit", timeZone: "UTC" }) : "---" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-1.5 text-center text-gray-300 font-mono whitespace-nowrap", children: isInactive ? "---" : expiryDate ? expiryDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit", timeZone: "UTC" }) : "---" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-1.5 text-center font-bold whitespace-nowrap ${daysColor}`, children: isInactive ? "---" : daysRemaining !== null ? daysRemaining : "---" }),
             isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-2 py-1.5 text-center", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -12292,7 +12292,7 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
       return d.toLocaleString("en-GB", {
         day: "2-digit",
         month: "short",
-        year: "numeric",
+        year: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
         hour12: false
@@ -18109,7 +18109,7 @@ const formatUnavailabilityDate = (dateValue) => {
   return parsedDate.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
-    year: "numeric",
+    year: "2-digit",
     timeZone: "UTC"
   });
 };
@@ -20716,7 +20716,7 @@ ${swapNote}` : swapNote
           alertData?.sentAt && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: new Date(alertData.sentAt).toLocaleString("en-AU", {
             day: "2-digit",
             month: "short",
-            year: "numeric",
+            year: "2-digit",
             hour: "2-digit",
             minute: "2-digit",
             hour12: false
@@ -25488,7 +25488,7 @@ const TafWeatherWidget = ({ onClose }) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-900 rounded p-3 mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { className: "text-xs text-green-400 font-mono whitespace-pre-wrap break-words", children: highlightTafText(data.raw) }) }),
           data.isCached && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-xs text-yellow-500/70 italic", children: [
             "⚠️ Old cached data - provided for display purposes only",
-            data.cacheTimestamp && ` (Cached: ${new Date(data.cacheTimestamp).toLocaleDateString()})`
+            data.cacheTimestamp && ` (Cached: ${new Date(data.cacheTimestamp).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })})`
           ] })
         ] })
       ] }, location);
@@ -25507,9 +25507,9 @@ const formatDate$2 = (dateString) => {
     const date = /* @__PURE__ */ new Date(dateString + "T00:00:00Z");
     if (isNaN(date.getTime())) return "-";
     const day = String(date.getUTCDate()).padStart(2, "0");
-    const month = date.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" }).toUpperCase();
+    const month = date.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
     const year = String(date.getUTCFullYear()).slice(-2);
-    return `${day}${month}${year}`;
+    return `${day} ${month} ${year}`;
   } catch (e) {
     return "-";
   }
@@ -28824,7 +28824,7 @@ const PrioritiesView = ({
       const day = String(parsedDate.getUTCDate()).padStart(2, "0");
       const month = parsedDate.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
       const year = String(parsedDate.getUTCFullYear()).slice(-2);
-      return `${day}${month}${year}`;
+      return `${day} ${month} ${year}`;
     } catch {
       return "Any";
     }
@@ -38757,7 +38757,7 @@ const ACHistoryAircraftAvailability = ({
           todaysAverageDate && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400 mt-2 pt-2 border-t border-gray-700/50 space-y-0.5", children: [
             todaysAverageDate && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Date:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: (/* @__PURE__ */ new Date(todaysAverageDate + "T00:00:00")).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: (/* @__PURE__ */ new Date(todaysAverageDate + "T00:00:00")).toLocaleDateString("en-AU", { weekday: "short", day: "2-digit", month: "short", year: "2-digit" }) })
             ] }),
             todaysFlyingWindowStart && todaysFlyingWindowEnd && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Flying Window:" }),
@@ -38916,7 +38916,7 @@ const ACHistoryAircraftAvailability = ({
           [...records].reverse().map((r, idx) => {
             const d = /* @__PURE__ */ new Date(r.date + "T00:00:00");
             const dayName = d.toLocaleDateString("en-AU", { weekday: "long" });
-            const dateDisplay = d.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
+            const dateDisplay = d.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "2-digit" });
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: `border-b border-gray-700/40 hover:bg-gray-700/20 transition-colors ${idx % 2 === 1 ? "bg-gray-800/20" : ""}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-white font-mono text-xs", children: dateDisplay }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-gray-300 text-xs", children: dayName }),
@@ -39057,7 +39057,7 @@ const RecentCancellationsTable = ({
       return "Invalid Date";
     }
     return date.toLocaleDateString("en-US", {
-      year: "numeric",
+      year: "2-digit",
       month: "short",
       day: "numeric",
       hour: "2-digit",
@@ -39405,8 +39405,7 @@ const BuildDateWarningFlyout = ({ onConfirm, onCancel, date }) => {
   const dateObj = new Date(Date.UTC(year, month - 1, day));
   const formattedDate = dateObj.toLocaleDateString("en-GB", {
     weekday: "long",
-    year: "numeric",
-    // Changed to numeric for clarity
+    year: "2-digit",
     month: "long",
     day: "numeric",
     timeZone: "UTC"
@@ -46012,7 +46011,7 @@ const PublishConfirmationFlyout = ({ date, onConfirm, onCancel }) => {
   const dateObj = new Date(Date.UTC(year, month - 1, day));
   const formattedDate = dateObj.toLocaleDateString("en-GB", {
     weekday: "long",
-    year: "numeric",
+    year: "2-digit",
     month: "long",
     day: "numeric",
     timeZone: "UTC"
@@ -46279,7 +46278,7 @@ const CurrencyStatusPage = ({
     const expiryDateStr = !isInactive && displayDate ? (() => {
       const d = new Date(displayDate);
       d.setDate(d.getDate() + validityDays);
-      return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+      return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
     })() : "—";
     const rowOpacity = isInactive && !isEditing ? "opacity-40" : "";
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: `hover:bg-gray-700/30 transition-colors ${rowOpacity}`, children: [
@@ -47509,7 +47508,7 @@ const AuthorisationFlyout = ({
     if (!timestamp) return "";
     const date = new Date(timestamp);
     const day = String(date.getDate()).padStart(2, "0");
-    const month = date.toLocaleString("en-GB", { month: "short" }).toUpperCase();
+    const month = date.toLocaleString("en-GB", { month: "short" });
     const year = String(date.getFullYear()).slice(-2);
     const hours = String(date.getHours()).padStart(2, "0");
     const minutes = String(date.getMinutes()).padStart(2, "0");
@@ -49790,7 +49789,7 @@ const EmergencyPage = ({
     return date.toLocaleString("en-GB", {
       day: "2-digit",
       month: "short",
-      year: "numeric",
+      year: "2-digit",
       hour: "2-digit",
       minute: "2-digit"
     });
@@ -57168,7 +57167,7 @@ const parseDateOnly = (value) => {
 const formatDateLabel = (value) => {
   const parsed = parseDateOnly(value);
   if (!parsed) return "Not set";
-  return parsed.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
+  return parsed.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "2-digit" });
 };
 const getLicenceStatusSummary = (license) => {
   const status = String(license.status || "ACTIVE").toUpperCase();
@@ -63206,7 +63205,7 @@ const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
       if (data.alreadySeeded && !force) {
         setMetadata(data);
         setStatus("idle");
-        setError(`Data already seeded on ${new Date(data.seededAt).toLocaleDateString()}. Use "Force Reseed" to regenerate.`);
+        setError(`Data already seeded on ${new Date(data.seededAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}. Use "Force Reseed" to regenerate.`);
         return;
       }
       if (!data.success) {
@@ -63278,7 +63277,7 @@ const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-green-300 font-medium", children: "Historical data is seeded" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-green-400/70 mt-0.5", children: [
           "Seeded ",
-          new Date(metadata.seededAt).toLocaleDateString(),
+          new Date(metadata.seededAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }),
           " · ",
           metadata?.eventCount?.toLocaleString(),
           " events · ",
@@ -63287,7 +63286,7 @@ const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
         ] }),
         metadata?.lastRefreshed && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-green-400/70", children: [
           "Last refreshed: ",
-          new Date(metadata.lastRefreshed).toLocaleDateString()
+          new Date(metadata.lastRefreshed).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-green-400/60 text-xs mt-1", children: [
           "Courses: ",
@@ -68531,11 +68530,11 @@ const CoursesManagementView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-sm text-gray-300", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Start Date:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: new Date(course.startDate).toLocaleDateString() })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: new Date(course.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Grad Date:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: new Date(course.gradDate).toLocaleDateString() })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: new Date(course.gradDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Total Students:" }),
@@ -70812,7 +70811,7 @@ const UnavailabilityReportModal = ({
   const formattedHeaderDate = reactExports.useMemo(() => {
     const [year, month, day] = date.split("-").map(Number);
     const dateObj = new Date(Date.UTC(year, month - 1, day));
-    return dateObj.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+    return dateObj.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit", timeZone: "UTC" });
   }, [date]);
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-50 flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl h-[80vh] flex flex-col border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [

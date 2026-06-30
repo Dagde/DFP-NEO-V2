@@ -2008,7 +2008,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       const day = String(parsedDate.getUTCDate()).padStart(2, '0');
       const month = parsedDate.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
       const year = String(parsedDate.getUTCFullYear()).slice(-2);
-      return `${day}${month}${year}`;
+      return `${day} ${month} ${year}`;
     } catch {
       return 'Any';
     }

@@ -63,7 +63,7 @@ export const HistoricalDataSeeder: React.FC<HistoricalDataSeederProps> = ({ onCl
             if (data.alreadySeeded && !force) {
                 setMetadata(data);
                 setStatus('idle');
-                setError(`Data already seeded on ${new Date(data.seededAt).toLocaleDateString()}. Use "Force Reseed" to regenerate.`);
+                setError(`Data already seeded on ${new Date(data.seededAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}. Use "Force Reseed" to regenerate.`);
                 return;
             }
             if (!data.success) {
@@ -145,10 +145,10 @@ export const HistoricalDataSeeder: React.FC<HistoricalDataSeederProps> = ({ onCl
                         <div className="text-sm">
                             <p className="text-green-300 font-medium">Historical data is seeded</p>
                             <p className="text-green-400/70 mt-0.5">
-                                Seeded {new Date(metadata!.seededAt!).toLocaleDateString()} · {metadata?.eventCount?.toLocaleString()} events · {metadata?.pt051Count?.toLocaleString()} PT-051s
+                                Seeded {new Date(metadata!.seededAt!).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })} · {metadata?.eventCount?.toLocaleString()} events · {metadata?.pt051Count?.toLocaleString()} PT-051s
                             </p>
                             {metadata?.lastRefreshed && (
-                                <p className="text-green-400/70">Last refreshed: {new Date(metadata.lastRefreshed).toLocaleDateString()}</p>
+                                <p className="text-green-400/70">Last refreshed: {new Date(metadata.lastRefreshed).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</p>
                             )}
                             <p className="text-green-400/60 text-xs mt-1">
                                 Courses: {(metadata?.coursesSeeded || []).join(', ')}

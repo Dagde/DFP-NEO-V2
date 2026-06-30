@@ -330,7 +330,7 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
     const expiryDateStr = (!isInactive && displayDate) ? (() => {
       const d = new Date(displayDate);
       d.setDate(d.getDate() + validityDays);
-      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
     })() : '—';
 
     const rowOpacity = isInactive && !isEditing ? 'opacity-40' : '';

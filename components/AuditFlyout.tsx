@@ -152,7 +152,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
           <tbody>
             ${sortedLogs.map(log => `
               <tr>
-                <td>${log.timestamp.toLocaleDateString()}</td>
+                <td>${log.timestamp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</td>
                 <td>${log.timestamp.toLocaleTimeString()}</td>
                 <td>${log.user}</td>
                 <td>${log.action}</td>
@@ -175,7 +175,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     const headers = ['Date', 'Time', 'User', 'Action', 'Description', 'Changes', 'Page'];
     const escapeCsv = (value: string) => `"${String(value || '').replaceAll('"', '""')}"`;
     const rows = sortedLogs.map(log => [
-      log.timestamp.toLocaleDateString(),
+      log.timestamp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
       log.timestamp.toLocaleTimeString(),
       log.user,
       log.action,
@@ -296,7 +296,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                   {sortedLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-gray-700/50">
                       <td className="px-4 py-3 whitespace-nowrap text-gray-300">
-                        <div>{log.timestamp.toLocaleDateString()}</div>
+                        <div>{log.timestamp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</div>
                         <div className="text-xs text-gray-500">{log.timestamp.toLocaleTimeString()}</div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-gray-300">

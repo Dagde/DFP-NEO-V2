@@ -154,7 +154,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ sessionToken, currentUserId, on
     if (!val) return 'Never';
     try {
       const d = typeof val === 'number' ? new Date(val) : new Date(val);
-      return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+      return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: '2-digit' });
     } catch {
       return String(val);
     }

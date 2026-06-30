@@ -13,7 +13,7 @@ const PublishConfirmationFlyout: React.FC<PublishConfirmationFlyoutProps> = ({ d
 
     const formattedDate = dateObj.toLocaleDateString('en-GB', {
         weekday: 'long',
-        year: 'numeric',
+        year: '2-digit',
         month: 'long',
         day: 'numeric',
         timeZone: 'UTC'

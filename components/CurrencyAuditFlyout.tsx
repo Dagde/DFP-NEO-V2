@@ -36,7 +36,7 @@ const CurrencyAuditFlyout: React.FC<CurrencyAuditFlyoutProps> = ({ personId, per
     try {
       const d = new Date(dateStr);
       return d.toLocaleString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric',
+        day: '2-digit', month: 'short', year: '2-digit',
         hour: '2-digit', minute: '2-digit', hour12: false,
       });
     } catch {

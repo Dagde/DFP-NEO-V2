@@ -13,7 +13,7 @@ const BuildDateWarningFlyout: React.FC<BuildDateWarningFlyoutProps> = ({ onConfi
     
     const formattedDate = dateObj.toLocaleDateString('en-GB', {
         weekday: 'long',
-        year: 'numeric', // Changed to numeric for clarity
+        year: '2-digit',
         month: 'long',
         day: 'numeric',
         timeZone: 'UTC'
