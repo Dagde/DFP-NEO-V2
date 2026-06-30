@@ -65157,11 +65157,19 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     return cleanName;
   };
   const normalisePostFlightName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
-  const getFixedCrewGroupCode = (value) => {
+  const getFixedCrewGroupDetails = (value, fallbackUnit) => {
     const raw = String(value || "").trim().toUpperCase();
-    if (!raw) return "";
+    const fallback = String(fallbackUnit || "").trim().toUpperCase();
+    if (!raw) return { crew: "", unit: fallback };
     const parts = raw.split("::").map((part) => part.trim()).filter(Boolean);
-    return (parts[1] || parts[0]).replace(/^CREW\s*/i, "").trim();
+    if (parts.length >= 2) {
+      return { unit: parts[0], crew: parts.slice(1).join("::").replace(/^CREW\s*/i, "").trim() };
+    }
+    const slashParts = raw.replace(/^CREW\s*/i, "").split("/").map((part) => part.trim()).filter(Boolean);
+    if (slashParts.length >= 2) {
+      return { crew: slashParts[0], unit: slashParts[1] };
+    }
+    return { crew: slashParts[0] || parts[0]?.replace(/^CREW\s*/i, "").trim() || "", unit: fallback };
   };
   const isPilotStaff = (staff) => {
     const role = String(staff?.role || "").trim().toLowerCase();
@@ -65179,9 +65187,9 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     (Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder : []).forEach(addByName);
     (Array.isArray(event.attendees) ? event.attendees : []).forEach(addByName);
     String(event.crew || "").split(/[,;/]/).map((name) => name.trim()).filter(Boolean).forEach(addByName);
-    const crewCode = getFixedCrewGroupCode(event.fixedCrewGroup || event.group || event.crew);
-    if (crewCode) {
-      instructorsData.filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewCode).forEach((staff) => roster.set(normalisePostFlightName(staff.name), staff));
+    const crewDetails = getFixedCrewGroupDetails(event.fixedCrewGroup || event.group || event.crew, event.fixedCrewUnit || event.unit);
+    if (crewDetails.crew) {
+      instructorsData.filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewDetails.crew && (!crewDetails.unit || String(staff.unit || "").trim().toUpperCase() === crewDetails.unit)).forEach((staff) => roster.set(normalisePostFlightName(staff.name), staff));
     }
     return Array.from(roster.values());
   }, [event, instructorsData]);
@@ -104209,11 +104217,19 @@ Do you want to replace the existing entry?`,
                   const parsedInst = parseFloat(data.instructorTime || "") || void 0;
                   const normaliseLogbookName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
                   const formatLogbookHours = (value) => value > 0 ? value.toFixed(1) : "";
-                  const getFixedCrewGroupCode = (value) => {
+                  const getFixedCrewGroupDetails = (value, fallbackUnit) => {
                     const raw = String(value || "").trim().toUpperCase();
-                    if (!raw) return "";
+                    const fallback = String(fallbackUnit || "").trim().toUpperCase();
+                    if (!raw) return { crew: "", unit: fallback };
                     const parts = raw.split("::").map((part) => part.trim()).filter(Boolean);
-                    return (parts[1] || parts[0]).replace(/^CREW\s*/i, "").trim();
+                    if (parts.length >= 2) {
+                      return { unit: parts[0], crew: parts.slice(1).join("::").replace(/^CREW\s*/i, "").trim() };
+                    }
+                    const slashParts = raw.replace(/^CREW\s*/i, "").split("/").map((part) => part.trim()).filter(Boolean);
+                    if (slashParts.length >= 2) {
+                      return { crew: slashParts[0], unit: slashParts[1] };
+                    }
+                    return { crew: slashParts[0] || parts[0]?.replace(/^CREW\s*/i, "").trim() || "", unit: fallback };
                   };
                   const getFixedCrewRosterForEvent = () => {
                     const roster = /* @__PURE__ */ new Map();
@@ -104227,9 +104243,9 @@ Do you want to replace the existing entry?`,
                     (Array.isArray(pfEvt.crewSelectionOrder) ? pfEvt.crewSelectionOrder : []).forEach(addByName);
                     (Array.isArray(pfEvt.attendees) ? pfEvt.attendees : []).forEach(addByName);
                     String(pfEvt.crew || "").split(/[,;/]/).map((name) => name.trim()).filter(Boolean).forEach(addByName);
-                    const crewCode = getFixedCrewGroupCode(pfEvt.fixedCrewGroup || pfEvt.group || pfEvt.crew);
-                    if (crewCode) {
-                      instructorsData.filter((person) => String(person.crew || "").trim().toUpperCase() === crewCode).forEach((person) => roster.set(normaliseLogbookName(person.name), person));
+                    const crewDetails = getFixedCrewGroupDetails(pfEvt.fixedCrewGroup || pfEvt.group || pfEvt.crew, pfEvt.fixedCrewUnit || pfEvt.unit);
+                    if (crewDetails.crew) {
+                      instructorsData.filter((person) => String(person.crew || "").trim().toUpperCase() === crewDetails.crew && (!crewDetails.unit || String(person.unit || "").trim().toUpperCase() === crewDetails.unit)).forEach((person) => roster.set(normaliseLogbookName(person.name), person));
                     }
                     return Array.from(roster.values());
                   };

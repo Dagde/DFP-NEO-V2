@@ -146,11 +146,19 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         return cleanName;
     };
     const normalisePostFlightName = (value?: string | null): string => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    const getFixedCrewGroupCode = (value?: string | null): string => {
+    const getFixedCrewGroupDetails = (value?: string | null, fallbackUnit?: string | null): { crew: string; unit: string } => {
         const raw = String(value || '').trim().toUpperCase();
-        if (!raw) return '';
+        const fallback = String(fallbackUnit || '').trim().toUpperCase();
+        if (!raw) return { crew: '', unit: fallback };
         const parts = raw.split('::').map(part => part.trim()).filter(Boolean);
-        return (parts[1] || parts[0]).replace(/^CREW\s*/i, '').trim();
+        if (parts.length >= 2) {
+            return { unit: parts[0], crew: parts.slice(1).join('::').replace(/^CREW\s*/i, '').trim() };
+        }
+        const slashParts = raw.replace(/^CREW\s*/i, '').split('/').map(part => part.trim()).filter(Boolean);
+        if (slashParts.length >= 2) {
+            return { crew: slashParts[0], unit: slashParts[1] };
+        }
+        return { crew: slashParts[0] || parts[0]?.replace(/^CREW\s*/i, '').trim() || '', unit: fallback };
     };
     const isPilotStaff = (staff?: Instructor | null): boolean => {
         const role = String(staff?.role || '').trim().toLowerCase();
@@ -173,10 +181,13 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             .filter(Boolean)
             .forEach(addByName);
 
-        const crewCode = getFixedCrewGroupCode(event.fixedCrewGroup || event.group || event.crew);
-        if (crewCode) {
+        const crewDetails = getFixedCrewGroupDetails(event.fixedCrewGroup || event.group || event.crew, (event as any).fixedCrewUnit || (event as any).unit);
+        if (crewDetails.crew) {
             instructorsData
-                .filter(staff => String(staff.crew || '').trim().toUpperCase() === crewCode)
+                .filter(staff => (
+                    String(staff.crew || '').trim().toUpperCase() === crewDetails.crew
+                    && (!crewDetails.unit || String(staff.unit || '').trim().toUpperCase() === crewDetails.unit)
+                ))
                 .forEach(staff => roster.set(normalisePostFlightName(staff.name), staff));
         }
         return Array.from(roster.values());
