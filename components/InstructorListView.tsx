@@ -98,6 +98,7 @@ interface InstructorListViewProps {
     assignment: AirCombatTrainingAssignment,
     item: SyllabusItemDetail,
   ) => Promise<void> | void;
+  onAddTrainingReport?: (staff: Instructor) => void;
   school: string;
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   onUpdateInstructor: (data: Instructor) => void;
@@ -114,7 +115,7 @@ interface InstructorListViewProps {
   onRequestSct: (instructor: Instructor) => void;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
-  profileInitialTab?: 'currency' | null;
+  profileInitialTab?: 'currency' | 'trainingReports' | null;
   onProfileTabConsumed?: () => void;
   currentUserId?: string;
   currentUserName?: string;
@@ -139,6 +140,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     onInsertAirCombatTrainingEvent,
     onUpdateAirCombatTrainingEvent,
     onGenerateAirCombatTrainingReport,
+    onAddTrainingReport,
     school,
     personnelData,
     onUpdateInstructor,
@@ -171,7 +173,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps: string[] = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology };
   Object.keys(currentProps).forEach(key => {
     if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
       changedProps.push(key);
@@ -780,6 +782,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     onInsertAirCombatTrainingEvent={onInsertAirCombatTrainingEvent}
                     onUpdateAirCombatTrainingEvent={onUpdateAirCombatTrainingEvent}
                     onGenerateAirCombatTrainingReport={onGenerateAirCombatTrainingReport}
+                    onAddTrainingReport={onAddTrainingReport}
                     onViewLogbook={onViewLogbook}
                     onRequestSct={() => {
                         if (onRequestSct) {

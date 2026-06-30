@@ -245,6 +245,7 @@ export interface AirCombatTrainingReport {
   resourceId?: string;
   callsign?: string;
   instructorName?: string;
+  dashboardAssigneeName?: string;
   overallGrade?: string;
   overallResult?: '' | 'P' | 'F';
   dcoResult?: '' | 'DCO' | 'DPCO' | 'DNCO';

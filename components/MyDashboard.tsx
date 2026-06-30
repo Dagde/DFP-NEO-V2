@@ -16,6 +16,7 @@ interface MyDashboardProps {
     onSelectPt051: (assessment: Pt051Assessment) => void;
     trainingReportsToComplete?: Array<{ report: AirCombatTrainingReport; staff: Instructor }>;
     onSelectTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void;
+    onReassignTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }, assignee: Instructor) => void;
     staffOptions?: Instructor[];
     selectedStaffName?: string;
     onSelectStaffName?: (staffName: string) => void;
@@ -68,6 +69,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     onSelectPt051,
     trainingReportsToComplete = [],
     onSelectTrainingReport,
+    onReassignTrainingReport,
     staffOptions = [],
     selectedStaffName,
     onSelectStaffName,
@@ -89,6 +91,21 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         return Array.from(groups.entries()).map(([unit, staff]) => ({ unit, staff }));
     }, [staffOptions]);
     const dashboardSelectedName = selectedStaffName || userName;
+    const [staffPickerEntry, setStaffPickerEntry] = useState<{ report: AirCombatTrainingReport; staff: Instructor; mode: 'open' | 'reassign' } | null>(null);
+    const roleTone = (role?: string) => {
+        const value = String(role || '').toLowerCase();
+        if (value.includes('pilot')) return 'text-sky-300 border-sky-500/30';
+        if (value.includes('awo') || value.includes('mpro') || value.includes('ewo')) return 'text-emerald-300 border-emerald-500/30';
+        if (value.includes('mission') || value.includes('crew')) return 'text-amber-300 border-amber-500/30';
+        return 'text-gray-300 border-gray-600';
+    };
+    const sameUnitStaff = useMemo(() => {
+        if (!staffPickerEntry) return [];
+        const unit = String(staffPickerEntry.staff.unit || staffPickerEntry.report.unitCode || '').trim();
+        return staffOptions
+            .filter(staff => staff?.name && (!unit || String(staff.unit || '').trim() === unit))
+            .sort((a, b) => getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || String(a.name || '').localeCompare(String(b.name || '')));
+    }, [staffOptions, staffPickerEntry]);
     
     const mySctRequests = sctRequests.filter(req => req.name === userName.split(' ').reverse().join(', '));
     
@@ -237,14 +254,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                             ))}
                             {trainingReportsToComplete.map(entry => (
                                 <li key={entry.report.id} className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors">
+                                    <div className="flex items-center gap-2">
                                     <button
-                                        onClick={() => onSelectTrainingReport?.(entry)}
-                                        className="w-full text-left"
+                                        onClick={() => setStaffPickerEntry({ ...entry, mode: 'open' })}
+                                        className="min-w-0 flex-1 text-left"
                                     >
                                         <div className="flex justify-between items-center">
                                             <div>
                                                 <p className="font-semibold text-white">{entry.report.eventCode}</p>
-                                                <p className="text-sm text-gray-400">{entry.report.staffName}</p>
+                                                <p className="text-sm text-gray-400">Report to complete from flight {entry.report.callsign || entry.report.eventCode}</p>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-sm text-gray-300 font-mono">{formatDate(entry.report.date)}</p>
@@ -254,6 +272,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                             </div>
                                         </div>
                                     </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setStaffPickerEntry({ ...entry, mode: 'reassign' })}
+                                        className="h-8 shrink-0 rounded-md border border-gray-600 bg-gray-900 px-2 text-[10px] font-bold text-gray-200 hover:border-sky-400"
+                                    >
+                                        Re-Assign
+                                    </button>
+                                    </div>
                                 </li>
                             ))}
                         </ul>
@@ -274,6 +300,39 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     <p className="text-gray-500 text-center py-8">No events scheduled for today.</p>
                 )}
             </div>
+            {staffPickerEntry && (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4">
+                    <div className="w-full max-w-lg rounded-lg border border-gray-600 bg-gray-900 p-4 shadow-2xl">
+                        <div className="mb-3 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">{staffPickerEntry.mode === 'reassign' ? 'Re-Assign Report' : 'Select Staff'}</h3>
+                                <p className="text-xs text-gray-400">Flight {staffPickerEntry.report.callsign || staffPickerEntry.report.eventCode}</p>
+                            </div>
+                            <button type="button" onClick={() => setStaffPickerEntry(null)} className="text-2xl leading-none text-gray-400 hover:text-white">x</button>
+                        </div>
+                        <div className="max-h-[55vh] space-y-1 overflow-y-auto">
+                            {sameUnitStaff.map(staff => (
+                                <button
+                                    key={`${staff.unit || 'unit'}-${staff.idNumber}-${staff.name}`}
+                                    type="button"
+                                    onClick={() => {
+                                        if (staffPickerEntry.mode === 'reassign') {
+                                            onReassignTrainingReport?.(staffPickerEntry, staff);
+                                        } else {
+                                            onSelectTrainingReport?.({ ...staffPickerEntry, staff });
+                                        }
+                                        setStaffPickerEntry(null);
+                                    }}
+                                    className={`flex w-full items-center justify-between rounded border bg-gray-800 px-3 py-2 text-left hover:bg-gray-700 ${roleTone(staff.role)}`}
+                                >
+                                    <span className="text-sm font-semibold">{staff.rank} {staff.name}</span>
+                                    <span className="text-[10px] font-bold uppercase">{staff.role || 'Staff'}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

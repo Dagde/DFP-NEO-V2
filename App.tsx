@@ -24232,7 +24232,7 @@ const App: React.FC = () => {
 
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
-    const [profileInitialTab, setProfileInitialTab] = useState<'currency' | null>(null);
+    const [profileInitialTab, setProfileInitialTab] = useState<'currency' | 'trainingReports' | null>(null);
     const [traineeProfileInitialTab, setTraineeProfileInitialTab] = useState<'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null>(null);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
     const [showAddGroundEvent, setShowAddGroundEvent] = useState(false);
@@ -27138,6 +27138,10 @@ const App: React.FC = () => {
         setAirCombatTrainingReportDraft({ staff, assignment, item, sourceEvent: reportEvent });
     };
 
+    const handleAddTrainingReportForStaff = (staff: Instructor) => {
+        setAirCombatTrainingReportDraft({ staff });
+    };
+
     const handleOpenAirCombatTrainingReportFromFlightDetails = async (
         staff: Instructor,
         sourceEvent: ScheduleEvent,
@@ -27347,6 +27351,93 @@ const App: React.FC = () => {
             `${existingReport ? 'Updated' : 'Generated'} draft ${report.reportName} from post-flight ${dcoResult} for ${report.staffName} - Event: ${report.eventCode}`
         );
         console.log(`[PostFlight] ✅ Draft training report ${existingReport ? 'updated' : 'generated'} for ${staff.name} — ${eventCode} (${dcoResult})`);
+    };
+
+    const handleReassignTrainingReportNotification = async (
+        entry: { report: AirCombatTrainingReport; staff: Instructor },
+        assignee: Instructor,
+    ) => {
+        const sourceStaff = allInstructorsData.find(person => (
+            (entry.staff as any).id
+                ? (person as any).id === (entry.staff as any).id
+                : person.idNumber === entry.staff.idNumber
+        )) || entry.staff;
+        const preferences = { ...(sourceStaff.preferences || {}) };
+        const existingReports = normaliseAirCombatTrainingReports(preferences);
+        const updatedReport: AirCombatTrainingReport = {
+            ...entry.report,
+            dashboardAssigneeName: assignee.name,
+            dashboardAcknowledgedAt: undefined,
+            updatedAt: new Date().toISOString(),
+            updatedBy: currentUserName,
+        };
+        const updatedStaff: Instructor = {
+            ...sourceStaff,
+            preferences: {
+                ...preferences,
+                airCombat: {
+                    ...(preferences.airCombat || {}),
+                    trainingReports: existingReports.map(report => (
+                        report.id === entry.report.id ? updatedReport : report
+                    )),
+                },
+            },
+        };
+        const dbId = (updatedStaff as any).id;
+        if (dbId) {
+            const response = await fetch(`/api/personnel/${dbId}`, {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedStaff),
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || `Failed to reassign training report (${response.status})`);
+            }
+        }
+        setInstructorsData(prev => prev.map(person => (
+            dbId
+                ? ((person as any).id === dbId ? updatedStaff : person)
+                : (person.idNumber === updatedStaff.idNumber ? updatedStaff : person)
+        )));
+        logAudit(
+            'Training Reports',
+            'Edit',
+            `Re-assigned report notification for ${entry.report.eventCode} to ${assignee.rank || ''} ${assignee.name}`.trim()
+        );
+    };
+
+    const getRecentTrainingReportEventsForStaff = (staff?: Instructor): ScheduleEvent[] => {
+        if (!staff) return [];
+        const target = String(staff.name || '').trim().toLowerCase();
+        const includesStaff = (event: ScheduleEvent) => {
+            const people = [
+                event.instructor,
+                event.student,
+                event.pilot,
+                event.crew,
+                event.fixedCrewPic,
+                ...(Array.isArray(event.attendees) ? event.attendees : []),
+            ];
+            return people
+                .flatMap(person => String(person || '').split(/[,;/]/))
+                .some(person => person.trim().toLowerCase() === target);
+        };
+        const deduped = new Map<string, ScheduleEvent>();
+        [...publishedScheduleHistoryEvents, ...eventsForDate]
+            .filter(includesStaff)
+            .filter(event => String((event as any).dcoResult || (event as any).completionResult || 'DCO').toUpperCase() === 'DCO')
+            .forEach(event => {
+                const key = event.id || `${event.date}-${event.flightNumber}-${event.startTime}-${event.resourceId}`;
+                deduped.set(key, event);
+            });
+        return Array.from(deduped.values())
+            .sort((left, right) => (
+                new Date(`${right.date || ''}T00:00:00`).getTime() - new Date(`${left.date || ''}T00:00:00`).getTime() ||
+                Number(right.startTime || 0) - Number(left.startTime || 0)
+            ))
+            .slice(0, 5);
     };
 
     const handleViewLogbook = useCallback((person: Instructor | Trainee) => {
@@ -37043,7 +37134,7 @@ appliedUpdates.forEach(update => {
                         .filter(report => (
                             report.status !== 'Complete' &&
                             !report.dashboardAcknowledgedAt &&
-                            normaliseDashboardName(report.staffName) === normaliseDashboardName(dashboardUserName)
+                            normaliseDashboardName(report.dashboardAssigneeName || report.instructorName || report.staffName) === normaliseDashboardName(dashboardUserName)
                         ))
                         .map(report => ({ report, staff }))
                 ));
@@ -37067,28 +37158,16 @@ appliedUpdates.forEach(update => {
                             selectedStaffName={dashboardUserName}
                             onSelectStaffName={setDashboardTestUserName}
                             onSelectTrainingReport={(entry) => {
-                                const sourceEvent = allPublishedEvents.find(event => (
-                                    event.id === entry.report.eventId ||
-                                    (
-                                        event.date === entry.report.date &&
-                                        String(event.flightNumber || event.eventCode || '').trim().toUpperCase() === String(entry.report.eventCode || '').trim().toUpperCase() &&
-                                        [event.fixedCrewPic, event.pilot, event.instructor, event.crew].some(name => normaliseDashboardName(name) === normaliseDashboardName(entry.report.staffName))
-                                    )
-                                ));
-                                const matchingItem = syllabusDetails.find(item => (
-                                    String(item.code || '').trim().toUpperCase() === String(entry.report.eventCode || '').trim().toUpperCase()
-                                ));
-                                const assignment = matchingItem
-                                    ? getAirCombatAssignmentFromItem(matchingItem, school, entry.staff.unit || activeUnitCode, currentUserName)
-                                    : undefined;
-                                setAirCombatTrainingReportDraft({
-                                    staff: entry.staff,
-                                    assignment,
-                                    item: matchingItem,
-                                    sourceEvent,
-                                    initialReport: entry.report,
-                                });
+                                const selectedStaff = allInstructorsData.find(staff => (
+                                    (entry.staff as any).id
+                                        ? (staff as any).id === (entry.staff as any).id
+                                        : staff.idNumber === entry.staff.idNumber
+                                )) || entry.staff;
+                                setSelectedPersonForProfile(selectedStaff);
+                                setProfileInitialTab('trainingReports');
+                                handleNavigation('Instructors');
                             }}
+                            onReassignTrainingReport={handleReassignTrainingReportNotification}
                             onSelectPt051={(assessment) => {
                                 console.log('🔍 Dashboard PT-051 clicked:', assessment);
                                 console.log('Looking for event ID:', assessment.eventId);
@@ -37248,6 +37327,7 @@ appliedUpdates.forEach(update => {
                             onInsertAirCombatTrainingEvent={handleInsertAirCombatTrainingEvent}
                             onUpdateAirCombatTrainingEvent={handleUpdateAirCombatTrainingEvent}
                             onGenerateAirCombatTrainingReport={handleGenerateAirCombatTrainingReportForStaff}
+                            onAddTrainingReport={handleAddTrainingReportForStaff}
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
@@ -37374,6 +37454,7 @@ appliedUpdates.forEach(update => {
                             onInsertAirCombatTrainingEvent={handleInsertAirCombatTrainingEvent}
                             onUpdateAirCombatTrainingEvent={handleUpdateAirCombatTrainingEvent}
                             onGenerateAirCombatTrainingReport={handleGenerateAirCombatTrainingReportForStaff}
+                            onAddTrainingReport={handleAddTrainingReportForStaff}
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
@@ -39561,6 +39642,8 @@ appliedUpdates.forEach(update => {
                 assignment={airCombatTrainingReportDraft.assignment}
                 item={airCombatTrainingReportDraft.item}
                 sourceEvent={airCombatTrainingReportDraft.sourceEvent}
+                recentEvents={getRecentTrainingReportEventsForStaff(airCombatTrainingReportDraft.staff)}
+                syllabusDetails={syllabusDetails}
                 initialReport={airCombatTrainingReportDraft.initialReport}
                 reportName={getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode).displayName}
                 trainingReportTemplate={getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode)}

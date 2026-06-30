@@ -6,12 +6,15 @@ import {
   normaliseTrainingReportTemplate,
   type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
+import { getAirCombatAssignmentFromItem } from '../utils/airCombatTraining';
 
 interface AirCombatTrainingReportModalProps {
   staff: Instructor;
   assignment?: AirCombatTrainingAssignment;
   item?: SyllabusItemDetail;
   sourceEvent?: ScheduleEvent;
+  recentEvents?: ScheduleEvent[];
+  syllabusDetails?: SyllabusItemDetail[];
   initialReport?: AirCombatTrainingReport;
   reportName?: string;
   trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
@@ -98,6 +101,8 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   assignment,
   item,
   sourceEvent,
+  recentEvents = [],
+  syllabusDetails = [],
   initialReport,
   reportName = 'PT-051',
   trainingReportTemplate = null,
@@ -132,13 +137,27 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const formatGradeNumber = (value: number | string): string => (
     String(value).toUpperCase() === 'DEMO' ? 'DEMO' : String(value)
   );
-  const eventCode = item?.code || sourceEvent?.flightNumber || initialReport?.eventCode || '';
-  const eventDescription = item?.eventDescription || sourceEvent?.notes || initialReport?.eventDescription || item?.module || '';
-  const eventType = item?.type || sourceEvent?.type || initialReport?.eventType || '';
-  const defaultDate = sourceEvent?.date || initialReport?.date || new Date().toISOString().slice(0, 10);
-  const defaultStart = Number(sourceEvent?.startTime ?? initialReport?.startTime ?? 8);
-  const defaultDuration = Number(sourceEvent?.duration ?? initialReport?.duration ?? item?.totalEventHours ?? item?.duration ?? item?.flightOrSimHours ?? 1);
-  const rawResourceId = sourceEvent?.resourceId || initialReport?.resourceId || '';
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedSourceEvent, setSelectedSourceEvent] = useState<ScheduleEvent | undefined>(sourceEvent);
+  const activeSourceEvent = selectedSourceEvent || sourceEvent;
+  const selectedEventCode = String(activeSourceEvent?.flightNumber || activeSourceEvent?.eventCode || initialReport?.eventCode || '').trim();
+  const matchedItem = useMemo(() => (
+    item || syllabusDetails.find(candidate => (
+      String(candidate.code || '').trim().toUpperCase() === selectedEventCode.toUpperCase()
+    ))
+  ), [item, selectedEventCode, syllabusDetails]);
+  const effectiveAssignment = useMemo(() => (
+    assignment || (matchedItem
+      ? getAirCombatAssignmentFromItem(matchedItem, locationCode, unitCode || staff.unit, currentUserName)
+      : undefined)
+  ), [assignment, currentUserName, locationCode, matchedItem, staff.unit, unitCode]);
+  const eventCode = matchedItem?.code || selectedEventCode || '';
+  const eventDescription = matchedItem?.eventDescription || activeSourceEvent?.notes || initialReport?.eventDescription || matchedItem?.module || '';
+  const eventType = matchedItem?.type || activeSourceEvent?.type || initialReport?.eventType || '';
+  const defaultDate = activeSourceEvent?.date || initialReport?.date || new Date().toISOString().slice(0, 10);
+  const defaultStart = Number(activeSourceEvent?.startTime ?? initialReport?.startTime ?? 8);
+  const defaultDuration = Number(activeSourceEvent?.duration ?? initialReport?.duration ?? matchedItem?.totalEventHours ?? matchedItem?.duration ?? matchedItem?.flightOrSimHours ?? 1);
+  const rawResourceId = activeSourceEvent?.resourceId || initialReport?.resourceId || '';
   const displayResourceId = rawResourceId
     ? stripResourceLineNumber(formatResourceLabel?.(rawResourceId) || rawResourceId)
     : '-';
@@ -146,7 +165,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const [date, setDate] = useState(initialReport?.date || defaultDate);
   const [startTime, setStartTime] = useState(defaultStart);
   const [endTime, setEndTime] = useState(defaultStart + defaultDuration);
-  const [instructorName, setInstructorName] = useState(initialReport?.instructorName || sourceEvent?.instructor || currentUserName || '');
+  const [instructorName, setInstructorName] = useState(initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || '');
   const [overallGrade, setOverallGrade] = useState(initialReport?.overallGrade || '');
   const [overallResult, setOverallResult] = useState<'' | 'P' | 'F'>(initialReport?.overallResult || '');
   const [dcoResult, setDcoResult] = useState<'' | 'DCO' | 'DPCO' | 'DNCO'>(initialReport?.dcoResult || '');
@@ -154,7 +173,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     const parsed = parseReportComments(initialReport?.notes || '');
     return {
       ...parsed,
-      assessor: parsed.assessor || initialReport?.instructorName || sourceEvent?.instructor || currentUserName || '',
+      assessor: parsed.assessor || initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || '',
     };
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -172,11 +191,22 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     </div>
   );
   const assessmentElements = useMemo(() => {
-    const source = Array.isArray(item?.assessedElements) && item.assessedElements.length > 0
-      ? item.assessedElements
+    const source = Array.isArray(matchedItem?.assessedElements) && matchedItem.assessedElements.length > 0
+      ? matchedItem.assessedElements
       : ['Airmanship', 'Preparation', 'Technique'];
     return Array.from(new Set(source.map(element => String(element || '').trim()).filter(Boolean)));
-  }, [item?.assessedElements]);
+  }, [matchedItem?.assessedElements]);
+  const selectRecentEvent = (event: ScheduleEvent) => {
+    const nextDuration = Number(event.duration || matchedItem?.duration || 1);
+    setSelectedSourceEvent(event);
+    setDate(event.date || new Date().toISOString().slice(0, 10));
+    setStartTime(Number(event.startTime || 8));
+    setEndTime(Number(event.startTime || 8) + Math.max(0.25, nextDuration));
+    setInstructorName(event.instructor || currentUserName || '');
+    setCommentSections(prev => ({ ...prev, assessor: event.instructor || currentUserName || prev.assessor }));
+    setSaveStatus('Unsaved');
+    setIsEditMode(false);
+  };
   const [elementScores, setElementScores] = useState<Array<{ element: string; grade: string; comment: string }>>(() => {
     const existingScores = Array.isArray(initialReport?.assessedElementScores) ? initialReport.assessedElementScores : [];
     return assessmentElements.map((element) => {
@@ -258,20 +288,21 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
         staffName: staff.name,
         locationCode,
         unitCode: unitCode || staff.unit,
-        trainingKey: assignment?.trainingKey,
-        trainingKind: assignment?.kind,
-        trainingCode: assignment?.code || item?.phase,
-        trainingTitle: assignment?.title || item?.module,
-        eventId: sourceEvent?.id || item?.id,
+        trainingKey: effectiveAssignment?.trainingKey,
+        trainingKind: effectiveAssignment?.kind,
+        trainingCode: effectiveAssignment?.code || matchedItem?.phase,
+        trainingTitle: effectiveAssignment?.title || matchedItem?.module,
+        eventId: activeSourceEvent?.id || matchedItem?.id,
         eventCode,
         eventDescription,
         eventType,
         date,
         startTime,
         duration,
-        resourceId: sourceEvent?.resourceId || initialReport?.resourceId,
-        callsign: sourceEvent?.callsign || initialReport?.callsign || staff.callsign,
+        resourceId: activeSourceEvent?.resourceId || initialReport?.resourceId,
+        callsign: activeSourceEvent?.callsign || initialReport?.callsign || staff.callsign,
         instructorName,
+        dashboardAssigneeName: initialReport?.dashboardAssigneeName || currentUserName || instructorName,
         overallGrade,
         overallResult,
         dcoResult,
@@ -365,7 +396,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
             </div>
             <div className="flex items-center gap-[1px]">
               <button type="button" onClick={() => window.print()} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Print</button>
-              <button type="button" className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Edit</button>
+              <button type="button" onClick={() => setIsEditMode(prev => !prev)} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Edit</button>
               <button type="button" onClick={saveReport} disabled={isSaving || !eventCode} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40">Save</button>
               <button type="button" className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Delete</button>
               <button type="button" onClick={onCancel} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Back</button>
@@ -375,7 +406,31 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
 
           <div className="p-4 md:p-6">
             <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <dl className="space-y-2 rounded-lg border border-gray-700 bg-gray-800 p-4 lg:col-span-1">
+              <dl onClick={() => isEditMode && recentEvents.length > 0 && setIsEditMode(true)} className={`space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 ${isEditMode ? 'border-sky-500/60' : 'border-gray-700'}`}>
+                {isEditMode && recentEvents.length > 0 && (
+                  <div className="mb-3 rounded border border-sky-500/30 bg-gray-950/80 p-2">
+                    <div className="mb-2 text-[10px] font-bold uppercase tracking-wide text-sky-300">Recent Flights</div>
+                    <div className="space-y-1">
+                      {recentEvents.slice(0, 5).map(event => (
+                        <button
+                          key={event.id}
+                          type="button"
+                          onClick={(clickEvent) => {
+                            clickEvent.stopPropagation();
+                            selectRecentEvent(event);
+                          }}
+                          className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-left hover:border-sky-500 hover:bg-sky-950/30"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-white">{event.flightNumber || event.eventCode || 'Event'}</span>
+                            <span className="font-mono text-[10px] text-gray-400">{event.date || '-'} {formatTimeToHHMM(event.startTime)}</span>
+                          </div>
+                          <div className="truncate text-[10px] text-gray-500">{event.callsign || event.resourceId || event.notes || '-'}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div><dt className="text-sm font-medium text-gray-400">{overviewFields.event}</dt><dd className="mt-1 text-sm font-semibold text-white">{eventCode || 'N/A'}</dd></div>
                 <div><dt className="text-sm font-medium text-gray-400">{overviewFields.type}</dt><dd className="mt-1 text-sm text-white">{eventDescription || eventType || 'N/A'}</dd></div>
                 <div><dt className="text-sm font-medium text-gray-400">Staff</dt><dd className="mt-1 text-sm font-semibold text-white">{staff.rank} {staff.name}</dd></div>
@@ -383,7 +438,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                 <div><dt className="text-sm font-medium text-gray-400">{overviewFields.date}</dt><dd className="mt-1"><input type="date" value={date} onChange={(event) => { setDate(event.target.value); setSaveStatus('Unsaved'); }} className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" /></dd></div>
                 <div><dt className="text-sm font-medium text-gray-400">{overviewFields.timing}</dt><dd className="mt-1 text-sm font-semibold text-white">{formatDecimalTime(startTime)} - {formatDecimalTime(endTime)}</dd></div>
                 <div><dt className="text-sm font-medium text-gray-400">{overviewFields.resource}</dt><dd className="mt-1 text-sm font-semibold text-white">{displayResourceId}</dd></div>
-                <div><dt className="text-sm font-medium text-gray-400">{overviewFields.callsign}</dt><dd className="mt-1 text-sm font-semibold text-white">{sourceEvent?.callsign || staff.callsign || '-'}</dd></div>
+                <div><dt className="text-sm font-medium text-gray-400">{overviewFields.callsign}</dt><dd className="mt-1 text-sm font-semibold text-white">{activeSourceEvent?.callsign || staff.callsign || '-'}</dd></div>
                 <div><dt className="text-sm font-medium text-gray-400">{overviewFields.assessor}</dt><dd className="mt-1"><input value={instructorName} onChange={(event) => { setInstructorName(event.target.value); updateCommentSection('assessor', event.target.value); setSaveStatus('Unsaved'); }} className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" /></dd></div>
               </dl>
 

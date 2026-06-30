@@ -21,6 +21,7 @@ interface StaffViewProps {
   onInsertAirCombatTrainingEvent?: (...args: any[]) => Promise<boolean> | boolean;
   onUpdateAirCombatTrainingEvent?: (...args: any[]) => Promise<boolean> | boolean;
   onGenerateAirCombatTrainingReport?: (...args: any[]) => Promise<void> | void;
+  onAddTrainingReport?: (...args: any[]) => void;
   school: string;
   personnelData: any[];
   onUpdateInstructor: (data: any) => Promise<void>;
@@ -197,6 +198,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onInsertAirCombatTrainingEvent={props.onInsertAirCombatTrainingEvent}
             onUpdateAirCombatTrainingEvent={props.onUpdateAirCombatTrainingEvent}
             onGenerateAirCombatTrainingReport={props.onGenerateAirCombatTrainingReport}
+            onAddTrainingReport={props.onAddTrainingReport}
             school={props.school}
             personnelData={props.personnelData}
             onUpdateInstructor={props.onUpdateInstructor}

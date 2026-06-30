@@ -200,6 +200,7 @@ export const normaliseAirCombatTrainingReports = (preferences?: PersonnelPrefere
       resourceId: report.resourceId ? String(report.resourceId) : undefined,
       callsign: report.callsign ? String(report.callsign) : undefined,
       instructorName: report.instructorName ? String(report.instructorName) : undefined,
+      dashboardAssigneeName: report.dashboardAssigneeName ? String(report.dashboardAssigneeName) : undefined,
       overallGrade: report.overallGrade ? String(report.overallGrade) : undefined,
       overallResult: report.overallResult === 'P' || report.overallResult === 'F' ? report.overallResult : '',
       dcoResult: ['DCO', 'DPCO', 'DNCO'].includes(report.dcoResult) ? report.dcoResult : '',

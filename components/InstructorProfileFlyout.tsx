@@ -86,12 +86,13 @@ interface InstructorProfileFlyoutProps {
     assignment: AirCombatTrainingAssignment,
     item: SyllabusItemDetail,
   ) => Promise<void> | void;
+  onAddTrainingReport?: (staff: Instructor) => void;
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: () => void;
   onNavigateToTrainee?: (trainee: Trainee) => void;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
-  profileInitialTab?: 'currency' | null;
+  profileInitialTab?: 'currency' | 'trainingReports' | null;
   onProfileTabConsumed?: () => void;
   currentUserId?: string;
   currentUserName?: string;
@@ -264,6 +265,7 @@ const getEventPeople = (event: ScheduleEvent): string[] => {
     event.student,
     event.pilot,
     event.crew,
+    event.fixedCrewPic,
     ...(Array.isArray(event.attendees) ? event.attendees : []),
   ];
   return rawPeople
@@ -281,6 +283,7 @@ const getStaffEventRole = (event: ScheduleEvent, staffName: string): string => {
   const target = staffName.trim().toLowerCase();
   if (String(event.pilot || '').trim().toLowerCase() === target) return 'Pilot';
   if (String(event.crew || '').split(/[,;/]/).some(person => person.trim().toLowerCase() === target)) return 'Crew';
+  if (String(event.fixedCrewPic || '').trim().toLowerCase() === target) return 'PIC';
   if (String(event.instructor || '').trim().toLowerCase() === target) return 'Instructor';
   if (Array.isArray(event.attendees) && event.attendees.some(person => String(person || '').trim().toLowerCase() === target)) return 'Attendee';
   return 'Staff';
@@ -291,7 +294,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
   locations, units, traineesData, events = [], scheduleHistoryEvents = [], syllabusDetails = [],
   insertEventTypes = DEFAULT_INSERT_EVENT_TYPES, aircraftConfigurations = [],
-  onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport,
+  onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport,
   onViewLogbook, onRequestSct, onNavigateToTrainee,
   masterCurrencies = [], currencyRequirements = [],
   profileInitialTab, onProfileTabConsumed,
@@ -449,7 +452,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     }).sort((a, b) => a.name.localeCompare(b.name));
     return { primaryTrainees: primary, secondaryTrainees: secondary };
   }, [traineesData, instructor.name]);
-  const isAirCombatModel = normaliseOperationalModel(operationalModel) === 'air_combat';
+  const activeOperationalModel = normaliseOperationalModel(operationalModel);
+  const isAirCombatModel = activeOperationalModel === 'air_combat';
+  const isStaffTrainingReportModel = isAirCombatModel || activeOperationalModel === 'fixed_crew';
   const assignedTraining = useMemo(
     () => normaliseAirCombatTrainingAssignments(instructor.preferences),
     [instructor.preferences],
@@ -1204,14 +1209,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h4 className="text-sm font-bold text-white">Training Reports - {instructor.name}</h4>
-                      <p className="mt-0.5 text-xs text-gray-400">Air Combat training reports saved against this staff member and unit.</p>
+                      <p className="mt-0.5 text-xs text-gray-400">Training reports saved against this staff member and unit.</p>
                     </div>
                     <div className="flex items-center gap-px">
+                      <button type="button" onClick={() => onAddTrainingReport?.(instructor)} className={airCombatPanelButtonClass}>+ Add<br />TR</button>
                       <AuditButton pageName="Air Combat Training Reports" />
                       <button onClick={() => setActiveTab(null)} className={airCombatPanelButtonClass}>Close</button>
                     </div>
                   </div>
-                  {isAirCombatModel ? (
+                  {isStaffTrainingReportModel ? (
                     <div className="space-y-3">
                       <div className="grid grid-cols-3 gap-2">
                         <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
@@ -1271,7 +1277,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                             }) : (
                               <tr>
                                 <td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-500">
-                                  No Air Combat training reports saved for this staff member.
+                                  No training reports saved for this staff member.
                                 </td>
                               </tr>
                             )}

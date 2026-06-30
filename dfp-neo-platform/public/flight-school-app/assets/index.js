@@ -4285,6 +4285,7 @@ const normaliseAirCombatTrainingReports = (preferences) => {
     resourceId: report.resourceId ? String(report.resourceId) : void 0,
     callsign: report.callsign ? String(report.callsign) : void 0,
     instructorName: report.instructorName ? String(report.instructorName) : void 0,
+    dashboardAssigneeName: report.dashboardAssigneeName ? String(report.dashboardAssigneeName) : void 0,
     overallGrade: report.overallGrade ? String(report.overallGrade) : void 0,
     overallResult: report.overallResult === "P" || report.overallResult === "F" ? report.overallResult : "",
     dcoResult: ["DCO", "DPCO", "DNCO"].includes(report.dcoResult) ? report.dcoResult : "",
@@ -25537,6 +25538,7 @@ const MyDashboard = ({
   onSelectPt051,
   trainingReportsToComplete = [],
   onSelectTrainingReport,
+  onReassignTrainingReport,
   staffOptions = [],
   selectedStaffName,
   onSelectStaffName
@@ -25552,6 +25554,19 @@ const MyDashboard = ({
     return Array.from(groups.entries()).map(([unit, staff]) => ({ unit, staff }));
   }, [staffOptions]);
   const dashboardSelectedName = selectedStaffName || userName;
+  const [staffPickerEntry, setStaffPickerEntry] = reactExports.useState(null);
+  const roleTone = (role) => {
+    const value = String(role || "").toLowerCase();
+    if (value.includes("pilot")) return "text-sky-300 border-sky-500/30";
+    if (value.includes("awo") || value.includes("mpro") || value.includes("ewo")) return "text-emerald-300 border-emerald-500/30";
+    if (value.includes("mission") || value.includes("crew")) return "text-amber-300 border-amber-500/30";
+    return "text-gray-300 border-gray-600";
+  };
+  const sameUnitStaff = reactExports.useMemo(() => {
+    if (!staffPickerEntry) return [];
+    const unit = String(staffPickerEntry.staff.unit || staffPickerEntry.report.unitCode || "").trim();
+    return staffOptions.filter((staff) => staff?.name && (!unit || String(staff.unit || "").trim() === unit)).sort((a, b) => getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || String(a.name || "").localeCompare(String(b.name || "")));
+  }, [staffOptions, staffPickerEntry]);
   const mySctRequests = sctRequests.filter((req) => req.name === userName.split(" ").reverse().join(", "));
   const incompletePt051s = React.useMemo(() => {
     const fullUserName = `${userName.split(" ").reverse().join(", ")}`;
@@ -25645,30 +25660,80 @@ const MyDashboard = ({
               ] })
             }
           ) }, assessment.id)),
-          trainingReportsToComplete.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => onSelectTrainingReport?.(entry),
-              className: "w-full text-left",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: entry.report.eventCode }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: entry.report.staffName })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(entry.report.date) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Training Report" })
+          trainingReportsToComplete.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => setStaffPickerEntry({ ...entry, mode: "open" }),
+                className: "min-w-0 flex-1 text-left",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: entry.report.eventCode }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
+                      "Report to complete from flight ",
+                      entry.report.callsign || entry.report.eventCode
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(entry.report.date) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Training Report" })
+                  ] })
                 ] })
-              ] })
-            }
-          ) }, entry.report.id))
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setStaffPickerEntry({ ...entry, mode: "reassign" }),
+                className: "h-8 shrink-0 rounded-md border border-gray-600 bg-gray-900 px-2 text-[10px] font-bold text-gray-200 hover:border-sky-400",
+                children: "Re-Assign"
+              }
+            )
+          ] }) }, entry.report.id))
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-4", children: "No pending reports." })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Today's Schedule" }),
       sortedEvents.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: sortedEvents.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsx(EventRow, { event }, event.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center py-8", children: "No events scheduled for today." })
-    ] })
+    ] }),
+    staffPickerEntry && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-lg rounded-lg border border-gray-600 bg-gray-900 p-4 shadow-2xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: staffPickerEntry.mode === "reassign" ? "Re-Assign Report" : "Select Staff" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
+            "Flight ",
+            staffPickerEntry.report.callsign || staffPickerEntry.report.eventCode
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setStaffPickerEntry(null), className: "text-2xl leading-none text-gray-400 hover:text-white", children: "x" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[55vh] space-y-1 overflow-y-auto", children: sameUnitStaff.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          type: "button",
+          onClick: () => {
+            if (staffPickerEntry.mode === "reassign") {
+              onReassignTrainingReport?.(staffPickerEntry, staff);
+            } else {
+              onSelectTrainingReport?.({ ...staffPickerEntry, staff });
+            }
+            setStaffPickerEntry(null);
+          },
+          className: `flex w-full items-center justify-between rounded border bg-gray-800 px-3 py-2 text-left hover:bg-gray-700 ${roleTone(staff.role)}`,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm font-semibold", children: [
+              staff.rank,
+              " ",
+              staff.name
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold uppercase", children: staff.role || "Staff" })
+          ]
+        },
+        `${staff.unit || "unit"}-${staff.idNumber}-${staff.name}`
+      )) })
+    ] }) })
   ] });
 };
 const formatDateForDisplay$1 = (dateStr) => {
@@ -39651,6 +39716,7 @@ const getEventPeople$1 = (event) => {
     event.student,
     event.pilot,
     event.crew,
+    event.fixedCrewPic,
     ...Array.isArray(event.attendees) ? event.attendees : []
   ];
   return rawPeople.flatMap((person) => String(person || "").split(/[,;/]/)).map((person) => person.trim()).filter(Boolean);
@@ -39680,6 +39746,7 @@ const InstructorProfileFlyout = ({
   onInsertAirCombatTrainingEvent,
   onUpdateAirCombatTrainingEvent,
   onGenerateAirCombatTrainingReport,
+  onAddTrainingReport,
   onViewLogbook,
   onRequestSct,
   onNavigateToTrainee,
@@ -39824,7 +39891,9 @@ const InstructorProfileFlyout = ({
     }).sort((a, b) => a.name.localeCompare(b.name));
     return { primaryTrainees: primary, secondaryTrainees: secondary };
   }, [traineesData, instructor.name]);
-  const isAirCombatModel = normaliseOperationalModel(operationalModel2) === "air_combat";
+  const activeOperationalModel = normaliseOperationalModel(operationalModel2);
+  const isAirCombatModel = activeOperationalModel === "air_combat";
+  const isStaffTrainingReportModel = isAirCombatModel || activeOperationalModel === "fixed_crew";
   const assignedTraining = reactExports.useMemo(
     () => normaliseAirCombatTrainingAssignments(instructor.preferences),
     [instructor.preferences]
@@ -40556,14 +40625,19 @@ const InstructorProfileFlyout = ({
                   "Training Reports - ",
                   instructor.name
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs text-gray-400", children: "Air Combat training reports saved against this staff member and unit." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs text-gray-400", children: "Training reports saved against this staff member and unit." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-px", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: () => onAddTrainingReport?.(instructor), className: airCombatPanelButtonClass, children: [
+                  "+ Add",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "TR"
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Air Combat Training Reports" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: airCombatPanelButtonClass, children: "Close" })
               ] })
             ] }),
-            isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+            isStaffTrainingReportModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Assigned Training" }),
@@ -40613,7 +40687,7 @@ const InstructorProfileFlyout = ({
                       report.unitCode || instructor.unit || "-"
                     ] })
                   ] }, report.id);
-                }) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, className: "px-4 py-10 text-center text-sm text-gray-500", children: "No Air Combat training reports saved for this staff member." }) }) })
+                }) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, className: "px-4 py-10 text-center text-sm text-gray-500", children: "No training reports saved for this staff member." }) }) })
               ] }) })
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400", children: "Staff training reports are not configured for this operational model." })
           ] }),
@@ -41893,6 +41967,7 @@ const InstructorListView = ({
   onInsertAirCombatTrainingEvent,
   onUpdateAirCombatTrainingEvent,
   onGenerateAirCombatTrainingReport,
+  onAddTrainingReport,
   school,
   personnelData,
   onUpdateInstructor,
@@ -41924,7 +41999,7 @@ const InstructorListView = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel: operationalModel2, crewPositionTerminology };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel: operationalModel2, crewPositionTerminology };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -42411,6 +42486,7 @@ const InstructorListView = ({
         onInsertAirCombatTrainingEvent,
         onUpdateAirCombatTrainingEvent,
         onGenerateAirCombatTrainingReport,
+        onAddTrainingReport,
         onViewLogbook,
         onRequestSct: () => {
           if (onRequestSct) {
@@ -42881,6 +42957,7 @@ const StaffView = (props) => {
           onInsertAirCombatTrainingEvent: props.onInsertAirCombatTrainingEvent,
           onUpdateAirCombatTrainingEvent: props.onUpdateAirCombatTrainingEvent,
           onGenerateAirCombatTrainingReport: props.onGenerateAirCombatTrainingReport,
+          onAddTrainingReport: props.onAddTrainingReport,
           school: props.school,
           personnelData: props.personnelData,
           onUpdateInstructor: props.onUpdateInstructor,
@@ -46401,6 +46478,8 @@ const AirCombatTrainingReportModal = ({
   assignment,
   item,
   sourceEvent,
+  recentEvents = [],
+  syllabusDetails = [],
   initialReport,
   reportName = "PT-051",
   trainingReportTemplate = null,
@@ -46431,18 +46510,24 @@ const AirCombatTrainingReportModal = ({
     return reportTemplate.grades.showNumbers ? label : formatGradeOption(value);
   };
   const formatGradeNumber = (value) => String(value).toUpperCase() === "DEMO" ? "DEMO" : String(value);
-  const eventCode2 = item?.code || sourceEvent?.flightNumber || initialReport?.eventCode || "";
-  const eventDescription = item?.eventDescription || sourceEvent?.notes || initialReport?.eventDescription || item?.module || "";
-  const eventType = item?.type || sourceEvent?.type || initialReport?.eventType || "";
-  const defaultDate = sourceEvent?.date || initialReport?.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  const defaultStart = Number(sourceEvent?.startTime ?? initialReport?.startTime ?? 8);
-  const defaultDuration = Number(sourceEvent?.duration ?? initialReport?.duration ?? item?.totalEventHours ?? item?.duration ?? item?.flightOrSimHours ?? 1);
-  const rawResourceId = sourceEvent?.resourceId || initialReport?.resourceId || "";
+  const [isEditMode, setIsEditMode] = reactExports.useState(false);
+  const [selectedSourceEvent, setSelectedSourceEvent] = reactExports.useState(sourceEvent);
+  const activeSourceEvent = selectedSourceEvent || sourceEvent;
+  const selectedEventCode = String(activeSourceEvent?.flightNumber || activeSourceEvent?.eventCode || initialReport?.eventCode || "").trim();
+  const matchedItem = reactExports.useMemo(() => item || syllabusDetails.find((candidate) => String(candidate.code || "").trim().toUpperCase() === selectedEventCode.toUpperCase()), [item, selectedEventCode, syllabusDetails]);
+  const effectiveAssignment = reactExports.useMemo(() => assignment || (matchedItem ? getAirCombatAssignmentFromItem(matchedItem, locationCode, unitCode || staff.unit, currentUserName) : void 0), [assignment, currentUserName, locationCode, matchedItem, staff.unit, unitCode]);
+  const eventCode2 = matchedItem?.code || selectedEventCode || "";
+  const eventDescription = matchedItem?.eventDescription || activeSourceEvent?.notes || initialReport?.eventDescription || matchedItem?.module || "";
+  const eventType = matchedItem?.type || activeSourceEvent?.type || initialReport?.eventType || "";
+  const defaultDate = activeSourceEvent?.date || initialReport?.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  const defaultStart = Number(activeSourceEvent?.startTime ?? initialReport?.startTime ?? 8);
+  const defaultDuration = Number(activeSourceEvent?.duration ?? initialReport?.duration ?? matchedItem?.totalEventHours ?? matchedItem?.duration ?? matchedItem?.flightOrSimHours ?? 1);
+  const rawResourceId = activeSourceEvent?.resourceId || initialReport?.resourceId || "";
   const displayResourceId = rawResourceId ? stripResourceLineNumber(formatResourceLabel2?.(rawResourceId) || rawResourceId) : "-";
   const [date, setDate] = reactExports.useState(initialReport?.date || defaultDate);
   const [startTime, setStartTime] = reactExports.useState(defaultStart);
   const [endTime, setEndTime] = reactExports.useState(defaultStart + defaultDuration);
-  const [instructorName, setInstructorName] = reactExports.useState(initialReport?.instructorName || sourceEvent?.instructor || currentUserName || "");
+  const [instructorName, setInstructorName] = reactExports.useState(initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || "");
   const [overallGrade, setOverallGrade] = reactExports.useState(initialReport?.overallGrade || "");
   const [overallResult, setOverallResult] = reactExports.useState(initialReport?.overallResult || "");
   const [dcoResult, setDcoResult] = reactExports.useState(initialReport?.dcoResult || "");
@@ -46450,7 +46535,7 @@ const AirCombatTrainingReportModal = ({
     const parsed = parseReportComments(initialReport?.notes || "");
     return {
       ...parsed,
-      assessor: parsed.assessor || initialReport?.instructorName || sourceEvent?.instructor || currentUserName || ""
+      assessor: parsed.assessor || initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || ""
     };
   });
   const [isSaving2, setIsSaving] = reactExports.useState(false);
@@ -46458,9 +46543,20 @@ const AirCombatTrainingReportModal = ({
   const [saveStatus, setSaveStatus] = reactExports.useState("Saved");
   const reportId = reactExports.useMemo(() => initialReport?.id || `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode2}-${Date.now()}`, [eventCode2, initialReport?.id, item?.id, sourceEvent?.id, staff.idNumber]);
   const assessmentElements = reactExports.useMemo(() => {
-    const source = Array.isArray(item?.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : ["Airmanship", "Preparation", "Technique"];
+    const source = Array.isArray(matchedItem?.assessedElements) && matchedItem.assessedElements.length > 0 ? matchedItem.assessedElements : ["Airmanship", "Preparation", "Technique"];
     return Array.from(new Set(source.map((element) => String(element || "").trim()).filter(Boolean)));
-  }, [item?.assessedElements]);
+  }, [matchedItem?.assessedElements]);
+  const selectRecentEvent = (event) => {
+    const nextDuration = Number(event.duration || matchedItem?.duration || 1);
+    setSelectedSourceEvent(event);
+    setDate(event.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
+    setStartTime(Number(event.startTime || 8));
+    setEndTime(Number(event.startTime || 8) + Math.max(0.25, nextDuration));
+    setInstructorName(event.instructor || currentUserName || "");
+    setCommentSections((prev) => ({ ...prev, assessor: event.instructor || currentUserName || prev.assessor }));
+    setSaveStatus("Unsaved");
+    setIsEditMode(false);
+  };
   const [elementScores, setElementScores] = reactExports.useState(() => {
     const existingScores = Array.isArray(initialReport?.assessedElementScores) ? initialReport.assessedElementScores : [];
     return assessmentElements.map((element) => {
@@ -46531,20 +46627,21 @@ const AirCombatTrainingReportModal = ({
         staffName: staff.name,
         locationCode,
         unitCode: unitCode || staff.unit,
-        trainingKey: assignment?.trainingKey,
-        trainingKind: assignment?.kind,
-        trainingCode: assignment?.code || item?.phase,
-        trainingTitle: assignment?.title || item?.module,
-        eventId: sourceEvent?.id || item?.id,
+        trainingKey: effectiveAssignment?.trainingKey,
+        trainingKind: effectiveAssignment?.kind,
+        trainingCode: effectiveAssignment?.code || matchedItem?.phase,
+        trainingTitle: effectiveAssignment?.title || matchedItem?.module,
+        eventId: activeSourceEvent?.id || matchedItem?.id,
         eventCode: eventCode2,
         eventDescription,
         eventType,
         date,
         startTime,
         duration,
-        resourceId: sourceEvent?.resourceId || initialReport?.resourceId,
-        callsign: sourceEvent?.callsign || initialReport?.callsign || staff.callsign,
+        resourceId: activeSourceEvent?.resourceId || initialReport?.resourceId,
+        callsign: activeSourceEvent?.callsign || initialReport?.callsign || staff.callsign,
         instructorName,
+        dashboardAssigneeName: initialReport?.dashboardAssigneeName || currentUserName || instructorName,
         overallGrade,
         overallResult,
         dcoResult,
@@ -46646,7 +46743,7 @@ const AirCombatTrainingReportModal = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => window.print(), className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Print" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Edit" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsEditMode((prev) => !prev), className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Edit" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: saveReport, disabled: isSaving2 || !eventCode2, className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40", children: "Save" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Delete" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Back" }),
@@ -46655,7 +46752,33 @@ const AirCombatTrainingReportModal = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 md:p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { className: "space-y-2 rounded-lg border border-gray-700 bg-gray-800 p-4 lg:col-span-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { onClick: () => isEditMode && recentEvents.length > 0 && setIsEditMode(true), className: `space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 ${isEditMode ? "border-sky-500/60" : "border-gray-700"}`, children: [
+            isEditMode && recentEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded border border-sky-500/30 bg-gray-950/80 p-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-bold uppercase tracking-wide text-sky-300", children: "Recent Flights" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: recentEvents.slice(0, 5).map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  onClick: (clickEvent) => {
+                    clickEvent.stopPropagation();
+                    selectRecentEvent(event);
+                  },
+                  className: "w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-left hover:border-sky-500 hover:bg-sky-950/30",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-white", children: event.flightNumber || event.eventCode || "Event" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-[10px] text-gray-400", children: [
+                        event.date || "-",
+                        " ",
+                        formatTimeToHHMM(event.startTime)
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[10px] text-gray-500", children: event.callsign || event.resourceId || event.notes || "-" })
+                  ]
+                },
+                event.id
+              )) })
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.event }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: eventCode2 || "N/A" })
@@ -46697,7 +46820,7 @@ const AirCombatTrainingReportModal = ({
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.callsign }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: sourceEvent?.callsign || staff.callsign || "-" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: activeSourceEvent?.callsign || staff.callsign || "-" })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.assessor }),
@@ -94638,6 +94761,9 @@ ${error instanceof Error ? error.message : String(error)}`,
     const reportEvent = buildAirCombatTrainingReportEventFromItem(staff, assignment, item);
     setAirCombatTrainingReportDraft({ staff, assignment, item, sourceEvent: reportEvent });
   };
+  const handleAddTrainingReportForStaff = (staff) => {
+    setAirCombatTrainingReportDraft({ staff });
+  };
   const handleOpenAirCombatTrainingReportFromFlightDetails = async (staff, sourceEvent) => {
     const matchingItem = syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === String(sourceEvent.flightNumber || "").trim().toUpperCase());
     let assignment;
@@ -94799,6 +94925,68 @@ ${error instanceof Error ? error.message : String(error)}`,
       `${existingReport ? "Updated" : "Generated"} draft ${report.reportName} from post-flight ${dcoResult} for ${report.staffName} - Event: ${report.eventCode}`
     );
     console.log(`[PostFlight] ✅ Draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode2} (${dcoResult})`);
+  };
+  const handleReassignTrainingReportNotification = async (entry, assignee) => {
+    const sourceStaff = allInstructorsData.find((person) => entry.staff.id ? person.id === entry.staff.id : person.idNumber === entry.staff.idNumber) || entry.staff;
+    const preferences = { ...sourceStaff.preferences || {} };
+    const existingReports = normaliseAirCombatTrainingReports(preferences);
+    const updatedReport = {
+      ...entry.report,
+      dashboardAssigneeName: assignee.name,
+      dashboardAcknowledgedAt: void 0,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      updatedBy: currentUserName
+    };
+    const updatedStaff = {
+      ...sourceStaff,
+      preferences: {
+        ...preferences,
+        airCombat: {
+          ...preferences.airCombat || {},
+          trainingReports: existingReports.map((report) => report.id === entry.report.id ? updatedReport : report)
+        }
+      }
+    };
+    const dbId = updatedStaff.id;
+    if (dbId) {
+      const response = await fetch(`/api/personnel/${dbId}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedStaff)
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Failed to reassign training report (${response.status})`);
+      }
+    }
+    setInstructorsData((prev) => prev.map((person) => dbId ? person.id === dbId ? updatedStaff : person : person.idNumber === updatedStaff.idNumber ? updatedStaff : person));
+    logAudit(
+      "Training Reports",
+      "Edit",
+      `Re-assigned report notification for ${entry.report.eventCode} to ${assignee.rank || ""} ${assignee.name}`.trim()
+    );
+  };
+  const getRecentTrainingReportEventsForStaff = (staff) => {
+    if (!staff) return [];
+    const target = String(staff.name || "").trim().toLowerCase();
+    const includesStaff = (event) => {
+      const people = [
+        event.instructor,
+        event.student,
+        event.pilot,
+        event.crew,
+        event.fixedCrewPic,
+        ...Array.isArray(event.attendees) ? event.attendees : []
+      ];
+      return people.flatMap((person) => String(person || "").split(/[,;/]/)).some((person) => person.trim().toLowerCase() === target);
+    };
+    const deduped = /* @__PURE__ */ new Map();
+    [...publishedScheduleHistoryEvents, ...eventsForDate].filter(includesStaff).filter((event) => String(event.dcoResult || event.completionResult || "DCO").toUpperCase() === "DCO").forEach((event) => {
+      const key = event.id || `${event.date}-${event.flightNumber}-${event.startTime}-${event.resourceId}`;
+      deduped.set(key, event);
+    });
+    return Array.from(deduped.values()).sort((left, right) => (/* @__PURE__ */ new Date(`${right.date || ""}T00:00:00`)).getTime() - (/* @__PURE__ */ new Date(`${left.date || ""}T00:00:00`)).getTime() || Number(right.startTime || 0) - Number(left.startTime || 0)).slice(0, 5);
   };
   const handleViewLogbook = reactExports.useCallback((person) => {
     setSelectedPersonForLogbook(person);
@@ -102740,7 +102928,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         const defaultDashboardStaff = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === "burns, alexander");
         const dashboardUserName = dashboardTestUserName || defaultDashboardStaff?.name || sessionDashboardUserName;
         const dashboardStaff = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName));
-        const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && normaliseDashboardName(report.staffName) === normaliseDashboardName(dashboardUserName)).map((report) => ({ report, staff })));
+        const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && normaliseDashboardName(report.dashboardAssigneeName || report.instructorName || report.staffName) === normaliseDashboardName(dashboardUserName)).map((report) => ({ report, staff })));
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           MyDashboard,
           {
@@ -102759,17 +102947,12 @@ ${error instanceof Error ? error.message : String(error)}`,
             selectedStaffName: dashboardUserName,
             onSelectStaffName: setDashboardTestUserName,
             onSelectTrainingReport: (entry) => {
-              const sourceEvent = allPublishedEvents.find((event) => event.id === entry.report.eventId || event.date === entry.report.date && String(event.flightNumber || event.eventCode || "").trim().toUpperCase() === String(entry.report.eventCode || "").trim().toUpperCase() && [event.fixedCrewPic, event.pilot, event.instructor, event.crew].some((name) => normaliseDashboardName(name) === normaliseDashboardName(entry.report.staffName)));
-              const matchingItem = syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === String(entry.report.eventCode || "").trim().toUpperCase());
-              const assignment = matchingItem ? getAirCombatAssignmentFromItem(matchingItem, school, entry.staff.unit || activeUnitCode, currentUserName) : void 0;
-              setAirCombatTrainingReportDraft({
-                staff: entry.staff,
-                assignment,
-                item: matchingItem,
-                sourceEvent,
-                initialReport: entry.report
-              });
+              const selectedStaff = allInstructorsData.find((staff) => entry.staff.id ? staff.id === entry.staff.id : staff.idNumber === entry.staff.idNumber) || entry.staff;
+              setSelectedPersonForProfile(selectedStaff);
+              setProfileInitialTab("trainingReports");
+              handleNavigation("Instructors");
             },
+            onReassignTrainingReport: handleReassignTrainingReportNotification,
             onSelectPt051: (assessment) => {
               console.log("🔍 Dashboard PT-051 clicked:", assessment);
               console.log("Looking for event ID:", assessment.eventId);
@@ -102909,6 +103092,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onInsertAirCombatTrainingEvent: handleInsertAirCombatTrainingEvent,
             onUpdateAirCombatTrainingEvent: handleUpdateAirCombatTrainingEvent,
             onGenerateAirCombatTrainingReport: handleGenerateAirCombatTrainingReportForStaff,
+            onAddTrainingReport: handleAddTrainingReportForStaff,
             school,
             personnelData,
             onUpdateInstructor: async (data) => {
@@ -103027,6 +103211,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onInsertAirCombatTrainingEvent: handleInsertAirCombatTrainingEvent,
             onUpdateAirCombatTrainingEvent: handleUpdateAirCombatTrainingEvent,
             onGenerateAirCombatTrainingReport: handleGenerateAirCombatTrainingReportForStaff,
+            onAddTrainingReport: handleAddTrainingReportForStaff,
             school,
             personnelData,
             onUpdateInstructor: async (data) => {
@@ -105042,6 +105227,8 @@ Do you want to replace the existing entry?`,
         assignment: airCombatTrainingReportDraft.assignment,
         item: airCombatTrainingReportDraft.item,
         sourceEvent: airCombatTrainingReportDraft.sourceEvent,
+        recentEvents: getRecentTrainingReportEventsForStaff(airCombatTrainingReportDraft.staff),
+        syllabusDetails,
         initialReport: airCombatTrainingReportDraft.initialReport,
         reportName: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode).displayName,
         trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode),
