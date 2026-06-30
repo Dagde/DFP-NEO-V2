@@ -80111,16 +80111,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const normalisePooledCrewPersonKey = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
     const isPooledCrewPilot = (staff) => String(staff.role || "").trim().toLowerCase() === "pilot";
     const pooledCrewPilots = pooledCrewStaff.filter(isPooledCrewPilot);
-    const pooledCrewStrictPicCount = pooledCrewPilots.filter(staffHasPicQualification).length;
-    const useProvisionalPooledCrewPicFallback = isPooledCrewBuild && pooledCrewPilots.length > 0 && pooledCrewStrictPicCount === 0;
-    if (useProvisionalPooledCrewPicFallback) {
-      diag.pooledCrewAllocation.rejections.push({
-        reason: "POOLED_CREW_PIC_QUALIFICATION_NOT_CONFIGURED_USING_PROVISIONAL_PIC",
-        pilotCount: pooledCrewPilots.length,
-        message: "No uploaded 36SQN pilot has a PIC qualification yet, so Pooled Crew will provisionally treat pilots as PIC-capable for this build."
-      });
-    }
-    const pooledCrewStaffHasPicQualification = (staff) => staffHasPicQualification(staff) || useProvisionalPooledCrewPicFallback && isPooledCrewPilot(staff);
     const pooledCrewPublishedHistory = Object.entries(publishedSchedules || {}).flatMap(([date, events]) => (events || []).map((event) => ({ ...event, date }))).filter((event) => String(event.date || "") < buildDate).sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")));
     const pooledCrewHistoryByPerson = /* @__PURE__ */ new Map();
     const buildPooledCrewHistoricalEvents = (staff) => {
@@ -80233,12 +80223,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         incrementFixedCrewRejection("NO_ELIGIBLE_POOLED_CREW_RECIPIENT");
         return null;
       }
-      const recipientIsPic = pooledCrewStaffHasPicQualification(recipient.staff);
+      const recipientIsPic = staffHasPicQualification(recipient.staff);
       const requiresPicSupervision = /upgrade|assessment|assess|check|instruct|supervis/i.test(`${event.flightNumber || ""} ${event.eventTitle || ""} ${event.training || ""}`);
-      const partnerPool = pilots.filter((staff) => !personnelNamesMatch(staff.name, recipient.staff.name)).filter((staff) => {
-        if (!recipientIsPic) return pooledCrewStaffHasPicQualification(staff);
-        return requiresPicSupervision ? pooledCrewStaffHasPicQualification(staff) : !staffHasPicQualification(staff);
+      const eligiblePartnerPilots = pilots.filter((staff) => !personnelNamesMatch(staff.name, recipient.staff.name));
+      const preferredPartnerPool = eligiblePartnerPilots.filter((staff) => {
+        if (!recipientIsPic) return staffHasPicQualification(staff);
+        return requiresPicSupervision ? staffHasPicQualification(staff) : !staffHasPicQualification(staff);
       });
+      const fallbackPicPartnerPool = recipientIsPic && !requiresPicSupervision && preferredPartnerPool.length === 0 ? eligiblePartnerPilots.filter(staffHasPicQualification) : [];
+      const partnerPool = preferredPartnerPool.length > 0 ? preferredPartnerPool : fallbackPicPartnerPool;
       fixedCrewPerf.counters.pooledCrewPartnerEvaluations += partnerPool.length;
       const partner = selectPooledCrewCandidate(partnerPool, event, "partner", `partner-${recipient.staff.idNumber || recipient.staff.name}`);
       if (!partner) {
@@ -80280,7 +80273,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         incrementFixedCrewRejection(reason);
         return null;
       }
-      const pic = pooledCrewStaffHasPicQualification(recipient.staff) ? recipient.staff : partner.staff;
+      const pic = staffHasPicQualification(recipient.staff) ? recipient.staff : partner.staff;
       const explanation = [
         `Recipient: ${recipient.staff.name}. ${recipient.explanation}`,
         `Partner pilot: ${partner.staff.name}. ${partner.explanation}`
@@ -80296,18 +80289,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           partner: { name: partner.staff.name, score: partner.score, randomFallback: partner.randomFallback, stats: partner.stats, explanation: partner.explanation },
           roleFill: roleFillDiagnostics,
           requiresPicSupervision,
-          provisionalPicFallback: useProvisionalPooledCrewPicFallback
+          usedPicAsCoPilotFallback: fallbackPicPartnerPool.length > 0 && preferredPartnerPool.length === 0
         }
       };
     };
     const getPooledCrewGlobalPairingViability = (event) => {
       const pilots = pooledCrewPilots;
-      const picCount = pilots.filter(pooledCrewStaffHasPicQualification).length;
-      const coPilotCount = useProvisionalPooledCrewPicFallback ? Math.max(0, pilots.length - 1) : pilots.length - picCount;
+      const picCount = pilots.filter(staffHasPicQualification).length;
+      const coPilotCount = pilots.length - picCount;
       const requiresPicSupervision = /upgrade|assessment|assess|check|instruct|supervis/i.test(`${event.flightNumber || ""} ${event.eventTitle || ""} ${event.training || ""}`);
       if (pilots.length < 2) return { viable: false, reason: "POOLED_CREW_NOT_ENOUGH_PILOTS", pilotCount: pilots.length, picCount, coPilotCount, requiresPicSupervision };
       if (picCount < 1) return { viable: false, reason: "POOLED_CREW_NO_PIC_PILOT", pilotCount: pilots.length, picCount, coPilotCount, requiresPicSupervision };
-      if (!requiresPicSupervision && coPilotCount < 1) return { viable: false, reason: "POOLED_CREW_NO_CO_PILOT", pilotCount: pilots.length, picCount, coPilotCount, requiresPicSupervision };
       return { viable: true, pilotCount: pilots.length, picCount, coPilotCount, requiresPicSupervision };
     };
     const tryPlaceFixedCrewEvent = (sourceEvent, source, fixedStartTime) => {
