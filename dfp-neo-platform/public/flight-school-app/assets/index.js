@@ -46492,6 +46492,8 @@ const AirCombatTrainingReportModal = ({
   const gradeOptions = reportTemplate.grades.options.map((option) => String(option.value));
   const overallGradeOptions = ["", ...gradeOptions];
   const assessmentGradeOptions = ["DEMO", ...gradeOptions];
+  const awardedOverallGrade = String(overallGrade || "").trim();
+  const gradeDrivenOverallResult = awardedOverallGrade ? awardedOverallGrade === "0" ? "F" : "P" : "";
   const gradeHeaderColors = {
     DEMO: "bg-red-950/35 border-red-500/20",
     "0": "bg-red-950/35 border-red-500/20",
@@ -46733,23 +46735,34 @@ const AirCombatTrainingReportModal = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 grid grid-cols-4 gap-2 rounded bg-gray-950/45 p-2 sm:grid-cols-6 xl:grid-cols-12", children: overallGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { title: grade ? formatGradeOption(grade) : "No Grade", className: `flex min-h-[64px] cursor-pointer flex-col items-center justify-between rounded border px-1.5 py-2 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`, children: [
                   grade && reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeNumber(grade) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300", children: (grade ? formatGradeHeaderText(grade) : "No Grade").split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-overall-grade", value: grade, checked: overallGrade === grade, onChange: () => {
-                    setOverallGrade(grade);
-                    setSaveStatus("Unsaved");
-                  }, className: `h-4 w-4 ${grade ? getRadioAccentColor(grade) : "accent-gray-400"} bg-gray-600` })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "radio",
+                      name: "training-report-overall-grade",
+                      value: grade,
+                      checked: overallGrade === grade,
+                      onChange: () => {
+                        setOverallGrade(grade);
+                        setOverallResult(grade ? grade === "0" ? "F" : "P" : "");
+                        setSaveStatus("Unsaved");
+                      },
+                      className: `h-4 w-4 ${grade ? getRadioAccentColor(grade) : "accent-gray-400"} bg-gray-600`
+                    }
+                  )
                 ] }, grade || "No Grade")) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-sm font-medium text-gray-400", children: overallFields.overallResult }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex space-x-4", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `w-1/2 cursor-pointer rounded-lg p-4 text-center transition-all duration-200 ${overallResult === "P" ? "scale-105 bg-green-600 text-white shadow-lg ring-2 ring-white" : "bg-green-800/50 text-green-200 hover:bg-green-700/50"}`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `w-1/2 cursor-pointer rounded-lg p-4 text-center transition-all duration-200 ${gradeDrivenOverallResult === "P" ? "scale-105 bg-green-600 text-white shadow-lg ring-2 ring-white" : "bg-green-950/20 text-green-300/35 hover:bg-green-900/25 hover:text-green-300/45"}`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-overall-result", value: "P", checked: overallResult === "P", onChange: () => {
                       setOverallResult("P");
                       setSaveStatus("Unsaved");
                     }, className: "sr-only" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: reportTemplate.overallResults.passLabel })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `w-1/2 cursor-pointer rounded-lg p-4 text-center transition-all duration-200 ${overallResult === "F" ? "scale-105 bg-red-600 text-white shadow-lg ring-2 ring-white" : "bg-red-800/50 text-red-200 hover:bg-red-700/50"}`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `w-1/2 cursor-pointer rounded-lg p-4 text-center transition-all duration-200 ${gradeDrivenOverallResult === "F" ? "scale-105 bg-red-600 text-white shadow-lg ring-2 ring-white" : "bg-red-950/20 text-red-300/35 hover:bg-red-900/25 hover:text-red-300/45"}`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-overall-result", value: "F", checked: overallResult === "F", onChange: () => {
                       setOverallResult("F");
                       setSaveStatus("Unsaved");

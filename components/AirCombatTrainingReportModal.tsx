@@ -212,6 +212,10 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const gradeOptions = reportTemplate.grades.options.map(option => String(option.value));
   const overallGradeOptions = ['', ...gradeOptions];
   const assessmentGradeOptions = ['DEMO', ...gradeOptions];
+  const awardedOverallGrade = String(overallGrade || '').trim();
+  const gradeDrivenOverallResult: '' | 'P' | 'F' = awardedOverallGrade
+    ? awardedOverallGrade === '0' ? 'F' : 'P'
+    : '';
   const gradeHeaderColors: Record<string, string> = {
     DEMO: 'bg-red-950/35 border-red-500/20',
     '0': 'bg-red-950/35 border-red-500/20',
@@ -410,7 +414,18 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                           <span className="flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300">
                             {(grade ? formatGradeHeaderText(grade) : 'No Grade').split(/\s+/).map((word, index) => <span key={`${word}-${index}`}>{word}</span>)}
                           </span>
-                          <input type="radio" name="training-report-overall-grade" value={grade} checked={overallGrade === grade} onChange={() => { setOverallGrade(grade); setSaveStatus('Unsaved'); }} className={`h-4 w-4 ${grade ? getRadioAccentColor(grade) : 'accent-gray-400'} bg-gray-600`} />
+                          <input
+                            type="radio"
+                            name="training-report-overall-grade"
+                            value={grade}
+                            checked={overallGrade === grade}
+                            onChange={() => {
+                              setOverallGrade(grade);
+                              setOverallResult(grade ? grade === '0' ? 'F' : 'P' : '');
+                              setSaveStatus('Unsaved');
+                            }}
+                            className={`h-4 w-4 ${grade ? getRadioAccentColor(grade) : 'accent-gray-400'} bg-gray-600`}
+                          />
                         </label>
                       ))}
                     </div>
@@ -418,11 +433,11 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-400">{overallFields.overallResult}</label>
                     <div className="mt-1 flex space-x-4">
-                      <label className={`w-1/2 cursor-pointer rounded-lg p-4 text-center transition-all duration-200 ${overallResult === 'P' ? 'scale-105 bg-green-600 text-white shadow-lg ring-2 ring-white' : 'bg-green-800/50 text-green-200 hover:bg-green-700/50'}`}>
+                      <label className={`w-1/2 cursor-pointer rounded-lg p-4 text-center transition-all duration-200 ${gradeDrivenOverallResult === 'P' ? 'scale-105 bg-green-600 text-white shadow-lg ring-2 ring-white' : 'bg-green-950/20 text-green-300/35 hover:bg-green-900/25 hover:text-green-300/45'}`}>
                         <input type="radio" name="training-report-overall-result" value="P" checked={overallResult === 'P'} onChange={() => { setOverallResult('P'); setSaveStatus('Unsaved'); }} className="sr-only" />
                         <span className="text-2xl font-bold">{reportTemplate.overallResults.passLabel}</span>
                       </label>
-                      <label className={`w-1/2 cursor-pointer rounded-lg p-4 text-center transition-all duration-200 ${overallResult === 'F' ? 'scale-105 bg-red-600 text-white shadow-lg ring-2 ring-white' : 'bg-red-800/50 text-red-200 hover:bg-red-700/50'}`}>
+                      <label className={`w-1/2 cursor-pointer rounded-lg p-4 text-center transition-all duration-200 ${gradeDrivenOverallResult === 'F' ? 'scale-105 bg-red-600 text-white shadow-lg ring-2 ring-white' : 'bg-red-950/20 text-red-300/35 hover:bg-red-900/25 hover:text-red-300/45'}`}>
                         <input type="radio" name="training-report-overall-result" value="F" checked={overallResult === 'F'} onChange={() => { setOverallResult('F'); setSaveStatus('Unsaved'); }} className="sr-only" />
                         <span className="text-2xl font-bold">{reportTemplate.overallResults.failLabel}</span>
                       </label>
