@@ -38109,7 +38109,7 @@ appliedUpdates.forEach(update => {
                                 }
                             }}
                             scores={scores}
-                            syllabusDetails={syllabusDetails}
+                            syllabusDetails={visibleSyllabusDetails}
                             traineeLMPs={traineeLMPs}
                             courseColors={scopedCourseColors}
                             currentUserRole={currentUserPermission}

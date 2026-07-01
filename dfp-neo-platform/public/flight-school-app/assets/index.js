@@ -32610,7 +32610,9 @@ const PeopleTab = ({
   const fieldsetShell = "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
   const legendClass = "px-2 text-lg font-semibold text-white";
   const inputClass = "bg-slate-950 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all";
-  const isAirCombatModel = String(operationalModel2 || "").trim().toLowerCase() === "air_combat";
+  const activeModel = normaliseOperationalModel(operationalModel2);
+  const isCrewOperationalModel = activeModel === "air_combat" || isFixedCrewLikeOperationalModel(activeModel);
+  const activeModelLabel = getOperationalModelLabel(activeModel);
   const activeUnitCodes = reactExports.useMemo(() => {
     const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
@@ -32783,10 +32785,13 @@ const PeopleTab = ({
       ] }, `${row.staff.idNumber}-${row.kind}-${row.code}`)) })
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "p-5 text-center text-sm text-slate-400", children: "No active priority items found." }) })
   ] });
-  if (isAirCombatModel) {
+  if (isCrewOperationalModel) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: sectionShell, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionHeader, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Staff Availability" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionHeader, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-lg font-semibold text-white", children: [
+          activeModelLabel,
+          " Staff Availability"
+        ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: sectionBody, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-4", children: [
@@ -32844,7 +32849,7 @@ const PeopleTab = ({
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: sectionShell, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionHeader, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Air Combat Training Priority Lists" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionHeader, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Operational Training Priority Lists" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${sectionBody} space-y-4`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(AirCombatPriorityTable, { title: "Composite Course / Package Priority List", rows: airCombatPeopleMetrics.priorityRows, limit: 20 }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 xl:grid-cols-2", children: [
@@ -33271,7 +33276,9 @@ const CourseMetricsTab = ({
   operationalModel: operationalModel2,
   operationalContext
 }) => {
-  const isAirCombatModel = String(operationalModel2 || "").trim().toLowerCase() === "air_combat";
+  const activeModel = normaliseOperationalModel(operationalModel2);
+  const isCrewOperationalModel = activeModel === "air_combat" || isFixedCrewLikeOperationalModel(activeModel);
+  const activeModelLabel = getOperationalModelLabel(activeModel);
   const activeUnitCodes = reactExports.useMemo(() => {
     const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
@@ -33456,13 +33463,16 @@ const CourseMetricsTab = ({
       availableTraineesPerCourse
     };
   }, [date, events, traineesData, activeCourses, traineeCourseLookup]);
-  if (isAirCombatModel) {
+  if (isCrewOperationalModel) {
     const totalScheduled = airCombatCourseStats.reduce((sum, stream) => sum + stream.eventCount, 0);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Air Combat Course & Package Metrics" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Each card is a course or training package assigned to at least one staff member in this unit. The large number is how many events from that stream are on the selected DFP." })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-lg font-semibold text-white", children: [
+            activeModelLabel,
+            " Course & Package Metrics"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Each card is a course, package, currency stream or operational training stream assigned to at least one staff member in this unit. The large number is how many events from that stream are on the selected DFP." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5", children: airCombatCourseStats.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3", children: airCombatCourseStats.map((stream) => /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
@@ -33474,12 +33484,12 @@ const CourseMetricsTab = ({
             onPersonClick: onNavigateAndSelectPerson
           },
           stream.key
-        )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-8 text-center text-slate-400", children: "No Air Combat courses or training packages have staff assigned in this unit." }) })
+        )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-8 text-center text-slate-400", children: "No courses, packages or operational training streams have staff assigned in this unit." }) })
       ] }),
       airCombatCourseStats.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Course And Package Schedule Summary" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "This table shows what is loaded for the selected Air Combat unit and what was actually scheduled on this DFP." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "This table shows what is loaded for the selected unit context and what was actually scheduled on this DFP." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto p-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[920px] text-left text-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-950/80 text-[10px] uppercase tracking-[0.16em] text-slate-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -37560,14 +37570,25 @@ const timeLabel = (value) => {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
 const normaliseRole = (value) => String(value || "Unassigned").trim() || "Unassigned";
+const normaliseName$1 = (value) => String(value || "").trim().toLowerCase();
+const isPlaceholderCrewValue = (value) => {
+  const text = String(value || "").trim();
+  return !text || /^TBA$/i.test(text) || /^Pooled Crew$/i.test(text) || /^Solo$/i.test(text);
+};
 const eventStaffNames = (event) => {
   const names = [
     event.instructor,
     event.pilot,
     event.crew,
+    event.student,
     ...event.attendees || []
-  ].map((name) => String(name || "").trim()).filter((name) => name && !/^TBA$/i.test(name));
+  ].map((name) => String(name || "").trim()).filter((name) => !isPlaceholderCrewValue(name) && !/^CREW\s*\d+/i.test(name));
   return [...new Set(names)];
+};
+const eventPicName = (event) => String(event.fixedCrewPic || event.pilot || event.instructor || "").trim();
+const eventPartnerNames = (event) => {
+  const picKey = normaliseName$1(eventPicName(event));
+  return eventStaffNames(event).filter((name) => normaliseName$1(name) !== picKey);
 };
 const eventCode = (event) => String(event.eventCode || event.flightNumber || event.taskingDisplayLabel || event.taskingName || "").trim().toUpperCase();
 const isTaskingEvent = (event) => Boolean(event.isTaskingRequest || event.taskingRequestId || event.taskingName);
@@ -37591,11 +37612,18 @@ const AirCombatIntelligenceTab = ({
   currentAircraftAvailable,
   totalAircraft,
   resourceDisplayNames,
-  operationalContext
+  operationalContext,
+  operationalModel: operationalModel2
 }) => {
+  const model = normaliseOperationalModel(operationalModel2);
+  const isFixedCrewLike = isFixedCrewLikeOperationalModel(model);
+  const modelLabel = getOperationalModelLabel(model);
   const analysis = reactExports.useMemo(() => {
     const roleCounts = /* @__PURE__ */ new Map();
+    const scheduledRoleCounts = /* @__PURE__ */ new Map();
+    const staffByName = /* @__PURE__ */ new Map();
     instructorsData.forEach((person) => {
+      staffByName.set(normaliseName$1(person.name), person);
       const role = normaliseRole(person.role);
       roleCounts.set(role, Number(roleCounts.get(role) || 0) + 1);
     });
@@ -37610,13 +37638,26 @@ const AirCombatIntelligenceTab = ({
     const currencyEvents = activeEvents.filter(isCurrencyEvent);
     const courseEvents = activeEvents.filter((event) => trainingFamily(event) === "course");
     const packageEvents = activeEvents.filter((event) => trainingFamily(event) === "package");
+    const assessmentEvents = activeEvents.filter((event) => Boolean(event.assessmentRequired));
     const flightHours = flightEvents.reduce((sum, event) => sum + (Number(event.duration) || 0), 0);
     const simulatorHours = simulatorEvents.reduce((sum, event) => sum + (Number(event.duration) || 0), 0);
     const crewedFlights = flightEvents.filter((event) => event.flightType === "Dual" || Boolean(event.crewRequirement));
-    const missingPilot = flightEvents.filter((event) => !String(event.pilot || event.instructor || "").trim());
-    const missingCrew = crewedFlights.filter((event) => !String(event.crew || "").trim());
+    const missingPilot = flightEvents.filter((event) => !eventPicName(event));
+    const missingCrew = crewedFlights.filter((event) => eventPartnerNames(event).length === 0);
+    const soloAnomalies = isFixedCrewLike ? flightEvents.filter((event) => event.flightType === "Solo" || event.soloOrDual === "Solo" || /^Solo$/i.test(String(event.crew || "").trim()) || eventPartnerNames(event).length === 0) : [];
     const uniqueCrew = new Set(activeEvents.flatMap(eventStaffNames));
-    const aircraftUsed = new Set(flightEvents.map((event) => event.resourceId).filter(Boolean));
+    uniqueCrew.forEach((name) => {
+      const staff = staffByName.get(normaliseName$1(name));
+      if (!staff) return;
+      const role = normaliseRole(staff.role);
+      scheduledRoleCounts.set(role, Number(scheduledRoleCounts.get(role) || 0) + 1);
+    });
+    const crewGroupValues = new Set(
+      flightEvents.map((event) => String(event.fixedCrewGroup || event.crew || "").trim()).filter((value) => value && !isPlaceholderCrewValue(value))
+    );
+    const aircraftUsed = new Set(
+      flightEvents.map((event) => String(event.resourceId || "").trim()).filter((resourceId) => resourceId && !resourceId.startsWith("STBY") && !resourceId.startsWith("BNF-STBY"))
+    );
     const firstFlight = flightEvents.reduce((first, event) => !first || Number(event.startTime) < Number(first.startTime) ? event : first, null);
     const lastFlight = flightEvents.reduce((last, event) => {
       const end = Number(event.startTime || 0) + Number(event.duration || 0);
@@ -37635,16 +37676,20 @@ const AirCombatIntelligenceTab = ({
       currencyEvents,
       courseEvents,
       packageEvents,
+      assessmentEvents,
       flightHours,
       simulatorHours,
       missingPilot,
       missingCrew,
+      soloAnomalies,
       uniqueCrew,
+      crewGroupValues,
+      scheduledRoleCounts,
       aircraftUsed,
       firstFlight,
       lastFlight
     };
-  }, [events, instructorsData]);
+  }, [events, instructorsData, isFixedCrewLike]);
   const unitLabel = [
     operationalContext?.locationCode,
     operationalContext?.unitCode || operationalContext?.unitName
@@ -37653,14 +37698,14 @@ const AirCombatIntelligenceTab = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900/80 p-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "Air Combat Model" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: modelLabel }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: "Operational Build Intelligence" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-400", children: [
           "Current DFP signal for ",
           unitLabel,
           " on ",
           date,
-          ". Aircraft availability is read for this unit or combined-unit context only."
+          ". Data is scoped to this unit or combined-unit operating context."
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700 bg-slate-950/60 px-4 py-3 text-right", children: [
@@ -37682,49 +37727,55 @@ const AirCombatIntelligenceTab = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-slate-700/80 bg-slate-900/80 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 flex items-center justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Crew And Resource Health" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Shows whether the current DFP is allocating people and aircraft in an Air Combat-shaped way." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Shows whether the current DFP has the required operational crew, resources and training mix loaded." })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             StatCard,
             {
-              label: "Missing captain / pilot",
+              label: "Missing PIC",
               value: numberLabel(analysis.missingPilot.length),
-              subtext: "Flight tiles without a primary crew member",
+              subtext: "Flight tiles without a primary pilot/PIC",
               accent: analysis.missingPilot.length > 0 ? "text-rose-200" : "text-emerald-200"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             StatCard,
             {
-              label: "Missing second crew",
+              label: isFixedCrewLike ? "Missing crew partner" : "Missing second crew",
               value: numberLabel(analysis.missingCrew.length),
-              subtext: "Crewed flight tiles without a second seat",
+              subtext: "Crewed flight tiles without another assigned person",
               accent: analysis.missingCrew.length > 0 ? "text-rose-200" : "text-emerald-200"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             StatCard,
             {
-              label: "Formation events",
-              value: numberLabel(analysis.formationEvents.length),
-              subtext: "Events with formation id or size above one",
-              accent: "text-violet-200"
+              label: isFixedCrewLike ? "Solo anomalies" : "Formation events",
+              value: numberLabel(isFixedCrewLike ? analysis.soloAnomalies.length : analysis.formationEvents.length),
+              subtext: isFixedCrewLike ? "Crew model flights that look under-crewed" : "Events with formation id or size above one",
+              accent: isFixedCrewLike && analysis.soloAnomalies.length > 0 ? "text-rose-200" : "text-violet-200"
             }
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-1 gap-3 md:grid-cols-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Taskings", value: numberLabel(analysis.taskingEvents.length), subtext: "Marked tasking requests", accent: "text-orange-200" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Currency", value: numberLabel(analysis.currencyEvents.length), subtext: "Currency marked events", accent: "text-fuchsia-200" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Night", value: numberLabel(analysis.nightEvents.length), subtext: "Night-coded events on this DFP", accent: "text-indigo-200" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: isFixedCrewLike ? "Assessment events" : "Night", value: numberLabel(isFixedCrewLike ? analysis.assessmentEvents.length : analysis.nightEvents.length), subtext: isFixedCrewLike ? "Events requiring a training report/assessment" : "Night-coded events on this DFP", accent: "text-indigo-200" })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-slate-700/80 bg-slate-900/80 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Staff Role Mix" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Roles loaded for this unit context. These roles should drive crew selection and seat eligibility." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Roles loaded and used for this unit context. These roles should drive crew selection and seat eligibility." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-2", children: [
           analysis.crewRoles.map((role) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-md border border-slate-700/70 bg-slate-950/50 px-3 py-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-slate-200", children: role.role }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-slate-200", children: role.role }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-2 text-xs text-slate-500", children: [
+                numberLabel(analysis.scheduledRoleCounts.get(role.role) || 0),
+                " scheduled"
+              ] })
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-cyan-200", children: role.count })
           ] }, role.role)),
           analysis.crewRoles.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-slate-700/70 bg-slate-950/50 px-3 py-4 text-sm text-slate-400", children: "No staff roles are loaded for this context." })
@@ -37737,7 +37788,7 @@ const AirCombatIntelligenceTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "First flight", value: timeLabel(analysis.firstFlight?.startTime), subtext: analysis.firstFlight ? eventCode(analysis.firstFlight) || "Flight event" : "No flight events" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Last landing", value: timeLabel(lastFlightEnd), subtext: analysis.lastFlight ? eventCode(analysis.lastFlight) || "Flight event" : "No flight events" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: resourceDisplayNames.aircraft || "Aircraft", value: numberLabel(analysis.aircraftUsed.size), subtext: "Distinct aircraft/resource rows used" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Ground events", value: numberLabel(analysis.groundEvents.length), subtext: "Non-flying scheduled events" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: isFixedCrewLike ? "Crew groups" : "Ground events", value: numberLabel(isFixedCrewLike ? analysis.crewGroupValues.size : analysis.groundEvents.length), subtext: isFixedCrewLike ? "Distinct crew groups/crew labels on flight events" : "Non-flying scheduled events" })
       ] })
     ] })
   ] });
@@ -39363,8 +39414,11 @@ const ACHistoryIntelligencePanel = ({
   ] });
 };
 const BuildIntelligenceView = (props) => {
-  const isAirCombatModel = String(props.operationalModel || "").trim().toLowerCase() === "air_combat";
-  const [activeTab, setActiveTab] = reactExports.useState(isAirCombatModel ? "air-combat" : "people");
+  const activeModel = normaliseOperationalModel(props.operationalModel);
+  const isAirCombatModel = activeModel === "air_combat";
+  const isCrewOperationalModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeModel);
+  const activeModelLabel = getOperationalModelLabel(activeModel);
+  const [activeTab, setActiveTab] = reactExports.useState(isCrewOperationalModel ? "air-combat" : "people");
   const resourceDisplayNames = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
   const formattedDate = reactExports.useMemo(() => {
     const [year, month, day] = props.date.split("-").map(Number);
@@ -39377,10 +39431,10 @@ const BuildIntelligenceView = (props) => {
     });
   }, [props.date]);
   reactExports.useEffect(() => {
-    if (!isAirCombatModel && activeTab === "air-combat") setActiveTab("people");
-  }, [activeTab, isAirCombatModel]);
+    if (!isCrewOperationalModel && activeTab === "air-combat") setActiveTab("people");
+  }, [activeTab, isCrewOperationalModel]);
   const tabs = [
-    ...isAirCombatModel ? [{ id: "air-combat", label: "Air Combat" }] : [],
+    ...isCrewOperationalModel ? [{ id: "air-combat", label: "Operational" }] : [],
     { id: "people", label: "People" },
     { id: "course-metrics", label: "Course Metrics" },
     { id: "build-analytics", label: "Build Analytics" },
@@ -39398,7 +39452,8 @@ const BuildIntelligenceView = (props) => {
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-slate-300", children: [
-        "Comprehensive analysis for DFP on ",
+        activeModelLabel,
+        " analysis for DFP on ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: formattedDate })
       ] })
     ] }) }),
@@ -39441,7 +39496,8 @@ const BuildIntelligenceView = (props) => {
           currentAircraftAvailable: props.currentAircraftAvailable,
           totalAircraft: props.totalAircraft,
           resourceDisplayNames,
-          operationalContext: props.operationalContext
+          operationalContext: props.operationalContext,
+          operationalModel: props.operationalModel
         }
       ),
       activeTab === "course-metrics" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -104352,7 +104408,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               }
             },
             scores,
-            syllabusDetails,
+            syllabusDetails: visibleSyllabusDetails,
             traineeLMPs,
             courseColors: scopedCourseColors,
             currentUserRole: currentUserPermission,

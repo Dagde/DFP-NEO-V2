@@ -6,6 +6,11 @@ import PieChart from '../shared/PieChart';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../../utils/resourceDisplayNames';
 import { normaliseAirCombatTrainingAssignments, normaliseAirCombatTrainingReports, type AirCombatTrainingKind } from '../../utils/airCombatTraining';
 import { resolveCourseLegendColor } from '../../utils/tileColorResolver';
+import {
+  getOperationalModelLabel,
+  isFixedCrewLikeOperationalModel,
+  normaliseOperationalModel,
+} from '../../utils/platformConfigService';
 
 interface CourseAnalysis {
   courseName: string;
@@ -76,7 +81,9 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
   operationalModel,
   operationalContext,
 }) => {
-  const isAirCombatModel = String(operationalModel || '').trim().toLowerCase() === 'air_combat';
+  const activeModel = normaliseOperationalModel(operationalModel);
+  const isCrewOperationalModel = activeModel === 'air_combat' || isFixedCrewLikeOperationalModel(activeModel);
+  const activeModelLabel = getOperationalModelLabel(activeModel);
   const activeUnitCodes = useMemo(() => {
     const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0
       ? operationalContext.unitCodes
@@ -315,15 +322,15 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
     };
   }, [date, events, traineesData, activeCourses, traineeCourseLookup]);
 
-  if (isAirCombatModel) {
+  if (isCrewOperationalModel) {
     const totalScheduled = airCombatCourseStats.reduce((sum, stream) => sum + stream.eventCount, 0);
     return (
       <div className="space-y-6">
         <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
           <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
-            <h2 className="text-lg font-semibold text-white">Air Combat Course & Package Metrics</h2>
+            <h2 className="text-lg font-semibold text-white">{activeModelLabel} Course & Package Metrics</h2>
             <p className="mt-1 text-sm text-slate-400">
-              Each card is a course or training package assigned to at least one staff member in this unit. The large number is how many events from that stream are on the selected DFP.
+              Each card is a course, package, currency stream or operational training stream assigned to at least one staff member in this unit. The large number is how many events from that stream are on the selected DFP.
             </p>
           </div>
           <div className="p-5">
@@ -341,7 +348,7 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
                 ))}
               </div>
             ) : (
-              <p className="py-8 text-center text-slate-400">No Air Combat courses or training packages have staff assigned in this unit.</p>
+              <p className="py-8 text-center text-slate-400">No courses, packages or operational training streams have staff assigned in this unit.</p>
             )}
           </div>
         </div>
@@ -351,7 +358,7 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
             <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
               <h2 className="text-lg font-semibold text-white">Course And Package Schedule Summary</h2>
               <p className="mt-1 text-sm text-slate-400">
-                This table shows what is loaded for the selected Air Combat unit and what was actually scheduled on this DFP.
+                This table shows what is loaded for the selected unit context and what was actually scheduled on this DFP.
               </p>
             </div>
             <div className="overflow-x-auto p-5">

@@ -9,6 +9,11 @@ import BliTab from './tabs/BliTab';
 import AirCombatIntelligenceTab from './tabs/AirCombatIntelligenceTab';
 import ACHistoryIntelligencePanel from './ACHistoryIntelligencePanel';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import {
+  getOperationalModelLabel,
+  isFixedCrewLikeOperationalModel,
+  normaliseOperationalModel,
+} from '../utils/platformConfigService';
 
 interface CourseAnalysis {
   courseName: string;
@@ -103,8 +108,11 @@ interface BuildIntelligenceViewProps {
 type TabType = 'air-combat' | 'people' | 'course-metrics' | 'build-analytics' | 'ac-history' | 'managerial-analytics' | 'bli';
 
 const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
-  const isAirCombatModel = String(props.operationalModel || '').trim().toLowerCase() === 'air_combat';
-  const [activeTab, setActiveTab] = useState<TabType>(isAirCombatModel ? 'air-combat' : 'people');
+  const activeModel = normaliseOperationalModel(props.operationalModel);
+  const isAirCombatModel = activeModel === 'air_combat';
+  const isCrewOperationalModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeModel);
+  const activeModelLabel = getOperationalModelLabel(activeModel);
+  const [activeTab, setActiveTab] = useState<TabType>(isCrewOperationalModel ? 'air-combat' : 'people');
   const resourceDisplayNames = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
 
   const formattedDate = useMemo(() => {
@@ -120,11 +128,11 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
   }, [props.date]);
 
   useEffect(() => {
-    if (!isAirCombatModel && activeTab === 'air-combat') setActiveTab('people');
-  }, [activeTab, isAirCombatModel]);
+    if (!isCrewOperationalModel && activeTab === 'air-combat') setActiveTab('people');
+  }, [activeTab, isCrewOperationalModel]);
 
   const tabs = [
-    ...(isAirCombatModel ? [{ id: 'air-combat' as TabType, label: 'Air Combat' }] : []),
+    ...(isCrewOperationalModel ? [{ id: 'air-combat' as TabType, label: 'Operational' }] : []),
     { id: 'people' as TabType, label: 'People' },
     { id: 'course-metrics' as TabType, label: 'Course Metrics' },
     { id: 'build-analytics' as TabType, label: 'Build Analytics' },
@@ -147,7 +155,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
               </div>
             </div>
             <p className="text-sm text-slate-300">
-              Comprehensive analysis for DFP on <span className="font-semibold text-white">{formattedDate}</span>
+              {activeModelLabel} analysis for DFP on <span className="font-semibold text-white">{formattedDate}</span>
             </p>
           </div>
         </header>
@@ -204,6 +212,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 totalAircraft={props.totalAircraft}
                 resourceDisplayNames={resourceDisplayNames}
                 operationalContext={props.operationalContext}
+                operationalModel={props.operationalModel}
               />
             )}
 

@@ -9,6 +9,11 @@ import {
   normaliseAirCombatTrainingReports,
   type AirCombatTrainingKind,
 } from '../../utils/airCombatTraining';
+import {
+  getOperationalModelLabel,
+  isFixedCrewLikeOperationalModel,
+  normaliseOperationalModel,
+} from '../../utils/platformConfigService';
 
 interface PeopleTabProps {
   date: string;
@@ -358,7 +363,9 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
   const fieldsetShell = 'rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]';
   const legendClass = 'px-2 text-lg font-semibold text-white';
   const inputClass = 'bg-slate-950 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all';
-  const isAirCombatModel = String(operationalModel || '').trim().toLowerCase() === 'air_combat';
+  const activeModel = normaliseOperationalModel(operationalModel);
+  const isCrewOperationalModel = activeModel === 'air_combat' || isFixedCrewLikeOperationalModel(activeModel);
+  const activeModelLabel = getOperationalModelLabel(activeModel);
   const activeUnitCodes = useMemo(() => {
     const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0
       ? operationalContext.unitCodes
@@ -614,12 +621,12 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
     </div>
   );
 
-  if (isAirCombatModel) {
+  if (isCrewOperationalModel) {
     return (
       <div className="space-y-6">
         <div className={sectionShell}>
           <div className={sectionHeader}>
-            <h2 className="text-lg font-semibold text-white">Staff Availability</h2>
+            <h2 className="text-lg font-semibold text-white">{activeModelLabel} Staff Availability</h2>
           </div>
           <div className={sectionBody}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -687,7 +694,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
 
         <div className={sectionShell}>
           <div className={sectionHeader}>
-            <h2 className="text-lg font-semibold text-white">Air Combat Training Priority Lists</h2>
+            <h2 className="text-lg font-semibold text-white">Operational Training Priority Lists</h2>
           </div>
           <div className={`${sectionBody} space-y-4`}>
             <AirCombatPriorityTable title="Composite Course / Package Priority List" rows={airCombatPeopleMetrics.priorityRows} limit={20} />
