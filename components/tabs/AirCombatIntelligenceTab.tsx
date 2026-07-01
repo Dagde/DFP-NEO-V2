@@ -43,6 +43,20 @@ const timeLabel = (value: number | undefined): string => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
+const dateLabel = (value: string): string => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || '').trim());
+  if (!match) return value;
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: '2-digit',
+    timeZone: 'UTC',
+  });
+};
+
 const normaliseRole = (value: unknown): string => String(value || 'Unassigned').trim() || 'Unassigned';
 const normaliseName = (value: unknown): string => String(value || '').trim().toLowerCase();
 const isPlaceholderCrewValue = (value: unknown): boolean => {
@@ -221,7 +235,7 @@ const AirCombatIntelligenceTab: React.FC<AirCombatIntelligenceTabProps> = ({
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">{modelLabel}</p>
             <h2 className="mt-1 text-2xl font-bold text-white">Operational Build Intelligence</h2>
             <p className="mt-1 text-sm text-slate-400">
-              Current DFP signal for {unitLabel} on {date}. Data is scoped to this unit or combined-unit operating context.
+              Current DFP signal for {unitLabel} on {dateLabel(date)}. Data is scoped to this unit or combined-unit operating context.
             </p>
           </div>
           <div className="rounded-md border border-slate-700 bg-slate-950/60 px-4 py-3 text-right">

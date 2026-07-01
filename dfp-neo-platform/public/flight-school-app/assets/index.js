@@ -36658,11 +36658,11 @@ const parseIsoDate = (value) => {
   return new Date(Date.UTC(year, month - 1, day));
 };
 const toIsoDate = (date) => date.toISOString().slice(0, 10);
-const dateLabel = (value) => {
+const dateLabel$1 = (value) => {
   const date = parseIsoDate(value);
   return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit", timeZone: "UTC" });
 };
-const formatDateRange = (startDate, endDate) => `${dateLabel(startDate)} - ${dateLabel(endDate)}`;
+const formatDateRange = (startDate, endDate) => `${dateLabel$1(startDate)} - ${dateLabel$1(endDate)}`;
 const parseMonthDay = (value) => {
   const match = /^(\d{1,2})-(\d{1,2})$/.exec(String(value || "").trim());
   if (!match) return null;
@@ -37124,14 +37124,14 @@ const FullLineChart = ({ series, color, label, unit }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: `${padding.left},${padding.top + chartHeight} ${pointString} ${width - padding.right},${padding.top + chartHeight}`, fill: `${color}20` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: pointString, fill: "none", stroke: color, strokeWidth: "3", strokeLinecap: "round", strokeLinejoin: "round" }),
     points.map((point, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: point.x, cy: point.y, r: "3", fill: color, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("title", { children: [
-      dateLabel(point.date),
+      dateLabel$1(point.date),
       ": ",
       compactNumber(point.value, 1),
       unit || ""
     ] }) }, `${point.date}-${index}`)),
     series.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: padding.left, y: height - 12, fill: "rgb(148,163,184)", fontSize: "12", children: dateLabel(series[0].date) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: width - padding.right, y: height - 12, textAnchor: "end", fill: "rgb(148,163,184)", fontSize: "12", children: dateLabel(series[series.length - 1].date) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: padding.left, y: height - 12, fill: "rgb(148,163,184)", fontSize: "12", children: dateLabel$1(series[0].date) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: width - padding.right, y: height - 12, textAnchor: "end", fill: "rgb(148,163,184)", fontSize: "12", children: dateLabel$1(series[series.length - 1].date) })
     ] })
   ] }) });
 };
@@ -37266,7 +37266,7 @@ const MetricStatsPanel = ({ metric, metrics, staffGroups, selectedStaff }) => {
         {
           label: "Highest day",
           value: formatMetricAmount(stats.highest?.value, metric),
-          subtext: stats.highest ? dateLabel(stats.highest.date) : "No date",
+          subtext: stats.highest ? dateLabel$1(stats.highest.date) : "No date",
           accent: "text-emerald-200"
         }
       ),
@@ -37275,7 +37275,7 @@ const MetricStatsPanel = ({ metric, metrics, staffGroups, selectedStaff }) => {
         {
           label: "Lowest day",
           value: formatMetricAmount(stats.lowest?.value, metric),
-          subtext: stats.lowest ? dateLabel(stats.lowest.date) : "No date",
+          subtext: stats.lowest ? dateLabel$1(stats.lowest.date) : "No date",
           accent: "text-amber-200"
         }
       )
@@ -37777,6 +37777,19 @@ const timeLabel = (value) => {
   const minutes = Math.round((numeric - hours) * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
+const dateLabel = (value) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || "").trim());
+  if (!match) return value;
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "2-digit",
+    timeZone: "UTC"
+  });
+};
 const normaliseRole = (value) => String(value || "Unassigned").trim() || "Unassigned";
 const normaliseName$1 = (value) => String(value || "").trim().toLowerCase();
 const isPlaceholderCrewValue = (value) => {
@@ -37912,7 +37925,7 @@ const AirCombatIntelligenceTab = ({
           "Current DFP signal for ",
           unitLabel,
           " on ",
-          date,
+          dateLabel(date),
           ". Data is scoped to this unit or combined-unit operating context."
         ] })
       ] }),
