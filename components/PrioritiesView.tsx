@@ -355,6 +355,8 @@ type TimelineDragState = TimelineDragTarget & {
 
 interface TaskingRequest {
   id: string;
+  unitCode?: string;
+  unitCodes?: string[];
   tasking: string;
   date: string;
   takeoff: number;
@@ -1099,6 +1101,27 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const codes = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || '').split('+');
     return new Set(codes.map(code => String(code || '').trim().toUpperCase()).filter(Boolean));
   }, [activeUnitCode, activeUnitCodes]);
+  const activeTaskingUnitCodes = useMemo(() => (
+    Array.from(activeUnitCodeSet).length > 0
+      ? Array.from(activeUnitCodeSet)
+      : [normaliseTaskingUnitCode(activeUnitCode || school)].filter(Boolean)
+  ), [activeUnitCode, activeUnitCodeSet, school]);
+  const activeTaskingUnitCode = activeTaskingUnitCodes.join('+') || normaliseTaskingUnitCode(activeUnitCode || school);
+  const legacyTaskingUnitCodes = ['11SQN', '12SQN'];
+  const getTaskingRequestScopeCodes = (request: Partial<TaskingRequest> | any): string[] => {
+    const explicitCodes = Array.isArray(request?.unitCodes)
+      ? request.unitCodes.map(normaliseTaskingUnitCode).filter(Boolean)
+      : [];
+    const unitCode = normaliseTaskingUnitCode(request?.unitCode);
+    if (unitCode) explicitCodes.push(...splitTaskingCompositeUnitCode(unitCode));
+    const uniqueCodes = Array.from(new Set(explicitCodes.filter(Boolean)));
+    return uniqueCodes.length > 0 ? uniqueCodes : legacyTaskingUnitCodes;
+  };
+  const taskingRequestMatchesActiveScope = (request: Partial<TaskingRequest> | any): boolean => {
+    const scopeCodes = getTaskingRequestScopeCodes(request);
+    if (activeTaskingUnitCodes.length === 0) return true;
+    return scopeCodes.some(code => activeTaskingUnitCodes.includes(code));
+  };
   const crewRequirementPresets = useMemo<CrewRequirementPreset[]>(() => {
     const settings = normaliseCrewCompositionSettings(crewCompositionSettings || null);
     const contextCodes = Array.from(activeUnitCodeSet);
@@ -2238,31 +2261,36 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const legacyCurrencyDraftStorageKey = 'neoCurrencyDraftEvents';
   const currencyDraftStorageKey = 'neoCurrencyDraftEvents.v2';
   const [taskingAirfieldCatalogue, setTaskingAirfieldCatalogue] = useState<TaskingAirfieldCatalogueEntry[]>([]);
-  const normaliseTaskingRequest = (request: any): TaskingRequest => ({
-    id: request.id || uuidv4(),
-    tasking: request.tasking || '',
-    date: request.date || buildDfpDate,
-    takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
-    duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : defaultTaskingDuration,
-    flightType: request.flightType === 'Solo' ? 'Solo' : 'Dual',
-    depPoint: request.depPoint || school,
-    arrivalPoint: request.arrivalPoint || school,
-    aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || '1'), 10) || 1),
-    aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
-    crewRequirement: request.crewRequirement || { mode: 'aircraft_default' },
-    callsignBase: request.callsignBase || defaultUnitCallsign || '',
-    callsignNumber: Number.isFinite(Number(request.callsignNumber)) ? Math.max(0, Math.min(100, Math.floor(Number(request.callsignNumber)))) : 0,
-    callsign: request.callsign || (request.callsignBase || defaultUnitCallsign ? buildUnitEventCallsign(request.callsignBase || defaultUnitCallsign, request.callsignNumber || 0) : ''),
-    schedulerPriority: request.schedulerPriority === 'Medium' || request.schedulerPriority === 'Low'
-      ? request.schedulerPriority
-      : request.isMandatory === false
-        ? 'Medium'
-        : 'High',
-    isMandatory: request.isMandatory !== false,
-    saved: Boolean(request.saved || request.submitted),
-    submitted: Boolean(request.submitted),
-    ignored: Boolean(request.ignored),
-  });
+  const normaliseTaskingRequest = (request: any): TaskingRequest => {
+    const scopeCodes = getTaskingRequestScopeCodes(request);
+    return ({
+      id: request.id || uuidv4(),
+      unitCode: normaliseTaskingUnitCode(request.unitCode) || scopeCodes.join('+') || activeTaskingUnitCode,
+      unitCodes: scopeCodes,
+      tasking: request.tasking || '',
+      date: request.date || buildDfpDate,
+      takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
+      duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : defaultTaskingDuration,
+      flightType: request.flightType === 'Solo' ? 'Solo' : 'Dual',
+      depPoint: request.depPoint || school,
+      arrivalPoint: request.arrivalPoint || school,
+      aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || '1'), 10) || 1),
+      aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+      crewRequirement: request.crewRequirement || { mode: 'aircraft_default' },
+      callsignBase: request.callsignBase || defaultUnitCallsign || '',
+      callsignNumber: Number.isFinite(Number(request.callsignNumber)) ? Math.max(0, Math.min(100, Math.floor(Number(request.callsignNumber)))) : 0,
+      callsign: request.callsign || (request.callsignBase || defaultUnitCallsign ? buildUnitEventCallsign(request.callsignBase || defaultUnitCallsign, request.callsignNumber || 0) : ''),
+      schedulerPriority: request.schedulerPriority === 'Medium' || request.schedulerPriority === 'Low'
+        ? request.schedulerPriority
+        : request.isMandatory === false
+          ? 'Medium'
+          : 'High',
+      isMandatory: request.isMandatory !== false,
+      saved: Boolean(request.saved || request.submitted),
+      submitted: Boolean(request.submitted),
+      ignored: Boolean(request.ignored),
+    });
+  };
   const loadStoredTaskingRequests = (): TaskingRequest[] => {
     try {
       const stored = localStorage.getItem(TASKING_REQUEST_STORAGE_KEY);
@@ -2275,6 +2303,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [taskingRequests, setTaskingRequests] = useState<TaskingRequest[]>(() => {
     return loadStoredTaskingRequests();
   });
+  const visibleTaskingRequests = useMemo(
+    () => taskingRequests.filter(taskingRequestMatchesActiveScope),
+    [taskingRequests, activeTaskingUnitCodes.join('|')]
+  );
   const [currencyDraftEvents, setCurrencyDraftEvents] = useState<Array<{
     id: string;
     audience: 'trainee' | 'staff';
@@ -2466,6 +2498,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const addTaskingRequest = () => {
     const nextRequest: TaskingRequest = {
       id: uuidv4(),
+      unitCode: activeTaskingUnitCode,
+      unitCodes: activeTaskingUnitCodes,
       tasking: '',
       date: buildDfpDate,
       takeoff: flyingStartTime,
@@ -2495,19 +2529,29 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     event.taskingRequestId === requestId || String(event.id || '').startsWith(`tasking-${requestId}-`)
   );
 
+  const taskingPriorityEventMatchesActiveScope = (event: ScheduleEvent): boolean => {
+    const eventCodes = getTaskingRequestScopeCodes({
+      unitCode: event.taskingUnitCode || event.unitCode || event.fixedCrewUnitCode || event.fixedCrewUnit || event.unit,
+      unitCodes: event.taskingUnitCodes,
+    });
+    if (activeTaskingUnitCodes.length === 0) return true;
+    return eventCodes.some(code => activeTaskingUnitCodes.includes(code));
+  };
+
   const removeTaskingPriorityEvents = (requestId: string) => {
     highestPriorityEvents
       .filter(event => isTaskingPriorityEventForRequest(event, requestId))
+      .filter(taskingPriorityEventMatchesActiveScope)
       .forEach(event => onDeletePriorityEvent(event.id));
   };
 
   const isTaskingRequestInHighestPriority = (requestId: string) => (
-    highestPriorityEvents.some(event => isTaskingPriorityEventForRequest(event, requestId))
+    highestPriorityEvents.some(event => isTaskingPriorityEventForRequest(event, requestId) && taskingPriorityEventMatchesActiveScope(event))
   );
 
   useEffect(() => {
     const submittedTaskingRequestIds = new Set(
-      taskingRequests
+      visibleTaskingRequests
         .filter(request => request.submitted)
         .map(request => request.id)
     );
@@ -2515,18 +2559,19 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     highestPriorityEvents
       .filter(event => (
         (event.isTaskingRequest || event.taskingRequestId || String(event.id || '').startsWith('tasking-')) &&
+        taskingPriorityEventMatchesActiveScope(event) &&
         (!event.taskingRequestId || !submittedTaskingRequestIds.has(event.taskingRequestId))
       ))
       .forEach(event => onDeletePriorityEvent(event.id));
-  }, [highestPriorityEvents, taskingRequests, onDeletePriorityEvent]);
+  }, [highestPriorityEvents, visibleTaskingRequests, onDeletePriorityEvent, activeTaskingUnitCodes.join('|')]);
 
   useEffect(() => {
     setTaskingRequests(prev => prev.map(request => (
-      request.submitted && !isTaskingRequestInHighestPriority(request.id)
+      taskingRequestMatchesActiveScope(request) && request.submitted && !isTaskingRequestInHighestPriority(request.id)
         ? { ...request, submitted: false, ignored: true }
         : request
     )));
-  }, [highestPriorityEvents]);
+  }, [highestPriorityEvents, activeTaskingUnitCodes.join('|')]);
 
   const updateTaskingRequest = (id: string, updates: Partial<TaskingRequest>) => {
     if (updates.submitted === false) {
@@ -2605,6 +2650,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       taskingName: tasking,
       taskingDisplayLabel,
       taskingRequestId: request.id,
+      taskingUnitCode: request.unitCode || activeTaskingUnitCode,
+      taskingUnitCodes: request.unitCodes || activeTaskingUnitCodes,
+      unit: request.unitCode || activeTaskingUnitCode,
+      unitCode: request.unitCode || activeTaskingUnitCode,
+      fixedCrewUnit: request.unitCode || activeTaskingUnitCode,
+      fixedCrewUnitCode: request.unitCode || activeTaskingUnitCode,
       taskingAircraftIndex: index + 1,
       taskingAircraftCount: aircraftCount,
       dateCreated: new Date().toISOString(),
@@ -4648,7 +4699,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               </button>
             </div>
             <TaskingRequestTable
-              taskingRequests={taskingRequests}
+              taskingRequests={visibleTaskingRequests}
               timeOptions={timeOptions}
               aircraftConfigOptions={aircraftConfigOptions}
               airfieldLookup={taskingAirfieldLookup}

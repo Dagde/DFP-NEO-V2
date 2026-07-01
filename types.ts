@@ -344,11 +344,17 @@ export interface ScheduleEvent {
       eventCategory?: 'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di' | 'currency';
       isTaskingRequest?: boolean;
       taskingRequestId?: string;
+      taskingUnitCode?: string;
+      taskingUnitCodes?: string[];
       taskingAircraftIndex?: number;
       taskingAircraftCount?: number;
       isMandatoryTasking?: boolean;
       taskingName?: string;
       taskingDisplayLabel?: string;
+      unit?: string;
+      unitCode?: string;
+      fixedCrewUnit?: string;
+      fixedCrewUnitCode?: string;
       
       // Additional fields for enhanced priority events display
       dateCreated?: string;

@@ -592,8 +592,36 @@ const DfpSidePanelTimeline: React.FC<{
     const [assistTaskAircraftCount, setAssistTaskAircraftCount] = useState(1);
     const [assistTaskConfigId, setAssistTaskConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
     const [assistTaskMandatory, setAssistTaskMandatory] = useState(true);
-    const normaliseAssistTaskRequest = (request: any) => ({
+    const assistTaskingUnitCodes = useMemo(() => {
+        const codes = String(activeUnitCode || '')
+            .split(/[+/]/)
+            .map(code => String(code || '').trim().toUpperCase())
+            .filter(Boolean);
+        return codes.length > 0 ? codes : [String(locationCode || '').trim().toUpperCase()].filter(Boolean);
+    }, [activeUnitCode, locationCode]);
+    const assistTaskingUnitCode = assistTaskingUnitCodes.join('+') || String(activeUnitCode || locationCode || '').trim().toUpperCase();
+    const legacyAssistTaskingUnitCodes = ['11SQN', '12SQN'];
+    const getAssistTaskingScopeCodes = (request: any): string[] => {
+        const explicitCodes = Array.isArray(request?.unitCodes)
+            ? request.unitCodes.map((code: any) => String(code || '').trim().toUpperCase()).filter(Boolean)
+            : [];
+        const unitCode = String(request?.unitCode || '').trim().toUpperCase();
+        if (unitCode) explicitCodes.push(...unitCode.split(/[+/]/).map(code => code.trim()).filter(Boolean));
+        const uniqueCodes = Array.from(new Set(explicitCodes.filter(Boolean)));
+        return uniqueCodes.length > 0 ? uniqueCodes : legacyAssistTaskingUnitCodes;
+    };
+    const assistTaskingMatchesActiveScope = (request: any): boolean => {
+        const scopeCodes = getAssistTaskingScopeCodes(request);
+        if (assistTaskingUnitCodes.length === 0) return true;
+        return scopeCodes.some(code => assistTaskingUnitCodes.includes(code));
+    };
+    const normaliseAssistTaskRequest = (request: any) => {
+        const scopeCodes = getAssistTaskingScopeCodes(request);
+        const unitCode = String(request.unitCode || scopeCodes.join('+') || assistTaskingUnitCode || '').trim().toUpperCase();
+        return ({
         id: request.id || uuidv4(),
+        unitCode,
+        unitCodes: scopeCodes,
         tasking: request.tasking || '',
         date: request.date || date,
         takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
@@ -607,7 +635,8 @@ const DfpSidePanelTimeline: React.FC<{
         saved: Boolean(request.saved || request.submitted),
         submitted: Boolean(request.submitted),
         ignored: Boolean(request.ignored),
-    });
+        });
+    };
     const loadStoredAssistTaskRequests = () => {
         try {
             const stored = window.localStorage.getItem(TASKING_REQUEST_STORAGE_KEY);
@@ -628,11 +657,17 @@ const DfpSidePanelTimeline: React.FC<{
         arrivalPoint: string;
         aircraftCount: number;
         aircraftConfigId: string;
+        unitCode?: string;
+        unitCodes?: string[];
         isMandatory: boolean;
         saved?: boolean;
         submitted?: boolean;
         ignored?: boolean;
     }>>(() => loadStoredAssistTaskRequests());
+    const visibleAssistTaskRequests = useMemo(
+        () => assistTaskRequests.filter(assistTaskingMatchesActiveScope),
+        [assistTaskRequests, assistTaskingUnitCodes.join('|')]
+    );
     const [assistCurrencyDate, setAssistCurrencyDate] = useState(date);
     const [assistCurrencyTakeoff, setAssistCurrencyTakeoff] = useState(flyingStartTime);
     const [assistCurrencyDuration, setAssistCurrencyDuration] = useState(defaultAssistCurrencyDuration);
@@ -2186,6 +2221,12 @@ const DfpSidePanelTimeline: React.FC<{
             taskingName: tasking,
             taskingDisplayLabel: label,
             taskingRequestId: request.id,
+            taskingUnitCode: request.unitCode || assistTaskingUnitCode,
+            taskingUnitCodes: request.unitCodes || assistTaskingUnitCodes,
+            unit: request.unitCode || assistTaskingUnitCode,
+            unitCode: request.unitCode || assistTaskingUnitCode,
+            fixedCrewUnit: request.unitCode || assistTaskingUnitCode,
+            fixedCrewUnitCode: request.unitCode || assistTaskingUnitCode,
             taskingAircraftIndex: index + 1,
             taskingAircraftCount: aircraftCount,
             dateCreated: new Date().toISOString(),
@@ -2228,20 +2269,28 @@ const DfpSidePanelTimeline: React.FC<{
             crewRequirement: { mode: 'aircraft_default' },
         };
     };
+    const isAssistTaskPriorityEventForRequest = (event: ScheduleEvent, id: string) => (
+        event.taskingRequestId === id ||
+        String(event.id || '').startsWith(`tasking-${id}-`) ||
+        String(event.id || '').startsWith(`neo-assist-tasking-${id}-`)
+    );
+    const assistTaskPriorityEventMatchesActiveScope = (event: ScheduleEvent): boolean => assistTaskingMatchesActiveScope({
+        unitCode: event.taskingUnitCode || event.unitCode || event.fixedCrewUnitCode || event.fixedCrewUnit || event.unit,
+        unitCodes: event.taskingUnitCodes,
+    });
     const isAssistTaskRequestInHighestPriority = (id: string) => (
         highestPriorityEvents.some(event => (
-            event.taskingRequestId === id ||
-            String(event.id || '').startsWith(`tasking-${id}-`) ||
-            String(event.id || '').startsWith(`neo-assist-tasking-${id}-`)
+            isAssistTaskPriorityEventForRequest(event, id) &&
+            assistTaskPriorityEventMatchesActiveScope(event)
         ))
     );
     useEffect(() => {
         setAssistTaskRequests(prev => prev.map(request => (
-            request.submitted && !isAssistTaskRequestInHighestPriority(request.id)
+            assistTaskingMatchesActiveScope(request) && request.submitted && !isAssistTaskRequestInHighestPriority(request.id)
                 ? { ...request, submitted: false, ignored: true }
                 : request
         )));
-    }, [highestPriorityEvents]);
+    }, [highestPriorityEvents, assistTaskingUnitCodes.join('|')]);
     const saveAssistTaskRequest = (id: string) => {
         setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: false, ignored: false } : item));
     };
@@ -2352,6 +2401,10 @@ const DfpSidePanelTimeline: React.FC<{
         const grouped = new Map<string, ScheduleEvent[]>();
         highestPriorityEvents
             .filter(event => event.isTaskingRequest || event.taskingRequestId || String(event.id || '').startsWith('tasking-') || String(event.id || '').startsWith('neo-assist-tasking-'))
+            .filter(event => assistTaskingMatchesActiveScope({
+                unitCode: event.taskingUnitCode || event.unitCode || event.fixedCrewUnitCode || event.fixedCrewUnit || event.unit,
+                unitCodes: event.taskingUnitCodes,
+            }))
             .forEach(event => {
                 const key = event.taskingRequestId || String(event.id || '');
                 grouped.set(key, [...(grouped.get(key) || []), event]);
@@ -2367,7 +2420,7 @@ const DfpSidePanelTimeline: React.FC<{
                 scheduled: true,
             };
         });
-    }, [date, highestPriorityEvents]);
+    }, [date, highestPriorityEvents, assistTaskingUnitCodes.join('|')]);
     const highestPriorityCurrencyRows = useMemo(() => (
         highestPriorityEvents
             .filter(event => event.currency || event.currencyDraftId || String(event.id || '').startsWith('neo-assist-currency-'))
@@ -2401,7 +2454,7 @@ const DfpSidePanelTimeline: React.FC<{
                 alreadyInHighest: true,
             });
         });
-        assistTaskRequests
+        visibleAssistTaskRequests
             .filter(request => request.saved && !request.ignored)
             .forEach(request => {
                 const identity = request.id;
@@ -2416,7 +2469,7 @@ const DfpSidePanelTimeline: React.FC<{
                 });
             });
         return rows;
-    }, [assistTaskRequests, date, highestPriorityTaskRows, highestPriorityEvents]);
+    }, [visibleAssistTaskRequests, date, highestPriorityTaskRows, highestPriorityEvents]);
     const wizardCurrencyRows = useMemo(() => {
         const rows: Array<{
             selectionId: string;
@@ -2503,9 +2556,8 @@ const DfpSidePanelTimeline: React.FC<{
         const request = assistTaskRequests.find(item => item.id === id);
         ignorePriorityEvents(
             highestPriorityEvents.filter(event => (
-                event.taskingRequestId === id ||
-                String(event.id || '').startsWith(`tasking-${id}-`) ||
-                String(event.id || '').startsWith(`neo-assist-tasking-${id}-`)
+                isAssistTaskPriorityEventForRequest(event, id) &&
+                assistTaskPriorityEventMatchesActiveScope(event)
             ))
         );
         setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: false, ignored: true } : item));
@@ -3779,7 +3831,7 @@ const DfpSidePanelTimeline: React.FC<{
             );
         }
         if (activeAssistSection === 'taskings') {
-            const localRows = assistTaskRequests.map(request => ({
+            const localRows = visibleAssistTaskRequests.map(request => ({
                 id: request.id,
                 tasking: request.tasking || 'Task',
                 date: request.date,
@@ -3795,7 +3847,7 @@ const DfpSidePanelTimeline: React.FC<{
                 ignored: Boolean(request.ignored),
                 source: 'local' as const,
             }));
-            const visibleRemoteRows = highestPriorityTaskRows.filter(remote => !assistTaskRequests.some(local => local.id === remote.id));
+            const visibleRemoteRows = highestPriorityTaskRows.filter(remote => !visibleAssistTaskRequests.some(local => local.id === remote.id));
             const rows = [...localRows, ...visibleRemoteRows.map(row => ({ ...row, ignored: false, source: 'remote' as const }))];
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
@@ -3929,6 +3981,8 @@ const DfpSidePanelTimeline: React.FC<{
                                     selectAssistTask(selectedTaskProfile);
                                     setAssistTaskRequests(prev => [...prev, {
                                         id: uuidv4(),
+                                        unitCode: assistTaskingUnitCode,
+                                        unitCodes: assistTaskingUnitCodes,
                                         tasking: selectedTaskProfile,
                                         date: assistTaskDate,
                                         takeoff: assistTaskTakeoff,
