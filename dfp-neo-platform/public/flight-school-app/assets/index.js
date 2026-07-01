@@ -65842,7 +65842,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         if (role === "Captain") {
           dayP1 = day;
           nightP1 = night;
-          logCaptTime = captainTime || (isDual ? totalTime : "");
+          logCaptTime = isFixedCrewLogbookPreview ? totalTime : captainTime || (isDual ? totalTime : "");
           if (isDual) {
             logInstTime = instructorTime || totalTime;
           }

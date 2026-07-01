@@ -688,7 +688,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                     // Captain logs P1 in both Solo (Pilot) and Dual (Instructor) scenarios for flights
                     dayP1 = day;
                     nightP1 = night;
-                    logCaptTime = captainTime || (isDual ? totalTime : '');
+                    logCaptTime = isFixedCrewLogbookPreview ? totalTime : (captainTime || (isDual ? totalTime : ''));
                     if (isDual) {
                         logInstTime = instructorTime || totalTime;
                     }
