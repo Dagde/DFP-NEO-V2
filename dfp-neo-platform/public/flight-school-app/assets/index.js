@@ -9748,109 +9748,151 @@ const ScheduleView = ({
       });
     });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: scrollContainerRef, "data-schedule-surface": "true", className: "flex-1 overflow-auto relative bg-gray-900 select-none", style: isPauseSelectMode ? { cursor: "crosshair" } : void 0, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-    "div",
-    {
-      style: {
-        width: `${AIRFRAME_COLUMN_WIDTH$1 + TOTAL_HOURS$6 * PIXELS_PER_HOUR$6 * zoomLevel}px`,
-        height: `${TIME_HEADER_HEIGHT$6 + resources.length * ROW_HEIGHT$6}px`,
-        display: "grid",
-        gridTemplateColumns: `${AIRFRAME_COLUMN_WIDTH$1}px 1fr`,
-        gridTemplateRows: `${TIME_HEADER_HEIGHT$6}px 1fr`
-      },
-      children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-corner": "true", className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 h-full", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "div",
-            {
-              "data-schedule-date-selector": "true",
-              className: `relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer ${isNeoBuild ? "neo-build-date-indicator" : ""}`,
-              style: { height: "100%", width: "100%" },
-              onClick: () => setShowDatePicker((prev) => !prev),
-              title: "Open date picker",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: (event) => {
-                      event.stopPropagation();
-                      onDateChange(-1);
-                    },
-                    "data-schedule-date-arrow": "true",
-                    className: "p-0.5",
-                    children: "←"
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: scrollContainerRef, "data-schedule-surface": "true", className: "flex-1 overflow-auto relative bg-gray-900 select-none", style: isPauseSelectMode ? { cursor: "crosshair" } : void 0, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        className: "pointer-events-none sticky z-[65] h-0",
+        style: {
+          left: `${RESOURCE_COLUMN_WIDTH}px`,
+          top: "50%"
+        },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => setShowResourceUnderlayPanel((value) => !value),
+            "aria-label": showResourceUnderlayPanel ? "Close resource slideout" : "Open resource slideout",
+            className: "pointer-events-auto flex h-7 w-[96px] -translate-x-1/2 -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: "h-4 w-7 opacity-80",
+                  style: {
+                    backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                    backgroundSize: "8px 8px"
                   }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-schedule-date-text": "true", className: "text-xs font-bold tracking-wider whitespace-nowrap", children: formattedDisplayDate }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: (event) => {
-                      event.stopPropagation();
-                      onDateChange(1);
-                    },
-                    "data-schedule-date-arrow": "true",
-                    className: "p-0.5",
-                    children: "→"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: showResourceUnderlayPanel ? "v" : "^" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: "h-4 w-7 opacity-80",
+                  style: {
+                    backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                    backgroundSize: "8px 8px"
                   }
-                ),
-                showDatePicker && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "div",
-                  {
-                    className: "absolute top-full left-0 mt-2 w-64 rounded-lg border border-gray-600 bg-gray-800 p-3 shadow-2xl",
-                    onClick: (event) => event.stopPropagation(),
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2", children: "Select DFP Date" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "input",
-                        {
-                          type: "date",
-                          value: date,
-                          onChange: (event) => {
-                            const selectedDate = event.target.value;
-                            if (!selectedDate) return;
-                            if (onDateSelect) {
-                              onDateSelect(selectedDate);
-                            } else {
-                              const current = (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime();
-                              const selected = (/* @__PURE__ */ new Date(`${selectedDate}T00:00:00Z`)).getTime();
-                              const diff = Math.round((selected - current) / 864e5);
-                              if (diff !== 0) onDateChange(diff);
-                            }
-                            setShowDatePicker(false);
-                          },
-                          className: "w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                        }
-                      ),
-                      snapshotDates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2", children: "Saved Records" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-36 overflow-y-auto space-y-1", children: snapshotDates.slice(0, 12).map((snapshotDate) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "button",
+                }
+              )
+            ]
+          }
+        )
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        style: {
+          width: `${AIRFRAME_COLUMN_WIDTH$1 + TOTAL_HOURS$6 * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+          height: `${TIME_HEADER_HEIGHT$6 + resources.length * ROW_HEIGHT$6}px`,
+          display: "grid",
+          gridTemplateColumns: `${AIRFRAME_COLUMN_WIDTH$1}px 1fr`,
+          gridTemplateRows: `${TIME_HEADER_HEIGHT$6}px 1fr`
+        },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-corner": "true", className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 h-full", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                "data-schedule-date-selector": "true",
+                className: `relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer ${isNeoBuild ? "neo-build-date-indicator" : ""}`,
+                style: { height: "100%", width: "100%" },
+                onClick: () => setShowDatePicker((prev) => !prev),
+                title: "Open date picker",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: (event) => {
+                        event.stopPropagation();
+                        onDateChange(-1);
+                      },
+                      "data-schedule-date-arrow": "true",
+                      className: "p-0.5",
+                      children: "←"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-schedule-date-text": "true", className: "text-xs font-bold tracking-wider whitespace-nowrap", children: formattedDisplayDate }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: (event) => {
+                        event.stopPropagation();
+                        onDateChange(1);
+                      },
+                      "data-schedule-date-arrow": "true",
+                      className: "p-0.5",
+                      children: "→"
+                    }
+                  ),
+                  showDatePicker && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "div",
+                    {
+                      className: "absolute top-full left-0 mt-2 w-64 rounded-lg border border-gray-600 bg-gray-800 p-3 shadow-2xl",
+                      onClick: (event) => event.stopPropagation(),
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2", children: "Select DFP Date" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
                           {
-                            type: "button",
-                            onClick: () => {
+                            type: "date",
+                            value: date,
+                            onChange: (event) => {
+                              const selectedDate = event.target.value;
+                              if (!selectedDate) return;
                               if (onDateSelect) {
-                                onDateSelect(snapshotDate);
+                                onDateSelect(selectedDate);
+                              } else {
+                                const current = (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime();
+                                const selected = (/* @__PURE__ */ new Date(`${selectedDate}T00:00:00Z`)).getTime();
+                                const diff = Math.round((selected - current) / 864e5);
+                                if (diff !== 0) onDateChange(diff);
                               }
                               setShowDatePicker(false);
                             },
-                            className: `w-full rounded px-2 py-1.5 text-left text-xs transition-colors ${snapshotDate === date ? "bg-sky-600 text-white" : "bg-gray-700/60 text-gray-300 hover:bg-gray-700"}`,
-                            children: formatSnapshotDate(snapshotDate)
-                          },
-                          snapshotDate
-                        )) })
-                      ] })
-                    ]
-                  }
-                )
-              ]
-            }
-          ),
-          isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-time-header": "true", className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-schedule-resource-column": "true", className: "sticky left-0 z-40 bg-gray-800 border-r border-gray-700", style: { width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "visible" }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            className: "w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                          }
+                        ),
+                        snapshotDates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2", children: "Saved Records" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-36 overflow-y-auto space-y-1", children: snapshotDates.slice(0, 12).map((snapshotDate) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: () => {
+                                if (onDateSelect) {
+                                  onDateSelect(snapshotDate);
+                                }
+                                setShowDatePicker(false);
+                              },
+                              className: `w-full rounded px-2 py-1.5 text-left text-xs transition-colors ${snapshotDate === date ? "bg-sky-600 text-white" : "bg-gray-700/60 text-gray-300 hover:bg-gray-700"}`,
+                              children: formatSnapshotDate(snapshotDate)
+                            },
+                            snapshotDate
+                          )) })
+                        ] })
+                      ]
+                    }
+                  )
+                ]
+              }
+            ),
+            isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-time-header": "true", className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-resource-column": "true", className: "sticky left-0 z-40 bg-gray-800 border-r border-gray-700", style: { width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             AirframeColumn,
             {
               resources,
@@ -9864,175 +9906,143 @@ const ScheduleView = ({
               formatResourceLabel: formatResourceLabel2,
               aircraftConfigLabelsByResource
             }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "aside",
+            {
+              className: `pointer-events-auto absolute z-[28] w-[40%] min-w-[360px] max-w-[680px] border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-all duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none"}`,
+              style: {
+                left: `${RESOURCE_COLUMN_WIDTH}px`,
+                top: `${TIME_HEADER_HEIGHT$6}px`,
+                height: `${resources.length * ROW_HEIGHT$6}px`
+              },
+              "aria-hidden": !showResourceUnderlayPanel,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" })
+            }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
+            "div",
             {
-              type: "button",
-              onClick: () => setShowResourceUnderlayPanel((value) => !value),
-              "aria-label": showResourceUnderlayPanel ? "Close resource slideout" : "Open resource slideout",
-              className: "absolute right-[-50px] top-1/2 z-[65] flex h-7 w-[96px] -translate-y-1/2 -rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
+              ref: scheduleGridRef,
+              "data-schedule-grid": "true",
+              "data-schedule-start-hour": START_HOUR$6,
+              "data-schedule-pixels-per-hour": PIXELS_PER_HOUR$6 * zoomLevel,
+              className: "relative bg-gray-900",
+              onMouseDown: (e) => handleMouseDown(e),
+              onMouseMove: handleMouseMove,
+              onMouseUp: handleMouseUp,
+              onMouseLeave: handleMouseUp,
+              onDragOver: handleExternalDragOver,
+              onDrop: handleExternalDrop,
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "span",
+                renderGridLines(),
+                renderNightShade(),
+                renderExclusionPeriods(),
+                renderDaylightLines(),
+                renderCategorySeparators(),
+                renderCurrentTimeIndicator(),
+                renderValidateOverlay(),
+                showAircraftAvailability && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && date && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  AircraftAvailabilityOverlay,
                   {
-                    className: "h-4 w-7 opacity-80",
-                    style: {
-                      backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                      backgroundSize: "8px 8px"
-                    }
+                    currentDate: new Date(date),
+                    dateString: date,
+                    totalAircraft: airframeCount,
+                    initialAvailability: initialAvailability ?? 15,
+                    apiBase: apiBase2,
+                    locationCode,
+                    unitCode,
+                    dayFlyingStart,
+                    dayFlyingEnd,
+                    gridHeight: resources.length * ROW_HEIGHT$6,
+                    rowHeight: ROW_HEIGHT$6,
+                    pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel,
+                    startHour: START_HOUR$6,
+                    onAvailabilityChange,
+                    onUserChange: isReadOnly ? void 0 : onUserAvailabilityChange,
+                    showLiveAvailabilityLine,
+                    isReadOnly
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: showResourceUnderlayPanel ? "<" : ">" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "span",
+                renderEvents(),
+                isVisualAdjustMode && visualAdjustEvent && onVisualAdjustTimeChange && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  VisualAdjustGuide,
                   {
-                    className: "h-4 w-7 opacity-80",
+                    event: visualAdjustEvent,
+                    onTimeChange: onVisualAdjustTimeChange,
+                    scheduleStartHour: START_HOUR$6,
+                    scheduleEndHour: END_HOUR$6,
+                    pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel
+                  }
+                ),
+                isOracleMode && oraclePreviewEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    FlightTile$1,
+                    {
+                      isPreview: true,
+                      event: oraclePreviewEvent,
+                      onSelectEvent: () => {
+                      },
+                      onMouseDown: () => {
+                      },
+                      onMouseEnter: () => {
+                      },
+                      onMouseLeave: () => {
+                      },
+                      pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel,
+                      rowHeight: ROW_HEIGHT$6,
+                      startHour: START_HOUR$6,
+                      row: resources.indexOf(oraclePreviewEvent.resourceId),
+                      isDragging: false,
+                      traineesData,
+                      personnelData,
+                      seatConfigs: /* @__PURE__ */ new Map(),
+                      currentTime,
+                      aircraftNumberSettings
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "div",
+                    {
+                      className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
+                      style: {
+                        left: `${(oraclePreviewEvent.startTime - (oraclePreviewEvent.preStart || 1) - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+                        width: `${(oraclePreviewEvent.preStart || 1) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+                        top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$6 + ROW_HEIGHT$6 / 2}px`
+                      }
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "div",
+                    {
+                      className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
+                      style: {
+                        left: `${(oraclePreviewEvent.startTime + oraclePreviewEvent.duration - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+                        width: `${(oraclePreviewEvent.postEnd || 0.5) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+                        top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$6 + ROW_HEIGHT$6 / 2}px`
+                      }
+                    }
+                  )
+                ] }),
+                selectionRect && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    className: "absolute bg-sky-500/20 border border-sky-400 z-50 pointer-events-none",
                     style: {
-                      backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                      backgroundSize: "8px 8px"
+                      left: selectionRect.x,
+                      top: selectionRect.y,
+                      width: selectionRect.width,
+                      height: selectionRect.height
                     }
                   }
                 )
               ]
             }
           )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "aside",
-          {
-            className: `pointer-events-auto absolute z-[28] w-[40%] min-w-[360px] max-w-[680px] border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-all duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none"}`,
-            style: {
-              left: `${RESOURCE_COLUMN_WIDTH}px`,
-              top: `${TIME_HEADER_HEIGHT$6}px`,
-              height: `${resources.length * ROW_HEIGHT$6}px`
-            },
-            "aria-hidden": !showResourceUnderlayPanel,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            ref: scheduleGridRef,
-            "data-schedule-grid": "true",
-            "data-schedule-start-hour": START_HOUR$6,
-            "data-schedule-pixels-per-hour": PIXELS_PER_HOUR$6 * zoomLevel,
-            className: "relative bg-gray-900",
-            onMouseDown: (e) => handleMouseDown(e),
-            onMouseMove: handleMouseMove,
-            onMouseUp: handleMouseUp,
-            onMouseLeave: handleMouseUp,
-            onDragOver: handleExternalDragOver,
-            onDrop: handleExternalDrop,
-            children: [
-              renderGridLines(),
-              renderNightShade(),
-              renderExclusionPeriods(),
-              renderDaylightLines(),
-              renderCategorySeparators(),
-              renderCurrentTimeIndicator(),
-              renderValidateOverlay(),
-              showAircraftAvailability && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && date && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                AircraftAvailabilityOverlay,
-                {
-                  currentDate: new Date(date),
-                  dateString: date,
-                  totalAircraft: airframeCount,
-                  initialAvailability: initialAvailability ?? 15,
-                  apiBase: apiBase2,
-                  locationCode,
-                  unitCode,
-                  dayFlyingStart,
-                  dayFlyingEnd,
-                  gridHeight: resources.length * ROW_HEIGHT$6,
-                  rowHeight: ROW_HEIGHT$6,
-                  pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel,
-                  startHour: START_HOUR$6,
-                  onAvailabilityChange,
-                  onUserChange: isReadOnly ? void 0 : onUserAvailabilityChange,
-                  showLiveAvailabilityLine,
-                  isReadOnly
-                }
-              ),
-              renderEvents(),
-              isVisualAdjustMode && visualAdjustEvent && onVisualAdjustTimeChange && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                VisualAdjustGuide,
-                {
-                  event: visualAdjustEvent,
-                  onTimeChange: onVisualAdjustTimeChange,
-                  scheduleStartHour: START_HOUR$6,
-                  scheduleEndHour: END_HOUR$6,
-                  pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel
-                }
-              ),
-              isOracleMode && oraclePreviewEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  FlightTile$1,
-                  {
-                    isPreview: true,
-                    event: oraclePreviewEvent,
-                    onSelectEvent: () => {
-                    },
-                    onMouseDown: () => {
-                    },
-                    onMouseEnter: () => {
-                    },
-                    onMouseLeave: () => {
-                    },
-                    pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel,
-                    rowHeight: ROW_HEIGHT$6,
-                    startHour: START_HOUR$6,
-                    row: resources.indexOf(oraclePreviewEvent.resourceId),
-                    isDragging: false,
-                    traineesData,
-                    personnelData,
-                    seatConfigs: /* @__PURE__ */ new Map(),
-                    currentTime,
-                    aircraftNumberSettings
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "div",
-                  {
-                    className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
-                    style: {
-                      left: `${(oraclePreviewEvent.startTime - (oraclePreviewEvent.preStart || 1) - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
-                      width: `${(oraclePreviewEvent.preStart || 1) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
-                      top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$6 + ROW_HEIGHT$6 / 2}px`
-                    }
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "div",
-                  {
-                    className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
-                    style: {
-                      left: `${(oraclePreviewEvent.startTime + oraclePreviewEvent.duration - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
-                      width: `${(oraclePreviewEvent.postEnd || 0.5) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
-                      top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$6 + ROW_HEIGHT$6 / 2}px`
-                    }
-                  }
-                )
-              ] }),
-              selectionRect && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "div",
-                {
-                  className: "absolute bg-sky-500/20 border border-sky-400 z-50 pointer-events-none",
-                  style: {
-                    left: selectionRect.x,
-                    top: selectionRect.y,
-                    width: selectionRect.width,
-                    height: selectionRect.height
-                  }
-                }
-              )
-            ]
-          }
-        )
-      ]
-    }
-  ) });
+        ]
+      }
+    )
+  ] });
 };
 const ROLE_TEXT_COLOURS = [
   "text-sky-300",
