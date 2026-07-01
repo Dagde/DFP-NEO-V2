@@ -65777,6 +65777,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     let simTotal = 0;
     let logCaptTime = "";
     let logInstTime = "";
+    const isPilotLogbookRole = role === "Captain" || role === "P2" || role === "Crew";
     let flightTotal = 0;
     if (isFlightLog) {
       if (role === "Crew" && isSolo) {
@@ -65836,10 +65837,10 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       total: flightTotal > 0 ? flightTotal.toFixed(1) : "",
       captTime: logCaptTime,
       instTime: logInstTime,
-      simActual: ifActual > 0 ? ifActual.toFixed(1) : "",
-      simIf: ifSim > 0 ? ifSim.toFixed(1) : "",
-      app2D: app2D > 0 ? app2D : "",
-      app3D: app3D > 0 ? app3D : "",
+      simActual: isPilotLogbookRole && ifActual > 0 ? ifActual.toFixed(1) : "",
+      simIf: isPilotLogbookRole && ifSim > 0 ? ifSim.toFixed(1) : "",
+      app2D: isPilotLogbookRole && app2D > 0 ? app2D : "",
+      app3D: isPilotLogbookRole && app3D > 0 ? app3D : "",
       simP1: "",
       simP2: "",
       simDual: simDual > 0 ? simDual.toFixed(1) : "",
@@ -66101,18 +66102,50 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs font-medium text-gray-400 mb-1", children: "Number" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "input",
-        {
-          type: "text",
-          inputMode: "numeric",
-          pattern: "[0-9]*",
-          value: count === 0 ? "" : count,
-          onChange: (e) => setCount(parseInt(e.target.value, 10) || 0),
-          disabled: !isChecked,
-          className: "block w-10 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-1 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
-        }
-      )
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-10 h-[38px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "text",
+            inputMode: "numeric",
+            pattern: "[0-9]*",
+            value: count === 0 ? "" : count,
+            onChange: (e) => setCount(parseInt(e.target.value, 10) || 0),
+            disabled: !isChecked,
+            className: "block w-10 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 pl-1 pr-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute right-0.5 top-0.5 bottom-0.5 flex flex-col justify-center gap-px", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                setIsChecked(true);
+                setCount(Math.max(1, count + 1));
+              },
+              className: "h-[16px] w-3 rounded-sm bg-gray-600/80 text-[8px] leading-none text-gray-100 hover:bg-gray-500",
+              "aria-label": `Increase ${label} approaches`,
+              children: "▲"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              disabled: !isChecked || count <= 0,
+              onClick: () => {
+                const next = Math.max(0, count - 1);
+                setCount(next);
+                if (next === 0) setIsChecked(false);
+              },
+              className: "h-[16px] w-3 rounded-sm bg-gray-600/80 text-[8px] leading-none text-gray-100 hover:bg-gray-500 disabled:bg-gray-800 disabled:text-gray-600",
+              "aria-label": `Decrease ${label} approaches`,
+              children: "▼"
+            }
+          )
+        ] })
+      ] })
     ] })
   ] });
   const EditableLogbookCell = ({ label, subLabel, fieldKey, overrides, onChange, width, bgColor = "bg-gray-800", borderColor = "border-gray-600", readOnly = false }) => {
@@ -105249,6 +105282,7 @@ Do you want to replace the existing entry?`,
                     for (const staff of fixedCrewRoster) {
                       const isPic = normaliseLogbookName(staff.name) === picName;
                       const isP2 = !isPic && isPilotStaffForLogbook(staff);
+                      const isPilotLogbookEntry = isPic || isP2;
                       const personRole = isPic ? "fixed_crew_pic" : isP2 ? "fixed_crew_p2" : "fixed_crew_crew";
                       const snapshot = {
                         ...baseSnapshot,
@@ -105259,7 +105293,15 @@ Do you want to replace the existing entry?`,
                         nightP2: isP2 ? formatLogbookHours(night) : "",
                         nightDual: "",
                         captTime: isPic && parsedTotal ? parsedTotal.toFixed(1) : "",
-                        instTime: ""
+                        instTime: "",
+                        simIf: isPilotLogbookEntry && parsedIfSim ? parsedIfSim.toFixed(1) : "",
+                        simActual: isPilotLogbookEntry && parsedIfAct ? parsedIfAct.toFixed(1) : "",
+                        app2D: isPilotLogbookEntry ? [
+                          data.approaches?.rnp || 0,
+                          data.approaches?.tacan || 0,
+                          data.approaches?.vor || 0
+                        ].reduce((sum, value) => sum + Number(value || 0), 0) || "" : "",
+                        app3D: isPilotLogbookEntry ? data.approaches?.ils || "" : ""
                       };
                       await saveFlightLogEntry({
                         ...flightLogBase,
@@ -105269,13 +105311,13 @@ Do you want to replace the existing entry?`,
                         captainTime: isPic ? parsedTotal : void 0,
                         instructorTime: void 0,
                         nightTime: isPic || isP2 ? Number(night.toFixed(1)) : void 0,
-                        ifActualTime: isPic ? parsedIfAct : void 0,
-                        ifSimTime: isPic ? parsedIfSim : void 0,
+                        ifActualTime: isPilotLogbookEntry ? parsedIfAct : void 0,
+                        ifSimTime: isPilotLogbookEntry ? parsedIfSim : void 0,
                         ineffectiveTime: isPic ? parsedIneff : void 0,
-                        ilsCount: isPic ? data.approaches?.ils || 0 : 0,
-                        rnpCount: isPic ? data.approaches?.rnp || 0 : 0,
-                        tacanCount: isPic ? data.approaches?.tacan || 0 : 0,
-                        vorCount: isPic ? data.approaches?.vor || 0 : 0,
+                        ilsCount: isPilotLogbookEntry ? data.approaches?.ils || 0 : 0,
+                        rnpCount: isPilotLogbookEntry ? data.approaches?.rnp || 0 : 0,
+                        tacanCount: isPilotLogbookEntry ? data.approaches?.tacan || 0 : 0,
+                        vorCount: isPilotLogbookEntry ? data.approaches?.vor || 0 : 0,
                         captainLogSnapshot: isPic ? snapshot : void 0,
                         crewLogSnapshot: !isPic ? snapshot : void 0
                       }, `fixed crew ${personRole}`);

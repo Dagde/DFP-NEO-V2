@@ -617,6 +617,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
         let logCaptTime = '';
         let logInstTime = '';
+        const isPilotLogbookRole = role === 'Captain' || role === 'P2' || role === 'Crew';
 
         // Variable for the main "TOTAL" column (Flight Time)
         let flightTotal = 0;
@@ -694,10 +695,10 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             total: flightTotal > 0 ? flightTotal.toFixed(1) : '',
             captTime: logCaptTime,
             instTime: logInstTime,
-            simActual: ifActual > 0 ? ifActual.toFixed(1) : '',
-            simIf: ifSim > 0 ? ifSim.toFixed(1) : '',
-            app2D: app2D > 0 ? app2D : '',
-            app3D: app3D > 0 ? app3D : '',
+            simActual: isPilotLogbookRole && ifActual > 0 ? ifActual.toFixed(1) : '',
+            simIf: isPilotLogbookRole && ifSim > 0 ? ifSim.toFixed(1) : '',
+            app2D: isPilotLogbookRole && app2D > 0 ? app2D : '',
+            app3D: isPilotLogbookRole && app3D > 0 ? app3D : '',
             simP1: simP1 > 0 ? simP1.toFixed(1) : '',
             simP2: '',
             simDual: simDual > 0 ? simDual.toFixed(1) : '',
@@ -979,15 +980,43 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             </label>
             <div className="flex flex-col items-center">
                 <label className="text-xs font-medium text-gray-400 mb-1">Number</label>
-                <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={count === 0 ? '' : count}
-                    onChange={e => setCount(parseInt(e.target.value, 10) || 0)}
-                    disabled={!isChecked}
-                    className="block w-10 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-1 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
-                />
+                <div className="relative w-10 h-[38px]">
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={count === 0 ? '' : count}
+                        onChange={e => setCount(parseInt(e.target.value, 10) || 0)}
+                        disabled={!isChecked}
+                        className="block w-10 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 pl-1 pr-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
+                    />
+                    <div className="absolute right-0.5 top-0.5 bottom-0.5 flex flex-col justify-center gap-px">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsChecked(true);
+                                setCount(Math.max(1, count + 1));
+                            }}
+                            className="h-[16px] w-3 rounded-sm bg-gray-600/80 text-[8px] leading-none text-gray-100 hover:bg-gray-500"
+                            aria-label={`Increase ${label} approaches`}
+                        >
+                            ▲
+                        </button>
+                        <button
+                            type="button"
+                            disabled={!isChecked || count <= 0}
+                            onClick={() => {
+                                const next = Math.max(0, count - 1);
+                                setCount(next);
+                                if (next === 0) setIsChecked(false);
+                            }}
+                            className="h-[16px] w-3 rounded-sm bg-gray-600/80 text-[8px] leading-none text-gray-100 hover:bg-gray-500 disabled:bg-gray-800 disabled:text-gray-600"
+                            aria-label={`Decrease ${label} approaches`}
+                        >
+                            ▼
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );

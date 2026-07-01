@@ -39268,6 +39268,7 @@ appliedUpdates.forEach(update => {
                                             for (const staff of fixedCrewRoster) {
                                                 const isPic = normaliseLogbookName(staff.name) === picName;
                                                 const isP2 = !isPic && isPilotStaffForLogbook(staff);
+                                                const isPilotLogbookEntry = isPic || isP2;
                                                 const personRole = isPic ? 'fixed_crew_pic' : isP2 ? 'fixed_crew_p2' : 'fixed_crew_crew';
                                                 const snapshot = {
                                                     ...baseSnapshot,
@@ -39279,6 +39280,14 @@ appliedUpdates.forEach(update => {
                                                     nightDual: '',
                                                     captTime: isPic && parsedTotal ? parsedTotal.toFixed(1) : '',
                                                     instTime: '',
+                                                    simIf: isPilotLogbookEntry && parsedIfSim ? parsedIfSim.toFixed(1) : '',
+                                                    simActual: isPilotLogbookEntry && parsedIfAct ? parsedIfAct.toFixed(1) : '',
+                                                    app2D: isPilotLogbookEntry ? [
+                                                        data.approaches?.rnp || 0,
+                                                        data.approaches?.tacan || 0,
+                                                        data.approaches?.vor || 0,
+                                                    ].reduce((sum, value) => sum + Number(value || 0), 0) || '' : '',
+                                                    app3D: isPilotLogbookEntry ? (data.approaches?.ils || '') : '',
                                                 };
                                                 await saveFlightLogEntry({
                                                     ...flightLogBase,
@@ -39288,13 +39297,13 @@ appliedUpdates.forEach(update => {
                                                     captainTime: isPic ? parsedTotal : undefined,
                                                     instructorTime: undefined,
                                                     nightTime: isPic || isP2 ? Number(night.toFixed(1)) : undefined,
-                                                    ifActualTime: isPic ? parsedIfAct : undefined,
-                                                    ifSimTime: isPic ? parsedIfSim : undefined,
+                                                    ifActualTime: isPilotLogbookEntry ? parsedIfAct : undefined,
+                                                    ifSimTime: isPilotLogbookEntry ? parsedIfSim : undefined,
                                                     ineffectiveTime: isPic ? parsedIneff : undefined,
-                                                    ilsCount: isPic ? (data.approaches?.ils || 0) : 0,
-                                                    rnpCount: isPic ? (data.approaches?.rnp || 0) : 0,
-                                                    tacanCount: isPic ? (data.approaches?.tacan || 0) : 0,
-                                                    vorCount: isPic ? (data.approaches?.vor || 0) : 0,
+                                                    ilsCount: isPilotLogbookEntry ? (data.approaches?.ils || 0) : 0,
+                                                    rnpCount: isPilotLogbookEntry ? (data.approaches?.rnp || 0) : 0,
+                                                    tacanCount: isPilotLogbookEntry ? (data.approaches?.tacan || 0) : 0,
+                                                    vorCount: isPilotLogbookEntry ? (data.approaches?.vor || 0) : 0,
                                                     captainLogSnapshot: isPic ? snapshot : undefined,
                                                     crewLogSnapshot: !isPic ? snapshot : undefined,
                                                 }, `fixed crew ${personRole}`);
