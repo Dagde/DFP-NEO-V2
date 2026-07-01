@@ -8969,6 +8969,7 @@ const ScheduleView = ({
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const [showDatePicker, setShowDatePicker] = reactExports.useState(false);
+  const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = reactExports.useState(false);
   const scheduleGridRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
     const now = /* @__PURE__ */ new Date();
@@ -9863,6 +9864,55 @@ const ScheduleView = ({
             aircraftConfigLabelsByResource
           }
         ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "aside",
+          {
+            className: `pointer-events-auto absolute z-[28] w-[40%] min-w-[360px] max-w-[680px] border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-all duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none"}`,
+            style: {
+              left: `${RESOURCE_COLUMN_WIDTH}px`,
+              top: `${TIME_HEADER_HEIGHT$6}px`,
+              height: `${resources.length * ROW_HEIGHT$6}px`
+            },
+            "aria-hidden": !showResourceUnderlayPanel,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" })
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => setShowResourceUnderlayPanel((value) => !value),
+            "aria-label": showResourceUnderlayPanel ? "Close resource slideout" : "Open resource slideout",
+            className: "absolute z-[45] flex h-7 w-[96px] -translate-y-1/2 -rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
+            style: {
+              left: `${RESOURCE_COLUMN_WIDTH - 20}px`,
+              top: `${TIME_HEADER_HEIGHT$6 + Math.max(96, resources.length * ROW_HEIGHT$6 / 2)}px`
+            },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: "h-4 w-7 opacity-80",
+                  style: {
+                    backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                    backgroundSize: "8px 8px"
+                  }
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: showResourceUnderlayPanel ? "<" : ">" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: "h-4 w-7 opacity-80",
+                  style: {
+                    backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                    backgroundSize: "8px 8px"
+                  }
+                }
+              )
+            ]
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
