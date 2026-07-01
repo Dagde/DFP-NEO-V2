@@ -39461,7 +39461,8 @@ appliedUpdates.forEach(update => {
                                 resourceDisplayNames={resourceDisplayNames}
                                 aircraftNumberSettings={aircraftNumberSettings}
                                 personnelDisplaySettings={personnelDisplaySettings}
-                           />;
+                                getSunTimesForAirfieldDate={getSunTimesForAirfieldDate}
+                            />;
                 }
                 return null;
             case 'Logbook':

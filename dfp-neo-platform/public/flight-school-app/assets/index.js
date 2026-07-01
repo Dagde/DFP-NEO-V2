@@ -65298,7 +65298,7 @@ const LocalityChangeFlyout = ({ locality }) => {
 };
 const POST_FLIGHT_FORM_STORAGE_PREFIX = "dfpNeo.postFlightFormSnapshot.";
 const getPostFlightFormStorageKey = (eventId) => eventId ? `${POST_FLIGHT_FORM_STORAGE_PREFIX}${eventId}` : "";
-const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings }) => {
+const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, getSunTimesForAirfieldDate }) => {
   const { freezeState, checkAndWarn } = useSystemFreeze$1();
   reactExports.useMemo(() => {
     const personName = event.student || event.pilot;
@@ -65426,6 +65426,14 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     }
     return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings || void 0, "staff");
   }), [fixedCrewPicName, fixedCrewRoster, personnelDisplaySettings]);
+  const parsePostFlightTimeToHours = (tStr) => {
+    const clean = String(tStr || "").trim().replace(":", "");
+    if (!/^\d{4}$/.test(clean)) return null;
+    const h = parseInt(clean.substring(0, 2), 10);
+    const m = parseInt(clean.substring(2, 4), 10);
+    if (!Number.isFinite(h) || !Number.isFinite(m) || h < 0 || h >= 24 || m < 0 || m >= 60) return null;
+    return h + m / 60;
+  };
   const totalTime = reactExports.useMemo(() => {
     const parseTime = (tStr) => {
       const clean = tStr.replace(":", "");
@@ -65447,6 +65455,37 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     const durationHours = durationMinutes / 60;
     return durationHours.toFixed(1);
   }, [takeoffTime, landTime]);
+  const calculatedDayNightSplit = reactExports.useMemo(() => {
+    if (!isFlightLog || typeof getSunTimesForAirfieldDate !== "function") return null;
+    const total = parseFloat(totalTime) || 0;
+    if (total <= 0) return null;
+    const startParsed = parsePostFlightTimeToHours(takeoffTime);
+    const endParsed = parsePostFlightTimeToHours(landTime);
+    if (startParsed === null || endParsed === null) return null;
+    let start = startParsed;
+    let end = endParsed;
+    if (end <= start) end += 24;
+    const sunTimes = getSunTimesForAirfieldDate(event.date, from || event.origin || school);
+    const firstLight = Number(sunTimes?.firstLightDecimal);
+    const lastLight = Number(sunTimes?.lastLightDecimal);
+    if (!Number.isFinite(firstLight) || !Number.isFinite(lastLight)) return null;
+    const dayWindows = [
+      { start: firstLight, end: lastLight },
+      { start: firstLight + 24, end: lastLight + 24 }
+    ];
+    const dayHours = dayWindows.reduce((sum, window2) => {
+      const overlapStart = Math.max(start, window2.start);
+      const overlapEnd = Math.min(end, window2.end);
+      return sum + Math.max(0, overlapEnd - overlapStart);
+    }, 0);
+    const day = Math.min(total, Math.max(0, dayHours));
+    const night = Math.max(0, total - day);
+    return {
+      day: Number(day.toFixed(1)),
+      night: Number(night.toFixed(1))
+    };
+  }, [event.date, event.origin, from, getSunTimesForAirfieldDate, isFlightLog, landTime, school, takeoffTime, totalTime]);
+  const effectiveNightTime = calculatedDayNightSplit ? calculatedDayNightSplit.night.toFixed(1) : nightTime;
   reactExports.useEffect(() => {
     const takeoff = event.startTime;
     const takeoffH = String(Math.floor(takeoff)).padStart(2, "0");
@@ -65667,7 +65706,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     });
   }, [
     totalTime,
-    nightTime,
+    effectiveNightTime,
     ifActualTime,
     ifSimTime,
     captainTime,
@@ -65700,7 +65739,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     });
   }, [
     totalTime,
-    nightTime,
+    effectiveNightTime,
     ifActualTime,
     ifSimTime,
     captainTime,
@@ -65744,7 +65783,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         flightTotal = 0;
       } else {
         flightTotal = total;
-        const night = parseFloat(nightTime) || 0;
+        const night = parseFloat(effectiveNightTime) || 0;
         const day = Math.max(0, total - night);
         if (role === "Captain") {
           dayP1 = day;
@@ -65894,7 +65933,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       totalTime,
       captainTime,
       instructorTime,
-      nightTime,
+      nightTime: effectiveNightTime,
       ifActualTime,
       ifSimTime,
       ineffectiveTime,
@@ -66435,7 +66474,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
                 "input",
                 {
                   type: "text",
-                  value: nightTime,
+                  value: effectiveNightTime,
                   onChange: (e) => setNightTime(e.target.value),
                   placeholder: "0.0",
                   className: "mt-1 block w-20 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center font-mono"
@@ -105366,7 +105405,8 @@ Do you want to replace the existing entry?`,
               currencyRequirements,
               resourceDisplayNames,
               aircraftNumberSettings,
-              personnelDisplaySettings
+              personnelDisplaySettings,
+              getSunTimesForAirfieldDate
             }
           );
         }

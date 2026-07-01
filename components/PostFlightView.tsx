@@ -33,6 +33,7 @@ interface PostFlightViewProps {
   resourceDisplayNames?: ResourceDisplayNames;
   aircraftNumberSettings?: AircraftNumberSettings;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
+  getSunTimesForAirfieldDate?: (targetDate: string, airfieldCode?: string | null) => any;
 }
 
 const POST_FLIGHT_FORM_STORAGE_PREFIX = 'dfpNeo.postFlightFormSnapshot.';
@@ -41,7 +42,7 @@ const getPostFlightFormStorageKey = (eventId?: string) =>
     eventId ? `${POST_FLIGHT_FORM_STORAGE_PREFIX}${eventId}` : '';
 
 // FIX: Changed to a named export to resolve module resolution errors.
-export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings }) => {
+export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, getSunTimesForAirfieldDate }) => {
     const { freezeState, checkAndWarn } = useSystemFreeze();
     // Find trainee or pilot for header
     const person = useMemo(() => {
@@ -226,6 +227,15 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     ), [fixedCrewPicName, fixedCrewRoster, personnelDisplaySettings]);
 
      // Derived Total Time
+    const parsePostFlightTimeToHours = (tStr: string): number | null => {
+        const clean = String(tStr || '').trim().replace(':', '');
+        if (!/^\d{4}$/.test(clean)) return null;
+        const h = parseInt(clean.substring(0, 2), 10);
+        const m = parseInt(clean.substring(2, 4), 10);
+        if (!Number.isFinite(h) || !Number.isFinite(m) || h < 0 || h >= 24 || m < 0 || m >= 60) return null;
+        return h + (m / 60);
+    };
+
     const totalTime = useMemo(() => {
         const parseTime = (tStr: string) => {
              const clean = tStr.replace(':', '');
@@ -253,6 +263,41 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
         return durationHours.toFixed(1);
     }, [takeoffTime, landTime]);
+
+    const calculatedDayNightSplit = useMemo(() => {
+        if (!isFlightLog || typeof getSunTimesForAirfieldDate !== 'function') return null;
+        const total = parseFloat(totalTime) || 0;
+        if (total <= 0) return null;
+        const startParsed = parsePostFlightTimeToHours(takeoffTime);
+        const endParsed = parsePostFlightTimeToHours(landTime);
+        if (startParsed === null || endParsed === null) return null;
+        let start = startParsed;
+        let end = endParsed;
+        if (end <= start) end += 24;
+
+        const sunTimes = getSunTimesForAirfieldDate(event.date, from || event.origin || school);
+        const firstLight = Number(sunTimes?.firstLightDecimal);
+        const lastLight = Number(sunTimes?.lastLightDecimal);
+        if (!Number.isFinite(firstLight) || !Number.isFinite(lastLight)) return null;
+
+        const dayWindows = [
+            { start: firstLight, end: lastLight },
+            { start: firstLight + 24, end: lastLight + 24 },
+        ];
+        const dayHours = dayWindows.reduce((sum, window) => {
+            const overlapStart = Math.max(start, window.start);
+            const overlapEnd = Math.min(end, window.end);
+            return sum + Math.max(0, overlapEnd - overlapStart);
+        }, 0);
+        const day = Math.min(total, Math.max(0, dayHours));
+        const night = Math.max(0, total - day);
+        return {
+            day: Number(day.toFixed(1)),
+            night: Number(night.toFixed(1)),
+        };
+    }, [event.date, event.origin, from, getSunTimesForAirfieldDate, isFlightLog, landTime, school, takeoffTime, totalTime]);
+
+    const effectiveNightTime = calculatedDayNightSplit ? calculatedDayNightSplit.night.toFixed(1) : nightTime;
 
     useEffect(() => {
         // Prefill times
@@ -528,7 +573,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             return next;
         });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [totalTime, nightTime, ifActualTime, ifSimTime, captainTime, instructorTime,
+    }, [totalTime, effectiveNightTime, ifActualTime, ifSimTime, captainTime, instructorTime,
         isFlightLog, isFtdLog, isSolo, isDual,
         ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount,
         aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, duty]);
@@ -543,7 +588,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             return next;
         });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [totalTime, nightTime, ifActualTime, ifSimTime, captainTime, instructorTime,
+    }, [totalTime, effectiveNightTime, ifActualTime, ifSimTime, captainTime, instructorTime,
         isFlightLog, isFtdLog, isSolo, isDual,
         ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount,
         aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, duty]);
@@ -582,7 +627,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 flightTotal = 0;
             } else {
                 flightTotal = total;
-                const night = parseFloat(nightTime) || 0;
+                const night = parseFloat(effectiveNightTime) || 0;
                 const day = Math.max(0, total - night);
 
                 if (role === 'Captain') {
@@ -734,7 +779,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             totalTime,
             captainTime,
             instructorTime,
-            nightTime,
+            nightTime: effectiveNightTime,
             ifActualTime,
             ifSimTime,
             ineffectiveTime,
@@ -1504,7 +1549,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             <label className="block text-sm font-medium text-gray-400">Night</label>
                             <input
                                 type="text"
-                                value={nightTime}
+                                value={effectiveNightTime}
                                 onChange={e => setNightTime(e.target.value)}
                                 placeholder="0.0"
                                 className="mt-1 block w-20 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center font-mono"
