@@ -1165,40 +1165,45 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     return (
         <div ref={scrollContainerRef} data-schedule-surface="true" className="flex-1 overflow-auto relative bg-gray-900 select-none" style={isPauseSelectMode ? { cursor: 'crosshair' } : undefined}>
             {resourceSlideoutFrame && (
-                <aside
-                    className={`fixed z-[35] pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? 'translate-x-0' : '-translate-x-full'}`}
+                <div
+                    className="fixed z-[35] pointer-events-none overflow-hidden"
                     style={{
                         left: `${resourceSlideoutFrame.left}px`,
                         top: `${resourceSlideoutFrame.top}px`,
                         height: `${resourceSlideoutFrame.height}px`,
-                        width: 'clamp(360px, 40vw, 680px)',
+                        width: 'calc(clamp(360px, 40vw, 680px) + 72px)',
                     }}
                     aria-hidden={!showResourceUnderlayPanel}
                 >
-                    <div className={`h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`} />
-                    <button
-                        type="button"
-                        onClick={() => setShowResourceUnderlayPanel(value => !value)}
-                        aria-label={showResourceUnderlayPanel ? 'Close resource slideout' : 'Open resource slideout'}
-                        className="pointer-events-auto absolute right-[-52px] top-1/2 z-[1] flex h-7 w-[96px] -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
+                    <aside
+                        className={`absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? 'translate-x-0' : '-translate-x-full'}`}
+                        style={{ width: 'clamp(360px, 40vw, 680px)' }}
                     >
-                        <span
-                            className="h-4 w-7 opacity-80"
-                            style={{
-                                backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
-                                backgroundSize: '8px 8px',
-                            }}
-                        />
-                        <span className="text-sm font-semibold leading-none">{showResourceUnderlayPanel ? 'v' : '^'}</span>
-                        <span
-                            className="h-4 w-7 opacity-80"
-                            style={{
-                                backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
-                                backgroundSize: '8px 8px',
-                            }}
-                        />
-                    </button>
-                </aside>
+                        <div className={`h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`} />
+                        <button
+                            type="button"
+                            onClick={() => setShowResourceUnderlayPanel(value => !value)}
+                            aria-label={showResourceUnderlayPanel ? 'Close resource slideout' : 'Open resource slideout'}
+                            className="pointer-events-auto absolute right-[-56px] top-1/2 z-[1] flex h-7 w-[96px] -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
+                        >
+                            <span
+                                className="h-4 w-7 opacity-80"
+                                style={{
+                                    backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
+                                    backgroundSize: '8px 8px',
+                                }}
+                            />
+                            <span className="text-sm font-semibold leading-none">{showResourceUnderlayPanel ? 'v' : '^'}</span>
+                            <span
+                                className="h-4 w-7 opacity-80"
+                                style={{
+                                    backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
+                                    backgroundSize: '8px 8px',
+                                }}
+                            />
+                        </button>
+                    </aside>
+                </div>
             )}
             <div 
                 style={{
