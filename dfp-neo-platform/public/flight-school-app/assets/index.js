@@ -65403,6 +65403,10 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     return role === "pilot" || role.includes("pilot");
   };
   const getFixedCrewPreviewRole = (staff) => normaliseFixedCrewStaffRole(staff?.role, staff?.unit).trim() || "Crew";
+  const isCrewTraineeDisplayRole = (staff) => {
+    const role = getFixedCrewPreviewRole(staff).trim().toLowerCase();
+    return isPilotStaff(staff) || role === "wso" || role.includes("weapon systems officer");
+  };
   const fixedCrewRoster = reactExports.useMemo(() => {
     const roster = /* @__PURE__ */ new Map();
     const addByName = (name) => {
@@ -65904,7 +65908,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       data: getLogbookData(isPic ? "Captain" : isP2 ? "P2" : "FixedCrewCrew", staff.name)
     };
   }) : [];
-  const crewTraineeDisplay = isFixedCrewLogbookPreview ? fixedCrewLogbookPreviewRoster.filter((staff) => normalisePostFlightName(staff.name) !== fixedCrewPicName).map((staff) => formatLogbookPersonName(staff.name)).join(", ") : isSolo ? "Solo" : event.student?.split(" – ")[0];
+  const crewTraineeDisplay = isFixedCrewLogbookPreview ? fixedCrewLogbookPreviewRoster.filter((staff) => normalisePostFlightName(staff.name) !== fixedCrewPicName).filter(isCrewTraineeDisplayRole).map((staff) => formatLogbookPersonName(staff.name)).join(", ") : isSolo ? "Solo" : event.student?.split(" – ")[0];
   reactExports.useEffect(() => {
     if (!initialFormState.current) return;
     const currentState = {

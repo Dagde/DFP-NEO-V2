@@ -186,6 +186,10 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     const getFixedCrewPreviewRole = (staff?: Instructor | null): string => (
         normaliseFixedCrewStaffRole(staff?.role, staff?.unit).trim() || 'Crew'
     );
+    const isCrewTraineeDisplayRole = (staff?: Instructor | null): boolean => {
+        const role = getFixedCrewPreviewRole(staff).trim().toLowerCase();
+        return isPilotStaff(staff) || role === 'wso' || role.includes('weapon systems officer');
+    };
     const fixedCrewRoster = useMemo(() => {
         const roster = new Map<string, Instructor>();
         const addByName = (name?: string | null) => {
@@ -767,6 +771,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     const crewTraineeDisplay = isFixedCrewLogbookPreview
         ? fixedCrewLogbookPreviewRoster
             .filter(staff => normalisePostFlightName(staff.name) !== fixedCrewPicName)
+            .filter(isCrewTraineeDisplayRole)
             .map(staff => formatLogbookPersonName(staff.name))
             .join(', ')
         : isSolo ? 'Solo' : event.student?.split(' – ')[0];
