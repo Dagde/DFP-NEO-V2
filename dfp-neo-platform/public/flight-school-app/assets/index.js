@@ -99856,6 +99856,11 @@ ${conflictLines.join("\n")}${moreText}`,
         ].map((name) => String(name || "").trim()).filter((name) => !ignored.has(normalisePausePersonName(name)));
         return Array.from(new Set(names.map(normalisePausePersonName))).map((key) => names.find((name) => normalisePausePersonName(name) === key) || "").filter(Boolean);
       };
+      const getPausePersonRecord = (personName) => {
+        const key = normalisePausePersonName(personName);
+        return instructorsData.find((person) => normalisePausePersonName(person.name) === key) || allTraineesData.find((person) => normalisePausePersonName(person.fullName) === key || normalisePausePersonName(person.name) === key) || null;
+      };
+      const getPauseBookingWindow = (event) => getEventBookingWindowForAlgo(event, syllabusDetails);
       const resourceOptionsForPauseType = (eventType, fallbackResourceId) => {
         const resources = fullRawEvents.filter((event) => event.type === eventType).map((event) => String(event.resourceId || "").trim()).filter((resourceId) => resourceId && !resourceId.startsWith("STBY") && !resourceId.startsWith("BNF-STBY"));
         if (fallbackResourceId && !resources.includes(fallbackResourceId)) resources.unshift(fallbackResourceId);
@@ -99880,18 +99885,70 @@ ${conflictLines.join("\n")}${moreText}`,
           return startTime < eventEnd + turnaround && endTime > event.startTime;
         });
       };
-      const peopleAreBusy = (candidate, startTime, duration) => {
-        const candidatePeople = getPauseEventPeople(candidate).map(normalisePausePersonName);
-        if (candidatePeople.length === 0) return false;
-        const endTime = startTime + duration;
+      const hasPauseDispatchStaggerConflict = (candidate) => {
+        const minMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, candidate.type);
+        if (minMinutes <= 0) return false;
+        const type = String(candidate.type || "").trim().toLowerCase();
+        const isSimulator = type === "ftd" || type === "sim" || type === "simulator" || type === "cpt";
         return scheduledEvents2.some((event) => {
           if (event.isCancelled || event.resourceId?.startsWith("STBY")) return false;
-          const eventEnd = event.startTime + event.duration;
-          if (!(event.startTime < endTime && eventEnd > startTime)) return false;
+          const existingType = String(event.type || "").trim().toLowerCase();
+          const existingIsSimulator = existingType === "ftd" || existingType === "sim" || existingType === "simulator" || existingType === "cpt";
+          if (type === "flight") {
+            if (existingType !== "flight") return false;
+          } else if (isSimulator) {
+            if (!existingIsSimulator) return false;
+          } else {
+            return false;
+          }
+          return Math.abs(event.startTime - candidate.startTime) * 60 < minMinutes - 1e-3;
+        });
+      };
+      const exceedsPauseDispatchLimit = (candidate) => {
+        if (candidate.type !== "flight") return false;
+        return scheduledEvents2.filter(
+          (event) => event.type === "flight" && !event.isCancelled && !event.resourceId?.startsWith("STBY") && event.startTime > candidate.startTime - 1 && event.startTime <= candidate.startTime
+        ).length >= maxDispatchPerHour;
+      };
+      const peopleAreBusy = (candidate) => {
+        const candidatePeople = getPauseEventPeople(candidate).map(normalisePausePersonName);
+        if (candidatePeople.length === 0) return false;
+        const candidateWindow = getPauseBookingWindow(candidate);
+        return scheduledEvents2.some((event) => {
+          if (event.isCancelled || event.resourceId?.startsWith("STBY")) return false;
+          const eventWindow = getPauseBookingWindow(event);
+          if (!(eventWindow.start < candidateWindow.end && candidateWindow.start < eventWindow.end)) return false;
           const existingPeople = getPauseEventPeople(event).map(normalisePausePersonName);
           return candidatePeople.some((name) => existingPeople.includes(name));
         });
       };
+      const peopleAreAvailable = (candidate) => {
+        const window2 = getPauseBookingWindow(candidate);
+        return getPauseEventPeople(candidate).every((personName) => {
+          const person = getPausePersonRecord(personName);
+          if (!person) return true;
+          return !isPersonStaticallyUnavailable(person, window2.start, window2.end, pauseDate, candidate.type);
+        });
+      };
+      const peopleWithinEventLimits = (candidate) => {
+        const candidatePeople = getPauseEventPeople(candidate).map(normalisePausePersonName);
+        if (candidatePeople.length === 0) return true;
+        return candidatePeople.every((personKey2) => {
+          const person = getPausePersonRecord(personKey2);
+          const isExec = Boolean(person?.isExecutive);
+          const limits = isExec ? eventLimits.exec : eventLimits.instructor;
+          const existingEvents = scheduledEvents2.filter((event) => {
+            if (event.isCancelled || event.resourceId?.startsWith("STBY")) return false;
+            return getPauseEventPeople(event).some((name) => normalisePausePersonName(name) === personKey2);
+          });
+          const flightFtdCount = existingEvents.filter((event) => event.type === "flight" || event.type === "ftd").length;
+          const totalCount = existingEvents.length;
+          if ((candidate.type === "flight" || candidate.type === "ftd") && flightFtdCount >= limits.maxFlightFtd) return false;
+          if (totalCount >= limits.maxTotal) return false;
+          return true;
+        });
+      };
+      const candidateObeysPauseRules = (candidate) => !hasPauseDispatchStaggerConflict(candidate) && !exceedsPauseDispatchLimit(candidate) && !peopleAreBusy(candidate) && peopleAreAvailable(candidate) && peopleWithinEventLimits(candidate);
       const cancelledCrewEvents = eventsAfterCancel.filter((event) => cancelledIds.has(event.id) && !completedEventIds.has(event.id)).filter((event) => event.type === "flight" || event.type === "ftd" || event.type === "cpt" || event.type === "ground").sort((left, right) => left.startTime - right.startTime);
       for (const original of cancelledCrewEvents) {
         const duration = Number(original.duration) || 0;
@@ -99921,7 +99978,7 @@ ${conflictLines.join("\n")}${moreText}`,
             cancelledBy: void 0,
             cancelledAt: void 0
           };
-          if (peopleAreBusy(candidate, slot, duration)) {
+          if (!candidateObeysPauseRules(candidate)) {
             slot += slotStep;
             continue;
           }

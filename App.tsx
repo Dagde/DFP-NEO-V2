@@ -32648,6 +32648,15 @@ const App: React.FC = () => {
                     .map(key => names.find(name => normalisePausePersonName(name) === key) || '')
                     .filter(Boolean);
             };
+            const getPausePersonRecord = (personName: string): Instructor | Trainee | null => {
+                const key = normalisePausePersonName(personName);
+                return instructorsData.find(person => normalisePausePersonName(person.name) === key)
+                    || allTraineesData.find(person => normalisePausePersonName(person.fullName) === key || normalisePausePersonName(person.name) === key)
+                    || null;
+            };
+            const getPauseBookingWindow = (event: ScheduleEvent): { start: number; end: number } => (
+                getEventBookingWindowForAlgo(event, syllabusDetails)
+            );
             const resourceOptionsForPauseType = (eventType: ScheduleEvent['type'], fallbackResourceId?: string): string[] => {
                 const resources = fullRawEvents
                     .filter(event => event.type === eventType)
@@ -32675,18 +32684,80 @@ const App: React.FC = () => {
                     return startTime < eventEnd + turnaround && endTime > event.startTime;
                 });
             };
-            const peopleAreBusy = (candidate: ScheduleEvent, startTime: number, duration: number): boolean => {
-                const candidatePeople = getPauseEventPeople(candidate).map(normalisePausePersonName);
-                if (candidatePeople.length === 0) return false;
-                const endTime = startTime + duration;
+            const hasPauseDispatchStaggerConflict = (candidate: ScheduleEvent): boolean => {
+                const minMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, candidate.type);
+                if (minMinutes <= 0) return false;
+                const type = String(candidate.type || '').trim().toLowerCase();
+                const isSimulator = type === 'ftd' || type === 'sim' || type === 'simulator' || type === 'cpt';
                 return scheduledEvents.some(event => {
                     if (event.isCancelled || event.resourceId?.startsWith('STBY')) return false;
-                    const eventEnd = event.startTime + event.duration;
-                    if (!(event.startTime < endTime && eventEnd > startTime)) return false;
+                    const existingType = String(event.type || '').trim().toLowerCase();
+                    const existingIsSimulator = existingType === 'ftd' || existingType === 'sim' || existingType === 'simulator' || existingType === 'cpt';
+                    if (type === 'flight') {
+                        if (existingType !== 'flight') return false;
+                    } else if (isSimulator) {
+                        if (!existingIsSimulator) return false;
+                    } else {
+                        return false;
+                    }
+                    return Math.abs(event.startTime - candidate.startTime) * 60 < minMinutes - 0.001;
+                });
+            };
+            const exceedsPauseDispatchLimit = (candidate: ScheduleEvent): boolean => {
+                if (candidate.type !== 'flight') return false;
+                return scheduledEvents.filter(event =>
+                    event.type === 'flight'
+                    && !event.isCancelled
+                    && !event.resourceId?.startsWith('STBY')
+                    && event.startTime > candidate.startTime - 1
+                    && event.startTime <= candidate.startTime
+                ).length >= maxDispatchPerHour;
+            };
+            const peopleAreBusy = (candidate: ScheduleEvent): boolean => {
+                const candidatePeople = getPauseEventPeople(candidate).map(normalisePausePersonName);
+                if (candidatePeople.length === 0) return false;
+                const candidateWindow = getPauseBookingWindow(candidate);
+                return scheduledEvents.some(event => {
+                    if (event.isCancelled || event.resourceId?.startsWith('STBY')) return false;
+                    const eventWindow = getPauseBookingWindow(event);
+                    if (!(eventWindow.start < candidateWindow.end && candidateWindow.start < eventWindow.end)) return false;
                     const existingPeople = getPauseEventPeople(event).map(normalisePausePersonName);
                     return candidatePeople.some(name => existingPeople.includes(name));
                 });
             };
+            const peopleAreAvailable = (candidate: ScheduleEvent): boolean => {
+                const window = getPauseBookingWindow(candidate);
+                return getPauseEventPeople(candidate).every(personName => {
+                    const person = getPausePersonRecord(personName);
+                    if (!person) return true;
+                    return !isPersonStaticallyUnavailable(person as any, window.start, window.end, pauseDate, candidate.type as any);
+                });
+            };
+            const peopleWithinEventLimits = (candidate: ScheduleEvent): boolean => {
+                const candidatePeople = getPauseEventPeople(candidate).map(normalisePausePersonName);
+                if (candidatePeople.length === 0) return true;
+                return candidatePeople.every(personKey => {
+                    const person = getPausePersonRecord(personKey);
+                    const isExec = Boolean((person as Instructor | null)?.isExecutive);
+                    const limits = isExec ? eventLimits.exec : eventLimits.instructor;
+                    const existingEvents = scheduledEvents.filter(event => {
+                        if (event.isCancelled || event.resourceId?.startsWith('STBY')) return false;
+                        return getPauseEventPeople(event).some(name => normalisePausePersonName(name) === personKey);
+                    });
+                    const flightFtdCount = existingEvents.filter(event => event.type === 'flight' || event.type === 'ftd').length;
+                    const totalCount = existingEvents.length;
+                    if ((candidate.type === 'flight' || candidate.type === 'ftd') && flightFtdCount >= limits.maxFlightFtd) return false;
+                    if (totalCount >= limits.maxTotal) return false;
+                    return true;
+                });
+            };
+            const candidateObeysPauseRules = (candidate: ScheduleEvent): boolean => (
+                !hasPauseDispatchStaggerConflict(candidate)
+                && !exceedsPauseDispatchLimit(candidate)
+                && !peopleAreBusy(candidate)
+                && peopleAreAvailable(candidate)
+                && peopleWithinEventLimits(candidate)
+            );
             const cancelledCrewEvents = eventsAfterCancel
                 .filter(event => cancelledIds.has(event.id) && !completedEventIds.has(event.id))
                 .filter(event => event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt' || event.type === 'ground')
@@ -32721,7 +32792,7 @@ const App: React.FC = () => {
                         cancelledBy: undefined,
                         cancelledAt: undefined,
                     };
-                    if (peopleAreBusy(candidate, slot, duration)) {
+                    if (!candidateObeysPauseRules(candidate)) {
                         slot += slotStep;
                         continue;
                     }
