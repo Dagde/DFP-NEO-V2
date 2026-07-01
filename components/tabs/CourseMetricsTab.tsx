@@ -84,6 +84,10 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
   const activeModel = normaliseOperationalModel(operationalModel);
   const isCrewOperationalModel = activeModel === 'air_combat' || isFixedCrewLikeOperationalModel(activeModel);
   const activeModelLabel = getOperationalModelLabel(activeModel);
+  const percentLabel = (numerator: number, denominator: number): string => {
+    if (denominator <= 0) return 'N/A';
+    return `${Math.round((numerator / denominator) * 100)}%`;
+  };
   const activeUnitCodes = useMemo(() => {
     const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0
       ? operationalContext.unitCodes
@@ -324,28 +328,84 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
 
   if (isCrewOperationalModel) {
     const totalScheduled = airCombatCourseStats.reduce((sum, stream) => sum + stream.eventCount, 0);
+    const totalAssignedStaffSlots = airCombatCourseStats.reduce((sum, stream) => sum + stream.staff.size, 0);
+    const totalAvailableStaffSlots = airCombatCourseStats.reduce((sum, stream) => sum + stream.availableStaff.size, 0);
+    const scheduledStreams = airCombatCourseStats.filter(stream => stream.eventCount > 0).length;
+    const unavailableStreams = airCombatCourseStats.filter(stream => stream.staff.size > 0 && stream.availableStaff.size === 0).length;
+    const uncoveredStreams = airCombatCourseStats.filter(stream => stream.availableStaff.size > 0 && stream.eventCount === 0).length;
+    const assessmentRecords = airCombatCourseStats.reduce((sum, stream) => sum + stream.completedReports, 0);
+    const streamHealth = (stream: typeof airCombatCourseStats[number]): { label: string; className: string; detail: string } => {
+      if (stream.staff.size === 0) {
+        return { label: 'Not loaded', className: 'text-slate-300', detail: 'No assigned staff' };
+      }
+      if (stream.availableStaff.size === 0) {
+        return { label: 'Unavailable', className: 'text-red-300', detail: 'Assigned staff unavailable today' };
+      }
+      if (stream.eventCount === 0) {
+        return { label: 'Unscheduled', className: 'text-amber-300', detail: 'Available staff but no DFP event' };
+      }
+      if (stream.personnel.size === 0) {
+        return { label: 'No crew named', className: 'text-amber-300', detail: 'Event exists without named staff' };
+      }
+      return { label: 'Active', className: 'text-emerald-300', detail: 'Assigned and represented on DFP' };
+    };
+
     return (
       <div className="space-y-6">
         <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
           <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
             <h2 className="text-lg font-semibold text-white">{activeModelLabel} Course & Package Metrics</h2>
             <p className="mt-1 text-sm text-slate-400">
-              Each card is a course, package, currency stream or operational training stream assigned to at least one staff member in this unit. The large number is how many events from that stream are on the selected DFP.
+              Course and package signals are scoped to staff assignments for this unit or combined-unit context, then compared against the selected DFP to show coverage, schedule representation, modality mix and assessment evidence.
             </p>
           </div>
           <div className="p-5">
             {airCombatCourseStats.length > 0 ? (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {airCombatCourseStats.map(stream => (
-                  <InteractiveStatCard
-                    key={stream.key}
-                    title={`${stream.kind === 'course' ? 'Course' : 'Package'} ${stream.code}`}
-                    value={stream.eventCount}
-                    description={`${stream.staff.size} assigned staff, ${stream.availableStaff.size} available today, ${stream.syllabusItems} LMP events in stream`}
-                    personnelList={Array.from(stream.staff).sort()}
-                    onPersonClick={onNavigateAndSelectPerson}
-                  />
-                ))}
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+                  <div className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Assigned streams</div>
+                    <div className="mt-2 text-2xl font-bold text-white">{airCombatCourseStats.length}</div>
+                    <div className="mt-1 text-xs text-slate-400">Courses and packages loaded</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Staff availability</div>
+                    <div className="mt-2 text-2xl font-bold text-emerald-200">{percentLabel(totalAvailableStaffSlots, totalAssignedStaffSlots)}</div>
+                    <div className="mt-1 text-xs text-slate-400">{totalAvailableStaffSlots} of {totalAssignedStaffSlots} assigned slots available</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Scheduled coverage</div>
+                    <div className="mt-2 text-2xl font-bold text-cyan-200">{percentLabel(scheduledStreams, airCombatCourseStats.length)}</div>
+                    <div className="mt-1 text-xs text-slate-400">{scheduledStreams} streams represented on DFP</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Coverage risk</div>
+                    <div className="mt-2 text-2xl font-bold text-amber-200">{unavailableStreams + uncoveredStreams}</div>
+                    <div className="mt-1 text-xs text-slate-400">{unavailableStreams} unavailable, {uncoveredStreams} unscheduled</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Assessment evidence</div>
+                    <div className="mt-2 text-2xl font-bold text-violet-200">{assessmentRecords}</div>
+                    <div className="mt-1 text-xs text-slate-400">Completed training reports found</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {airCombatCourseStats.map(stream => {
+                    const health = streamHealth(stream);
+                    const scheduledAvailable = Array.from(stream.personnel).filter(person => stream.availableStaff.has(person)).length;
+                    return (
+                      <InteractiveStatCard
+                        key={stream.key}
+                        title={`${stream.kind === 'course' ? 'Course' : 'Package'} ${stream.code}`}
+                        value={stream.eventCount}
+                        description={`${health.label}: ${stream.availableStaff.size}/${stream.staff.size} available, ${scheduledAvailable} available staff scheduled, ${stream.eventsByType.flight} flight, ${stream.eventsByType.ftd + stream.eventsByType.cpt} sim/CPT`}
+                        personnelList={Array.from(stream.staff).sort()}
+                        onPersonClick={onNavigateAndSelectPerson}
+                      />
+                    );
+                  })}
+                </div>
               </div>
             ) : (
               <p className="py-8 text-center text-slate-400">No courses, packages or operational training streams have staff assigned in this unit.</p>
@@ -369,31 +429,39 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
                     <th className="px-4 py-3">Code</th>
                     <th className="px-4 py-3">Assigned Staff</th>
                     <th className="px-4 py-3">Available</th>
+                    <th className="px-4 py-3">Avail %</th>
+                    <th className="px-4 py-3">Scheduled People</th>
                     <th className="px-4 py-3">LMP Events</th>
                     <th className="px-4 py-3">Scheduled</th>
                     <th className="px-4 py-3">{resourceDisplayNames.aircraft} Flight</th>
-                    <th className="px-4 py-3">{resourceDisplayNames.ftd}</th>
-                    <th className="px-4 py-3">{resourceDisplayNames.cpt}</th>
+                    <th className="px-4 py-3">Sim / CPT</th>
                     <th className="px-4 py-3">Ground</th>
-                    <th className="px-4 py-3">Completed Reports</th>
+                    <th className="px-4 py-3">Assessments</th>
+                    <th className="px-4 py-3">Health</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {airCombatCourseStats.map(stream => (
-                    <tr key={stream.key} className="border-t border-slate-800">
-                      <td className="px-4 py-3 text-slate-300">{stream.kind === 'course' ? 'Course' : 'Package'}</td>
-                      <td className="px-4 py-3 font-semibold text-white">{stream.code}</td>
-                      <td className="px-4 py-3 text-slate-200">{stream.staff.size}</td>
-                      <td className="px-4 py-3 text-emerald-300">{stream.availableStaff.size}</td>
-                      <td className="px-4 py-3 text-slate-200">{stream.syllabusItems}</td>
-                      <td className="px-4 py-3 font-semibold text-cyan-200">{stream.eventCount}</td>
-                      <td className="px-4 py-3 text-slate-200">{stream.eventsByType.flight}</td>
-                      <td className="px-4 py-3 text-slate-200">{stream.eventsByType.ftd}</td>
-                      <td className="px-4 py-3 text-slate-200">{stream.eventsByType.cpt}</td>
-                      <td className="px-4 py-3 text-slate-200">{stream.eventsByType.ground}</td>
-                      <td className="px-4 py-3 text-slate-200">{stream.completedReports}</td>
-                    </tr>
-                  ))}
+                  {airCombatCourseStats.map(stream => {
+                    const health = streamHealth(stream);
+                    const scheduledPeople = stream.personnel.size;
+                    return (
+                      <tr key={stream.key} className="border-t border-slate-800">
+                        <td className="px-4 py-3 text-slate-300">{stream.kind === 'course' ? 'Course' : 'Package'}</td>
+                        <td className="px-4 py-3 font-semibold text-white">{stream.code}</td>
+                        <td className="px-4 py-3 text-slate-200">{stream.staff.size}</td>
+                        <td className="px-4 py-3 text-emerald-300">{stream.availableStaff.size}</td>
+                        <td className="px-4 py-3 text-slate-200">{percentLabel(stream.availableStaff.size, stream.staff.size)}</td>
+                        <td className="px-4 py-3 text-slate-200">{scheduledPeople}</td>
+                        <td className="px-4 py-3 text-slate-200">{stream.syllabusItems}</td>
+                        <td className="px-4 py-3 font-semibold text-cyan-200">{stream.eventCount}</td>
+                        <td className="px-4 py-3 text-slate-200">{stream.eventsByType.flight}</td>
+                        <td className="px-4 py-3 text-slate-200">{stream.eventsByType.ftd + stream.eventsByType.cpt}</td>
+                        <td className="px-4 py-3 text-slate-200">{stream.eventsByType.ground}</td>
+                        <td className="px-4 py-3 text-slate-200">{stream.completedReports}</td>
+                        <td className={`px-4 py-3 font-semibold ${health.className}`} title={health.detail}>{health.label}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

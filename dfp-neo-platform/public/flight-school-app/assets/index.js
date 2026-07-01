@@ -33487,6 +33487,10 @@ const CourseMetricsTab = ({
   const activeModel = normaliseOperationalModel(operationalModel2);
   const isCrewOperationalModel = activeModel === "air_combat" || isFixedCrewLikeOperationalModel(activeModel);
   const activeModelLabel = getOperationalModelLabel(activeModel);
+  const percentLabel = (numerator, denominator) => {
+    if (denominator <= 0) return "N/A";
+    return `${Math.round(numerator / denominator * 100)}%`;
+  };
   const activeUnitCodes = reactExports.useMemo(() => {
     const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
@@ -33673,6 +33677,27 @@ const CourseMetricsTab = ({
   }, [date, events, traineesData, activeCourses, traineeCourseLookup]);
   if (isCrewOperationalModel) {
     const totalScheduled = airCombatCourseStats.reduce((sum, stream) => sum + stream.eventCount, 0);
+    const totalAssignedStaffSlots = airCombatCourseStats.reduce((sum, stream) => sum + stream.staff.size, 0);
+    const totalAvailableStaffSlots = airCombatCourseStats.reduce((sum, stream) => sum + stream.availableStaff.size, 0);
+    const scheduledStreams = airCombatCourseStats.filter((stream) => stream.eventCount > 0).length;
+    const unavailableStreams = airCombatCourseStats.filter((stream) => stream.staff.size > 0 && stream.availableStaff.size === 0).length;
+    const uncoveredStreams = airCombatCourseStats.filter((stream) => stream.availableStaff.size > 0 && stream.eventCount === 0).length;
+    const assessmentRecords = airCombatCourseStats.reduce((sum, stream) => sum + stream.completedReports, 0);
+    const streamHealth = (stream) => {
+      if (stream.staff.size === 0) {
+        return { label: "Not loaded", className: "text-slate-300", detail: "No assigned staff" };
+      }
+      if (stream.availableStaff.size === 0) {
+        return { label: "Unavailable", className: "text-red-300", detail: "Assigned staff unavailable today" };
+      }
+      if (stream.eventCount === 0) {
+        return { label: "Unscheduled", className: "text-amber-300", detail: "Available staff but no DFP event" };
+      }
+      if (stream.personnel.size === 0) {
+        return { label: "No crew named", className: "text-amber-300", detail: "Event exists without named staff" };
+      }
+      return { label: "Active", className: "text-emerald-300", detail: "Assigned and represented on DFP" };
+    };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: [
@@ -33680,19 +33705,65 @@ const CourseMetricsTab = ({
             activeModelLabel,
             " Course & Package Metrics"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Each card is a course, package, currency stream or operational training stream assigned to at least one staff member in this unit. The large number is how many events from that stream are on the selected DFP." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Course and package signals are scoped to staff assignments for this unit or combined-unit context, then compared against the selected DFP to show coverage, schedule representation, modality mix and assessment evidence." })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5", children: airCombatCourseStats.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3", children: airCombatCourseStats.map((stream) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-          InteractiveStatCard,
-          {
-            title: `${stream.kind === "course" ? "Course" : "Package"} ${stream.code}`,
-            value: stream.eventCount,
-            description: `${stream.staff.size} assigned staff, ${stream.availableStaff.size} available today, ${stream.syllabusItems} LMP events in stream`,
-            personnelList: Array.from(stream.staff).sort(),
-            onPersonClick: onNavigateAndSelectPerson
-          },
-          stream.key
-        )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-8 text-center text-slate-400", children: "No courses, packages or operational training streams have staff assigned in this unit." }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5", children: airCombatCourseStats.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: "Assigned streams" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: airCombatCourseStats.length }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-slate-400", children: "Courses and packages loaded" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: "Staff availability" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-emerald-200", children: percentLabel(totalAvailableStaffSlots, totalAssignedStaffSlots) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-slate-400", children: [
+                totalAvailableStaffSlots,
+                " of ",
+                totalAssignedStaffSlots,
+                " assigned slots available"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: "Scheduled coverage" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-cyan-200", children: percentLabel(scheduledStreams, airCombatCourseStats.length) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-slate-400", children: [
+                scheduledStreams,
+                " streams represented on DFP"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: "Coverage risk" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-amber-200", children: unavailableStreams + uncoveredStreams }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-slate-400", children: [
+                unavailableStreams,
+                " unavailable, ",
+                uncoveredStreams,
+                " unscheduled"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: "Assessment evidence" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-violet-200", children: assessmentRecords }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-slate-400", children: "Completed training reports found" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3", children: airCombatCourseStats.map((stream) => {
+            const health = streamHealth(stream);
+            const scheduledAvailable = Array.from(stream.personnel).filter((person) => stream.availableStaff.has(person)).length;
+            return /* @__PURE__ */ jsxRuntimeExports.jsx(
+              InteractiveStatCard,
+              {
+                title: `${stream.kind === "course" ? "Course" : "Package"} ${stream.code}`,
+                value: stream.eventCount,
+                description: `${health.label}: ${stream.availableStaff.size}/${stream.staff.size} available, ${scheduledAvailable} available staff scheduled, ${stream.eventsByType.flight} flight, ${stream.eventsByType.ftd + stream.eventsByType.cpt} sim/CPT`,
+                personnelList: Array.from(stream.staff).sort(),
+                onPersonClick: onNavigateAndSelectPerson
+              },
+              stream.key
+            );
+          }) })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-8 text-center text-slate-400", children: "No courses, packages or operational training streams have staff assigned in this unit." }) })
       ] }),
       airCombatCourseStats.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: [
@@ -33705,30 +33776,38 @@ const CourseMetricsTab = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Code" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Assigned Staff" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Available" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Avail %" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Scheduled People" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "LMP Events" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Scheduled" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("th", { className: "px-4 py-3", children: [
               resourceDisplayNames.aircraft,
               " Flight"
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: resourceDisplayNames.ftd }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: resourceDisplayNames.cpt }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Sim / CPT" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Ground" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Completed Reports" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Assessments" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Health" })
           ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: airCombatCourseStats.map((stream) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-slate-800", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-300", children: stream.kind === "course" ? "Course" : "Package" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 font-semibold text-white", children: stream.code }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.staff.size }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-emerald-300", children: stream.availableStaff.size }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.syllabusItems }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 font-semibold text-cyan-200", children: stream.eventCount }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.eventsByType.flight }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.eventsByType.ftd }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.eventsByType.cpt }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.eventsByType.ground }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.completedReports })
-          ] }, stream.key)) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: airCombatCourseStats.map((stream) => {
+            const health = streamHealth(stream);
+            const scheduledPeople = stream.personnel.size;
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-slate-800", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-300", children: stream.kind === "course" ? "Course" : "Package" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 font-semibold text-white", children: stream.code }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.staff.size }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-emerald-300", children: stream.availableStaff.size }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: percentLabel(stream.availableStaff.size, stream.staff.size) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: scheduledPeople }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.syllabusItems }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 font-semibold text-cyan-200", children: stream.eventCount }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.eventsByType.flight }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.eventsByType.ftd + stream.eventsByType.cpt }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.eventsByType.ground }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.completedReports }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-4 py-3 font-semibold ${health.className}`, title: health.detail, children: health.label })
+            ] }, stream.key);
+          }) })
         ] }) })
       ] }),
       airCombatCourseStats.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
