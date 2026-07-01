@@ -895,6 +895,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                         isPauseCompleted={isPauseCompleted}
                         isDiagnosticHighlighted={diagnosticHighlightedEventIds.has(event.id)}
                         aircraftNumberSettings={aircraftNumberSettings}
+                        suppressAuthorisationWarnings
                         
                     />
                 );

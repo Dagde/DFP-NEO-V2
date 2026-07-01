@@ -42,6 +42,7 @@ interface FlightTileProps {
   alertStatus?: 'pending' | 'accepted' | 'rejected' | null;
   aircraftNumberSettings?: AircraftNumberSettings;
   disableLayoutTransition?: boolean;
+  suppressAuthorisationWarnings?: boolean;
 }
 
 const formatTime = (time: number): string => {
@@ -169,7 +170,7 @@ const getAuthorizationTextColorClass = (
 };
 
 
-const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false }) => {
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false }) => {
   // ERROR TRACKING: Log props to identify missing seatConfigs
 
   // Removed unit color logic - colors are now handled in PersonnelColumn only
@@ -230,7 +231,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return 'ring-red-400'; // Highest priority
     }
 
-    if (event.type !== 'flight' || isAuthorisationWarningExempt(event)) {
+    if (suppressAuthorisationWarnings || event.type !== 'flight' || isAuthorisationWarningExempt(event)) {
         return 'ring-transparent';
     }
 
@@ -379,7 +380,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
           studentClasses = 'font-bold truncate text-red-500';
       }
   } else {
-      const textColorClass = getAuthorizationTextColorClass(event, currentTime, tileStatusSettings);
+      const textColorClass = suppressAuthorisationWarnings ? '' : getAuthorizationTextColorClass(event, currentTime, tileStatusSettings);
       const picHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(picName || '');
       const studentHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(studentName || '');
       

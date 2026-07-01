@@ -7426,7 +7426,7 @@ const getAuthorizationTextColorClass = (event, currentTime, settings) => {
   }
   return "";
 };
-const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false }) => {
+const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false }) => {
   try {
     const testAccess = seatConfigs;
   } catch (error) {
@@ -7466,7 +7466,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     if (isConflicting || isUnavailabilityConflict) {
       return "ring-red-400";
     }
-    if (event.type !== "flight" || isAuthorisationWarningExempt(event)) {
+    if (suppressAuthorisationWarnings || event.type !== "flight" || isAuthorisationWarningExempt(event)) {
       return "ring-transparent";
     }
     const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
@@ -7557,7 +7557,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       studentClasses = "font-bold truncate text-red-500";
     }
   } else {
-    const textColorClass = getAuthorizationTextColorClass(event, currentTime, tileStatusSettings);
+    const textColorClass = suppressAuthorisationWarnings ? "" : getAuthorizationTextColorClass(event, currentTime, tileStatusSettings);
     const picHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(picName || "");
     const studentHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(studentName || "");
     const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
@@ -26980,7 +26980,8 @@ const NextDayBuildView = ({
             isChanged,
             isPauseCompleted,
             isDiagnosticHighlighted: diagnosticHighlightedEventIds.has(event.id),
-            aircraftNumberSettings
+            aircraftNumberSettings,
+            suppressAuthorisationWarnings: true
           },
           event.id
         );
