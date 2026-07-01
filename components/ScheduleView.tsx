@@ -1249,7 +1249,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 </div>
 
                 {/* Resource Column (Left Col) */}
-                <div data-schedule-resource-column="true" className="sticky left-0 z-30 bg-gray-800 border-r border-gray-700" style={{width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden"}}>
+                <div data-schedule-resource-column="true" className="sticky left-0 z-40 bg-gray-800 border-r border-gray-700" style={{width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "visible"}}>
                     <AirframeColumn
                         resources={resources}
                         onReorder={onReorderResources}
@@ -1262,6 +1262,28 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         formatResourceLabel={formatResourceLabel}
                         aircraftConfigLabelsByResource={aircraftConfigLabelsByResource}
                     />
+                    <button
+                        type="button"
+                        onClick={() => setShowResourceUnderlayPanel(value => !value)}
+                        aria-label={showResourceUnderlayPanel ? 'Close resource slideout' : 'Open resource slideout'}
+                        className="absolute right-[-50px] top-1/2 z-[65] flex h-7 w-[96px] -translate-y-1/2 -rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
+                    >
+                        <span
+                            className="h-4 w-7 opacity-80"
+                            style={{
+                                backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
+                                backgroundSize: '8px 8px',
+                            }}
+                        />
+                        <span className="text-sm font-semibold leading-none">{showResourceUnderlayPanel ? '<' : '>'}</span>
+                        <span
+                            className="h-4 w-7 opacity-80"
+                            style={{
+                                backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
+                                backgroundSize: '8px 8px',
+                            }}
+                        />
+                    </button>
                 </div>
 
                 <aside
@@ -1275,33 +1297,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 >
                     <div className="h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" />
                 </aside>
-                <button
-                    type="button"
-                    onClick={() => setShowResourceUnderlayPanel(value => !value)}
-                    aria-label={showResourceUnderlayPanel ? 'Close resource slideout' : 'Open resource slideout'}
-                    className="absolute z-[45] flex h-7 w-[96px] -translate-y-1/2 -rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
-                    style={{
-                        left: `${RESOURCE_COLUMN_WIDTH - 20}px`,
-                        top: `${TIME_HEADER_HEIGHT + Math.max(96, (resources.length * ROW_HEIGHT) / 2)}px`,
-                    }}
-                >
-                    <span
-                        className="h-4 w-7 opacity-80"
-                        style={{
-                            backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
-                            backgroundSize: '8px 8px',
-                        }}
-                    />
-                    <span className="text-sm font-semibold leading-none">{showResourceUnderlayPanel ? '<' : '>'}</span>
-                    <span
-                        className="h-4 w-7 opacity-80"
-                        style={{
-                            backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
-                            backgroundSize: '8px 8px',
-                        }}
-                    />
-                </button>
-
                 {/* Main Grid */}
                 <div 
                     ref={scheduleGridRef}
