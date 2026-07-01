@@ -80718,6 +80718,27 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           incrementFixedCrewRejection("OUTSIDE_BUILD_WINDOW");
           continue;
         }
+        if (sourceEvent.type === "flight") {
+          const exclusionViolation = getFlightWindowExclusionViolation(startTime, duration);
+          if (exclusionViolation) {
+            const reason = exclusionViolation.reason || "FLYING_WINDOW_EXCLUSION";
+            incrementFixedCrewRejection(reason);
+            pushFixedCrewAttempt({
+              event: sourceEvent.flightNumber,
+              source,
+              startTime,
+              outcome: "rejected",
+              reason,
+              restriction: exclusionViolation.period.restriction,
+              exclusionStart: exclusionViolation.period.startTime,
+              exclusionEnd: exclusionViolation.period.endTime,
+              checkedTime: exclusionViolation.checkedTime,
+              departureTime: startTime,
+              landingTime: startTime + duration
+            });
+            continue;
+          }
+        }
         for (const resourceId of resourceOptions) {
           fixedCrewPerf.counters.resourceCandidates += 1;
           eventPerf.resourceCandidates += 1;
