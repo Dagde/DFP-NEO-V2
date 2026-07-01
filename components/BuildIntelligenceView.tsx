@@ -137,7 +137,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
     { id: 'course-metrics' as TabType, label: 'Course Metrics' },
     { id: 'build-analytics' as TabType, label: 'Build Analytics' },
     { id: 'ac-history' as TabType, label: 'AC History' },
-    { id: 'managerial-analytics' as TabType, label: 'Managerial Analytics' },
+    ...(!isCrewOperationalModel ? [{ id: 'managerial-analytics' as TabType, label: 'Managerial Analytics' }] : []),
     { id: 'bli' as TabType, label: 'BLI' }
   ];
 

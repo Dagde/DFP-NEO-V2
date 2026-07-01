@@ -39439,7 +39439,7 @@ const BuildIntelligenceView = (props) => {
     { id: "course-metrics", label: "Course Metrics" },
     { id: "build-analytics", label: "Build Analytics" },
     { id: "ac-history", label: "AC History" },
-    { id: "managerial-analytics", label: "Managerial Analytics" },
+    ...!isCrewOperationalModel ? [{ id: "managerial-analytics", label: "Managerial Analytics" }] : [],
     { id: "bli", label: "BLI" }
   ];
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex flex-col overflow-hidden bg-[#111827] text-slate-100", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col", children: [
