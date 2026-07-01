@@ -39,7 +39,7 @@ import {
 } from './utils/resourceDisplayNames';
 import { normaliseAircraftNumberSettings } from './utils/aircraftNumberFormat';
 import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions, type AircraftConfigurationDefinition } from './utils/aircraftConfigurationSettings';
-import { getAircraftSeatEligibleRoles, getAircraftTypeCrewComposition, normaliseAircraftCrewComposition, type AircraftCrewComposition } from './utils/aircraftCrewComposition';
+import { getAircraftCrewCompositionForEvent, getAircraftSeatEligibleRoles, getAircraftTypeCrewComposition, normaliseAircraftCrewComposition, type AircraftCrewComposition } from './utils/aircraftCrewComposition';
 import { getCrewRequirementCount, getCrewRequirementRoleOptions, getCrewRequirementRoles } from './utils/crewRequirements';
 import {
     readTileStatusSettingsFromLocalStorage,
@@ -6692,7 +6692,10 @@ function generateDfpInternal(
             .filter(Boolean)
     ));
     const buildCrewPositionTerminology = normaliseCrewPositionTerminology(config.crewPositionTerminology || null);
-    const buildAircraftCrewComposition = config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: 'seat-1', role: 'Pilot', eligibleRoles: ['Pilot'] }] };
+    const buildAircraftCrewComposition = normaliseAircraftCrewComposition(config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: 'seat-1', role: 'Pilot', eligibleRoles: ['Pilot'] }] });
+    const getBuildAircraftCrewCompositionForEvent = (event?: { type?: string; resourceId?: string } | null): AircraftCrewComposition => (
+        getAircraftCrewCompositionForEvent(buildAircraftCrewComposition, event)
+    );
     const markBuildTiming = (name: string, details?: Record<string, any>) => markNeoBuildTiming(timingReport, name, details);
     const recordProgress = (progress: { message: string, percentage: number }) => {
         markBuildTiming(`progress:${progress.message}`, {
@@ -8411,7 +8414,7 @@ function generateDfpInternal(
             return options.filter(resourceId => eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(resourceId)));
         };
         const getFixedCrewRoleShortfalls = (members: Instructor[], event: Omit<ScheduleEvent, 'date'>): any[] => (
-            getCrewRequirementRoles(event.crewRequirement, buildAircraftCrewComposition)
+            getCrewRequirementRoles(event.crewRequirement, getBuildAircraftCrewCompositionForEvent(event))
                 .map(role => {
                     const eligibleRoles = getCrewRequirementRoleOptions(role);
                     const matchingMembers = members.filter(staff => eligibleRoles.some(requiredRole => roleMatchesStaff(staff, requiredRole)));
@@ -9073,7 +9076,7 @@ function generateDfpInternal(
             addSelected(recipient.staff);
             addSelected(partner.staff);
             const roleFillDiagnostics: any[] = [];
-            for (const role of getCrewRequirementRoles(event.crewRequirement, buildAircraftCrewComposition)) {
+            for (const role of getCrewRequirementRoles(event.crewRequirement, getBuildAircraftCrewCompositionForEvent(event))) {
                 const eligibleRoles = getCrewRequirementRoleOptions(role);
                 const requiredCount = Math.max(0, Number(role.count) || 0);
                 let currentCount = Array.from(selected.values()).filter(staff => eligibleRoles.some(requiredRole => roleMatchesStaff(staff, requiredRole))).length;
@@ -10139,11 +10142,14 @@ function generateDfpInternal(
             placements: fixedCrewPerf.counters.placements,
         });
 
-        const pooledCrewMinimumManifestCount = Math.max(
-            2,
-            Number(buildAircraftCrewComposition.crewCount) || 0,
-            Array.isArray(buildAircraftCrewComposition.seats) ? buildAircraftCrewComposition.seats.length : 0,
-        );
+        const getPooledCrewMinimumManifestCount = (event: Omit<ScheduleEvent, 'date'>): number => {
+            const eventCrewComposition = getBuildAircraftCrewCompositionForEvent(event);
+            return Math.max(
+                2,
+                Number(eventCrewComposition.crewCount) || 0,
+                Array.isArray(eventCrewComposition.seats) ? eventCrewComposition.seats.length : 0,
+            );
+        };
         const pooledCrewManifestGuard: any[] = [];
         const fixedCrewFinalEvents = isPooledCrewBuild
             ? generatedEvents
@@ -10157,14 +10163,15 @@ function generateDfpInternal(
                         ...(((event as any).crewSelectionOrder || []) as string[]),
                         ...getPersonnel(event),
                     ].map(name => String(name || '').trim()).filter(Boolean)));
-                    if (manifest.length < pooledCrewMinimumManifestCount) {
+                    const minimumManifestCount = getPooledCrewMinimumManifestCount(event);
+                    if (manifest.length < minimumManifestCount) {
                         pooledCrewManifestGuard.push({
                             action: 'removed',
                             reason: 'POOLED_CREW_BELOW_MINIMUM_CREW',
                             event: event.flightNumber,
                             resourceId: event.resourceId,
                             startTime: event.startTime,
-                            minimumCrew: pooledCrewMinimumManifestCount,
+                            minimumCrew: minimumManifestCount,
                             manifest,
                         });
                         return null;
@@ -10176,7 +10183,7 @@ function generateDfpInternal(
                             event: event.flightNumber,
                             resourceId: event.resourceId,
                             startTime: event.startTime,
-                            minimumCrew: pooledCrewMinimumManifestCount,
+                            minimumCrew: minimumManifestCount,
                             manifest,
                         });
                     }
@@ -10194,7 +10201,7 @@ function generateDfpInternal(
                 .filter((event): event is Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string } => Boolean(event))
             : generatedEvents;
         diag.pooledCrewManifestGuard = {
-            minimumCrew: pooledCrewMinimumManifestCount,
+            minimumCrew: 'resource-specific',
             removedEvents: pooledCrewManifestGuard.filter(entry => entry.action === 'removed').length,
             forcedDualEvents: pooledCrewManifestGuard.filter(entry => entry.action === 'forced-dual').length,
             actions: pooledCrewManifestGuard,
@@ -13998,11 +14005,17 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     const airCombatWeights = normaliseAirCombatSchedulingWeights(
         config.airCombatSchedulingWeights
     );
-    const airCombatFlightCrewRoleGroups = buildAircraftCrewComposition.seats
+    const airCombatFlightCrewComposition = getBuildAircraftCrewCompositionForEvent({ type: 'flight' });
+    const airCombatFlightCrewRoleGroups = airCombatFlightCrewComposition.seats
         .map(seat => getAircraftSeatEligibleRoles(seat).filter(Boolean))
         .filter(group => group.length > 0);
+    const getAirCombatCrewRoleGroupsForEvent = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): string[][] => (
+        getBuildAircraftCrewCompositionForEvent(event).seats
+            .map(seat => getAircraftSeatEligibleRoles(seat).filter(Boolean))
+            .filter(group => group.length > 0)
+    );
     const getPriorityEventCrewCount = (event: ScheduleEvent): number => (
-        Math.max(1, getCrewRequirementCount(event.crewRequirement, buildAircraftCrewComposition) || airCombatFlightCrewRoleGroups.length || buildAircraftCrewComposition.crewCount || 1)
+        Math.max(1, getCrewRequirementCount(event.crewRequirement, getBuildAircraftCrewCompositionForEvent(event)) || getAirCombatCrewRoleGroupsForEvent(event).length || buildAircraftCrewComposition.crewCount || 1)
     );
     const isAirCombatPilotStaff = (staff: Instructor): boolean => {
         const roleText = String(staff.role || '').trim().toLowerCase();
@@ -14441,18 +14454,21 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         roleGroups.map(group => formatCrewRoleGroup(group))
     );
     const getResolvedCrewRoleGroupsForEvent = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>, requiredStaffCount?: number): string[][] => {
-        const configuredGroups = getCrewRequirementRoles(event.crewRequirement, buildAircraftCrewComposition)
+        const eventCrewComposition = getBuildAircraftCrewCompositionForEvent(event);
+        const configuredGroups = getCrewRequirementRoles(event.crewRequirement, eventCrewComposition)
             .flatMap(role => Array.from(
                 { length: Math.max(0, Math.round(Number(role.count) || 0)) },
                 () => getCrewRequirementRoleOptions(role).filter(Boolean)
             ))
             .filter(group => group.length > 0);
-        const fallbackGroups = airCombatFlightCrewRoleGroups.length > 0 ? airCombatFlightCrewRoleGroups : [['Pilot']];
+        const eventRoleGroups = getAirCombatCrewRoleGroupsForEvent(event);
+        const fallbackGroups = eventRoleGroups.length > 0 ? eventRoleGroups : airCombatFlightCrewRoleGroups.length > 0 ? airCombatFlightCrewRoleGroups : [['Pilot']];
         const crewLimit = Math.max(1, Math.min(2, requiredStaffCount || configuredGroups.length || fallbackGroups.length || 1));
         return (configuredGroups.length > 0 ? configuredGroups : fallbackGroups).slice(0, crewLimit);
     };
     const getCrewRequirementDiagnostic = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>, requiredStaffCount?: number) => {
-        const rawRoles = getCrewRequirementRoles(event.crewRequirement, buildAircraftCrewComposition).map(role => ({
+        const eventCrewComposition = getBuildAircraftCrewCompositionForEvent(event);
+        const rawRoles = getCrewRequirementRoles(event.crewRequirement, eventCrewComposition).map(role => ({
             role: role.role,
             count: role.count,
             eligibleRoles: getCrewRequirementRoleOptions(role),
@@ -14462,6 +14478,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             mode: event.crewRequirement?.mode || 'aircraft_default',
             rawCrewRequirement: event.crewRequirement || null,
             rawRoles,
+            resourceCrewComposition: eventCrewComposition,
             requiredStaffCount: requiredStaffCount || null,
             schedulerCrewLimit: Math.max(1, Math.min(2, requiredStaffCount || resolvedRoleGroups.length || 1)),
             resolvedRoleGroups,
@@ -20083,11 +20100,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     conflictSafeEvents
         .filter(eventMatchesTaskTrace)
         .forEach(event => traceTaskProvenance('finalCleanup', 'after-ground-repair', event));
-    const pooledCrewMinimumManifestCount = Math.max(
-        2,
-        Number(buildAircraftCrewComposition.crewCount) || 0,
-        Array.isArray(buildAircraftCrewComposition.seats) ? buildAircraftCrewComposition.seats.length : 0,
-    );
+    const getPooledCrewFinalManifestMinimum = (event: Omit<ScheduleEvent, 'date'>): number => {
+        const eventCrewComposition = getBuildAircraftCrewCompositionForEvent(event);
+        return Math.max(
+            2,
+            Number(eventCrewComposition.crewCount) || 0,
+            Array.isArray(eventCrewComposition.seats) ? eventCrewComposition.seats.length : 0,
+        );
+    };
     const pooledCrewManifestGuard: any[] = [];
     const finalCrewSafeEvents = buildOperationalModel === 'pooled_crew'
         ? conflictSafeEvents
@@ -20102,14 +20122,15 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     ...(((event as any).crewSelectionOrder || []) as string[]),
                     ...getPersonnel(event),
                 ].map(name => String(name || '').trim()).filter(Boolean)));
-                if (manifest.length < pooledCrewMinimumManifestCount) {
+                const minimumManifestCount = getPooledCrewFinalManifestMinimum(event);
+                if (manifest.length < minimumManifestCount) {
                     pooledCrewManifestGuard.push({
                         action: 'removed',
                         reason: 'POOLED_CREW_BELOW_MINIMUM_CREW',
                         event: event.flightNumber,
                         resourceId: event.resourceId,
                         startTime: event.startTime,
-                        minimumCrew: pooledCrewMinimumManifestCount,
+                        minimumCrew: minimumManifestCount,
                         manifest,
                     });
                     return null;
@@ -20121,7 +20142,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         event: event.flightNumber,
                         resourceId: event.resourceId,
                         startTime: event.startTime,
-                        minimumCrew: pooledCrewMinimumManifestCount,
+                        minimumCrew: minimumManifestCount,
                         manifest,
                     });
                 }

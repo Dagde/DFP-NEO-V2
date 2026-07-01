@@ -39,7 +39,15 @@ import {
 } from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { normaliseAircraftConfigurationDefinitions } from '../utils/aircraftConfigurationSettings';
-import { DEFAULT_AIRCRAFT_CREW_COMPOSITION, getAircraftSeatEligibleRoles, normaliseAircraftCrewComposition, type AircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import {
+  AIRCRAFT_CREW_RESOURCE_KINDS,
+  DEFAULT_AIRCRAFT_CREW_COMPOSITION,
+  getAircraftSeatEligibleRoles,
+  getAircraftSeatEligibleRolesForResource,
+  normaliseAircraftCrewComposition,
+  type AircraftCrewComposition,
+  type AircraftCrewResourceKind,
+} from '../utils/aircraftCrewComposition';
 import {
   DEFAULT_CREW_POSITION_TERMINOLOGY,
   getCrewPositionLabelMap,
@@ -2439,8 +2447,45 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const next = normaliseAircraftCrewComposition({
       crewCount: nextCount,
       seats: current.seats,
+      resourceSeatCounts: {
+        flight: Math.min(nextCount, current.resourceSeatCounts?.flight ?? current.crewCount),
+        sim: Math.min(nextCount, current.resourceSeatCounts?.sim ?? current.crewCount),
+        cpt: Math.min(nextCount, current.resourceSeatCounts?.cpt ?? current.crewCount),
+      },
     });
     updateRow('aircraftTypes', aircraftIndex, { crewComposition: next });
+  };
+
+  const updateAircraftCrewResourceSeatCount = (aircraftIndex: number, kind: AircraftCrewResourceKind, count: number) => {
+    const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
+    const nextCount = Math.max(0, Math.min(current.crewCount, Math.round(Number(count) || 0)));
+    const nextResourceSeatCounts = {
+      flight: current.resourceSeatCounts?.flight ?? current.crewCount,
+      sim: current.resourceSeatCounts?.sim ?? current.crewCount,
+      cpt: current.resourceSeatCounts?.cpt ?? current.crewCount,
+      [kind]: nextCount,
+    };
+    const seats = current.seats.map((seat, index) => {
+      const nextRolesByResource = { ...(seat.eligibleRolesByResource || {}) };
+      if (index < nextCount && getAircraftSeatEligibleRolesForResource(seat, kind).length === 0) {
+        nextRolesByResource[kind] = getAircraftSeatEligibleRoles(seat);
+      }
+      if (index >= nextCount) {
+        nextRolesByResource[kind] = [];
+      }
+      return {
+        ...seat,
+        resourceTypes: { ...(seat.resourceTypes || {}), [kind]: index < nextCount },
+        eligibleRolesByResource: nextRolesByResource,
+      };
+    });
+    updateRow('aircraftTypes', aircraftIndex, {
+      crewComposition: normaliseAircraftCrewComposition({
+        ...current,
+        resourceSeatCounts: nextResourceSeatCounts,
+        seats,
+      }),
+    });
   };
 
   const updateAircraftSeatRole = (aircraftIndex: number, seatIndex: number, role: string) => {
@@ -2450,6 +2495,41 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ? { ...seat, role, eligibleRoles: Array.from(new Set([role, ...getAircraftSeatEligibleRoles(seat)])) }
         : seat
     ));
+    updateRow('aircraftTypes', aircraftIndex, {
+      crewComposition: normaliseAircraftCrewComposition({ ...current, seats }),
+    });
+  };
+
+  const updateAircraftSeatResourceEligibleRole = (
+    aircraftIndex: number,
+    seatIndex: number,
+    kind: AircraftCrewResourceKind,
+    role: string,
+    checked: boolean,
+  ) => {
+    const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
+    const seats = current.seats.map((seat, index) => {
+      if (index !== seatIndex) return seat;
+      const currentRoles = getAircraftSeatEligibleRolesForResource(seat, kind);
+      const nextRoles = checked
+        ? Array.from(new Set([...currentRoles, role]))
+        : currentRoles.filter((candidate) => candidate.toUpperCase() !== role.toUpperCase());
+      const eligibleRoles = getAircraftSeatEligibleRoles(seat);
+      const nextBaseRoles = checked && !eligibleRoles.some(candidate => candidate.toUpperCase() === role.toUpperCase())
+        ? Array.from(new Set([...eligibleRoles, role]))
+        : eligibleRoles;
+      const primaryRoleStillEligible = nextBaseRoles.some((candidate) => candidate.toUpperCase() === String(seat.role || '').trim().toUpperCase());
+      return {
+        ...seat,
+        role: primaryRoleStillEligible ? seat.role : nextBaseRoles[0],
+        eligibleRoles: nextBaseRoles,
+        resourceTypes: { ...(seat.resourceTypes || {}), [kind]: nextRoles.length > 0 },
+        eligibleRolesByResource: {
+          ...(seat.eligibleRolesByResource || {}),
+          [kind]: nextRoles,
+        },
+      };
+    });
     updateRow('aircraftTypes', aircraftIndex, {
       crewComposition: normaliseAircraftCrewComposition({ ...current, seats }),
     });
@@ -4515,8 +4595,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <div className="text-sm font-black text-white">{activeCrewCompositionAircraftCode || 'AIRCRAFT'}</div>
                   <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">{activeCrewCompositionAircraft?.category || 'Training'} aircraft</div>
                 </div>
-                <div className="w-[110px]">
-                  <NumberField label="Crew Seats" value={activeCrewComposition.crewCount} disabled={!canEditCrewComposition} onChange={(value) => updateAircraftCrewCount(activeCrewCompositionAircraftIndex, value)} />
+                <div className="grid min-w-[360px] gap-2 sm:grid-cols-4">
+                  <NumberField label="Total Seats" value={activeCrewComposition.crewCount} disabled={!canEditCrewComposition} onChange={(value) => updateAircraftCrewCount(activeCrewCompositionAircraftIndex, value)} />
+                  {AIRCRAFT_CREW_RESOURCE_KINDS.map(({ kind, shortLabel }) => (
+                    <NumberField
+                      key={`crew-resource-count-${kind}`}
+                      label={shortLabel === 'Procedural Trainer' ? 'Proc Trainer' : `${shortLabel} Seats`}
+                      value={activeCrewComposition.resourceSeatCounts?.[kind] ?? activeCrewComposition.crewCount}
+                      disabled={!canEditCrewComposition}
+                      onChange={(value) => updateAircraftCrewResourceSeatCount(activeCrewCompositionAircraftIndex, kind, value)}
+                    />
+                  ))}
                   <div className="mt-2 h-fit rounded-md border border-orange-300/20 bg-orange-500/10 px-2 py-2">
                     <div className="mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-orange-100">Crew Summary</div>
                     <ol className="space-y-0.5 text-[11px] font-semibold leading-tight text-orange-50/90">
@@ -4531,27 +4620,66 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 {activeCrewComposition.seats.map((seat, seatIndex) => {
                   const eligibleRoles = getAircraftSeatEligibleRoles(seat);
                   const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, eligibleRoles);
+                  const visibleResourceKinds = AIRCRAFT_CREW_RESOURCE_KINDS.filter(({ kind }) => (
+                    seatIndex < (activeCrewComposition.resourceSeatCounts?.[kind] ?? activeCrewComposition.crewCount)
+                  ));
                   return (
                     <div key={seat.id || `standard-crew-seat-${seatIndex}`} className="rounded-lg border border-gray-800 bg-gray-950/70 p-2">
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <div>
                           <div className="text-xs font-black uppercase tracking-wide text-orange-100">Seat {seatIndex + 1}</div>
-                          <div className="text-[11px] text-gray-500">Allowed role set for this seat.</div>
+                          <div className="text-[11px] text-gray-500">Role eligibility by resource type.</div>
                         </div>
                         <div className="w-40">
                           <SelectField label="Default" value={seat.role} disabled={!canEditCrewComposition} options={eligibleRoles} optionLabels={crewPositionLabelMap} onChange={(value) => updateAircraftSeatRole(activeCrewCompositionAircraftIndex, seatIndex, value)} />
                         </div>
                       </div>
-                      <div className="grid gap-1 sm:grid-cols-2">
-                        {crewPositionOptions.map((role) => {
-                          const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
-                          return (
-                            <label key={role} className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-semibold ${checked ? 'border-orange-300/35 bg-orange-500/10 text-orange-100' : 'border-gray-800 bg-gray-900/70 text-gray-300'}`}>
-                              <input type="checkbox" className="h-4 w-4 rounded border-gray-500 accent-orange-400" checked={checked} disabled={!canEditCrewComposition || (checked && eligibleRoles.length <= 1)} onChange={(event) => updateAircraftSeatEligibleRole(activeCrewCompositionAircraftIndex, seatIndex, role, event.target.checked)} />
-                              <span>{crewPositionLabelMap[role] || role}</span>
-                            </label>
-                          );
-                        })}
+                      <div className="overflow-hidden rounded-md border border-gray-800">
+                        <div
+                          className="grid bg-gray-900/80 text-[9px] font-black uppercase tracking-wide text-gray-500"
+                          style={{ gridTemplateColumns: `minmax(130px,1fr) repeat(${Math.max(visibleResourceKinds.length, 1)}, minmax(58px,72px))` }}
+                        >
+                          <div className="px-2 py-1.5">Role</div>
+                          {visibleResourceKinds.map(({ kind, shortLabel }) => (
+                            <div key={`seat-${seatIndex}-${kind}-header`} className="px-1 py-1.5 text-center">{shortLabel}</div>
+                          ))}
+                          {visibleResourceKinds.length === 0 && <div className="px-1 py-1.5 text-center">No seats</div>}
+                        </div>
+                        {crewPositionOptions.map((role) => (
+                          <div
+                            key={role}
+                            className="grid border-t border-gray-800 text-xs font-semibold"
+                            style={{ gridTemplateColumns: `minmax(130px,1fr) repeat(${Math.max(visibleResourceKinds.length, 1)}, minmax(58px,72px))` }}
+                          >
+                            <button
+                              type="button"
+                              disabled={!canEditCrewComposition || (eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase()) && eligibleRoles.length <= 1)}
+                              onClick={() => {
+                                const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
+                                updateAircraftSeatEligibleRole(activeCrewCompositionAircraftIndex, seatIndex, role, !checked);
+                              }}
+                              className={`px-2 py-1.5 text-left ${eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase()) ? 'text-orange-100' : 'text-gray-400'} disabled:cursor-not-allowed disabled:opacity-50`}
+                            >
+                              {crewPositionLabelMap[role] || role}
+                            </button>
+                            {visibleResourceKinds.map(({ kind }) => {
+                              const resourceRoles = getAircraftSeatEligibleRolesForResource(seat, kind);
+                              const checked = resourceRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
+                              return (
+                                <label key={`seat-${seatIndex}-${role}-${kind}`} className={`flex items-center justify-center border-l border-gray-800 px-1 py-1.5 ${checked ? 'bg-orange-500/10' : 'bg-gray-950/40'}`}>
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded border-gray-500 accent-orange-400"
+                                    checked={checked}
+                                    disabled={!canEditCrewComposition || (checked && resourceRoles.length <= 1)}
+                                    onChange={(event) => updateAircraftSeatResourceEligibleRole(activeCrewCompositionAircraftIndex, seatIndex, kind, role, event.target.checked)}
+                                  />
+                                </label>
+                              );
+                            })}
+                            {visibleResourceKinds.length === 0 && <div className="border-l border-gray-800 px-1 py-1.5 text-center text-gray-600">-</div>}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   );
