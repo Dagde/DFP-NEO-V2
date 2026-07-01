@@ -24984,9 +24984,14 @@ const AddGroundEventFlyout = ({
   onUpdateCourseAcademicProgress,
   persistedAcademicLmp,
   onUpdatePersistedAcademicLmp,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  operationalModel: operationalModel2
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("ground");
+  const crewLabel = reactExports.useMemo(() => {
+    const model = normaliseOperationalModel(operationalModel2);
+    return model === "air_combat" || isFixedCrewLikeOperationalModel(model) ? "Crew" : "Trainees";
+  }, [operationalModel2]);
   const [flightNumber, setFlightNumber] = reactExports.useState(groundSyllabus[0]?.code || "");
   const [startTime, setStartTime] = reactExports.useState(8);
   const [duration, setDuration] = reactExports.useState(groundSyllabus[0]?.duration || 1);
@@ -25186,8 +25191,8 @@ const AddGroundEventFlyout = ({
                         ] })
                       ] }),
                       !isEntireCourse && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", ref: traineeSelectorRef, children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Trainees" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowTraineeSelector(!showTraineeSelector), className: "mt-1 w-full text-left bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500", children: selectedTrainees.length > 0 ? `${selectedTrainees.length} selected` : "Select trainees..." }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: crewLabel }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowTraineeSelector(!showTraineeSelector), className: "mt-1 w-full text-left bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500", children: selectedTrainees.length > 0 ? `${selectedTrainees.length} selected` : `Select ${crewLabel.toLowerCase()}...` }),
                         showTraineeSelector && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-2 space-y-1", children: availableTrainees.map((t) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 p-2 rounded hover:bg-gray-700", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: selectedTrainees.includes(t), onChange: () => handleTraineeCheckboxChange(t), className: "h-4 w-4 accent-sky-500 bg-gray-600" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-300", children: t })
@@ -106609,7 +106614,8 @@ Do you want to replace the existing entry?`,
           onUpdateCourseAcademicProgress: handleUpdateCourseAcademicProgress,
           persistedAcademicLmp,
           onUpdatePersistedAcademicLmp: handleUpdatePersistedAcademicLmp,
-          resourceDisplayNames
+          resourceDisplayNames,
+          operationalModel: activeOperationalModel
         }
       ),
       showAuthFlyout && eventForAuth && /* @__PURE__ */ jsxRuntimeExports.jsx(

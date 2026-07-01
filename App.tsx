@@ -40605,6 +40605,7 @@ appliedUpdates.forEach(update => {
                     persistedAcademicLmp={persistedAcademicLmp}
                     onUpdatePersistedAcademicLmp={handleUpdatePersistedAcademicLmp}
                     resourceDisplayNames={resourceDisplayNames}
+                    operationalModel={activeOperationalModel}
                 />
             )}
             {showAuthFlyout && eventForAuth &&

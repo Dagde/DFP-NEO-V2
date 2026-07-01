@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
 import CourseTraineeSelectionFlyout from './CourseTraineeSelectionFlyout';
 import AcademicsTab, { AcademicSaveData } from './AcademicsTab';
+import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import {
   DEFAULT_RESOURCE_DISPLAY_NAMES,
   ResourceDisplayNames,
@@ -31,6 +32,7 @@ interface AddGroundEventFlyoutProps {
   persistedAcademicLmp?: string;
   onUpdatePersistedAcademicLmp?: (lmp: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
+  operationalModel?: unknown;
 }
 
 type TabKey = 'ground' | 'academics';
@@ -57,8 +59,13 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     persistedAcademicLmp,
     onUpdatePersistedAcademicLmp,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+    operationalModel,
 }) => {
     const [activeTab, setActiveTab] = useState<TabKey>('ground');
+    const crewLabel = useMemo(() => {
+        const model = normaliseOperationalModel(operationalModel);
+        return model === 'air_combat' || isFixedCrewLikeOperationalModel(model) ? 'Crew' : 'Trainees';
+    }, [operationalModel]);
 
     // ── Ground Event state ──
     const [flightNumber, setFlightNumber] = useState(groundSyllabus[0]?.code || '');
@@ -286,9 +293,9 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                         </div>
                                         {!isEntireCourse && (
                                             <div className="relative" ref={traineeSelectorRef}>
-                                                <label className="block text-sm font-medium text-gray-400">Trainees</label>
+                                                <label className="block text-sm font-medium text-gray-400">{crewLabel}</label>
                                                 <button onClick={() => setShowTraineeSelector(!showTraineeSelector)} className="mt-1 w-full text-left bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500">
-                                                    {selectedTrainees.length > 0 ? `${selectedTrainees.length} selected` : 'Select trainees...'}
+                                                    {selectedTrainees.length > 0 ? `${selectedTrainees.length} selected` : `Select ${crewLabel.toLowerCase()}...`}
                                                 </button>
                                                 {showTraineeSelector && (
                                                     <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
