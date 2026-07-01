@@ -65298,6 +65298,11 @@ const LocalityChangeFlyout = ({ locality }) => {
 };
 const POST_FLIGHT_FORM_STORAGE_PREFIX = "dfpNeo.postFlightFormSnapshot.";
 const getPostFlightFormStorageKey = (eventId) => eventId ? `${POST_FLIGHT_FORM_STORAGE_PREFIX}${eventId}` : "";
+const stripPostFlightDutyRoutePrefix = (value) => {
+  const text = String(value || "").trim();
+  const parts = text.split(/\s*:\s*/);
+  return (parts.length > 1 ? parts.slice(1).join(" : ") : text).trim();
+};
 const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, getSunTimesForAirfieldDate }) => {
   const { freezeState, checkAndWarn } = useSystemFreeze$1();
   reactExports.useMemo(() => {
@@ -65339,7 +65344,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   const [isDual, setIsDual] = reactExports.useState(event.flightType === "Dual");
   const [takeoffTime, setTakeoffTime] = reactExports.useState("");
   const [landTime, setLandTime] = reactExports.useState("");
-  const [duty, setDuty] = reactExports.useState(`${event.origin || school}-${event.destination || school} : ${event.flightNumber}`);
+  const [duty, setDuty] = reactExports.useState(stripPostFlightDutyRoutePrefix(event.flightNumber));
   const [captainTime, setCaptainTime] = reactExports.useState("");
   const [instructorTime, setInstructorTime] = reactExports.useState("");
   const [nightTime, setNightTime] = reactExports.useState("");
@@ -65536,7 +65541,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         isFtdLog: event.type === "ftd",
         isSolo: event.flightType === "Solo",
         isDual: event.flightType === "Dual",
-        duty: `${event.origin || school}-${event.destination || school} : ${event.flightNumber}`,
+        duty: stripPostFlightDutyRoutePrefix(event.flightNumber),
         takeoffTime: initialTakeoff,
         landTime: initialLand,
         captainTime: "",
@@ -65657,7 +65662,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     if (saved.isFtdLog != null) setIsFtdLog(!!saved.isFtdLog);
     if (saved.isSolo != null) setIsSolo(!!saved.isSolo);
     if (saved.isDual != null) setIsDual(!!saved.isDual);
-    if (saved.duty) setDuty(saved.duty);
+    if (saved.duty) setDuty(stripPostFlightDutyRoutePrefix(saved.duty));
     if (saved.takeoffTime) setTakeoffTime(saved.takeoffTime);
     if (saved.landTime) setLandTime(saved.landTime);
     if (saved.captainTime != null) setCaptainTime(String(saved.captainTime));
@@ -65701,7 +65706,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       isFtdLog: saved.isFtdLog ?? isFtdLog,
       isSolo: saved.isSolo ?? isSolo,
       isDual: saved.isDual ?? isDual,
-      duty: saved.duty || duty,
+      duty: stripPostFlightDutyRoutePrefix(saved.duty || duty),
       takeoffTime: saved.takeoffTime || takeoffTime,
       landTime: saved.landTime || landTime,
       captainTime: saved.captainTime != null ? String(saved.captainTime) : captainTime,
@@ -65899,6 +65904,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       data: getLogbookData(isPic ? "Captain" : isP2 ? "P2" : "FixedCrewCrew", staff.name)
     };
   }) : [];
+  const crewTraineeDisplay = isFixedCrewLogbookPreview ? fixedCrewLogbookPreviewRoster.filter((staff) => normalisePostFlightName(staff.name) !== fixedCrewPicName).map((staff) => formatLogbookPersonName(staff.name)).join(", ") : isSolo ? "Solo" : event.student?.split(" – ")[0];
   reactExports.useEffect(() => {
     if (!initialFormState.current) return;
     const currentState = {
@@ -66500,7 +66506,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", style: { width: "12rem" }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Crew/Trainee" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center truncate", children: isSolo ? "Solo" : event.student?.split(" – ")[0] })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center truncate", children: crewTraineeDisplay })
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex items-end space-x-4 overflow-x-auto pb-2", children: [

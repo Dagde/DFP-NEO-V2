@@ -41,6 +41,12 @@ const POST_FLIGHT_FORM_STORAGE_PREFIX = 'dfpNeo.postFlightFormSnapshot.';
 const getPostFlightFormStorageKey = (eventId?: string) =>
     eventId ? `${POST_FLIGHT_FORM_STORAGE_PREFIX}${eventId}` : '';
 
+const stripPostFlightDutyRoutePrefix = (value?: string | null): string => {
+    const text = String(value || '').trim();
+    const parts = text.split(/\s*:\s*/);
+    return (parts.length > 1 ? parts.slice(1).join(' : ') : text).trim();
+};
+
 // FIX: Changed to a named export to resolve module resolution errors.
 export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, getSunTimesForAirfieldDate }) => {
     const { freezeState, checkAndWarn } = useSystemFreeze();
@@ -100,7 +106,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     const [landTime, setLandTime] = useState('');
 
     // New state for Durations & Approaches
-    const [duty, setDuty] = useState(`${event.origin || school}-${event.destination || school} : ${event.flightNumber}`);
+    const [duty, setDuty] = useState(stripPostFlightDutyRoutePrefix(event.flightNumber));
     const [captainTime, setCaptainTime] = useState('');
     const [instructorTime, setInstructorTime] = useState('');
     const [nightTime, setNightTime] = useState('');
@@ -355,7 +361,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 isFtdLog: event.type === 'ftd',
                 isSolo: event.flightType === 'Solo',
                 isDual: event.flightType === 'Dual',
-                duty: `${event.origin || school}-${event.destination || school} : ${event.flightNumber}`,
+                duty: stripPostFlightDutyRoutePrefix(event.flightNumber),
                 takeoffTime: initialTakeoff,
                 landTime: initialLand,
                 captainTime: '',
@@ -512,7 +518,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         if (saved.isFtdLog != null) setIsFtdLog(!!saved.isFtdLog);
         if (saved.isSolo != null) setIsSolo(!!saved.isSolo);
         if (saved.isDual != null) setIsDual(!!saved.isDual);
-        if (saved.duty) setDuty(saved.duty);
+        if (saved.duty) setDuty(stripPostFlightDutyRoutePrefix(saved.duty));
         if (saved.takeoffTime) setTakeoffTime(saved.takeoffTime);
         if (saved.landTime) setLandTime(saved.landTime);
         if (saved.captainTime != null) setCaptainTime(String(saved.captainTime));
@@ -568,7 +574,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             isFtdLog: saved.isFtdLog ?? isFtdLog,
             isSolo: saved.isSolo ?? isSolo,
             isDual: saved.isDual ?? isDual,
-            duty: saved.duty || duty,
+            duty: stripPostFlightDutyRoutePrefix(saved.duty || duty),
             takeoffTime: saved.takeoffTime || takeoffTime,
             landTime: saved.landTime || landTime,
             captainTime: saved.captainTime != null ? String(saved.captainTime) : captainTime,
@@ -758,6 +764,12 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             };
         })
         : [];
+    const crewTraineeDisplay = isFixedCrewLogbookPreview
+        ? fixedCrewLogbookPreviewRoster
+            .filter(staff => normalisePostFlightName(staff.name) !== fixedCrewPicName)
+            .map(staff => formatLogbookPersonName(staff.name))
+            .join(', ')
+        : isSolo ? 'Solo' : event.student?.split(' – ')[0];
 
 
     // Determine if any data has changed
@@ -1577,7 +1589,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                         <div className="flex-shrink-0" style={{width: '12rem'}}>
                             <label className="block text-sm font-medium text-gray-400">Crew/Trainee</label>
                             <div className="mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center truncate">
-                                {isSolo ? 'Solo' : event.student?.split(' – ')[0]}
+                                {crewTraineeDisplay}
                             </div>
                         </div>
                     </div>
