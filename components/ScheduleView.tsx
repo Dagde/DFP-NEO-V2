@@ -203,7 +203,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = useState(false);
-    const [resourceSlideoutFrame, setResourceSlideoutFrame] = useState<{ left: number; top: number; height: number; tabTop: number } | null>(null);
+    const [resourceSlideoutFrame, setResourceSlideoutFrame] = useState<{ left: number; top: number; height: number } | null>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
     // Initialize with timezone-adjusted time
     const [currentTime, setCurrentTime] = useState(() => {
@@ -243,7 +243,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             left: Math.round(resourceRect.right),
             top: Math.round(surfaceRect.top),
             height: Math.round(surfaceRect.height),
-            tabTop: Math.round(surfaceRect.top + (surfaceRect.height / 2)),
         });
     }, []);
 
@@ -1166,28 +1165,22 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     return (
         <div ref={scrollContainerRef} data-schedule-surface="true" className="flex-1 overflow-auto relative bg-gray-900 select-none" style={isPauseSelectMode ? { cursor: 'crosshair' } : undefined}>
             {resourceSlideoutFrame && (
-                <>
-                    <aside
-                        className={`fixed z-[35] border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? 'translate-x-0' : '-translate-x-full pointer-events-none'}`}
-                        style={{
-                            left: `${resourceSlideoutFrame.left}px`,
-                            top: `${resourceSlideoutFrame.top}px`,
-                            height: `${resourceSlideoutFrame.height}px`,
-                            width: 'clamp(360px, 40vw, 680px)',
-                        }}
-                        aria-hidden={!showResourceUnderlayPanel}
-                    >
-                        <div className="h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" />
-                    </aside>
+                <aside
+                    className={`fixed z-[35] pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? 'translate-x-0' : '-translate-x-full'}`}
+                    style={{
+                        left: `${resourceSlideoutFrame.left}px`,
+                        top: `${resourceSlideoutFrame.top}px`,
+                        height: `${resourceSlideoutFrame.height}px`,
+                        width: 'clamp(360px, 40vw, 680px)',
+                    }}
+                    aria-hidden={!showResourceUnderlayPanel}
+                >
+                    <div className={`h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`} />
                     <button
                         type="button"
                         onClick={() => setShowResourceUnderlayPanel(value => !value)}
                         aria-label={showResourceUnderlayPanel ? 'Close resource slideout' : 'Open resource slideout'}
-                        className="fixed z-[90] flex h-7 w-[96px] -translate-x-1/2 -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
-                        style={{
-                            left: `${resourceSlideoutFrame.left + 4}px`,
-                            top: `${resourceSlideoutFrame.tabTop}px`,
-                        }}
+                        className="pointer-events-auto absolute right-[-52px] top-1/2 z-[1] flex h-7 w-[96px] -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
                     >
                         <span
                             className="h-4 w-7 opacity-80"
@@ -1205,7 +1198,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             }}
                         />
                     </button>
-                </>
+                </aside>
             )}
             <div 
                 style={{
