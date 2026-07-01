@@ -33495,6 +33495,7 @@ const CourseMetricsTab = ({
     const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
   }, [operationalContext?.unitCode, operationalContext?.unitCodes]);
+  const activeLocationCode = String(operationalContext?.locationCode || "").trim().toUpperCase();
   const getTrainingCodeFromItem2 = (item) => (item.courses || []).find(Boolean) || item.code || "";
   const matchesAirCombatAssignment = (item, kind, code, unitCode) => {
     const itemKind = item.lmpType === "Staff CAT" ? "training_package" : "course";
@@ -33506,6 +33507,14 @@ const CourseMetricsTab = ({
     const assignmentUnit = String("").trim().toUpperCase();
     return !assignmentUnit || !itemUnit || itemUnit === assignmentUnit;
   };
+  const itemMatchesOperationalContext = (item) => {
+    const itemUnit = String(item.unit || "").trim().toUpperCase();
+    const itemLocation = String(item.location || "").trim().toUpperCase();
+    const unitMatches = activeUnitCodes.size === 0 || !itemUnit || activeUnitCodes.has(itemUnit);
+    const locationMatches = !activeLocationCode || !itemLocation || itemLocation === activeLocationCode;
+    return unitMatches && locationMatches;
+  };
+  const getStreamTitleFromItem = (item, code) => item.module && item.module !== code ? item.module : item.phase && item.phase !== code ? item.phase : item.eventDescription || code;
   const normaliseAirCombatStreamCode = (value) => {
     const code = String(value || "").trim().toUpperCase();
     if (code.startsWith("AA") || code.startsWith("ATA")) return "ATA";
@@ -33530,25 +33539,46 @@ const CourseMetricsTab = ({
   };
   const airCombatCourseStats = reactExports.useMemo(() => {
     const streams = /* @__PURE__ */ new Map();
-    const ensureStream = (kind, code, title) => {
-      const key = `${kind}:${String(code || "").trim().toUpperCase()}`;
+    const ensureStream = (kind, code, title, unitCode, locationCode) => {
+      const normalisedCode = String(code || "").trim().toUpperCase();
+      const normalisedUnit = String(unitCode || "").trim().toUpperCase();
+      const normalisedLocation = String(locationCode || "").trim().toUpperCase();
+      const key = `${kind}:${normalisedLocation || "GLOBAL"}:${normalisedUnit || "GLOBAL"}:${normalisedCode}`;
       if (!streams.has(key)) {
         streams.set(key, {
           key,
           kind,
           code,
           title: title || code,
+          unitCode: normalisedUnit,
+          locationCode: normalisedLocation,
           staff: /* @__PURE__ */ new Set(),
           availableStaff: /* @__PURE__ */ new Set(),
           eventCount: 0,
           eventsByType: { flight: 0, ftd: 0, cpt: 0, ground: 0 },
           completedReports: 0,
           syllabusItems: 0,
+          syllabusItemKeys: /* @__PURE__ */ new Set(),
           personnel: /* @__PURE__ */ new Set()
         });
       }
       return streams.get(key);
     };
+    const addSyllabusItemToStream = (stream, item) => {
+      const itemKey = String(item.id || item.code || `${stream.key}:${stream.syllabusItems}`).trim();
+      if (!itemKey || stream.syllabusItemKeys.has(itemKey)) return;
+      stream.syllabusItemKeys.add(itemKey);
+      stream.syllabusItems += 1;
+    };
+    syllabusDetails.filter((item) => item.isActive !== false).filter((item) => item.lmpType === "Staff CAT" || item.lmpType === "Master LMP" || !item.lmpType).filter(itemMatchesOperationalContext).forEach((item) => {
+      const kind = item.lmpType === "Staff CAT" ? "training_package" : "course";
+      const code = String(getTrainingCodeFromItem2(item) || "").trim();
+      if (!code) return;
+      const itemUnit = String(item.unit || "").trim().toUpperCase();
+      const itemLocation = String(item.location || "").trim().toUpperCase();
+      const stream = ensureStream(kind, code, getStreamTitleFromItem(item, code), itemUnit, itemLocation);
+      addSyllabusItemToStream(stream, item);
+    });
     instructorsData.forEach((staff) => {
       const staffUnit = String(staff.unit || "").trim().toUpperCase();
       if (activeUnitCodes.size > 0 && staffUnit && !activeUnitCodes.has(staffUnit)) return;
@@ -33557,20 +33587,22 @@ const CourseMetricsTab = ({
       [...assignments.courses, ...assignments.trainingPackages].forEach((assignment) => {
         const assignmentUnit = String(assignment.unitCode || staffUnit).trim().toUpperCase();
         if (activeUnitCodes.size > 0 && assignmentUnit && !activeUnitCodes.has(assignmentUnit)) return;
-        const stream = ensureStream(assignment.kind, assignment.code, assignment.title);
+        const assignmentLocation = String(assignment.locationCode || activeLocationCode).trim().toUpperCase();
+        const stream = ensureStream(assignment.kind, assignment.code, assignment.title, assignmentUnit, assignmentLocation);
         stream.staff.add(staff.name);
         if (isAvailable) stream.availableStaff.add(staff.name);
       });
       normaliseAirCombatTrainingReports(staff.preferences).forEach((report) => {
         if (report.status && report.status !== "Complete") return;
         if (!report.trainingKind || !report.trainingCode) return;
-        const stream = ensureStream(report.trainingKind, report.trainingCode, report.trainingTitle || report.trainingCode);
+        const stream = ensureStream(report.trainingKind, report.trainingCode, report.trainingTitle || report.trainingCode, report.unitCode, report.locationCode);
         stream.completedReports += 1;
       });
     });
-    syllabusDetails.forEach((item) => {
+    syllabusDetails.filter((item) => item.isActive !== false).filter(itemMatchesOperationalContext).forEach((item) => {
       streams.forEach((stream) => {
-        if (matchesAirCombatAssignment(item, stream.kind, stream.code)) stream.syllabusItems += 1;
+        if (stream.unitCode && String(item.unit || "").trim().toUpperCase() && String(item.unit || "").trim().toUpperCase() !== stream.unitCode) return;
+        if (matchesAirCombatAssignment(item, stream.kind, stream.code)) addSyllabusItemToStream(stream, item);
       });
     });
     events.forEach((event) => {
@@ -33585,10 +33617,13 @@ const CourseMetricsTab = ({
         getEventPeople2(event).forEach((person) => stream.personnel.add(person));
       });
     });
-    return Array.from(streams.values()).sort(
-      (left, right) => left.kind.localeCompare(right.kind) || left.code.localeCompare(right.code)
+    return Array.from(streams.values()).map((stream) => ({
+      ...stream,
+      syllabusItems: Math.max(stream.syllabusItems, 0)
+    })).sort(
+      (left, right) => left.kind.localeCompare(right.kind) || left.unitCode.localeCompare(right.unitCode) || left.code.localeCompare(right.code)
     );
-  }, [activeUnitCodes, date, events, instructorsData, syllabusDetails]);
+  }, [activeLocationCode, activeUnitCodes, date, events, instructorsData, syllabusDetails]);
   const stripCourseSuffix = (value) => {
     const text = String(value || "").trim();
     const match = text.match(/^(.*?)\s+[–-]\s+([A-Z0-9][A-Z0-9 +/]*?)$/);
