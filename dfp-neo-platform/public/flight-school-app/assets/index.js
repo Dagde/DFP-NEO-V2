@@ -8970,6 +8970,7 @@ const ScheduleView = ({
   const scrollContainerRef = reactExports.useRef(null);
   const [showDatePicker, setShowDatePicker] = reactExports.useState(false);
   const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = reactExports.useState(false);
+  const [resourceSlideoutFrame, setResourceSlideoutFrame] = reactExports.useState(null);
   const scheduleGridRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
     const now = /* @__PURE__ */ new Date();
@@ -8989,6 +8990,29 @@ const ScheduleView = ({
     const interval = setInterval(updateTime, 1e3);
     return () => clearInterval(interval);
   }, [timezoneOffset]);
+  const updateResourceSlideoutFrame = reactExports.useCallback(() => {
+    const surface = scrollContainerRef.current;
+    const resourceColumn = surface?.querySelector('[data-schedule-resource-column="true"]');
+    if (!surface || !resourceColumn) return;
+    const surfaceRect = surface.getBoundingClientRect();
+    const resourceRect = resourceColumn.getBoundingClientRect();
+    setResourceSlideoutFrame({
+      left: Math.round(resourceRect.right),
+      top: Math.round(surfaceRect.top),
+      height: Math.round(surfaceRect.height),
+      tabTop: Math.round(surfaceRect.top + surfaceRect.height / 2)
+    });
+  }, []);
+  reactExports.useEffect(() => {
+    updateResourceSlideoutFrame();
+    const surface = scrollContainerRef.current;
+    window.addEventListener("resize", updateResourceSlideoutFrame);
+    surface?.addEventListener("scroll", updateResourceSlideoutFrame, { passive: true });
+    return () => {
+      window.removeEventListener("resize", updateResourceSlideoutFrame);
+      surface?.removeEventListener("scroll", updateResourceSlideoutFrame);
+    };
+  }, [date, resources.length, updateResourceSlideoutFrame, zoomLevel]);
   const [draggingState, setDraggingState] = reactExports.useState(null);
   const [realtimeConflict, setRealtimeConflict] = reactExports.useState(null);
   const [realtimeResourceConflictId, setRealtimeResourceConflictId] = reactExports.useState(null);
@@ -9749,48 +9773,58 @@ const ScheduleView = ({
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: scrollContainerRef, "data-schedule-surface": "true", className: "flex-1 overflow-auto relative bg-gray-900 select-none", style: isPauseSelectMode ? { cursor: "crosshair" } : void 0, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "div",
-      {
-        className: "pointer-events-none sticky z-[65] h-0",
-        style: {
-          left: `${RESOURCE_COLUMN_WIDTH + 4}px`,
-          top: "50vh"
-        },
-        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "button",
-          {
-            type: "button",
-            onClick: () => setShowResourceUnderlayPanel((value) => !value),
-            "aria-label": showResourceUnderlayPanel ? "Close resource slideout" : "Open resource slideout",
-            className: "pointer-events-auto flex h-7 w-[96px] -translate-x-1/2 -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "span",
-                {
-                  className: "h-4 w-7 opacity-80",
-                  style: {
-                    backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                    backgroundSize: "8px 8px"
-                  }
+    resourceSlideoutFrame && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "aside",
+        {
+          className: `fixed z-[35] border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0" : "-translate-x-full pointer-events-none"}`,
+          style: {
+            left: `${resourceSlideoutFrame.left}px`,
+            top: `${resourceSlideoutFrame.top}px`,
+            height: `${resourceSlideoutFrame.height}px`,
+            width: "clamp(360px, 40vw, 680px)"
+          },
+          "aria-hidden": !showResourceUnderlayPanel,
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" })
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          type: "button",
+          onClick: () => setShowResourceUnderlayPanel((value) => !value),
+          "aria-label": showResourceUnderlayPanel ? "Close resource slideout" : "Open resource slideout",
+          className: "fixed z-[90] flex h-7 w-[96px] -translate-x-1/2 -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
+          style: {
+            left: `${resourceSlideoutFrame.left + 4}px`,
+            top: `${resourceSlideoutFrame.tabTop}px`
+          },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                className: "h-4 w-7 opacity-80",
+                style: {
+                  backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                  backgroundSize: "8px 8px"
                 }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: showResourceUnderlayPanel ? "v" : "^" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "span",
-                {
-                  className: "h-4 w-7 opacity-80",
-                  style: {
-                    backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                    backgroundSize: "8px 8px"
-                  }
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: showResourceUnderlayPanel ? "v" : "^" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                className: "h-4 w-7 opacity-80",
+                style: {
+                  backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                  backgroundSize: "8px 8px"
                 }
-              )
-            ]
-          }
-        )
-      }
-    ),
+              }
+            )
+          ]
+        }
+      )
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
@@ -9907,19 +9941,6 @@ const ScheduleView = ({
               aircraftConfigLabelsByResource
             }
           ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "aside",
-            {
-              className: `pointer-events-auto absolute z-[45] w-[40%] min-w-[360px] max-w-[680px] border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0" : "-translate-x-full pointer-events-none"}`,
-              style: {
-                left: `${RESOURCE_COLUMN_WIDTH}px`,
-                top: `${TIME_HEADER_HEIGHT$6}px`,
-                height: `${resources.length * ROW_HEIGHT$6}px`
-              },
-              "aria-hidden": !showResourceUnderlayPanel,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" })
-            }
-          ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {

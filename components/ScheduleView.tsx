@@ -203,6 +203,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = useState(false);
+    const [resourceSlideoutFrame, setResourceSlideoutFrame] = useState<{ left: number; top: number; height: number; tabTop: number } | null>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
     // Initialize with timezone-adjusted time
     const [currentTime, setCurrentTime] = useState(() => {
@@ -232,6 +233,30 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         return () => clearInterval(interval);
     }, [timezoneOffset]);
     
+    const updateResourceSlideoutFrame = useCallback(() => {
+        const surface = scrollContainerRef.current;
+        const resourceColumn = surface?.querySelector('[data-schedule-resource-column="true"]') as HTMLElement | null;
+        if (!surface || !resourceColumn) return;
+        const surfaceRect = surface.getBoundingClientRect();
+        const resourceRect = resourceColumn.getBoundingClientRect();
+        setResourceSlideoutFrame({
+            left: Math.round(resourceRect.right),
+            top: Math.round(surfaceRect.top),
+            height: Math.round(surfaceRect.height),
+            tabTop: Math.round(surfaceRect.top + (surfaceRect.height / 2)),
+        });
+    }, []);
+
+    useEffect(() => {
+        updateResourceSlideoutFrame();
+        const surface = scrollContainerRef.current;
+        window.addEventListener('resize', updateResourceSlideoutFrame);
+        surface?.addEventListener('scroll', updateResourceSlideoutFrame, { passive: true });
+        return () => {
+            window.removeEventListener('resize', updateResourceSlideoutFrame);
+            surface?.removeEventListener('scroll', updateResourceSlideoutFrame);
+        };
+    }, [date, resources.length, updateResourceSlideoutFrame, zoomLevel]);
     
 
     const [draggingState, setDraggingState] = useState<{
@@ -1140,36 +1165,48 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     return (
         <div ref={scrollContainerRef} data-schedule-surface="true" className="flex-1 overflow-auto relative bg-gray-900 select-none" style={isPauseSelectMode ? { cursor: 'crosshair' } : undefined}>
-            <div
-                className="pointer-events-none sticky z-[65] h-0"
-                style={{
-                    left: `${RESOURCE_COLUMN_WIDTH + 4}px`,
-                    top: '50vh',
-                }}
-            >
-                <button
-                    type="button"
-                    onClick={() => setShowResourceUnderlayPanel(value => !value)}
-                    aria-label={showResourceUnderlayPanel ? 'Close resource slideout' : 'Open resource slideout'}
-                    className="pointer-events-auto flex h-7 w-[96px] -translate-x-1/2 -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
-                >
-                    <span
-                        className="h-4 w-7 opacity-80"
+            {resourceSlideoutFrame && (
+                <>
+                    <aside
+                        className={`fixed z-[35] border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? 'translate-x-0' : '-translate-x-full pointer-events-none'}`}
                         style={{
-                            backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
-                            backgroundSize: '8px 8px',
+                            left: `${resourceSlideoutFrame.left}px`,
+                            top: `${resourceSlideoutFrame.top}px`,
+                            height: `${resourceSlideoutFrame.height}px`,
+                            width: 'clamp(360px, 40vw, 680px)',
                         }}
-                    />
-                    <span className="text-sm font-semibold leading-none">{showResourceUnderlayPanel ? 'v' : '^'}</span>
-                    <span
-                        className="h-4 w-7 opacity-80"
+                        aria-hidden={!showResourceUnderlayPanel}
+                    >
+                        <div className="h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" />
+                    </aside>
+                    <button
+                        type="button"
+                        onClick={() => setShowResourceUnderlayPanel(value => !value)}
+                        aria-label={showResourceUnderlayPanel ? 'Close resource slideout' : 'Open resource slideout'}
+                        className="fixed z-[90] flex h-7 w-[96px] -translate-x-1/2 -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
                         style={{
-                            backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
-                            backgroundSize: '8px 8px',
+                            left: `${resourceSlideoutFrame.left + 4}px`,
+                            top: `${resourceSlideoutFrame.tabTop}px`,
                         }}
-                    />
-                </button>
-            </div>
+                    >
+                        <span
+                            className="h-4 w-7 opacity-80"
+                            style={{
+                                backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
+                                backgroundSize: '8px 8px',
+                            }}
+                        />
+                        <span className="text-sm font-semibold leading-none">{showResourceUnderlayPanel ? 'v' : '^'}</span>
+                        <span
+                            className="h-4 w-7 opacity-80"
+                            style={{
+                                backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
+                                backgroundSize: '8px 8px',
+                            }}
+                        />
+                    </button>
+                </>
+            )}
             <div 
                 style={{
                     width: `${AIRFRAME_COLUMN_WIDTH + (TOTAL_HOURS * PIXELS_PER_HOUR * zoomLevel)}px`,
@@ -1294,17 +1331,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     />
                 </div>
 
-                <aside
-                    className={`pointer-events-auto absolute z-[45] w-[40%] min-w-[360px] max-w-[680px] border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? 'translate-x-0' : '-translate-x-full pointer-events-none'}`}
-                    style={{
-                        left: `${RESOURCE_COLUMN_WIDTH}px`,
-                        top: `${TIME_HEADER_HEIGHT}px`,
-                        height: `${resources.length * ROW_HEIGHT}px`,
-                    }}
-                    aria-hidden={!showResourceUnderlayPanel}
-                >
-                    <div className="h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" />
-                </aside>
                 {/* Main Grid */}
                 <div 
                     ref={scheduleGridRef}
