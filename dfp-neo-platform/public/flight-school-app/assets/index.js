@@ -9754,8 +9754,8 @@ const ScheduleView = ({
       {
         className: "pointer-events-none sticky z-[65] h-0",
         style: {
-          left: `${RESOURCE_COLUMN_WIDTH}px`,
-          top: "50%"
+          left: `${RESOURCE_COLUMN_WIDTH + 4}px`,
+          top: "50vh"
         },
         children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
@@ -9892,7 +9892,7 @@ const ScheduleView = ({
             isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-time-header": "true", className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-resource-column": "true", className: "sticky left-0 z-40 bg-gray-800 border-r border-gray-700", style: { width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-resource-column": "true", className: "sticky left-0 z-[70] bg-gray-800 border-r border-gray-700", style: { width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             AirframeColumn,
             {
               resources,
@@ -9910,7 +9910,7 @@ const ScheduleView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "aside",
             {
-              className: `pointer-events-auto absolute z-[28] w-[40%] min-w-[360px] max-w-[680px] border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-all duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none"}`,
+              className: `pointer-events-auto absolute z-[45] w-[40%] min-w-[360px] max-w-[680px] border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0" : "-translate-x-full pointer-events-none"}`,
               style: {
                 left: `${RESOURCE_COLUMN_WIDTH}px`,
                 top: `${TIME_HEADER_HEIGHT$6}px`,
