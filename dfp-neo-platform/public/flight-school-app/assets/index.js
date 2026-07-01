@@ -65354,6 +65354,12 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   const [tacanCount, setTacanCount] = reactExports.useState(0);
   const [vorChecked, setVorChecked] = reactExports.useState(false);
   const [vorCount, setVorCount] = reactExports.useState(0);
+  const [approachAssignments, setApproachAssignments] = reactExports.useState({
+    ils: "",
+    rnp: "",
+    tacan: "",
+    vor: ""
+  });
   const [showUnsavedWarning, setShowUnsavedWarning] = reactExports.useState(false);
   const initialFormState = reactExports.useRef(null);
   const [isDirty, setIsDirty] = reactExports.useState(false);
@@ -65426,6 +65432,28 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     }
     return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings || void 0, "staff");
   }), [fixedCrewPicName, fixedCrewRoster, personnelDisplaySettings]);
+  const pilotLogbookOptions = reactExports.useMemo(() => {
+    const options = [];
+    const addPilotOption = (name) => {
+      const cleanName = String(name || "").split(" – ")[0].trim();
+      const key = normalisePostFlightName(cleanName);
+      if (!key || key === "tba" || options.some((option) => option.key === key)) return;
+      options.push({ key, label: formatLogbookPersonName(cleanName) });
+    };
+    if (isFixedCrewLogbookPreview) {
+      fixedCrewLogbookPreviewRoster.filter((staff) => isPilotStaff(staff)).forEach((staff) => addPilotOption(staff.name));
+    } else {
+      addPilotOption(event.instructor || event.pilot);
+      if (!isSolo) addPilotOption(event.student);
+    }
+    return options;
+  }, [event.instructor, event.pilot, event.student, fixedCrewLogbookPreviewRoster, isFixedCrewLogbookPreview, isSolo]);
+  const defaultApproachPilotKey = pilotLogbookOptions[0]?.key || "";
+  const getApproachAssignedPilotKey = (kind) => approachAssignments[kind] || defaultApproachPilotKey;
+  const isApproachAssignedToPilot = (kind, pilotKey) => {
+    const key = normalisePostFlightName(pilotKey);
+    return Boolean(key && getApproachAssignedPilotKey(kind) === key);
+  };
   const parsePostFlightTimeToHours = (tStr) => {
     const clean = String(tStr || "").trim().replace(":", "");
     if (!/^\d{4}$/.test(clean)) return null;
@@ -65525,6 +65553,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         tacanCount: 0,
         vorChecked: false,
         vorCount: 0,
+        approachAssignments: { ils: "", rnp: "", tacan: "", vor: "" },
         currencyValues: {}
       };
     }
@@ -65647,6 +65676,14 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     restoreApproach(approaches.rnp, setRnpChecked, setRnpCount);
     restoreApproach(approaches.tacan, setTacanChecked, setTacanCount);
     restoreApproach(approaches.vor, setVorChecked, setVorCount);
+    if (saved.approachAssignments && typeof saved.approachAssignments === "object") {
+      setApproachAssignments({
+        ils: normalisePostFlightName(saved.approachAssignments.ils),
+        rnp: normalisePostFlightName(saved.approachAssignments.rnp),
+        tacan: normalisePostFlightName(saved.approachAssignments.tacan),
+        vor: normalisePostFlightName(saved.approachAssignments.vor)
+      });
+    }
     if (saved.currencyUpdates && typeof saved.currencyUpdates === "object") {
       setCurrencyValues(saved.currencyUpdates);
     } else if (saved.currencyValues && typeof saved.currencyValues === "object") {
@@ -65681,6 +65718,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       tacanCount: Number(approaches.tacan || 0),
       vorChecked: Number(approaches.vor || 0) > 0,
       vorCount: Number(approaches.vor || 0),
+      approachAssignments: saved.approachAssignments || approachAssignments,
       currencyValues: saved.currencyUpdates || saved.currencyValues || currencyValues
     };
     setIsDirty(false);
@@ -65696,7 +65734,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     setCrewLogOverride((prev) => ({ ...prev, [key]: value }));
   };
   reactExports.useEffect(() => {
-    const capt = getLogbookData("Captain");
+    const capt = getLogbookData("Captain", event.instructor || event.pilot);
     setCaptLogOverride((prev) => {
       const next = { ...prev };
       Object.keys(capt).forEach((k) => {
@@ -65726,10 +65764,11 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     aircraftNumber,
     aircraftNumberPrefix,
     aircraftNumberSettings,
-    duty
+    duty,
+    approachAssignments
   ]);
   reactExports.useEffect(() => {
-    const crew = getLogbookData("Crew");
+    const crew = getLogbookData("Crew", event.student);
     setCrewLogOverride((prev) => {
       const next = { ...prev };
       Object.keys(crew).forEach((k) => {
@@ -65759,14 +65798,19 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     aircraftNumber,
     aircraftNumberPrefix,
     aircraftNumberSettings,
-    duty
+    duty,
+    approachAssignments
   ]);
-  const getLogbookData = (role = "Crew") => {
+  const getLogbookData = (role = "Crew", pilotKey) => {
     const total = parseFloat(totalTime) || 0;
     const ifActual = parseFloat(ifActualTime) || 0;
     const ifSim = parseFloat(ifSimTime) || 0;
-    const app2D = (rnpChecked ? rnpCount : 0) + (tacanChecked ? tacanCount : 0) + (vorChecked ? vorCount : 0);
-    const app3D = ilsChecked ? ilsCount : 0;
+    const assignedRnp = rnpChecked && isApproachAssignedToPilot("rnp", pilotKey) ? rnpCount : 0;
+    const assignedTacan = tacanChecked && isApproachAssignedToPilot("tacan", pilotKey) ? tacanCount : 0;
+    const assignedVor = vorChecked && isApproachAssignedToPilot("vor", pilotKey) ? vorCount : 0;
+    const assignedIls = ilsChecked && isApproachAssignedToPilot("ils", pilotKey) ? ilsCount : 0;
+    const app2D = assignedRnp + assignedTacan + assignedVor;
+    const app3D = assignedIls;
     let dayP1 = 0;
     let dayP2 = 0;
     let dayDual = 0;
@@ -65852,7 +65896,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     const isP2 = !isPic && isPilotStaff(staff);
     return {
       title: formatLogbookPersonName(staff.name),
-      data: getLogbookData(isPic ? "Captain" : isP2 ? "P2" : "FixedCrewCrew")
+      data: getLogbookData(isPic ? "Captain" : isP2 ? "P2" : "FixedCrewCrew", staff.name)
     };
   }) : [];
   reactExports.useEffect(() => {
@@ -65884,6 +65928,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       tacanCount: tacanChecked ? tacanCount : 0,
       vorChecked,
       vorCount: vorChecked ? vorCount : 0,
+      approachAssignments,
       currencyValues
     };
     const initialStateForCompare = {
@@ -65897,7 +65942,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       setIsDirty(true);
       setSaveStatus("Saving...");
     }
-  }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, currencyValues]);
+  }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, approachAssignments, currencyValues]);
   const aircraftNumberOptions = reactExports.useMemo(() => Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")), []);
   const handleResultChange = (newResult) => {
     const oldResult = result;
@@ -65943,6 +65988,12 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         rnp: rnpChecked ? rnpCount : 0,
         tacan: tacanChecked ? tacanCount : 0,
         vor: vorChecked ? vorCount : 0
+      },
+      approachAssignments: {
+        ils: getApproachAssignedPilotKey("ils"),
+        rnp: getApproachAssignedPilotKey("rnp"),
+        tacan: getApproachAssignedPilotKey("tacan"),
+        vor: getApproachAssignedPilotKey("vor")
       },
       // Currency updates from post-flight panel
       currencyUpdates: Object.keys(currencyValues).length > 0 ? currencyValues : void 0,
@@ -66081,9 +66132,9 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: value })
   ] });
-  const ApproachInput = ({ label, isChecked, setIsChecked, count, setCount }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 flex items-end space-x-1", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 pb-2 cursor-pointer h-[38px]", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-400 w-10 text-right", children: label }),
+  const ApproachInput = ({ kind, label, isChecked, setIsChecked, count, setCount }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 flex items-end space-x-2 rounded-md border border-gray-700/70 bg-gray-900/20 px-2 py-1", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 cursor-pointer h-[38px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-400 w-12 text-right", children: label }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "input",
         {
@@ -66146,7 +66197,20 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
           )
         ] })
       ] })
-    ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex max-w-[190px] flex-wrap gap-x-2 gap-y-0.5 pb-1", children: pilotLogbookOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-1 text-[9px] leading-tight text-gray-300", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          type: "radio",
+          name: `approach-${kind}-pilot`,
+          checked: getApproachAssignedPilotKey(kind) === option.key,
+          onChange: () => setApproachAssignments((prev) => ({ ...prev, [kind]: option.key })),
+          className: "h-2.5 w-2.5 accent-sky-500"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-[72px] truncate", children: option.label })
+    ] }, `${kind}-${option.key}`)) })
   ] });
   const EditableLogbookCell = ({ label, subLabel, fieldKey, overrides, onChange, width, bgColor = "bg-gray-800", borderColor = "border-gray-600", readOnly = false }) => {
     const value = overrides[fieldKey] ?? "";
@@ -66428,11 +66492,11 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
                 }
               )
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", style: { flexBasis: "8rem" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", style: { width: "12rem" }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Captain/Instructor" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center truncate", children: (event.instructor || event.pilot)?.split(" – ")[0] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", style: { flexBasis: "6rem" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", style: { width: "12rem" }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Crew/Trainee" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center truncate", children: isSolo ? "Solo" : event.student?.split(" – ")[0] })
             ] })
@@ -66552,11 +66616,13 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
                   className: "mt-1 block w-20 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center font-mono"
                 }
               )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "ILS/GLS", isChecked: ilsChecked, setIsChecked: setIlsChecked, count: ilsCount, setCount: setIlsCount }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "RNP", isChecked: rnpChecked, setIsChecked: setRnpChecked, count: rnpCount, setCount: setRnpCount }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "TACAN", isChecked: tacanChecked, setIsChecked: setTacanChecked, count: tacanCount, setCount: setTacanCount }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "VOR/DME", isChecked: vorChecked, setIsChecked: setVorChecked, count: vorCount, setCount: setVorCount })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-end gap-2 overflow-x-auto pb-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { kind: "ils", label: "ILS/GLS", isChecked: ilsChecked, setIsChecked: setIlsChecked, count: ilsCount, setCount: setIlsCount }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { kind: "tacan", label: "TACAN", isChecked: tacanChecked, setIsChecked: setTacanChecked, count: tacanCount, setCount: setTacanCount }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { kind: "rnp", label: "RNP", isChecked: rnpChecked, setIsChecked: setRnpChecked, count: rnpCount, setCount: setRnpCount }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { kind: "vor", label: "VOR/DME", isChecked: vorChecked, setIsChecked: setVorChecked, count: vorCount, setCount: setVorCount })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-900 border border-gray-600 rounded-md min-w-max", children: [
@@ -105161,6 +105227,13 @@ Do you want to replace the existing entry?`,
                   const parsedCapt = parseFloat(data.captainTime || "") || void 0;
                   const parsedInst = parseFloat(data.instructorTime || "") || void 0;
                   const normaliseLogbookName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+                  const approachAssignments = data.approachAssignments && typeof data.approachAssignments === "object" ? data.approachAssignments : {};
+                  const getApproachAssignedPilot = (kind, fallbackName) => normaliseLogbookName(approachAssignments[kind]) || normaliseLogbookName(fallbackName);
+                  const getAssignedApproachCount = (kind, personName, fallbackName) => {
+                    const personKey2 = normaliseLogbookName(personName);
+                    if (!personKey2) return 0;
+                    return getApproachAssignedPilot(kind, fallbackName) === personKey2 ? Number(data.approaches?.[kind] || 0) : 0;
+                  };
                   const formatLogbookHours = (value) => value > 0 ? value.toFixed(1) : "";
                   const getFixedCrewGroupDetails = (value, fallbackUnit) => {
                     const raw = String(value || "").trim().toUpperCase();
@@ -105297,11 +105370,11 @@ Do you want to replace the existing entry?`,
                         simIf: isPilotLogbookEntry && parsedIfSim ? parsedIfSim.toFixed(1) : "",
                         simActual: isPilotLogbookEntry && parsedIfAct ? parsedIfAct.toFixed(1) : "",
                         app2D: isPilotLogbookEntry ? [
-                          data.approaches?.rnp || 0,
-                          data.approaches?.tacan || 0,
-                          data.approaches?.vor || 0
+                          getAssignedApproachCount("rnp", staff.name, captainDisplay),
+                          getAssignedApproachCount("tacan", staff.name, captainDisplay),
+                          getAssignedApproachCount("vor", staff.name, captainDisplay)
                         ].reduce((sum, value) => sum + Number(value || 0), 0) || "" : "",
-                        app3D: isPilotLogbookEntry ? data.approaches?.ils || "" : ""
+                        app3D: isPilotLogbookEntry ? getAssignedApproachCount("ils", staff.name, captainDisplay) || "" : ""
                       };
                       await saveFlightLogEntry({
                         ...flightLogBase,
@@ -105314,10 +105387,10 @@ Do you want to replace the existing entry?`,
                         ifActualTime: isPilotLogbookEntry ? parsedIfAct : void 0,
                         ifSimTime: isPilotLogbookEntry ? parsedIfSim : void 0,
                         ineffectiveTime: isPic ? parsedIneff : void 0,
-                        ilsCount: isPilotLogbookEntry ? data.approaches?.ils || 0 : 0,
-                        rnpCount: isPilotLogbookEntry ? data.approaches?.rnp || 0 : 0,
-                        tacanCount: isPilotLogbookEntry ? data.approaches?.tacan || 0 : 0,
-                        vorCount: isPilotLogbookEntry ? data.approaches?.vor || 0 : 0,
+                        ilsCount: isPilotLogbookEntry ? getAssignedApproachCount("ils", staff.name, captainDisplay) : 0,
+                        rnpCount: isPilotLogbookEntry ? getAssignedApproachCount("rnp", staff.name, captainDisplay) : 0,
+                        tacanCount: isPilotLogbookEntry ? getAssignedApproachCount("tacan", staff.name, captainDisplay) : 0,
+                        vorCount: isPilotLogbookEntry ? getAssignedApproachCount("vor", staff.name, captainDisplay) : 0,
                         captainLogSnapshot: isPic ? snapshot : void 0,
                         crewLogSnapshot: !isPic ? snapshot : void 0
                       }, `fixed crew ${personRole}`);
@@ -105334,6 +105407,10 @@ Do you want to replace the existing entry?`,
                         // Dual trainee gets captainTime from user-entered captainTime field
                         captainTime: isSoloFlight ? parsedTotal : parsedCapt || void 0,
                         instructorTime: void 0,
+                        ilsCount: getAssignedApproachCount("ils", pfEvt.student, pfEvt.instructor || pfEvt.pilot),
+                        rnpCount: getAssignedApproachCount("rnp", pfEvt.student, pfEvt.instructor || pfEvt.pilot),
+                        tacanCount: getAssignedApproachCount("tacan", pfEvt.student, pfEvt.instructor || pfEvt.pilot),
+                        vorCount: getAssignedApproachCount("vor", pfEvt.student, pfEvt.instructor || pfEvt.pilot),
                         // Full logbook row snapshots (auto-filled + any manual overrides)
                         captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : void 0,
                         crewLogSnapshot: data.crewLog && Object.keys(data.crewLog).length > 0 ? data.crewLog : void 0
@@ -105350,6 +105427,10 @@ Do you want to replace the existing entry?`,
                         personRole: "instructor",
                         captainTime: void 0,
                         instructorTime: parsedInst,
+                        ilsCount: getAssignedApproachCount("ils", pfEvt.instructor, pfEvt.instructor || pfEvt.pilot),
+                        rnpCount: getAssignedApproachCount("rnp", pfEvt.instructor, pfEvt.instructor || pfEvt.pilot),
+                        tacanCount: getAssignedApproachCount("tacan", pfEvt.instructor, pfEvt.instructor || pfEvt.pilot),
+                        vorCount: getAssignedApproachCount("vor", pfEvt.instructor, pfEvt.instructor || pfEvt.pilot),
                         // Full logbook row snapshots (auto-filled + any manual overrides)
                         captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : void 0,
                         crewLogSnapshot: data.crewLog && Object.keys(data.crewLog).length > 0 ? data.crewLog : void 0

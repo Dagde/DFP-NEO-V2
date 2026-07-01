@@ -39128,6 +39128,15 @@ appliedUpdates.forEach(update => {
                                         const parsedCapt   = parseFloat(data.captainTime || '') || undefined;
                                         const parsedInst   = parseFloat(data.instructorTime || '') || undefined;
                                         const normaliseLogbookName = (value?: string | null): string => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+                                        const approachAssignments = data.approachAssignments && typeof data.approachAssignments === 'object' ? data.approachAssignments : {};
+                                        const getApproachAssignedPilot = (kind: 'ils' | 'rnp' | 'tacan' | 'vor', fallbackName?: string | null): string => (
+                                            normaliseLogbookName(approachAssignments[kind]) || normaliseLogbookName(fallbackName)
+                                        );
+                                        const getAssignedApproachCount = (kind: 'ils' | 'rnp' | 'tacan' | 'vor', personName?: string | null, fallbackName?: string | null): number => {
+                                            const personKey = normaliseLogbookName(personName);
+                                            if (!personKey) return 0;
+                                            return getApproachAssignedPilot(kind, fallbackName) === personKey ? Number(data.approaches?.[kind] || 0) : 0;
+                                        };
                                         const formatLogbookHours = (value: number): string => value > 0 ? value.toFixed(1) : '';
                                         const getFixedCrewGroupDetails = (value?: string | null, fallbackUnit?: string | null): { crew: string; unit: string } => {
                                             const raw = String(value || '').trim().toUpperCase();
@@ -39283,11 +39292,11 @@ appliedUpdates.forEach(update => {
                                                     simIf: isPilotLogbookEntry && parsedIfSim ? parsedIfSim.toFixed(1) : '',
                                                     simActual: isPilotLogbookEntry && parsedIfAct ? parsedIfAct.toFixed(1) : '',
                                                     app2D: isPilotLogbookEntry ? [
-                                                        data.approaches?.rnp || 0,
-                                                        data.approaches?.tacan || 0,
-                                                        data.approaches?.vor || 0,
+                                                        getAssignedApproachCount('rnp', staff.name, captainDisplay),
+                                                        getAssignedApproachCount('tacan', staff.name, captainDisplay),
+                                                        getAssignedApproachCount('vor', staff.name, captainDisplay),
                                                     ].reduce((sum, value) => sum + Number(value || 0), 0) || '' : '',
-                                                    app3D: isPilotLogbookEntry ? (data.approaches?.ils || '') : '',
+                                                    app3D: isPilotLogbookEntry ? (getAssignedApproachCount('ils', staff.name, captainDisplay) || '') : '',
                                                 };
                                                 await saveFlightLogEntry({
                                                     ...flightLogBase,
@@ -39300,10 +39309,10 @@ appliedUpdates.forEach(update => {
                                                     ifActualTime: isPilotLogbookEntry ? parsedIfAct : undefined,
                                                     ifSimTime: isPilotLogbookEntry ? parsedIfSim : undefined,
                                                     ineffectiveTime: isPic ? parsedIneff : undefined,
-                                                    ilsCount: isPilotLogbookEntry ? (data.approaches?.ils || 0) : 0,
-                                                    rnpCount: isPilotLogbookEntry ? (data.approaches?.rnp || 0) : 0,
-                                                    tacanCount: isPilotLogbookEntry ? (data.approaches?.tacan || 0) : 0,
-                                                    vorCount: isPilotLogbookEntry ? (data.approaches?.vor || 0) : 0,
+                                                    ilsCount: isPilotLogbookEntry ? getAssignedApproachCount('ils', staff.name, captainDisplay) : 0,
+                                                    rnpCount: isPilotLogbookEntry ? getAssignedApproachCount('rnp', staff.name, captainDisplay) : 0,
+                                                    tacanCount: isPilotLogbookEntry ? getAssignedApproachCount('tacan', staff.name, captainDisplay) : 0,
+                                                    vorCount: isPilotLogbookEntry ? getAssignedApproachCount('vor', staff.name, captainDisplay) : 0,
                                                     captainLogSnapshot: isPic ? snapshot : undefined,
                                                     crewLogSnapshot: !isPic ? snapshot : undefined,
                                                 }, `fixed crew ${personRole}`);
@@ -39322,6 +39331,10 @@ appliedUpdates.forEach(update => {
                                                 // Dual trainee gets captainTime from user-entered captainTime field
                                                 captainTime: isSoloFlight ? parsedTotal : (parsedCapt || undefined),
                                                 instructorTime: undefined,
+                                                ilsCount: getAssignedApproachCount('ils', pfEvt.student, pfEvt.instructor || pfEvt.pilot),
+                                                rnpCount: getAssignedApproachCount('rnp', pfEvt.student, pfEvt.instructor || pfEvt.pilot),
+                                                tacanCount: getAssignedApproachCount('tacan', pfEvt.student, pfEvt.instructor || pfEvt.pilot),
+                                                vorCount: getAssignedApproachCount('vor', pfEvt.student, pfEvt.instructor || pfEvt.pilot),
                                                 // Full logbook row snapshots (auto-filled + any manual overrides)
                                                 captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : undefined,
                                                 crewLogSnapshot:    data.crewLog    && Object.keys(data.crewLog).length    > 0 ? data.crewLog    : undefined,
@@ -39340,6 +39353,10 @@ appliedUpdates.forEach(update => {
                                                 personRole:    'instructor',
                                                 captainTime:   undefined,
                                                 instructorTime: parsedInst,
+                                                ilsCount: getAssignedApproachCount('ils', pfEvt.instructor, pfEvt.instructor || pfEvt.pilot),
+                                                rnpCount: getAssignedApproachCount('rnp', pfEvt.instructor, pfEvt.instructor || pfEvt.pilot),
+                                                tacanCount: getAssignedApproachCount('tacan', pfEvt.instructor, pfEvt.instructor || pfEvt.pilot),
+                                                vorCount: getAssignedApproachCount('vor', pfEvt.instructor, pfEvt.instructor || pfEvt.pilot),
                                                 // Full logbook row snapshots (auto-filled + any manual overrides)
                                                 captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : undefined,
                                                 crewLogSnapshot:    data.crewLog    && Object.keys(data.crewLog).length    > 0 ? data.crewLog    : undefined,

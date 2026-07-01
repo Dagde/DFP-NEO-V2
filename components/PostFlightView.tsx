@@ -115,6 +115,12 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     const [tacanCount, setTacanCount] = useState(0);
     const [vorChecked, setVorChecked] = useState(false);
     const [vorCount, setVorCount] = useState(0);
+    const [approachAssignments, setApproachAssignments] = useState<Record<'ils' | 'rnp' | 'tacan' | 'vor', string>>({
+        ils: '',
+        rnp: '',
+        tacan: '',
+        vor: '',
+    });
 
     // Dirty check and save status
     const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
@@ -225,6 +231,30 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings || undefined, 'staff');
         })
     ), [fixedCrewPicName, fixedCrewRoster, personnelDisplaySettings]);
+    const pilotLogbookOptions = useMemo(() => {
+        const options: Array<{ key: string; label: string }> = [];
+        const addPilotOption = (name?: string | null) => {
+            const cleanName = String(name || '').split(' – ')[0].trim();
+            const key = normalisePostFlightName(cleanName);
+            if (!key || key === 'tba' || options.some(option => option.key === key)) return;
+            options.push({ key, label: formatLogbookPersonName(cleanName) });
+        };
+        if (isFixedCrewLogbookPreview) {
+            fixedCrewLogbookPreviewRoster
+                .filter(staff => isPilotStaff(staff))
+                .forEach(staff => addPilotOption(staff.name));
+        } else {
+            addPilotOption(event.instructor || event.pilot);
+            if (!isSolo) addPilotOption(event.student);
+        }
+        return options;
+    }, [event.instructor, event.pilot, event.student, fixedCrewLogbookPreviewRoster, isFixedCrewLogbookPreview, isSolo]);
+    const defaultApproachPilotKey = pilotLogbookOptions[0]?.key || '';
+    const getApproachAssignedPilotKey = (kind: 'ils' | 'rnp' | 'tacan' | 'vor') => approachAssignments[kind] || defaultApproachPilotKey;
+    const isApproachAssignedToPilot = (kind: 'ils' | 'rnp' | 'tacan' | 'vor', pilotKey?: string) => {
+        const key = normalisePostFlightName(pilotKey);
+        return Boolean(key && getApproachAssignedPilotKey(kind) === key);
+    };
 
      // Derived Total Time
     const parsePostFlightTimeToHours = (tStr: string): number | null => {
@@ -342,6 +372,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 tacanCount: 0,
                 vorChecked: false,
                 vorCount: 0,
+                approachAssignments: { ils: '', rnp: '', tacan: '', vor: '' },
                 currencyValues: {},
             };
         }
@@ -505,6 +536,14 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         restoreApproach(approaches.rnp, setRnpChecked, setRnpCount);
         restoreApproach(approaches.tacan, setTacanChecked, setTacanCount);
         restoreApproach(approaches.vor, setVorChecked, setVorCount);
+        if (saved.approachAssignments && typeof saved.approachAssignments === 'object') {
+            setApproachAssignments({
+                ils: normalisePostFlightName(saved.approachAssignments.ils),
+                rnp: normalisePostFlightName(saved.approachAssignments.rnp),
+                tacan: normalisePostFlightName(saved.approachAssignments.tacan),
+                vor: normalisePostFlightName(saved.approachAssignments.vor),
+            });
+        }
 
         if (saved.currencyUpdates && typeof saved.currencyUpdates === 'object') {
             setCurrencyValues(saved.currencyUpdates);
@@ -546,6 +585,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             tacanCount: Number(approaches.tacan || 0),
             vorChecked: Number(approaches.vor || 0) > 0,
             vorCount: Number(approaches.vor || 0),
+            approachAssignments: saved.approachAssignments || approachAssignments,
             currencyValues: saved.currencyUpdates || saved.currencyValues || currencyValues,
         };
         setIsDirty(false);
@@ -564,7 +604,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
     // Auto-sync TIMES fields → logbook override state (only untouched fields)
     useEffect(() => {
-        const capt = getLogbookData('Captain');
+        const capt = getLogbookData('Captain', event.instructor || event.pilot);
         setCaptLogOverride(prev => {
             const next = { ...prev };
             (Object.keys(capt) as string[]).forEach(k => {
@@ -576,10 +616,10 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     }, [totalTime, effectiveNightTime, ifActualTime, ifSimTime, captainTime, instructorTime,
         isFlightLog, isFtdLog, isSolo, isDual,
         ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount,
-        aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, duty]);
+        aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, duty, approachAssignments]);
 
     useEffect(() => {
-        const crew = getLogbookData('Crew');
+        const crew = getLogbookData('Crew', event.student);
         setCrewLogOverride(prev => {
             const next = { ...prev };
             (Object.keys(crew) as string[]).forEach(k => {
@@ -591,17 +631,20 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     }, [totalTime, effectiveNightTime, ifActualTime, ifSimTime, captainTime, instructorTime,
         isFlightLog, isFtdLog, isSolo, isDual,
         ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount,
-        aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, duty]);
+        aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, duty, approachAssignments]);
 
     // --- LOGBOOK CALCULATION LOGIC ---
-    const getLogbookData = (role: 'Captain' | 'Crew' | 'P2' | 'FixedCrewCrew' = 'Crew') => {
+    const getLogbookData = (role: 'Captain' | 'Crew' | 'P2' | 'FixedCrewCrew' = 'Crew', pilotKey?: string) => {
         const total = parseFloat(totalTime) || 0;
         const ifActual = parseFloat(ifActualTime) || 0;
         const ifSim = parseFloat(ifSimTime) || 0;
 
-        // 2D vs 3D Apps
-        const app2D = (rnpChecked ? rnpCount : 0) + (tacanChecked ? tacanCount : 0) + (vorChecked ? vorCount : 0);
-        const app3D = (ilsChecked ? ilsCount : 0);
+        const assignedRnp = rnpChecked && isApproachAssignedToPilot('rnp', pilotKey) ? rnpCount : 0;
+        const assignedTacan = tacanChecked && isApproachAssignedToPilot('tacan', pilotKey) ? tacanCount : 0;
+        const assignedVor = vorChecked && isApproachAssignedToPilot('vor', pilotKey) ? vorCount : 0;
+        const assignedIls = ilsChecked && isApproachAssignedToPilot('ils', pilotKey) ? ilsCount : 0;
+        const app2D = assignedRnp + assignedTacan + assignedVor;
+        const app3D = assignedIls;
 
         // Time variables
         let dayP1 = 0;
@@ -711,7 +754,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             const isP2 = !isPic && isPilotStaff(staff);
             return {
                 title: formatLogbookPersonName(staff.name),
-                data: getLogbookData(isPic ? 'Captain' : isP2 ? 'P2' : 'FixedCrewCrew'),
+                data: getLogbookData(isPic ? 'Captain' : isP2 ? 'P2' : 'FixedCrewCrew', staff.name),
             };
         })
         : [];
@@ -722,7 +765,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         if (!initialFormState.current) return;
 
         const currentState = {
-            result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount: ilsChecked ? ilsCount : 0, rnpChecked, rnpCount: rnpChecked ? rnpCount : 0, tacanChecked, tacanCount: tacanChecked ? tacanCount : 0, vorChecked, vorCount: vorChecked ? vorCount : 0, currencyValues,
+            result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount: ilsChecked ? ilsCount : 0, rnpChecked, rnpCount: rnpChecked ? rnpCount : 0, tacanChecked, tacanCount: tacanChecked ? tacanCount : 0, vorChecked, vorCount: vorChecked ? vorCount : 0, approachAssignments, currencyValues,
         };
         const initialStateForCompare = {
             ...initialFormState.current,
@@ -736,7 +779,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             setIsDirty(true);
             setSaveStatus('Saving...');
         }
-    }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, currencyValues]);
+    }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, approachAssignments, currencyValues]);
 
     const aircraftNumberOptions = useMemo(() => Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')), []);
 
@@ -789,6 +832,12 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 rnp: rnpChecked ? rnpCount : 0,
                 tacan: tacanChecked ? tacanCount : 0,
                 vor: vorChecked ? vorCount : 0,
+            },
+            approachAssignments: {
+                ils: getApproachAssignedPilotKey('ils'),
+                rnp: getApproachAssignedPilotKey('rnp'),
+                tacan: getApproachAssignedPilotKey('tacan'),
+                vor: getApproachAssignedPilotKey('vor'),
             },
             // Currency updates from post-flight panel
             currencyUpdates: Object.keys(currencyValues).length > 0 ? currencyValues : undefined,
@@ -956,15 +1005,16 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     );
 
     const ApproachInput: React.FC<{
+        kind: 'ils' | 'rnp' | 'tacan' | 'vor',
         label: string,
         isChecked: boolean,
         setIsChecked: (val: boolean) => void,
         count: number,
         setCount: (val: number) => void
-    }> = ({ label, isChecked, setIsChecked, count, setCount }) => (
-        <div className="flex-shrink-0 flex items-end space-x-1">
-            <label className="flex items-center space-x-1 pb-2 cursor-pointer h-[38px]">
-                <span className="text-sm font-medium text-gray-400 w-10 text-right">{label}</span>
+    }> = ({ kind, label, isChecked, setIsChecked, count, setCount }) => (
+        <div className="flex-shrink-0 flex items-end space-x-2 rounded-md border border-gray-700/70 bg-gray-900/20 px-2 py-1">
+            <label className="flex items-center space-x-1 cursor-pointer h-[38px]">
+                <span className="text-sm font-medium text-gray-400 w-12 text-right">{label}</span>
                 <input
                     type="checkbox"
                     checked={isChecked}
@@ -1017,6 +1067,20 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                         </button>
                     </div>
                 </div>
+            </div>
+            <div className="flex max-w-[190px] flex-wrap gap-x-2 gap-y-0.5 pb-1">
+                {pilotLogbookOptions.map(option => (
+                    <label key={`${kind}-${option.key}`} className="flex items-center gap-1 text-[9px] leading-tight text-gray-300">
+                        <input
+                            type="radio"
+                            name={`approach-${kind}-pilot`}
+                            checked={getApproachAssignedPilotKey(kind) === option.key}
+                            onChange={() => setApproachAssignments(prev => ({ ...prev, [kind]: option.key }))}
+                            className="h-2.5 w-2.5 accent-sky-500"
+                        />
+                        <span className="max-w-[72px] truncate">{option.label}</span>
+                    </label>
+                ))}
             </div>
         </div>
     );
@@ -1501,12 +1565,12 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                         </div>
 
                         {/* Captain/Instructor */}
-                        <div className="flex-1 min-w-0" style={{flexBasis: '8rem'}}>
+                        <div className="flex-shrink-0" style={{width: '12rem'}}>
                             <label className="block text-sm font-medium text-gray-400">Captain/Instructor</label>
                             <div className="mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center truncate">{(event.instructor || event.pilot)?.split(' – ')[0]}</div>
                         </div>
                         {/* Crew */}
-                        <div className="flex-1 min-w-0" style={{flexBasis: '6rem'}}>
+                        <div className="flex-shrink-0" style={{width: '12rem'}}>
                             <label className="block text-sm font-medium text-gray-400">Crew/Trainee</label>
                             <div className="mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center truncate">
                                 {isSolo ? 'Solo' : event.student?.split(' – ')[0]}
@@ -1514,7 +1578,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                         </div>
                     </div>
 
-                    {/* Row 2: Route, Takeoff, Land, Total, Night, IF Actual, IF Sim, Ineffective, Approaches */}
+                    {/* Row 2: Route, Takeoff, Land, Total, Night, IF Actual, IF Sim, Ineffective */}
                     <div className="mt-4 flex items-end space-x-4 overflow-x-auto pb-2">
                         {/* Route */}
                          <div className="flex-shrink-0">
@@ -1618,12 +1682,13 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             />
                         </div>
 
-                         {/* Approaches */}
-                        <ApproachInput label="ILS/GLS" isChecked={ilsChecked} setIsChecked={setIlsChecked} count={ilsCount} setCount={setIlsCount} />
-                        <ApproachInput label="RNP" isChecked={rnpChecked} setIsChecked={setRnpChecked} count={rnpCount} setCount={setRnpCount} />
-                        <ApproachInput label="TACAN" isChecked={tacanChecked} setIsChecked={setTacanChecked} count={tacanCount} setCount={setTacanCount} />
-                        <ApproachInput label="VOR/DME" isChecked={vorChecked} setIsChecked={setVorChecked} count={vorCount} setCount={setVorCount} />
-
+                    </div>
+                    {/* Row 3: Approach counts and pilot assignment */}
+                    <div className="mt-2 flex items-end gap-2 overflow-x-auto pb-1">
+                        <ApproachInput kind="ils" label="ILS/GLS" isChecked={ilsChecked} setIsChecked={setIlsChecked} count={ilsCount} setCount={setIlsCount} />
+                        <ApproachInput kind="tacan" label="TACAN" isChecked={tacanChecked} setIsChecked={setTacanChecked} count={tacanCount} setCount={setTacanCount} />
+                        <ApproachInput kind="rnp" label="RNP" isChecked={rnpChecked} setIsChecked={setRnpChecked} count={rnpCount} setCount={setRnpCount} />
+                        <ApproachInput kind="vor" label="VOR/DME" isChecked={vorChecked} setIsChecked={setVorChecked} count={vorCount} setCount={setVorCount} />
                     </div>
                 </fieldset>
 
