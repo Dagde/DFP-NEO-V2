@@ -66198,7 +66198,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex max-w-[190px] flex-wrap gap-x-2 gap-y-0.5 pb-1", children: pilotLogbookOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-1 text-[9px] leading-tight text-gray-300", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex w-[92px] flex-col gap-0.5 pb-1", children: pilotLogbookOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-1 text-[9px] leading-tight text-gray-300", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "input",
         {
@@ -66209,7 +66209,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
           className: "h-2.5 w-2.5 accent-sky-500"
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-[72px] truncate", children: option.label })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-[76px] truncate", children: option.label })
     ] }, `${kind}-${option.key}`)) })
   ] });
   const EditableLogbookCell = ({ label, subLabel, fieldKey, overrides, onChange, width, bgColor = "bg-gray-800", borderColor = "border-gray-600", readOnly = false }) => {

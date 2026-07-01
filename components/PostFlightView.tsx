@@ -1068,7 +1068,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                     </div>
                 </div>
             </div>
-            <div className="flex max-w-[190px] flex-wrap gap-x-2 gap-y-0.5 pb-1">
+            <div className="flex w-[92px] flex-col gap-0.5 pb-1">
                 {pilotLogbookOptions.map(option => (
                     <label key={`${kind}-${option.key}`} className="flex items-center gap-1 text-[9px] leading-tight text-gray-300">
                         <input
@@ -1078,7 +1078,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             onChange={() => setApproachAssignments(prev => ({ ...prev, [kind]: option.key }))}
                             className="h-2.5 w-2.5 accent-sky-500"
                         />
-                        <span className="max-w-[72px] truncate">{option.label}</span>
+                        <span className="max-w-[76px] truncate">{option.label}</span>
                     </label>
                 ))}
             </div>
