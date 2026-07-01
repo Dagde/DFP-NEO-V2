@@ -342,7 +342,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     };
 
     // Solid line is the live/current availability marker. It should only appear
-    // on the current day; past days are represented by the dotted history trace.
+    // on the current day; past days are represented by the dotted history trace,
+    // and future days should not show an availability line at all.
     // Use dateString prop if provided (canonical YYYY-MM-DD from App.tsx, timezone-correct).
     // Fallback: use local date string comparison to avoid UTC/local timezone mismatch
     // (currentDate may be created from a YYYY-MM-DD string which is parsed as UTC midnight)
@@ -350,10 +351,10 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     const todayStr = localDateStr(now);
     const selectedDateStr = dateString ?? localDateStr(currentDate);
     const isFutureDate = selectedDateStr > todayStr;
-    const isToday = showLiveAvailabilityLine ?? (selectedDateStr === todayStr);
-    const showSolidLine = isToday || isFutureDate;
+    const isToday = selectedDateStr === todayStr && (showLiveAvailabilityLine ?? true);
+    const showSolidLine = isToday;
     const showHistoryTrace = !isFutureDate;
-    const solidStartX = isFutureDate ? 0 : Math.min(currentTimeX, endOfDayX - 1);
+    const solidStartX = Math.min(currentTimeX, endOfDayX - 1);
     const historyEndX = isToday ? Math.min(currentTimeX, endOfDayX) : endOfDayX;
 
     return (

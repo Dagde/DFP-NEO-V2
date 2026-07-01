@@ -8584,10 +8584,10 @@ const AircraftAvailabilityOverlay = ({
   const todayStr = localDateStr(now);
   const selectedDateStr = dateString ?? localDateStr(currentDate);
   const isFutureDate = selectedDateStr > todayStr;
-  const isToday = showLiveAvailabilityLine ?? selectedDateStr === todayStr;
-  const showSolidLine = isToday || isFutureDate;
+  const isToday = selectedDateStr === todayStr && (showLiveAvailabilityLine ?? true);
+  const showSolidLine = isToday;
   const showHistoryTrace = !isFutureDate;
-  const solidStartX = isFutureDate ? 0 : Math.min(currentTimeX, endOfDayX - 1);
+  const solidStartX = Math.min(currentTimeX, endOfDayX - 1);
   const historyEndX = isToday ? Math.min(currentTimeX, endOfDayX) : endOfDayX;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "svg",
