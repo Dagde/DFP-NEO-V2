@@ -708,6 +708,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const isOracleContext = !!oracleContextForModal;
     const instructorList = oracleContextForModal?.availableInstructors || instructors;
     const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
+    const isPooledCrewModel = String(operationalModel || '').trim().toLowerCase() === 'pooled_crew';
     const normalisedEventType = String(eventType || '').trim().toLowerCase();
     const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === 'flight' || normalisedEventType === 'ftd');
     const activeUnitNormalised = String(activeUnitCode || '').trim().toUpperCase();
@@ -835,6 +836,15 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         targetEvent.group,
         ...((targetEvent.attendees || []) as string[]),
     ].map(value => String(value || '').trim()).filter(Boolean)));
+    const isSameDisplayedEvent = (otherEvent: Partial<ScheduleEvent>): boolean => {
+        if (otherEvent.id && event.id && otherEvent.id === event.id) return true;
+        const sameResource = String(otherEvent.resourceId || '').trim() === String(event.resourceId || '').trim();
+        const sameType = String(otherEvent.type || '').trim().toLowerCase() === String(event.type || '').trim().toLowerCase();
+        const sameNumber = String(otherEvent.flightNumber || '').trim() === String(event.flightNumber || '').trim();
+        const sameStart = Math.abs(Number(otherEvent.startTime || 0) - Number(event.startTime || 0)) < 0.001;
+        const sameDuration = Math.abs(Number(otherEvent.duration || 0) - Number(event.duration || 0)) < 0.001;
+        return Boolean(sameResource && sameType && sameNumber && sameStart && sameDuration);
+    };
     const rosteredFixedCrewMembers = useMemo(() => {
         if (!isFixedCrewCrewedEvent) return [] as Instructor[];
         const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || '';
@@ -885,7 +895,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     };
     const staffHasEventConflict = (staff: Instructor, bookingWindow: { start: number; end: number }): boolean => (
         (eventsForDate || [])
-            .filter(otherEvent => otherEvent.id !== event.id)
+            .filter(otherEvent => !isSameDisplayedEvent(otherEvent))
             .filter(otherEvent => getPersonnelForConflictCheck(otherEvent).includes(staff.name))
             .some(otherEvent => {
                 const otherWindow = getEventBookingWindow(otherEvent);
@@ -972,7 +982,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                         : `${[staff.rank, staff.name].filter(Boolean).join(' ')} is unavailable from ${formatTime(normaliseTimeFieldToHour(period.startTime, 0))} to ${formatTime(normaliseTimeFieldToHour(period.endTime, 24))}${period.reason ? ` because ${period.reason}` : ''}.`,
                 }));
             const eventConflicts = (eventsForDate || [])
-                .filter(otherEvent => otherEvent.id !== event.id)
+                .filter(otherEvent => !isSameDisplayedEvent(otherEvent))
                 .filter(otherEvent => getPersonnelForConflictCheck(otherEvent).includes(staff.name))
                 .filter(otherEvent => {
                     const otherWindow = getEventBookingWindow(otherEvent);
@@ -1092,9 +1102,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         return (
             <div className="rounded-lg border border-gray-700 bg-gray-900/50 p-3 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                    <strong className="rounded bg-emerald-500/15 px-2 py-1 text-sm font-bold text-emerald-200">
-                        {formatFixedCrewDisplayGroup(fixedCrewGroup || event.fixedCrewGroup || '') || 'Crew not assigned'}
-                    </strong>
+                    {!isPooledCrewModel && (
+                        <strong className="rounded bg-emerald-500/15 px-2 py-1 text-sm font-bold text-emerald-200">
+                            {formatFixedCrewDisplayGroup(fixedCrewGroup || event.fixedCrewGroup || '') || 'Crew not assigned'}
+                        </strong>
+                    )}
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                         Availability window {formatTime(Math.max(0, bookingWindow.start))}-{formatTime(Math.min(24, bookingWindow.end))}
                     </span>

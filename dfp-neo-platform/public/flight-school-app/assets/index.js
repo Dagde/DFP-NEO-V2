@@ -18424,6 +18424,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const isOracleContext = !!oracleContextForModal;
   const instructorList = oracleContextForModal?.availableInstructors || instructors;
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel2);
+  const isPooledCrewModel = String(operationalModel2 || "").trim().toLowerCase() === "pooled_crew";
   const normalisedEventType = String(eventType || "").trim().toLowerCase();
   const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === "flight" || normalisedEventType === "ftd");
   const activeUnitNormalised = String(activeUnitCode || "").trim().toUpperCase();
@@ -18527,6 +18528,15 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     targetEvent.group,
     ...targetEvent.attendees || []
   ].map((value) => String(value || "").trim()).filter(Boolean)));
+  const isSameDisplayedEvent = (otherEvent) => {
+    if (otherEvent.id && event.id && otherEvent.id === event.id) return true;
+    const sameResource = String(otherEvent.resourceId || "").trim() === String(event.resourceId || "").trim();
+    const sameType = String(otherEvent.type || "").trim().toLowerCase() === String(event.type || "").trim().toLowerCase();
+    const sameNumber = String(otherEvent.flightNumber || "").trim() === String(event.flightNumber || "").trim();
+    const sameStart = Math.abs(Number(otherEvent.startTime || 0) - Number(event.startTime || 0)) < 1e-3;
+    const sameDuration = Math.abs(Number(otherEvent.duration || 0) - Number(event.duration || 0)) < 1e-3;
+    return Boolean(sameResource && sameType && sameNumber && sameStart && sameDuration);
+  };
   const rosteredFixedCrewMembers = reactExports.useMemo(() => {
     if (!isFixedCrewCrewedEvent) return [];
     const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || "";
@@ -18558,7 +18568,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       return unavailableStart < bookingWindow.end && bookingWindow.start < unavailableEnd;
     });
   };
-  const staffHasEventConflict = (staff, bookingWindow) => (eventsForDate || []).filter((otherEvent) => otherEvent.id !== event.id).filter((otherEvent) => getPersonnelForConflictCheck(otherEvent).includes(staff.name)).some((otherEvent) => {
+  const staffHasEventConflict = (staff, bookingWindow) => (eventsForDate || []).filter((otherEvent) => !isSameDisplayedEvent(otherEvent)).filter((otherEvent) => getPersonnelForConflictCheck(otherEvent).includes(staff.name)).some((otherEvent) => {
     const otherWindow = getEventBookingWindow2(otherEvent);
     return otherWindow.start < bookingWindow.end && bookingWindow.start < otherWindow.end;
   });
@@ -18608,7 +18618,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         type: "unavailability",
         label: period.allDay ? `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable all day${period.reason ? ` because ${period.reason}` : ""}.` : `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable from ${formatTime$4(normaliseTimeFieldToHour(period.startTime, 0))} to ${formatTime$4(normaliseTimeFieldToHour(period.endTime, 24))}${period.reason ? ` because ${period.reason}` : ""}.`
       }));
-      const eventConflicts = (eventsForDate || []).filter((otherEvent) => otherEvent.id !== event.id).filter((otherEvent) => getPersonnelForConflictCheck(otherEvent).includes(staff.name)).filter((otherEvent) => {
+      const eventConflicts = (eventsForDate || []).filter((otherEvent) => !isSameDisplayedEvent(otherEvent)).filter((otherEvent) => getPersonnelForConflictCheck(otherEvent).includes(staff.name)).filter((otherEvent) => {
         const otherWindow = getEventBookingWindow2(otherEvent);
         return otherWindow.start < bookingWindow.end && bookingWindow.start < otherWindow.end;
       }).map((otherEvent) => ({
@@ -18719,7 +18729,7 @@ ${swapNote}` : swapNote
     const bookingWindow = getEventBookingWindow2(event);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/50 p-3 space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "rounded bg-emerald-500/15 px-2 py-1 text-sm font-bold text-emerald-200", children: formatFixedCrewDisplayGroup$2(fixedCrewGroup || event.fixedCrewGroup || "") || "Crew not assigned" }),
+        !isPooledCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "rounded bg-emerald-500/15 px-2 py-1 text-sm font-bold text-emerald-200", children: formatFixedCrewDisplayGroup$2(fixedCrewGroup || event.fixedCrewGroup || "") || "Crew not assigned" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
           "Availability window ",
           formatTime$4(Math.max(0, bookingWindow.start)),
