@@ -99834,6 +99834,148 @@ ${conflictLines.join("\n")}${moreText}`,
     console.log("[PauseBuild] Cleared for rebuild:", cancelledIds.size, "events");
     const lockedEvents = eventsAfterCancel.filter((e) => !e.isCancelled);
     console.log("[PauseBuild] Locked (completed + non-affected type) events:", lockedEvents.length);
+    if (isFixedCrewLikeOperationalModel(activeOperationalModel)) {
+      const slotStep = 5 / 60;
+      const scheduledEvents2 = [...lockedEvents];
+      const rescheduledCancelledIds = /* @__PURE__ */ new Set();
+      const roundUpTo5Min2 = (time) => {
+        const totalMinutes = Math.round(time * 60);
+        const remainder = totalMinutes % 5;
+        if (remainder === 0) return totalMinutes / 60;
+        return (totalMinutes + (5 - remainder)) / 60;
+      };
+      const normalisePausePersonName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+      const getPauseEventPeople = (event) => {
+        const ignored = /* @__PURE__ */ new Set(["", "tba", "pooled crew"]);
+        const names = [
+          event.instructor,
+          event.pilot,
+          event.student,
+          ...event.attendees || [],
+          ...event.crewSelectionOrder || []
+        ].map((name) => String(name || "").trim()).filter((name) => !ignored.has(normalisePausePersonName(name)));
+        return Array.from(new Set(names.map(normalisePausePersonName))).map((key) => names.find((name) => normalisePausePersonName(name) === key) || "").filter(Boolean);
+      };
+      const resourceOptionsForPauseType = (eventType, fallbackResourceId) => {
+        const resources = fullRawEvents.filter((event) => event.type === eventType).map((event) => String(event.resourceId || "").trim()).filter((resourceId) => resourceId && !resourceId.startsWith("STBY") && !resourceId.startsWith("BNF-STBY"));
+        if (fallbackResourceId && !resources.includes(fallbackResourceId)) resources.unshift(fallbackResourceId);
+        return Array.from(new Set(resources));
+      };
+      const pauseTurnaroundForType = (eventType) => {
+        if (eventType === "flight") return flightTurnaround;
+        if (eventType === "ftd") return ftdTurnaround;
+        if (eventType === "cpt") return cptTurnaround;
+        return 0;
+      };
+      const pauseWindowForType = (eventType) => {
+        if (eventType === "ftd") return { start: pFtdStart, end: pFtdEnd };
+        return { start: dayStart, end: dayEnd };
+      };
+      const resourceIsBusy = (resourceId, startTime, duration, eventType) => {
+        const endTime = startTime + duration;
+        const turnaround = pauseTurnaroundForType(eventType);
+        return scheduledEvents2.some((event) => {
+          if (event.isCancelled || event.resourceId !== resourceId) return false;
+          const eventEnd = event.startTime + event.duration;
+          return startTime < eventEnd + turnaround && endTime > event.startTime;
+        });
+      };
+      const peopleAreBusy = (candidate, startTime, duration) => {
+        const candidatePeople = getPauseEventPeople(candidate).map(normalisePausePersonName);
+        if (candidatePeople.length === 0) return false;
+        const endTime = startTime + duration;
+        return scheduledEvents2.some((event) => {
+          if (event.isCancelled || event.resourceId?.startsWith("STBY")) return false;
+          const eventEnd = event.startTime + event.duration;
+          if (!(event.startTime < endTime && eventEnd > startTime)) return false;
+          const existingPeople = getPauseEventPeople(event).map(normalisePausePersonName);
+          return candidatePeople.some((name) => existingPeople.includes(name));
+        });
+      };
+      const cancelledCrewEvents = eventsAfterCancel.filter((event) => cancelledIds.has(event.id) && !completedEventIds.has(event.id)).filter((event) => event.type === "flight" || event.type === "ftd" || event.type === "cpt" || event.type === "ground").sort((left, right) => left.startTime - right.startTime);
+      for (const original of cancelledCrewEvents) {
+        const duration = Number(original.duration) || 0;
+        const window2 = pauseWindowForType(original.type);
+        const resources = resourceOptionsForPauseType(original.type, original.resourceId);
+        let slot = Math.max(roundUpTo5Min2(pauseEnd), roundUpTo5Min2(original.startTime));
+        let placed = null;
+        while (duration > 0 && slot + duration <= window2.end + 1e-3) {
+          if (slot < window2.start) {
+            slot += slotStep;
+            continue;
+          }
+          const resourceId = resources.find((resource) => !resourceIsBusy(resource, slot, duration, original.type));
+          if (!resourceId) {
+            slot += slotStep;
+            continue;
+          }
+          const candidate = {
+            ...original,
+            id: v4(),
+            date: pauseDate,
+            startTime: slot,
+            duration,
+            resourceId,
+            isCancelled: false,
+            cancellationCode: void 0,
+            cancelledBy: void 0,
+            cancelledAt: void 0
+          };
+          if (peopleAreBusy(candidate, slot, duration)) {
+            slot += slotStep;
+            continue;
+          }
+          placed = candidate;
+          break;
+        }
+        if (placed) {
+          scheduledEvents2.push(placed);
+          rescheduledCancelledIds.add(original.id);
+          console.log(`[PauseBuild][CrewModel] Reprogrammed ${original.flightNumber} from ${original.startTime.toFixed(2)} to ${placed.startTime.toFixed(2)} on ${placed.resourceId}`);
+        } else {
+          console.log(`[PauseBuild][CrewModel] Could not reprogram ${original.flightNumber}; will stage as OPS PAUSE STBY.`);
+        }
+      }
+      const stbyOccupied2 = scheduledEvents2.filter((e) => e.resourceId?.startsWith("STBY") && !e.isCancelled).map((e) => ({ resourceId: e.resourceId, start: e.startTime, end: e.startTime + e.duration }));
+      const getNextStbySlot2 = (evStart, evEnd) => {
+        let stbyLine = 1;
+        while (true) {
+          const stbyId = `STBY ${stbyLine}`;
+          const hasOverlap = stbyOccupied2.some(
+            (o) => o.resourceId === stbyId && o.start < evEnd && o.end > evStart
+          );
+          if (!hasOverlap) break;
+          stbyLine++;
+        }
+        stbyOccupied2.push({ resourceId: `STBY ${stbyLine}`, start: evStart, end: evEnd });
+        return `STBY ${stbyLine}`;
+      };
+      const stbyEvents2 = cancelledCrewEvents.filter((event) => !rescheduledCancelledIds.has(event.id)).map((event) => ({
+        ...event,
+        date: pauseDate,
+        resourceId: getNextStbySlot2(event.startTime, event.startTime + event.duration),
+        isCancelled: true,
+        cancellationCode: "OPS_PAUSE"
+      }));
+      const seenIds2 = /* @__PURE__ */ new Set();
+      const finalEvents2 = [...scheduledEvents2, ...stbyEvents2].filter((event) => {
+        if (seenIds2.has(event.id)) return false;
+        seenIds2.add(event.id);
+        return true;
+      }).map((event) => ({ ...event, date: pauseDate }));
+      console.log(
+        "[PauseBuild][CrewModel] Final staged events:",
+        finalEvents2.length,
+        "(locked:",
+        lockedEvents.length,
+        "reprogrammed:",
+        rescheduledCancelledIds.size,
+        "STBY cancelled:",
+        stbyEvents2.length,
+        ")"
+      );
+      return finalEvents2;
+    }
     const getMedianProgressLocal = (courseName) => {
       const courseTrainees = allTraineesData.filter((t) => t.course === courseName && !t.isPaused);
       if (courseTrainees.length === 0) return 0;
