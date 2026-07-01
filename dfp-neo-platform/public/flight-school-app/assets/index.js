@@ -18488,10 +18488,47 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
   const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
   const getEventSyllabusDetail = (targetEvent) => syllabusDetails.find((item) => item.id === targetEvent.flightNumber || item.code === targetEvent.flightNumber);
+  const getNonNegativeFiniteNumber2 = (value) => {
+    if (value === void 0 || value === null || value === "") return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+  };
+  const normaliseBookingDurationHours2 = (value) => {
+    const numeric = getNonNegativeFiniteNumber2(value);
+    if (numeric === null) return 0;
+    return numeric > 24 ? numeric / 60 : numeric;
+  };
+  const getEventBookingOffsets = (targetEvent, detail) => {
+    const startTimeValue = Number(targetEvent.startTime ?? 0) || 0;
+    const durationValue = Math.max(0, Number(targetEvent.duration ?? detail?.duration ?? 0) || 0);
+    const eventEnd = startTimeValue + durationValue;
+    const eventPre = getNonNegativeFiniteNumber2(targetEvent.preFlightTime);
+    const eventPost = getNonNegativeFiniteNumber2(targetEvent.postFlightTime);
+    const syllabusPre = getNonNegativeFiniteNumber2(detail?.preFlightTime);
+    const syllabusPost = getNonNegativeFiniteNumber2(detail?.postFlightTime);
+    let preFlight = eventPre === null ? syllabusPre === null ? 0 : normaliseBookingDurationHours2(syllabusPre) : normaliseBookingDurationHours2(eventPre);
+    let postFlight = eventPost === null ? syllabusPost === null ? 0 : normaliseBookingDurationHours2(syllabusPost) : normaliseBookingDurationHours2(eventPost);
+    if (targetEvent.bookingOffsetsAreDuration === true) {
+      const rawPre2 = getNonNegativeFiniteNumber2(targetEvent.preStart);
+      const rawPost2 = getNonNegativeFiniteNumber2(targetEvent.postEnd);
+      return {
+        preFlight: rawPre2 === null ? preFlight : normaliseBookingDurationHours2(rawPre2),
+        postFlight: rawPost2 === null ? postFlight : normaliseBookingDurationHours2(rawPost2)
+      };
+    }
+    const rawPre = getNonNegativeFiniteNumber2(targetEvent.preStart);
+    if (eventPre === null && rawPre !== null) {
+      preFlight = rawPre > 24 ? rawPre / 60 : rawPre > 6 && rawPre < startTimeValue ? Math.max(0, startTimeValue - rawPre) : rawPre;
+    }
+    const rawPost = getNonNegativeFiniteNumber2(targetEvent.postEnd);
+    if (eventPost === null && rawPost !== null) {
+      postFlight = rawPost > 24 ? rawPost / 60 : rawPost > eventEnd && rawPost <= 24 ? Math.max(0, rawPost - eventEnd) : rawPost;
+    }
+    return { preFlight, postFlight };
+  };
   const getEventBookingWindow2 = (targetEvent) => {
     const detail = getEventSyllabusDetail(targetEvent);
-    const preFlight = Number(targetEvent.preFlightTime ?? detail?.preFlightTime ?? 0) || 0;
-    const postFlight = Number(targetEvent.postFlightTime ?? detail?.postFlightTime ?? 0) || 0;
+    const { preFlight, postFlight } = getEventBookingOffsets(targetEvent, detail);
     const startTimeValue = Number(targetEvent.startTime ?? 0) || 0;
     const durationValue = Number(targetEvent.duration ?? detail?.duration ?? 0) || 0;
     return {
