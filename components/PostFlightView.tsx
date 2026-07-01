@@ -1462,7 +1462,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 <fieldset className="p-4 border border-gray-600 rounded-lg">
                     <legend className="px-2 text-lg font-semibold text-gray-300">Times</legend>
 
-                    {/* Row 1: Flight, FTD, Solo, Dual, Date, AC, Number, Duty, Captain, Crew */}
+                    {/* Row 1: Flight, FTD, Date, AC, Number, Duty, Captain, Crew */}
                     <div className="mt-2 flex items-end space-x-4">
 
                         {/* Flight Checkbox */}
@@ -1491,31 +1491,35 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             </div>
                         </div>
 
-                        {/* Solo Checkbox */}
-                        <div className="flex-shrink-0 flex flex-col items-center">
-                            <label className="block text-sm font-medium text-gray-400">Solo</label>
-                            <div className="mt-1 h-[38px] flex items-center justify-center">
-                                <input
-                                    type="checkbox"
-                                    checked={isSolo}
-                                    onChange={handleSoloChange}
-                                    className="h-5 w-5 bg-gray-700 border-gray-600 rounded focus:ring-sky-500 focus:ring-offset-gray-800 accent-sky-500"
-                                />
-                            </div>
-                        </div>
+                        {!isFixedCrewLogbookPreview && (
+                            <>
+                                {/* Solo Checkbox */}
+                                <div className="flex-shrink-0 flex flex-col items-center">
+                                    <label className="block text-sm font-medium text-gray-400">Solo</label>
+                                    <div className="mt-1 h-[38px] flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={isSolo}
+                                            onChange={handleSoloChange}
+                                            className="h-5 w-5 bg-gray-700 border-gray-600 rounded focus:ring-sky-500 focus:ring-offset-gray-800 accent-sky-500"
+                                        />
+                                    </div>
+                                </div>
 
-                        {/* Dual Checkbox */}
-                        <div className="flex-shrink-0 flex flex-col items-center">
-                            <label className="block text-sm font-medium text-gray-400">Dual</label>
-                            <div className="mt-1 h-[38px] flex items-center justify-center">
-                                <input
-                                    type="checkbox"
-                                    checked={isDual}
-                                    onChange={handleDualChange}
-                                    className="h-5 w-5 bg-gray-700 border-gray-600 rounded focus:ring-sky-500 focus:ring-offset-gray-800 accent-sky-500"
-                                />
-                            </div>
-                        </div>
+                                {/* Dual Checkbox */}
+                                <div className="flex-shrink-0 flex flex-col items-center">
+                                    <label className="block text-sm font-medium text-gray-400">Dual</label>
+                                    <div className="mt-1 h-[38px] flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={isDual}
+                                            onChange={handleDualChange}
+                                            className="h-5 w-5 bg-gray-700 border-gray-600 rounded focus:ring-sky-500 focus:ring-offset-gray-800 accent-sky-500"
+                                        />
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
                         {/* Date */}
                         <div className="flex-shrink-0">
