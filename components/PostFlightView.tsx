@@ -1528,7 +1528,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             <div className="mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center">{resourceDisplayNames.aircraft}</div>
                         </div>
                          {/* Number */}
-                        <div className="flex-shrink-0" style={{width: '6.75rem'}}>
+                        <div className="flex-shrink-0" style={{width: 'calc(6.75rem + 10px)'}}>
                             <label className="block text-sm font-medium text-gray-400">Number</label>
                             <div className="flex items-center space-x-1 mt-1">
                                 {aircraftNumberSettings.usePrefix && (

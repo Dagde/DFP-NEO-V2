@@ -66455,7 +66455,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Aircraft" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center", children: resourceDisplayNames.aircraft })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", style: { width: "6.75rem" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", style: { width: "calc(6.75rem + 10px)" }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Number" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 mt-1", children: [
                 aircraftNumberSettings.usePrefix && /* @__PURE__ */ jsxRuntimeExports.jsx(
