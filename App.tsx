@@ -40587,12 +40587,12 @@ appliedUpdates.forEach(update => {
                     onClose={() => setShowAddGroundEvent(false)}
                     onSave={handleSaveGroundEvent}
                     onSaveAcademic={handleSaveAcademicEvent}
-                    groundSyllabus={syllabusDetails.filter(s => s.type === 'Ground School')}
+                    groundSyllabus={visibleSyllabusDetails.filter(s => s.type === 'Ground School')}
                     activeCourses={scopedCourseColors}
                     allTraineesByCourse={allTraineesByCourse}
                     instructors={instructorsData.map(i => i.name)}
                     traineesData={traineesData}
-                    syllabusDetails={syllabusDetails}
+                    syllabusDetails={visibleSyllabusDetails}
                     scores={scores}
                     traineeLMPs={traineeLMPs}
                     events={events}

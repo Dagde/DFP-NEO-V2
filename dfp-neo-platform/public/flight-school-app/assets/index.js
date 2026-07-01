@@ -24231,12 +24231,20 @@ Do you still want to include them in this academic session?`
     }
   }, [persistedAcademicLmp]);
   reactExports.useEffect(() => {
-    if (academicLmpCourses.length > 0 && !selectedAcademicLmp) {
+    const availableCodes = new Set(academicLmpCourses.map((course) => course.code));
+    if (academicLmpCourses.length === 0) {
+      if (selectedAcademicLmp) {
+        setSelectedAcademicLmp("");
+        onUpdatePersistedAcademicLmp?.("");
+      }
+      return;
+    }
+    if (!selectedAcademicLmp || !availableCodes.has(selectedAcademicLmp)) {
       const firstCode = academicLmpCourses[0].code;
       setSelectedAcademicLmp(firstCode);
       onUpdatePersistedAcademicLmp?.(firstCode);
     }
-  }, [academicLmpCourses]);
+  }, [academicLmpCourses, selectedAcademicLmp, onUpdatePersistedAcademicLmp]);
   const academicSyllabus = reactExports.useMemo(() => {
     if (!selectedAcademicLmp) return [];
     return syllabusDetails.filter((s) => s.courses?.includes(selectedAcademicLmp));
@@ -106584,12 +106592,12 @@ Do you want to replace the existing entry?`,
           onClose: () => setShowAddGroundEvent(false),
           onSave: handleSaveGroundEvent,
           onSaveAcademic: handleSaveAcademicEvent,
-          groundSyllabus: syllabusDetails.filter((s) => s.type === "Ground School"),
+          groundSyllabus: visibleSyllabusDetails.filter((s) => s.type === "Ground School"),
           activeCourses: scopedCourseColors,
           allTraineesByCourse,
           instructors: instructorsData.map((i) => i.name),
           traineesData,
-          syllabusDetails,
+          syllabusDetails: visibleSyllabusDetails,
           scores,
           traineeLMPs,
           events,

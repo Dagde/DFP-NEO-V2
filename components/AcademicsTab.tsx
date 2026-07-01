@@ -437,12 +437,20 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
   // Auto-select first academic LMP course if nothing is persisted yet
   useEffect(() => {
-    if (academicLmpCourses.length > 0 && !selectedAcademicLmp) {
+    const availableCodes = new Set(academicLmpCourses.map(course => course.code));
+    if (academicLmpCourses.length === 0) {
+      if (selectedAcademicLmp) {
+        setSelectedAcademicLmp('');
+        onUpdatePersistedAcademicLmp?.('');
+      }
+      return;
+    }
+    if (!selectedAcademicLmp || !availableCodes.has(selectedAcademicLmp)) {
       const firstCode = academicLmpCourses[0].code;
       setSelectedAcademicLmp(firstCode);
       onUpdatePersistedAcademicLmp?.(firstCode);
     }
-  }, [academicLmpCourses]);
+  }, [academicLmpCourses, selectedAcademicLmp, onUpdatePersistedAcademicLmp]);
 
   // ── Academic syllabus filtered by selected Academic LMP course ─────────────
   // Includes all event types — Ground School, Academics, etc.
