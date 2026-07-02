@@ -248,19 +248,24 @@ const DEFAULT_ORGANISATION_STRUCTURE_LEVELS = [
   'Crew',
 ];
 
-const normaliseOrganisationStructure = (source: unknown): OrganisationStructureSettings => {
+const normaliseOrganisationStructure = (source: unknown, organisationName = ''): OrganisationStructureSettings => {
   const raw = (source || {}) as any;
   const rawLevels = Array.isArray(raw.levels) ? raw.levels : [];
   const requestedCount = Number(raw.levelCount);
   const levelCount = Math.max(1, Math.min(12, Number.isFinite(requestedCount) && requestedCount > 0 ? Math.round(requestedCount) : Math.max(rawLevels.length, 4)));
+  const organisationLevelName = String(organisationName || '').trim();
   const levels = Array.from({ length: levelCount }, (_, index) => {
     const rawLevel = rawLevels[index] || {};
+    const rawLevelName = String(rawLevel.name || rawLevel.label || '').trim();
+    const defaultLevelName = DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index}`;
     const options = Array.isArray(rawLevel.options)
       ? rawLevel.options
       : String(rawLevel.options || '').split(/\r?\n|;/);
     return {
-      id: String(rawLevel.id || `org-level-${index + 1}`),
-      name: String(rawLevel.name || rawLevel.label || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index + 1}`).trim(),
+      id: String(rawLevel.id || `org-level-${index}`),
+      name: index === 0 && organisationLevelName && (!rawLevelName || rawLevelName === DEFAULT_ORGANISATION_STRUCTURE_LEVELS[0])
+        ? organisationLevelName
+        : (rawLevelName || defaultLevelName),
       options: Array.from(new Set(options.map((option: unknown) => String(option || '').trim()).filter(Boolean))),
     };
   });
@@ -1661,8 +1666,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const primaryOrganisation = config.organisations[primaryOrganisationIndex] || null;
   const primaryOrganisationSettings = primaryOrganisation?.settings || {};
   const organisationStructure = useMemo(
-    () => normaliseOrganisationStructure(primaryOrganisationSettings.organisationStructure || null),
-    [primaryOrganisationSettings.organisationStructure],
+    () => normaliseOrganisationStructure(primaryOrganisationSettings.organisationStructure || null, primaryOrganisation?.name || ''),
+    [primaryOrganisationSettings.organisationStructure, primaryOrganisation?.name],
   );
   const deploymentProfile = {
     ...DEFAULT_DEPLOYMENT_PROFILE,
@@ -1812,7 +1817,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const updateOrganisationStructure = (nextStructure: OrganisationStructureSettings) => {
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
-      organisationStructure: normaliseOrganisationStructure(nextStructure),
+      organisationStructure: normaliseOrganisationStructure(nextStructure, primaryOrganisation?.name || ''),
     }));
   };
 
@@ -1822,8 +1827,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       levelCount: count,
       levels: Array.from({ length: count }, (_, index) => (
         organisationStructure.levels[index] || {
-          id: `org-level-${index + 1}`,
-          name: DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index + 1}`,
+          id: `org-level-${index}`,
+          name: index === 0 && primaryOrganisation?.name
+            ? primaryOrganisation.name
+            : DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index}`,
           options: [],
         }
       )),
@@ -1846,17 +1853,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const downloadOrganisationStructureTemplate = () => {
+    const organisationName = String(primaryOrganisation?.name || 'Department of the Air Force').trim();
     const rows = [
       ['Level', 'Level Name', 'Option'],
-      [1, 'Organisation', 'Department of the Air Force'],
-      [2, 'Headquarters', 'HQ USAF'],
-      [3, 'Command', 'Air Force Global Strike Command'],
-      [4, 'Numbered Force', 'Eighth Air Force'],
-      [5, 'Wing', '2nd Bomb Wing'],
-      [6, 'Group', '2nd Operations Group'],
-      [7, 'Squadron', '96th Bomb Squadron'],
-      [8, 'Flight', 'Flight'],
-      [9, 'Crew', 'Aircrew'],
+      [0, organisationName, organisationName],
+      [1, 'Headquarters', 'HQ USAF'],
+      [2, 'Command', 'Air Force Global Strike Command'],
+      [3, 'Numbered Force', 'Eighth Air Force'],
+      [4, 'Wing', '2nd Bomb Wing'],
+      [5, 'Group', '2nd Operations Group'],
+      [6, 'Squadron', '96th Bomb Squadron'],
+      [7, 'Flight', 'Flight'],
+      [8, 'Crew', 'Aircrew'],
     ];
     if (typeof XLSX !== 'undefined') {
       const worksheet = XLSX.utils.aoa_to_sheet(rows);
@@ -1870,11 +1878,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const importOrganisationStructureRows = (rows: any[]) => {
     const grouped = new Map<number, { name: string; options: string[] }>();
+    const parsedRows = rows.map((row) => ({
+      row,
+      levelNumber: Math.round(Number(row.Level ?? row.level ?? row['Level Number'] ?? row['level number'])),
+    }));
+    const usesZeroBasedLevels = parsedRows.some(({ levelNumber }) => levelNumber === 0);
     rows.forEach((row) => {
       const rawLevel = row.Level ?? row.level ?? row['Level Number'] ?? row['level number'];
-      const levelNumber = Math.round(Number(rawLevel));
-      if (!Number.isFinite(levelNumber) || levelNumber < 1 || levelNumber > 12) return;
-      const levelName = String(row['Level Name'] ?? row.levelName ?? row.Name ?? row.name ?? DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber - 1] ?? `Level ${levelNumber}`).trim();
+      const rawLevelNumber = Math.round(Number(rawLevel));
+      const levelNumber = usesZeroBasedLevels ? rawLevelNumber : rawLevelNumber - 1;
+      if (!Number.isFinite(levelNumber) || levelNumber < 0 || levelNumber > 11) return;
+      const levelName = String(row['Level Name'] ?? row.levelName ?? row.Name ?? row.name ?? DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] ?? `Level ${levelNumber}`).trim();
       const option = String(row.Option ?? row.option ?? row.Value ?? row.value ?? '').trim();
       const current = grouped.get(levelNumber) || { name: levelName, options: [] };
       current.name = levelName || current.name;
@@ -1885,15 +1899,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       setOrganisationStructureImportError('No valid organisation structure rows found.');
       return;
     }
-    const levelCount = Math.max(...Array.from(grouped.keys()));
+    const levelCount = Math.max(...Array.from(grouped.keys())) + 1;
     updateOrganisationStructure({
       levelCount,
       levels: Array.from({ length: levelCount }, (_, index) => {
-        const levelNumber = index + 1;
-        const row = grouped.get(levelNumber);
+        const row = grouped.get(index);
         return {
-          id: organisationStructure.levels[index]?.id || `org-level-${levelNumber}`,
-          name: row?.name || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${levelNumber}`,
+          id: organisationStructure.levels[index]?.id || `org-level-${index}`,
+          name: row?.name || (index === 0 && primaryOrganisation?.name ? primaryOrganisation.name : DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index}`),
           options: Array.from(new Set(row?.options || [])),
         };
       }),
@@ -4190,7 +4203,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <div key={level.id || `org-structure-level-${levelIndex}`} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900 p-3 md:grid-cols-[72px_220px_1fr]">
                     <div className="rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-center">
                       <div className="text-[10px] font-semibold uppercase tracking-wide text-cyan-100/60">Level</div>
-                      <div className="mt-1 text-lg font-black text-white">{levelIndex + 1}</div>
+                      <div className="mt-1 text-lg font-black text-white">{levelIndex}</div>
                     </div>
                     <Field
                       label="Level Name"
