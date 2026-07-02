@@ -1376,6 +1376,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const organisationStructureFileInputRef = useRef<HTMLInputElement>(null);
   const [selectedUnitIndex, setSelectedUnitIndex] = useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
+  const [openParentOrgUnitIndex, setOpenParentOrgUnitIndex] = useState<number | null>(null);
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = useState(false);
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
@@ -4015,6 +4016,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       },
     });
   };
+  const clearUnitParentOrganisationPath = (unitIndex: number, unit: any) => {
+    updateRow('units', unitIndex, {
+      settings: {
+        ...(unit.settings || {}),
+        parentOrganisationPath: [],
+        parentOrganisation: '',
+      },
+    });
+    setOpenParentOrgUnitIndex(null);
+  };
 
   return (
     <div className="relative space-y-8" onKeyDownCapture={stopEditableKeyPropagation}>
@@ -4416,30 +4427,75 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
                 <label>
                   <FieldLabel label="Parent Org." info="Select each organisation level in order. The saved path is stored against this unit." />
-                  <div className="flex min-h-[38px] flex-wrap items-center gap-1 rounded border border-gray-600 bg-gray-950 p-1">
-                    {organisationParentLevels.length > 0 ? organisationParentLevels.map((level, parentLevelIndex) => {
-                      const previousSelected = parentLevelIndex === 0 || Boolean(parentOrganisationPath[parentLevelIndex - 1]);
-                      const selectedValue = parentOrganisationPath[parentLevelIndex] || '';
-                      return (
-                        <select
-                          key={`unit-${rowKey}-parent-org-${level.levelIndex}`}
-                          className="min-w-[84px] flex-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                          value={selectedValue}
-                          disabled={!isUnitEditing || !previousSelected}
-                          title={level.name}
-                          onKeyDownCapture={stopEditableKeyPropagation}
-                          onKeyDown={stopEditableKeyPropagation}
-                          onChange={(event) => updateUnitParentOrganisationPath(index, unit, parentLevelIndex, event.target.value)}
-                        >
-                          <option value="">{level.name}</option>
-                          {level.options.map((option) => (
-                            <option key={`${level.levelIndex}-${option}`} value={option}>{option}</option>
-                          ))}
-                        </select>
-                      );
-                    }) : (
-                      <span className="px-2 py-1 text-xs font-semibold text-gray-500">No organisation options</span>
-                    )}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className={`${fieldClass} flex min-h-[38px] items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:opacity-60`}
+                      disabled={!isUnitEditing || organisationParentLevels.length === 0}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setOpenParentOrgUnitIndex(openParentOrgUnitIndex === index ? null : index);
+                      }}
+                    >
+                      <span className={`min-w-0 truncate ${parentOrganisationPath.length > 0 ? 'text-white' : 'text-gray-500'}`}>
+                        {parentOrganisationPath.length > 0 ? parentOrganisationPath.join('-') : 'Choose Level 1'}
+                      </span>
+                      <span className="text-cyan-200">{openParentOrgUnitIndex === index ? '^' : 'v'}</span>
+                    </button>
+                    {openParentOrgUnitIndex === index && isUnitEditing && organisationParentLevels.length > 0 ? (
+                      <div
+                        className="absolute left-0 top-[calc(100%+4px)] z-[180] flex items-start rounded-lg border border-cyan-400/35 bg-gray-950/95 p-2 shadow-2xl shadow-black/45"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {organisationParentLevels
+                          .slice(0, Math.min(organisationParentLevels.length, parentOrganisationPath.length + 1))
+                          .map((level, parentLevelIndex) => {
+                            const selectedValue = parentOrganisationPath[parentLevelIndex] || '';
+                            return (
+                              <div key={`unit-${rowKey}-parent-org-menu-${level.levelIndex}`} className="w-56 border-r border-gray-700/70 last:border-r-0">
+                                <div className="border-b border-gray-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-cyan-200">
+                                  {level.name || `Level ${level.levelIndex}`}
+                                </div>
+                                <div className="max-h-72 overflow-y-auto py-1">
+                                  {level.options.map((option) => {
+                                    const isSelected = option === selectedValue;
+                                    const hasNextLevel = parentLevelIndex < organisationParentLevels.length - 1;
+                                    return (
+                                      <button
+                                        key={`${level.levelIndex}-${option}`}
+                                        type="button"
+                                        className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs font-semibold transition-colors ${
+                                          isSelected
+                                            ? 'bg-cyan-500/20 text-cyan-50'
+                                            : 'text-gray-200 hover:bg-cyan-500/10 hover:text-cyan-50'
+                                        }`}
+                                        onClick={() => {
+                                          updateUnitParentOrganisationPath(index, unit, parentLevelIndex, option);
+                                          if (!hasNextLevel) setOpenParentOrgUnitIndex(null);
+                                        }}
+                                      >
+                                        <span className="min-w-0 truncate">{option}</span>
+                                        {hasNextLevel ? <span className="text-cyan-200">&gt;</span> : null}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        {parentOrganisationPath.length > 0 ? (
+                          <div className="w-28 px-2 py-1">
+                            <button
+                              type="button"
+                              className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-2 text-xs font-bold text-gray-200 hover:border-red-400/60 hover:bg-red-500/10 hover:text-red-100"
+                              onClick={() => clearUnitParentOrganisationPath(index, unit)}
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 </label>
                 <div>
