@@ -58539,6 +58539,7 @@ const PlatformConfigurationSettings = ({
   const [selectedUnitIndex, setSelectedUnitIndex] = reactExports.useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = reactExports.useState(null);
   const [openParentOrgUnitIndex, setOpenParentOrgUnitIndex] = reactExports.useState(null);
+  const [parentOrgMenuDirection, setParentOrgMenuDirection] = reactExports.useState("down");
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = reactExports.useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = reactExports.useState(false);
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = reactExports.useState("");
@@ -61137,7 +61138,15 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                       disabled: !isUnitEditing || organisationParentLevels.length === 0,
                       onClick: (event) => {
                         event.stopPropagation();
-                        setOpenParentOrgUnitIndex(openParentOrgUnitIndex === index ? null : index);
+                        if (openParentOrgUnitIndex === index) {
+                          setOpenParentOrgUnitIndex(null);
+                          return;
+                        }
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        const availableBelow = window.innerHeight - rect.bottom;
+                        const availableAbove = rect.top;
+                        setParentOrgMenuDirection(availableBelow < 340 && availableAbove > availableBelow ? "up" : "down");
+                        setOpenParentOrgUnitIndex(index);
                       },
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -61155,7 +61164,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   openParentOrgUnitIndex === index && isUnitEditing && organisationParentLevels.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "div",
                     {
-                      className: "absolute left-0 top-[calc(100%+4px)] z-[180] flex items-start rounded-lg border border-cyan-400/35 bg-gray-950/95 p-2 shadow-2xl shadow-black/45",
+                      className: `absolute left-0 z-[180] flex items-start rounded-lg border border-cyan-400/35 bg-gray-950/95 p-2 shadow-2xl shadow-black/45 ${parentOrgMenuDirection === "up" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"}`,
                       onClick: (event) => event.stopPropagation(),
                       children: [
                         organisationParentLevels.slice(0, Math.min(organisationParentLevels.length, parentOrganisationPath.length + 1)).map((level, parentLevelIndex) => {

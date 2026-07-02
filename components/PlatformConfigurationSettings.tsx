@@ -1413,6 +1413,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [selectedUnitIndex, setSelectedUnitIndex] = useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
   const [openParentOrgUnitIndex, setOpenParentOrgUnitIndex] = useState<number | null>(null);
+  const [parentOrgMenuDirection, setParentOrgMenuDirection] = useState<'down' | 'up'>('down');
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = useState(false);
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
@@ -4595,7 +4596,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       disabled={!isUnitEditing || organisationParentLevels.length === 0}
                       onClick={(event) => {
                         event.stopPropagation();
-                        setOpenParentOrgUnitIndex(openParentOrgUnitIndex === index ? null : index);
+                        if (openParentOrgUnitIndex === index) {
+                          setOpenParentOrgUnitIndex(null);
+                          return;
+                        }
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        const availableBelow = window.innerHeight - rect.bottom;
+                        const availableAbove = rect.top;
+                        setParentOrgMenuDirection(availableBelow < 340 && availableAbove > availableBelow ? 'up' : 'down');
+                        setOpenParentOrgUnitIndex(index);
                       }}
                     >
                       <span
@@ -4608,7 +4617,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </button>
                     {openParentOrgUnitIndex === index && isUnitEditing && organisationParentLevels.length > 0 ? (
                       <div
-                        className="absolute left-0 top-[calc(100%+4px)] z-[180] flex items-start rounded-lg border border-cyan-400/35 bg-gray-950/95 p-2 shadow-2xl shadow-black/45"
+                        className={`absolute left-0 z-[180] flex items-start rounded-lg border border-cyan-400/35 bg-gray-950/95 p-2 shadow-2xl shadow-black/45 ${
+                          parentOrgMenuDirection === 'up' ? 'bottom-[calc(100%+4px)]' : 'top-[calc(100%+4px)]'
+                        }`}
                         onClick={(event) => event.stopPropagation()}
                       >
                         {organisationParentLevels
