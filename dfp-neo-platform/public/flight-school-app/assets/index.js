@@ -52780,7 +52780,7 @@ const SettingsView = ({
                 const overrideName = getTemplateOverrideDisplayName(template.key);
                 return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/40 p-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => void template.onDownload(), className: "min-w-0 flex-1 truncate whitespace-nowrap rounded-md bg-sky-600 px-3 py-2 text-left text-sm font-semibold text-white hover:bg-sky-700", children: template.downloadLabel }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => void template.onDownload(), className: "w-[45%] min-w-0 shrink-0 truncate whitespace-nowrap rounded-md bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-sky-700", children: template.downloadLabel }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "button",
                       {
