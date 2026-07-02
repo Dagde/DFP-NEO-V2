@@ -37115,6 +37115,7 @@ appliedUpdates.forEach(update => {
                            isReadOnly={isViewingPastDfp}
                            onExternalEventDrop={handleProgramScheduleExternalEventDrop}
                            diagnosticHighlightedEventIds={staffAvailabilityDiagnosticEventIds}
+                           platformConfig={platformConfig}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
                            onOracleMouseDown={handleOracleMouseDown}

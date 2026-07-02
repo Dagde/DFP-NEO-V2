@@ -85,6 +85,7 @@ interface ScheduleViewProps {
   isReadOnly?: boolean;
   onExternalEventDrop?: (event: ScheduleEvent, placement: { startTime: number; resourceId: string }) => void;
   diagnosticHighlightedEventIds?: Set<string>;
+  platformConfig?: any;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -179,6 +180,193 @@ const formatSnapshotDate = (dateStr: string) => {
     }).replace(/ /g, '-');
 };
 
+type OrganisationChartNode = {
+    id: string;
+    label: string;
+    levelName: string;
+    levelIndex: number;
+    unitCode?: string;
+    children: OrganisationChartNode[];
+};
+
+const normaliseOrgChartValue = (value: unknown): string =>
+    String(value || '').trim().replace(/\s+/g, ' ');
+
+const getActiveOrganisation = (platformConfig: any): any => (
+    (platformConfig?.organisations || []).find((organisation: any) => (
+        String(organisation?.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
+    )) || platformConfig?.organisations?.[0] || null
+);
+
+const addOrganisationChartPath = (
+    root: OrganisationChartNode,
+    path: string[],
+    levelNames: string[],
+    unitCode?: string,
+) => {
+    let cursor = root;
+    path.forEach((rawPart, pathIndex) => {
+        const label = normaliseOrgChartValue(rawPart);
+        if (!label) return;
+        const levelIndex = pathIndex + 1;
+        const key = label.toLowerCase();
+        let child = cursor.children.find((node) => node.label.toLowerCase() === key && node.levelIndex === levelIndex);
+        if (!child) {
+            child = {
+                id: `${cursor.id}-${levelIndex}-${key.replace(/[^a-z0-9]+/g, '-') || 'node'}`,
+                label,
+                levelName: levelNames[levelIndex] || `Level ${levelIndex}`,
+                levelIndex,
+                children: [],
+            };
+            cursor.children.push(child);
+        }
+        cursor = child;
+    });
+    if (unitCode) {
+        const label = normaliseOrgChartValue(unitCode);
+        if (!label) return;
+        const key = label.toLowerCase();
+        if (!cursor.children.some((node) => node.unitCode?.toLowerCase() === key || node.label.toLowerCase() === key)) {
+            cursor.children.push({
+                id: `${cursor.id}-unit-${key.replace(/[^a-z0-9]+/g, '-') || 'unit'}`,
+                label,
+                levelName: 'Unit',
+                levelIndex: cursor.levelIndex + 1,
+                unitCode: label,
+                children: [],
+            });
+        }
+    }
+};
+
+const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | null => {
+    const activeOrganisation = getActiveOrganisation(platformConfig);
+    if (!activeOrganisation) return null;
+    const structure = activeOrganisation?.settings?.organisationStructure || {};
+    const levels = Array.isArray(structure.levels) ? structure.levels : [];
+    const levelNames = levels.map((level: any, index: number) => normaliseOrgChartValue(level?.name) || `Level ${index}`);
+    const rootLabel = normaliseOrgChartValue(levels[0]?.name) || normaliseOrgChartValue(activeOrganisation.name || activeOrganisation.code) || 'Organisation';
+    const root: OrganisationChartNode = {
+        id: 'org-root',
+        label: rootLabel,
+        levelName: levelNames[0] || 'Level 0',
+        levelIndex: 0,
+        children: [],
+    };
+    const rootKey = root.label.toLowerCase();
+    const relationshipPaths = Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [];
+    relationshipPaths.forEach((rawPath: unknown) => {
+        const path = (Array.isArray(rawPath) ? rawPath : String(rawPath || '').split('>'))
+            .map(normaliseOrgChartValue)
+            .filter(Boolean);
+        const displayPath = path[0]?.toLowerCase() === rootKey ? path.slice(1) : path;
+        addOrganisationChartPath(root, displayPath, levelNames);
+    });
+    (platformConfig?.units || [])
+        .filter((unit: any) => String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+        .forEach((unit: any) => {
+            const unitCode = normaliseOrgChartValue(unit?.code || unit?.name);
+            if (!unitCode) return;
+            const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath)
+                ? unit.settings.parentOrganisationPath
+                : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || '').split('-');
+            const parentPath = rawPath.map(normaliseOrgChartValue).filter(Boolean);
+            const displayPath = parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath;
+            addOrganisationChartPath(root, displayPath, levelNames, unitCode);
+        });
+    if (root.children.length === 0) {
+        levels.slice(1).forEach((level: any) => {
+            (Array.isArray(level?.options) ? level.options : [])
+                .map(normaliseOrgChartValue)
+                .filter(Boolean)
+                .forEach((option: string) => addOrganisationChartPath(root, [option], levelNames));
+        });
+    }
+    const sortNodes = (node: OrganisationChartNode) => {
+        node.children.sort((a, b) => {
+            if (a.levelIndex !== b.levelIndex) return a.levelIndex - b.levelIndex;
+            if (a.unitCode && !b.unitCode) return 1;
+            if (!a.unitCode && b.unitCode) return -1;
+            return a.label.localeCompare(b.label);
+        });
+        node.children.forEach(sortNodes);
+    };
+    sortNodes(root);
+    return root;
+};
+
+const OrganisationChartBranch: React.FC<{ node: OrganisationChartNode; isRoot?: boolean }> = ({ node, isRoot = false }) => (
+    <li>
+        <button
+            type="button"
+            className={`org-chart-box ${isRoot ? 'org-chart-box-root' : ''} ${node.unitCode ? 'org-chart-box-unit' : ''}`}
+            data-org-node-id={node.id}
+            title={isRoot ? node.label : `${node.levelName}: ${node.label}`}
+        >
+            {!isRoot && <span className="org-chart-level">{node.levelName}</span>}
+            <span className="org-chart-label">{node.label}</span>
+        </button>
+        {node.children.length > 0 ? (
+            <ul>
+                {node.children.map((child) => (
+                    <OrganisationChartBranch key={child.id} node={child} />
+                ))}
+            </ul>
+        ) : null}
+    </li>
+);
+
+const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platformConfig }) => {
+    const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
+    if (!chart) {
+        return (
+            <div className="flex h-full items-center justify-center p-6 text-center text-xs text-slate-400">
+                No organisation structure has been configured.
+            </div>
+        );
+    }
+    const unitCount = (platformConfig?.units || []).filter((unit: any) => String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE').length;
+    return (
+        <div className="h-full overflow-auto px-5 py-4 text-slate-100">
+            <style>{`
+                .org-chart { display: inline-flex; min-width: 100%; justify-content: center; padding: 10px 18px 22px; }
+                .org-chart ul { position: relative; display: flex; justify-content: center; gap: 18px; padding: 26px 0 0; margin: 0; list-style: none; }
+                .org-chart li { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 132px; }
+                .org-chart li::before, .org-chart li::after { content: ''; position: absolute; top: 0; width: calc(50% + 9px); height: 16px; border-top: 1px solid rgba(103, 232, 249, 0.42); }
+                .org-chart li::before { right: 50%; }
+                .org-chart li::after { left: 50%; border-left: 1px solid rgba(103, 232, 249, 0.42); }
+                .org-chart li:only-child::before, .org-chart li:only-child::after { display: none; }
+                .org-chart li:first-child::before, .org-chart li:last-child::after { border-top: 0; }
+                .org-chart li:first-child::after { border-top-left-radius: 8px; }
+                .org-chart li:last-child::before { border-top-right-radius: 8px; }
+                .org-chart ul ul::before { content: ''; position: absolute; top: 0; left: 50%; height: 26px; border-left: 1px solid rgba(103, 232, 249, 0.42); }
+                .org-chart > ul > li::before, .org-chart > ul > li::after { display: none; }
+                .org-chart > ul { padding-top: 0; }
+                .org-chart-box { min-width: 132px; max-width: 168px; min-height: 62px; border: 1px solid rgba(103, 232, 249, 0.46); background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.96)); color: #e5faff; box-shadow: 0 12px 22px rgba(0,0,0,0.26); padding: 9px 10px; text-align: center; transition: border-color 160ms ease, transform 160ms ease, background 160ms ease; }
+                .org-chart-box:hover { border-color: rgba(165, 243, 252, 0.9); background: linear-gradient(180deg, rgba(8, 47, 73, 0.98), rgba(8, 13, 28, 0.98)); transform: translateY(-1px); }
+                .org-chart-box-root { min-width: 190px; border-color: rgba(34, 211, 238, 0.82); background: linear-gradient(180deg, rgba(14, 116, 144, 0.32), rgba(15, 23, 42, 0.98)); }
+                .org-chart-box-unit { border-color: rgba(74, 222, 128, 0.52); }
+                .org-chart-level { display: block; margin-bottom: 3px; font-size: 9px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(125, 211, 252, 0.78); }
+                .org-chart-label { display: block; font-size: 12px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+            `}</style>
+            <div className="mb-4 flex items-start justify-between gap-4 border-b border-cyan-400/20 pb-3">
+                <div>
+                    <h3 className="text-sm font-black uppercase tracking-[0.16em] text-cyan-200">Organisation Structure</h3>
+                    <p className="mt-1 text-xs text-slate-400">{unitCount} configured units mapped from Settings.</p>
+                </div>
+            </div>
+            <div className="rounded border border-cyan-400/20 bg-slate-950/55">
+                <div className="org-chart">
+                    <ul>
+                        <OrganisationChartBranch node={chart} isRoot />
+                    </ul>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ScheduleView: React.FC<ScheduleViewProps> = ({
     date, onDateChange, onDateSelect, snapshotDates = [], events, resources, instructors, traineesData, airframeCount, standbyCount, ftdCount, cptCount,
     onUpdateEvent, onSelectEvent, onReorderResources, zoomLevel, showValidation, showPrePost, syllabusDetails,
@@ -198,6 +386,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isReadOnly = false,
     onExternalEventDrop,
     diagnosticHighlightedEventIds = new Set<string>(),
+    platformConfig,
     timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -1179,7 +1368,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         className={`absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? 'translate-x-0' : '-translate-x-full'}`}
                         style={{ width: 'calc(clamp(360px, 40vw, 680px) + 200px)' }}
                     >
-                        <div className={`h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`} />
+                        <div className={`h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+                            <OrganisationSlideoutDiagram platformConfig={platformConfig} />
+                        </div>
                         <button
                             type="button"
                             onClick={() => setShowResourceUnderlayPanel(value => !value)}
