@@ -1171,13 +1171,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         left: `${resourceSlideoutFrame.left}px`,
                         top: `${resourceSlideoutFrame.top}px`,
                         height: `${resourceSlideoutFrame.height}px`,
-                        width: 'calc(clamp(360px, 40vw, 680px) + 72px)',
+                        width: 'calc(clamp(360px, 40vw, 680px) + 272px)',
                     }}
                     aria-hidden={!showResourceUnderlayPanel}
                 >
                     <aside
                         className={`absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? 'translate-x-0' : '-translate-x-full'}`}
-                        style={{ width: 'clamp(360px, 40vw, 680px)' }}
+                        style={{ width: 'calc(clamp(360px, 40vw, 680px) + 200px)' }}
                     >
                         <div className={`h-full overflow-y-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`} />
                         <button
