@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { initDB, getAllFiles, addFile, getFile, deleteFile } from '../utils/db';
 import UploadFileFlyout from './UploadFileFlyout';
 import SelectDestinationFlyout from './SelectDestinationFlyout';
@@ -42,6 +42,8 @@ import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService'
 
 
 declare var XLSX: any;
+
+const TEMPLATE_OVERRIDE_FOLDER_ID = 'template_overrides';
 
 interface SettingsViewProps {
     hideHeader?: boolean;
@@ -601,9 +603,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         { id: 'trainee_logbook', name: 'Logbook', isSub: true },
         { id: 'staff_data', name: 'Staff Data' },
         { id: 'staff_logbook', name: 'Logbook', isSub: true },
+        { id: TEMPLATE_OVERRIDE_FOLDER_ID, name: 'Template Overrides' },
     ]);
     const [showUpload, setShowUpload] = useState(false);
     const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+    const [pendingTemplateOverride, setPendingTemplateOverride] = useState<{ key: string; label: string } | null>(null);
+    const templateOverrideInputRef = useRef<HTMLInputElement>(null);
     const [showSelectDestination, setShowSelectDestination] = useState(false);
     const [fileToDownload, setFileToDownload] = useState<{ id: string; name: string } | null>(null);
     const [fileToDelete, setFileToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -688,6 +693,81 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const refreshFiles = async () => {
         const files = await getAllFiles();
         setRepoFiles(files);
+    };
+
+    const getTemplateOverride = (templateKey: string) => (
+        repoFiles.find(file => file.folderId === TEMPLATE_OVERRIDE_FOLDER_ID && file.name.startsWith(`${templateKey}::`))
+    );
+
+    const getTemplateOverrideDisplayName = (templateKey: string) => {
+        const override = getTemplateOverride(templateKey);
+        return override ? override.name.replace(`${templateKey}::`, '') : '';
+    };
+
+    const downloadStoredTemplate = async (templateKey: string): Promise<boolean> => {
+        const override = getTemplateOverride(templateKey);
+        if (!override) return false;
+        const record = await getFile(override.id);
+        if (!record) return false;
+        const url = URL.createObjectURL(record.content);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = record.name.replace(`${templateKey}::`, '');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return true;
+    };
+
+    const downloadPublicTemplate = (href: string, fileName: string) => {
+        const link = document.createElement('a');
+        link.href = href;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleChangeTemplateClick = (template: { key: string; label: string }) => {
+        setPendingTemplateOverride(template);
+        if (templateOverrideInputRef.current) templateOverrideInputRef.current.value = '';
+        templateOverrideInputRef.current?.click();
+    };
+
+    const handleTemplateOverrideSelected = async (file?: File | null) => {
+        if (!file || !pendingTemplateOverride) return;
+        const existingOverrides = repoFiles.filter(existingFile => (
+            existingFile.folderId === TEMPLATE_OVERRIDE_FOLDER_ID
+            && existingFile.name.startsWith(`${pendingTemplateOverride.key}::`)
+        ));
+        await Promise.all(existingOverrides.map(existingFile => deleteFile(existingFile.id)));
+        await addFile(file, TEMPLATE_OVERRIDE_FOLDER_ID, `${pendingTemplateOverride.key}::${file.name}`);
+        await refreshFiles();
+        logAudit({
+            page: 'Settings - Data Loaders',
+            action: 'update',
+            description: `Changed ${pendingTemplateOverride.label} download template`,
+            changes: `Template file: ${file.name}`,
+        });
+        onShowSuccess(`${pendingTemplateOverride.label} template updated.`);
+        setPendingTemplateOverride(null);
+    };
+
+    const handleResetTemplateOverride = async (template: { key: string; label: string }) => {
+        const existingOverrides = repoFiles.filter(existingFile => (
+            existingFile.folderId === TEMPLATE_OVERRIDE_FOLDER_ID
+            && existingFile.name.startsWith(`${template.key}::`)
+        ));
+        await Promise.all(existingOverrides.map(existingFile => deleteFile(existingFile.id)));
+        await refreshFiles();
+        logAudit({
+            page: 'Settings - Data Loaders',
+            action: 'update',
+            description: `Reset ${template.label} download template`,
+            changes: 'Restored built-in template download.',
+        });
+        onShowSuccess(`${template.label} template reset to built-in default.`);
     };
 
     // Op Areas Handlers
@@ -1103,34 +1183,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         }
     };
 
-    const handleDownloadInstructorTemplate = () => {
-        const link = document.createElement('a');
-        link.href = '/Staff_Bulk_Update_Template.xlsx';
-        link.download = 'Staff_Bulk_Update_Template.xlsx';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const handleDownloadInstructorTemplate = async () => {
+        if (await downloadStoredTemplate('staff')) return;
+        downloadPublicTemplate('/Staff_Bulk_Update_Template.xlsx', 'Staff_Bulk_Update_Template.xlsx');
     };
 
-    const handleDownloadTraineeTemplate = () => {
-        const link = document.createElement('a');
-        link.href = '/Trainee_Bulk_Update_Template.xlsx';
-        link.download = 'Trainee_Bulk_Update_Template.xlsx';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const handleDownloadTraineeTemplate = async () => {
+        if (await downloadStoredTemplate('trainee')) return;
+        downloadPublicTemplate('/Trainee_Bulk_Update_Template.xlsx', 'Trainee_Bulk_Update_Template.xlsx');
     };
     
-    const handleDownloadLmpTemplate = () => {
-        const link = document.createElement('a');
-        link.href = '/LMP_Syllabus_Template.xlsx';
-        link.download = 'LMP_Syllabus_Template.xlsx';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const handleDownloadLmpTemplate = async () => {
+        if (await downloadStoredTemplate('lmp')) return;
+        downloadPublicTemplate('/LMP_Syllabus_Template.xlsx', 'LMP_Syllabus_Template.xlsx');
     };
 
-    const handleDownloadLogbookTemplate = () => {
+    const handleDownloadLogbookTemplate = async () => {
+        if (await downloadStoredTemplate('logbook')) return;
         const headers = ['Date', 'Aircraft', 'Pilot', 'Student', 'Sortie', 'Duration', 'Result'];
         const ws = XLSX.utils.json_to_sheet([{}], { header: headers });
         const wb = XLSX.utils.book_new();
@@ -1138,7 +1207,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         XLSX.writeFile(wb, "Logbook_Template.xlsx");
     };
 
-    const handleDownloadOrganisationStructureTemplate = () => {
+    const handleDownloadOrganisationStructureTemplate = async () => {
+        if (await downloadStoredTemplate('organisation-structure')) return;
         const rows = [
             ['Level', 'Level Name', 'Option'],
             [0, 'Department of the Air Force', 'Department of the Air Force'],
@@ -1169,6 +1239,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     };
+
+    const dataLoaderTemplateRows = [
+        { key: 'staff', label: 'Staff', downloadLabel: 'Download Staff Template (.xlsx)', onDownload: handleDownloadInstructorTemplate },
+        { key: 'trainee', label: 'Trainee', downloadLabel: 'Download Trainee Template (.xlsx)', onDownload: handleDownloadTraineeTemplate },
+        { key: 'lmp', label: 'LMP', downloadLabel: 'Download LMP Template (.xlsx)', onDownload: handleDownloadLmpTemplate },
+        { key: 'logbook', label: 'Logbook', downloadLabel: 'Download Logbook Template (.xlsx)', onDownload: handleDownloadLogbookTemplate },
+        { key: 'organisation-structure', label: 'Organisational Structure', downloadLabel: 'Download Organisational Structure Template (.xlsx)', onDownload: handleDownloadOrganisationStructureTemplate },
+    ];
     
     const handleDownloadManual = () => {
         const manualHtml = `
@@ -2713,21 +2791,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <legend className="px-2 text-sm font-semibold text-gray-300">Templates</legend>
                                 <div className="mt-2 space-y-2">
                                     <p className="text-xs text-gray-400">Download templates to ensure correct formatting for bulk uploads.</p>
-                                    <button onClick={handleDownloadInstructorTemplate} className="w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold">
-                                        Download Staff Template (.xlsx)
-                                    </button>
-                                    <button onClick={handleDownloadTraineeTemplate} className="w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold">
-                                        Download Trainee Template (.xlsx)
-                                    </button>
-                                    <button onClick={handleDownloadLmpTemplate} className="w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold">
-                                        Download LMP Template (.xlsx)
-                                    </button>
-                                    <button onClick={handleDownloadLogbookTemplate} className="w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold">
-                                        Download Logbook Template (.xlsx)
-                                    </button>
-                                    <button onClick={handleDownloadOrganisationStructureTemplate} className="w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold">
-                                        Download Organisational Structure Template (.xlsx)
-                                    </button>
+                                    <input
+                                        ref={templateOverrideInputRef}
+                                        type="file"
+                                        accept=".xlsx,.xls,.csv"
+                                        className="hidden"
+                                        onChange={(event) => void handleTemplateOverrideSelected(event.target.files?.[0])}
+                                    />
+                                    {dataLoaderTemplateRows.map((template) => {
+                                        const overrideName = getTemplateOverrideDisplayName(template.key);
+                                        return (
+                                            <div key={template.key} className="rounded border border-gray-700 bg-gray-900/70 p-2">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <button onClick={() => void template.onDownload()} className="min-w-0 flex-1 rounded-md bg-sky-600 px-3 py-2 text-left text-sm font-semibold text-white hover:bg-sky-700">
+                                                        {template.downloadLabel}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleChangeTemplateClick(template)}
+                                                        className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20"
+                                                    >
+                                                        Change
+                                                    </button>
+                                                    {overrideName ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void handleResetTemplateOverride(template)}
+                                                            className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20"
+                                                        >
+                                                            Reset
+                                                        </button>
+                                                    ) : null}
+                                                </div>
+                                                <p className="mt-1 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500" title={overrideName || 'Built-in default template'}>
+                                                    {overrideName ? `Custom: ${overrideName}` : 'Built-in default'}
+                                                </p>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </fieldset>
                             <fieldset className="p-3 border border-gray-600 rounded-lg">
