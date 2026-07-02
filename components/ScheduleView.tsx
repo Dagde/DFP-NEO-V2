@@ -332,7 +332,7 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
         ? activeOrganisation.settings.organisationStructure.levels
         : [];
     const maxStructureLevel = Math.max(1, levels.length - 1);
-    const verticalStartLevel = Math.max(2, maxStructureLevel - 1);
+    const verticalStartLevel = maxStructureLevel;
     return (
         <div className="h-full overflow-auto px-5 py-4 text-slate-100">
             <style>{`
