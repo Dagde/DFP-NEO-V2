@@ -786,6 +786,15 @@ const formatTimezoneLabel = (offset: number) => {
     return timezoneOptions.find(option => option.value === offset)?.label || `UTC${offset >= 0 ? '+' : ''}${offset}:00`;
 };
 
+const baseSectionTones = [
+    { border: 'border-cyan-400/55', glow: 'shadow-cyan-950/30', header: 'bg-cyan-500/10', accent: 'bg-cyan-300' },
+    { border: 'border-emerald-400/55', glow: 'shadow-emerald-950/30', header: 'bg-emerald-500/10', accent: 'bg-emerald-300' },
+    { border: 'border-violet-400/55', glow: 'shadow-violet-950/30', header: 'bg-violet-500/10', accent: 'bg-violet-300' },
+    { border: 'border-amber-400/55', glow: 'shadow-amber-950/30', header: 'bg-amber-500/10', accent: 'bg-amber-300' },
+    { border: 'border-sky-400/55', glow: 'shadow-sky-950/30', header: 'bg-sky-500/10', accent: 'bg-sky-300' },
+    { border: 'border-rose-400/55', glow: 'shadow-rose-950/30', header: 'bg-rose-500/10', accent: 'bg-rose-300' },
+];
+
 const LocaleSettingsSection: React.FC<{
     locations: string[];
     onUpdateLocations: (locations: string[]) => void;
@@ -1103,10 +1112,12 @@ const LocaleSettingsSection: React.FC<{
                 {displayedLocations.map((location, locationIndex) => {
                     const assignedUnits = displayedUnits.filter(unit => displayedUnitLocations[unit] === location);
                     const trainingAreas = displayedOpAreas[location] || [];
+                    const tone = baseSectionTones[locationIndex % baseSectionTones.length];
                     return (
-                        <section key={`settings-location-${locationIndex}`} className="rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
-                            <div className="border-b border-gray-700 bg-gray-900/45 px-4 py-3">
+                        <section key={`settings-location-${locationIndex}`} className={`overflow-hidden rounded-lg border-2 ${tone.border} bg-gray-800 shadow-lg ${tone.glow}`}>
+                            <div className={`border-b border-gray-700 ${tone.header} px-4 py-3`}>
                                 <div className="flex flex-wrap items-start gap-3">
+                                    <div className={`mt-1 h-10 w-1.5 shrink-0 rounded-full ${tone.accent}`} />
                                     <div className="min-w-0 flex-1">
                                         {isEditing ? (
                                             <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_6rem]">
