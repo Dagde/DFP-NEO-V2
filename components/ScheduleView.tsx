@@ -296,11 +296,11 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
     return root;
 };
 
-const OrganisationChartBranch: React.FC<{ node: OrganisationChartNode; isRoot?: boolean }> = ({ node, isRoot = false }) => (
-    <li>
+const OrganisationChartBranch: React.FC<{ node: OrganisationChartNode; isRoot?: boolean; maxStructureLevel: number }> = ({ node, isRoot = false, maxStructureLevel }) => (
+    <li className={node.levelIndex >= 2 ? 'org-chart-compact-node' : undefined}>
         <button
             type="button"
-            className={`org-chart-box ${isRoot ? 'org-chart-box-root' : ''} ${node.unitCode ? 'org-chart-box-unit' : ''}`}
+            className={`org-chart-box ${isRoot ? 'org-chart-box-root' : ''} ${node.levelIndex >= 2 ? 'org-chart-box-compact' : ''} ${node.unitCode ? 'org-chart-box-unit' : ''}`}
             data-org-node-id={node.id}
             title={isRoot ? node.label : `${node.levelName}: ${node.label}`}
         >
@@ -308,9 +308,9 @@ const OrganisationChartBranch: React.FC<{ node: OrganisationChartNode; isRoot?: 
             <span className="org-chart-label">{node.label}</span>
         </button>
         {node.children.length > 0 ? (
-            <ul>
+            <ul className={node.children.every((child) => child.levelIndex >= maxStructureLevel) ? 'org-chart-vertical-level' : undefined}>
                 {node.children.map((child) => (
-                    <OrganisationChartBranch key={child.id} node={child} />
+                    <OrganisationChartBranch key={child.id} node={child} maxStructureLevel={maxStructureLevel} />
                 ))}
             </ul>
         ) : null}
@@ -327,12 +327,18 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
         );
     }
     const unitCount = (platformConfig?.units || []).filter((unit: any) => String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE').length;
+    const activeOrganisation = getActiveOrganisation(platformConfig);
+    const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels)
+        ? activeOrganisation.settings.organisationStructure.levels
+        : [];
+    const maxStructureLevel = Math.max(1, levels.length - 1);
     return (
         <div className="h-full overflow-auto px-5 py-4 text-slate-100">
             <style>{`
                 .org-chart { display: inline-flex; min-width: 100%; justify-content: center; padding: 10px 18px 22px; }
                 .org-chart ul { position: relative; display: flex; justify-content: center; gap: 18px; padding: 26px 0 0; margin: 0; list-style: none; }
                 .org-chart li { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 132px; }
+                .org-chart li.org-chart-compact-node { min-width: 66px; }
                 .org-chart li::before, .org-chart li::after { content: ''; position: absolute; top: 0; width: calc(50% + 9px); height: 16px; border-top: 1px solid rgba(103, 232, 249, 0.42); }
                 .org-chart li::before { right: 50%; }
                 .org-chart li::after { left: 50%; border-left: 1px solid rgba(103, 232, 249, 0.42); }
@@ -346,9 +352,18 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
                 .org-chart-box { min-width: 132px; max-width: 168px; min-height: 62px; border: 1px solid rgba(103, 232, 249, 0.46); background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.96)); color: #e5faff; box-shadow: 0 12px 22px rgba(0,0,0,0.26); padding: 9px 10px; text-align: center; transition: border-color 160ms ease, transform 160ms ease, background 160ms ease; }
                 .org-chart-box:hover { border-color: rgba(165, 243, 252, 0.9); background: linear-gradient(180deg, rgba(8, 47, 73, 0.98), rgba(8, 13, 28, 0.98)); transform: translateY(-1px); }
                 .org-chart-box-root { min-width: 190px; border-color: rgba(34, 211, 238, 0.82); background: linear-gradient(180deg, rgba(14, 116, 144, 0.32), rgba(15, 23, 42, 0.98)); }
+                .org-chart-box-compact { min-width: 66px; max-width: 84px; min-height: 54px; padding: 7px 6px; }
                 .org-chart-box-unit { border-color: rgba(74, 222, 128, 0.52); }
                 .org-chart-level { display: block; margin-bottom: 3px; font-size: 9px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(125, 211, 252, 0.78); }
                 .org-chart-label { display: block; font-size: 12px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+                .org-chart-box-compact .org-chart-level { font-size: 7px; letter-spacing: 0.08em; }
+                .org-chart-box-compact .org-chart-label { font-size: 10px; line-height: 1.12; }
+                .org-chart ul.org-chart-vertical-level { flex-direction: column; align-items: center; gap: 8px; padding-top: 24px; }
+                .org-chart ul.org-chart-vertical-level::before { height: 24px; }
+                .org-chart ul.org-chart-vertical-level > li { min-width: 66px; }
+                .org-chart ul.org-chart-vertical-level > li::before { display: none; }
+                .org-chart ul.org-chart-vertical-level > li::after { left: 50%; height: calc(100% + 8px); width: 0; border-top: 0; border-left: 1px solid rgba(103, 232, 249, 0.34); }
+                .org-chart ul.org-chart-vertical-level > li:last-child::after { height: 16px; }
             `}</style>
             <div className="mb-4 flex items-start justify-between gap-4 border-b border-cyan-400/20 pb-3">
                 <div>
@@ -359,7 +374,7 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
             <div className="rounded border border-cyan-400/20 bg-slate-950/55">
                 <div className="org-chart">
                     <ul>
-                        <OrganisationChartBranch node={chart} isRoot />
+                        <OrganisationChartBranch node={chart} isRoot maxStructureLevel={maxStructureLevel} />
                     </ul>
                 </div>
             </div>
