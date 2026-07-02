@@ -51457,6 +51457,37 @@ const SettingsView = ({
     XLSX.utils.book_append_sheet(wb, ws, "Logbook");
     XLSX.writeFile(wb, "Logbook_Template.xlsx");
   };
+  const handleDownloadOrganisationStructureTemplate = () => {
+    const rows = [
+      ["Level", "Level Name", "Option"],
+      [0, "Department of the Air Force", "Department of the Air Force"],
+      [1, "Headquarters", "HQ USAF"],
+      [2, "Command", "Air Force Global Strike Command"],
+      [3, "Numbered Force", "Eighth Air Force"],
+      [4, "Wing", "2nd Bomb Wing"],
+      [5, "Group", "2nd Operations Group"],
+      [6, "Squadron", "96th Bomb Squadron"],
+      [7, "Flight", "Flight"],
+      [8, "Crew", "Aircrew"]
+    ];
+    if (typeof XLSX !== "undefined") {
+      const worksheet = XLSX.utils.aoa_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Organisation Structure");
+      XLSX.writeFile(workbook, "Organisation_Structure_Template.xlsx");
+      return;
+    }
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "Organisation_Structure_Template.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
   const handleUpdateIconClick = (file) => {
     setFileToProcess(file);
     setShowUpdateConfirmation(true);
@@ -52677,7 +52708,8 @@ const SettingsView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDownloadInstructorTemplate, className: "w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold", children: "Download Staff Template (.xlsx)" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDownloadTraineeTemplate, className: "w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold", children: "Download Trainee Template (.xlsx)" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDownloadLmpTemplate, className: "w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold", children: "Download LMP Template (.xlsx)" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDownloadLogbookTemplate, className: "w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold", children: "Download Logbook Template (.xlsx)" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDownloadLogbookTemplate, className: "w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold", children: "Download Logbook Template (.xlsx)" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDownloadOrganisationStructureTemplate, className: "w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold", children: "Download Organisational Structure Template (.xlsx)" })
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
