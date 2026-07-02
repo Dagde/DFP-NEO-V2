@@ -185,14 +185,10 @@ const ACCESS_SCOPE_TONE = {
   fill: 'rgba(8, 145, 178, 0.24)',
   applyBorder: 'rgba(103, 232, 249, 0.62)',
 };
-const platformLocationRowTones = [
-  { border: 'rgba(34, 211, 238, 0.72)', accent: 'rgba(34, 211, 238, 0.8)' },
-  { border: 'rgba(52, 211, 153, 0.72)', accent: 'rgba(52, 211, 153, 0.8)' },
-  { border: 'rgba(167, 139, 250, 0.72)', accent: 'rgba(167, 139, 250, 0.8)' },
-  { border: 'rgba(251, 191, 36, 0.72)', accent: 'rgba(251, 191, 36, 0.8)' },
-  { border: 'rgba(56, 189, 248, 0.72)', accent: 'rgba(56, 189, 248, 0.8)' },
-  { border: 'rgba(244, 114, 182, 0.72)', accent: 'rgba(244, 114, 182, 0.8)' },
-];
+const platformLocationRowTone = {
+  border: 'rgba(244, 114, 182, 0.72)',
+  accent: 'rgba(244, 114, 182, 0.8)',
+};
 
 type StandardMissionResourceType = 'Flight' | 'FTD' | 'CPT' | 'Ground';
 
@@ -4258,15 +4254,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             const codeSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.code, airfieldCatalogueLookup);
             const iataSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.iataCode, airfieldCatalogueLookup);
             const nameSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.name, airfieldCatalogueLookup);
-            const rowTone = platformLocationRowTones[index % platformLocationRowTones.length];
             return (
               <div
                 key={rowKey}
                 ref={(node) => { locationRowRefs.current[rowKey] = node; }}
                 className="relative grid gap-3 rounded-lg border-2 bg-gray-900/95 p-3 pr-11 md:grid-cols-12"
                 style={{
-                  borderColor: rowTone.border,
-                  boxShadow: `inset 4px 0 0 ${rowTone.accent}, 0 12px 24px rgba(0,0,0,0.22)`,
+                  borderColor: platformLocationRowTone.border,
+                  boxShadow: `inset 4px 0 0 ${platformLocationRowTone.accent}, 0 12px 24px rgba(0,0,0,0.22)`,
                 }}
               >
                 {canEdit ? (
