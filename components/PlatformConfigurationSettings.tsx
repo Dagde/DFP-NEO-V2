@@ -1407,6 +1407,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [airfieldCatalogueError, setAirfieldCatalogueError] = useState('');
   const [organisationStructureUnlocked, setOrganisationStructureUnlocked] = useState(false);
+  const [organisationStructureOptionDrafts, setOrganisationStructureOptionDrafts] = useState<Record<string, string>>({});
   const [organisationStructureImportError, setOrganisationStructureImportError] = useState('');
   const organisationStructureFileInputRef = useRef<HTMLInputElement>(null);
   const [selectedUnitIndex, setSelectedUnitIndex] = useState(0);
@@ -1891,6 +1892,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
+  const startOrganisationStructureEdit = () => {
+    setOrganisationStructureOptionDrafts(Object.fromEntries(
+      organisationStructure.levels.map((level) => [level.id, level.options.join('\n')]),
+    ));
+    setOrganisationStructureUnlocked(true);
+  };
+
   const downloadOrganisationStructureTemplate = () => {
     const organisationName = String(primaryOrganisation?.name || 'Department of the Air Force').trim();
     const rows = [
@@ -1937,6 +1945,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       }),
       ...(relationshipPaths && relationshipPaths.length > 0 ? { relationshipPaths } : {}),
     });
+    setOrganisationStructureOptionDrafts({});
     setOrganisationStructureImportError('');
     setOrganisationStructureUnlocked(true);
     return true;
@@ -2059,7 +2068,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const saveOrganisationStructure = async () => {
     const saved = await save(undefined, 'platform-organisation', { reloadPage: false, successMessage: 'Organisation structure saved.' });
-    if (saved) setOrganisationStructureUnlocked(false);
+    if (saved) {
+      setOrganisationStructureOptionDrafts({});
+      setOrganisationStructureUnlocked(false);
+    }
   };
 
   const updateDeploymentProfile = (changes: Record<string, any>) => {
@@ -4310,7 +4322,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           subtitle="The top-level customer or operating organisation for this deployment."
           action={canEdit ? (
             <div className="flex items-center gap-[1px]">
-              <button type="button" onClick={() => setOrganisationStructureUnlocked(true)} disabled={organisationStructureUnlocked} className={platformActionButtonClass}>EDIT</button>
+              <button type="button" onClick={startOrganisationStructureEdit} disabled={organisationStructureUnlocked} className={platformActionButtonClass}>EDIT</button>
               <button type="button" onClick={() => void saveOrganisationStructure()} disabled={!organisationStructureUnlocked || saving || applyingChanges} className={platformActionButtonClass}>Save</button>
             </div>
           ) : null}
@@ -4398,11 +4410,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       {organisationStructureUnlocked ? (
                         <textarea
                           className={`${fieldClass} min-h-[76px] resize-y`}
-                          value={level.options.join('\n')}
+                          value={organisationStructureOptionDrafts[level.id] ?? level.options.join('\n')}
                           disabled={!canEdit}
                           onKeyDownCapture={stopEditableKeyPropagation}
                           onKeyDown={stopEditableKeyPropagation}
-                          onChange={(event) => updateOrganisationStructureLevel(levelIndex, { options: event.target.value.split(/\r?\n/) })}
+                          onChange={(event) => {
+                            const nextText = event.target.value;
+                            setOrganisationStructureOptionDrafts((prev) => ({ ...prev, [level.id]: nextText }));
+                            updateOrganisationStructureLevel(levelIndex, { options: nextText.split(/\r?\n/) });
+                          }}
                         />
                       ) : (
                         <div className="flex min-h-[42px] items-center gap-2 overflow-hidden rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300">

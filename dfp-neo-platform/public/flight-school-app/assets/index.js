@@ -58533,6 +58533,7 @@ const PlatformConfigurationSettings = ({
   const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = reactExports.useState("idle");
   const [airfieldCatalogueError, setAirfieldCatalogueError] = reactExports.useState("");
   const [organisationStructureUnlocked, setOrganisationStructureUnlocked] = reactExports.useState(false);
+  const [organisationStructureOptionDrafts, setOrganisationStructureOptionDrafts] = reactExports.useState({});
   const [organisationStructureImportError, setOrganisationStructureImportError] = reactExports.useState("");
   const organisationStructureFileInputRef = reactExports.useRef(null);
   const [selectedUnitIndex, setSelectedUnitIndex] = reactExports.useState(0);
@@ -58951,6 +58952,12 @@ const PlatformConfigurationSettings = ({
       } : level)
     });
   };
+  const startOrganisationStructureEdit = () => {
+    setOrganisationStructureOptionDrafts(Object.fromEntries(
+      organisationStructure.levels.map((level) => [level.id, level.options.join("\n")])
+    ));
+    setOrganisationStructureUnlocked(true);
+  };
   const applyImportedOrganisationStructure = (grouped, relationshipPaths) => {
     if (grouped.size === 0) {
       setOrganisationStructureImportError("No valid organisation structure rows found.");
@@ -58970,6 +58977,7 @@ const PlatformConfigurationSettings = ({
       }),
       ...relationshipPaths && relationshipPaths.length > 0 ? { relationshipPaths } : {}
     });
+    setOrganisationStructureOptionDrafts({});
     setOrganisationStructureImportError("");
     setOrganisationStructureUnlocked(true);
     return true;
@@ -59079,7 +59087,10 @@ const PlatformConfigurationSettings = ({
   };
   const saveOrganisationStructure = async () => {
     const saved = await save(void 0, "platform-organisation", { reloadPage: false, successMessage: "Organisation structure saved." });
-    if (saved) setOrganisationStructureUnlocked(false);
+    if (saved) {
+      setOrganisationStructureOptionDrafts({});
+      setOrganisationStructureUnlocked(false);
+    }
   };
   const updateDeploymentProfile = (changes) => {
     updatePrimaryOrganisationSettings((settings) => ({
@@ -60860,7 +60871,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           title: "Organisation",
           subtitle: "The top-level customer or operating organisation for this deployment.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setOrganisationStructureUnlocked(true), disabled: organisationStructureUnlocked, className: platformActionButtonClass, children: "EDIT" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: startOrganisationStructureEdit, disabled: organisationStructureUnlocked, className: platformActionButtonClass, children: "EDIT" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => void saveOrganisationStructure(), disabled: !organisationStructureUnlocked || saving || applyingChanges, className: platformActionButtonClass, children: "Save" })
           ] }) : null
         }
@@ -60958,11 +60969,15 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   "textarea",
                   {
                     className: `${fieldClass} min-h-[76px] resize-y`,
-                    value: level.options.join("\n"),
+                    value: organisationStructureOptionDrafts[level.id] ?? level.options.join("\n"),
                     disabled: !canEdit,
                     onKeyDownCapture: stopEditableKeyPropagation,
                     onKeyDown: stopEditableKeyPropagation,
-                    onChange: (event) => updateOrganisationStructureLevel(levelIndex, { options: event.target.value.split(/\r?\n/) })
+                    onChange: (event) => {
+                      const nextText = event.target.value;
+                      setOrganisationStructureOptionDrafts((prev) => ({ ...prev, [level.id]: nextText }));
+                      updateOrganisationStructureLevel(levelIndex, { options: nextText.split(/\r?\n/) });
+                    }
                   }
                 ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-h-[42px] items-center gap-2 overflow-hidden rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300", children: level.options.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                   level.options.slice(0, 3).map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-[180px] truncate rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-gray-200", title: option, children: option }, option)),
