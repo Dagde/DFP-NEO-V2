@@ -333,7 +333,7 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
         : [];
     const maxStructureLevel = Math.max(1, levels.length - 1);
     const squadronLevelIndex = levels.findIndex((level: any) => /\b(sqn|squadron)\b/i.test(String(level?.name || '')));
-    const verticalStartLevel = squadronLevelIndex >= 1 ? squadronLevelIndex : maxStructureLevel;
+    const verticalStartLevel = squadronLevelIndex >= 1 ? squadronLevelIndex : maxStructureLevel + 1;
     return (
         <div className="h-full overflow-auto px-5 py-4 text-slate-100">
             <style>{`
