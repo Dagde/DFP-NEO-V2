@@ -57631,10 +57631,17 @@ const normaliseOrganisationStructure = (source, organisationName = "") => {
     const rawLevelName = String(rawLevel.name || rawLevel.label || "");
     const defaultLevelName = DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index}`;
     const options = Array.isArray(rawLevel.options) ? rawLevel.options : String(rawLevel.options || "").split(/\r?\n|;/);
+    const childrenByParent = rawLevel.childrenByParent && typeof rawLevel.childrenByParent === "object" ? Object.fromEntries(
+      Object.entries(rawLevel.childrenByParent).map(([parent, children]) => [
+        String(parent || "").trim(),
+        Array.from(new Set((Array.isArray(children) ? children : String(children || "").split(/\r?\n|;/)).map((child) => String(child || "").trim()).filter(Boolean)))
+      ]).filter(([parent, children]) => parent && children.length > 0)
+    ) : void 0;
     return {
       id: String(rawLevel.id || `org-level-${index}`),
       name: index === 0 && organisationLevelName && (!rawLevelName.trim() || rawLevelName.trim() === DEFAULT_ORGANISATION_STRUCTURE_LEVELS[0]) ? organisationLevelName : rawLevelName.trim() ? rawLevelName : defaultLevelName,
-      options: Array.from(new Set(options.map((option) => String(option || "")).filter((option) => option.trim())))
+      options: Array.from(new Set(options.map((option) => String(option || "")).filter((option) => option.trim()))),
+      ...childrenByParent && Object.keys(childrenByParent).length > 0 ? { childrenByParent } : {}
     };
   });
   return { levelCount, levels };
@@ -58923,7 +58930,8 @@ const PlatformConfigurationSettings = ({
       levels: organisationStructure.levels.map((level, index) => index === levelIndex ? {
         ...level,
         ...changes,
-        options: changes.options ? Array.from(new Set(changes.options.filter((option) => option.trim()))) : level.options
+        options: changes.options ? Array.from(new Set(changes.options.filter((option) => option.trim()))) : level.options,
+        childrenByParent: changes.options ? void 0 : level.childrenByParent
       } : level)
     });
   };
@@ -58940,7 +58948,8 @@ const PlatformConfigurationSettings = ({
         return {
           id: organisationStructure.levels[index]?.id || `org-level-${index}`,
           name: row?.name || (index === 0 && primaryOrganisation?.name ? primaryOrganisation.name : DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index}`),
-          options: Array.from(new Set(row?.options || []))
+          options: Array.from(new Set(row?.options || [])),
+          ...row?.childrenByParent ? { childrenByParent: row.childrenByParent } : {}
         };
       })
     });
@@ -59004,6 +59013,20 @@ const PlatformConfigurationSettings = ({
           options: []
         };
         current.options.push(option);
+        grouped.set(levelNumber, current);
+      });
+      levelColumns.forEach(({ columnIndex, levelNumber }, index) => {
+        if (index === 0) return;
+        const child = String(row[columnIndex] || "").trim();
+        const parent = String(row[levelColumns[index - 1].columnIndex] || "").trim();
+        if (!parent || !child) return;
+        const current = grouped.get(levelNumber) || {
+          name: levelNames.get(levelNumber) || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] || `Level ${levelNumber}`,
+          options: []
+        };
+        const childrenByParent = current.childrenByParent || {};
+        childrenByParent[parent] = Array.from(/* @__PURE__ */ new Set([...childrenByParent[parent] || [], child]));
+        current.childrenByParent = childrenByParent;
         grouped.set(levelNumber, current);
       });
     });
@@ -60710,6 +60733,13 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     });
     setOpenParentOrgUnitIndex(null);
   };
+  const getFilteredParentOrganisationOptions = (level, parentOrganisationPath, parentLevelIndex) => {
+    if (parentLevelIndex === 0) return level.options;
+    const previousParent = parentOrganisationPath[parentLevelIndex - 1] || "";
+    const sourceLevel = organisationStructure.levels[level.levelIndex];
+    const filteredOptions = previousParent && sourceLevel?.childrenByParent ? sourceLevel.childrenByParent[previousParent] || [] : [];
+    return filteredOptions.length > 0 ? filteredOptions : level.options;
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: stopEditableKeyPropagation, children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-cyan-100", children: "One moment while we apply your changes" }),
@@ -61081,9 +61111,10 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                       children: [
                         organisationParentLevels.slice(0, Math.min(organisationParentLevels.length, parentOrganisationPath.length + 1)).map((level, parentLevelIndex) => {
                           const selectedValue = parentOrganisationPath[parentLevelIndex] || "";
+                          const levelOptions = getFilteredParentOrganisationOptions(level, parentOrganisationPath, parentLevelIndex);
                           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-56 border-r border-gray-700/70 last:border-r-0", children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-cyan-200", children: level.name || `Level ${level.levelIndex}` }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-72 overflow-y-auto py-1", children: level.options.map((option) => {
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-72 overflow-y-auto py-1", children: levelOptions.map((option) => {
                               const isSelected = option === selectedValue;
                               const hasNextLevel = parentLevelIndex < organisationParentLevels.length - 1;
                               return /* @__PURE__ */ jsxRuntimeExports.jsxs(

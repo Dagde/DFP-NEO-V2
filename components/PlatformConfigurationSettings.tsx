@@ -229,6 +229,7 @@ interface OrganisationStructureLevel {
   id: string;
   name: string;
   options: string[];
+  childrenByParent?: Record<string, string[]>;
 }
 
 interface OrganisationStructureSettings {
@@ -261,12 +262,23 @@ const normaliseOrganisationStructure = (source: unknown, organisationName = ''):
     const options = Array.isArray(rawLevel.options)
       ? rawLevel.options
       : String(rawLevel.options || '').split(/\r?\n|;/);
+    const childrenByParent = rawLevel.childrenByParent && typeof rawLevel.childrenByParent === 'object'
+      ? Object.fromEntries(
+          Object.entries(rawLevel.childrenByParent).map(([parent, children]) => [
+            String(parent || '').trim(),
+            Array.from(new Set((Array.isArray(children) ? children : String(children || '').split(/\r?\n|;/))
+              .map((child: unknown) => String(child || '').trim())
+              .filter(Boolean))),
+          ]).filter(([parent, children]) => parent && (children as string[]).length > 0)
+        )
+      : undefined;
     return {
       id: String(rawLevel.id || `org-level-${index}`),
       name: index === 0 && organisationLevelName && (!rawLevelName.trim() || rawLevelName.trim() === DEFAULT_ORGANISATION_STRUCTURE_LEVELS[0])
         ? organisationLevelName
         : (rawLevelName.trim() ? rawLevelName : defaultLevelName),
       options: Array.from(new Set(options.map((option: unknown) => String(option || '')).filter((option) => option.trim()))),
+      ...(childrenByParent && Object.keys(childrenByParent).length > 0 ? { childrenByParent } : {}),
     };
   });
   return { levelCount, levels };
@@ -1847,6 +1859,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               ...level,
               ...changes,
               options: changes.options ? Array.from(new Set(changes.options.filter((option) => option.trim()))) : level.options,
+              childrenByParent: changes.options ? undefined : level.childrenByParent,
             }
           : level
       )),
@@ -1877,7 +1890,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     downloadTextFile('Organisation_Structure_Template.csv', rows.map((row) => row.join(',')).join('\n'), 'text/csv');
   };
 
-  const applyImportedOrganisationStructure = (grouped: Map<number, { name: string; options: string[] }>): boolean => {
+  const applyImportedOrganisationStructure = (grouped: Map<number, { name: string; options: string[]; childrenByParent?: Record<string, string[]> }>): boolean => {
     if (grouped.size === 0) {
       setOrganisationStructureImportError('No valid organisation structure rows found.');
       return false;
@@ -1891,6 +1904,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           id: organisationStructure.levels[index]?.id || `org-level-${index}`,
           name: row?.name || (index === 0 && primaryOrganisation?.name ? primaryOrganisation.name : DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index}`),
           options: Array.from(new Set(row?.options || [])),
+          ...(row?.childrenByParent ? { childrenByParent: row.childrenByParent } : {}),
         };
       }),
     });
@@ -1900,7 +1914,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const importOrganisationStructureRows = (rows: any[]): boolean => {
-    const grouped = new Map<number, { name: string; options: string[] }>();
+    const grouped = new Map<number, { name: string; options: string[]; childrenByParent?: Record<string, string[]> }>();
     const parsedRows = rows.map((row) => ({
       row,
       levelNumber: Math.round(Number(row.Level ?? row.level ?? row['Level Number'] ?? row['level number'])),
@@ -1952,7 +1966,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         !!entry && Number.isFinite(entry.levelNumber) && entry.levelNumber >= 0 && entry.levelNumber <= 11
       ));
     if (levelColumns.length === 0) return false;
-    const grouped = new Map<number, { name: string; options: string[] }>();
+    const grouped = new Map<number, { name: string; options: string[]; childrenByParent?: Record<string, string[]> }>();
     rows.slice(headerRowIndex + 1).forEach((row) => {
       if (!Array.isArray(row)) return;
       levelColumns.forEach(({ columnIndex, levelNumber }) => {
@@ -1963,6 +1977,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           options: [],
         };
         current.options.push(option);
+        grouped.set(levelNumber, current);
+      });
+      levelColumns.forEach(({ columnIndex, levelNumber }, index) => {
+        if (index === 0) return;
+        const child = String(row[columnIndex] || '').trim();
+        const parent = String(row[levelColumns[index - 1].columnIndex] || '').trim();
+        if (!parent || !child) return;
+        const current = grouped.get(levelNumber) || {
+          name: levelNames.get(levelNumber) || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] || `Level ${levelNumber}`,
+          options: [],
+        };
+        const childrenByParent = current.childrenByParent || {};
+        childrenByParent[parent] = Array.from(new Set([...(childrenByParent[parent] || []), child]));
+        current.childrenByParent = childrenByParent;
         grouped.set(levelNumber, current);
       });
     });
@@ -4085,6 +4113,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
     setOpenParentOrgUnitIndex(null);
   };
+  const getFilteredParentOrganisationOptions = (level: { options: string[]; levelIndex: number }, parentOrganisationPath: string[], parentLevelIndex: number): string[] => {
+    if (parentLevelIndex === 0) return level.options;
+    const previousParent = parentOrganisationPath[parentLevelIndex - 1] || '';
+    const sourceLevel = organisationStructure.levels[level.levelIndex];
+    const filteredOptions = previousParent && sourceLevel?.childrenByParent
+      ? sourceLevel.childrenByParent[previousParent] || []
+      : [];
+    return filteredOptions.length > 0 ? filteredOptions : level.options;
+  };
 
   return (
     <div className="relative space-y-8" onKeyDownCapture={stopEditableKeyPropagation}>
@@ -4507,13 +4544,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           .slice(0, Math.min(organisationParentLevels.length, parentOrganisationPath.length + 1))
                           .map((level, parentLevelIndex) => {
                             const selectedValue = parentOrganisationPath[parentLevelIndex] || '';
+                            const levelOptions = getFilteredParentOrganisationOptions(level, parentOrganisationPath, parentLevelIndex);
                             return (
                               <div key={`unit-${rowKey}-parent-org-menu-${level.levelIndex}`} className="w-56 border-r border-gray-700/70 last:border-r-0">
                                 <div className="border-b border-gray-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-cyan-200">
                                   {level.name || `Level ${level.levelIndex}`}
                                 </div>
                                 <div className="max-h-72 overflow-y-auto py-1">
-                                  {level.options.map((option) => {
+                                  {levelOptions.map((option) => {
                                     const isSelected = option === selectedValue;
                                     const hasNextLevel = parentLevelIndex < organisationParentLevels.length - 1;
                                     return (
