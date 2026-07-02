@@ -235,6 +235,7 @@ interface OrganisationStructureLevel {
 interface OrganisationStructureSettings {
   levelCount: number;
   levels: OrganisationStructureLevel[];
+  relationshipPaths?: string[][];
 }
 
 const DEFAULT_ORGANISATION_STRUCTURE_LEVELS = [
@@ -255,6 +256,15 @@ const normaliseOrganisationParentKey = (value: unknown): string =>
 const normaliseOrganisationStructure = (source: unknown, organisationName = ''): OrganisationStructureSettings => {
   const raw = (source || {}) as any;
   const rawLevels = Array.isArray(raw.levels) ? raw.levels : [];
+  const relationshipPaths = Array.isArray(raw.relationshipPaths)
+    ? raw.relationshipPaths
+        .map((path: unknown) => (
+          Array.isArray(path)
+            ? path.map((part: unknown) => String(part || '').trim()).filter(Boolean)
+            : String(path || '').split('>').map((part) => part.trim()).filter(Boolean)
+        ))
+        .filter((path: string[]) => path.length > 1)
+    : undefined;
   const requestedCount = Number(raw.levelCount);
   const levelCount = Math.max(1, Math.min(12, Number.isFinite(requestedCount) && requestedCount > 0 ? Math.round(requestedCount) : Math.max(rawLevels.length, 4)));
   const organisationLevelName = String(organisationName || '').trim();
@@ -284,7 +294,11 @@ const normaliseOrganisationStructure = (source: unknown, organisationName = ''):
       ...(childrenByParent && Object.keys(childrenByParent).length > 0 ? { childrenByParent } : {}),
     };
   });
-  return { levelCount, levels };
+  return {
+    levelCount,
+    levels,
+    ...(relationshipPaths && relationshipPaths.length > 0 ? { relationshipPaths } : {}),
+  };
 };
 
 const clampWholeNumber = (value: unknown, fallback: number, min: number, max: number): number => {
@@ -1850,12 +1864,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           options: [],
         }
       )),
+      relationshipPaths: organisationStructure.relationshipPaths?.filter((path) => path.length <= count),
     });
   };
 
   const updateOrganisationStructureLevel = (levelIndex: number, changes: Partial<OrganisationStructureLevel>) => {
     updateOrganisationStructure({
       ...organisationStructure,
+      relationshipPaths: changes.options ? undefined : organisationStructure.relationshipPaths,
       levels: organisationStructure.levels.map((level, index) => (
         index === levelIndex
           ? {
@@ -1893,7 +1909,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     downloadTextFile('Organisation_Structure_Template.csv', rows.map((row) => row.join(',')).join('\n'), 'text/csv');
   };
 
-  const applyImportedOrganisationStructure = (grouped: Map<number, { name: string; options: string[]; childrenByParent?: Record<string, string[]> }>): boolean => {
+  const applyImportedOrganisationStructure = (
+    grouped: Map<number, { name: string; options: string[]; childrenByParent?: Record<string, string[]> }>,
+    relationshipPaths?: string[][],
+  ): boolean => {
     if (grouped.size === 0) {
       setOrganisationStructureImportError('No valid organisation structure rows found.');
       return false;
@@ -1910,6 +1929,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ...(row?.childrenByParent ? { childrenByParent: row.childrenByParent } : {}),
         };
       }),
+      ...(relationshipPaths && relationshipPaths.length > 0 ? { relationshipPaths } : {}),
     });
     setOrganisationStructureImportError('');
     setOrganisationStructureUnlocked(true);
@@ -1970,8 +1990,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ));
     if (levelColumns.length === 0) return false;
     const grouped = new Map<number, { name: string; options: string[]; childrenByParent?: Record<string, string[]> }>();
+    const relationshipPaths: string[][] = [];
     rows.slice(headerRowIndex + 1).forEach((row) => {
       if (!Array.isArray(row)) return;
+      const path = levelColumns
+        .map(({ columnIndex }) => String(row[columnIndex] || '').trim())
+        .filter(Boolean);
+      if (path.length > 1) relationshipPaths.push(path);
       levelColumns.forEach(({ columnIndex, levelNumber }) => {
         const option = String(row[columnIndex] || '').trim();
         if (!option) return;
@@ -1997,7 +2022,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         grouped.set(levelNumber, current);
       });
     });
-    return applyImportedOrganisationStructure(grouped);
+    return applyImportedOrganisationStructure(grouped, relationshipPaths);
   };
 
   const handleOrganisationStructureFile = async (file?: File | null) => {
@@ -4118,6 +4143,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
   const getFilteredParentOrganisationOptions = (level: { options: string[]; levelIndex: number }, parentOrganisationPath: string[], parentLevelIndex: number): string[] => {
     if (parentLevelIndex === 0) return level.options;
+    const pathMatches = (path: string[]) => parentOrganisationPath
+      .slice(0, parentLevelIndex)
+      .every((selectedParent, pathIndex) => normaliseOrganisationParentKey(path[pathIndex + 1]) === normaliseOrganisationParentKey(selectedParent));
+    const pathFilteredOptions = (organisationStructure.relationshipPaths || [])
+      .filter((path) => path.length > level.levelIndex && pathMatches(path))
+      .map((path) => String(path[level.levelIndex] || '').trim())
+      .filter(Boolean);
+    if ((organisationStructure.relationshipPaths || []).length > 0) {
+      return Array.from(new Set(pathFilteredOptions));
+    }
     const previousParent = parentOrganisationPath[parentLevelIndex - 1] || '';
     const sourceLevel = organisationStructure.levels[level.levelIndex];
     const childMap = sourceLevel?.childrenByParent || {};

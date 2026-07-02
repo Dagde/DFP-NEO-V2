@@ -57624,6 +57624,7 @@ const normaliseOrganisationParentKey = (value) => String(value || "").trim().rep
 const normaliseOrganisationStructure = (source, organisationName = "") => {
   const raw = source || {};
   const rawLevels = Array.isArray(raw.levels) ? raw.levels : [];
+  const relationshipPaths = Array.isArray(raw.relationshipPaths) ? raw.relationshipPaths.map((path) => Array.isArray(path) ? path.map((part) => String(part || "").trim()).filter(Boolean) : String(path || "").split(">").map((part) => part.trim()).filter(Boolean)).filter((path) => path.length > 1) : void 0;
   const requestedCount = Number(raw.levelCount);
   const levelCount = Math.max(1, Math.min(12, Number.isFinite(requestedCount) && requestedCount > 0 ? Math.round(requestedCount) : Math.max(rawLevels.length, 4)));
   const organisationLevelName = String(organisationName || "").trim();
@@ -57645,7 +57646,11 @@ const normaliseOrganisationStructure = (source, organisationName = "") => {
       ...childrenByParent && Object.keys(childrenByParent).length > 0 ? { childrenByParent } : {}
     };
   });
-  return { levelCount, levels };
+  return {
+    levelCount,
+    levels,
+    ...relationshipPaths && relationshipPaths.length > 0 ? { relationshipPaths } : {}
+  };
 };
 const clampWholeNumber = (value, fallback, min, max) => {
   const parsed = Math.round(Number(value));
@@ -58922,12 +58927,14 @@ const PlatformConfigurationSettings = ({
         id: `org-level-${index}`,
         name: index === 0 && primaryOrganisation?.name ? primaryOrganisation.name : DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index}`,
         options: []
-      })
+      }),
+      relationshipPaths: organisationStructure.relationshipPaths?.filter((path) => path.length <= count)
     });
   };
   const updateOrganisationStructureLevel = (levelIndex, changes) => {
     updateOrganisationStructure({
       ...organisationStructure,
+      relationshipPaths: changes.options ? void 0 : organisationStructure.relationshipPaths,
       levels: organisationStructure.levels.map((level, index) => index === levelIndex ? {
         ...level,
         ...changes,
@@ -58936,7 +58943,7 @@ const PlatformConfigurationSettings = ({
       } : level)
     });
   };
-  const applyImportedOrganisationStructure = (grouped) => {
+  const applyImportedOrganisationStructure = (grouped, relationshipPaths) => {
     if (grouped.size === 0) {
       setOrganisationStructureImportError("No valid organisation structure rows found.");
       return false;
@@ -58952,7 +58959,8 @@ const PlatformConfigurationSettings = ({
           options: Array.from(new Set(row?.options || [])),
           ...row?.childrenByParent ? { childrenByParent: row.childrenByParent } : {}
         };
-      })
+      }),
+      ...relationshipPaths && relationshipPaths.length > 0 ? { relationshipPaths } : {}
     });
     setOrganisationStructureImportError("");
     setOrganisationStructureUnlocked(true);
@@ -59004,8 +59012,11 @@ const PlatformConfigurationSettings = ({
     }).filter((entry) => !!entry && Number.isFinite(entry.levelNumber) && entry.levelNumber >= 0 && entry.levelNumber <= 11);
     if (levelColumns.length === 0) return false;
     const grouped = /* @__PURE__ */ new Map();
+    const relationshipPaths = [];
     rows.slice(headerRowIndex + 1).forEach((row) => {
       if (!Array.isArray(row)) return;
+      const path = levelColumns.map(({ columnIndex }) => String(row[columnIndex] || "").trim()).filter(Boolean);
+      if (path.length > 1) relationshipPaths.push(path);
       levelColumns.forEach(({ columnIndex, levelNumber }) => {
         const option = String(row[columnIndex] || "").trim();
         if (!option) return;
@@ -59031,7 +59042,7 @@ const PlatformConfigurationSettings = ({
         grouped.set(levelNumber, current);
       });
     });
-    return applyImportedOrganisationStructure(grouped);
+    return applyImportedOrganisationStructure(grouped, relationshipPaths);
   };
   const handleOrganisationStructureFile = async (file) => {
     if (!file) return;
@@ -60736,6 +60747,11 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   };
   const getFilteredParentOrganisationOptions = (level, parentOrganisationPath, parentLevelIndex) => {
     if (parentLevelIndex === 0) return level.options;
+    const pathMatches = (path) => parentOrganisationPath.slice(0, parentLevelIndex).every((selectedParent, pathIndex) => normaliseOrganisationParentKey(path[pathIndex + 1]) === normaliseOrganisationParentKey(selectedParent));
+    const pathFilteredOptions = (organisationStructure.relationshipPaths || []).filter((path) => path.length > level.levelIndex && pathMatches(path)).map((path) => String(path[level.levelIndex] || "").trim()).filter(Boolean);
+    if ((organisationStructure.relationshipPaths || []).length > 0) {
+      return Array.from(new Set(pathFilteredOptions));
+    }
     const previousParent = parentOrganisationPath[parentLevelIndex - 1] || "";
     const sourceLevel = organisationStructure.levels[level.levelIndex];
     const childMap = sourceLevel?.childrenByParent || {};
