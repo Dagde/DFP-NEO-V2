@@ -881,12 +881,12 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
   }
   if (area === 'Locations') {
     if (lowerTitle.includes('organisation')) {
-      return 'Open Locale Settings or Organisation & Locations, then assign the location to an active organisation or reactivate the referenced organisation.';
+      return 'Open Locations, then assign the location to an active organisation or reactivate the referenced organisation.';
     }
-    return 'Open Locale Settings or Organisation & Locations, then create or reactivate the location and at least one unit at that location.';
+    return 'Open Locations, then create or reactivate the location and at least one unit at that location.';
   }
   if (area === 'Units') {
-    return 'Open Organisation & Locations and assign the unit to an active location, or reactivate the correct location before saving.';
+    return 'Open Units and assign the unit to an active location, or reactivate the correct location before saving.';
   }
   if (area === 'Modules') {
     return 'Open the unit/module setup area and enable the required app areas for that unit, or deactivate unused modules if they are not required.';
@@ -3618,8 +3618,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const visibleSectionTarget = sectionOnly ? (scrollTarget || 'platform-configuration-health') : null;
   const isResourcePoolsOnlyView = visibleSectionTarget === 'platform-resource-pools';
-  const getSectionClass = (sectionId: string) =>
-    `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId ? ' hidden' : ''}`;
+  const getSectionClass = (sectionId: string) => {
+    const visibleWithLegacyTarget = visibleSectionTarget === 'platform-organisation-locations'
+      && (sectionId === 'platform-organisation' || sectionId === 'platform-locations');
+    return `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId && !visibleWithLegacyTarget ? ' hidden' : ''}`;
+  };
   const saveButton = (
     <button
       type="button"
@@ -3928,11 +3931,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section id="platform-organisation-locations" className={getSectionClass('platform-organisation-locations')}>
+      <section id="platform-organisation" className={getSectionClass('platform-organisation')}>
         <SectionHeader
-          title="Organisation & Locations"
-          subtitle="The top of the hierarchy: customer, base, timezone, and training areas."
-          action={canEdit ? <button type="button" onClick={addLocation} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Location</button> : null}
+          title="Organisation"
+          subtitle="The top-level customer or operating organisation for this deployment."
         />
         <div className="space-y-4 p-4">
           {config.organisations.map((org, index) => (
@@ -3942,6 +3944,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <SelectField label="Status" value={org.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('organisations', index, { status: value })} />
             </div>
           ))}
+        </div>
+      </section>
+
+      <section id="platform-locations" className={getSectionClass('platform-locations')}>
+        <SectionHeader
+          title="Locations"
+          subtitle="Bases, airfields, timezone data and local training areas used by units and scheduling."
+          action={canEdit ? <button type="button" onClick={addLocation} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Location</button> : null}
+        />
+        <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
             Offline airfield catalogue:{' '}
             {airfieldCatalogueStatus === 'loaded'

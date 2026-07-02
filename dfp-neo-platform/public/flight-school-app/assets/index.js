@@ -57992,12 +57992,12 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
   }
   if (area === "Locations") {
     if (lowerTitle.includes("organisation")) {
-      return "Open Locale Settings or Organisation & Locations, then assign the location to an active organisation or reactivate the referenced organisation.";
+      return "Open Locations, then assign the location to an active organisation or reactivate the referenced organisation.";
     }
-    return "Open Locale Settings or Organisation & Locations, then create or reactivate the location and at least one unit at that location.";
+    return "Open Locations, then create or reactivate the location and at least one unit at that location.";
   }
   if (area === "Units") {
-    return "Open Organisation & Locations and assign the unit to an active location, or reactivate the correct location before saving.";
+    return "Open Units and assign the unit to an active location, or reactivate the correct location before saving.";
   }
   if (area === "Modules") {
     return "Open the unit/module setup area and enable the required app areas for that unit, or deactivate unused modules if they are not required.";
@@ -60235,7 +60235,10 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   }
   const visibleSectionTarget = sectionOnly ? scrollTarget || "platform-configuration-health" : null;
   const isResourcePoolsOnlyView = visibleSectionTarget === "platform-resource-pools";
-  const getSectionClass = (sectionId) => `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId ? " hidden" : ""}`;
+  const getSectionClass = (sectionId) => {
+    const visibleWithLegacyTarget = visibleSectionTarget === "platform-organisation-locations" && (sectionId === "platform-organisation" || sectionId === "platform-locations");
+    return `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId && !visibleWithLegacyTarget ? " hidden" : ""}`;
+  };
   const saveButton = /* @__PURE__ */ jsxRuntimeExports.jsx(
     "button",
     {
@@ -60449,21 +60452,30 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         }) })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-organisation-locations", className: getSectionClass("platform-organisation-locations"), children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-organisation", className: getSectionClass("platform-organisation"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Organisation & Locations",
-          subtitle: "The top of the hierarchy: customer, base, timezone, and training areas.",
+          title: "Organisation",
+          subtitle: "The top-level customer or operating organisation for this deployment."
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: config.organisations.map((org, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Code", value: org.code, disabled: !canEdit, onChange: (value) => updateRow("organisations", index, { code: value }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Name", value: org.name, disabled: !canEdit, onChange: (value) => updateRow("organisations", index, { name: value }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: org.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("organisations", index, { status: value }) })
+      ] }, org.id || `platform-organisation-${index}`)) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-locations", className: getSectionClass("platform-locations"), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Locations",
+          subtitle: "Bases, airfields, timezone data and local training areas used by units and scheduling.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLocation, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Location" }) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        config.organisations.map((org, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Code", value: org.code, disabled: !canEdit, onChange: (value) => updateRow("organisations", index, { code: value }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Name", value: org.name, disabled: !canEdit, onChange: (value) => updateRow("organisations", index, { name: value }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: org.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("organisations", index, { status: value }) })
-        ] }, org.id || `platform-organisation-${index}`)),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: [
           "Offline airfield catalogue:",
           " ",
