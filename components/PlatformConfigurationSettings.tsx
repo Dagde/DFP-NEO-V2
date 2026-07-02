@@ -4408,12 +4408,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             const isUnitEditing = canEdit && editingUnitIndex === index;
             const rowKey = unit.id || `platform-unit-${index}`;
             const parentOrganisationPath = getUnitParentOrganisationPath(unit);
+            const parentOrganisationDisplay = parentOrganisationPath[parentOrganisationPath.length - 1] || '';
             return (
               <div
                 key={rowKey}
                 ref={(node) => { unitRowRefs.current[rowKey] = node; }}
                 onClick={() => setSelectedUnitIndex(index)}
-                className={`relative grid cursor-pointer gap-3 rounded border-2 p-3 transition-colors md:grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(230px,1.9fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(190px,1.45fr)_minmax(110px,0.75fr)] ${
+                className={`relative grid cursor-pointer gap-3 rounded border-2 p-3 transition-colors md:grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(138px,1.14fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(190px,1.45fr)] ${
                   isSelectedUnit
                     ? 'border-cyan-300 bg-cyan-500/10 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40'
                     : 'border-gray-700 bg-gray-900 hover:border-gray-500'
@@ -4437,8 +4438,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         setOpenParentOrgUnitIndex(openParentOrgUnitIndex === index ? null : index);
                       }}
                     >
-                      <span className={`min-w-0 truncate ${parentOrganisationPath.length > 0 ? 'text-white' : 'text-gray-500'}`}>
-                        {parentOrganisationPath.length > 0 ? parentOrganisationPath.join('-') : 'Choose Level 1'}
+                      <span
+                        className={`min-w-0 truncate ${parentOrganisationDisplay ? 'text-white' : 'text-gray-500'}`}
+                        title={parentOrganisationPath.join('-')}
+                      >
+                        {parentOrganisationDisplay || 'Choose Level 1'}
                       </span>
                       <span className="text-cyan-200">{openParentOrgUnitIndex === index ? '^' : 'v'}</span>
                     </button>
@@ -4518,9 +4522,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       },
                     })}
                   />
-                </div>
-                <div>
-                  <SelectField label="Status" value={unit.status || 'ACTIVE'} disabled={!isUnitEditing} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('units', index, { status: value })} />
                 </div>
               </div>
             );
