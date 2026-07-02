@@ -249,6 +249,9 @@ const DEFAULT_ORGANISATION_STRUCTURE_LEVELS = [
   'Crew',
 ];
 
+const normaliseOrganisationParentKey = (value: unknown): string =>
+  String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
 const normaliseOrganisationStructure = (source: unknown, organisationName = ''): OrganisationStructureSettings => {
   const raw = (source || {}) as any;
   const rawLevels = Array.isArray(raw.levels) ? raw.levels : [];
@@ -4117,10 +4120,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (parentLevelIndex === 0) return level.options;
     const previousParent = parentOrganisationPath[parentLevelIndex - 1] || '';
     const sourceLevel = organisationStructure.levels[level.levelIndex];
-    const filteredOptions = previousParent && sourceLevel?.childrenByParent
-      ? sourceLevel.childrenByParent[previousParent] || []
-      : [];
-    return filteredOptions.length > 0 ? filteredOptions : level.options;
+    const childMap = sourceLevel?.childrenByParent || {};
+    const childMapKeys = Object.keys(childMap);
+    if (childMapKeys.length === 0) return level.options;
+    const exactChildren = previousParent ? childMap[previousParent] : [];
+    if (exactChildren?.length) return exactChildren;
+    const normalisedPreviousParent = normaliseOrganisationParentKey(previousParent);
+    const matchedKey = childMapKeys.find((key) => normaliseOrganisationParentKey(key) === normalisedPreviousParent);
+    return matchedKey ? childMap[matchedKey] || [] : [];
   };
 
   return (

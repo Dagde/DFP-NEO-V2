@@ -57620,6 +57620,7 @@ const DEFAULT_ORGANISATION_STRUCTURE_LEVELS = [
   "Flight",
   "Crew"
 ];
+const normaliseOrganisationParentKey = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
 const normaliseOrganisationStructure = (source, organisationName = "") => {
   const raw = source || {};
   const rawLevels = Array.isArray(raw.levels) ? raw.levels : [];
@@ -60737,8 +60738,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     if (parentLevelIndex === 0) return level.options;
     const previousParent = parentOrganisationPath[parentLevelIndex - 1] || "";
     const sourceLevel = organisationStructure.levels[level.levelIndex];
-    const filteredOptions = previousParent && sourceLevel?.childrenByParent ? sourceLevel.childrenByParent[previousParent] || [] : [];
-    return filteredOptions.length > 0 ? filteredOptions : level.options;
+    const childMap = sourceLevel?.childrenByParent || {};
+    const childMapKeys = Object.keys(childMap);
+    if (childMapKeys.length === 0) return level.options;
+    const exactChildren = previousParent ? childMap[previousParent] : [];
+    if (exactChildren?.length) return exactChildren;
+    const normalisedPreviousParent = normaliseOrganisationParentKey(previousParent);
+    const matchedKey = childMapKeys.find((key) => normaliseOrganisationParentKey(key) === normalisedPreviousParent);
+    return matchedKey ? childMap[matchedKey] || [] : [];
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: stopEditableKeyPropagation, children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
