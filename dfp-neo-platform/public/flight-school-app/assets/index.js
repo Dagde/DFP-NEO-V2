@@ -57479,8 +57479,8 @@ const ACCESS_SCOPE_TONE = {
   applyBorder: "rgba(103, 232, 249, 0.62)"
 };
 const platformLocationRowTone = {
-  border: "rgba(244, 114, 182, 0.72)",
-  accent: "rgba(244, 114, 182, 0.8)"
+  border: "rgba(103, 232, 249, 0.72)",
+  accent: "rgba(103, 232, 249, 0.8)"
 };
 const STANDARD_MISSION_RESOURCE_TYPES = ["Flight", "FTD", "CPT", "Ground"];
 const DEFAULT_ORGANISATION_STRUCTURE_LEVELS = [
