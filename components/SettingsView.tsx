@@ -1241,11 +1241,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     const dataLoaderTemplateRows = [
-        { key: 'staff', label: 'Staff', downloadLabel: 'Download Staff Template (.xlsx)', onDownload: handleDownloadInstructorTemplate },
-        { key: 'trainee', label: 'Trainee', downloadLabel: 'Download Trainee Template (.xlsx)', onDownload: handleDownloadTraineeTemplate },
-        { key: 'lmp', label: 'LMP', downloadLabel: 'Download LMP Template (.xlsx)', onDownload: handleDownloadLmpTemplate },
-        { key: 'logbook', label: 'Logbook', downloadLabel: 'Download Logbook Template (.xlsx)', onDownload: handleDownloadLogbookTemplate },
-        { key: 'organisation-structure', label: 'Organisational Structure', downloadLabel: 'Download Organisational Structure Template (.xlsx)', onDownload: handleDownloadOrganisationStructureTemplate },
+        { key: 'staff', label: 'Staff', downloadLabel: 'Staff Template (.xlsx)', onDownload: handleDownloadInstructorTemplate },
+        { key: 'trainee', label: 'Trainee', downloadLabel: 'Trainee Template (.xlsx)', onDownload: handleDownloadTraineeTemplate },
+        { key: 'lmp', label: 'LMP', downloadLabel: 'LMP Template (.xlsx)', onDownload: handleDownloadLmpTemplate },
+        { key: 'logbook', label: 'Logbook', downloadLabel: 'Logbook Template (.xlsx)', onDownload: handleDownloadLogbookTemplate },
+        { key: 'organisation-structure', label: 'Organisational Structure', downloadLabel: 'Organisational Structure Template (.xlsx)', onDownload: handleDownloadOrganisationStructureTemplate },
     ];
     
     const handleDownloadManual = () => {
@@ -2782,12 +2782,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    )}
                     {/* Data Loaders Window */}
                    {shouldShowSection('data-loaders') && (
-                    <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[30rem] h-fit">
+                    <div className="w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
                         <div className="p-4 flex justify-between items-center border-b border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-200">Data Loaders</h2>
                         </div>
                         <div className="p-4 space-y-4">
-                            <fieldset className="p-3 border border-gray-600 rounded-lg">
+                            <fieldset className="overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3">
                                 <legend className="px-2 text-sm font-semibold text-gray-300">Templates</legend>
                                 <div className="mt-2 space-y-2">
                                     <p className="text-xs text-gray-400">Download templates to ensure correct formatting for bulk uploads.</p>
@@ -2801,15 +2801,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                     {dataLoaderTemplateRows.map((template) => {
                                         const overrideName = getTemplateOverrideDisplayName(template.key);
                                         return (
-                                            <div key={template.key} className="rounded border border-gray-700 bg-gray-900/70 p-2">
+                                            <div key={template.key} className="rounded border border-gray-700 bg-gray-950/40 p-2">
                                                 <div className="flex items-center justify-between gap-2">
-                                                    <button onClick={() => void template.onDownload()} className="min-w-0 flex-1 rounded-md bg-sky-600 px-3 py-2 text-left text-sm font-semibold text-white hover:bg-sky-700">
+                                                    <button onClick={() => void template.onDownload()} className="min-w-0 flex-1 truncate whitespace-nowrap rounded-md bg-sky-600 px-3 py-2 text-left text-sm font-semibold text-white hover:bg-sky-700">
                                                         {template.downloadLabel}
                                                     </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => handleChangeTemplateClick(template)}
-                                                        className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20"
+                                                        className="shrink-0 whitespace-nowrap rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20"
                                                     >
                                                         Change
                                                     </button>
@@ -2817,7 +2817,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                         <button
                                                             type="button"
                                                             onClick={() => void handleResetTemplateOverride(template)}
-                                                            className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20"
+                                                            className="shrink-0 whitespace-nowrap rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20"
                                                         >
                                                             Reset
                                                         </button>
