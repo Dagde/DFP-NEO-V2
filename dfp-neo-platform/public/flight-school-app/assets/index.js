@@ -58950,6 +58950,27 @@ const PlatformConfigurationSettings = ({
     }
     downloadTextFile("Organisation_Structure_Template.csv", rows.map((row) => row.join(",")).join("\n"), "text/csv");
   };
+  const applyImportedOrganisationStructure = (grouped) => {
+    if (grouped.size === 0) {
+      setOrganisationStructureImportError("No valid organisation structure rows found.");
+      return false;
+    }
+    const levelCount = Math.max(...Array.from(grouped.keys())) + 1;
+    updateOrganisationStructure({
+      levelCount,
+      levels: Array.from({ length: levelCount }, (_, index) => {
+        const row = grouped.get(index);
+        return {
+          id: organisationStructure.levels[index]?.id || `org-level-${index}`,
+          name: row?.name || (index === 0 && primaryOrganisation?.name ? primaryOrganisation.name : DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index}`),
+          options: Array.from(new Set(row?.options || []))
+        };
+      })
+    });
+    setOrganisationStructureImportError("");
+    setOrganisationStructureUnlocked(true);
+    return true;
+  };
   const importOrganisationStructureRows = (rows) => {
     const grouped = /* @__PURE__ */ new Map();
     const parsedRows = rows.map((row) => ({
@@ -58969,24 +58990,47 @@ const PlatformConfigurationSettings = ({
       if (option) current.options.push(option);
       grouped.set(levelNumber, current);
     });
-    if (grouped.size === 0) {
-      setOrganisationStructureImportError("No valid organisation structure rows found.");
-      return;
-    }
-    const levelCount = Math.max(...Array.from(grouped.keys())) + 1;
-    updateOrganisationStructure({
-      levelCount,
-      levels: Array.from({ length: levelCount }, (_, index) => {
-        const row = grouped.get(index);
-        return {
-          id: organisationStructure.levels[index]?.id || `org-level-${index}`,
-          name: row?.name || (index === 0 && primaryOrganisation?.name ? primaryOrganisation.name : DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index}`),
-          options: Array.from(new Set(row?.options || []))
-        };
-      })
+    return applyImportedOrganisationStructure(grouped);
+  };
+  const getOrganisationLevelNamesFromWorkbook = (workbook) => {
+    const names = /* @__PURE__ */ new Map();
+    workbook.SheetNames.forEach((sheetName) => {
+      const match = String(sheetName || "").trim().match(/^Level\s*(\d+)$/i);
+      if (!match) return;
+      const levelNumber = Number(match[1]);
+      if (!Number.isFinite(levelNumber) || levelNumber < 0 || levelNumber > 11) return;
+      const worksheet = workbook.Sheets[sheetName];
+      const title = String(worksheet?.A1?.v || "").trim();
+      const titleMatch = title.match(/^Level\s*\d+\s*(?:[-–—:]\s*)?(.+)$/i);
+      const levelName = String(titleMatch?.[1] || "").trim();
+      if (levelName) names.set(levelNumber, levelName);
     });
-    setOrganisationStructureImportError("");
-    setOrganisationStructureUnlocked(true);
+    return names;
+  };
+  const importOrganisationStructureLadderRows = (rows, levelNames) => {
+    const headerRowIndex = rows.findIndex((row) => Array.isArray(row) && row.some((cell) => /^Level\s*\d+$/i.test(String(cell || "").trim())));
+    if (headerRowIndex < 0) return false;
+    const headerRow = rows[headerRowIndex] || [];
+    const levelColumns = headerRow.map((cell, columnIndex) => {
+      const match = String(cell || "").trim().match(/^Level\s*(\d+)$/i);
+      return match ? { columnIndex, levelNumber: Number(match[1]) } : null;
+    }).filter((entry) => !!entry && Number.isFinite(entry.levelNumber) && entry.levelNumber >= 0 && entry.levelNumber <= 11);
+    if (levelColumns.length === 0) return false;
+    const grouped = /* @__PURE__ */ new Map();
+    rows.slice(headerRowIndex + 1).forEach((row) => {
+      if (!Array.isArray(row)) return;
+      levelColumns.forEach(({ columnIndex, levelNumber }) => {
+        const option = String(row[columnIndex] || "").trim();
+        if (!option) return;
+        const current = grouped.get(levelNumber) || {
+          name: levelNames.get(levelNumber) || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] || `Level ${levelNumber}`,
+          options: []
+        };
+        current.options.push(option);
+        grouped.set(levelNumber, current);
+      });
+    });
+    return applyImportedOrganisationStructure(grouped);
   };
   const handleOrganisationStructureFile = async (file) => {
     if (!file) return;
@@ -58995,6 +59039,12 @@ const PlatformConfigurationSettings = ({
       if (typeof XLSX === "undefined") throw new Error("Excel import library is not available.");
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: "array" });
+      const levelNames = getOrganisationLevelNamesFromWorkbook(workbook);
+      const ladderSheetName = workbook.SheetNames.find((name) => String(name || "").trim().toLowerCase() === "ladder view");
+      if (ladderSheetName) {
+        const ladderRows = XLSX.utils.sheet_to_json(workbook.Sheets[ladderSheetName], { header: 1, defval: "" });
+        if (importOrganisationStructureLadderRows(ladderRows, levelNames)) return;
+      }
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(worksheet);
