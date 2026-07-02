@@ -57621,6 +57621,11 @@ const DEFAULT_ORGANISATION_STRUCTURE_LEVELS = [
   "Crew"
 ];
 const normaliseOrganisationParentKey = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+const getOrganisationPathValueForLevel = (path, levelIndex) => {
+  const rootedValue = String(path[levelIndex] || "").trim();
+  if (rootedValue) return rootedValue;
+  return String(path[levelIndex - 1] || "").trim();
+};
 const normaliseOrganisationStructure = (source, organisationName = "") => {
   const raw = source || {};
   const rawLevels = Array.isArray(raw.levels) ? raw.levels : [];
@@ -59037,7 +59042,9 @@ const PlatformConfigurationSettings = ({
           options: []
         };
         const childrenByParent = current.childrenByParent || {};
+        const normalisedParent = normaliseOrganisationParentKey(parent);
         childrenByParent[parent] = Array.from(/* @__PURE__ */ new Set([...childrenByParent[parent] || [], child]));
+        childrenByParent[normalisedParent] = Array.from(/* @__PURE__ */ new Set([...childrenByParent[normalisedParent] || [], child]));
         current.childrenByParent = childrenByParent;
         grouped.set(levelNumber, current);
       });
@@ -60747,8 +60754,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   };
   const getFilteredParentOrganisationOptions = (level, parentOrganisationPath, parentLevelIndex) => {
     if (parentLevelIndex === 0) return level.options;
-    const pathMatches = (path) => parentOrganisationPath.slice(0, parentLevelIndex).every((selectedParent, pathIndex) => normaliseOrganisationParentKey(path[pathIndex + 1]) === normaliseOrganisationParentKey(selectedParent));
-    const pathFilteredOptions = (organisationStructure.relationshipPaths || []).filter((path) => path.length > level.levelIndex && pathMatches(path)).map((path) => String(path[level.levelIndex] || "").trim()).filter(Boolean);
+    const rootedPathMatches = (path) => parentOrganisationPath.slice(0, parentLevelIndex).every((selectedParent, pathIndex) => normaliseOrganisationParentKey(path[pathIndex + 1]) === normaliseOrganisationParentKey(selectedParent));
+    const rootlessPathMatches = (path) => parentOrganisationPath.slice(0, parentLevelIndex).every((selectedParent, pathIndex) => normaliseOrganisationParentKey(path[pathIndex]) === normaliseOrganisationParentKey(selectedParent));
+    const pathFilteredOptions = (organisationStructure.relationshipPaths || []).filter((path) => path.length > parentLevelIndex && (rootedPathMatches(path) || rootlessPathMatches(path))).map((path) => getOrganisationPathValueForLevel(path, level.levelIndex)).filter(Boolean);
     if ((organisationStructure.relationshipPaths || []).length > 0) {
       return Array.from(new Set(pathFilteredOptions));
     }
@@ -60760,7 +60768,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     const exactChildren = previousParent ? childMap[previousParent] : [];
     if (exactChildren?.length) return exactChildren;
     const normalisedPreviousParent = normaliseOrganisationParentKey(previousParent);
-    const matchedKey = childMapKeys.find((key) => normaliseOrganisationParentKey(key) === normalisedPreviousParent);
+    const matchedKey = childMap[normalisedPreviousParent]?.length ? normalisedPreviousParent : childMapKeys.find((key) => normaliseOrganisationParentKey(key) === normalisedPreviousParent);
     return matchedKey ? childMap[matchedKey] || [] : [];
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: stopEditableKeyPropagation, children: [

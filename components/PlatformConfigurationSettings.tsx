@@ -253,6 +253,12 @@ const DEFAULT_ORGANISATION_STRUCTURE_LEVELS = [
 const normaliseOrganisationParentKey = (value: unknown): string =>
   String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
+const getOrganisationPathValueForLevel = (path: string[], levelIndex: number): string => {
+  const rootedValue = String(path[levelIndex] || '').trim();
+  if (rootedValue) return rootedValue;
+  return String(path[levelIndex - 1] || '').trim();
+};
+
 const normaliseOrganisationStructure = (source: unknown, organisationName = ''): OrganisationStructureSettings => {
   const raw = (source || {}) as any;
   const rawLevels = Array.isArray(raw.levels) ? raw.levels : [];
@@ -2017,7 +2023,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           options: [],
         };
         const childrenByParent = current.childrenByParent || {};
+        const normalisedParent = normaliseOrganisationParentKey(parent);
         childrenByParent[parent] = Array.from(new Set([...(childrenByParent[parent] || []), child]));
+        childrenByParent[normalisedParent] = Array.from(new Set([...(childrenByParent[normalisedParent] || []), child]));
         current.childrenByParent = childrenByParent;
         grouped.set(levelNumber, current);
       });
@@ -4143,12 +4151,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
   const getFilteredParentOrganisationOptions = (level: { options: string[]; levelIndex: number }, parentOrganisationPath: string[], parentLevelIndex: number): string[] => {
     if (parentLevelIndex === 0) return level.options;
-    const pathMatches = (path: string[]) => parentOrganisationPath
+    const rootedPathMatches = (path: string[]) => parentOrganisationPath
       .slice(0, parentLevelIndex)
       .every((selectedParent, pathIndex) => normaliseOrganisationParentKey(path[pathIndex + 1]) === normaliseOrganisationParentKey(selectedParent));
+    const rootlessPathMatches = (path: string[]) => parentOrganisationPath
+      .slice(0, parentLevelIndex)
+      .every((selectedParent, pathIndex) => normaliseOrganisationParentKey(path[pathIndex]) === normaliseOrganisationParentKey(selectedParent));
     const pathFilteredOptions = (organisationStructure.relationshipPaths || [])
-      .filter((path) => path.length > level.levelIndex && pathMatches(path))
-      .map((path) => String(path[level.levelIndex] || '').trim())
+      .filter((path) => path.length > parentLevelIndex && (rootedPathMatches(path) || rootlessPathMatches(path)))
+      .map((path) => getOrganisationPathValueForLevel(path, level.levelIndex))
       .filter(Boolean);
     if ((organisationStructure.relationshipPaths || []).length > 0) {
       return Array.from(new Set(pathFilteredOptions));
@@ -4161,7 +4172,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const exactChildren = previousParent ? childMap[previousParent] : [];
     if (exactChildren?.length) return exactChildren;
     const normalisedPreviousParent = normaliseOrganisationParentKey(previousParent);
-    const matchedKey = childMapKeys.find((key) => normaliseOrganisationParentKey(key) === normalisedPreviousParent);
+    const matchedKey = childMap[normalisedPreviousParent]?.length
+      ? normalisedPreviousParent
+      : childMapKeys.find((key) => normaliseOrganisationParentKey(key) === normalisedPreviousParent);
     return matchedKey ? childMap[matchedKey] || [] : [];
   };
 
