@@ -296,7 +296,7 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
     return root;
 };
 
-const OrganisationChartBranch: React.FC<{ node: OrganisationChartNode; isRoot?: boolean; maxStructureLevel: number }> = ({ node, isRoot = false, maxStructureLevel }) => (
+const OrganisationChartBranch: React.FC<{ node: OrganisationChartNode; isRoot?: boolean; verticalStartLevel: number }> = ({ node, isRoot = false, verticalStartLevel }) => (
     <li className={node.levelIndex >= 2 ? 'org-chart-compact-node' : undefined}>
         <button
             type="button"
@@ -308,9 +308,9 @@ const OrganisationChartBranch: React.FC<{ node: OrganisationChartNode; isRoot?: 
             <span className="org-chart-label">{node.label}</span>
         </button>
         {node.children.length > 0 ? (
-            <ul className={node.children.every((child) => child.levelIndex >= maxStructureLevel) ? 'org-chart-vertical-level' : undefined}>
+            <ul className={node.children.every((child) => child.levelIndex >= verticalStartLevel) ? 'org-chart-vertical-level' : undefined}>
                 {node.children.map((child) => (
-                    <OrganisationChartBranch key={child.id} node={child} maxStructureLevel={maxStructureLevel} />
+                    <OrganisationChartBranch key={child.id} node={child} verticalStartLevel={verticalStartLevel} />
                 ))}
             </ul>
         ) : null}
@@ -332,6 +332,7 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
         ? activeOrganisation.settings.organisationStructure.levels
         : [];
     const maxStructureLevel = Math.max(1, levels.length - 1);
+    const verticalStartLevel = Math.max(2, maxStructureLevel - 1);
     return (
         <div className="h-full overflow-auto px-5 py-4 text-slate-100">
             <style>{`
@@ -374,7 +375,7 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
             <div className="rounded border border-cyan-400/20 bg-slate-950/55">
                 <div className="org-chart">
                     <ul>
-                        <OrganisationChartBranch node={chart} isRoot maxStructureLevel={maxStructureLevel} />
+                        <OrganisationChartBranch node={chart} isRoot verticalStartLevel={verticalStartLevel} />
                     </ul>
                 </div>
             </div>

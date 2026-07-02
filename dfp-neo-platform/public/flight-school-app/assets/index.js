@@ -8986,7 +8986,7 @@ const buildOrganisationChart = (platformConfig) => {
   sortNodes(root2);
   return root2;
 };
-const OrganisationChartBranch = ({ node, isRoot = false, maxStructureLevel }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: node.levelIndex >= 2 ? "org-chart-compact-node" : void 0, children: [
+const OrganisationChartBranch = ({ node, isRoot = false, verticalStartLevel }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: node.levelIndex >= 2 ? "org-chart-compact-node" : void 0, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "button",
     {
@@ -9000,7 +9000,7 @@ const OrganisationChartBranch = ({ node, isRoot = false, maxStructureLevel }) =>
       ]
     }
   ),
-  node.children.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: node.children.every((child) => child.levelIndex >= maxStructureLevel) ? "org-chart-vertical-level" : void 0, children: node.children.map((child) => /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationChartBranch, { node: child, maxStructureLevel }, child.id)) }) : null
+  node.children.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: node.children.every((child) => child.levelIndex >= verticalStartLevel) ? "org-chart-vertical-level" : void 0, children: node.children.map((child) => /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationChartBranch, { node: child, verticalStartLevel }, child.id)) }) : null
 ] });
 const OrganisationSlideoutDiagram = ({ platformConfig }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
@@ -9011,6 +9011,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
   const activeOrganisation = getActiveOrganisation(platformConfig);
   const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
   const maxStructureLevel = Math.max(1, levels.length - 1);
+  const verticalStartLevel = Math.max(2, maxStructureLevel - 1);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto px-5 py-4 text-slate-100", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
                 .org-chart { display: inline-flex; min-width: 100%; justify-content: center; padding: 10px 18px 22px; }
@@ -9050,7 +9051,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
         " configured units mapped from Settings."
       ] })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-400/20 bg-slate-950/55", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "org-chart", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationChartBranch, { node: chart, isRoot: true, maxStructureLevel }) }) }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-400/20 bg-slate-950/55", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "org-chart", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationChartBranch, { node: chart, isRoot: true, verticalStartLevel }) }) }) })
   ] });
 };
 const ScheduleView = ({
