@@ -256,17 +256,17 @@ const normaliseOrganisationStructure = (source: unknown, organisationName = ''):
   const organisationLevelName = String(organisationName || '').trim();
   const levels = Array.from({ length: levelCount }, (_, index) => {
     const rawLevel = rawLevels[index] || {};
-    const rawLevelName = String(rawLevel.name || rawLevel.label || '').trim();
+    const rawLevelName = String(rawLevel.name || rawLevel.label || '');
     const defaultLevelName = DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index}`;
     const options = Array.isArray(rawLevel.options)
       ? rawLevel.options
       : String(rawLevel.options || '').split(/\r?\n|;/);
     return {
       id: String(rawLevel.id || `org-level-${index}`),
-      name: index === 0 && organisationLevelName && (!rawLevelName || rawLevelName === DEFAULT_ORGANISATION_STRUCTURE_LEVELS[0])
+      name: index === 0 && organisationLevelName && (!rawLevelName.trim() || rawLevelName.trim() === DEFAULT_ORGANISATION_STRUCTURE_LEVELS[0])
         ? organisationLevelName
-        : (rawLevelName || defaultLevelName),
-      options: Array.from(new Set(options.map((option: unknown) => String(option || '').trim()).filter(Boolean))),
+        : (rawLevelName.trim() ? rawLevelName : defaultLevelName),
+      options: Array.from(new Set(options.map((option: unknown) => String(option || '')).filter((option) => option.trim()))),
     };
   });
   return { levelCount, levels };
@@ -1845,7 +1845,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ? {
               ...level,
               ...changes,
-              options: changes.options ? Array.from(new Set(changes.options.map((option) => option.trim()).filter(Boolean))) : level.options,
+              options: changes.options ? Array.from(new Set(changes.options.filter((option) => option.trim()))) : level.options,
             }
           : level
       )),

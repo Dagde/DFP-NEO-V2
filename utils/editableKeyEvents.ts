@@ -15,5 +15,6 @@ export const isEditableElement = (target: EventTarget | null): boolean => {
 export const stopEditableKeyPropagation = (event: React.KeyboardEvent<HTMLElement>) => {
   if (isEditableElement(event.target)) {
     event.stopPropagation();
+    event.nativeEvent.stopImmediatePropagation?.();
   }
 };
