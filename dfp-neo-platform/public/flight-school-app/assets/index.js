@@ -57479,6 +57479,33 @@ const ACCESS_SCOPE_TONE = {
   applyBorder: "rgba(103, 232, 249, 0.62)"
 };
 const STANDARD_MISSION_RESOURCE_TYPES = ["Flight", "FTD", "CPT", "Ground"];
+const DEFAULT_ORGANISATION_STRUCTURE_LEVELS = [
+  "Organisation",
+  "Headquarters",
+  "Command",
+  "Numbered Force",
+  "Wing",
+  "Group",
+  "Squadron",
+  "Flight",
+  "Crew"
+];
+const normaliseOrganisationStructure = (source) => {
+  const raw = source || {};
+  const rawLevels = Array.isArray(raw.levels) ? raw.levels : [];
+  const requestedCount = Number(raw.levelCount);
+  const levelCount = Math.max(1, Math.min(12, Number.isFinite(requestedCount) && requestedCount > 0 ? Math.round(requestedCount) : Math.max(rawLevels.length, 4)));
+  const levels = Array.from({ length: levelCount }, (_, index) => {
+    const rawLevel = rawLevels[index] || {};
+    const options = Array.isArray(rawLevel.options) ? rawLevel.options : String(rawLevel.options || "").split(/\r?\n|;/);
+    return {
+      id: String(rawLevel.id || `org-level-${index + 1}`),
+      name: String(rawLevel.name || rawLevel.label || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index + 1}`).trim(),
+      options: Array.from(new Set(options.map((option) => String(option || "").trim()).filter(Boolean)))
+    };
+  });
+  return { levelCount, levels };
+};
 const clampWholeNumber = (value, fallback, min, max) => {
   const parsed = Math.round(Number(value));
   if (!Number.isFinite(parsed)) return fallback;
@@ -58351,6 +58378,9 @@ const PlatformConfigurationSettings = ({
   const [airfieldCatalogue, setAirfieldCatalogue] = reactExports.useState([]);
   const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = reactExports.useState("idle");
   const [airfieldCatalogueError, setAirfieldCatalogueError] = reactExports.useState("");
+  const [organisationStructureUnlocked, setOrganisationStructureUnlocked] = reactExports.useState(false);
+  const [organisationStructureImportError, setOrganisationStructureImportError] = reactExports.useState("");
+  const organisationStructureFileInputRef = reactExports.useRef(null);
   const [selectedUnitIndex, setSelectedUnitIndex] = reactExports.useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = reactExports.useState(null);
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = reactExports.useState(false);
@@ -58613,6 +58643,10 @@ const PlatformConfigurationSettings = ({
   }, [config.organisations]);
   const primaryOrganisation = config.organisations[primaryOrganisationIndex] || null;
   const primaryOrganisationSettings = primaryOrganisation?.settings || {};
+  const organisationStructure = reactExports.useMemo(
+    () => normaliseOrganisationStructure(primaryOrganisationSettings.organisationStructure || null),
+    [primaryOrganisationSettings.organisationStructure]
+  );
   const deploymentProfile = {
     ...DEFAULT_DEPLOYMENT_PROFILE,
     ...primaryOrganisationSettings.deploymentProfile || {},
@@ -58731,6 +58765,109 @@ const PlatformConfigurationSettings = ({
       organisations[orgIndex] = { ...currentOrg, settings: nextSettings };
       return { ...prev, organisations };
     });
+  };
+  const updateOrganisationStructure = (nextStructure) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      organisationStructure: normaliseOrganisationStructure(nextStructure)
+    }));
+  };
+  const updateOrganisationStructureLevelCount = (levelCount) => {
+    const count = Math.max(1, Math.min(12, Math.round(Number(levelCount) || 1)));
+    updateOrganisationStructure({
+      levelCount: count,
+      levels: Array.from({ length: count }, (_, index) => organisationStructure.levels[index] || {
+        id: `org-level-${index + 1}`,
+        name: DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index + 1}`,
+        options: []
+      })
+    });
+  };
+  const updateOrganisationStructureLevel = (levelIndex, changes) => {
+    updateOrganisationStructure({
+      ...organisationStructure,
+      levels: organisationStructure.levels.map((level, index) => index === levelIndex ? {
+        ...level,
+        ...changes,
+        options: changes.options ? Array.from(new Set(changes.options.map((option) => option.trim()).filter(Boolean))) : level.options
+      } : level)
+    });
+  };
+  const downloadOrganisationStructureTemplate = () => {
+    const rows = [
+      ["Level", "Level Name", "Option"],
+      [1, "Organisation", "Department of the Air Force"],
+      [2, "Headquarters", "HQ USAF"],
+      [3, "Command", "Air Force Global Strike Command"],
+      [4, "Numbered Force", "Eighth Air Force"],
+      [5, "Wing", "2nd Bomb Wing"],
+      [6, "Group", "2nd Operations Group"],
+      [7, "Squadron", "96th Bomb Squadron"],
+      [8, "Flight", "Flight"],
+      [9, "Crew", "Aircrew"]
+    ];
+    if (typeof XLSX !== "undefined") {
+      const worksheet = XLSX.utils.aoa_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Organisation Structure");
+      XLSX.writeFile(workbook, "Organisation_Structure_Template.xlsx");
+      return;
+    }
+    downloadTextFile("Organisation_Structure_Template.csv", rows.map((row) => row.join(",")).join("\n"), "text/csv");
+  };
+  const importOrganisationStructureRows = (rows) => {
+    const grouped = /* @__PURE__ */ new Map();
+    rows.forEach((row) => {
+      const rawLevel = row.Level ?? row.level ?? row["Level Number"] ?? row["level number"];
+      const levelNumber = Math.round(Number(rawLevel));
+      if (!Number.isFinite(levelNumber) || levelNumber < 1 || levelNumber > 12) return;
+      const levelName = String(row["Level Name"] ?? row.levelName ?? row.Name ?? row.name ?? DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber - 1] ?? `Level ${levelNumber}`).trim();
+      const option = String(row.Option ?? row.option ?? row.Value ?? row.value ?? "").trim();
+      const current = grouped.get(levelNumber) || { name: levelName, options: [] };
+      current.name = levelName || current.name;
+      if (option) current.options.push(option);
+      grouped.set(levelNumber, current);
+    });
+    if (grouped.size === 0) {
+      setOrganisationStructureImportError("No valid organisation structure rows found.");
+      return;
+    }
+    const levelCount = Math.max(...Array.from(grouped.keys()));
+    updateOrganisationStructure({
+      levelCount,
+      levels: Array.from({ length: levelCount }, (_, index) => {
+        const levelNumber = index + 1;
+        const row = grouped.get(levelNumber);
+        return {
+          id: organisationStructure.levels[index]?.id || `org-level-${levelNumber}`,
+          name: row?.name || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${levelNumber}`,
+          options: Array.from(new Set(row?.options || []))
+        };
+      })
+    });
+    setOrganisationStructureImportError("");
+    setOrganisationStructureUnlocked(true);
+  };
+  const handleOrganisationStructureFile = async (file) => {
+    if (!file) return;
+    setOrganisationStructureImportError("");
+    try {
+      if (typeof XLSX === "undefined") throw new Error("Excel import library is not available.");
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet);
+      importOrganisationStructureRows(rows);
+    } catch (err) {
+      setOrganisationStructureImportError(err?.message || "Could not import organisation structure.");
+    } finally {
+      if (organisationStructureFileInputRef.current) organisationStructureFileInputRef.current.value = "";
+    }
+  };
+  const saveOrganisationStructure = async () => {
+    const saved = await save(void 0, "platform-organisation", { reloadPage: false, successMessage: "Organisation structure saved." });
+    if (saved) setOrganisationStructureUnlocked(false);
   };
   const updateDeploymentProfile = (changes) => {
     updatePrimaryOrganisationSettings((settings) => ({
@@ -59938,7 +60075,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     const configToSave = buildSeparationReadyConfig(
       configOverride && Array.isArray(configOverride.locations) ? configOverride : config
     );
-    const reloadPage = true;
+    const reloadPage = options?.reloadPage ?? true;
     if (!canEdit) return false;
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
@@ -59989,7 +60126,11 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         });
       });
       loadedConfigRef.current = configToSave;
-      if (!reloadPage) ;
+      if (!reloadPage) {
+        await reloadPlatformConfig();
+        onShowSuccess(options?.successMessage || "Platform configuration saved.");
+        return true;
+      }
       shouldReload = true;
       setApplyingChanges(true);
       onShowSuccess("Platform configuration saved. Applying changes...");
@@ -60457,14 +60598,129 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Organisation",
-          subtitle: "The top-level customer or operating organisation for this deployment."
+          subtitle: "The top-level customer or operating organisation for this deployment.",
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setOrganisationStructureUnlocked(true), disabled: organisationStructureUnlocked, className: platformActionButtonClass, children: "EDIT" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => void saveOrganisationStructure(), disabled: !organisationStructureUnlocked || saving || applyingChanges, className: platformActionButtonClass, children: "Save" })
+          ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: config.organisations.map((org, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Code", value: org.code, disabled: !canEdit, onChange: (value) => updateRow("organisations", index, { code: value }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Name", value: org.name, disabled: !canEdit, onChange: (value) => updateRow("organisations", index, { name: value }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: org.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("organisations", index, { status: value }) })
-      ] }, org.id || `platform-organisation-${index}`)) })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        config.organisations.map((org, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Code", value: org.code, disabled: !canEdit || !organisationStructureUnlocked, onChange: (value) => updateRow("organisations", index, { code: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Name", value: org.name, disabled: !canEdit || !organisationStructureUnlocked, onChange: (value) => updateRow("organisations", index, { name: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: org.status || "ACTIVE", disabled: !canEdit || !organisationStructureUnlocked, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("organisations", index, { status: value }) })
+        ] }, org.id || `platform-organisation-${index}`)),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/25 bg-gray-950/50", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 border-b border-cyan-500/15 bg-cyan-500/10 px-4 py-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Organisation Structure" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-gray-400", children: [
+                organisationStructure.levelCount,
+                " levels · ",
+                organisationStructure.levels.reduce((sum, level) => sum + level.options.length, 0),
+                " options"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                  onClick: downloadOrganisationStructureTemplate,
+                  children: "Template"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: "rounded border border-cyan-500/45 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+                  disabled: !canEdit || !organisationStructureUnlocked,
+                  onClick: () => organisationStructureFileInputRef.current?.click(),
+                  children: "Import Excel"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  ref: organisationStructureFileInputRef,
+                  type: "file",
+                  className: "hidden",
+                  accept: ".xlsx,.xls,.csv",
+                  onChange: (event) => void handleOrganisationStructureFile(event.target.files?.[0])
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 lg:grid-cols-[240px_1fr]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                NumberField,
+                {
+                  label: "No. of Levels",
+                  value: organisationStructure.levelCount,
+                  disabled: !canEdit || !organisationStructureUnlocked,
+                  onChange: updateOrganisationStructureLevelCount
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: `mt-3 rounded border border-dashed px-3 py-5 text-center text-xs transition-colors ${organisationStructureUnlocked ? "border-cyan-500/45 bg-cyan-500/10 text-cyan-100" : "border-gray-700 bg-gray-950 text-gray-500"}`,
+                  onDragOver: (event) => {
+                    if (!organisationStructureUnlocked) return;
+                    event.preventDefault();
+                  },
+                  onDrop: (event) => {
+                    if (!organisationStructureUnlocked) return;
+                    event.preventDefault();
+                    void handleOrganisationStructureFile(event.dataTransfer.files?.[0]);
+                  },
+                  children: "Drop Excel template here"
+                }
+              ),
+              organisationStructureImportError ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded border border-red-500/30 bg-red-950/40 px-3 py-2 text-xs text-red-200", children: organisationStructureImportError }) : null
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: organisationStructure.levels.map((level, levelIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900 p-3 md:grid-cols-[72px_220px_1fr]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-wide text-cyan-100/60", children: "Level" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-white", children: levelIndex + 1 })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Level Name",
+                  value: level.name,
+                  disabled: !canEdit || !organisationStructureUnlocked,
+                  onChange: (value) => updateOrganisationStructureLevel(levelIndex, { name: value })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: `Options (${level.options.length})` }),
+                organisationStructureUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "textarea",
+                  {
+                    className: `${fieldClass} min-h-[76px] resize-y`,
+                    value: level.options.join("\n"),
+                    disabled: !canEdit,
+                    onKeyDownCapture: stopEditableKeyPropagation,
+                    onKeyDown: stopEditableKeyPropagation,
+                    onChange: (event) => updateOrganisationStructureLevel(levelIndex, { options: event.target.value.split(/\r?\n/) })
+                  }
+                ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-h-[42px] items-center gap-2 overflow-hidden rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300", children: level.options.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                  level.options.slice(0, 3).map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-[180px] truncate rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-gray-200", title: option, children: option }, option)),
+                  level.options.length > 3 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-semibold text-cyan-200", children: [
+                    "+",
+                    level.options.length - 3
+                  ] }) : null
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500", children: "No options defined" }) })
+              ] })
+            ] }, level.id || `org-structure-level-${levelIndex}`)) })
+          ] })
+        ] })
+      ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-locations", className: getSectionClass("platform-locations"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(

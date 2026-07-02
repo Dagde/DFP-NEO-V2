@@ -93,6 +93,8 @@ import {
 } from '../utils/sunTimes.js';
 import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
 
+declare const XLSX: any;
+
 type PlatformConfig = {
   organisations: any[];
   locations: any[];
@@ -218,6 +220,48 @@ interface StandardMissionProfile {
 }
 
 const STANDARD_MISSION_RESOURCE_TYPES: StandardMissionResourceType[] = ['Flight', 'FTD', 'CPT', 'Ground'];
+
+interface OrganisationStructureLevel {
+  id: string;
+  name: string;
+  options: string[];
+}
+
+interface OrganisationStructureSettings {
+  levelCount: number;
+  levels: OrganisationStructureLevel[];
+}
+
+const DEFAULT_ORGANISATION_STRUCTURE_LEVELS = [
+  'Organisation',
+  'Headquarters',
+  'Command',
+  'Numbered Force',
+  'Wing',
+  'Group',
+  'Squadron',
+  'Flight',
+  'Crew',
+];
+
+const normaliseOrganisationStructure = (source: unknown): OrganisationStructureSettings => {
+  const raw = (source || {}) as any;
+  const rawLevels = Array.isArray(raw.levels) ? raw.levels : [];
+  const requestedCount = Number(raw.levelCount);
+  const levelCount = Math.max(1, Math.min(12, Number.isFinite(requestedCount) && requestedCount > 0 ? Math.round(requestedCount) : Math.max(rawLevels.length, 4)));
+  const levels = Array.from({ length: levelCount }, (_, index) => {
+    const rawLevel = rawLevels[index] || {};
+    const options = Array.isArray(rawLevel.options)
+      ? rawLevel.options
+      : String(rawLevel.options || '').split(/\r?\n|;/);
+    return {
+      id: String(rawLevel.id || `org-level-${index + 1}`),
+      name: String(rawLevel.name || rawLevel.label || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index + 1}`).trim(),
+      options: Array.from(new Set(options.map((option: unknown) => String(option || '').trim()).filter(Boolean))),
+    };
+  });
+  return { levelCount, levels };
+};
 
 const clampWholeNumber = (value: unknown, fallback: number, min: number, max: number): number => {
   const parsed = Math.round(Number(value));
@@ -1318,6 +1362,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [airfieldCatalogue, setAirfieldCatalogue] = useState<AirfieldCatalogueEntry[]>([]);
   const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [airfieldCatalogueError, setAirfieldCatalogueError] = useState('');
+  const [organisationStructureUnlocked, setOrganisationStructureUnlocked] = useState(false);
+  const [organisationStructureImportError, setOrganisationStructureImportError] = useState('');
+  const organisationStructureFileInputRef = useRef<HTMLInputElement>(null);
   const [selectedUnitIndex, setSelectedUnitIndex] = useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
@@ -1609,6 +1656,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const primaryOrganisation = config.organisations[primaryOrganisationIndex] || null;
   const primaryOrganisationSettings = primaryOrganisation?.settings || {};
+  const organisationStructure = useMemo(
+    () => normaliseOrganisationStructure(primaryOrganisationSettings.organisationStructure || null),
+    [primaryOrganisationSettings.organisationStructure],
+  );
   const deploymentProfile = {
     ...DEFAULT_DEPLOYMENT_PROFILE,
     ...(primaryOrganisationSettings.deploymentProfile || {}),
@@ -1752,6 +1803,122 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       organisations[orgIndex] = { ...currentOrg, settings: nextSettings };
       return { ...prev, organisations };
     });
+  };
+
+  const updateOrganisationStructure = (nextStructure: OrganisationStructureSettings) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      organisationStructure: normaliseOrganisationStructure(nextStructure),
+    }));
+  };
+
+  const updateOrganisationStructureLevelCount = (levelCount: number) => {
+    const count = Math.max(1, Math.min(12, Math.round(Number(levelCount) || 1)));
+    updateOrganisationStructure({
+      levelCount: count,
+      levels: Array.from({ length: count }, (_, index) => (
+        organisationStructure.levels[index] || {
+          id: `org-level-${index + 1}`,
+          name: DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index + 1}`,
+          options: [],
+        }
+      )),
+    });
+  };
+
+  const updateOrganisationStructureLevel = (levelIndex: number, changes: Partial<OrganisationStructureLevel>) => {
+    updateOrganisationStructure({
+      ...organisationStructure,
+      levels: organisationStructure.levels.map((level, index) => (
+        index === levelIndex
+          ? {
+              ...level,
+              ...changes,
+              options: changes.options ? Array.from(new Set(changes.options.map((option) => option.trim()).filter(Boolean))) : level.options,
+            }
+          : level
+      )),
+    });
+  };
+
+  const downloadOrganisationStructureTemplate = () => {
+    const rows = [
+      ['Level', 'Level Name', 'Option'],
+      [1, 'Organisation', 'Department of the Air Force'],
+      [2, 'Headquarters', 'HQ USAF'],
+      [3, 'Command', 'Air Force Global Strike Command'],
+      [4, 'Numbered Force', 'Eighth Air Force'],
+      [5, 'Wing', '2nd Bomb Wing'],
+      [6, 'Group', '2nd Operations Group'],
+      [7, 'Squadron', '96th Bomb Squadron'],
+      [8, 'Flight', 'Flight'],
+      [9, 'Crew', 'Aircrew'],
+    ];
+    if (typeof XLSX !== 'undefined') {
+      const worksheet = XLSX.utils.aoa_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Organisation Structure');
+      XLSX.writeFile(workbook, 'Organisation_Structure_Template.xlsx');
+      return;
+    }
+    downloadTextFile('Organisation_Structure_Template.csv', rows.map((row) => row.join(',')).join('\n'), 'text/csv');
+  };
+
+  const importOrganisationStructureRows = (rows: any[]) => {
+    const grouped = new Map<number, { name: string; options: string[] }>();
+    rows.forEach((row) => {
+      const rawLevel = row.Level ?? row.level ?? row['Level Number'] ?? row['level number'];
+      const levelNumber = Math.round(Number(rawLevel));
+      if (!Number.isFinite(levelNumber) || levelNumber < 1 || levelNumber > 12) return;
+      const levelName = String(row['Level Name'] ?? row.levelName ?? row.Name ?? row.name ?? DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber - 1] ?? `Level ${levelNumber}`).trim();
+      const option = String(row.Option ?? row.option ?? row.Value ?? row.value ?? '').trim();
+      const current = grouped.get(levelNumber) || { name: levelName, options: [] };
+      current.name = levelName || current.name;
+      if (option) current.options.push(option);
+      grouped.set(levelNumber, current);
+    });
+    if (grouped.size === 0) {
+      setOrganisationStructureImportError('No valid organisation structure rows found.');
+      return;
+    }
+    const levelCount = Math.max(...Array.from(grouped.keys()));
+    updateOrganisationStructure({
+      levelCount,
+      levels: Array.from({ length: levelCount }, (_, index) => {
+        const levelNumber = index + 1;
+        const row = grouped.get(levelNumber);
+        return {
+          id: organisationStructure.levels[index]?.id || `org-level-${levelNumber}`,
+          name: row?.name || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${levelNumber}`,
+          options: Array.from(new Set(row?.options || [])),
+        };
+      }),
+    });
+    setOrganisationStructureImportError('');
+    setOrganisationStructureUnlocked(true);
+  };
+
+  const handleOrganisationStructureFile = async (file?: File | null) => {
+    if (!file) return;
+    setOrganisationStructureImportError('');
+    try {
+      if (typeof XLSX === 'undefined') throw new Error('Excel import library is not available.');
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet);
+      importOrganisationStructureRows(rows);
+    } catch (err: any) {
+      setOrganisationStructureImportError(err?.message || 'Could not import organisation structure.');
+    } finally {
+      if (organisationStructureFileInputRef.current) organisationStructureFileInputRef.current.value = '';
+    }
+  };
+
+  const saveOrganisationStructure = async () => {
+    const saved = await save(undefined, 'platform-organisation', { reloadPage: false, successMessage: 'Organisation structure saved.' });
+    if (saved) setOrganisationStructureUnlocked(false);
   };
 
   const updateDeploymentProfile = (changes: Record<string, any>) => {
@@ -3935,15 +4102,129 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Organisation"
           subtitle="The top-level customer or operating organisation for this deployment."
+          action={canEdit ? (
+            <div className="flex items-center gap-[1px]">
+              <button type="button" onClick={() => setOrganisationStructureUnlocked(true)} disabled={organisationStructureUnlocked} className={platformActionButtonClass}>EDIT</button>
+              <button type="button" onClick={() => void saveOrganisationStructure()} disabled={!organisationStructureUnlocked || saving || applyingChanges} className={platformActionButtonClass}>Save</button>
+            </div>
+          ) : null}
         />
         <div className="space-y-4 p-4">
           {config.organisations.map((org, index) => (
             <div key={org.id || `platform-organisation-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3">
-              <Field label="Organisation Code" value={org.code} disabled={!canEdit} onChange={(value) => updateRow('organisations', index, { code: value })} />
-              <Field label="Organisation Name" value={org.name} disabled={!canEdit} onChange={(value) => updateRow('organisations', index, { name: value })} />
-              <SelectField label="Status" value={org.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('organisations', index, { status: value })} />
+              <Field label="Organisation Code" value={org.code} disabled={!canEdit || !organisationStructureUnlocked} onChange={(value) => updateRow('organisations', index, { code: value })} />
+              <Field label="Organisation Name" value={org.name} disabled={!canEdit || !organisationStructureUnlocked} onChange={(value) => updateRow('organisations', index, { name: value })} />
+              <SelectField label="Status" value={org.status || 'ACTIVE'} disabled={!canEdit || !organisationStructureUnlocked} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('organisations', index, { status: value })} />
             </div>
           ))}
+
+          <div className="overflow-hidden rounded-lg border border-cyan-500/25 bg-gray-950/50">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cyan-500/15 bg-cyan-500/10 px-4 py-3">
+              <div>
+                <h5 className="text-sm font-bold text-white">Organisation Structure</h5>
+                <p className="mt-1 text-xs text-gray-400">{organisationStructure.levelCount} levels · {organisationStructure.levels.reduce((sum, level) => sum + level.options.length, 0)} options</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={downloadOrganisationStructureTemplate}
+                >
+                  Template
+                </button>
+                <button
+                  type="button"
+                  className="rounded border border-cyan-500/45 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!canEdit || !organisationStructureUnlocked}
+                  onClick={() => organisationStructureFileInputRef.current?.click()}
+                >
+                  Import Excel
+                </button>
+                <input
+                  ref={organisationStructureFileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(event) => void handleOrganisationStructureFile(event.target.files?.[0])}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 p-4 lg:grid-cols-[240px_1fr]">
+              <div className="rounded-lg border border-gray-700 bg-gray-900 p-3">
+                <NumberField
+                  label="No. of Levels"
+                  value={organisationStructure.levelCount}
+                  disabled={!canEdit || !organisationStructureUnlocked}
+                  onChange={updateOrganisationStructureLevelCount}
+                />
+                <div
+                  className={`mt-3 rounded border border-dashed px-3 py-5 text-center text-xs transition-colors ${
+                    organisationStructureUnlocked
+                      ? 'border-cyan-500/45 bg-cyan-500/10 text-cyan-100'
+                      : 'border-gray-700 bg-gray-950 text-gray-500'
+                  }`}
+                  onDragOver={(event) => {
+                    if (!organisationStructureUnlocked) return;
+                    event.preventDefault();
+                  }}
+                  onDrop={(event) => {
+                    if (!organisationStructureUnlocked) return;
+                    event.preventDefault();
+                    void handleOrganisationStructureFile(event.dataTransfer.files?.[0]);
+                  }}
+                >
+                  Drop Excel template here
+                </div>
+                {organisationStructureImportError ? (
+                  <p className="mt-3 rounded border border-red-500/30 bg-red-950/40 px-3 py-2 text-xs text-red-200">{organisationStructureImportError}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                {organisationStructure.levels.map((level, levelIndex) => (
+                  <div key={level.id || `org-structure-level-${levelIndex}`} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900 p-3 md:grid-cols-[72px_220px_1fr]">
+                    <div className="rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-center">
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-cyan-100/60">Level</div>
+                      <div className="mt-1 text-lg font-black text-white">{levelIndex + 1}</div>
+                    </div>
+                    <Field
+                      label="Level Name"
+                      value={level.name}
+                      disabled={!canEdit || !organisationStructureUnlocked}
+                      onChange={(value) => updateOrganisationStructureLevel(levelIndex, { name: value })}
+                    />
+                    <label>
+                      <FieldLabel label={`Options (${level.options.length})`} />
+                      {organisationStructureUnlocked ? (
+                        <textarea
+                          className={`${fieldClass} min-h-[76px] resize-y`}
+                          value={level.options.join('\n')}
+                          disabled={!canEdit}
+                          onKeyDownCapture={stopEditableKeyPropagation}
+                          onKeyDown={stopEditableKeyPropagation}
+                          onChange={(event) => updateOrganisationStructureLevel(levelIndex, { options: event.target.value.split(/\r?\n/) })}
+                        />
+                      ) : (
+                        <div className="flex min-h-[42px] items-center gap-2 overflow-hidden rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300">
+                          {level.options.length > 0 ? (
+                            <>
+                              {level.options.slice(0, 3).map((option) => (
+                                <span key={option} className="max-w-[180px] truncate rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-gray-200" title={option}>{option}</span>
+                              ))}
+                              {level.options.length > 3 ? <span className="text-xs font-semibold text-cyan-200">+{level.options.length - 3}</span> : null}
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-500">No options defined</span>
+                          )}
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
