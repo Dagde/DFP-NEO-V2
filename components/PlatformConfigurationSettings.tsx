@@ -3988,6 +3988,33 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       Array.from({ length: Math.max(1, Math.round(Number(requirement.count) || 1)) }, () => formatCrewRoleLabel(requirement.role))
     ))
   );
+  const organisationParentLevels = organisationStructure.levels
+    .slice(1)
+    .map((level, index) => ({
+      levelIndex: index + 1,
+      name: level.name || `Level ${index + 1}`,
+      options: level.options.map((option) => String(option || '').trim()).filter(Boolean),
+    }))
+    .filter((level) => level.options.length > 0);
+  const getUnitParentOrganisationPath = (unit: any): string[] => (
+    Array.isArray(unit?.settings?.parentOrganisationPath)
+      ? unit.settings.parentOrganisationPath
+      : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || '')
+        .split('-')
+    ).map((part: unknown) => String(part || '').trim()).filter(Boolean);
+  const updateUnitParentOrganisationPath = (unitIndex: number, unit: any, levelIndex: number, selectedValue: string) => {
+    const currentPath = getUnitParentOrganisationPath(unit);
+    const nextPath = currentPath.slice(0, levelIndex);
+    if (selectedValue) nextPath[levelIndex] = selectedValue;
+    const cleanPath = nextPath.map((part) => String(part || '').trim()).filter(Boolean);
+    updateRow('units', unitIndex, {
+      settings: {
+        ...(unit.settings || {}),
+        parentOrganisationPath: cleanPath,
+        parentOrganisation: cleanPath.join('-'),
+      },
+    });
+  };
 
   return (
     <div className="relative space-y-8" onKeyDownCapture={stopEditableKeyPropagation}>
@@ -4369,35 +4396,59 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             const isSelectedUnit = selectedUnitIndex === index;
             const isUnitEditing = canEdit && editingUnitIndex === index;
             const rowKey = unit.id || `platform-unit-${index}`;
+            const parentOrganisationPath = getUnitParentOrganisationPath(unit);
             return (
               <div
                 key={rowKey}
                 ref={(node) => { unitRowRefs.current[rowKey] = node; }}
                 onClick={() => setSelectedUnitIndex(index)}
-                className={`relative grid cursor-pointer gap-3 rounded border-2 p-3 transition-colors md:grid-cols-12 ${
+                className={`relative grid cursor-pointer gap-3 rounded border-2 p-3 transition-colors md:grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(230px,1.9fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(190px,1.45fr)_minmax(110px,0.75fr)] ${
                   isSelectedUnit
-                    ? 'border-cyan-300 bg-cyan-500/10 pr-24 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40'
+                    ? 'border-cyan-300 bg-cyan-500/10 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40'
                     : 'border-gray-700 bg-gray-900 hover:border-gray-500'
                 }`}
               >
-                {isSelectedUnit && (
-                  <span className="absolute right-2 top-2 rounded border border-cyan-300/70 bg-cyan-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cyan-50">
-                    Selected
-                  </span>
-                )}
-                <div className="md:col-span-1">
+                <div>
                   <Field label="Unit" value={unit.code} disabled={!isUnitEditing} onChange={(value) => updateUnitCode(index, value)} />
                 </div>
-                <div className="md:col-span-2">
+                <div>
                   <Field label="Unit Name" value={unit.name} disabled={!isUnitEditing} onChange={(value) => updateRow('units', index, { name: value })} />
                 </div>
-                <div className="md:col-span-2">
+                <label>
+                  <FieldLabel label="Parent Org." info="Select each organisation level in order. The saved path is stored against this unit." />
+                  <div className="flex min-h-[38px] flex-wrap items-center gap-1 rounded border border-gray-600 bg-gray-950 p-1">
+                    {organisationParentLevels.length > 0 ? organisationParentLevels.map((level, parentLevelIndex) => {
+                      const previousSelected = parentLevelIndex === 0 || Boolean(parentOrganisationPath[parentLevelIndex - 1]);
+                      const selectedValue = parentOrganisationPath[parentLevelIndex] || '';
+                      return (
+                        <select
+                          key={`unit-${rowKey}-parent-org-${level.levelIndex}`}
+                          className="min-w-[84px] flex-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                          value={selectedValue}
+                          disabled={!isUnitEditing || !previousSelected}
+                          title={level.name}
+                          onKeyDownCapture={stopEditableKeyPropagation}
+                          onKeyDown={stopEditableKeyPropagation}
+                          onChange={(event) => updateUnitParentOrganisationPath(index, unit, parentLevelIndex, event.target.value)}
+                        >
+                          <option value="">{level.name}</option>
+                          {level.options.map((option) => (
+                            <option key={`${level.levelIndex}-${option}`} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      );
+                    }) : (
+                      <span className="px-2 py-1 text-xs font-semibold text-gray-500">No organisation options</span>
+                    )}
+                  </div>
+                </label>
+                <div>
                   <SelectField label="Location" value={unit.locationCode || ''} disabled={!isUnitEditing} options={config.locations.map((location) => location.code)} onChange={(value) => updateRow('units', index, { locationCode: value })} />
                 </div>
-                <div className="md:col-span-2">
+                <div>
                   <SelectField label="Unit Type" value={unit.unitType || 'Training'} disabled={!isUnitEditing} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational']} onChange={(value) => updateRow('units', index, { unitType: value })} />
                 </div>
-                <div className="md:col-span-3">
+                <div>
                   <SelectField
                     label="Model"
                     value={getUnitOperationalModel(unit)}
@@ -4412,7 +4463,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     })}
                   />
                 </div>
-                <div className="md:col-span-2">
+                <div>
                   <SelectField label="Status" value={unit.status || 'ACTIVE'} disabled={!isUnitEditing} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('units', index, { status: value })} />
                 </div>
               </div>
