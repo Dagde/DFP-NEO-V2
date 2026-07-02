@@ -58927,29 +58927,6 @@ const PlatformConfigurationSettings = ({
       } : level)
     });
   };
-  const downloadOrganisationStructureTemplate = () => {
-    const organisationName = String(primaryOrganisation?.name || "Department of the Air Force").trim();
-    const rows = [
-      ["Level", "Level Name", "Option"],
-      [0, organisationName, organisationName],
-      [1, "Headquarters", "HQ USAF"],
-      [2, "Command", "Air Force Global Strike Command"],
-      [3, "Numbered Force", "Eighth Air Force"],
-      [4, "Wing", "2nd Bomb Wing"],
-      [5, "Group", "2nd Operations Group"],
-      [6, "Squadron", "96th Bomb Squadron"],
-      [7, "Flight", "Flight"],
-      [8, "Crew", "Aircrew"]
-    ];
-    if (typeof XLSX !== "undefined") {
-      const worksheet = XLSX.utils.aoa_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Organisation Structure");
-      XLSX.writeFile(workbook, "Organisation_Structure_Template.xlsx");
-      return;
-    }
-    downloadTextFile("Organisation_Structure_Template.csv", rows.map((row) => row.join(",")).join("\n"), "text/csv");
-  };
   const applyImportedOrganisationStructure = (grouped) => {
     if (grouped.size === 0) {
       setOrganisationStructureImportError("No valid organisation structure rows found.");
@@ -60846,19 +60823,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 "button",
                 {
                   type: "button",
-                  className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
-                  onClick: downloadOrganisationStructureTemplate,
-                  children: "Template"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "rounded border border-cyan-500/45 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+                  className: platformActionButtonClass,
                   disabled: !canEdit || !organisationStructureUnlocked,
                   onClick: () => organisationStructureFileInputRef.current?.click(),
-                  children: "Import Excel"
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
+                    "Bulk",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                    "Import"
+                  ] })
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(

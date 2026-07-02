@@ -4241,18 +4241,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={downloadOrganisationStructureTemplate}
-                >
-                  Template
-                </button>
-                <button
-                  type="button"
-                  className="rounded border border-cyan-500/45 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={platformActionButtonClass}
                   disabled={!canEdit || !organisationStructureUnlocked}
                   onClick={() => organisationStructureFileInputRef.current?.click()}
                 >
-                  Import Excel
+                  <span className="leading-tight">Bulk<br />Import</span>
                 </button>
                 <input
                   ref={organisationStructureFileInputRef}
