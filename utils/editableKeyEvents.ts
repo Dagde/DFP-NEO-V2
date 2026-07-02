@@ -15,7 +15,6 @@ export const isEditableElement = (target: EventTarget | null): boolean => {
 export const stopEditableKeyPropagation = (event: React.KeyboardEvent<HTMLElement>) => {
   if (isEditableElement(event.target)) {
     if (event.target instanceof HTMLTextAreaElement && event.key === 'Enter') {
-      event.stopPropagation();
       return;
     }
     event.stopPropagation();

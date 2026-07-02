@@ -31873,7 +31873,6 @@ const isEditableElement = (target) => {
 const stopEditableKeyPropagation = (event) => {
   if (isEditableElement(event.target)) {
     if (event.target instanceof HTMLTextAreaElement && event.key === "Enter") {
-      event.stopPropagation();
       return;
     }
     event.stopPropagation();
