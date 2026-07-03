@@ -9015,6 +9015,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
   const verticalStartLevel = squadronLevelIndex >= 1 ? squadronLevelIndex : maxStructureLevel + 1;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto px-5 py-4 text-slate-100", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
+                /* Keep connector rules aligned with docs/organisation-chart-rendering.md. */
                 .org-chart { display: inline-flex; min-width: 100%; justify-content: center; padding: 10px 18px 22px; }
                 .org-chart ul { position: relative; display: flex; justify-content: center; gap: 20px; padding: 42px 0 0; margin: 0; list-style: none; }
                 .org-chart li { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 132px; isolation: isolate; }
