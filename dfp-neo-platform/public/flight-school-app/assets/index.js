@@ -61564,7 +61564,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 p-4", children: config.units.map((unit, index) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1060px] space-y-3", children: config.units.map((unit, index) => {
         const unitSettings = unit.settings || {};
         const isSelectedUnit = selectedUnitIndex === index;
         const isUnitEditing = canEdit && editingUnitIndex === index;
@@ -61578,7 +61578,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               unitRowRefs.current[rowKey] = node;
             },
             onClick: () => setSelectedUnitIndex(index),
-            className: `relative grid cursor-pointer gap-3 rounded border-2 p-3 transition-colors md:grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(138px,1.14fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(190px,1.45fr)] ${isSelectedUnit ? "border-cyan-300 bg-cyan-500/10 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40" : "border-gray-700 bg-gray-900 hover:border-gray-500"}`,
+            className: `relative grid cursor-pointer grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(138px,1.14fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(190px,1.45fr)] gap-3 rounded border-2 p-3 transition-colors ${isSelectedUnit ? "border-cyan-300 bg-cyan-500/10 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40" : "border-gray-700 bg-gray-900 hover:border-gray-500"}`,
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit", value: unit.code, disabled: !isUnitEditing, onChange: (value) => updateUnitCode(index, value) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit Name", value: unit.name, disabled: !isUnitEditing, onChange: (value) => updateRow("units", index, { name: value }) }) }),
@@ -61697,7 +61697,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           },
           rowKey
         );
-      }) })
+      }) }) }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-task-profiles", className: getSectionClass("platform-task-profiles"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(

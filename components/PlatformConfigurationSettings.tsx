@@ -4736,25 +4736,27 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           ) : null}
         />
-        <div className="space-y-3 p-4">
-          {config.units.map((unit, index) => {
-            const unitSettings = unit.settings || {};
-            const isSelectedUnit = selectedUnitIndex === index;
-            const isUnitEditing = canEdit && editingUnitIndex === index;
-            const rowKey = unit.id || `platform-unit-${index}`;
-            const parentOrganisationPath = getUnitParentOrganisationPath(unit);
-            const parentOrganisationDisplay = parentOrganisationPath[parentOrganisationPath.length - 1] || '';
-            return (
-              <div
-                key={rowKey}
-                ref={(node) => { unitRowRefs.current[rowKey] = node; }}
-                onClick={() => setSelectedUnitIndex(index)}
-                className={`relative grid cursor-pointer gap-3 rounded border-2 p-3 transition-colors md:grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(138px,1.14fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(190px,1.45fr)] ${
-                  isSelectedUnit
-                    ? 'border-cyan-300 bg-cyan-500/10 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40'
-                    : 'border-gray-700 bg-gray-900 hover:border-gray-500'
-                }`}
-              >
+        <div className="p-4">
+          <div className="max-w-full overflow-x-auto pb-2">
+            <div className="min-w-[1060px] space-y-3">
+              {config.units.map((unit, index) => {
+                const unitSettings = unit.settings || {};
+                const isSelectedUnit = selectedUnitIndex === index;
+                const isUnitEditing = canEdit && editingUnitIndex === index;
+                const rowKey = unit.id || `platform-unit-${index}`;
+                const parentOrganisationPath = getUnitParentOrganisationPath(unit);
+                const parentOrganisationDisplay = parentOrganisationPath[parentOrganisationPath.length - 1] || '';
+                return (
+                  <div
+                    key={rowKey}
+                    ref={(node) => { unitRowRefs.current[rowKey] = node; }}
+                    onClick={() => setSelectedUnitIndex(index)}
+                    className={`relative grid cursor-pointer grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(138px,1.14fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(190px,1.45fr)] gap-3 rounded border-2 p-3 transition-colors ${
+                      isSelectedUnit
+                        ? 'border-cyan-300 bg-cyan-500/10 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40'
+                        : 'border-gray-700 bg-gray-900 hover:border-gray-500'
+                    }`}
+                  >
                 <div>
                   <Field label="Unit" value={unit.code} disabled={!isUnitEditing} onChange={(value) => updateUnitCode(index, value)} />
                 </div>
@@ -4881,9 +4883,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     })}
                   />
                 </div>
-              </div>
-            );
-          })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </section>
 
