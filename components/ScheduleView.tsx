@@ -362,8 +362,8 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
                 .org-chart-box-level-2 { width: 84px; min-width: 84px; max-width: 84px; height: 74px; min-height: 74px; }
                 .org-chart-node-level-3 { min-width: 66px; }
                 .org-chart-box-level-3 { width: 66px; min-width: 66px; max-width: 66px; height: 54px; min-height: 54px; }
-                .org-chart-node-level-4 { min-width: 84px; }
-                .org-chart-box-level-4 { width: 84px; min-width: 84px; max-width: 84px; height: 74px; min-height: 74px; }
+                .org-chart-node-level-4 { min-width: 66px; }
+                .org-chart-box-level-4 { width: 66px; min-width: 66px; max-width: 66px; height: 54px; min-height: 54px; }
                 .org-chart-box-unit { border-color: rgba(74, 222, 128, 0.52); }
                 .org-chart-level { display: block; margin-bottom: 3px; font-size: 9px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(125, 211, 252, 0.78); }
                 .org-chart-label { display: block; font-size: 12px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
