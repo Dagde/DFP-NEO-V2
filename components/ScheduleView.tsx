@@ -310,19 +310,74 @@ const findOrganisationChartPath = (node: OrganisationChartNode, nodeId: string, 
     return null;
 };
 
+const getOrganisationChartBoxWidth = (node: OrganisationChartNode, isRoot = false): number => {
+    if (isRoot) return 190;
+    if (node.levelIndex === 2) return 84;
+    if (node.levelIndex >= 3) return 66;
+    return 132;
+};
+
+const estimateOrganisationChartBoxHeight = (node: OrganisationChartNode, isRoot = false): number => {
+    const width = getOrganisationChartBoxWidth(node, isRoot);
+    const compact = node.levelIndex >= 2 && !isRoot;
+    const labelFontSize = compact ? 10 : 12;
+    const labelLineHeight = compact ? 11.2 : 14.4;
+    const levelLineHeight = compact ? 9 : 11;
+    const horizontalPadding = compact ? 12 : 20;
+    const verticalPadding = compact ? 14 : 18;
+    const averageCharacterWidth = labelFontSize * 0.58;
+    const usableWidth = Math.max(24, width - horizontalPadding);
+    const charactersPerLine = Math.max(4, Math.floor(usableWidth / averageCharacterWidth));
+    const words = normaliseOrgChartValue(node.label).split(/\s+/).filter(Boolean);
+    let lineCount = 1;
+    let lineLength = 0;
+    words.forEach((word) => {
+        const wordLength = Math.max(1, word.length);
+        if (wordLength > charactersPerLine) {
+            if (lineLength > 0) lineCount += 1;
+            lineCount += Math.ceil(wordLength / charactersPerLine) - 1;
+            lineLength = wordLength % charactersPerLine;
+            return;
+        }
+        const nextLength = lineLength ? lineLength + 1 + wordLength : wordLength;
+        if (nextLength > charactersPerLine) {
+            lineCount += 1;
+            lineLength = wordLength;
+        } else {
+            lineLength = nextLength;
+        }
+    });
+    const levelHeight = isRoot ? 0 : levelLineHeight + 3;
+    const minimumHeight = isRoot ? 62 : compact ? 54 : 62;
+    return Math.max(minimumHeight, Math.ceil(verticalPadding + levelHeight + (lineCount * labelLineHeight)));
+};
+
+const getOrganisationChartLevelHeights = (root: OrganisationChartNode): Map<number, number> => {
+    const heights = new Map<number, number>();
+    const visit = (node: OrganisationChartNode, isRoot = false) => {
+        const height = estimateOrganisationChartBoxHeight(node, isRoot);
+        heights.set(node.levelIndex, Math.max(heights.get(node.levelIndex) || 0, height));
+        node.children.forEach((child) => visit(child, false));
+    };
+    visit(root, true);
+    return heights;
+};
+
 const OrganisationChartBranch: React.FC<{
     node: OrganisationChartNode;
     isRoot?: boolean;
+    levelHeights: Map<number, number>;
     verticalStartLevel: number;
     selectedNodeId: string | null;
     selectedPathIds: Set<string>;
     focusedPath: OrganisationChartNode[] | null;
     onSelectNode: (node: OrganisationChartNode) => void;
-}> = ({ node, isRoot = false, verticalStartLevel, selectedNodeId, selectedPathIds, focusedPath, onSelectNode }) => (
+}> = ({ node, isRoot = false, levelHeights, verticalStartLevel, selectedNodeId, selectedPathIds, focusedPath, onSelectNode }) => (
     <li className={`${node.levelIndex >= 2 ? 'org-chart-compact-node ' : ''}org-chart-node-level-${node.levelIndex}`}>
         <button
             type="button"
             className={`org-chart-box org-chart-box-level-${node.levelIndex} ${isRoot ? 'org-chart-box-root' : ''} ${node.levelIndex >= 2 ? 'org-chart-box-compact' : ''} ${node.unitCode ? 'org-chart-box-unit' : ''} ${selectedPathIds.has(node.id) ? 'org-chart-box-active-chain' : ''} ${selectedNodeId === node.id ? 'org-chart-box-selected' : ''}`}
+            style={{ height: `${levelHeights.get(node.levelIndex) || estimateOrganisationChartBoxHeight(node, isRoot)}px` }}
             data-org-node-id={node.id}
             title={isRoot ? node.label : `${node.levelName}: ${node.label}`}
             onClick={() => onSelectNode(node)}
@@ -350,6 +405,7 @@ const OrganisationChartBranch: React.FC<{
                         <OrganisationChartBranch
                             key={child.id}
                             node={child}
+                            levelHeights={levelHeights}
                             verticalStartLevel={verticalStartLevel}
                             selectedNodeId={selectedNodeId}
                             selectedPathIds={selectedPathIds}
@@ -398,6 +454,7 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
     const maxStructureLevel = Math.max(1, levels.length - 1);
     const squadronLevelIndex = levels.findIndex((level: any) => /\b(sqn|squadron)\b/i.test(String(level?.name || '')));
     const verticalStartLevel = squadronLevelIndex >= 1 ? squadronLevelIndex : maxStructureLevel + 1;
+    const levelHeights = getOrganisationChartLevelHeights(chart);
     return (
         <div className="h-full overflow-auto px-5 py-4 text-slate-100">
             <style>{`
@@ -455,6 +512,7 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
                         <OrganisationChartBranch
                             node={chart}
                             isRoot
+                            levelHeights={levelHeights}
                             verticalStartLevel={verticalStartLevel}
                             selectedNodeId={selectedNodeId}
                             selectedPathIds={selectedPathIds}
