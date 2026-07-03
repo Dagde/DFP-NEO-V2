@@ -9187,13 +9187,38 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
                 .org-chart ul.org-chart-vertical-level > li:first-child > .org-chart-box::before { display: block; top: -14px; height: 14px; border-left-color: rgba(103, 232, 249, 0.34); }
                 .org-chart ul.org-chart-vertical-level > li:not(:last-child) > .org-chart-box::after { content: ''; position: absolute; top: 100%; left: 50%; z-index: -1; height: 8px; width: 0; border-left: 1px solid rgba(103, 232, 249, 0.34); }
             ` }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 flex items-start justify-between gap-4 border-b border-cyan-400/20 pb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-black uppercase tracking-[0.16em] text-cyan-200", children: "Organisation Structure" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-slate-400", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 border-b border-cyan-400/20 pb-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "rounded-md border border-orange-300 bg-orange-500/20 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18",
+            children: "Organisation Structure"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-100/80 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18",
+            children: "My Unit Settings"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-100/80 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18",
+            children: "Initial Setup Wizard"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-slate-400", children: [
         unitCount,
         " configured units mapped from Settings."
-      ] })
-    ] }) }),
+      ] }) })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
       {
