@@ -59252,12 +59252,25 @@ const PlatformConfigurationSettings = ({
     if (levelColumns.length === 0) return false;
     const grouped = /* @__PURE__ */ new Map();
     const relationshipPaths = [];
+    const lastValuesByLevel = /* @__PURE__ */ new Map();
     rows.slice(headerRowIndex + 1).forEach((row) => {
       if (!Array.isArray(row)) return;
-      const path = levelColumns.map(({ columnIndex }) => String(row[columnIndex] || "").trim()).filter(Boolean);
-      if (path.length > 1) relationshipPaths.push(path);
-      levelColumns.forEach(({ columnIndex, levelNumber }) => {
-        const option = String(row[columnIndex] || "").trim();
+      const rawValues = levelColumns.map(({ columnIndex }) => String(row[columnIndex] || "").trim());
+      const deepestValueIndex = rawValues.reduce((lastIndex, value, index) => value ? index : lastIndex, -1);
+      if (deepestValueIndex < 0) return;
+      const filledValues = rawValues.map((value, index) => {
+        const levelNumber = levelColumns[index].levelNumber;
+        if (value) {
+          lastValuesByLevel.set(levelNumber, value);
+          return value;
+        }
+        return index <= deepestValueIndex ? lastValuesByLevel.get(levelNumber) || "" : "";
+      });
+      const path = filledValues.slice(0, deepestValueIndex + 1);
+      if (path.length > 1 && path.every(Boolean)) relationshipPaths.push(path);
+      levelColumns.forEach(({ levelNumber }, index) => {
+        if (index > deepestValueIndex) return;
+        const option = filledValues[index];
         if (!option) return;
         const current = grouped.get(levelNumber) || {
           name: levelNames.get(levelNumber) || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] || `Level ${levelNumber}`,
@@ -59266,10 +59279,10 @@ const PlatformConfigurationSettings = ({
         current.options.push(option);
         grouped.set(levelNumber, current);
       });
-      levelColumns.forEach(({ columnIndex, levelNumber }, index) => {
-        if (index === 0) return;
-        const child = String(row[columnIndex] || "").trim();
-        const parent = String(row[levelColumns[index - 1].columnIndex] || "").trim();
+      levelColumns.forEach(({ levelNumber }, index) => {
+        if (index === 0 || index > deepestValueIndex) return;
+        const child = filledValues[index];
+        const parent = filledValues[index - 1];
         if (!parent || !child) return;
         const current = grouped.get(levelNumber) || {
           name: levelNames.get(levelNumber) || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] || `Level ${levelNumber}`,
