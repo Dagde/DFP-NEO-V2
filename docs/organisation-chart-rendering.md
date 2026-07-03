@@ -23,15 +23,26 @@ The key lesson is that vertical connector endpoints should be attached to the bo
 
 ## Level Layout Rules
 
-The chart supports a flexible organisation hierarchy, but the current defence layout uses:
+The chart supports a flexible organisation hierarchy, but it deliberately does not show every configured level at once.
+
+Default view:
 
 - Level 0: single organisation root, centred.
 - Level 1: command level, horizontal.
 - Level 2: group level, horizontal, fixed-size compact boxes.
 - Level 3: wing level, horizontal, fixed-size compact boxes.
-- Level 4 and below: unit/squadron level stacks vertically under the parent to save width.
 
-The vertical stacking starts at the configured level whose name matches `SQN` or `Squadron`. If no squadron-style level exists, the chart stacks only beyond the configured organisation structure levels.
+Interactive drill-down:
+
+- Clicking any entity highlights that entity and its full parent chain with a green border.
+- Clicking Level 0, 1, or 2 keeps the default Level 0-3 view visible while showing the selected chain.
+- Clicking Level 3 or deeper focuses the view on that chain of command only.
+- In focused mode, siblings outside the selected chain disappear.
+- The selected Level 3+ entity displays only its immediate children underneath it.
+- Those children are listed vertically to save width.
+- The same pattern repeats until the lowest configured level is selected.
+
+The vertical stacking starts at the focused Level 3+ entity. The older `SQN`/`Squadron` fallback remains available for unfocused structures that need vertical stacking beyond the configured organisation levels.
 
 ## Maintenance Guidance
 
@@ -41,4 +52,5 @@ When changing this chart:
 - Avoid rounded-corner connector hacks unless the rail/drop endpoints are mathematically tied together.
 - Avoid hard-coded assumptions about RAAF-specific names except the current `SQN`/`Squadron` stacking detection.
 - If adding another fixed-size level, add both `org-chart-node-level-N` and `org-chart-box-level-N` rules.
-- Test with branches that have one child, several children, and vertically stacked children.
+- Test with branches that have one child, several children, vertically stacked children, and deeper-than-Level-4 children.
+- Test both default view and focused drill-down view.

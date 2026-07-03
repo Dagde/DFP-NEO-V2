@@ -8986,24 +8986,69 @@ const buildOrganisationChart = (platformConfig) => {
   sortNodes(root2);
   return root2;
 };
-const OrganisationChartBranch = ({ node, isRoot = false, verticalStartLevel }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `${node.levelIndex >= 2 ? "org-chart-compact-node " : ""}org-chart-node-level-${node.levelIndex}`, children: [
+const findOrganisationChartPath = (node, nodeId, path = []) => {
+  const nextPath = [...path, node];
+  if (node.id === nodeId) return nextPath;
+  for (const child of node.children) {
+    const childPath = findOrganisationChartPath(child, nodeId, nextPath);
+    if (childPath) return childPath;
+  }
+  return null;
+};
+const OrganisationChartBranch = ({ node, isRoot = false, verticalStartLevel, selectedNodeId, selectedPathIds, focusedPath, onSelectNode }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `${node.levelIndex >= 2 ? "org-chart-compact-node " : ""}org-chart-node-level-${node.levelIndex}`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "button",
     {
       type: "button",
-      className: `org-chart-box org-chart-box-level-${node.levelIndex} ${isRoot ? "org-chart-box-root" : ""} ${node.levelIndex >= 2 ? "org-chart-box-compact" : ""} ${node.unitCode ? "org-chart-box-unit" : ""}`,
+      className: `org-chart-box org-chart-box-level-${node.levelIndex} ${isRoot ? "org-chart-box-root" : ""} ${node.levelIndex >= 2 ? "org-chart-box-compact" : ""} ${node.unitCode ? "org-chart-box-unit" : ""} ${selectedPathIds.has(node.id) ? "org-chart-box-active-chain" : ""} ${selectedNodeId === node.id ? "org-chart-box-selected" : ""}`,
       "data-org-node-id": node.id,
       title: isRoot ? node.label : `${node.levelName}: ${node.label}`,
+      onClick: () => onSelectNode(node),
       children: [
         !isRoot && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "org-chart-level", children: node.levelName }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "org-chart-label", children: node.label })
       ]
     }
   ),
-  node.children.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: node.children.every((child) => child.levelIndex >= verticalStartLevel) ? "org-chart-vertical-level" : void 0, children: node.children.map((child) => /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationChartBranch, { node: child, verticalStartLevel }, child.id)) }) : null
+  (() => {
+    const pathIndex = focusedPath?.findIndex((pathNode) => pathNode.id === node.id) ?? -1;
+    const isFocusedSelection = Boolean(focusedPath && selectedNodeId === node.id && node.levelIndex >= 3);
+    const visibleChildren = focusedPath ? pathIndex >= 0 ? selectedNodeId === node.id ? node.children : focusedPath[pathIndex + 1] ? [focusedPath[pathIndex + 1]] : [] : [] : node.children.filter((child) => child.levelIndex <= 3);
+    if (visibleChildren.length === 0) return null;
+    const useVerticalList = isFocusedSelection || visibleChildren.every((child) => child.levelIndex >= verticalStartLevel);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: useVerticalList ? "org-chart-vertical-level" : void 0, children: visibleChildren.map((child) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+      OrganisationChartBranch,
+      {
+        node: child,
+        verticalStartLevel,
+        selectedNodeId,
+        selectedPathIds,
+        focusedPath,
+        onSelectNode
+      },
+      child.id
+    )) });
+  })()
 ] });
+const EmptyOrganisationChartSet = /* @__PURE__ */ new Set();
 const OrganisationSlideoutDiagram = ({ platformConfig }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
+  const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    if (selectedNodeId && chart && !findOrganisationChartPath(chart, selectedNodeId)) {
+      setSelectedNodeId(null);
+    }
+  }, [chart, selectedNodeId]);
+  const selectedPath = reactExports.useMemo(() => {
+    if (!chart || !selectedNodeId) return null;
+    return findOrganisationChartPath(chart, selectedNodeId);
+  }, [chart, selectedNodeId]);
+  const selectedPathIds = reactExports.useMemo(() => selectedPath ? new Set(selectedPath.map((node) => node.id)) : EmptyOrganisationChartSet, [selectedPath]);
+  const selectedNode = selectedPath?.[selectedPath.length - 1] || null;
+  const focusedPath = selectedNode && selectedNode.levelIndex >= 3 ? selectedPath : null;
+  const handleSelectNode = reactExports.useCallback((node) => {
+    setSelectedNodeId((current) => current === node.id ? null : node.id);
+  }, []);
   if (!chart) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full items-center justify-center p-6 text-center text-xs text-slate-400", children: "No organisation structure has been configured." });
   }
@@ -9034,6 +9079,8 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
                 .org-chart ul ul > li > .org-chart-box::before { content: ''; position: absolute; top: -18px; left: 50%; z-index: -1; height: 18px; width: 0; border-left: 1px solid rgba(103, 232, 249, 0.42); }
                 .org-chart > ul > li > .org-chart-box::before { display: none; }
                 .org-chart-box:hover { border-color: rgba(165, 243, 252, 0.9); background: linear-gradient(180deg, rgb(8, 47, 73), rgb(8, 13, 28)); transform: translateY(-1px); }
+                .org-chart-box-active-chain { border-color: rgba(74, 222, 128, 0.95); box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.42), 0 12px 22px rgba(0,0,0,0.26); }
+                .org-chart-box-selected { background: linear-gradient(180deg, rgb(20, 83, 45), rgb(6, 78, 59)); }
                 .org-chart-box-root { min-width: 190px; border-color: rgba(34, 211, 238, 0.82); background: linear-gradient(180deg, rgb(15, 82, 105), rgb(15, 23, 42)); }
                 .org-chart-box-compact { min-width: 66px; max-width: 84px; min-height: 54px; padding: 7px 6px; }
                 .org-chart-node-level-2 { min-width: 84px; }
@@ -9062,7 +9109,18 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
         " configured units mapped from Settings."
       ] })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-400/20 bg-slate-950/55", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "org-chart", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationChartBranch, { node: chart, isRoot: true, verticalStartLevel }) }) }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-400/20 bg-slate-950/55", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "org-chart", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      OrganisationChartBranch,
+      {
+        node: chart,
+        isRoot: true,
+        verticalStartLevel,
+        selectedNodeId,
+        selectedPathIds,
+        focusedPath,
+        onSelectNode: handleSelectNode
+      }
+    ) }) }) })
   ] });
 };
 const ScheduleView = ({

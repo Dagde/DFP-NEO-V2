@@ -296,29 +296,89 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
     return root;
 };
 
-const OrganisationChartBranch: React.FC<{ node: OrganisationChartNode; isRoot?: boolean; verticalStartLevel: number }> = ({ node, isRoot = false, verticalStartLevel }) => (
+const findOrganisationChartPath = (node: OrganisationChartNode, nodeId: string, path: OrganisationChartNode[] = []): OrganisationChartNode[] | null => {
+    const nextPath = [...path, node];
+    if (node.id === nodeId) return nextPath;
+    for (const child of node.children) {
+        const childPath = findOrganisationChartPath(child, nodeId, nextPath);
+        if (childPath) return childPath;
+    }
+    return null;
+};
+
+const OrganisationChartBranch: React.FC<{
+    node: OrganisationChartNode;
+    isRoot?: boolean;
+    verticalStartLevel: number;
+    selectedNodeId: string | null;
+    selectedPathIds: Set<string>;
+    focusedPath: OrganisationChartNode[] | null;
+    onSelectNode: (node: OrganisationChartNode) => void;
+}> = ({ node, isRoot = false, verticalStartLevel, selectedNodeId, selectedPathIds, focusedPath, onSelectNode }) => (
     <li className={`${node.levelIndex >= 2 ? 'org-chart-compact-node ' : ''}org-chart-node-level-${node.levelIndex}`}>
         <button
             type="button"
-            className={`org-chart-box org-chart-box-level-${node.levelIndex} ${isRoot ? 'org-chart-box-root' : ''} ${node.levelIndex >= 2 ? 'org-chart-box-compact' : ''} ${node.unitCode ? 'org-chart-box-unit' : ''}`}
+            className={`org-chart-box org-chart-box-level-${node.levelIndex} ${isRoot ? 'org-chart-box-root' : ''} ${node.levelIndex >= 2 ? 'org-chart-box-compact' : ''} ${node.unitCode ? 'org-chart-box-unit' : ''} ${selectedPathIds.has(node.id) ? 'org-chart-box-active-chain' : ''} ${selectedNodeId === node.id ? 'org-chart-box-selected' : ''}`}
             data-org-node-id={node.id}
             title={isRoot ? node.label : `${node.levelName}: ${node.label}`}
+            onClick={() => onSelectNode(node)}
         >
             {!isRoot && <span className="org-chart-level">{node.levelName}</span>}
             <span className="org-chart-label">{node.label}</span>
         </button>
-        {node.children.length > 0 ? (
-            <ul className={node.children.every((child) => child.levelIndex >= verticalStartLevel) ? 'org-chart-vertical-level' : undefined}>
-                {node.children.map((child) => (
-                    <OrganisationChartBranch key={child.id} node={child} verticalStartLevel={verticalStartLevel} />
-                ))}
-            </ul>
-        ) : null}
+        {(() => {
+            const pathIndex = focusedPath?.findIndex((pathNode) => pathNode.id === node.id) ?? -1;
+            const isFocusedSelection = Boolean(focusedPath && selectedNodeId === node.id && node.levelIndex >= 3);
+            const visibleChildren = focusedPath
+                ? pathIndex >= 0
+                    ? selectedNodeId === node.id
+                        ? node.children
+                        : focusedPath[pathIndex + 1]
+                            ? [focusedPath[pathIndex + 1]]
+                            : []
+                    : []
+                : node.children.filter((child) => child.levelIndex <= 3);
+            if (visibleChildren.length === 0) return null;
+            const useVerticalList = isFocusedSelection || visibleChildren.every((child) => child.levelIndex >= verticalStartLevel);
+            return (
+                <ul className={useVerticalList ? 'org-chart-vertical-level' : undefined}>
+                    {visibleChildren.map((child) => (
+                        <OrganisationChartBranch
+                            key={child.id}
+                            node={child}
+                            verticalStartLevel={verticalStartLevel}
+                            selectedNodeId={selectedNodeId}
+                            selectedPathIds={selectedPathIds}
+                            focusedPath={focusedPath}
+                            onSelectNode={onSelectNode}
+                        />
+                    ))}
+                </ul>
+            );
+        })()}
     </li>
 );
 
+const EmptyOrganisationChartSet = new Set<string>();
+
 const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platformConfig }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    useEffect(() => {
+        if (selectedNodeId && chart && !findOrganisationChartPath(chart, selectedNodeId)) {
+            setSelectedNodeId(null);
+        }
+    }, [chart, selectedNodeId]);
+    const selectedPath = useMemo(() => {
+        if (!chart || !selectedNodeId) return null;
+        return findOrganisationChartPath(chart, selectedNodeId);
+    }, [chart, selectedNodeId]);
+    const selectedPathIds = useMemo(() => selectedPath ? new Set(selectedPath.map((node) => node.id)) : EmptyOrganisationChartSet, [selectedPath]);
+    const selectedNode = selectedPath?.[selectedPath.length - 1] || null;
+    const focusedPath = selectedNode && selectedNode.levelIndex >= 3 ? selectedPath : null;
+    const handleSelectNode = useCallback((node: OrganisationChartNode) => {
+        setSelectedNodeId((current) => current === node.id ? null : node.id);
+    }, []);
     if (!chart) {
         return (
             <div className="flex h-full items-center justify-center p-6 text-center text-xs text-slate-400">
@@ -356,6 +416,8 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
                 .org-chart ul ul > li > .org-chart-box::before { content: ''; position: absolute; top: -18px; left: 50%; z-index: -1; height: 18px; width: 0; border-left: 1px solid rgba(103, 232, 249, 0.42); }
                 .org-chart > ul > li > .org-chart-box::before { display: none; }
                 .org-chart-box:hover { border-color: rgba(165, 243, 252, 0.9); background: linear-gradient(180deg, rgb(8, 47, 73), rgb(8, 13, 28)); transform: translateY(-1px); }
+                .org-chart-box-active-chain { border-color: rgba(74, 222, 128, 0.95); box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.42), 0 12px 22px rgba(0,0,0,0.26); }
+                .org-chart-box-selected { background: linear-gradient(180deg, rgb(20, 83, 45), rgb(6, 78, 59)); }
                 .org-chart-box-root { min-width: 190px; border-color: rgba(34, 211, 238, 0.82); background: linear-gradient(180deg, rgb(15, 82, 105), rgb(15, 23, 42)); }
                 .org-chart-box-compact { min-width: 66px; max-width: 84px; min-height: 54px; padding: 7px 6px; }
                 .org-chart-node-level-2 { min-width: 84px; }
@@ -386,7 +448,15 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
             <div className="rounded border border-cyan-400/20 bg-slate-950/55">
                 <div className="org-chart">
                     <ul>
-                        <OrganisationChartBranch node={chart} isRoot verticalStartLevel={verticalStartLevel} />
+                        <OrganisationChartBranch
+                            node={chart}
+                            isRoot
+                            verticalStartLevel={verticalStartLevel}
+                            selectedNodeId={selectedNodeId}
+                            selectedPathIds={selectedPathIds}
+                            focusedPath={focusedPath}
+                            onSelectNode={handleSelectNode}
+                        />
                     </ul>
                 </div>
             </div>
