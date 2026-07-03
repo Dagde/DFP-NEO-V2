@@ -9063,8 +9063,10 @@ const OrganisationChartBranch = ({ node, isRoot = false, levelHeights, selectedN
     }
   ),
   (() => {
-    const pathIndex = focusedPath?.findIndex((pathNode) => pathNode.id === node.id) ?? -1;
-    const visibleChildren = focusedPath ? pathIndex >= 0 ? selectedNodeId === node.id ? node.children : focusedPath[pathIndex + 1] ? [focusedPath[pathIndex + 1]] : [] : [] : node.children.filter((child) => child.levelIndex <= 3);
+    const visibleChildren = node.children.filter((child) => {
+      if (!focusedPath || node.levelIndex < 3) return child.levelIndex <= 3;
+      return selectedPathIds.has(node.id);
+    });
     if (visibleChildren.length === 0) return null;
     return /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: visibleChildren.map((child) => /* @__PURE__ */ jsxRuntimeExports.jsx(
       OrganisationChartBranch,
