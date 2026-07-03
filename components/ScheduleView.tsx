@@ -346,12 +346,12 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
                 .org-chart li::after { left: 50%; border-left: 1px solid rgba(103, 232, 249, 0.42); }
                 .org-chart li:only-child::before, .org-chart li:only-child::after { display: none; }
                 .org-chart li:first-child::before, .org-chart li:last-child::after { border-top: 0; }
-                .org-chart li:first-child::after { border-top-left-radius: 8px; }
-                .org-chart li:last-child::before { border-top-right-radius: 8px; }
+                .org-chart li:first-child::after { border-top-left-radius: 0; }
+                .org-chart li:last-child::before { border-top-right-radius: 0; }
                 .org-chart ul ul::before { content: ''; position: absolute; top: 0; left: 50%; z-index: 0; height: 24px; border-left: 1px solid rgba(103, 232, 249, 0.42); }
                 .org-chart > ul > li::before, .org-chart > ul > li::after { display: none; }
                 .org-chart > ul { padding-top: 0; }
-                .org-chart-box { position: relative; z-index: 2; display: flex; flex-direction: column; justify-content: center; min-width: 132px; max-width: 168px; min-height: 62px; border: 1px solid rgba(103, 232, 249, 0.46); background: linear-gradient(180deg, rgb(15, 23, 42), rgb(2, 6, 23)); color: #e5faff; box-shadow: 0 12px 22px rgba(0,0,0,0.26); padding: 9px 10px; text-align: center; transition: border-color 160ms ease, transform 160ms ease, background 160ms ease; }
+                .org-chart-box { position: relative; z-index: 2; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; min-width: 132px; max-width: 168px; min-height: 62px; border: 1px solid rgba(103, 232, 249, 0.46); background: linear-gradient(180deg, rgb(15, 23, 42), rgb(2, 6, 23)); color: #e5faff; box-shadow: 0 12px 22px rgba(0,0,0,0.26); padding: 9px 10px; text-align: center; transition: border-color 160ms ease, transform 160ms ease, background 160ms ease; }
                 .org-chart-box:hover { border-color: rgba(165, 243, 252, 0.9); background: linear-gradient(180deg, rgb(8, 47, 73), rgb(8, 13, 28)); transform: translateY(-1px); }
                 .org-chart-box-root { min-width: 190px; border-color: rgba(34, 211, 238, 0.82); background: linear-gradient(180deg, rgb(15, 82, 105), rgb(15, 23, 42)); }
                 .org-chart-box-compact { min-width: 66px; max-width: 84px; min-height: 54px; padding: 7px 6px; }
@@ -368,8 +368,8 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
                 .org-chart ul.org-chart-vertical-level::before { height: 20px; }
                 .org-chart ul.org-chart-vertical-level > li { min-width: 66px; }
                 .org-chart ul.org-chart-vertical-level > li::before { display: none; }
-                .org-chart ul.org-chart-vertical-level > li::after { top: -14px; left: 50%; z-index: 0; height: calc(100% + 22px); width: 0; border-top: 0; border-left: 1px solid rgba(103, 232, 249, 0.34); }
-                .org-chart ul.org-chart-vertical-level > li:last-child::after { height: 16px; }
+                .org-chart ul.org-chart-vertical-level > li::after { top: -16px; left: 50%; z-index: 0; height: 16px; width: 0; border-top: 0; border-left: 1px solid rgba(103, 232, 249, 0.34); }
+                .org-chart ul.org-chart-vertical-level > li:not(:last-child)::before { content: ''; display: block; position: absolute; top: 54px; left: 50%; z-index: 0; height: 8px; width: 0; border-left: 1px solid rgba(103, 232, 249, 0.34); }
             `}</style>
             <div className="mb-4 flex items-start justify-between gap-4 border-b border-cyan-400/20 pb-3">
                 <div>
