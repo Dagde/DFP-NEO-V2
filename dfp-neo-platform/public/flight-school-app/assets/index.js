@@ -9146,9 +9146,9 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
                 .org-chart-box-compact .org-chart-level { font-size: 7px; letter-spacing: 0.08em; }
                 .org-chart-box-compact .org-chart-label { font-size: 10px; line-height: 1.12; }
                 .org-chart ul.org-chart-drilldown-row { position: absolute; top: calc(100% + 34px); left: 50%; z-index: 4; transform: translateX(-50%); padding-top: 0; gap: 14px; }
-                .org-chart ul.org-chart-drilldown-row::before { display: none; }
-                .org-chart ul.org-chart-drilldown-row > li::before, .org-chart ul.org-chart-drilldown-row > li::after { top: -30px; height: 30px; width: calc(50% + 7px); }
-                .org-chart ul.org-chart-drilldown-row > li > .org-chart-box::before { top: -30px; height: 30px; }
+                .org-chart ul.org-chart-drilldown-row::before { top: -34px; height: 17px; display: block; }
+                .org-chart ul.org-chart-drilldown-row > li::before, .org-chart ul.org-chart-drilldown-row > li::after { top: -17px; height: 17px; width: calc(50% + 7px); }
+                .org-chart ul.org-chart-drilldown-row > li > .org-chart-box::before { top: -17px; height: 17px; }
                 .org-chart ul.org-chart-vertical-level { flex-direction: column; align-items: center; gap: 8px; padding-top: 34px; }
                 .org-chart ul.org-chart-vertical-level::before { height: 20px; }
                 .org-chart ul.org-chart-vertical-level > li { min-width: 66px; }
