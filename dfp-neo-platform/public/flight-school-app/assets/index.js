@@ -57846,6 +57846,23 @@ const DEFAULT_ORGANISATION_STRUCTURE_LEVELS = [
   "Crew"
 ];
 const normaliseOrganisationParentKey = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+const addOrganisationParentRelationship = (grouped, levelNumber, levelName, parent, child) => {
+  const cleanParent = String(parent || "").trim();
+  const cleanChild = String(child || "").trim();
+  if (!cleanParent || !cleanChild || levelNumber <= 0) return;
+  const current = grouped.get(levelNumber) || { name: levelName, options: [] };
+  const childrenByParent = current.childrenByParent || {};
+  const parentByChild = current.parentByChild || {};
+  const normalisedParent = normaliseOrganisationParentKey(cleanParent);
+  const normalisedChild = normaliseOrganisationParentKey(cleanChild);
+  childrenByParent[cleanParent] = Array.from(/* @__PURE__ */ new Set([...childrenByParent[cleanParent] || [], cleanChild]));
+  childrenByParent[normalisedParent] = Array.from(/* @__PURE__ */ new Set([...childrenByParent[normalisedParent] || [], cleanChild]));
+  parentByChild[cleanChild] = cleanParent;
+  parentByChild[normalisedChild] = cleanParent;
+  current.childrenByParent = childrenByParent;
+  current.parentByChild = parentByChild;
+  grouped.set(levelNumber, current);
+};
 const getOrganisationPathValueForLevel = (path, levelIndex) => {
   const rootedValue = String(path[levelIndex] || "").trim();
   if (rootedValue) return rootedValue;
@@ -57869,13 +57886,43 @@ const normaliseOrganisationStructure = (source, organisationName = "") => {
         Array.from(new Set((Array.isArray(children) ? children : String(children || "").split(/\r?\n|;/)).map((child) => String(child || "").trim()).filter(Boolean)))
       ]).filter(([parent, children]) => parent && children.length > 0)
     ) : void 0;
+    const parentByChild = rawLevel.parentByChild && typeof rawLevel.parentByChild === "object" ? Object.fromEntries(
+      Object.entries(rawLevel.parentByChild).map(([child, parent]) => [String(child || "").trim(), String(parent || "").trim()]).filter(([child, parent]) => child && parent)
+    ) : void 0;
     return {
       id: String(rawLevel.id || `org-level-${index}`),
       name: index === 0 && organisationLevelName && (!rawLevelName.trim() || rawLevelName.trim() === DEFAULT_ORGANISATION_STRUCTURE_LEVELS[0]) ? organisationLevelName : rawLevelName.trim() ? rawLevelName : defaultLevelName,
       options: Array.from(new Set(options.map((option) => String(option || "")).filter((option) => option.trim()))),
-      ...childrenByParent && Object.keys(childrenByParent).length > 0 ? { childrenByParent } : {}
+      ...childrenByParent && Object.keys(childrenByParent).length > 0 ? { childrenByParent } : {},
+      ...parentByChild && Object.keys(parentByChild).length > 0 ? { parentByChild } : {}
     };
   });
+  if (relationshipPaths && relationshipPaths.length > 0) {
+    const grouped = /* @__PURE__ */ new Map();
+    levels.forEach((level, index) => {
+      grouped.set(index, {
+        name: level.name,
+        options: [...level.options],
+        ...level.childrenByParent ? { childrenByParent: { ...level.childrenByParent } } : {},
+        ...level.parentByChild ? { parentByChild: { ...level.parentByChild } } : {}
+      });
+    });
+    relationshipPaths.forEach((path) => {
+      path.forEach((child, index) => {
+        if (index === 0) return;
+        const parent = path[index - 1];
+        const levelName = levels[index]?.name || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index}`;
+        addOrganisationParentRelationship(grouped, index, levelName, parent, child);
+      });
+    });
+    grouped.forEach((row, index) => {
+      levels[index] = {
+        ...levels[index],
+        ...row.childrenByParent && Object.keys(row.childrenByParent).length > 0 ? { childrenByParent: row.childrenByParent } : {},
+        ...row.parentByChild && Object.keys(row.parentByChild).length > 0 ? { parentByChild: row.parentByChild } : {}
+      };
+    });
+  }
   return {
     levelCount,
     levels,
@@ -59171,7 +59218,8 @@ const PlatformConfigurationSettings = ({
         ...level,
         ...changes,
         options: changes.options ? Array.from(new Set(changes.options.filter((option) => option.trim()))) : level.options,
-        childrenByParent: changes.options ? void 0 : level.childrenByParent
+        childrenByParent: changes.options ? void 0 : level.childrenByParent,
+        parentByChild: changes.options ? void 0 : level.parentByChild
       } : level)
     });
   };
@@ -59195,7 +59243,8 @@ const PlatformConfigurationSettings = ({
           id: organisationStructure.levels[index]?.id || `org-level-${index}`,
           name: row?.name || (index === 0 && primaryOrganisation?.name ? primaryOrganisation.name : DEFAULT_ORGANISATION_STRUCTURE_LEVELS[index] || `Level ${index}`),
           options: Array.from(new Set(row?.options || [])),
-          ...row?.childrenByParent ? { childrenByParent: row.childrenByParent } : {}
+          ...row?.childrenByParent ? { childrenByParent: row.childrenByParent } : {},
+          ...row?.parentByChild ? { parentByChild: row.parentByChild } : {}
         };
       }),
       ...relationshipPaths && relationshipPaths.length > 0 ? { relationshipPaths } : {}
@@ -59284,16 +59333,13 @@ const PlatformConfigurationSettings = ({
         const child = filledValues[index];
         const parent = filledValues[index - 1];
         if (!parent || !child) return;
-        const current = grouped.get(levelNumber) || {
-          name: levelNames.get(levelNumber) || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] || `Level ${levelNumber}`,
-          options: []
-        };
-        const childrenByParent = current.childrenByParent || {};
-        const normalisedParent = normaliseOrganisationParentKey(parent);
-        childrenByParent[parent] = Array.from(/* @__PURE__ */ new Set([...childrenByParent[parent] || [], child]));
-        childrenByParent[normalisedParent] = Array.from(/* @__PURE__ */ new Set([...childrenByParent[normalisedParent] || [], child]));
-        current.childrenByParent = childrenByParent;
-        grouped.set(levelNumber, current);
+        addOrganisationParentRelationship(
+          grouped,
+          levelNumber,
+          levelNames.get(levelNumber) || DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] || `Level ${levelNumber}`,
+          parent,
+          child
+        );
       });
     });
     return applyImportedOrganisationStructure(grouped, relationshipPaths);
