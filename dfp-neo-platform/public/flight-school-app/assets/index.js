@@ -8961,7 +8961,8 @@ const buildOrganisationChart = (platformConfig) => {
     const displayPath = path[0]?.toLowerCase() === rootKey ? path.slice(1) : path;
     addOrganisationChartPath(root2, displayPath, levelNames);
   });
-  (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").forEach((unit) => {
+  const activeOrganisationCode = normaliseOrgChartValue(activeOrganisation.code).toLowerCase();
+  (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!activeOrganisationCode || normaliseOrgChartValue(unit?.organisationCode).toLowerCase() === activeOrganisationCode)).forEach((unit) => {
     const unitCode = normaliseOrgChartValue(unit?.code || unit?.name);
     if (!unitCode) return;
     const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");

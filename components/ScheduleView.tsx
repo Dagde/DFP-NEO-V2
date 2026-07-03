@@ -263,8 +263,12 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
         const displayPath = path[0]?.toLowerCase() === rootKey ? path.slice(1) : path;
         addOrganisationChartPath(root, displayPath, levelNames);
     });
+    const activeOrganisationCode = normaliseOrgChartValue(activeOrganisation.code).toLowerCase();
     (platformConfig?.units || [])
-        .filter((unit: any) => String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+        .filter((unit: any) => (
+            String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+            && (!activeOrganisationCode || normaliseOrgChartValue(unit?.organisationCode).toLowerCase() === activeOrganisationCode)
+        ))
         .forEach((unit: any) => {
             const unitCode = normaliseOrgChartValue(unit?.code || unit?.name);
             if (!unitCode) return;
