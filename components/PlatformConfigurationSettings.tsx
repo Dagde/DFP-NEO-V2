@@ -1479,7 +1479,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [selectedUnitIndex, setSelectedUnitIndex] = useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
   const [openParentOrgUnitIndex, setOpenParentOrgUnitIndex] = useState<number | null>(null);
-  const [parentOrgMenuDirection, setParentOrgMenuDirection] = useState<'down' | 'up'>('down');
+  const [parentOrgMenuPosition, setParentOrgMenuPosition] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = useState(false);
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
@@ -4324,6 +4324,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       },
     });
     setOpenParentOrgUnitIndex(null);
+    setParentOrgMenuPosition(null);
   };
   const getFilteredParentOrganisationOptions = (level: { options: string[]; levelIndex: number }, parentOrganisationPath: string[], parentLevelIndex: number): string[] => {
     if (parentLevelIndex === 0) return level.options;
@@ -4771,12 +4772,24 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         event.stopPropagation();
                         if (openParentOrgUnitIndex === index) {
                           setOpenParentOrgUnitIndex(null);
+                          setParentOrgMenuPosition(null);
                           return;
                         }
                         const rect = event.currentTarget.getBoundingClientRect();
-                        const availableBelow = window.innerHeight - rect.bottom;
-                        const availableAbove = rect.top;
-                        setParentOrgMenuDirection(availableBelow < 340 && availableAbove > availableBelow ? 'up' : 'down');
+                        const viewportMargin = 12;
+                        const menuGap = 4;
+                        const desiredMenuHeight = 340;
+                        const availableBelow = Math.max(0, window.innerHeight - rect.bottom - viewportMargin - menuGap);
+                        const availableAbove = Math.max(0, rect.top - viewportMargin - menuGap);
+                        const shouldOpenUp = availableBelow < desiredMenuHeight && availableAbove > availableBelow;
+                        const maxHeight = Math.max(160, Math.min(desiredMenuHeight, shouldOpenUp ? availableAbove : availableBelow));
+                        setParentOrgMenuPosition({
+                          left: Math.max(viewportMargin, rect.left),
+                          top: shouldOpenUp
+                            ? Math.max(viewportMargin, rect.top - menuGap - maxHeight)
+                            : Math.min(window.innerHeight - viewportMargin - maxHeight, rect.bottom + menuGap),
+                          maxHeight,
+                        });
                         setOpenParentOrgUnitIndex(index);
                       }}
                     >
@@ -4790,9 +4803,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </button>
                     {openParentOrgUnitIndex === index && isUnitEditing && organisationParentLevels.length > 0 ? (
                       <div
-                        className={`absolute left-0 z-[180] flex items-start rounded-lg border border-cyan-400/35 bg-gray-950/95 p-2 shadow-2xl shadow-black/45 ${
-                          parentOrgMenuDirection === 'up' ? 'bottom-[calc(100%+4px)]' : 'top-[calc(100%+4px)]'
-                        }`}
+                        className="fixed z-[180] flex items-start overflow-y-auto rounded-lg border border-cyan-400/35 bg-gray-950/95 p-2 shadow-2xl shadow-black/45"
+                        style={{
+                          left: parentOrgMenuPosition?.left ?? 0,
+                          top: parentOrgMenuPosition?.top ?? 0,
+                          maxHeight: parentOrgMenuPosition?.maxHeight ?? 340,
+                        }}
                         onClick={(event) => event.stopPropagation()}
                       >
                         {organisationParentLevels
@@ -4820,7 +4836,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                         }`}
                                         onClick={() => {
                                           updateUnitParentOrganisationPath(index, unit, parentLevelIndex, option);
-                                          if (!hasNextLevel) setOpenParentOrgUnitIndex(null);
+                                          if (!hasNextLevel) {
+                                            setOpenParentOrgUnitIndex(null);
+                                            setParentOrgMenuPosition(null);
+                                          }
                                         }}
                                       >
                                         <span className="min-w-0 truncate">{option}</span>
