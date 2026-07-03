@@ -9046,7 +9046,7 @@ const getOrganisationChartLevelHeights = (root2) => {
   visit(root2, true);
   return heights;
 };
-const OrganisationChartBranch = ({ node, isRoot = false, levelHeights, verticalStartLevel, selectedNodeId, selectedPathIds, focusedPath, onSelectNode }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `${node.levelIndex >= 2 ? "org-chart-compact-node " : ""}org-chart-node-level-${node.levelIndex}`, children: [
+const OrganisationChartBranch = ({ node, isRoot = false, levelHeights, selectedNodeId, selectedPathIds, focusedPath, onSelectNode }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `${node.levelIndex >= 2 ? "org-chart-compact-node " : ""}org-chart-node-level-${node.levelIndex}`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "button",
     {
@@ -9064,16 +9064,13 @@ const OrganisationChartBranch = ({ node, isRoot = false, levelHeights, verticalS
   ),
   (() => {
     const pathIndex = focusedPath?.findIndex((pathNode) => pathNode.id === node.id) ?? -1;
-    const isFocusedSelection = Boolean(focusedPath && selectedNodeId === node.id && node.levelIndex >= 3);
     const visibleChildren = focusedPath ? pathIndex >= 0 ? selectedNodeId === node.id ? node.children : focusedPath[pathIndex + 1] ? [focusedPath[pathIndex + 1]] : [] : [] : node.children.filter((child) => child.levelIndex <= 3);
     if (visibleChildren.length === 0) return null;
-    const useVerticalList = isFocusedSelection || visibleChildren.every((child) => child.levelIndex >= verticalStartLevel);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: useVerticalList ? "org-chart-vertical-level" : void 0, children: visibleChildren.map((child) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: visibleChildren.map((child) => /* @__PURE__ */ jsxRuntimeExports.jsx(
       OrganisationChartBranch,
       {
         node: child,
         levelHeights,
-        verticalStartLevel,
         selectedNodeId,
         selectedPathIds,
         focusedPath,
@@ -9107,10 +9104,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
   }
   const unitCount = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").length;
   const activeOrganisation = getActiveOrganisation(platformConfig);
-  const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
-  const maxStructureLevel = Math.max(1, levels.length - 1);
-  const squadronLevelIndex = levels.findIndex((level) => /\b(sqn|squadron)\b/i.test(String(level?.name || "")));
-  const verticalStartLevel = squadronLevelIndex >= 1 ? squadronLevelIndex : maxStructureLevel + 1;
+  Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
   const levelHeights = getOrganisationChartLevelHeights(chart);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto px-5 py-4 text-slate-100", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
@@ -9169,7 +9163,6 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
         node: chart,
         isRoot: true,
         levelHeights,
-        verticalStartLevel,
         selectedNodeId,
         selectedPathIds,
         focusedPath,

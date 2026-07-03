@@ -367,12 +367,11 @@ const OrganisationChartBranch: React.FC<{
     node: OrganisationChartNode;
     isRoot?: boolean;
     levelHeights: Map<number, number>;
-    verticalStartLevel: number;
     selectedNodeId: string | null;
     selectedPathIds: Set<string>;
     focusedPath: OrganisationChartNode[] | null;
     onSelectNode: (node: OrganisationChartNode) => void;
-}> = ({ node, isRoot = false, levelHeights, verticalStartLevel, selectedNodeId, selectedPathIds, focusedPath, onSelectNode }) => (
+}> = ({ node, isRoot = false, levelHeights, selectedNodeId, selectedPathIds, focusedPath, onSelectNode }) => (
     <li className={`${node.levelIndex >= 2 ? 'org-chart-compact-node ' : ''}org-chart-node-level-${node.levelIndex}`}>
         <button
             type="button"
@@ -387,7 +386,6 @@ const OrganisationChartBranch: React.FC<{
         </button>
         {(() => {
             const pathIndex = focusedPath?.findIndex((pathNode) => pathNode.id === node.id) ?? -1;
-            const isFocusedSelection = Boolean(focusedPath && selectedNodeId === node.id && node.levelIndex >= 3);
             const visibleChildren = focusedPath
                 ? pathIndex >= 0
                     ? selectedNodeId === node.id
@@ -398,15 +396,13 @@ const OrganisationChartBranch: React.FC<{
                     : []
                 : node.children.filter((child) => child.levelIndex <= 3);
             if (visibleChildren.length === 0) return null;
-            const useVerticalList = isFocusedSelection || visibleChildren.every((child) => child.levelIndex >= verticalStartLevel);
             return (
-                <ul className={useVerticalList ? 'org-chart-vertical-level' : undefined}>
+                <ul>
                     {visibleChildren.map((child) => (
                         <OrganisationChartBranch
                             key={child.id}
                             node={child}
                             levelHeights={levelHeights}
-                            verticalStartLevel={verticalStartLevel}
                             selectedNodeId={selectedNodeId}
                             selectedPathIds={selectedPathIds}
                             focusedPath={focusedPath}
@@ -451,9 +447,6 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
     const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels)
         ? activeOrganisation.settings.organisationStructure.levels
         : [];
-    const maxStructureLevel = Math.max(1, levels.length - 1);
-    const squadronLevelIndex = levels.findIndex((level: any) => /\b(sqn|squadron)\b/i.test(String(level?.name || '')));
-    const verticalStartLevel = squadronLevelIndex >= 1 ? squadronLevelIndex : maxStructureLevel + 1;
     const levelHeights = getOrganisationChartLevelHeights(chart);
     return (
         <div className="h-full overflow-auto px-5 py-4 text-slate-100">
@@ -513,7 +506,6 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
                             node={chart}
                             isRoot
                             levelHeights={levelHeights}
-                            verticalStartLevel={verticalStartLevel}
                             selectedNodeId={selectedNodeId}
                             selectedPathIds={selectedPathIds}
                             focusedPath={focusedPath}
