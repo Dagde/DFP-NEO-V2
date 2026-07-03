@@ -169,7 +169,7 @@ const emptyConfig: PlatformConfig = {
 
 const getApiBase = (): string => getAppApiBase();
 
-const fieldClass = 'w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none';
+const fieldClass = 'w-full min-w-0 rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none';
 const labelClass = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400';
 const sectionClass = 'overflow-hidden rounded-xl border border-sky-500/35 bg-gray-800 shadow-[0_0_0_1px_rgba(125,211,252,0.08),0_18px_45px_rgba(0,0,0,0.28)]';
 const sectionHeaderStyle = {
@@ -8206,11 +8206,19 @@ const ToggleField = ({ label, checked, disabled, onChange, info }: { label: stri
 );
 
 const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = 'None', info, optionLabels = {} }: { label: string; value: string; disabled: boolean; options: string[]; onChange: (value: string) => void; emptyLabel?: string; info?: string; optionLabels?: Record<string, string> }) => (
-  <label>
+  <label className="block min-w-0">
     <FieldLabel label={label} info={info} />
-    <select className={fieldClass} value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
+    <div className="max-w-full overflow-x-auto">
+      <select
+        className={`${fieldClass} block max-w-full whitespace-nowrap`}
+        value={value || ''}
+        disabled={disabled}
+        title={optionLabels[value] || value || emptyLabel}
+        onChange={(event) => onChange(event.target.value)}
+      >
       {options.map((option) => <option key={option} value={option}>{optionLabels[option] || option || emptyLabel}</option>)}
-    </select>
+      </select>
+    </div>
   </label>
 );
 

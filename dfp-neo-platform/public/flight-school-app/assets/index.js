@@ -9046,6 +9046,38 @@ const getOrganisationChartLevelHeights = (root2) => {
   visit(root2, true);
   return heights;
 };
+const getVisibleOrganisationChartChildren = (node, focusedPath, selectedPathIds) => node.children.filter((child) => {
+  if (!focusedPath || node.levelIndex < 3) return child.levelIndex <= 3;
+  return selectedPathIds.has(node.id);
+});
+const getOrganisationChartVisibleMetrics = (root2, levelHeights, focusedPath, selectedPathIds) => {
+  const levelWidths = /* @__PURE__ */ new Map();
+  const levelCounts = /* @__PURE__ */ new Map();
+  let maxLevel = 0;
+  const visit = (node, isRoot = false) => {
+    const width2 = getOrganisationChartBoxWidth(node, isRoot);
+    const level = node.levelIndex;
+    maxLevel = Math.max(maxLevel, level);
+    levelWidths.set(level, (levelWidths.get(level) || 0) + width2);
+    levelCounts.set(level, (levelCounts.get(level) || 0) + 1);
+    getVisibleOrganisationChartChildren(node, focusedPath, selectedPathIds).forEach((child) => visit(child, false));
+  };
+  visit(root2, true);
+  let width = 0;
+  levelWidths.forEach((rowWidth, level) => {
+    const count = levelCounts.get(level) || 1;
+    width = Math.max(width, rowWidth + Math.max(0, count - 1) * 20 + 72);
+  });
+  let height = 32;
+  for (let level = 0; level <= maxLevel; level += 1) {
+    height += levelHeights.get(level) || 54;
+    if (level < maxLevel) height += level >= 3 ? 76 : 42;
+  }
+  return {
+    width: Math.max(560, Math.ceil(width)),
+    height: Math.max(320, Math.ceil(height + 36))
+  };
+};
 const OrganisationChartBranch = ({ node, isRoot = false, levelHeights, selectedNodeId, selectedPathIds, focusedPath, onSelectNode }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `${node.levelIndex >= 2 ? "org-chart-compact-node " : ""}org-chart-node-level-${node.levelIndex}`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "button",
@@ -9063,10 +9095,7 @@ const OrganisationChartBranch = ({ node, isRoot = false, levelHeights, selectedN
     }
   ),
   (() => {
-    const visibleChildren = node.children.filter((child) => {
-      if (!focusedPath || node.levelIndex < 3) return child.levelIndex <= 3;
-      return selectedPathIds.has(node.id);
-    });
+    const visibleChildren = getVisibleOrganisationChartChildren(node, focusedPath, selectedPathIds);
     if (visibleChildren.length === 0) return null;
     const useDrilldownRow = Boolean(focusedPath && selectedPathIds.has(node.id) && node.levelIndex >= 3);
     return /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: useDrilldownRow ? "org-chart-drilldown-row" : void 0, children: visibleChildren.map((child) => /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -9109,6 +9138,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
   const activeOrganisation = getActiveOrganisation(platformConfig);
   Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
   const levelHeights = getOrganisationChartLevelHeights(chart);
+  const chartMetrics = getOrganisationChartVisibleMetrics(chart, levelHeights, focusedPath, selectedPathIds);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto px-5 py-4 text-slate-100", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
                 /* Keep connector rules aligned with docs/organisation-chart-rendering.md. */
@@ -9164,18 +9194,29 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
         " configured units mapped from Settings."
       ] })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "inline-block rounded border border-cyan-400/20 bg-slate-950/55", style: { minWidth: "100%", width: "max-content" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "org-chart", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      OrganisationChartBranch,
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
       {
-        node: chart,
-        isRoot: true,
-        levelHeights,
-        selectedNodeId,
-        selectedPathIds,
-        focusedPath,
-        onSelectNode: handleSelectNode
+        className: "inline-block rounded border border-cyan-400/20 bg-slate-950/55",
+        style: {
+          minWidth: "100%",
+          width: `max(100%, ${chartMetrics.width}px)`,
+          minHeight: chartMetrics.height
+        },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "org-chart", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          OrganisationChartBranch,
+          {
+            node: chart,
+            isRoot: true,
+            levelHeights,
+            selectedNodeId,
+            selectedPathIds,
+            focusedPath,
+            onSelectNode: handleSelectNode
+          }
+        ) }) })
       }
-    ) }) }) })
+    )
   ] });
 };
 const ScheduleView = ({
@@ -57868,7 +57909,7 @@ const emptyConfig = {
   schedulingRuleSets: []
 };
 const getApiBase = () => getAppApiBase();
-const fieldClass = "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none";
+const fieldClass = "w-full min-w-0 rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none";
 const labelClass = "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400";
 const sectionClass = "overflow-hidden rounded-xl border border-sky-500/35 bg-gray-800 shadow-[0_0_0_1px_rgba(125,211,252,0.08),0_18px_45px_rgba(0,0,0,0.28)]";
 const sectionHeaderStyle = {
@@ -64862,9 +64903,19 @@ const ToggleField = ({ label, checked, disabled, onChange, info }) => /* @__PURE
     }
   )
 ] });
-const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = "None", info, optionLabels = {} }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = "None", info, optionLabels = {} }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block min-w-0", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: fieldClass, value: value || "", disabled, onChange: (event) => onChange(event.target.value), children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: optionLabels[option] || option || emptyLabel }, option)) })
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "select",
+    {
+      className: `${fieldClass} block max-w-full whitespace-nowrap`,
+      value: value || "",
+      disabled,
+      title: optionLabels[value] || value || emptyLabel,
+      onChange: (event) => onChange(event.target.value),
+      children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: optionLabels[option] || option || emptyLabel }, option))
+    }
+  ) })
 ] });
 const TrainingReportPreviewCell = ({ label, value }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: label }),

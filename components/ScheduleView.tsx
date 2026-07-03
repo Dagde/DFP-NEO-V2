@@ -363,6 +363,52 @@ const getOrganisationChartLevelHeights = (root: OrganisationChartNode): Map<numb
     return heights;
 };
 
+const getVisibleOrganisationChartChildren = (
+    node: OrganisationChartNode,
+    focusedPath: OrganisationChartNode[] | null,
+    selectedPathIds: Set<string>,
+): OrganisationChartNode[] => (
+    node.children.filter((child) => {
+        if (!focusedPath || node.levelIndex < 3) return child.levelIndex <= 3;
+        return selectedPathIds.has(node.id);
+    })
+);
+
+const getOrganisationChartVisibleMetrics = (
+    root: OrganisationChartNode,
+    levelHeights: Map<number, number>,
+    focusedPath: OrganisationChartNode[] | null,
+    selectedPathIds: Set<string>,
+) => {
+    const levelWidths = new Map<number, number>();
+    const levelCounts = new Map<number, number>();
+    let maxLevel = 0;
+    const visit = (node: OrganisationChartNode, isRoot = false) => {
+        const width = getOrganisationChartBoxWidth(node, isRoot);
+        const level = node.levelIndex;
+        maxLevel = Math.max(maxLevel, level);
+        levelWidths.set(level, (levelWidths.get(level) || 0) + width);
+        levelCounts.set(level, (levelCounts.get(level) || 0) + 1);
+        getVisibleOrganisationChartChildren(node, focusedPath, selectedPathIds)
+            .forEach((child) => visit(child, false));
+    };
+    visit(root, true);
+    let width = 0;
+    levelWidths.forEach((rowWidth, level) => {
+        const count = levelCounts.get(level) || 1;
+        width = Math.max(width, rowWidth + Math.max(0, count - 1) * 20 + 72);
+    });
+    let height = 32;
+    for (let level = 0; level <= maxLevel; level += 1) {
+        height += levelHeights.get(level) || 54;
+        if (level < maxLevel) height += level >= 3 ? 76 : 42;
+    }
+    return {
+        width: Math.max(560, Math.ceil(width)),
+        height: Math.max(320, Math.ceil(height + 36)),
+    };
+};
+
 const OrganisationChartBranch: React.FC<{
     node: OrganisationChartNode;
     isRoot?: boolean;
@@ -385,10 +431,7 @@ const OrganisationChartBranch: React.FC<{
             <span className="org-chart-label">{node.label}</span>
         </button>
         {(() => {
-            const visibleChildren = node.children.filter((child) => {
-                if (!focusedPath || node.levelIndex < 3) return child.levelIndex <= 3;
-                return selectedPathIds.has(node.id);
-            });
+            const visibleChildren = getVisibleOrganisationChartChildren(node, focusedPath, selectedPathIds);
             if (visibleChildren.length === 0) return null;
             const useDrilldownRow = Boolean(focusedPath && selectedPathIds.has(node.id) && node.levelIndex >= 3);
             return (
@@ -443,6 +486,7 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
         ? activeOrganisation.settings.organisationStructure.levels
         : [];
     const levelHeights = getOrganisationChartLevelHeights(chart);
+    const chartMetrics = getOrganisationChartVisibleMetrics(chart, levelHeights, focusedPath, selectedPathIds);
     return (
         <div className="h-full overflow-auto px-5 py-4 text-slate-100">
             <style>{`
@@ -498,7 +542,14 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
                     <p className="mt-1 text-xs text-slate-400">{unitCount} configured units mapped from Settings.</p>
                 </div>
             </div>
-            <div className="inline-block rounded border border-cyan-400/20 bg-slate-950/55" style={{ minWidth: '100%', width: 'max-content' }}>
+            <div
+                className="inline-block rounded border border-cyan-400/20 bg-slate-950/55"
+                style={{
+                    minWidth: '100%',
+                    width: `max(100%, ${chartMetrics.width}px)`,
+                    minHeight: chartMetrics.height,
+                }}
+            >
                 <div className="org-chart">
                     <ul>
                         <OrganisationChartBranch
