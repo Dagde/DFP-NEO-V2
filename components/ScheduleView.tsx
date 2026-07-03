@@ -498,7 +498,7 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
                     <p className="mt-1 text-xs text-slate-400">{unitCount} configured units mapped from Settings.</p>
                 </div>
             </div>
-            <div className="rounded border border-cyan-400/20 bg-slate-950/55">
+            <div className="inline-block rounded border border-cyan-400/20 bg-slate-950/55" style={{ minWidth: '100%', width: 'max-content' }}>
                 <div className="org-chart">
                     <ul>
                         <OrganisationChartBranch

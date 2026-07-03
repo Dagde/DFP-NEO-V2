@@ -9164,7 +9164,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
         " configured units mapped from Settings."
       ] })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-400/20 bg-slate-950/55", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "org-chart", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "inline-block rounded border border-cyan-400/20 bg-slate-950/55", style: { minWidth: "100%", width: "max-content" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "org-chart", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       OrganisationChartBranch,
       {
         node: chart,
