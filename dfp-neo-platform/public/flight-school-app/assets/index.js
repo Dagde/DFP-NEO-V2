@@ -8986,12 +8986,12 @@ const buildOrganisationChart = (platformConfig) => {
   sortNodes(root2);
   return root2;
 };
-const OrganisationChartBranch = ({ node, isRoot = false, verticalStartLevel }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: node.levelIndex >= 2 ? "org-chart-compact-node" : void 0, children: [
+const OrganisationChartBranch = ({ node, isRoot = false, verticalStartLevel }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `${node.levelIndex >= 2 ? "org-chart-compact-node " : ""}org-chart-node-level-${node.levelIndex}`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "button",
     {
       type: "button",
-      className: `org-chart-box ${isRoot ? "org-chart-box-root" : ""} ${node.levelIndex >= 2 ? "org-chart-box-compact" : ""} ${node.unitCode ? "org-chart-box-unit" : ""}`,
+      className: `org-chart-box org-chart-box-level-${node.levelIndex} ${isRoot ? "org-chart-box-root" : ""} ${node.levelIndex >= 2 ? "org-chart-box-compact" : ""} ${node.unitCode ? "org-chart-box-unit" : ""}`,
       "data-org-node-id": node.id,
       title: isRoot ? node.label : `${node.levelName}: ${node.label}`,
       children: [
@@ -9016,33 +9016,37 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto px-5 py-4 text-slate-100", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
                 .org-chart { display: inline-flex; min-width: 100%; justify-content: center; padding: 10px 18px 22px; }
-                .org-chart ul { position: relative; display: flex; justify-content: center; gap: 18px; padding: 26px 0 0; margin: 0; list-style: none; }
-                .org-chart li { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 132px; }
+                .org-chart ul { position: relative; display: flex; justify-content: center; gap: 20px; padding: 34px 0 0; margin: 0; list-style: none; }
+                .org-chart li { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 132px; isolation: isolate; }
                 .org-chart li.org-chart-compact-node { min-width: 66px; }
-                .org-chart li::before, .org-chart li::after { content: ''; position: absolute; top: 0; width: calc(50% + 9px); height: 16px; border-top: 1px solid rgba(103, 232, 249, 0.42); }
+                .org-chart li::before, .org-chart li::after { content: ''; position: absolute; top: 0; z-index: 0; width: calc(50% + 10px); height: 22px; border-top: 1px solid rgba(103, 232, 249, 0.42); }
                 .org-chart li::before { right: 50%; }
                 .org-chart li::after { left: 50%; border-left: 1px solid rgba(103, 232, 249, 0.42); }
                 .org-chart li:only-child::before, .org-chart li:only-child::after { display: none; }
                 .org-chart li:first-child::before, .org-chart li:last-child::after { border-top: 0; }
                 .org-chart li:first-child::after { border-top-left-radius: 8px; }
                 .org-chart li:last-child::before { border-top-right-radius: 8px; }
-                .org-chart ul ul::before { content: ''; position: absolute; top: 0; left: 50%; height: 26px; border-left: 1px solid rgba(103, 232, 249, 0.42); }
+                .org-chart ul ul::before { content: ''; position: absolute; top: 0; left: 50%; z-index: 0; height: 34px; border-left: 1px solid rgba(103, 232, 249, 0.42); }
                 .org-chart > ul > li::before, .org-chart > ul > li::after { display: none; }
                 .org-chart > ul { padding-top: 0; }
-                .org-chart-box { min-width: 132px; max-width: 168px; min-height: 62px; border: 1px solid rgba(103, 232, 249, 0.46); background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.96)); color: #e5faff; box-shadow: 0 12px 22px rgba(0,0,0,0.26); padding: 9px 10px; text-align: center; transition: border-color 160ms ease, transform 160ms ease, background 160ms ease; }
-                .org-chart-box:hover { border-color: rgba(165, 243, 252, 0.9); background: linear-gradient(180deg, rgba(8, 47, 73, 0.98), rgba(8, 13, 28, 0.98)); transform: translateY(-1px); }
-                .org-chart-box-root { min-width: 190px; border-color: rgba(34, 211, 238, 0.82); background: linear-gradient(180deg, rgba(14, 116, 144, 0.32), rgba(15, 23, 42, 0.98)); }
+                .org-chart-box { position: relative; z-index: 2; display: flex; flex-direction: column; justify-content: center; min-width: 132px; max-width: 168px; min-height: 62px; border: 1px solid rgba(103, 232, 249, 0.46); background: linear-gradient(180deg, rgb(15, 23, 42), rgb(2, 6, 23)); color: #e5faff; box-shadow: 0 12px 22px rgba(0,0,0,0.26); padding: 9px 10px; text-align: center; transition: border-color 160ms ease, transform 160ms ease, background 160ms ease; }
+                .org-chart-box:hover { border-color: rgba(165, 243, 252, 0.9); background: linear-gradient(180deg, rgb(8, 47, 73), rgb(8, 13, 28)); transform: translateY(-1px); }
+                .org-chart-box-root { min-width: 190px; border-color: rgba(34, 211, 238, 0.82); background: linear-gradient(180deg, rgb(15, 82, 105), rgb(15, 23, 42)); }
                 .org-chart-box-compact { min-width: 66px; max-width: 84px; min-height: 54px; padding: 7px 6px; }
+                .org-chart-node-level-2 { min-width: 84px; }
+                .org-chart-box-level-2 { width: 84px; min-width: 84px; max-width: 84px; height: 74px; min-height: 74px; }
+                .org-chart-node-level-3 { min-width: 66px; }
+                .org-chart-box-level-3 { width: 66px; min-width: 66px; max-width: 66px; height: 54px; min-height: 54px; }
                 .org-chart-box-unit { border-color: rgba(74, 222, 128, 0.52); }
                 .org-chart-level { display: block; margin-bottom: 3px; font-size: 9px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(125, 211, 252, 0.78); }
                 .org-chart-label { display: block; font-size: 12px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
                 .org-chart-box-compact .org-chart-level { font-size: 7px; letter-spacing: 0.08em; }
                 .org-chart-box-compact .org-chart-label { font-size: 10px; line-height: 1.12; }
-                .org-chart ul.org-chart-vertical-level { flex-direction: column; align-items: center; gap: 8px; padding-top: 24px; }
-                .org-chart ul.org-chart-vertical-level::before { height: 24px; }
+                .org-chart ul.org-chart-vertical-level { flex-direction: column; align-items: center; gap: 8px; padding-top: 28px; }
+                .org-chart ul.org-chart-vertical-level::before { height: 28px; }
                 .org-chart ul.org-chart-vertical-level > li { min-width: 66px; }
                 .org-chart ul.org-chart-vertical-level > li::before { display: none; }
-                .org-chart ul.org-chart-vertical-level > li::after { left: 50%; height: calc(100% + 8px); width: 0; border-top: 0; border-left: 1px solid rgba(103, 232, 249, 0.34); }
+                .org-chart ul.org-chart-vertical-level > li::after { left: 50%; z-index: 0; height: calc(100% + 8px); width: 0; border-top: 0; border-left: 1px solid rgba(103, 232, 249, 0.34); }
                 .org-chart ul.org-chart-vertical-level > li:last-child::after { height: 16px; }
             ` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 flex items-start justify-between gap-4 border-b border-cyan-400/20 pb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
