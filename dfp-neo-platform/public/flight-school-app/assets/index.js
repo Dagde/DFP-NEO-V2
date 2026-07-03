@@ -9021,7 +9021,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
                 .org-chart li.org-chart-compact-node { min-width: 66px; }
                 .org-chart li::before, .org-chart li::after { content: ''; position: absolute; top: -18px; z-index: 0; width: calc(50% + 10px); height: 18px; border-top: 1px solid rgba(103, 232, 249, 0.42); }
                 .org-chart li::before { right: 50%; }
-                .org-chart li::after { left: 50%; border-left: 1px solid rgba(103, 232, 249, 0.42); }
+                .org-chart li::after { left: 50%; }
                 .org-chart li:only-child::before, .org-chart li:only-child::after { display: none; }
                 .org-chart li:first-child::before, .org-chart li:last-child::after { border-top: 0; }
                 .org-chart li:first-child::after { border-top-left-radius: 0; }
@@ -9030,6 +9030,8 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
                 .org-chart > ul > li::before, .org-chart > ul > li::after { display: none; }
                 .org-chart > ul { padding-top: 0; }
                 .org-chart-box { position: relative; z-index: 2; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; min-width: 132px; max-width: 168px; min-height: 62px; border: 1px solid rgba(103, 232, 249, 0.46); background: linear-gradient(180deg, rgb(15, 23, 42), rgb(2, 6, 23)); color: #e5faff; box-shadow: 0 12px 22px rgba(0,0,0,0.26); padding: 9px 10px; text-align: center; transition: border-color 160ms ease, transform 160ms ease, background 160ms ease; }
+                .org-chart ul ul > li > .org-chart-box::before { content: ''; position: absolute; top: -18px; left: 50%; z-index: -1; height: 18px; width: 0; border-left: 1px solid rgba(103, 232, 249, 0.42); }
+                .org-chart > ul > li > .org-chart-box::before { display: none; }
                 .org-chart-box:hover { border-color: rgba(165, 243, 252, 0.9); background: linear-gradient(180deg, rgb(8, 47, 73), rgb(8, 13, 28)); transform: translateY(-1px); }
                 .org-chart-box-root { min-width: 190px; border-color: rgba(34, 211, 238, 0.82); background: linear-gradient(180deg, rgb(15, 82, 105), rgb(15, 23, 42)); }
                 .org-chart-box-compact { min-width: 66px; max-width: 84px; min-height: 54px; padding: 7px 6px; }
@@ -9037,6 +9039,8 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
                 .org-chart-box-level-2 { width: 84px; min-width: 84px; max-width: 84px; height: 74px; min-height: 74px; }
                 .org-chart-node-level-3 { min-width: 66px; }
                 .org-chart-box-level-3 { width: 66px; min-width: 66px; max-width: 66px; height: 54px; min-height: 54px; }
+                .org-chart-node-level-4 { min-width: 84px; }
+                .org-chart-box-level-4 { width: 84px; min-width: 84px; max-width: 84px; height: 74px; min-height: 74px; }
                 .org-chart-box-unit { border-color: rgba(74, 222, 128, 0.52); }
                 .org-chart-level { display: block; margin-bottom: 3px; font-size: 9px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(125, 211, 252, 0.78); }
                 .org-chart-label { display: block; font-size: 12px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
@@ -9045,9 +9049,10 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
                 .org-chart ul.org-chart-vertical-level { flex-direction: column; align-items: center; gap: 8px; padding-top: 34px; }
                 .org-chart ul.org-chart-vertical-level::before { height: 20px; }
                 .org-chart ul.org-chart-vertical-level > li { min-width: 66px; }
-                .org-chart ul.org-chart-vertical-level > li::before { display: none; }
-                .org-chart ul.org-chart-vertical-level > li::after { top: -16px; left: 50%; z-index: 0; height: 16px; width: 0; border-top: 0; border-left: 1px solid rgba(103, 232, 249, 0.34); }
-                .org-chart ul.org-chart-vertical-level > li:not(:last-child)::before { content: ''; display: block; position: absolute; top: 54px; left: 50%; z-index: 0; height: 8px; width: 0; border-left: 1px solid rgba(103, 232, 249, 0.34); }
+                .org-chart ul.org-chart-vertical-level > li::before, .org-chart ul.org-chart-vertical-level > li::after { display: none; }
+                .org-chart ul.org-chart-vertical-level > li > .org-chart-box::before { display: none; }
+                .org-chart ul.org-chart-vertical-level > li:first-child > .org-chart-box::before { display: block; top: -14px; height: 14px; border-left-color: rgba(103, 232, 249, 0.34); }
+                .org-chart ul.org-chart-vertical-level > li:not(:last-child) > .org-chart-box::after { content: ''; position: absolute; top: 100%; left: 50%; z-index: -1; height: 8px; width: 0; border-left: 1px solid rgba(103, 232, 249, 0.34); }
             ` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 flex items-start justify-between gap-4 border-b border-cyan-400/20 pb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-black uppercase tracking-[0.16em] text-cyan-200", children: "Organisation Structure" }),
