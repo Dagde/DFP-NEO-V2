@@ -59429,6 +59429,69 @@ const PlatformConfigurationSettings = ({
       setOrganisationStructureUnlocked(false);
     }
   };
+  const deleteOrganisation = async (organisationIndex) => {
+    if (!canEdit || !organisationStructureUnlocked) return;
+    const organisation = config.organisations[organisationIndex];
+    if (!organisation) return;
+    const organisationLabel = String(organisation.name || organisation.code || "this organisation").trim();
+    const organisationCode = String(organisation.code || "").trim();
+    const confirmed = await showDarkConfirm(
+      `Delete "${organisationLabel}" and its organisation structure?
+
+This permanently removes the organisation record from platform configuration and clears unit, licence and access references to it.`,
+      "Delete Organisation?",
+      "warning"
+    );
+    if (!confirmed) return;
+    const password = await showDarkPrompt({
+      title: "Confirm Organisation Deletion",
+      message: `Enter your password to delete "${organisationLabel}".`,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted. The organisation was not deleted.", "Password Required", "warning");
+        return;
+      }
+    } catch {
+      await showDarkAlert("The app could not verify your password. The organisation was not deleted.", "Password Check Failed", "error");
+      return;
+    }
+    const nextConfig = {
+      ...config,
+      organisations: config.organisations.filter((_, index) => index !== organisationIndex),
+      locations: config.locations.map((location) => String(location.organisationCode || "").trim() === organisationCode ? { ...location, organisationCode: "" } : location),
+      units: config.units.map((unit) => {
+        const unitOrganisationCode = String(unit.organisationCode || "").trim();
+        if (!organisationCode || unitOrganisationCode !== organisationCode) return unit;
+        return {
+          ...unit,
+          organisationCode: "",
+          settings: {
+            ...unit.settings || {},
+            parentOrganisation: "",
+            parentOrganisationPath: []
+          }
+        };
+      }),
+      licenses: config.licenses.map((license) => String(license.organisationCode || "").trim() === organisationCode ? { ...license, organisationCode: "" } : license),
+      userAccess: config.userAccess.map((access) => String(access.organisationCode || "").trim() === organisationCode ? { ...access, organisationCode: "" } : access)
+    };
+    const saved = await save(nextConfig, "platform-organisation", { reloadPage: false, successMessage: `Organisation "${organisationLabel}" deleted.` });
+    if (saved) {
+      setConfig(nextConfig);
+      setOrganisationStructureOptionDrafts({});
+      setOrganisationStructureImportError("");
+      setOrganisationStructureUnlocked(false);
+    }
+  };
   const updateDeploymentProfile = (changes) => {
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
@@ -61214,10 +61277,20 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        config.organisations.map((org, index) => ({ org, index })).filter(({ org }) => isActiveRecord(org)).map(({ org, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
+        config.organisations.map((org, index) => ({ org, index })).filter(({ org }) => isActiveRecord(org)).map(({ org, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-[1fr_1fr_1fr_auto]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Code", value: org.code, disabled: !canEdit || !organisationStructureUnlocked, onChange: (value) => updateRow("organisations", index, { code: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Name", value: org.name, disabled: !canEdit || !organisationStructureUnlocked, onChange: (value) => updateRow("organisations", index, { name: value }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: org.status || "ACTIVE", disabled: !canEdit || !organisationStructureUnlocked, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("organisations", index, { status: value }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: org.status || "ACTIVE", disabled: !canEdit || !organisationStructureUnlocked, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("organisations", index, { status: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => void deleteOrganisation(index),
+              disabled: !canEdit || !organisationStructureUnlocked || saving || applyingChanges,
+              className: `${platformActionButtonClass} text-red-700`,
+              children: "Delete"
+            }
+          ) })
         ] }, org.id || `platform-organisation-${index}`)),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/25 bg-gray-950/50", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 border-b border-cyan-500/15 bg-cyan-500/10 px-4 py-3", children: [

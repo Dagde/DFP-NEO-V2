@@ -2151,6 +2151,85 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }
   };
 
+  const deleteOrganisation = async (organisationIndex: number) => {
+    if (!canEdit || !organisationStructureUnlocked) return;
+    const organisation = config.organisations[organisationIndex];
+    if (!organisation) return;
+    const organisationLabel = String(organisation.name || organisation.code || 'this organisation').trim();
+    const organisationCode = String(organisation.code || '').trim();
+
+    const confirmed = await showDarkConfirm(
+      `Delete "${organisationLabel}" and its organisation structure?\n\nThis permanently removes the organisation record from platform configuration and clears unit, licence and access references to it.`,
+      'Delete Organisation?',
+      'warning',
+    );
+    if (!confirmed) return;
+
+    const password = await showDarkPrompt({
+      title: 'Confirm Organisation Deletion',
+      message: `Enter your password to delete "${organisationLabel}".`,
+      inputLabel: 'Password',
+      inputType: 'password',
+      inputPlaceholder: 'Enter password',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'warning',
+    });
+    if (!password) return;
+
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert('The password was not accepted. The organisation was not deleted.', 'Password Required', 'warning');
+        return;
+      }
+    } catch {
+      await showDarkAlert('The app could not verify your password. The organisation was not deleted.', 'Password Check Failed', 'error');
+      return;
+    }
+
+    const nextConfig: PlatformConfig = {
+      ...config,
+      organisations: config.organisations.filter((_, index) => index !== organisationIndex),
+      locations: config.locations.map((location) => (
+        String(location.organisationCode || '').trim() === organisationCode
+          ? { ...location, organisationCode: '' }
+          : location
+      )),
+      units: config.units.map((unit) => {
+        const unitOrganisationCode = String(unit.organisationCode || '').trim();
+        if (!organisationCode || unitOrganisationCode !== organisationCode) return unit;
+        return {
+          ...unit,
+          organisationCode: '',
+          settings: {
+            ...(unit.settings || {}),
+            parentOrganisation: '',
+            parentOrganisationPath: [],
+          },
+        };
+      }),
+      licenses: config.licenses.map((license) => (
+        String(license.organisationCode || '').trim() === organisationCode
+          ? { ...license, organisationCode: '' }
+          : license
+      )),
+      userAccess: config.userAccess.map((access) => (
+        String(access.organisationCode || '').trim() === organisationCode
+          ? { ...access, organisationCode: '' }
+          : access
+      )),
+    };
+
+    const saved = await save(nextConfig, 'platform-organisation', { reloadPage: false, successMessage: `Organisation "${organisationLabel}" deleted.` });
+    if (saved) {
+      setConfig(nextConfig);
+      setOrganisationStructureOptionDrafts({});
+      setOrganisationStructureImportError('');
+      setOrganisationStructureUnlocked(false);
+    }
+  };
+
   const updateDeploymentProfile = (changes: Record<string, any>) => {
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
@@ -4406,10 +4485,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           {config.organisations.map((org, index) => ({ org, index })).filter(({ org }) => isActiveRecord(org)).map(({ org, index }) => (
-            <div key={org.id || `platform-organisation-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3">
+            <div key={org.id || `platform-organisation-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-[1fr_1fr_1fr_auto]">
               <Field label="Organisation Code" value={org.code} disabled={!canEdit || !organisationStructureUnlocked} onChange={(value) => updateRow('organisations', index, { code: value })} />
               <Field label="Organisation Name" value={org.name} disabled={!canEdit || !organisationStructureUnlocked} onChange={(value) => updateRow('organisations', index, { name: value })} />
               <SelectField label="Status" value={org.status || 'ACTIVE'} disabled={!canEdit || !organisationStructureUnlocked} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('organisations', index, { status: value })} />
+              <div className="flex flex-col justify-end">
+                <button
+                  type="button"
+                  onClick={() => void deleteOrganisation(index)}
+                  disabled={!canEdit || !organisationStructureUnlocked || saving || applyingChanges}
+                  className={`${platformActionButtonClass} text-red-700`}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
 
