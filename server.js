@@ -2237,6 +2237,20 @@ app.post('/api/platform-config', async (req, res) => {
       return { latitude, longitude, timezone };
     };
     const beforeAuditSnapshot = await loadPlatformConfigAuditSnapshot(db);
+    const organisationCodesToKeep = Array.from(new Set(
+      organisations
+        .map((org) => String(org.code || '').trim())
+        .filter(Boolean)
+    ));
+    if (organisationCodesToKeep.length === 0) {
+      await db.$executeRawUnsafe(`DELETE FROM "CommercialOrganisation"`);
+    } else {
+      const keepPlaceholders = organisationCodesToKeep.map((_, index) => `$${index + 1}`).join(', ');
+      await db.$executeRawUnsafe(
+        `DELETE FROM "CommercialOrganisation" WHERE "code" NOT IN (${keepPlaceholders})`,
+        ...organisationCodesToKeep
+      );
+    }
 
     for (const org of organisations) {
       if (!org.code || !org.name) continue;

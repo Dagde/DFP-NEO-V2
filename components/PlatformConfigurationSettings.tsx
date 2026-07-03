@@ -1903,9 +1903,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updater: Record<string, any> | ((settings: Record<string, any>) => Record<string, any>),
   ) => {
     setConfig((prev) => {
-      const organisations = prev.organisations.length > 0
-        ? [...prev.organisations]
-        : [{ code: 'RAAF', name: 'RAAF', status: 'ACTIVE', settings: {} }];
+      if (prev.organisations.length === 0) return prev;
+      const organisations = [...prev.organisations];
       const activeIndex = organisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
       const orgIndex = activeIndex >= 0 ? activeIndex : 0;
       const currentOrg = organisations[orgIndex] || organisations[0];
@@ -2209,6 +2208,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           },
         };
       }),
+      resourcePools: config.resourcePools.map((pool) => (
+        String(pool.organisationCode || '').trim() === organisationCode
+          ? { ...pool, organisationCode: '' }
+          : pool
+      )),
+      schedulingRuleSets: config.schedulingRuleSets.map((ruleSet) => (
+        String(ruleSet.organisationCode || '').trim() === organisationCode
+          ? { ...ruleSet, organisationCode: '' }
+          : ruleSet
+      )),
       licenses: config.licenses.map((license) => (
         String(license.organisationCode || '').trim() === organisationCode
           ? { ...license, organisationCode: '' }
@@ -2281,9 +2290,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   ) => {
     setRankTerminologyDirty(true);
     setConfig((prev) => {
-      const organisations = prev.organisations.length > 0
-        ? [...prev.organisations]
-        : [{ code: 'RAAF', name: 'RAAF', status: 'ACTIVE', settings: {} }];
+      if (prev.organisations.length === 0) return prev;
+      const organisations = [...prev.organisations];
       const activeIndex = organisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
       const orgIndex = activeIndex >= 0 ? activeIndex : 0;
       const currentOrg = organisations[orgIndex] || organisations[0];

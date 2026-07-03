@@ -59237,7 +59237,8 @@ const PlatformConfigurationSettings = ({
   const operationalReadinessPercent = operationalSignals.length ? Math.round(operationalCompleteCount / operationalSignals.length * 100) : 0;
   const updatePrimaryOrganisationSettings = (updater) => {
     setConfig((prev) => {
-      const organisations = prev.organisations.length > 0 ? [...prev.organisations] : [{ code: "RAAF", name: "RAAF", status: "ACTIVE", settings: {} }];
+      if (prev.organisations.length === 0) return prev;
+      const organisations = [...prev.organisations];
       const activeIndex = organisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
       const orgIndex = activeIndex >= 0 ? activeIndex : 0;
       const currentOrg = organisations[orgIndex] || organisations[0];
@@ -59481,6 +59482,8 @@ This permanently removes the organisation record from platform configuration and
           }
         };
       }),
+      resourcePools: config.resourcePools.map((pool) => String(pool.organisationCode || "").trim() === organisationCode ? { ...pool, organisationCode: "" } : pool),
+      schedulingRuleSets: config.schedulingRuleSets.map((ruleSet) => String(ruleSet.organisationCode || "").trim() === organisationCode ? { ...ruleSet, organisationCode: "" } : ruleSet),
       licenses: config.licenses.map((license) => String(license.organisationCode || "").trim() === organisationCode ? { ...license, organisationCode: "" } : license),
       userAccess: config.userAccess.map((access) => String(access.organisationCode || "").trim() === organisationCode ? { ...access, organisationCode: "" } : access)
     };
@@ -59535,7 +59538,8 @@ This permanently removes the organisation record from platform configuration and
   const updateCrewPositionTerminology = (positions, renamedPosition, deletedDefaultIds = crewPositionTerminology.deletedDefaultIds || []) => {
     setRankTerminologyDirty(true);
     setConfig((prev) => {
-      const organisations = prev.organisations.length > 0 ? [...prev.organisations] : [{ code: "RAAF", name: "RAAF", status: "ACTIVE", settings: {} }];
+      if (prev.organisations.length === 0) return prev;
+      const organisations = [...prev.organisations];
       const activeIndex = organisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
       const orgIndex = activeIndex >= 0 ? activeIndex : 0;
       const currentOrg = organisations[orgIndex] || organisations[0];
