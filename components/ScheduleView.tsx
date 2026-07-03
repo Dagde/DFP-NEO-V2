@@ -390,8 +390,9 @@ const OrganisationChartBranch: React.FC<{
                 return selectedPathIds.has(node.id);
             });
             if (visibleChildren.length === 0) return null;
+            const useDrilldownRow = Boolean(focusedPath && selectedPathIds.has(node.id) && node.levelIndex >= 3);
             return (
-                <ul>
+                <ul className={useDrilldownRow ? 'org-chart-drilldown-row' : undefined}>
                     {visibleChildren.map((child) => (
                         <OrganisationChartBranch
                             key={child.id}
@@ -479,6 +480,10 @@ const OrganisationSlideoutDiagram: React.FC<{ platformConfig?: any }> = ({ platf
                 .org-chart-label { display: block; font-size: 12px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
                 .org-chart-box-compact .org-chart-level { font-size: 7px; letter-spacing: 0.08em; }
                 .org-chart-box-compact .org-chart-label { font-size: 10px; line-height: 1.12; }
+                .org-chart ul.org-chart-drilldown-row { position: absolute; top: calc(100% + 14px); left: 50%; z-index: 4; transform: translateX(-50%); padding-top: 0; gap: 14px; }
+                .org-chart ul.org-chart-drilldown-row::before { display: none; }
+                .org-chart ul.org-chart-drilldown-row > li::before, .org-chart ul.org-chart-drilldown-row > li::after { top: -10px; height: 10px; width: calc(50% + 7px); }
+                .org-chart ul.org-chart-drilldown-row > li > .org-chart-box::before { top: -10px; height: 10px; }
                 .org-chart ul.org-chart-vertical-level { flex-direction: column; align-items: center; gap: 8px; padding-top: 34px; }
                 .org-chart ul.org-chart-vertical-level::before { height: 20px; }
                 .org-chart ul.org-chart-vertical-level > li { min-width: 66px; }
