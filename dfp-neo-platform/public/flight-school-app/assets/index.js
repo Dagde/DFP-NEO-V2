@@ -8828,6 +8828,20 @@ const VisualAdjustGuide = ({
     }
   );
 };
+const isEditableElement = (target) => {
+  const element = target;
+  if (!element) return false;
+  return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement || element.isContentEditable || Boolean(element.closest('[contenteditable="true"]'));
+};
+const stopEditableKeyPropagation = (event) => {
+  if (isEditableElement(event.target)) {
+    if (event.target instanceof HTMLTextAreaElement && event.key === "Enter") {
+      return;
+    }
+    event.stopPropagation();
+    event.nativeEvent.stopImmediatePropagation?.();
+  }
+};
 const PIXELS_PER_HOUR$6 = 200;
 const ROW_HEIGHT$6 = 32;
 const START_HOUR$6 = 0;
@@ -9113,9 +9127,279 @@ const OrganisationChartBranch = ({ node, isRoot = false, levelHeights, selectedN
   })()
 ] });
 const EmptyOrganisationChartSet = /* @__PURE__ */ new Set();
-const OrganisationSlideoutDiagram = ({ platformConfig }) => {
+const organisationSlideoutActiveButtonClass = "rounded-md border border-orange-300 bg-orange-500/20 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18";
+const organisationSlideoutInactiveButtonClass = "rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-100/80 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18";
+const unitSettingsPanelClass = "rounded border border-cyan-400/15 bg-slate-950/60 p-3";
+const unitSettingsLabelClass = "text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/80";
+const unitSettingsInputClass = "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-100 outline-none transition focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60";
+const unitSettingsSelectClass = `${unitSettingsInputClass} cursor-pointer`;
+const normaliseUnitSettingsIdentifier = (value) => String(value || "").trim().toUpperCase();
+const formatPlainList = (items, fallback = "Not set") => {
+  const cleanItems = items.map((item) => String(item || "").trim()).filter(Boolean);
+  return cleanItems.length > 0 ? cleanItems.join(" / ") : fallback;
+};
+const getUnitParentOrganisationPath = (unit) => {
+  const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
+  return rawPath.map((item) => String(item || "").trim()).filter(Boolean);
+};
+const getRelevantResourcePoolsForUnit = (platformConfig, unit) => {
+  const unitCode = normaliseUnitSettingsIdentifier(unit?.code);
+  const locationCode = normaliseUnitSettingsIdentifier(unit?.locationCode);
+  return (platformConfig?.resourcePools || []).filter((pool) => {
+    if (String(pool?.status || "ACTIVE").toUpperCase() === "INACTIVE") return false;
+    const poolUnitCode = normaliseUnitSettingsIdentifier(pool?.unitCode);
+    const poolLocationCode = normaliseUnitSettingsIdentifier(pool?.locationCode);
+    return poolUnitCode === unitCode || !poolUnitCode && poolLocationCode && poolLocationCode === locationCode;
+  });
+};
+const UnitSettingsField = ({ label, value, onChange, disabled = false }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsLabelClass, children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      className: unitSettingsInputClass,
+      value: value || "",
+      disabled,
+      onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDown: stopEditableKeyPropagation,
+      onChange: (event) => onChange(event.target.value)
+    }
+  )
+] });
+const UnitSettingsSelect = ({ label, value, options, onChange, optionLabels = {}, disabled = false }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block min-w-0", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsLabelClass, children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "select",
+    {
+      className: unitSettingsSelectClass,
+      value: value || "",
+      disabled,
+      title: optionLabels[value] || value,
+      onChange: (event) => onChange(event.target.value),
+      children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: optionLabels[option] || option || "Not set" }, option || "blank"))
+    }
+  )
+] });
+const UnitSettingsNumberField = ({ label, value, onChange, disabled = false }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsLabelClass, children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      type: "number",
+      min: 0,
+      className: unitSettingsInputClass,
+      value: Number.isFinite(Number(value)) ? value : 0,
+      disabled,
+      onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDown: stopEditableKeyPropagation,
+      onChange: (event) => onChange(Math.max(0, Math.round(Number(event.target.value) || 0)))
+    }
+  )
+] });
+const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatformConfig }) => {
+  const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
+  const units = platformConfig?.units || [];
+  const unit = units.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === activeUnitCode) || units.find((candidate) => String(candidate?.status || "ACTIVE").toUpperCase() !== "INACTIVE") || units[0];
+  const unitIndex = unit ? units.findIndex((candidate) => candidate === unit) : -1;
+  const canEdit = Boolean(onUpdatePlatformConfig && unit && unitIndex >= 0);
+  const locations = platformConfig?.locations || [];
+  const modules = platformConfig?.modules || [];
+  const resourcePools = unit ? getRelevantResourcePoolsForUnit(platformConfig, unit) : [];
+  const unitModules = platformConfig?.unitModules || [];
+  const schedulingRuleSets = (platformConfig?.schedulingRuleSets || []).filter((ruleSet) => String(ruleSet?.isActive ?? true) !== "false" && (!ruleSet?.unitCode || normaliseUnitSettingsIdentifier(ruleSet.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)));
+  const location = locations.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === normaliseUnitSettingsIdentifier(unit?.locationCode));
+  const parentPath = getUnitParentOrganisationPath(unit);
+  const operationalModel2 = getUnitOperationalModel(unit);
+  const modelOptionLabels = Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
+  const taskAbbreviations = unit?.settings?.taskProfileAbbreviations || {};
+  const updateUnit = (patch) => {
+    if (!canEdit) return;
+    onUpdatePlatformConfig?.((current) => ({
+      ...current,
+      units: (current?.units || []).map((candidate, index) => index === unitIndex ? { ...candidate, ...patch } : candidate)
+    }));
+  };
+  const updateUnitSettings = (patch) => {
+    updateUnit({
+      settings: {
+        ...unit?.settings || {},
+        ...patch
+      }
+    });
+  };
+  const updateResourcePoolSettings = (pool, patch) => {
+    if (!onUpdatePlatformConfig) return;
+    onUpdatePlatformConfig((current) => ({
+      ...current,
+      resourcePools: (current?.resourcePools || []).map((candidate) => candidate === pool || String(candidate?.id || candidate?.code || "") === String(pool?.id || pool?.code || "") ? {
+        ...candidate,
+        settings: {
+          ...candidate.settings || {},
+          ...patch
+        }
+      } : candidate)
+    }));
+  };
+  const updateUnitModule = (moduleCode, isEnabled) => {
+    if (!onUpdatePlatformConfig || !unit?.code) return;
+    const cleanModuleCode = String(moduleCode || "").trim();
+    const cleanUnitCode = String(unit.code || "").trim();
+    onUpdatePlatformConfig((current) => {
+      const existingIndex = (current?.unitModules || []).findIndex((item) => normaliseUnitSettingsIdentifier(item?.unitCode) === normaliseUnitSettingsIdentifier(cleanUnitCode) && normaliseUnitSettingsIdentifier(item?.moduleCode) === normaliseUnitSettingsIdentifier(cleanModuleCode));
+      if (existingIndex >= 0) {
+        return {
+          ...current,
+          unitModules: current.unitModules.map((item, index) => index === existingIndex ? { ...item, isEnabled } : item)
+        };
+      }
+      return {
+        ...current,
+        unitModules: [
+          ...current?.unitModules || [],
+          { unitCode: cleanUnitCode, moduleCode: cleanModuleCode, isEnabled, settings: {} }
+        ]
+      };
+    });
+  };
+  if (!unit) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-400/15 bg-slate-950/60 p-5 text-sm text-slate-300", children: "No active unit is available for this user context." });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-400/20 bg-slate-950/70 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-bold text-cyan-100", children: [
+        unit.code || "Unit",
+        " settings"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-400", children: "These values come from the same Settings records used by the full platform configuration. Changes made here update that shared configuration." })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: unitSettingsPanelClass, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-100", children: "Who this unit is" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit code", value: unit.code || "", onChange: () => {
+          }, disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit name", value: unit.name || "", onChange: (value) => updateUnit({ name: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Location", value: unit.locationCode || "", options: locations.map((item) => item.code), onChange: (value) => updateUnit({ locationCode: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Unit type", value: unit.unitType || "Training", options: ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"], onChange: (value) => updateUnit({ unitType: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            UnitSettingsSelect,
+            {
+              label: "Operating model",
+              value: operationalModel2,
+              options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value),
+              optionLabels: modelOptionLabels,
+              onChange: (value) => updateUnitSettings({ operationalModel: value }),
+              disabled: !canEdit
+            }
+          ) })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: unitSettingsPanelClass, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-100", children: "Where it sits" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { className: "mt-3 space-y-3 text-xs", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: unitSettingsLabelClass, children: "Parent organisation" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 rounded border border-slate-700 bg-slate-950 px-3 py-2 font-semibold text-slate-100", children: formatPlainList(parentPath) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: unitSettingsLabelClass, children: "Home location" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 rounded border border-slate-700 bg-slate-950 px-3 py-2 font-semibold text-slate-100", children: location ? `${location.code} - ${location.name || location.code}` : unit.locationCode || "Not set" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: unitSettingsLabelClass, children: "Scheduling model in plain English" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 rounded border border-slate-700 bg-slate-950 px-3 py-2 font-semibold text-slate-100", children: getOperationalModelLabel(operationalModel2) })
+          ] })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: unitSettingsPanelClass, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-100", children: "Resources this unit can use" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-300/25 bg-cyan-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-cyan-100", children: [
+          resourcePools.length,
+          " pools"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-3", children: resourcePools.length > 0 ? resourcePools.map((pool) => {
+        const settings = pool.settings || {};
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-900/70 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap items-start justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-black uppercase tracking-[0.12em] text-cyan-100", children: pool.name || pool.code || "Resource pool" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-slate-400", children: [
+              pool.aircraftTypeCode || "Aircraft type not set",
+              " / ",
+              pool.poolType || "Dedicated",
+              " / ",
+              pool.locationCode || unit.locationCode || "Location not set"
+            ] })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-2 md:grid-cols-5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Aircraft", value: settings.aircraft ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { aircraft: value }), disabled: !onUpdatePlatformConfig }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Sim", value: settings.ftd ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { ftd: value }), disabled: !onUpdatePlatformConfig }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Trainer", value: settings.cpt ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { cpt: value }), disabled: !onUpdatePlatformConfig }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Standby", value: settings.standby ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { standby: value }), disabled: !onUpdatePlatformConfig }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Ground", value: settings.ground ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { ground: value }), disabled: !onUpdatePlatformConfig })
+          ] })
+        ] }, pool.id || pool.code);
+      }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-400", children: "No resource pools are assigned to this unit or its location." }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: unitSettingsPanelClass, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-100", children: "Enabled tools" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-2", children: modules.length > 0 ? modules.map((module) => {
+          const unitModule = unitModules.find((item) => normaliseUnitSettingsIdentifier(item?.unitCode) === normaliseUnitSettingsIdentifier(unit.code) && normaliseUnitSettingsIdentifier(item?.moduleCode) === normaliseUnitSettingsIdentifier(module.code));
+          const checked = unitModule?.isEnabled !== false;
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center justify-between gap-3 rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-100", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: module.name || module.code }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                className: "h-4 w-4 accent-cyan-400",
+                checked,
+                disabled: !onUpdatePlatformConfig,
+                onChange: (event) => updateUnitModule(module.code, event.target.checked)
+              }
+            )
+          ] }, module.code);
+        }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-400", children: "No modules have been configured yet." }) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: unitSettingsPanelClass, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-100", children: "Task tile short labels" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-400", children: "One line per label, for example: Air Refuelling = AR." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "textarea",
+          {
+            className: `${unitSettingsInputClass} min-h-[148px] resize-y leading-5`,
+            value: formatTaskProfileAbbreviationText(taskAbbreviations),
+            disabled: !canEdit,
+            onKeyDownCapture: stopEditableKeyPropagation,
+            onKeyDown: stopEditableKeyPropagation,
+            onChange: (event) => updateUnitSettings({ taskProfileAbbreviations: parseTaskProfileAbbreviationText(event.target.value) })
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: unitSettingsPanelClass, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-100", children: "Scheduling rules that apply here" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-2 md:grid-cols-2", children: schedulingRuleSets.length > 0 ? schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950 px-3 py-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-bold text-slate-100", children: ruleSet.name || "Unnamed rule set" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-[11px] text-slate-400", children: [
+          "Scope: ",
+          ruleSet.scope || "Unit",
+          " / Aircraft: ",
+          ruleSet.aircraftTypeCode || "All",
+          " / Unit: ",
+          ruleSet.unitCode || unit.code
+        ] })
+      ] }, ruleSet.id || `${ruleSet.name}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-400", children: "No specific scheduling rule sets are active for this unit." }) })
+    ] })
+  ] });
+};
+const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, onUpdatePlatformConfig }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
+  const [activeView, setActiveView] = reactExports.useState("structure");
   reactExports.useEffect(() => {
     if (selectedNodeId && chart && !findOrganisationChartPath(chart, selectedNodeId)) {
       setSelectedNodeId(null);
@@ -9131,14 +9415,9 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
   const handleSelectNode = reactExports.useCallback((node) => {
     setSelectedNodeId((current) => current === node.id ? null : node.id);
   }, []);
-  if (!chart) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full items-center justify-center p-6 text-center text-xs text-slate-400", children: "No organisation structure has been configured." });
-  }
   const unitCount = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").length;
-  const activeOrganisation = getActiveOrganisation(platformConfig);
-  Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
-  const levelHeights = getOrganisationChartLevelHeights(chart);
-  const chartMetrics = getOrganisationChartVisibleMetrics(chart, levelHeights, focusedPath, selectedPathIds);
+  const levelHeights = chart ? getOrganisationChartLevelHeights(chart) : /* @__PURE__ */ new Map();
+  const chartMetrics = chart ? getOrganisationChartVisibleMetrics(chart, levelHeights, focusedPath, selectedPathIds) : { width: 560, height: 320 };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto px-5 py-4 text-slate-100", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
                 /* Keep connector rules aligned with docs/organisation-chart-rendering.md. */
@@ -9193,7 +9472,8 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
           "button",
           {
             type: "button",
-            className: "rounded-md border border-orange-300 bg-orange-500/20 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18",
+            className: activeView === "structure" ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass,
+            onClick: () => setActiveView("structure"),
             children: "Organisation Structure"
           }
         ),
@@ -9201,7 +9481,8 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
           "button",
           {
             type: "button",
-            className: "rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-100/80 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18",
+            className: activeView === "unitSettings" ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass,
+            onClick: () => setActiveView("unitSettings"),
             children: "My Unit Settings"
           }
         ),
@@ -9209,7 +9490,8 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
           "button",
           {
             type: "button",
-            className: "rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-100/80 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18",
+            className: activeView === "setupWizard" ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass,
+            onClick: () => setActiveView("setupWizard"),
             children: "Initial Setup Wizard"
           }
         )
@@ -9219,7 +9501,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
         " configured units mapped from Settings."
       ] }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
+    activeView === "structure" ? chart ? /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
       {
         className: "inline-block rounded border border-cyan-400/20 bg-slate-950/55",
@@ -9241,7 +9523,17 @@ const OrganisationSlideoutDiagram = ({ platformConfig }) => {
           }
         ) }) })
       }
-    )
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-h-[320px] items-center justify-center rounded border border-cyan-400/20 bg-slate-950/55 p-6 text-center text-xs text-slate-400", children: "No organisation structure has been configured." }) : activeView === "unitSettings" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+      OrganisationMyUnitSettings,
+      {
+        platformConfig,
+        unitCode,
+        onUpdatePlatformConfig
+      }
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-400/15 bg-slate-950/60 p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-100", children: "Initial Setup Wizard" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-slate-400", children: "This area is reserved for a guided setup flow for new units. The current unit settings remain available from My Unit Settings." })
+    ] })
   ] });
 };
 const ScheduleView = ({
@@ -9307,6 +9599,7 @@ const ScheduleView = ({
   onExternalEventDrop,
   diagnosticHighlightedEventIds = /* @__PURE__ */ new Set(),
   platformConfig,
+  onUpdatePlatformConfig,
   timezoneOffset = 11
   // Default to UTC+11
 }) => {
@@ -10132,7 +10425,7 @@ const ScheduleView = ({
             className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0" : "-translate-x-full"}`,
             style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, unitCode, onUpdatePlatformConfig }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
@@ -32207,20 +32500,6 @@ const PrioritiesView = ({
       showRemedialPriorityQueue
     ] })
   ] });
-};
-const isEditableElement = (target) => {
-  const element = target;
-  if (!element) return false;
-  return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement || element.isContentEditable || Boolean(element.closest('[contenteditable="true"]'));
-};
-const stopEditableKeyPropagation = (event) => {
-  if (isEditableElement(event.target)) {
-    if (event.target instanceof HTMLTextAreaElement && event.key === "Enter") {
-      return;
-    }
-    event.stopPropagation();
-    event.nativeEvent.stopImmediatePropagation?.();
-  }
 };
 const PrioritiesViewWithMenu = (props) => {
   const [activeSection, setActiveSection] = reactExports.useState("build-timeline");
@@ -61212,9 +61491,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     name: level.name || `Level ${index + 1}`,
     options: level.options.map((option) => String(option || "").trim()).filter(Boolean)
   })).filter((level) => level.options.length > 0);
-  const getUnitParentOrganisationPath = (unit) => (Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-")).map((part) => String(part || "").trim()).filter(Boolean);
+  const getUnitParentOrganisationPath2 = (unit) => (Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-")).map((part) => String(part || "").trim()).filter(Boolean);
   const updateUnitParentOrganisationPath = (unitIndex, unit, levelIndex, selectedValue) => {
-    const currentPath = getUnitParentOrganisationPath(unit);
+    const currentPath = getUnitParentOrganisationPath2(unit);
     const nextPath = currentPath.slice(0, levelIndex);
     if (selectedValue) nextPath[levelIndex] = selectedValue;
     const cleanPath = nextPath.map((part) => String(part || "").trim()).filter(Boolean);
@@ -61594,7 +61873,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         const isSelectedUnit = selectedUnitIndex === index;
         const isUnitEditing = canEdit && editingUnitIndex === index;
         const rowKey = unit.id || `platform-unit-${index}`;
-        const parentOrganisationPath = getUnitParentOrganisationPath(unit);
+        const parentOrganisationPath = getUnitParentOrganisationPath2(unit);
         const parentOrganisationDisplay = parentOrganisationPath[parentOrganisationPath.length - 1] || "";
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
@@ -94609,6 +94888,14 @@ const App = () => {
       });
     }, 900);
   }, []);
+  const handleUpdatePlatformConfigFromSchedule = reactExports.useCallback((updater) => {
+    setPlatformConfig((prev) => {
+      if (!prev) return prev;
+      const nextConfig = updater(prev);
+      savePlatformConfigDebounced(nextConfig);
+      return nextConfig;
+    });
+  }, [savePlatformConfigDebounced]);
   const handleSaveStandardMissionProfileFromPlanner = reactExports.useCallback((profileId, changes) => {
     const targetId = String(profileId || "").trim();
     if (!targetId) return;
@@ -105034,6 +105321,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onExternalEventDrop: handleProgramScheduleExternalEventDrop,
             diagnosticHighlightedEventIds: staffAvailabilityDiagnosticEventIds,
             platformConfig,
+            onUpdatePlatformConfig: handleUpdatePlatformConfigFromSchedule,
             isOracleMode,
             oraclePreviewEvent,
             onOracleMouseDown: handleOracleMouseDown,

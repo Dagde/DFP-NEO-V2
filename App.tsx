@@ -24083,6 +24083,14 @@ const App: React.FC = () => {
             });
         }, 900);
     }, []);
+    const handleUpdatePlatformConfigFromSchedule = useCallback((updater: (current: PlatformConfig) => PlatformConfig) => {
+        setPlatformConfig((prev) => {
+            if (!prev) return prev;
+            const nextConfig = updater(prev);
+            savePlatformConfigDebounced(nextConfig);
+            return nextConfig;
+        });
+    }, [savePlatformConfigDebounced]);
     const handleSaveStandardMissionProfileFromPlanner = useCallback((profileId: string, changes: Partial<StandardMissionProfile>) => {
         const targetId = String(profileId || '').trim();
         if (!targetId) return;
@@ -37116,6 +37124,7 @@ appliedUpdates.forEach(update => {
                            onExternalEventDrop={handleProgramScheduleExternalEventDrop}
                            diagnosticHighlightedEventIds={staffAvailabilityDiagnosticEventIds}
                            platformConfig={platformConfig}
+                           onUpdatePlatformConfig={handleUpdatePlatformConfigFromSchedule}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
                            onOracleMouseDown={handleOracleMouseDown}
