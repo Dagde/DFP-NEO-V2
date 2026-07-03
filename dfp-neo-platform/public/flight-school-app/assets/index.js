@@ -61159,7 +61159,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        config.organisations.map((org, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
+        config.organisations.map((org, index) => ({ org, index })).filter(({ org }) => isActiveRecord(org)).map(({ org, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Code", value: org.code, disabled: !canEdit || !organisationStructureUnlocked, onChange: (value) => updateRow("organisations", index, { code: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Name", value: org.name, disabled: !canEdit || !organisationStructureUnlocked, onChange: (value) => updateRow("organisations", index, { name: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: org.status || "ACTIVE", disabled: !canEdit || !organisationStructureUnlocked, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("organisations", index, { status: value }) })
