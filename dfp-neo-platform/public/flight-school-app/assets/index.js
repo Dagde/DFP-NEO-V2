@@ -58863,7 +58863,7 @@ const PlatformConfigurationSettings = ({
   const [selectedUnitIndex, setSelectedUnitIndex] = reactExports.useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = reactExports.useState(null);
   const [openParentOrgUnitIndex, setOpenParentOrgUnitIndex] = reactExports.useState(null);
-  const [parentOrgMenuPosition, setParentOrgMenuPosition] = reactExports.useState(null);
+  const [parentOrgMenuPlacement, setParentOrgMenuPlacement] = reactExports.useState({ direction: "down", maxHeight: 340 });
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = reactExports.useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = reactExports.useState(false);
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = reactExports.useState("");
@@ -61169,7 +61169,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
       }
     });
     setOpenParentOrgUnitIndex(null);
-    setParentOrgMenuPosition(null);
+    setParentOrgMenuPlacement({ direction: "down", maxHeight: 340 });
   };
   const getFilteredParentOrganisationOptions = (level, parentOrganisationPath, parentLevelIndex) => {
     if (parentLevelIndex === 0) return level.options;
@@ -61554,7 +61554,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                         event.stopPropagation();
                         if (openParentOrgUnitIndex === index) {
                           setOpenParentOrgUnitIndex(null);
-                          setParentOrgMenuPosition(null);
+                          setParentOrgMenuPlacement({ direction: "down", maxHeight: 340 });
                           return;
                         }
                         const rect = event.currentTarget.getBoundingClientRect();
@@ -61565,11 +61565,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                         const availableAbove = Math.max(0, rect.top - viewportMargin - menuGap);
                         const shouldOpenUp = availableBelow < desiredMenuHeight && availableAbove > availableBelow;
                         const maxHeight = Math.max(160, Math.min(desiredMenuHeight, shouldOpenUp ? availableAbove : availableBelow));
-                        setParentOrgMenuPosition({
-                          left: Math.max(viewportMargin, rect.left),
-                          top: shouldOpenUp ? Math.max(viewportMargin, rect.top - menuGap - maxHeight) : Math.min(window.innerHeight - viewportMargin - maxHeight, rect.bottom + menuGap),
-                          maxHeight
-                        });
+                        setParentOrgMenuPlacement({ direction: shouldOpenUp ? "up" : "down", maxHeight });
                         setOpenParentOrgUnitIndex(index);
                       },
                       children: [
@@ -61588,11 +61584,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   openParentOrgUnitIndex === index && isUnitEditing && organisationParentLevels.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "div",
                     {
-                      className: "fixed z-[180] flex items-start overflow-y-auto rounded-lg border border-cyan-400/35 bg-gray-950/95 p-2 shadow-2xl shadow-black/45",
+                      className: `absolute left-0 z-[180] flex items-start overflow-y-auto rounded-lg border border-cyan-400/35 bg-gray-950/95 p-2 shadow-2xl shadow-black/45 ${parentOrgMenuPlacement.direction === "up" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"}`,
                       style: {
-                        left: parentOrgMenuPosition?.left ?? 0,
-                        top: parentOrgMenuPosition?.top ?? 0,
-                        maxHeight: parentOrgMenuPosition?.maxHeight ?? 340
+                        maxHeight: parentOrgMenuPlacement.maxHeight
                       },
                       onClick: (event) => event.stopPropagation(),
                       children: [
@@ -61613,7 +61607,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                                     updateUnitParentOrganisationPath(index, unit, parentLevelIndex, option);
                                     if (!hasNextLevel) {
                                       setOpenParentOrgUnitIndex(null);
-                                      setParentOrgMenuPosition(null);
+                                      setParentOrgMenuPlacement({ direction: "down", maxHeight: 340 });
                                     }
                                   },
                                   children: [
