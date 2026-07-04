@@ -571,6 +571,23 @@ const formatPlainList = (items: string[], fallback = 'Not set'): string => {
     return cleanItems.length > 0 ? cleanItems.join(' / ') : fallback;
 };
 
+const formatRoleRequirementsText = (requirements: any[] = []): string => (
+    requirements.map((requirement) => `${requirement.role || 'Crew'} = ${requirement.count ?? 1}`).join('\n')
+);
+
+const parseRoleRequirementsText = (value: string): any[] => (
+    String(value || '')
+        .split(/\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+            const [rolePart, countPart] = line.includes('=') ? line.split('=') : line.split(':');
+            const role = String(rolePart || '').trim() || 'Crew';
+            const count = Math.max(1, Math.round(Number(String(countPart || '1').trim()) || 1));
+            return { role, count };
+        })
+);
+
 const getUnitParentOrganisationPath = (unit: any): string[] => {
     const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath)
         ? unit.settings.parentOrganisationPath
@@ -888,6 +905,28 @@ const OrganisationMyUnitSettings: React.FC<{
             },
         });
     };
+    const updateResourcePool = (pool: any, patch: Record<string, any>) => {
+        if (!onUpdatePlatformConfig) return;
+        onUpdatePlatformConfig((current) => ({
+            ...current,
+            resourcePools: (current?.resourcePools || []).map((candidate: any) => (
+                candidate === pool || String(candidate?.id || candidate?.code || '') === String(pool?.id || pool?.code || '')
+                    ? { ...candidate, ...patch }
+                    : candidate
+            )),
+        }));
+    };
+    const updateLocation = (targetLocation: any, patch: Record<string, any>) => {
+        if (!onUpdatePlatformConfig || !targetLocation) return;
+        onUpdatePlatformConfig((current) => ({
+            ...current,
+            locations: (current?.locations || []).map((candidate: any) => (
+                candidate === targetLocation || String(candidate?.id || candidate?.code || '') === String(targetLocation?.id || targetLocation?.code || '')
+                    ? { ...candidate, ...patch }
+                    : candidate
+            )),
+        }));
+    };
     const updateResourcePoolSettings = (pool: any, patch: Record<string, number>) => {
         if (!onUpdatePlatformConfig) return;
         onUpdatePlatformConfig((current) => ({
@@ -901,6 +940,126 @@ const OrganisationMyUnitSettings: React.FC<{
                             ...patch,
                         },
                     }
+                    : candidate
+            )),
+        }));
+    };
+    const updateAircraftType = (aircraft: any, patch: Record<string, any>) => {
+        if (!onUpdatePlatformConfig) return;
+        onUpdatePlatformConfig((current) => ({
+            ...current,
+            aircraftTypes: (current?.aircraftTypes || []).map((candidate: any) => (
+                candidate === aircraft || String(candidate?.id || candidate?.code || '') === String(aircraft?.id || aircraft?.code || '')
+                    ? { ...candidate, ...patch }
+                    : candidate
+            )),
+        }));
+    };
+    const updateAircraftCrewComposition = (aircraft: any, patch: Record<string, any>) => {
+        const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+        updateAircraftType(aircraft, {
+            crewComposition: {
+                ...composition,
+                ...patch,
+            },
+        });
+    };
+    const updateCrewCompositionSettings = (patch: Record<string, any>) => {
+        updateOrganisationSettings({
+            crewCompositionSettings: {
+                ...crewCompositionSettings,
+                ...patch,
+            },
+        });
+    };
+    const updateAlternateCrewProfile = (profile: any, patch: Record<string, any>) => {
+        updateCrewCompositionSettings({
+            alternateCompositions: crewCompositionSettings.alternateCompositions.map((candidate) => (
+                candidate.id === profile.id ? { ...candidate, ...patch } : candidate
+            )),
+        });
+    };
+    const updateCurrencyProfile = (profile: any, patch: Record<string, any>) => {
+        updateCrewCompositionSettings({
+            currencyProfiles: crewCompositionSettings.currencyProfiles.map((candidate) => (
+                candidate.id === profile.id ? { ...candidate, ...patch } : candidate
+            )),
+        });
+    };
+    const updateStandardMissionProfile = (profile: any, patch: Record<string, any>) => {
+        const source = Array.isArray(organisationSettings.standardMissionProfiles?.profiles)
+            ? organisationSettings.standardMissionProfiles.profiles
+            : Array.isArray(organisationSettings.standardMissionProfiles)
+                ? organisationSettings.standardMissionProfiles
+                : [];
+        const nextProfiles = source.map((candidate: any) => (
+            candidate === profile || String(candidate?.id || candidate?.code || candidate?.missionName || '') === String(profile?.id || profile?.code || profile?.missionName || '')
+                ? { ...candidate, ...patch }
+                : candidate
+        ));
+        updateOrganisationSettings({
+            standardMissionProfiles: Array.isArray(organisationSettings.standardMissionProfiles?.profiles)
+                ? { ...organisationSettings.standardMissionProfiles, profiles: nextProfiles }
+                : nextProfiles,
+        });
+    };
+    const updateCrewPositionEntry = (entry: any, patch: Record<string, any>) => {
+        updateOrganisationSettings({
+            crewPositionTerminology: {
+                ...crewPositionTerminology,
+                positions: crewPositionTerminology.positions.map((candidate) => (
+                    candidate.id === entry.id ? { ...candidate, ...patch } : candidate
+                )),
+            },
+        });
+    };
+    const updateQualificationEntry = (qualification: any, patch: Record<string, any>) => {
+        updateOrganisationSettings({
+            staffQualificationCatalogue: {
+                ...staffQualificationCatalogue,
+                qualifications: staffQualificationCatalogue.qualifications.map((candidate) => (
+                    candidate.id === qualification.id ? { ...candidate, ...patch } : candidate
+                )),
+            },
+        });
+    };
+    const updateUnitCallsignEntry = (entry: any, patch: Record<string, any>) => {
+        updateOrganisationSettings({
+            unitCallsignSettings: {
+                ...unitCallsignSettings,
+                entries: unitCallsignSettings.entries.map((candidate) => (
+                    candidate.id === entry.id ? { ...candidate, ...patch } : candidate
+                )),
+            },
+        });
+    };
+    const updateMasterLmpAccessRule = (rule: any, patch: Record<string, any>) => {
+        updateOrganisationSettings({
+            masterLmpAccess: masterLmpAccessRules.map((candidate: any) => (
+                candidate === rule || String(candidate?.id || candidate?.masterLmpId || candidate?.masterLmpName || '') === String(rule?.id || rule?.masterLmpId || rule?.masterLmpName || '')
+                    ? { ...candidate, ...patch }
+                    : candidate
+            )),
+        });
+    };
+    const updateUserAccessScope = (access: any, patch: Record<string, any>) => {
+        if (!onUpdatePlatformConfig) return;
+        onUpdatePlatformConfig((current) => ({
+            ...current,
+            userAccess: (current?.userAccess || []).map((candidate: any) => (
+                candidate === access || String(candidate?.id || candidate?.userId || candidate?.userName || '') === String(access?.id || access?.userId || access?.userName || '')
+                    ? { ...candidate, ...patch }
+                    : candidate
+            )),
+        }));
+    };
+    const updateLicenseRecord = (license: any, patch: Record<string, any>) => {
+        if (!onUpdatePlatformConfig) return;
+        onUpdatePlatformConfig((current) => ({
+            ...current,
+            licenses: (current?.licenses || []).map((candidate: any) => (
+                candidate === license || String(candidate?.id || candidate?.licenseKey || candidate?.licenseName || '') === String(license?.id || license?.licenseKey || license?.licenseName || '')
+                    ? { ...candidate, ...patch }
                     : candidate
             )),
         }));
@@ -953,7 +1112,10 @@ const OrganisationMyUnitSettings: React.FC<{
                             const settings = pool.settings || {};
                             return (
                                 <div key={pool.id || pool.code} className="border-t border-white/10 first:border-t-0">
-                                    <UnitSettingsReadRow label={pool.name || pool.code || 'Resource pool'} value={`${pool.aircraftTypeCode || 'Aircraft not set'} / ${pool.poolType || 'Dedicated'} / ${pool.locationCode || unit.locationCode || 'Location not set'}`} />
+                                    <UnitSettingsField label="Pool name" value={pool.name || pool.code || ''} onChange={(value) => updateResourcePool(pool, { name: value })} disabled={!canEdit} />
+                                    <UnitSettingsField label="Aircraft type" value={pool.aircraftTypeCode || ''} onChange={(value) => updateResourcePool(pool, { aircraftTypeCode: value })} disabled={!canEdit} />
+                                    <UnitSettingsSelect label="Pool type" value={pool.poolType || 'Dedicated'} options={['Dedicated', 'Shared', 'Combined']} onChange={(value) => updateResourcePool(pool, { poolType: value })} disabled={!canEdit} />
+                                    <UnitSettingsSelect label="Location" value={pool.locationCode || unit.locationCode || ''} options={locations.map((item: any) => item.code)} onChange={(value) => updateResourcePool(pool, { locationCode: value })} disabled={!canEdit} />
                                     <div className={`${unitSettingsScrollClass} border-t border-white/10 bg-slate-950/25`}>
                                         <div className="min-w-[440px]">
                                             <div className="grid grid-cols-3 border-b border-white/10">
@@ -977,16 +1139,34 @@ const OrganisationMyUnitSettings: React.FC<{
                             const configurations = Array.isArray(aircraft.settings?.aircraftConfigurations) ? aircraft.settings.aircraftConfigurations : [];
                             return (
                                 <div key={aircraft.code} className="border-t border-white/10 first:border-t-0">
-                                    <UnitSettingsReadRow label={aircraft.code || 'Aircraft'} value={aircraft.name || aircraft.code || 'Unnamed aircraft'} />
-                                    <UnitSettingsReadRow label="Standard crew seats" value={`${composition.crewCount} seats`} />
-                                    <UnitSettingsReadRow label="Configurations" value={configurations.length ? configurations.map((item: any) => item.label || item.name || item.id).join(', ') : 'Default / ANY'} />
+                                    <UnitSettingsField label="Aircraft code" value={aircraft.code || ''} onChange={(value) => updateAircraftType(aircraft, { code: value })} disabled={!canEdit} />
+                                    <UnitSettingsField label="Aircraft name" value={aircraft.name || aircraft.code || ''} onChange={(value) => updateAircraftType(aircraft, { name: value })} disabled={!canEdit} />
+                                    <UnitSettingsNumberField label="Standard crew seats" value={composition.crewCount} onChange={(value) => updateAircraftCrewComposition(aircraft, { crewCount: value })} disabled={!canEdit} />
+                                    <UnitSettingsField label="Configurations" value={configurations.length ? configurations.map((item: any) => item.label || item.name || item.id).join(', ') : 'Default / ANY'} onChange={(value) => updateAircraftType(aircraft, { settings: { ...(aircraft.settings || {}), aircraftConfigurations: value.split(',').map((label) => label.trim()).filter(Boolean).map((label) => ({ id: label, label })) } })} disabled={!canEdit} />
                                 </div>
                             );
                         }) : <UnitSettingsReadRow label="Aircraft" value="No aircraft types are linked to this unit yet." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Scheduling Rule Sets" description="Enterprise rule sets that apply to this unit or broadly across the organisation.">
                         {schedulingRuleSets.length > 0 ? schedulingRuleSets.map((ruleSet: any, index: number) => (
-                            <UnitSettingsReadRow key={ruleSet.id || `${ruleSet.name}-${index}`} label={ruleSet.name || 'Unnamed rule set'} value={`Scope: ${ruleSet.scope || 'Unit'} / Aircraft: ${ruleSet.aircraftTypeCode || 'All'} / Unit: ${ruleSet.unitCode || unit.code}`} />
+                            <div key={ruleSet.id || `${ruleSet.name}-${index}`} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="Rule name" value={ruleSet.name || ''} onChange={(value) => {
+                                    if (!onUpdatePlatformConfig) return;
+                                    onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate: any) => candidate === ruleSet || String(candidate?.id || candidate?.name || '') === String(ruleSet?.id || ruleSet?.name || '') ? { ...candidate, name: value } : candidate) }));
+                                }} disabled={!canEdit} />
+                                <UnitSettingsField label="Scope" value={ruleSet.scope || 'Unit'} onChange={(value) => {
+                                    if (!onUpdatePlatformConfig) return;
+                                    onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate: any) => candidate === ruleSet || String(candidate?.id || candidate?.name || '') === String(ruleSet?.id || ruleSet?.name || '') ? { ...candidate, scope: value } : candidate) }));
+                                }} disabled={!canEdit} />
+                                <UnitSettingsField label="Aircraft" value={ruleSet.aircraftTypeCode || ''} onChange={(value) => {
+                                    if (!onUpdatePlatformConfig) return;
+                                    onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate: any) => candidate === ruleSet || String(candidate?.id || candidate?.name || '') === String(ruleSet?.id || ruleSet?.name || '') ? { ...candidate, aircraftTypeCode: value } : candidate) }));
+                                }} disabled={!canEdit} />
+                                <UnitSettingsField label="Unit" value={ruleSet.unitCode || unit.code || ''} onChange={(value) => {
+                                    if (!onUpdatePlatformConfig) return;
+                                    onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate: any) => candidate === ruleSet || String(candidate?.id || candidate?.name || '') === String(ruleSet?.id || ruleSet?.name || '') ? { ...candidate, unitCode: value } : candidate) }));
+                                }} disabled={!canEdit} />
+                            </div>
                         )) : <UnitSettingsReadRow label="Rules" value="No specific scheduling rule sets are active for this unit." muted />}
                     </UnitSettingsGroup>
                 </div>
@@ -1001,15 +1181,14 @@ const OrganisationMyUnitSettings: React.FC<{
                             const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
                             return (
                                 <div key={aircraft.code || aircraft.name} className="border-t border-white/10 first:border-t-0">
-                                    <UnitSettingsReadRow label={aircraft.code || 'Aircraft'} value={`${composition.crewCount} standard seats`} />
+                                    <UnitSettingsNumberField label={`${aircraft.code || 'Aircraft'} standard seats`} value={composition.crewCount} onChange={(value) => updateAircraftCrewComposition(aircraft, { crewCount: value })} disabled={!canEdit} />
                                     {AIRCRAFT_CREW_RESOURCE_KINDS.map(({ kind, label }) => (
-                                        <UnitSettingsReadRow
+                                        <UnitSettingsNumberField
                                             key={`${aircraft.code}-${kind}`}
                                             label={label}
-                                            value={`${composition.resourceSeatCounts?.[kind] ?? 0} seats: ${composition.seats
-                                                .filter((_, index) => index < (composition.resourceSeatCounts?.[kind] ?? composition.crewCount))
-                                                .map((seat) => crewPositionLabelMap[seat.role] || seat.role)
-                                                .join(', ') || 'No seats'}`}
+                                            value={composition.resourceSeatCounts?.[kind] ?? 0}
+                                            onChange={(value) => updateAircraftCrewComposition(aircraft, { resourceSeatCounts: { ...(composition.resourceSeatCounts || {}), [kind]: value } })}
+                                            disabled={!canEdit}
                                         />
                                     ))}
                                 </div>
@@ -1018,16 +1197,25 @@ const OrganisationMyUnitSettings: React.FC<{
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Alternate Crew Profiles" description="Alternate tasking crews available to this unit and operational model." action={<span className={unitSettingsMutedPillClass}>{alternateCrewProfiles.length} profiles</span>}>
                         {alternateCrewProfiles.length > 0 ? alternateCrewProfiles.map((profile) => (
-                            <UnitSettingsReadRow
-                                key={profile.id}
-                                label={`${profile.code} - ${profile.name}`}
-                                value={`${profile.aircraftTypeCode || 'Any aircraft'} / ${profile.roleRequirements.map((role) => `${role.count} ${crewPositionLabelMap[role.role] || role.role}`).join(', ') || 'No roles'}`}
-                            />
+                            <div key={profile.id} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="Profile code" value={profile.code || ''} onChange={(value) => updateAlternateCrewProfile(profile, { code: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Profile name" value={profile.name || ''} onChange={(value) => updateAlternateCrewProfile(profile, { name: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Aircraft type" value={profile.aircraftTypeCode || ''} onChange={(value) => updateAlternateCrewProfile(profile, { aircraftTypeCode: value })} disabled={!canEdit} />
+                                <UnitSettingsTextAreaRow label="Role requirements" value={formatRoleRequirementsText(profile.roleRequirements)} onChange={(value) => updateAlternateCrewProfile(profile, { roleRequirements: parseRoleRequirementsText(value) })} disabled={!canEdit} placeholder="Pilot = 2" />
+                            </div>
                         )) : <UnitSettingsReadRow label="Alternate crews" value="No alternate crew profiles match this unit." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Crew Labels & Qualifications" description="The local words users see for crew roles, plus model-specific qualifications such as PIC.">
-                        <UnitSettingsReadRow label="Crew positions" value={modelCrewPositions.map((entry) => `${entry.genericName} = ${entry.label}`).join(', ') || 'Not configured'} />
-                        <UnitSettingsReadRow label="Qualifications" value={modelQualifications.map((entry) => entry.code || entry.name).join(', ') || 'No qualifications for this model'} />
+                        {modelCrewPositions.map((entry) => (
+                            <UnitSettingsField key={entry.id} label={entry.genericName} value={entry.label || ''} onChange={(value) => updateCrewPositionEntry(entry, { label: value })} disabled={!canEdit} />
+                        ))}
+                        {modelQualifications.map((entry) => (
+                            <div key={entry.id} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="Qualification code" value={entry.code || ''} onChange={(value) => updateQualificationEntry(entry, { code: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Qualification name" value={entry.name || entry.code || ''} onChange={(value) => updateQualificationEntry(entry, { name: value })} disabled={!canEdit} />
+                            </div>
+                        ))}
+                        {modelCrewPositions.length === 0 && modelQualifications.length === 0 ? <UnitSettingsReadRow label="Crew labels" value="No crew labels or qualifications for this model." muted /> : null}
                     </UnitSettingsGroup>
                 </div>
             );
@@ -1041,19 +1229,33 @@ const OrganisationMyUnitSettings: React.FC<{
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Standard Missions" description="Regular unit mission profiles scoped to this unit.">
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
-                            <UnitSettingsReadRow key={profile.id || profile.missionName} label={profile.shortTitle || profile.code || 'Mission'} value={`${profile.missionName || 'Unnamed mission'} / ${profile.aircraftTypeCode || 'Aircraft not set'} / ${profile.durationMinutes || 0} min`} />
+                            <div key={profile.id || profile.missionName} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="Short title" value={profile.shortTitle || profile.code || ''} onChange={(value) => updateStandardMissionProfile(profile, { shortTitle: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Mission name" value={profile.missionName || ''} onChange={(value) => updateStandardMissionProfile(profile, { missionName: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Aircraft type" value={profile.aircraftTypeCode || ''} onChange={(value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value })} disabled={!canEdit} />
+                                <UnitSettingsNumberField label="Duration minutes" value={Number(profile.durationMinutes ?? 0)} onChange={(value) => updateStandardMissionProfile(profile, { durationMinutes: value })} disabled={!canEdit} />
+                            </div>
                         )) : <UnitSettingsReadRow label="Missions" value="No standard missions are configured for this unit." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Currency Profiles" description="Preset crew, aircraft configuration and currency selections for requests.">
                         {currencyProfiles.length > 0 ? currencyProfiles.map((profile) => (
-                            <UnitSettingsReadRow key={profile.id} label={`${profile.code} - ${profile.name}`} value={`${profile.currency} / Crew: ${profile.crew || 'Not set'} / CONFIG: ${profile.config || 'ANY'} / ${profile.aircraftCount} aircraft`} />
+                            <div key={profile.id} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="Profile code" value={profile.code || ''} onChange={(value) => updateCurrencyProfile(profile, { code: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Profile name" value={profile.name || ''} onChange={(value) => updateCurrencyProfile(profile, { name: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Currency" value={profile.currency || ''} onChange={(value) => updateCurrencyProfile(profile, { currency: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Crew" value={profile.crew || ''} onChange={(value) => updateCurrencyProfile(profile, { crew: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Config" value={profile.config || 'ANY'} onChange={(value) => updateCurrencyProfile(profile, { config: value })} disabled={!canEdit} />
+                                <UnitSettingsNumberField label="Aircraft count" value={Number(profile.aircraftCount ?? 0)} onChange={(value) => updateCurrencyProfile(profile, { aircraftCount: value })} disabled={!canEdit} />
+                            </div>
                         )) : <UnitSettingsReadRow label="Currency" value="No currency profiles match this unit." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Training Report Template" description="Unit report naming, pass/fail wording, grading and module labels.">
                         <UnitSettingsField label="Report short name" value={trainingReportTerminology.name} onChange={(value) => updateUnitSettings({ trainingReportTerminology: { name: value.slice(0, 10) } })} disabled={!canEdit} />
                         <UnitSettingsField label="Display name" value={trainingReportTemplate.displayName} onChange={(value) => updateUnitTrainingReportTemplate({ displayName: value.slice(0, 20) })} disabled={!canEdit} />
-                        <UnitSettingsReadRow label="Grade scale" value={`${trainingReportTemplate.grades.scaleMin} to ${trainingReportTemplate.grades.scaleMax}${trainingReportTemplate.grades.includeDemo ? ' plus DEMO' : ''}`} />
-                        <UnitSettingsReadRow label="Result labels" value={`${trainingReportTemplate.overallResults.passLabel} / ${trainingReportTemplate.overallResults.failLabel}`} />
+                        <UnitSettingsNumberField label="Grade minimum" value={Number(trainingReportTemplate.grades.scaleMin ?? 0)} onChange={(value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMin: value } })} disabled={!canEdit} />
+                        <UnitSettingsNumberField label="Grade maximum" value={Number(trainingReportTemplate.grades.scaleMax ?? 5)} onChange={(value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMax: value } })} disabled={!canEdit} />
+                        <UnitSettingsField label="Pass label" value={trainingReportTemplate.overallResults.passLabel || ''} onChange={(value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, passLabel: value } })} disabled={!canEdit} />
+                        <UnitSettingsField label="Fail label" value={trainingReportTemplate.overallResults.failLabel || ''} onChange={(value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, failLabel: value } })} disabled={!canEdit} />
                     </UnitSettingsGroup>
                 </div>
             );
@@ -1070,12 +1272,19 @@ const OrganisationMyUnitSettings: React.FC<{
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Crew Position Labels" description="Generic scheduler roles mapped to customer-facing words.">
                         {crewPositionTerminology.positions.map((entry) => (
-                            <UnitSettingsReadRow key={entry.id} label={entry.genericName} value={`${entry.label} / ${(entry.operationalModels || []).map((model) => getOperationalModelLabel(model).replace(' Model', '')).join(', ')}`} />
+                            <div key={entry.id} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="Generic role" value={entry.genericName || ''} onChange={(value) => updateCrewPositionEntry(entry, { genericName: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Display label" value={entry.label || ''} onChange={(value) => updateCrewPositionEntry(entry, { label: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Models" value={(entry.operationalModels || []).join(', ')} onChange={(value) => updateCrewPositionEntry(entry, { operationalModels: value.split(',').map((item) => item.trim()).filter(Boolean) })} disabled={!canEdit} />
+                            </div>
                         ))}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Unit Callsigns" description="Callsign bases offered when creating or editing unit events.">
                         {unitCallsignEntries.length > 0 ? unitCallsignEntries.map((entry) => (
-                            <UnitSettingsReadRow key={entry.id} label={entry.callsign} value={entry.isDefault ? 'Default callsign' : 'Available callsign'} />
+                            <div key={entry.id} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="Callsign" value={entry.callsign || ''} onChange={(value) => updateUnitCallsignEntry(entry, { callsign: value })} disabled={!canEdit} />
+                                <UnitSettingsSelect label="Default" value={entry.isDefault ? 'yes' : 'no'} options={['yes', 'no']} optionLabels={{ yes: 'Default callsign', no: 'Available callsign' }} onChange={(value) => updateUnitCallsignEntry(entry, { isDefault: value === 'yes' })} disabled={!canEdit} />
+                            </div>
                         )) : <UnitSettingsReadRow label="Callsigns" value="No callsigns configured for this unit." muted />}
                     </UnitSettingsGroup>
                 </div>
@@ -1105,12 +1314,22 @@ const OrganisationMyUnitSettings: React.FC<{
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Master LMP Access" description="Which Master LMP records this unit can see or manage.">
                         {masterLmpAccessForUnit.length > 0 ? masterLmpAccessForUnit.map((rule: any, index: number) => (
-                            <UnitSettingsReadRow key={rule.id || index} label={rule.masterLmpName || rule.masterLmpId || 'Master LMP'} value={`${rule.accessLevel || 'View'} / Location: ${rule.locationCode || 'All'} / Unit: ${rule.unitCode || 'All'}`} />
+                            <div key={rule.id || index} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="Master LMP" value={rule.masterLmpName || rule.masterLmpId || ''} onChange={(value) => updateMasterLmpAccessRule(rule, { masterLmpName: value })} disabled={!canEdit} />
+                                <UnitSettingsSelect label="Access level" value={rule.accessLevel || 'View'} options={['View', 'Assign', 'Manage']} onChange={(value) => updateMasterLmpAccessRule(rule, { accessLevel: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Location" value={rule.locationCode || ''} onChange={(value) => updateMasterLmpAccessRule(rule, { locationCode: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Unit" value={rule.unitCode || ''} onChange={(value) => updateMasterLmpAccessRule(rule, { unitCode: value })} disabled={!canEdit} />
+                            </div>
                         )) : <UnitSettingsReadRow label="Access rules" value="No unit-specific Master LMP restrictions. Organisation defaults apply." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="User Access Scopes" description="Users or profiles with access that includes this unit.">
                         {userAccessForUnit.length > 0 ? userAccessForUnit.map((access: any, index: number) => (
-                            <UnitSettingsReadRow key={access.id || index} label={access.displayName || access.userName || access.userId || 'User'} value={`${Array.isArray(access.profileIds) ? access.profileIds.join(', ') : access.profileId || 'No profile'} / ${access.moduleCode || 'All enabled features'}`} />
+                            <div key={access.id || index} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="User" value={access.displayName || access.userName || access.userId || ''} onChange={(value) => updateUserAccessScope(access, { displayName: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Profiles" value={Array.isArray(access.profileIds) ? access.profileIds.join(', ') : access.profileId || ''} onChange={(value) => updateUserAccessScope(access, { profileIds: value.split(',').map((item) => item.trim()).filter(Boolean) })} disabled={!canEdit} />
+                                <UnitSettingsField label="Module" value={access.moduleCode || ''} onChange={(value) => updateUserAccessScope(access, { moduleCode: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Unit" value={access.unitCode || ''} onChange={(value) => updateUserAccessScope(access, { unitCode: value })} disabled={!canEdit} />
+                            </div>
                         )) : <UnitSettingsReadRow label="Users" value="No access scopes currently include this unit." muted />}
                     </UnitSettingsGroup>
                 </div>
@@ -1142,7 +1361,13 @@ const OrganisationMyUnitSettings: React.FC<{
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Licensing" description="Active licence records and commercial limits for the deployment.">
                         {activeLicences.length > 0 ? activeLicences.map((license: any) => (
-                            <UnitSettingsReadRow key={license.id || license.licenseKey} label={license.licenseName || license.licenseKey || 'Licence'} value={`${license.deploymentMode || deploymentProfile.mode || 'Deployment'} / Valid until ${license.validUntil || 'No expiry'} / Units: ${license.maxUnits || 'Unlimited'} / Users: ${license.maxUsers || 'Unlimited'}`} />
+                            <div key={license.id || license.licenseKey} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="Licence name" value={license.licenseName || license.licenseKey || ''} onChange={(value) => updateLicenseRecord(license, { licenseName: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Deployment mode" value={license.deploymentMode || deploymentProfile.mode || ''} onChange={(value) => updateLicenseRecord(license, { deploymentMode: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Valid until" value={license.validUntil || ''} onChange={(value) => updateLicenseRecord(license, { validUntil: value })} disabled={!canEdit} />
+                                <UnitSettingsNumberField label="Max units" value={Number(license.maxUnits ?? 0)} onChange={(value) => updateLicenseRecord(license, { maxUnits: value })} disabled={!canEdit} />
+                                <UnitSettingsNumberField label="Max users" value={Number(license.maxUsers ?? 0)} onChange={(value) => updateLicenseRecord(license, { maxUsers: value })} disabled={!canEdit} />
+                            </div>
                         )) : <UnitSettingsReadRow label="Licences" value="No active licence records configured." muted />}
                     </UnitSettingsGroup>
                 </div>
@@ -1159,11 +1384,11 @@ const OrganisationMyUnitSettings: React.FC<{
                     <UnitSettingsSelect label="Operating model" value={operationalModel} options={OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)} optionLabels={modelOptionLabels} onChange={(value) => updateUnitSettings({ operationalModel: value })} disabled={!canEdit} />
                 </UnitSettingsGroup>
                 <UnitSettingsGroup title="Organisation & Location" description="Where this unit sits in the configured organisation.">
-                    <UnitSettingsReadRow label="Parent organisation" value={formatPlainList(parentPath)} />
-                    <UnitSettingsReadRow label="Home location" value={location ? `${location.code} - ${location.name || location.code}` : unit.locationCode || 'Not set'} />
-                    <UnitSettingsReadRow label="Timezone" value={location?.timezone || 'Not set'} />
-                    <UnitSettingsReadRow label="Training areas" value={Array.isArray(location?.trainingAreas) ? location.trainingAreas.join(', ') : 'Not set'} />
-                    <UnitSettingsReadRow label="Scheduling model" value={getOperationalModelLabel(operationalModel)} />
+                    <UnitSettingsField label="Parent organisation" value={formatPlainList(parentPath, '')} onChange={(value) => updateUnitSettings({ parentOrganisationPath: value.split('/').map((part) => part.trim()).filter(Boolean), parentOrganisation: value.split('/').map((part) => part.trim()).filter(Boolean).join('-') })} disabled={!canEdit} />
+                    <UnitSettingsField label="Home location name" value={location ? `${location.name || location.code}` : unit.locationCode || ''} onChange={(value) => updateLocation(location, { name: value })} disabled={!canEdit || !location} />
+                    <UnitSettingsField label="Timezone" value={location?.timezone || ''} onChange={(value) => updateLocation(location, { timezone: value })} disabled={!canEdit || !location} />
+                    <UnitSettingsField label="Training areas" value={Array.isArray(location?.trainingAreas) ? location.trainingAreas.join(', ') : ''} onChange={(value) => updateLocation(location, { trainingAreas: value.split(',').map((item) => item.trim()).filter(Boolean) })} disabled={!canEdit || !location} />
+                    <UnitSettingsSelect label="Scheduling model" value={operationalModel} options={OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)} optionLabels={modelOptionLabels} onChange={(value) => updateUnitSettings({ operationalModel: value })} disabled={!canEdit} />
                 </UnitSettingsGroup>
             </div>
         );

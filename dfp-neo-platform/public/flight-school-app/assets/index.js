@@ -9205,6 +9205,13 @@ const formatPlainList = (items, fallback = "Not set") => {
   const cleanItems = items.map((item) => String(item || "").trim()).filter(Boolean);
   return cleanItems.length > 0 ? cleanItems.join(" / ") : fallback;
 };
+const formatRoleRequirementsText = (requirements = []) => requirements.map((requirement) => `${requirement.role || "Crew"} = ${requirement.count ?? 1}`).join("\n");
+const parseRoleRequirementsText = (value) => String(value || "").split(/\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+  const [rolePart, countPart] = line.includes("=") ? line.split("=") : line.split(":");
+  const role = String(rolePart || "").trim() || "Crew";
+  const count = Math.max(1, Math.round(Number(String(countPart || "1").trim()) || 1));
+  return { role, count };
+});
 const getUnitParentOrganisationPath = (unit) => {
   const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
   return rawPath.map((item) => String(item || "").trim()).filter(Boolean);
@@ -9337,7 +9344,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
   const deploymentProfile = organisationSettings.deploymentProfile || {};
   const operationalRunbook = organisationSettings.operationalRunbook || {};
   const crewPositionTerminology = normaliseCrewPositionTerminology(organisationSettings.crewPositionTerminology || null);
-  const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
+  getCrewPositionLabelMap(crewPositionTerminology);
   const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null);
   const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(organisationSettings.staffQualificationCatalogue || null);
@@ -9425,6 +9432,20 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
       }
     });
   };
+  const updateResourcePool = (pool, patch) => {
+    if (!onUpdatePlatformConfig) return;
+    onUpdatePlatformConfig((current) => ({
+      ...current,
+      resourcePools: (current?.resourcePools || []).map((candidate) => candidate === pool || String(candidate?.id || candidate?.code || "") === String(pool?.id || pool?.code || "") ? { ...candidate, ...patch } : candidate)
+    }));
+  };
+  const updateLocation = (targetLocation, patch) => {
+    if (!onUpdatePlatformConfig || !targetLocation) return;
+    onUpdatePlatformConfig((current) => ({
+      ...current,
+      locations: (current?.locations || []).map((candidate) => candidate === targetLocation || String(candidate?.id || candidate?.code || "") === String(targetLocation?.id || targetLocation?.code || "") ? { ...candidate, ...patch } : candidate)
+    }));
+  };
   const updateResourcePoolSettings = (pool, patch) => {
     if (!onUpdatePlatformConfig) return;
     onUpdatePlatformConfig((current) => ({
@@ -9436,6 +9457,90 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           ...patch
         }
       } : candidate)
+    }));
+  };
+  const updateAircraftType = (aircraft, patch) => {
+    if (!onUpdatePlatformConfig) return;
+    onUpdatePlatformConfig((current) => ({
+      ...current,
+      aircraftTypes: (current?.aircraftTypes || []).map((candidate) => candidate === aircraft || String(candidate?.id || candidate?.code || "") === String(aircraft?.id || aircraft?.code || "") ? { ...candidate, ...patch } : candidate)
+    }));
+  };
+  const updateAircraftCrewComposition = (aircraft, patch) => {
+    const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+    updateAircraftType(aircraft, {
+      crewComposition: {
+        ...composition,
+        ...patch
+      }
+    });
+  };
+  const updateCrewCompositionSettings = (patch) => {
+    updateOrganisationSettings({
+      crewCompositionSettings: {
+        ...crewCompositionSettings,
+        ...patch
+      }
+    });
+  };
+  const updateAlternateCrewProfile = (profile, patch) => {
+    updateCrewCompositionSettings({
+      alternateCompositions: crewCompositionSettings.alternateCompositions.map((candidate) => candidate.id === profile.id ? { ...candidate, ...patch } : candidate)
+    });
+  };
+  const updateCurrencyProfile = (profile, patch) => {
+    updateCrewCompositionSettings({
+      currencyProfiles: crewCompositionSettings.currencyProfiles.map((candidate) => candidate.id === profile.id ? { ...candidate, ...patch } : candidate)
+    });
+  };
+  const updateStandardMissionProfile = (profile, patch) => {
+    const source = Array.isArray(organisationSettings.standardMissionProfiles?.profiles) ? organisationSettings.standardMissionProfiles.profiles : Array.isArray(organisationSettings.standardMissionProfiles) ? organisationSettings.standardMissionProfiles : [];
+    const nextProfiles = source.map((candidate) => candidate === profile || String(candidate?.id || candidate?.code || candidate?.missionName || "") === String(profile?.id || profile?.code || profile?.missionName || "") ? { ...candidate, ...patch } : candidate);
+    updateOrganisationSettings({
+      standardMissionProfiles: Array.isArray(organisationSettings.standardMissionProfiles?.profiles) ? { ...organisationSettings.standardMissionProfiles, profiles: nextProfiles } : nextProfiles
+    });
+  };
+  const updateCrewPositionEntry = (entry, patch) => {
+    updateOrganisationSettings({
+      crewPositionTerminology: {
+        ...crewPositionTerminology,
+        positions: crewPositionTerminology.positions.map((candidate) => candidate.id === entry.id ? { ...candidate, ...patch } : candidate)
+      }
+    });
+  };
+  const updateQualificationEntry = (qualification, patch) => {
+    updateOrganisationSettings({
+      staffQualificationCatalogue: {
+        ...staffQualificationCatalogue,
+        qualifications: staffQualificationCatalogue.qualifications.map((candidate) => candidate.id === qualification.id ? { ...candidate, ...patch } : candidate)
+      }
+    });
+  };
+  const updateUnitCallsignEntry = (entry, patch) => {
+    updateOrganisationSettings({
+      unitCallsignSettings: {
+        ...unitCallsignSettings,
+        entries: unitCallsignSettings.entries.map((candidate) => candidate.id === entry.id ? { ...candidate, ...patch } : candidate)
+      }
+    });
+  };
+  const updateMasterLmpAccessRule = (rule, patch) => {
+    updateOrganisationSettings({
+      masterLmpAccess: masterLmpAccessRules.map((candidate) => candidate === rule || String(candidate?.id || candidate?.masterLmpId || candidate?.masterLmpName || "") === String(rule?.id || rule?.masterLmpId || rule?.masterLmpName || "") ? { ...candidate, ...patch } : candidate)
+    });
+  };
+  const updateUserAccessScope = (access, patch) => {
+    if (!onUpdatePlatformConfig) return;
+    onUpdatePlatformConfig((current) => ({
+      ...current,
+      userAccess: (current?.userAccess || []).map((candidate) => candidate === access || String(candidate?.id || candidate?.userId || candidate?.userName || "") === String(access?.id || access?.userId || access?.userName || "") ? { ...candidate, ...patch } : candidate)
+    }));
+  };
+  const updateLicenseRecord = (license, patch) => {
+    if (!onUpdatePlatformConfig) return;
+    onUpdatePlatformConfig((current) => ({
+      ...current,
+      licenses: (current?.licenses || []).map((candidate) => candidate === license || String(candidate?.id || candidate?.licenseKey || candidate?.licenseName || "") === String(license?.id || license?.licenseKey || license?.licenseName || "") ? { ...candidate, ...patch } : candidate)
     }));
   };
   const updateUnitModule = (moduleCode, isEnabled) => {
@@ -9480,7 +9585,10 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
             children: resourcePools.length > 0 ? resourcePools.map((pool) => {
               const settings = pool.settings || {};
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: pool.name || pool.code || "Resource pool", value: `${pool.aircraftTypeCode || "Aircraft not set"} / ${pool.poolType || "Dedicated"} / ${pool.locationCode || unit.locationCode || "Location not set"}` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Pool name", value: pool.name || pool.code || "", onChange: (value) => updateResourcePool(pool, { name: value }), disabled: !canEdit }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: pool.aircraftTypeCode || "", onChange: (value) => updateResourcePool(pool, { aircraftTypeCode: value }), disabled: !canEdit }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Pool type", value: pool.poolType || "Dedicated", options: ["Dedicated", "Shared", "Combined"], onChange: (value) => updateResourcePool(pool, { poolType: value }), disabled: !canEdit }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Location", value: pool.locationCode || unit.locationCode || "", options: locations.map((item) => item.code), onChange: (value) => updateResourcePool(pool, { locationCode: value }), disabled: !canEdit }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${unitSettingsScrollClass} border-t border-white/10 bg-slate-950/25`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[440px]", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 border-b border-white/10", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsResourceNumberField, { label: "Aircraft", value: settings.aircraft ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { aircraft: value }), disabled: !canEdit }),
@@ -9500,12 +9608,30 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
           const configurations = Array.isArray(aircraft.settings?.aircraftConfigurations) ? aircraft.settings.aircraftConfigurations : [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: aircraft.code || "Aircraft", value: aircraft.name || aircraft.code || "Unnamed aircraft" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Standard crew seats", value: `${composition.crewCount} seats` }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Configurations", value: configurations.length ? configurations.map((item) => item.label || item.name || item.id).join(", ") : "Default / ANY" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft code", value: aircraft.code || "", onChange: (value) => updateAircraftType(aircraft, { code: value }), disabled: !canEdit }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft name", value: aircraft.name || aircraft.code || "", onChange: (value) => updateAircraftType(aircraft, { name: value }), disabled: !canEdit }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Standard crew seats", value: composition.crewCount, onChange: (value) => updateAircraftCrewComposition(aircraft, { crewCount: value }), disabled: !canEdit }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Configurations", value: configurations.length ? configurations.map((item) => item.label || item.name || item.id).join(", ") : "Default / ANY", onChange: (value) => updateAircraftType(aircraft, { settings: { ...aircraft.settings || {}, aircraftConfigurations: value.split(",").map((label) => label.trim()).filter(Boolean).map((label) => ({ id: label, label })) } }), disabled: !canEdit })
           ] }, aircraft.code);
         }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Aircraft", value: "No aircraft types are linked to this unit yet.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Scheduling Rule Sets", description: "Enterprise rule sets that apply to this unit or broadly across the organisation.", children: schedulingRuleSets.length > 0 ? schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: ruleSet.name || "Unnamed rule set", value: `Scope: ${ruleSet.scope || "Unit"} / Aircraft: ${ruleSet.aircraftTypeCode || "All"} / Unit: ${ruleSet.unitCode || unit.code}` }, ruleSet.id || `${ruleSet.name}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Rules", value: "No specific scheduling rule sets are active for this unit.", muted: true }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Scheduling Rule Sets", description: "Enterprise rule sets that apply to this unit or broadly across the organisation.", children: schedulingRuleSets.length > 0 ? schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Rule name", value: ruleSet.name || "", onChange: (value) => {
+            if (!onUpdatePlatformConfig) return;
+            onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate) => candidate === ruleSet || String(candidate?.id || candidate?.name || "") === String(ruleSet?.id || ruleSet?.name || "") ? { ...candidate, name: value } : candidate) }));
+          }, disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Scope", value: ruleSet.scope || "Unit", onChange: (value) => {
+            if (!onUpdatePlatformConfig) return;
+            onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate) => candidate === ruleSet || String(candidate?.id || candidate?.name || "") === String(ruleSet?.id || ruleSet?.name || "") ? { ...candidate, scope: value } : candidate) }));
+          }, disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft", value: ruleSet.aircraftTypeCode || "", onChange: (value) => {
+            if (!onUpdatePlatformConfig) return;
+            onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate) => candidate === ruleSet || String(candidate?.id || candidate?.name || "") === String(ruleSet?.id || ruleSet?.name || "") ? { ...candidate, aircraftTypeCode: value } : candidate) }));
+          }, disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit", value: ruleSet.unitCode || unit.code || "", onChange: (value) => {
+            if (!onUpdatePlatformConfig) return;
+            onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate) => candidate === ruleSet || String(candidate?.id || candidate?.name || "") === String(ruleSet?.id || ruleSet?.name || "") ? { ...candidate, unitCode: value } : candidate) }));
+          }, disabled: !canEdit })
+        ] }, ruleSet.id || `${ruleSet.name}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Rules", value: "No specific scheduling rule sets are active for this unit.", muted: true }) })
       ] });
     }
     if (activeCategory === "crew") {
@@ -9513,12 +9639,14 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Standard Crew Composition", description: "Minimum seats and role eligibility by aircraft and resource type.", children: aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft) => {
           const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: aircraft.code || "Aircraft", value: `${composition.crewCount} standard seats` }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: `${aircraft.code || "Aircraft"} standard seats`, value: composition.crewCount, onChange: (value) => updateAircraftCrewComposition(aircraft, { crewCount: value }), disabled: !canEdit }),
             AIRCRAFT_CREW_RESOURCE_KINDS.map(({ kind, label }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-              UnitSettingsReadRow,
+              UnitSettingsNumberField,
               {
                 label,
-                value: `${composition.resourceSeatCounts?.[kind] ?? 0} seats: ${composition.seats.filter((_, index) => index < (composition.resourceSeatCounts?.[kind] ?? composition.crewCount)).map((seat) => crewPositionLabelMap[seat.role] || seat.role).join(", ") || "No seats"}`
+                value: composition.resourceSeatCounts?.[kind] ?? 0,
+                onChange: (value) => updateAircraftCrewComposition(aircraft, { resourceSeatCounts: { ...composition.resourceSeatCounts || {}, [kind]: value } }),
+                disabled: !canEdit
               },
               `${aircraft.code}-${kind}`
             ))
@@ -9527,30 +9655,46 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Alternate Crew Profiles", description: "Alternate tasking crews available to this unit and operational model.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
           alternateCrewProfiles.length,
           " profiles"
-        ] }), children: alternateCrewProfiles.length > 0 ? alternateCrewProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-          UnitSettingsReadRow,
-          {
-            label: `${profile.code} - ${profile.name}`,
-            value: `${profile.aircraftTypeCode || "Any aircraft"} / ${profile.roleRequirements.map((role) => `${role.count} ${crewPositionLabelMap[role.role] || role.role}`).join(", ") || "No roles"}`
-          },
-          profile.id
-        )) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Alternate crews", value: "No alternate crew profiles match this unit.", muted: true }) }),
+        ] }), children: alternateCrewProfiles.length > 0 ? alternateCrewProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile code", value: profile.code || "", onChange: (value) => updateAlternateCrewProfile(profile, { code: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile name", value: profile.name || "", onChange: (value) => updateAlternateCrewProfile(profile, { name: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateAlternateCrewProfile(profile, { aircraftTypeCode: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsTextAreaRow, { label: "Role requirements", value: formatRoleRequirementsText(profile.roleRequirements), onChange: (value) => updateAlternateCrewProfile(profile, { roleRequirements: parseRoleRequirementsText(value) }), disabled: !canEdit, placeholder: "Pilot = 2" })
+        ] }, profile.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Alternate crews", value: "No alternate crew profiles match this unit.", muted: true }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Crew Labels & Qualifications", description: "The local words users see for crew roles, plus model-specific qualifications such as PIC.", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Crew positions", value: modelCrewPositions.map((entry) => `${entry.genericName} = ${entry.label}`).join(", ") || "Not configured" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Qualifications", value: modelQualifications.map((entry) => entry.code || entry.name).join(", ") || "No qualifications for this model" })
+          modelCrewPositions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: entry.genericName, value: entry.label || "", onChange: (value) => updateCrewPositionEntry(entry, { label: value }), disabled: !canEdit }, entry.id)),
+          modelQualifications.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Qualification code", value: entry.code || "", onChange: (value) => updateQualificationEntry(entry, { code: value }), disabled: !canEdit }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Qualification name", value: entry.name || entry.code || "", onChange: (value) => updateQualificationEntry(entry, { name: value }), disabled: !canEdit })
+          ] }, entry.id)),
+          modelCrewPositions.length === 0 && modelQualifications.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Crew labels", value: "No crew labels or qualifications for this model.", muted: true }) : null
         ] })
       ] });
     }
     if (activeCategory === "training") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Task Profiles", description: "Tasking labels used by Directed Events for this unit's operating model.", children: /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsTextAreaRow, { label: "Unit tile abbreviations", value: formatTaskProfileAbbreviationText(taskAbbreviations), disabled: !canEdit, onChange: (value) => updateUnitSettings({ taskProfileAbbreviations: parseTaskProfileAbbreviationText(value) }), placeholder: "Task Profile = SHORT" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Standard Missions", description: "Regular unit mission profiles scoped to this unit.", children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: profile.shortTitle || profile.code || "Mission", value: `${profile.missionName || "Unnamed mission"} / ${profile.aircraftTypeCode || "Aircraft not set"} / ${profile.durationMinutes || 0} min` }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Missions", value: "No standard missions are configured for this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Currency Profiles", description: "Preset crew, aircraft configuration and currency selections for requests.", children: currencyProfiles.length > 0 ? currencyProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: `${profile.code} - ${profile.name}`, value: `${profile.currency} / Crew: ${profile.crew || "Not set"} / CONFIG: ${profile.config || "ANY"} / ${profile.aircraftCount} aircraft` }, profile.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Currency", value: "No currency profiles match this unit.", muted: true }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Standard Missions", description: "Regular unit mission profiles scoped to this unit.", children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Mission name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Duration minutes", value: Number(profile.durationMinutes ?? 0), onChange: (value) => updateStandardMissionProfile(profile, { durationMinutes: value }), disabled: !canEdit })
+        ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Missions", value: "No standard missions are configured for this unit.", muted: true }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Currency Profiles", description: "Preset crew, aircraft configuration and currency selections for requests.", children: currencyProfiles.length > 0 ? currencyProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile code", value: profile.code || "", onChange: (value) => updateCurrencyProfile(profile, { code: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile name", value: profile.name || "", onChange: (value) => updateCurrencyProfile(profile, { name: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Currency", value: profile.currency || "", onChange: (value) => updateCurrencyProfile(profile, { currency: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Crew", value: profile.crew || "", onChange: (value) => updateCurrencyProfile(profile, { crew: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Config", value: profile.config || "ANY", onChange: (value) => updateCurrencyProfile(profile, { config: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Aircraft count", value: Number(profile.aircraftCount ?? 0), onChange: (value) => updateCurrencyProfile(profile, { aircraftCount: value }), disabled: !canEdit })
+        ] }, profile.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Currency", value: "No currency profiles match this unit.", muted: true }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Training Report Template", description: "Unit report naming, pass/fail wording, grading and module labels.", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Report short name", value: trainingReportTerminology.name, onChange: (value) => updateUnitSettings({ trainingReportTerminology: { name: value.slice(0, 10) } }), disabled: !canEdit }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Display name", value: trainingReportTemplate.displayName, onChange: (value) => updateUnitTrainingReportTemplate({ displayName: value.slice(0, 20) }), disabled: !canEdit }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Grade scale", value: `${trainingReportTemplate.grades.scaleMin} to ${trainingReportTemplate.grades.scaleMax}${trainingReportTemplate.grades.includeDemo ? " plus DEMO" : ""}` }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Result labels", value: `${trainingReportTemplate.overallResults.passLabel} / ${trainingReportTemplate.overallResults.failLabel}` })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Grade minimum", value: Number(trainingReportTemplate.grades.scaleMin ?? 0), onChange: (value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMin: value } }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Grade maximum", value: Number(trainingReportTemplate.grades.scaleMax ?? 5), onChange: (value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMax: value } }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Pass label", value: trainingReportTemplate.overallResults.passLabel || "", onChange: (value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, passLabel: value } }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Fail label", value: trainingReportTemplate.overallResults.failLabel || "", onChange: (value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, failLabel: value } }), disabled: !canEdit })
         ] })
       ] });
     }
@@ -9562,8 +9706,15 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Civilian group", value: personnelDisplaySettings.civilianContractorGroupName || "", onChange: (value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value }), disabled: !canEdit }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Trainee ranks", value: personnelDisplaySettings.useSeparateTraineeRankOrder ? "separate" : "staff", options: ["staff", "separate"], optionLabels: { staff: "Uses staff rank order", separate: "Separate trainee rank order" }, onChange: (value) => updatePersonnelDisplaySettings({ useSeparateTraineeRankOrder: value === "separate" }), disabled: !canEdit })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Crew Position Labels", description: "Generic scheduler roles mapped to customer-facing words.", children: crewPositionTerminology.positions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: entry.genericName, value: `${entry.label} / ${(entry.operationalModels || []).map((model) => getOperationalModelLabel(model).replace(" Model", "")).join(", ")}` }, entry.id)) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Unit Callsigns", description: "Callsign bases offered when creating or editing unit events.", children: unitCallsignEntries.length > 0 ? unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: entry.callsign, value: entry.isDefault ? "Default callsign" : "Available callsign" }, entry.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Callsigns", value: "No callsigns configured for this unit.", muted: true }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Crew Position Labels", description: "Generic scheduler roles mapped to customer-facing words.", children: crewPositionTerminology.positions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Generic role", value: entry.genericName || "", onChange: (value) => updateCrewPositionEntry(entry, { genericName: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Display label", value: entry.label || "", onChange: (value) => updateCrewPositionEntry(entry, { label: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Models", value: (entry.operationalModels || []).join(", "), onChange: (value) => updateCrewPositionEntry(entry, { operationalModels: value.split(",").map((item) => item.trim()).filter(Boolean) }), disabled: !canEdit })
+        ] }, entry.id)) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Unit Callsigns", description: "Callsign bases offered when creating or editing unit events.", children: unitCallsignEntries.length > 0 ? unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Callsign", value: entry.callsign || "", onChange: (value) => updateUnitCallsignEntry(entry, { callsign: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Default", value: entry.isDefault ? "yes" : "no", options: ["yes", "no"], optionLabels: { yes: "Default callsign", no: "Available callsign" }, onChange: (value) => updateUnitCallsignEntry(entry, { isDefault: value === "yes" }), disabled: !canEdit })
+        ] }, entry.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Callsigns", value: "No callsigns configured for this unit.", muted: true }) })
       ] });
     }
     if (activeCategory === "access") {
@@ -9579,8 +9730,18 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
             ] })
           ] }, module.code);
         }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Modules", value: "No modules have been configured yet.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Master LMP Access", description: "Which Master LMP records this unit can see or manage.", children: masterLmpAccessForUnit.length > 0 ? masterLmpAccessForUnit.map((rule, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: rule.masterLmpName || rule.masterLmpId || "Master LMP", value: `${rule.accessLevel || "View"} / Location: ${rule.locationCode || "All"} / Unit: ${rule.unitCode || "All"}` }, rule.id || index)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Access rules", value: "No unit-specific Master LMP restrictions. Organisation defaults apply.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "User Access Scopes", description: "Users or profiles with access that includes this unit.", children: userAccessForUnit.length > 0 ? userAccessForUnit.map((access, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: access.displayName || access.userName || access.userId || "User", value: `${Array.isArray(access.profileIds) ? access.profileIds.join(", ") : access.profileId || "No profile"} / ${access.moduleCode || "All enabled features"}` }, access.id || index)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Users", value: "No access scopes currently include this unit.", muted: true }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Master LMP Access", description: "Which Master LMP records this unit can see or manage.", children: masterLmpAccessForUnit.length > 0 ? masterLmpAccessForUnit.map((rule, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Master LMP", value: rule.masterLmpName || rule.masterLmpId || "", onChange: (value) => updateMasterLmpAccessRule(rule, { masterLmpName: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Access level", value: rule.accessLevel || "View", options: ["View", "Assign", "Manage"], onChange: (value) => updateMasterLmpAccessRule(rule, { accessLevel: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Location", value: rule.locationCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { locationCode: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit", value: rule.unitCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { unitCode: value }), disabled: !canEdit })
+        ] }, rule.id || index)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Access rules", value: "No unit-specific Master LMP restrictions. Organisation defaults apply.", muted: true }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "User Access Scopes", description: "Users or profiles with access that includes this unit.", children: userAccessForUnit.length > 0 ? userAccessForUnit.map((access, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "User", value: access.displayName || access.userName || access.userId || "", onChange: (value) => updateUserAccessScope(access, { displayName: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profiles", value: Array.isArray(access.profileIds) ? access.profileIds.join(", ") : access.profileId || "", onChange: (value) => updateUserAccessScope(access, { profileIds: value.split(",").map((item) => item.trim()).filter(Boolean) }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Module", value: access.moduleCode || "", onChange: (value) => updateUserAccessScope(access, { moduleCode: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit", value: access.unitCode || "", onChange: (value) => updateUserAccessScope(access, { unitCode: value }), disabled: !canEdit })
+        ] }, access.id || index)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Users", value: "No access scopes currently include this unit.", muted: true }) })
       ] });
     }
     if (activeCategory === "deployment") {
@@ -9605,7 +9766,13 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "RPO hours", value: Number(operationalRunbook.restorePointObjectiveHours ?? 24), onChange: (value) => updateOperationalRunbook({ restorePointObjectiveHours: value }), disabled: !canEdit }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Accreditation", value: operationalRunbook.accreditationStatus || "Not started", options: accreditationStatusOptions, onChange: (value) => updateOperationalRunbook({ accreditationStatus: value }), disabled: !canEdit })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Licensing", description: "Active licence records and commercial limits for the deployment.", children: activeLicences.length > 0 ? activeLicences.map((license) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: license.licenseName || license.licenseKey || "Licence", value: `${license.deploymentMode || deploymentProfile.mode || "Deployment"} / Valid until ${license.validUntil || "No expiry"} / Units: ${license.maxUnits || "Unlimited"} / Users: ${license.maxUsers || "Unlimited"}` }, license.id || license.licenseKey)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Licences", value: "No active licence records configured.", muted: true }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Licensing", description: "Active licence records and commercial limits for the deployment.", children: activeLicences.length > 0 ? activeLicences.map((license) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Licence name", value: license.licenseName || license.licenseKey || "", onChange: (value) => updateLicenseRecord(license, { licenseName: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Deployment mode", value: license.deploymentMode || deploymentProfile.mode || "", onChange: (value) => updateLicenseRecord(license, { deploymentMode: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Valid until", value: license.validUntil || "", onChange: (value) => updateLicenseRecord(license, { validUntil: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Max units", value: Number(license.maxUnits ?? 0), onChange: (value) => updateLicenseRecord(license, { maxUnits: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Max users", value: Number(license.maxUsers ?? 0), onChange: (value) => updateLicenseRecord(license, { maxUsers: value }), disabled: !canEdit })
+        ] }, license.id || license.licenseKey)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Licences", value: "No active licence records configured.", muted: true }) })
       ] });
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
@@ -9618,11 +9785,11 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Operating model", value: operationalModel2, options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value), optionLabels: modelOptionLabels, onChange: (value) => updateUnitSettings({ operationalModel: value }), disabled: !canEdit })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Organisation & Location", description: "Where this unit sits in the configured organisation.", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Parent organisation", value: formatPlainList(parentPath) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Home location", value: location ? `${location.code} - ${location.name || location.code}` : unit.locationCode || "Not set" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Timezone", value: location?.timezone || "Not set" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Training areas", value: Array.isArray(location?.trainingAreas) ? location.trainingAreas.join(", ") : "Not set" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Scheduling model", value: getOperationalModelLabel(operationalModel2) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Parent organisation", value: formatPlainList(parentPath, ""), onChange: (value) => updateUnitSettings({ parentOrganisationPath: value.split("/").map((part) => part.trim()).filter(Boolean), parentOrganisation: value.split("/").map((part) => part.trim()).filter(Boolean).join("-") }), disabled: !canEdit }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Home location name", value: location ? `${location.name || location.code}` : unit.locationCode || "", onChange: (value) => updateLocation(location, { name: value }), disabled: !canEdit || !location }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Timezone", value: location?.timezone || "", onChange: (value) => updateLocation(location, { timezone: value }), disabled: !canEdit || !location }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Training areas", value: Array.isArray(location?.trainingAreas) ? location.trainingAreas.join(", ") : "", onChange: (value) => updateLocation(location, { trainingAreas: value.split(",").map((item) => item.trim()).filter(Boolean) }), disabled: !canEdit || !location }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Scheduling model", value: operationalModel2, options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value), optionLabels: modelOptionLabels, onChange: (value) => updateUnitSettings({ operationalModel: value }), disabled: !canEdit })
       ] })
     ] });
   };
