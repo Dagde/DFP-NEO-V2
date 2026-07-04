@@ -2170,6 +2170,11 @@ const DEFAULT_MASTER_LMP_ACCESS_RULES = [
   { id: "master-lmp-pc21-ground-school-2fts", lmpCode: "PC-21 Ground School", organisationCode: "DEFAULT", locationCode: "YPEA", unitCode: "2FTS", accessLevel: "Manage", status: "ACTIVE" },
   { id: "master-lmp-pc21-ground-school-cfs", lmpCode: "PC-21 Ground School", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "CFS", accessLevel: "View", status: "ACTIVE" }
 ];
+const DEFAULT_MASTER_LMP_CATALOGUE = [
+  { id: "master-lmp-catalogue-bpc-ipc", code: "BPC+IPC", name: "BPC+IPC", description: "Default Flight School basic and instrument progression Master LMP.", status: "ACTIVE" },
+  { id: "master-lmp-catalogue-fic", code: "FIC", name: "FIC", description: "Default Flight Instructor Course Master LMP.", status: "ACTIVE" },
+  { id: "master-lmp-catalogue-pc21-ground-school", code: "PC-21 Ground School", name: "PC-21 Ground School", description: "Default Flight School PC-21 ground school Master LMP.", status: "ACTIVE" }
+];
 const emptyPlatformConfig = {
   organisations: [],
   locations: [],
@@ -2275,6 +2280,40 @@ const normaliseMasterLmpAccessRules = (config) => {
     accessLevel: normaliseAccessLevel(rule.accessLevel),
     status: String(rule.status || "ACTIVE").toUpperCase()
   })).filter((rule) => rule.lmpCode);
+};
+const normaliseMasterLmpCatalogue = (config) => {
+  const configured = config?.organisations?.[0]?.settings?.masterLmpCatalogue;
+  const configuredEntries = Array.isArray(configured) ? configured : [];
+  const accessRuleCodes = normaliseMasterLmpAccessRules(config).map((rule) => rule.lmpCode);
+  const source = configuredEntries.length > 0 ? configuredEntries : DEFAULT_MASTER_LMP_CATALOGUE;
+  const entriesByCode = /* @__PURE__ */ new Map();
+  source.forEach((entry, index) => {
+    const code = String(entry?.code || entry?.lmpCode || entry?.name || "").trim();
+    if (!code) return;
+    const key = normaliseAccessValue(code);
+    if (entriesByCode.has(key)) return;
+    entriesByCode.set(key, {
+      id: String(entry?.id || `master-lmp-catalogue-${index + 1}`),
+      code,
+      name: String(entry?.name || code).trim(),
+      description: String(entry?.description || "").trim(),
+      status: String(entry?.status || "ACTIVE").toUpperCase()
+    });
+  });
+  accessRuleCodes.forEach((code) => {
+    const cleanCode = String(code || "").trim();
+    if (!cleanCode) return;
+    const key = normaliseAccessValue(cleanCode);
+    if (entriesByCode.has(key)) return;
+    entriesByCode.set(key, {
+      id: `master-lmp-catalogue-${cleanCode.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      code: cleanCode,
+      name: cleanCode,
+      description: "",
+      status: "ACTIVE"
+    });
+  });
+  return Array.from(entriesByCode.values());
 };
 const getMasterLmpAccessLevel = (config, lmpCode, context = {}) => {
   if (!config) return "Manage";
@@ -9815,7 +9854,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           ] }, module.code);
         }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Modules", value: "No modules have been configured yet.", muted: true }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Master LMP Access", description: "Which Master LMP records this unit can see or manage.", action: settingsLink("platform-master-lmp-access", "Take me there", { focusSubsectionId: "platform-master-lmp-access-records" }), children: masterLmpAccessForUnit.length > 0 ? masterLmpAccessForUnit.map((rule, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Master LMP", value: rule.masterLmpName || rule.masterLmpId || "", onChange: (value) => updateMasterLmpAccessRule(rule, { masterLmpName: value }), disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Master LMP", value: rule.lmpCode || rule.masterLmpName || rule.masterLmpId || "", onChange: (value) => updateMasterLmpAccessRule(rule, { lmpCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Access level", value: rule.accessLevel || "View", options: ["View", "Assign", "Manage"], onChange: (value) => updateMasterLmpAccessRule(rule, { accessLevel: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Location", value: rule.locationCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { locationCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit", value: rule.unitCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { unitCode: value }), disabled: true })
@@ -60260,12 +60299,14 @@ const PlatformConfigurationSettings = ({
     () => normaliseMasterLmpAccessRules(config),
     [config.organisations]
   );
+  const masterLmpCatalogue = reactExports.useMemo(
+    () => normaliseMasterLmpCatalogue(config),
+    [config.organisations]
+  );
   const masterLmpOptions = reactExports.useMemo(() => Array.from(/* @__PURE__ */ new Set([
-    ...DEFAULT_MASTER_LMP_ACCESS_RULES.map((rule) => rule.lmpCode),
-    "BPC+IPC",
-    "FIC",
-    "PC-21 Ground School"
-  ])).filter(Boolean).sort(), []);
+    ...masterLmpCatalogue.filter((entry) => String(entry.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((entry) => entry.code),
+    ...masterLmpAccessRules.map((rule) => rule.lmpCode)
+  ])).filter(Boolean).sort((left, right) => left.localeCompare(right, void 0, { sensitivity: "base" })), [masterLmpAccessRules, masterLmpCatalogue]);
   const operationalSignals = [
     {
       label: "Support owner",
@@ -61047,6 +61088,28 @@ This permanently removes the organisation record from platform configuration and
       ...settings,
       masterLmpAccess: rules
     }));
+  };
+  const updateMasterLmpCatalogue = (entries) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      masterLmpCatalogue: entries
+    }));
+  };
+  const updateMasterLmpCatalogueEntry = (index, changes) => {
+    updateMasterLmpCatalogue(masterLmpCatalogue.map((entry, entryIndex) => entryIndex === index ? { ...entry, ...changes } : entry));
+  };
+  const addMasterLmpCatalogueEntry = () => {
+    const nextNumber = masterLmpCatalogue.length + 1;
+    updateMasterLmpCatalogue([
+      ...masterLmpCatalogue,
+      {
+        id: createClientRecordId("master-lmp-catalogue"),
+        code: `New Master LMP ${nextNumber}`,
+        name: `New Master LMP ${nextNumber}`,
+        description: "",
+        status: "ACTIVE"
+      }
+    ]);
   };
   const updateMasterLmpAccessRule = (index, changes) => {
     updateMasterLmpAccessRules(masterLmpAccessRules.map((rule, ruleIndex) => ruleIndex === index ? { ...rule, ...changes } : rule));
@@ -62819,86 +62882,147 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         {
           title: "Master LMP Access",
           subtitle: "Restrict which locations and units can view, assign or manage each Master LMP. Empty location or unit values apply broadly.",
-          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addMasterLmpAccessRule, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Access" }) : null
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addMasterLmpCatalogueEntry, className: platformActionButtonClass, children: "Add Master LMP" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addMasterLmpAccessRule, className: platformActionButtonClass, children: "Add Access" })
+          ] }) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-master-lmp-access-records", className: "space-y-3 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees." }),
-        masterLmpAccessRules.map((rule, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_0.8fr_auto]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            SelectField,
-            {
-              label: "Master LMP",
-              value: rule.lmpCode,
-              disabled: !canEdit,
-              options: masterLmpOptions,
-              onChange: (value) => updateMasterLmpAccessRule(index, { lmpCode: value })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            SelectField,
-            {
-              label: "Location",
-              value: rule.locationCode || "",
-              disabled: !canEdit,
-              options: ["", ...config.locations.map((location) => location.code)],
-              emptyLabel: "All Locations",
-              onChange: (value) => updateMasterLmpAccessRule(index, { locationCode: value || null })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            SelectField,
-            {
-              label: "Unit",
-              value: rule.unitCode || "",
-              disabled: !canEdit,
-              options: ["", ...config.units.map((unit) => unit.code)],
-              emptyLabel: "All Units",
-              onChange: (value) => updateMasterLmpAccessRule(index, { unitCode: value || null })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            SelectField,
-            {
-              label: "Model",
-              value: rule.operationalModel || "",
-              disabled: !canEdit,
-              options: ["", ...OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)],
-              emptyLabel: "Any Model",
-              onChange: (value) => updateMasterLmpAccessRule(index, { operationalModel: value || null })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            SelectField,
-            {
-              label: "Access",
-              value: rule.accessLevel || "View",
-              disabled: !canEdit,
-              options: ["View", "Assign", "Manage"],
-              onChange: (value) => updateMasterLmpAccessRule(index, { accessLevel: value })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            SelectField,
-            {
-              label: "Status",
-              value: rule.status || "ACTIVE",
-              disabled: !canEdit,
-              options: ["ACTIVE", "INACTIVE"],
-              onChange: (value) => updateMasterLmpAccessRule(index, { status: value })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              disabled: !canEdit,
-              onClick: () => removeMasterLmpAccessRule(index),
-              className: "rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 disabled:cursor-not-allowed disabled:opacity-50",
-              children: "Remove"
-            }
-          ) })
-        ] }, rule.id || `master-lmp-access-${index}`))
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Add Master LMP records to the catalogue first, then create access rules that decide which locations or units can View, Assign, or Manage each Master LMP." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: "Master LMP Catalogue" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "These are the selectable Master LMP names used by access rules and later LMP assignment workflows." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
+              masterLmpCatalogue.length,
+              " records"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: masterLmpCatalogue.map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[minmax(160px,0.8fr)_minmax(190px,1fr)_minmax(240px,1.35fr)_120px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Field,
+              {
+                label: "Code",
+                value: entry.code,
+                disabled: !canEdit,
+                onChange: (value) => updateMasterLmpCatalogueEntry(index, { code: value, name: entry.name || value }),
+                info: "Stable selectable value used by Master LMP Access and trainee/course assignment."
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Field,
+              {
+                label: "Name",
+                value: entry.name || entry.code,
+                disabled: !canEdit,
+                onChange: (value) => updateMasterLmpCatalogueEntry(index, { name: value })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Field,
+              {
+                label: "Description",
+                value: entry.description || "",
+                disabled: !canEdit,
+                onChange: (value) => updateMasterLmpCatalogueEntry(index, { description: value })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectField,
+              {
+                label: "Status",
+                value: entry.status || "ACTIVE",
+                disabled: !canEdit,
+                options: ["ACTIVE", "INACTIVE"],
+                onChange: (value) => updateMasterLmpCatalogueEntry(index, { status: value })
+              }
+            )
+          ] }, entry.id || `master-lmp-catalogue-${index}`)) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: "Master LMP Access Rules" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees." })
+          ] }),
+          masterLmpAccessRules.map((rule, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_0.8fr_auto]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectField,
+              {
+                label: "Master LMP",
+                value: rule.lmpCode,
+                disabled: !canEdit,
+                options: masterLmpOptions,
+                onChange: (value) => updateMasterLmpAccessRule(index, { lmpCode: value })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectField,
+              {
+                label: "Location",
+                value: rule.locationCode || "",
+                disabled: !canEdit,
+                options: ["", ...config.locations.map((location) => location.code)],
+                emptyLabel: "All Locations",
+                onChange: (value) => updateMasterLmpAccessRule(index, { locationCode: value || null })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectField,
+              {
+                label: "Unit",
+                value: rule.unitCode || "",
+                disabled: !canEdit,
+                options: ["", ...config.units.map((unit) => unit.code)],
+                emptyLabel: "All Units",
+                onChange: (value) => updateMasterLmpAccessRule(index, { unitCode: value || null })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectField,
+              {
+                label: "Model",
+                value: rule.operationalModel || "",
+                disabled: !canEdit,
+                options: ["", ...OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)],
+                emptyLabel: "Any Model",
+                onChange: (value) => updateMasterLmpAccessRule(index, { operationalModel: value || null })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectField,
+              {
+                label: "Access",
+                value: rule.accessLevel || "View",
+                disabled: !canEdit,
+                options: ["View", "Assign", "Manage"],
+                onChange: (value) => updateMasterLmpAccessRule(index, { accessLevel: value })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectField,
+              {
+                label: "Status",
+                value: rule.status || "ACTIVE",
+                disabled: !canEdit,
+                options: ["ACTIVE", "INACTIVE"],
+                onChange: (value) => updateMasterLmpAccessRule(index, { status: value })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                disabled: !canEdit,
+                onClick: () => removeMasterLmpAccessRule(index),
+                className: "rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 disabled:cursor-not-allowed disabled:opacity-50",
+                children: "Remove"
+              }
+            ) })
+          ] }, rule.id || `master-lmp-access-${index}`))
+        ] })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-standard-missions", className: getSectionClass("platform-standard-missions"), children: [

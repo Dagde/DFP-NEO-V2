@@ -4,13 +4,14 @@ import {
   DEFAULT_OPERATIONAL_MODEL,
   OPERATIONAL_MODEL_OPTIONS,
   PLATFORM_PERMISSION_CATALOG,
-  DEFAULT_MASTER_LMP_ACCESS_RULES,
   getUnitOperationalModel,
   getLocationResourcePool,
   isFixedCrewLikeOperationalModel,
   normaliseOperationalModel,
   normaliseMasterLmpAccessRules,
+  normaliseMasterLmpCatalogue,
   type PlatformMasterLmpAccessRule,
+  type PlatformMasterLmpCatalogueEntry,
   type PlatformPermissionProfile,
 } from '../utils/platformConfigService';
 import {
@@ -2098,14 +2099,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     () => normaliseMasterLmpAccessRules(config as any),
     [config.organisations],
   );
+  const masterLmpCatalogue = useMemo(
+    () => normaliseMasterLmpCatalogue(config as any),
+    [config.organisations],
+  );
   const masterLmpOptions = useMemo(() => (
     Array.from(new Set([
-      ...DEFAULT_MASTER_LMP_ACCESS_RULES.map((rule) => rule.lmpCode),
-      'BPC+IPC',
-      'FIC',
-      'PC-21 Ground School',
-    ])).filter(Boolean).sort()
-  ), []);
+      ...masterLmpCatalogue
+        .filter((entry) => String(entry.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+        .map((entry) => entry.code),
+      ...masterLmpAccessRules.map((rule) => rule.lmpCode),
+    ])).filter(Boolean).sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }))
+  ), [masterLmpAccessRules, masterLmpCatalogue]);
   const operationalSignals = [
     {
       label: 'Support owner',
@@ -3109,6 +3114,33 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ...settings,
       masterLmpAccess: rules,
     }));
+  };
+
+  const updateMasterLmpCatalogue = (entries: PlatformMasterLmpCatalogueEntry[]) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      masterLmpCatalogue: entries,
+    }));
+  };
+
+  const updateMasterLmpCatalogueEntry = (index: number, changes: Partial<PlatformMasterLmpCatalogueEntry>) => {
+    updateMasterLmpCatalogue(masterLmpCatalogue.map((entry, entryIndex) => (
+      entryIndex === index ? { ...entry, ...changes } : entry
+    )));
+  };
+
+  const addMasterLmpCatalogueEntry = () => {
+    const nextNumber = masterLmpCatalogue.length + 1;
+    updateMasterLmpCatalogue([
+      ...masterLmpCatalogue,
+      {
+        id: createClientRecordId('master-lmp-catalogue'),
+        code: `New Master LMP ${nextNumber}`,
+        name: `New Master LMP ${nextNumber}`,
+        description: '',
+        status: 'ACTIVE',
+      },
+    ]);
   };
 
   const updateMasterLmpAccessRule = (index: number, changes: Partial<PlatformMasterLmpAccessRule>) => {
@@ -5234,12 +5266,63 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Master LMP Access"
           subtitle="Restrict which locations and units can view, assign or manage each Master LMP. Empty location or unit values apply broadly."
-          action={canEdit ? <button type="button" onClick={addMasterLmpAccessRule} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Access</button> : null}
+          action={canEdit ? (
+            <div className="flex flex-wrap justify-end gap-[1px]">
+              <button type="button" onClick={addMasterLmpCatalogueEntry} className={platformActionButtonClass}>Add Master LMP</button>
+              <button type="button" onClick={addMasterLmpAccessRule} className={platformActionButtonClass}>Add Access</button>
+            </div>
+          ) : null}
         />
         <div id="platform-master-lmp-access-records" className="space-y-3 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees.
+            Add Master LMP records to the catalogue first, then create access rules that decide which locations or units can View, Assign, or Manage each Master LMP.
           </div>
+          <div className="space-y-3 rounded-lg border border-gray-700 bg-gray-900 p-3">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-bold text-white">Master LMP Catalogue</h4>
+                <p className="mt-1 text-xs leading-relaxed text-gray-400">These are the selectable Master LMP names used by access rules and later LMP assignment workflows.</p>
+              </div>
+              <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">{masterLmpCatalogue.length} records</span>
+            </div>
+            <div className="space-y-3">
+              {masterLmpCatalogue.map((entry, index) => (
+                <div key={entry.id || `master-lmp-catalogue-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[minmax(160px,0.8fr)_minmax(190px,1fr)_minmax(240px,1.35fr)_120px]">
+                  <Field
+                    label="Code"
+                    value={entry.code}
+                    disabled={!canEdit}
+                    onChange={(value) => updateMasterLmpCatalogueEntry(index, { code: value, name: entry.name || value })}
+                    info="Stable selectable value used by Master LMP Access and trainee/course assignment."
+                  />
+                  <Field
+                    label="Name"
+                    value={entry.name || entry.code}
+                    disabled={!canEdit}
+                    onChange={(value) => updateMasterLmpCatalogueEntry(index, { name: value })}
+                  />
+                  <Field
+                    label="Description"
+                    value={entry.description || ''}
+                    disabled={!canEdit}
+                    onChange={(value) => updateMasterLmpCatalogueEntry(index, { description: value })}
+                  />
+                  <SelectField
+                    label="Status"
+                    value={entry.status || 'ACTIVE'}
+                    disabled={!canEdit}
+                    options={['ACTIVE', 'INACTIVE']}
+                    onChange={(value) => updateMasterLmpCatalogueEntry(index, { status: value })}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-3 rounded-lg border border-gray-700 bg-gray-900 p-3">
+            <div className="mb-3">
+              <h4 className="text-sm font-bold text-white">Master LMP Access Rules</h4>
+              <p className="mt-1 text-xs leading-relaxed text-gray-400">Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees.</p>
+            </div>
           {masterLmpAccessRules.map((rule, index) => (
             <div key={rule.id || `master-lmp-access-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_0.8fr_auto]">
               <SelectField
@@ -5299,6 +5382,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             </div>
           ))}
+          </div>
         </div>
       </section>
 

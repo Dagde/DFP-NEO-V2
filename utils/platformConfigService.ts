@@ -265,6 +265,14 @@ export interface PlatformMasterLmpAccessRule {
   status?: string | null;
 }
 
+export interface PlatformMasterLmpCatalogueEntry {
+  id?: string;
+  code: string;
+  name?: string | null;
+  description?: string | null;
+  status?: string | null;
+}
+
 export interface MasterLmpAccessContext {
   organisationCode?: string | null;
   locationCode?: string | null;
@@ -283,6 +291,12 @@ export const DEFAULT_MASTER_LMP_ACCESS_RULES: PlatformMasterLmpAccessRule[] = [
   { id: 'master-lmp-pc21-ground-school-1fts', lmpCode: 'PC-21 Ground School', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: '1FTS', accessLevel: 'Manage', status: 'ACTIVE' },
   { id: 'master-lmp-pc21-ground-school-2fts', lmpCode: 'PC-21 Ground School', organisationCode: 'DEFAULT', locationCode: 'YPEA', unitCode: '2FTS', accessLevel: 'Manage', status: 'ACTIVE' },
   { id: 'master-lmp-pc21-ground-school-cfs', lmpCode: 'PC-21 Ground School', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: 'CFS', accessLevel: 'View', status: 'ACTIVE' },
+];
+
+export const DEFAULT_MASTER_LMP_CATALOGUE: PlatformMasterLmpCatalogueEntry[] = [
+  { id: 'master-lmp-catalogue-bpc-ipc', code: 'BPC+IPC', name: 'BPC+IPC', description: 'Default Flight School basic and instrument progression Master LMP.', status: 'ACTIVE' },
+  { id: 'master-lmp-catalogue-fic', code: 'FIC', name: 'FIC', description: 'Default Flight Instructor Course Master LMP.', status: 'ACTIVE' },
+  { id: 'master-lmp-catalogue-pc21-ground-school', code: 'PC-21 Ground School', name: 'PC-21 Ground School', description: 'Default Flight School PC-21 ground school Master LMP.', status: 'ACTIVE' },
 ];
 
 const emptyPlatformConfig: PlatformConfig = {
@@ -430,6 +444,44 @@ export const normaliseMasterLmpAccessRules = (config: PlatformConfig | null): Pl
       status: String(rule.status || 'ACTIVE').toUpperCase(),
     }))
     .filter((rule) => rule.lmpCode);
+};
+
+export const normaliseMasterLmpCatalogue = (config: PlatformConfig | null): PlatformMasterLmpCatalogueEntry[] => {
+  const configured = config?.organisations?.[0]?.settings?.masterLmpCatalogue;
+  const configuredEntries = Array.isArray(configured) ? configured : [];
+  const accessRuleCodes = normaliseMasterLmpAccessRules(config).map((rule) => rule.lmpCode);
+  const source = configuredEntries.length > 0 ? configuredEntries : DEFAULT_MASTER_LMP_CATALOGUE;
+  const entriesByCode = new Map<string, PlatformMasterLmpCatalogueEntry>();
+
+  source.forEach((entry: any, index: number) => {
+    const code = String(entry?.code || entry?.lmpCode || entry?.name || '').trim();
+    if (!code) return;
+    const key = normaliseAccessValue(code);
+    if (entriesByCode.has(key)) return;
+    entriesByCode.set(key, {
+      id: String(entry?.id || `master-lmp-catalogue-${index + 1}`),
+      code,
+      name: String(entry?.name || code).trim(),
+      description: String(entry?.description || '').trim(),
+      status: String(entry?.status || 'ACTIVE').toUpperCase(),
+    });
+  });
+
+  accessRuleCodes.forEach((code) => {
+    const cleanCode = String(code || '').trim();
+    if (!cleanCode) return;
+    const key = normaliseAccessValue(cleanCode);
+    if (entriesByCode.has(key)) return;
+    entriesByCode.set(key, {
+      id: `master-lmp-catalogue-${cleanCode.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      code: cleanCode,
+      name: cleanCode,
+      description: '',
+      status: 'ACTIVE',
+    });
+  });
+
+  return Array.from(entriesByCode.values());
 };
 
 export const getMasterLmpAccessLevel = (

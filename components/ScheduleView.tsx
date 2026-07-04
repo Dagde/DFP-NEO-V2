@@ -1454,7 +1454,7 @@ const OrganisationMyUnitSettings: React.FC<{
                     <UnitSettingsGroup title="Master LMP Access" description="Which Master LMP records this unit can see or manage." action={settingsLink('platform-master-lmp-access', 'Take me there', { focusSubsectionId: 'platform-master-lmp-access-records' })}>
                         {masterLmpAccessForUnit.length > 0 ? masterLmpAccessForUnit.map((rule: any, index: number) => (
                             <div key={rule.id || index} className="border-t border-white/10 first:border-t-0">
-                                <UnitSettingsField label="Master LMP" value={rule.masterLmpName || rule.masterLmpId || ''} onChange={(value) => updateMasterLmpAccessRule(rule, { masterLmpName: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Master LMP" value={rule.lmpCode || rule.masterLmpName || rule.masterLmpId || ''} onChange={(value) => updateMasterLmpAccessRule(rule, { lmpCode: value })} disabled={!canEdit} />
                                 <UnitSettingsSelect label="Access level" value={rule.accessLevel || 'View'} options={['View', 'Assign', 'Manage']} onChange={(value) => updateMasterLmpAccessRule(rule, { accessLevel: value })} disabled={!canEdit} />
                                 <UnitSettingsField label="Location" value={rule.locationCode || ''} onChange={(value) => updateMasterLmpAccessRule(rule, { locationCode: value })} disabled={!canEdit} />
                                 <UnitSettingsField label="Unit" value={rule.unitCode || ''} onChange={(value) => updateMasterLmpAccessRule(rule, { unitCode: value })} disabled={!canEdit} />
