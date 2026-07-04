@@ -21646,9 +21646,10 @@ const App: React.FC = () => {
         const contextUnitCode = unitCode || activeUnitCode;
         return hasMasterLmpAccess(platformConfig, lmpCode, {
             unitCode: contextUnitCode,
+            locationCode: school,
             operationalModel: getOperationalModelForUnitCode(contextUnitCode),
         }, requiredAccess);
-    }, [activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded]);
+    }, [activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded, school]);
 
     const filterSyllabusForMasterLmpAccess = useCallback((
         items: SyllabusItemDetail[],
@@ -22489,6 +22490,30 @@ const App: React.FC = () => {
                 return !packageUnit || packageUnit === activeUnit;
             });
     }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
+    const accessibleMasterLmpCatalogueForSyllabus = useMemo(() => {
+        if (!platformConfigLoaded) return [];
+        const contextUnitCodes = isFixedCrewLikeOperationalModel(activeOperationalModel) && activeContextUnitCodes.length > 0
+            ? activeContextUnitCodes
+            : [activeUnitCode];
+        const seen = new Set<string>();
+        return normaliseMasterLmpCatalogue(platformConfig)
+            .filter((entry) => String(entry.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+            .filter((entry) => {
+                const code = String(entry.code || '').trim();
+                if (!code) return false;
+                const key = code.toUpperCase();
+                if (seen.has(key)) return false;
+                const hasAccess = contextUnitCodes.some((unitCode) => (
+                    hasMasterLmpAccess(platformConfig, code, {
+                        unitCode,
+                        locationCode: school,
+                        operationalModel: getOperationalModelForUnitCode(unitCode),
+                    }, 'View')
+                ));
+                if (hasAccess) seen.add(key);
+                return hasAccess;
+            });
+    }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded, school]);
     const trainingPackageTemplatesForActiveModel = useMemo(() => {
         const normaliseContextCode = (value?: string | null) => String(value || '').trim().toUpperCase();
         const activeUnit = normaliseContextCode(activeUnitCode);
@@ -38705,7 +38730,7 @@ appliedUpdates.forEach(update => {
                            trainingPackageTemplates={trainingPackageTemplatesForActiveModel}
                            instructorsData={instructorsData}
                            operationalModel={activeOperationalModel}
-                           masterLmpCatalogue={normaliseMasterLmpCatalogue(platformConfig)}
+                           masterLmpCatalogue={accessibleMasterLmpCatalogueForSyllabus}
                            staffQualificationCatalogue={activeStaffQualificationCatalogue}
                            currentUserName={currentUserName}
                            scoringMatrixPhraseBank={activeTrainingReportPhraseBank}

@@ -93967,9 +93967,10 @@ const App = () => {
     const contextUnitCode = unitCode || activeUnitCode;
     return hasMasterLmpAccess(platformConfig, lmpCode, {
       unitCode: contextUnitCode,
+      locationCode: school,
       operationalModel: getOperationalModelForUnitCode(contextUnitCode)
     }, requiredAccess);
-  }, [activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded]);
+  }, [activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded, school]);
   const filterSyllabusForMasterLmpAccess = reactExports.useCallback((items, requiredAccess = "View", unitCode) => {
     const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
     const activeUnit = normaliseContextCode(unitCode || activeUnitCode);
@@ -94568,6 +94569,24 @@ const App = () => {
       return !packageUnit || packageUnit === activeUnit;
     });
   }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
+  const accessibleMasterLmpCatalogueForSyllabus = reactExports.useMemo(() => {
+    if (!platformConfigLoaded) return [];
+    const contextUnitCodes = isFixedCrewLikeOperationalModel(activeOperationalModel) && activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode];
+    const seen = /* @__PURE__ */ new Set();
+    return normaliseMasterLmpCatalogue(platformConfig).filter((entry) => String(entry.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((entry) => {
+      const code = String(entry.code || "").trim();
+      if (!code) return false;
+      const key = code.toUpperCase();
+      if (seen.has(key)) return false;
+      const hasAccess = contextUnitCodes.some((unitCode) => hasMasterLmpAccess(platformConfig, code, {
+        unitCode,
+        locationCode: school,
+        operationalModel: getOperationalModelForUnitCode(unitCode)
+      }, "View"));
+      if (hasAccess) seen.add(key);
+      return hasAccess;
+    });
+  }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded, school]);
   const trainingPackageTemplatesForActiveModel = reactExports.useMemo(() => {
     const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
     const activeUnit = normaliseContextCode(activeUnitCode);
@@ -107793,7 +107812,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             trainingPackageTemplates: trainingPackageTemplatesForActiveModel,
             instructorsData,
             operationalModel: activeOperationalModel,
-            masterLmpCatalogue: normaliseMasterLmpCatalogue(platformConfig),
+            masterLmpCatalogue: accessibleMasterLmpCatalogueForSyllabus,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             currentUserName,
             scoringMatrixPhraseBank: activeTrainingReportPhraseBank,
