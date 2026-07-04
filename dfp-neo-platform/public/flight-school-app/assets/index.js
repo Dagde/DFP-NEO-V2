@@ -62948,9 +62948,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               " records"
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: masterLmpCatalogue.map((entry, index) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1060px] space-y-3", children: masterLmpCatalogue.map((entry, index) => {
             const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || "").trim().toUpperCase()) || 0;
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px]", children: [
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px] gap-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 Field,
                 {
@@ -62998,7 +62998,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 }
               )
             ] }, entry.id || `master-lmp-catalogue-${index}`);
-          }) })
+          }) }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
