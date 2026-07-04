@@ -548,8 +548,8 @@ const EmptyOrganisationChartSet = new Set<string>();
 
 type OrganisationSlideoutView = 'structure' | 'unitSettings' | 'setupWizard';
 
-const organisationSlideoutActiveButtonClass = 'inline-flex h-9 w-40 items-center justify-center rounded-md border border-orange-300 bg-orange-500/20 px-3 text-center text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18';
-const organisationSlideoutInactiveButtonClass = 'inline-flex h-9 w-40 items-center justify-center rounded-md border border-orange-400/55 bg-orange-500/10 px-3 text-center text-[11px] font-semibold text-orange-100/80 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18';
+const organisationSlideoutActiveButtonClass = 'btn-aluminium-brushed inline-flex h-9 w-40 items-center justify-center rounded-md border border-orange-300 px-3 text-center text-[11px] font-semibold text-orange-500 shadow-[0_0_16px_rgba(251,146,60,0.4),inset_0_1px_0_rgba(255,255,255,0.82)] ring-1 ring-orange-300/55 transition hover:border-orange-200 hover:text-orange-400';
+const organisationSlideoutInactiveButtonClass = 'btn-aluminium-brushed inline-flex h-9 w-40 items-center justify-center rounded-md border border-orange-400/70 px-3 text-center text-[11px] font-semibold text-orange-500 shadow-[0_0_12px_rgba(251,146,60,0.26),inset_0_1px_0_rgba(255,255,255,0.82)] ring-1 ring-orange-300/35 transition hover:border-orange-200 hover:text-orange-400';
 const unitSettingsPanelClass = 'overflow-hidden rounded-2xl border border-white/10 bg-white/[0.055] shadow-[0_18px_44px_rgba(0,0,0,0.22)] backdrop-blur';
 const unitSettingsLabelClass = 'text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400';
 const unitSettingsInputClass = 'w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-100 outline-none transition focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60';
@@ -696,16 +696,16 @@ const UnitSettingsResourceNumberField: React.FC<{
     disabled?: boolean;
 }> = ({ label, value, onChange, disabled = false }) => (
     disabled ? (
-        <div className="min-w-[78px] shrink-0 border-r border-white/10 px-2 py-3 last:border-r-0">
-            <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400">{label}</span>
-            <span className="mt-2 block text-sm font-semibold text-slate-100">{Number.isFinite(Number(value)) ? value : 0}</span>
+        <div className="flex aspect-square min-w-[74px] flex-col items-center justify-center rounded-md border border-white/10 bg-slate-950/45 px-2 text-center">
+            <span className="block max-w-full truncate text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">{label}</span>
+            <span className="mt-2 block text-center text-lg font-semibold leading-none text-slate-100">{Number.isFinite(Number(value)) ? value : 0}</span>
         </div>
-    ) : <label className="min-w-[78px] shrink-0 border-r border-white/10 px-2 py-3 last:border-r-0">
-        <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400">{label}</span>
+    ) : <label className="flex aspect-square min-w-[74px] flex-col items-center justify-center rounded-md border border-white/10 bg-slate-950/45 px-2 text-center">
+        <span className="block max-w-full truncate text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">{label}</span>
         <input
             type="number"
             min={0}
-            className="mt-2 h-9 w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 text-center text-sm font-semibold text-slate-100 outline-none transition focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-2 h-8 w-full rounded-lg border border-white/10 bg-slate-950/80 px-1 text-center text-sm font-semibold text-slate-100 outline-none transition focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
             value={Number.isFinite(Number(value)) ? value : 0}
             disabled={disabled}
             onKeyDownCapture={stopEditableKeyPropagation}
@@ -1161,7 +1161,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                     <UnitSettingsSelect label="Location" value={pool.locationCode || unit.locationCode || ''} options={locations.map((item: any) => item.code)} onChange={(value) => updateResourcePool(pool, { locationCode: value })} disabled={!canEdit} />
                                     <div className={`${unitSettingsScrollClass} border-t border-white/10 bg-slate-950/25`}>
                                         <div className="min-w-[390px]">
-                                            <div className="grid grid-cols-5">
+                                            <div className="grid grid-cols-5 gap-2 p-2">
                                                 <UnitSettingsResourceNumberField label="Aircraft" value={settings.aircraft ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { aircraft: value })} disabled={!canEdit} />
                                                 <UnitSettingsResourceNumberField label="Sim" value={settings.ftd ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ftd: value })} disabled={!canEdit} />
                                                 <UnitSettingsResourceNumberField label="Trainer" value={settings.cpt ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { cpt: value })} disabled={!canEdit} />
