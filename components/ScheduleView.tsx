@@ -1217,8 +1217,21 @@ const OrganisationMyUnitSettings: React.FC<{
                         {modelQualifications.length > 0 ? (
                             <div className="border-t border-white/10">
                                 <div className="px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70">Qualifications</div>
+                                <div className="grid gap-2 border-t border-white/10 px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(120px,0.4fr)]">
+                                    <span>Qualification</span>
+                                    <span>Code</span>
+                                </div>
                                 {modelQualifications.map((entry) => (
-                                    <div key={entry.id} className="grid gap-2 border-t border-white/10 px-4 py-3 md:grid-cols-[minmax(120px,0.4fr)_minmax(0,1fr)] md:items-center">
+                                    <div key={entry.id} className="grid gap-2 border-t border-white/10 px-4 py-3 md:grid-cols-[minmax(0,1fr)_minmax(120px,0.4fr)] md:items-center">
+                                        <input
+                                            className={unitSettingsInputClass}
+                                            value={entry.name || entry.code || ''}
+                                            disabled={!canEdit}
+                                            aria-label="Qualification"
+                                            onKeyDownCapture={stopEditableKeyPropagation}
+                                            onKeyDown={stopEditableKeyPropagation}
+                                            onChange={(event) => updateQualificationEntry(entry, { name: event.target.value })}
+                                        />
                                         <input
                                             className={unitSettingsInputClass}
                                             value={entry.code || ''}
@@ -1227,15 +1240,6 @@ const OrganisationMyUnitSettings: React.FC<{
                                             onKeyDownCapture={stopEditableKeyPropagation}
                                             onKeyDown={stopEditableKeyPropagation}
                                             onChange={(event) => updateQualificationEntry(entry, { code: event.target.value })}
-                                        />
-                                        <input
-                                            className={unitSettingsInputClass}
-                                            value={entry.name || entry.code || ''}
-                                            disabled={!canEdit}
-                                            aria-label="Qualification name"
-                                            onKeyDownCapture={stopEditableKeyPropagation}
-                                            onKeyDown={stopEditableKeyPropagation}
-                                            onChange={(event) => updateQualificationEntry(entry, { name: event.target.value })}
                                         />
                                     </div>
                                 ))}
