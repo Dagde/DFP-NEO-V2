@@ -46926,6 +46926,10 @@ const SyllabusView = ({
     }
   };
   const handleAddEvent = () => {
+    if (!selectedCourseType) {
+      alert(`Please select a ${activeCollectionNoun} before adding an event.`);
+      return;
+    }
     const isAcademicCourse = filteredSyllabusDetails.some((s) => s.type === "Academics");
     const newItem = {
       id: `new-${Date.now()}`,
@@ -47064,6 +47068,11 @@ const SyllabusView = ({
               "Add",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               isTrainingPackagesTab ? "Package" : "Course"
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddEvent, disabled: isFrozen || !selectedCourseType, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              "Add",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Event"
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
               setDeletePassword("");

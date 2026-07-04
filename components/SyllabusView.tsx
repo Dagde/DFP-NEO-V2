@@ -1936,6 +1936,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   };
 
   const handleAddEvent = () => {
+      if (!selectedCourseType) {
+          alert(`Please select a ${activeCollectionNoun} before adding an event.`);
+          return;
+      }
       // Create a blank new item pre-filled for the currently selected course
       // Determine if this is an Academics course (so new events default to Academics type)
       const isAcademicCourse = filteredSyllabusDetails.some(s => s.type === 'Academics');
@@ -2095,6 +2099,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         <span>
                             Add<br />{isTrainingPackagesTab ? 'Package' : 'Course'}
                         </span>
+                    </button>
+                    <button onClick={handleAddEvent} disabled={isFrozen || !selectedCourseType} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span>Add<br />Event</span>
                     </button>
                     <button onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
                         <span>
