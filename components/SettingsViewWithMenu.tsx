@@ -1819,6 +1819,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 phraseBank={props.phraseBank}
                                 masterCurrencies={props.masterCurrencies}
                                 currencyRequirements={props.currencyRequirements}
+                                syllabusDetails={props.syllabusDetails}
                                 unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                             />
                         </div>
@@ -1842,6 +1843,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             phraseBank={props.phraseBank}
                             masterCurrencies={props.masterCurrencies}
                             currencyRequirements={props.currencyRequirements}
+                            syllabusDetails={props.syllabusDetails}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}
@@ -1865,6 +1867,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             phraseBank={props.phraseBank}
                             masterCurrencies={props.masterCurrencies}
                             currencyRequirements={props.currencyRequirements}
+                            syllabusDetails={props.syllabusDetails}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}
@@ -1888,6 +1891,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             phraseBank={props.phraseBank}
                             masterCurrencies={props.masterCurrencies}
                             currencyRequirements={props.currencyRequirements}
+                            syllabusDetails={props.syllabusDetails}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}
@@ -1911,6 +1915,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             phraseBank={props.phraseBank}
                             masterCurrencies={props.masterCurrencies}
                             currencyRequirements={props.currencyRequirements}
+                            syllabusDetails={props.syllabusDetails}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}
@@ -2018,6 +2023,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             phraseBank={props.phraseBank}
                             masterCurrencies={props.masterCurrencies}
                             currencyRequirements={props.currencyRequirements}
+                            syllabusDetails={props.syllabusDetails}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}

@@ -36,6 +36,7 @@ import {
 } from '../utils/fixedCrewTraining';
 import { SYLLABUS_COURSE_SHELL_NOTE, isSyllabusCourseShell } from '../utils/syllabusCourseShell';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import type { PlatformMasterLmpCatalogueEntry } from '../utils/platformConfigService';
 
 interface SyllabusViewProps {
   syllabusDetails: SyllabusItemDetail[];
@@ -54,6 +55,7 @@ interface SyllabusViewProps {
   onUpdateInstructor?: (data: Instructor) => void | Promise<void>;
   operationalModel?: string;
   sharedUnitTabs?: string[];
+  masterLmpCatalogue?: PlatformMasterLmpCatalogueEntry[];
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   currentUserName?: string;
   scoringMatrixPhraseBank?: PhraseBank;
@@ -961,6 +963,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     onUpdateInstructor,
     operationalModel = 'flight_school',
     sharedUnitTabs = [],
+    masterLmpCatalogue = [],
     staffQualificationCatalogue,
     currentUserName,
     scoringMatrixPhraseBank,
@@ -1034,14 +1037,44 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   // Dynamic course list: only courses found in the currently visible syllabusDetails.
   // App-level unit access filtering happens before this view is rendered.
+  const activeMasterLmpCatalogue = useMemo(() => (
+    masterLmpCatalogue
+      .filter(entry => String(entry.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+      .filter(entry => String(entry.code || '').trim())
+  ), [masterLmpCatalogue]);
+
+  const masterLmpTitleMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    activeMasterLmpCatalogue.forEach(entry => {
+      const code = String(entry.code || '').trim();
+      if (!code) return;
+      map[code] = String(entry.name || code).trim() || code;
+    });
+    return map;
+  }, [activeMasterLmpCatalogue]);
+
   const courseLMPs = useMemo(() => {
     const fromSyllabus = new Set<string>();
     unitScopedSyllabusDetails.filter(item => item.isActive !== false).forEach(item => {
       if (getItemLmpDetailsTab(item) !== activeTab) return;
       (item.courses || []).forEach(c => { if (c) fromSyllabus.add(c); });
     });
-    return Array.from(fromSyllabus).sort();
-  }, [activeTab, unitScopedSyllabusDetails]);
+    if (activeTab !== 'master') {
+      return Array.from(fromSyllabus).sort();
+    }
+    const ordered = new Map<string, string>();
+    activeMasterLmpCatalogue.forEach(entry => {
+      const code = String(entry.code || '').trim();
+      if (code) ordered.set(code.toUpperCase(), code);
+    });
+    Array.from(fromSyllabus).sort().forEach(code => {
+      const cleanCode = String(code || '').trim();
+      if (cleanCode && !ordered.has(cleanCode.toUpperCase())) {
+        ordered.set(cleanCode.toUpperCase(), cleanCode);
+      }
+    });
+    return Array.from(ordered.values());
+  }, [activeMasterLmpCatalogue, activeTab, unitScopedSyllabusDetails]);
 
   // Map from course code → full display title (uses module field of first item in that course)
   const courseTitleMap = useMemo(() => {
@@ -1058,7 +1091,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   }, [activeTab, unitScopedSyllabusDetails]);
 
   // Helper: get display title for a course code
-  const getCourseTitle = (code: string) => courseTitleMap[code] || code;
+  const getCourseTitle = (code: string) => (
+    activeTab === 'master'
+      ? masterLmpTitleMap[code] || courseTitleMap[code] || code
+      : courseTitleMap[code] || code
+  );
   const normaliseContextCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
   const activeUnitNormalised = normaliseContextCode(effectiveActiveUnitCode);
   const activeLocationNormalised = normaliseContextCode(activeLocationCode);
@@ -1172,6 +1209,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           return item.courses.includes(selectedCourseType);
       });
   }, [activeTab, unitScopedSyllabusDetails, selectedCourseType]);
+
+  const selectedCourseEventCount = filteredSyllabusDetails.length;
+  const selectedMasterLmpCatalogueEntry = activeTab === 'master'
+    ? activeMasterLmpCatalogue.find(entry => String(entry.code || '').trim().toUpperCase() === String(selectedCourseType || '').trim().toUpperCase()) || null
+    : null;
 
   const activeTrainingAssignmentItem = useMemo(() => (
       filteredSyllabusDetails[0] || selectedItem || null
@@ -2023,6 +2065,20 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     {courseLMPs.map(c => <option key={`${activeTab}-${c}`} value={c}>{getCourseTitle(c)}</option>)}
                 </select>
             </div>
+            {selectedCourseType && (
+                <div className="flex min-h-[38px] flex-wrap items-center gap-2 rounded-md border border-gray-700 bg-gray-900/70 px-3 py-1 text-xs text-gray-300">
+                    <span className="font-semibold text-white">{selectedCourseEventCount} event{selectedCourseEventCount === 1 ? '' : 's'}</span>
+                    {activeTab === 'master' && (
+                        <span className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                            selectedMasterLmpCatalogueEntry
+                                ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-100'
+                                : 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                        }`}>
+                            {selectedMasterLmpCatalogueEntry ? 'Catalogue linked' : 'Legacy stream'}
+                        </span>
+                    )}
+                </div>
+            )}
 
             <div className="w-px h-8 bg-gray-600 mx-2"></div>
 

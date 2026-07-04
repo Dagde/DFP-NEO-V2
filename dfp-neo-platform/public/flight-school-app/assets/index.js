@@ -46079,6 +46079,7 @@ const SyllabusView = ({
   onUpdateInstructor,
   operationalModel: operationalModel2 = "flight_school",
   sharedUnitTabs = [],
+  masterLmpCatalogue = [],
   staffQualificationCatalogue,
   currentUserName,
   scoringMatrixPhraseBank,
@@ -46145,6 +46146,16 @@ const SyllabusView = ({
   const [showAssignTrainingModal, setShowAssignTrainingModal] = reactExports.useState(false);
   const [assignTrainingSelection, setAssignTrainingSelection] = reactExports.useState(/* @__PURE__ */ new Set());
   const [isSavingTrainingAssignments, setIsSavingTrainingAssignments] = reactExports.useState(false);
+  const activeMasterLmpCatalogue = reactExports.useMemo(() => masterLmpCatalogue.filter((entry) => String(entry.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((entry) => String(entry.code || "").trim()), [masterLmpCatalogue]);
+  const masterLmpTitleMap = reactExports.useMemo(() => {
+    const map = {};
+    activeMasterLmpCatalogue.forEach((entry) => {
+      const code = String(entry.code || "").trim();
+      if (!code) return;
+      map[code] = String(entry.name || code).trim() || code;
+    });
+    return map;
+  }, [activeMasterLmpCatalogue]);
   const courseLMPs = reactExports.useMemo(() => {
     const fromSyllabus = /* @__PURE__ */ new Set();
     unitScopedSyllabusDetails.filter((item) => item.isActive !== false).forEach((item) => {
@@ -46153,8 +46164,22 @@ const SyllabusView = ({
         if (c) fromSyllabus.add(c);
       });
     });
-    return Array.from(fromSyllabus).sort();
-  }, [activeTab, unitScopedSyllabusDetails]);
+    if (activeTab !== "master") {
+      return Array.from(fromSyllabus).sort();
+    }
+    const ordered = /* @__PURE__ */ new Map();
+    activeMasterLmpCatalogue.forEach((entry) => {
+      const code = String(entry.code || "").trim();
+      if (code) ordered.set(code.toUpperCase(), code);
+    });
+    Array.from(fromSyllabus).sort().forEach((code) => {
+      const cleanCode = String(code || "").trim();
+      if (cleanCode && !ordered.has(cleanCode.toUpperCase())) {
+        ordered.set(cleanCode.toUpperCase(), cleanCode);
+      }
+    });
+    return Array.from(ordered.values());
+  }, [activeMasterLmpCatalogue, activeTab, unitScopedSyllabusDetails]);
   const courseTitleMap = reactExports.useMemo(() => {
     const map = {};
     unitScopedSyllabusDetails.filter((item) => item.isActive !== false).forEach((item) => {
@@ -46167,7 +46192,7 @@ const SyllabusView = ({
     });
     return map;
   }, [activeTab, unitScopedSyllabusDetails]);
-  const getCourseTitle = (code) => courseTitleMap[code] || code;
+  const getCourseTitle = (code) => activeTab === "master" ? masterLmpTitleMap[code] || courseTitleMap[code] || code : courseTitleMap[code] || code;
   const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
   const activeUnitNormalised = normaliseContextCode(effectiveActiveUnitCode);
   const activeLocationNormalised = normaliseContextCode(activeLocationCode);
@@ -46252,6 +46277,8 @@ const SyllabusView = ({
       return item.courses.includes(selectedCourseType);
     });
   }, [activeTab, unitScopedSyllabusDetails, selectedCourseType]);
+  const selectedCourseEventCount = filteredSyllabusDetails.length;
+  const selectedMasterLmpCatalogueEntry = activeTab === "master" ? activeMasterLmpCatalogue.find((entry) => String(entry.code || "").trim().toUpperCase() === String(selectedCourseType || "").trim().toUpperCase()) || null : null;
   const activeTrainingAssignmentItem = reactExports.useMemo(() => filteredSyllabusDetails[0] || selectedItem || null, [filteredSyllabusDetails, selectedItem]);
   const activeTrainingAssignment = reactExports.useMemo(() => {
     if (!isAirCombatModel || !activeTrainingAssignmentItem || !selectedCourseType) return null;
@@ -47016,6 +47043,14 @@ const SyllabusView = ({
                 ]
               }
             )
+          ] }),
+          selectedCourseType && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-[38px] flex-wrap items-center gap-2 rounded-md border border-gray-700 bg-gray-900/70 px-3 py-1 text-xs text-gray-300", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-white", children: [
+              selectedCourseEventCount,
+              " event",
+              selectedCourseEventCount === 1 ? "" : "s"
+            ] }),
+            activeTab === "master" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${selectedMasterLmpCatalogueEntry ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-100" : "border-amber-500/40 bg-amber-500/10 text-amber-100"}`, children: selectedMasterLmpCatalogueEntry ? "Catalogue linked" : "Legacy stream" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-8 bg-gray-600 mx-2" }),
           isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
@@ -59835,6 +59870,7 @@ const PlatformConfigurationSettings = ({
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
+  syllabusDetails = [],
   unitCurrencyDefinitions = {}
 }) => {
   const [config, setConfig] = reactExports.useState(emptyConfig);
@@ -60303,6 +60339,17 @@ const PlatformConfigurationSettings = ({
     () => normaliseMasterLmpCatalogue(config),
     [config.organisations]
   );
+  const masterLmpSyllabusCounts = reactExports.useMemo(() => {
+    const counts = /* @__PURE__ */ new Map();
+    syllabusDetails.filter((item) => item && item.isActive !== false).filter((item) => (item.lmpType || "Master LMP") === "Master LMP").forEach((item) => {
+      const courseCodes = item.courses && item.courses.length > 0 ? item.courses : ["BPC+IPC"];
+      courseCodes.forEach((courseCode) => {
+        const key = String(courseCode || "BPC+IPC").trim().toUpperCase();
+        counts.set(key, (counts.get(key) || 0) + 1);
+      });
+    });
+    return counts;
+  }, [syllabusDetails]);
   const masterLmpOptions = reactExports.useMemo(() => Array.from(/* @__PURE__ */ new Set([
     ...masterLmpCatalogue.filter((entry) => String(entry.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((entry) => entry.code),
     ...masterLmpAccessRules.map((rule) => rule.lmpCode)
@@ -62901,46 +62948,57 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               " records"
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: masterLmpCatalogue.map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[minmax(160px,0.8fr)_minmax(190px,1fr)_minmax(240px,1.35fr)_120px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Field,
-              {
-                label: "Code",
-                value: entry.code,
-                disabled: !canEdit,
-                onChange: (value) => updateMasterLmpCatalogueEntry(index, { code: value, name: entry.name || value }),
-                info: "Stable selectable value used by Master LMP Access and trainee/course assignment."
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Field,
-              {
-                label: "Name",
-                value: entry.name || entry.code,
-                disabled: !canEdit,
-                onChange: (value) => updateMasterLmpCatalogueEntry(index, { name: value })
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Field,
-              {
-                label: "Description",
-                value: entry.description || "",
-                disabled: !canEdit,
-                onChange: (value) => updateMasterLmpCatalogueEntry(index, { description: value })
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              SelectField,
-              {
-                label: "Status",
-                value: entry.status || "ACTIVE",
-                disabled: !canEdit,
-                options: ["ACTIVE", "INACTIVE"],
-                onChange: (value) => updateMasterLmpCatalogueEntry(index, { status: value })
-              }
-            )
-          ] }, entry.id || `master-lmp-catalogue-${index}`)) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: masterLmpCatalogue.map((entry, index) => {
+            const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || "").trim().toUpperCase()) || 0;
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Code",
+                  value: entry.code,
+                  disabled: !canEdit,
+                  onChange: (value) => updateMasterLmpCatalogueEntry(index, { code: value, name: entry.name || value }),
+                  info: "Stable selectable value used by Master LMP Access and trainee/course assignment."
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Name",
+                  value: entry.name || entry.code,
+                  disabled: !canEdit,
+                  onChange: (value) => updateMasterLmpCatalogueEntry(index, { name: value })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Description",
+                  value: entry.description || "",
+                  disabled: !canEdit,
+                  onChange: (value) => updateMasterLmpCatalogueEntry(index, { description: value })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: labelClass, children: "Syllabus Content" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-[38px] items-center rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: [
+                  linkedSyllabusCount,
+                  " event",
+                  linkedSyllabusCount === 1 ? "" : "s"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                SelectField,
+                {
+                  label: "Status",
+                  value: entry.status || "ACTIVE",
+                  disabled: !canEdit,
+                  options: ["ACTIVE", "INACTIVE"],
+                  onChange: (value) => updateMasterLmpCatalogueEntry(index, { status: value })
+                }
+              )
+            ] }, entry.id || `master-lmp-catalogue-${index}`);
+          }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
@@ -67902,6 +67960,7 @@ const SettingsViewWithMenu = (props) => {
               phraseBank: props.phraseBank,
               masterCurrencies: props.masterCurrencies,
               currencyRequirements: props.currencyRequirements,
+              syllabusDetails: props.syllabusDetails,
               unitCurrencyDefinitions: props.unitCurrencyDefinitions
             }
           )
@@ -67925,6 +67984,7 @@ const SettingsViewWithMenu = (props) => {
             phraseBank: props.phraseBank,
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
+            syllabusDetails: props.syllabusDetails,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
@@ -67948,6 +68008,7 @@ const SettingsViewWithMenu = (props) => {
             phraseBank: props.phraseBank,
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
+            syllabusDetails: props.syllabusDetails,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
@@ -67971,6 +68032,7 @@ const SettingsViewWithMenu = (props) => {
             phraseBank: props.phraseBank,
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
+            syllabusDetails: props.syllabusDetails,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
@@ -67994,6 +68056,7 @@ const SettingsViewWithMenu = (props) => {
             phraseBank: props.phraseBank,
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
+            syllabusDetails: props.syllabusDetails,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
@@ -68087,6 +68150,7 @@ const SettingsViewWithMenu = (props) => {
             phraseBank: props.phraseBank,
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
+            syllabusDetails: props.syllabusDetails,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
@@ -107719,6 +107783,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             trainingPackageTemplates: trainingPackageTemplatesForActiveModel,
             instructorsData,
             operationalModel: activeOperationalModel,
+            masterLmpCatalogue: normaliseMasterLmpCatalogue(platformConfig),
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             currentUserName,
             scoringMatrixPhraseBank: activeTrainingReportPhraseBank,

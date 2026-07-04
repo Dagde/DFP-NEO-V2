@@ -76,7 +76,7 @@ import { getAppApiBase } from '../utils/externalDataControls';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
-import type { CurrencyRequirement, MasterCurrency } from '../types';
+import type { CurrencyRequirement, MasterCurrency, SyllabusItemDetail } from '../types';
 import {
   DEFAULT_INSERT_EVENT_TYPES,
   INSERT_EVENT_LABEL_MAX_LENGTH,
@@ -1551,6 +1551,7 @@ interface PlatformConfigurationSettingsProps {
   phraseBank?: Record<string, any>;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
+  syllabusDetails?: SyllabusItemDetail[];
   unitCurrencyDefinitions?: Record<string, {
     masterCurrencies: MasterCurrency[];
     currencyRequirements: CurrencyRequirement[];
@@ -1575,6 +1576,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
+  syllabusDetails = [],
   unitCurrencyDefinitions = {},
 }) => {
   const [config, setConfig] = useState<PlatformConfig>(emptyConfig);
@@ -2103,6 +2105,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     () => normaliseMasterLmpCatalogue(config as any),
     [config.organisations],
   );
+  const masterLmpSyllabusCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    syllabusDetails
+      .filter((item) => item && item.isActive !== false)
+      .filter((item) => (item.lmpType || 'Master LMP') === 'Master LMP')
+      .forEach((item) => {
+        const courseCodes = item.courses && item.courses.length > 0 ? item.courses : ['BPC+IPC'];
+        courseCodes.forEach((courseCode) => {
+          const key = String(courseCode || 'BPC+IPC').trim().toUpperCase();
+          counts.set(key, (counts.get(key) || 0) + 1);
+        });
+      });
+    return counts;
+  }, [syllabusDetails]);
   const masterLmpOptions = useMemo(() => (
     Array.from(new Set([
       ...masterLmpCatalogue
@@ -5286,8 +5302,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">{masterLmpCatalogue.length} records</span>
             </div>
             <div className="space-y-3">
-              {masterLmpCatalogue.map((entry, index) => (
-                <div key={entry.id || `master-lmp-catalogue-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[minmax(160px,0.8fr)_minmax(190px,1fr)_minmax(240px,1.35fr)_120px]">
+              {masterLmpCatalogue.map((entry, index) => {
+                const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || '').trim().toUpperCase()) || 0;
+                return (
+                <div key={entry.id || `master-lmp-catalogue-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px]">
                   <Field
                     label="Code"
                     value={entry.code}
@@ -5307,6 +5325,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     disabled={!canEdit}
                     onChange={(value) => updateMasterLmpCatalogueEntry(index, { description: value })}
                   />
+                  <div>
+                    <label className={labelClass}>Syllabus Content</label>
+                    <div className="flex min-h-[38px] items-center rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100">
+                      {linkedSyllabusCount} event{linkedSyllabusCount === 1 ? '' : 's'}
+                    </div>
+                  </div>
                   <SelectField
                     label="Status"
                     value={entry.status || 'ACTIVE'}
@@ -5315,7 +5339,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     onChange={(value) => updateMasterLmpCatalogueEntry(index, { status: value })}
                   />
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
           <div className="space-y-3 rounded-lg border border-gray-700 bg-gray-900 p-3">

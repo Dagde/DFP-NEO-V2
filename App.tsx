@@ -27,6 +27,7 @@ import {
     hasPlatformModuleAccess,
     isFixedCrewLikeOperationalModel,
     loadPlatformConfigFromDB,
+    normaliseMasterLmpCatalogue,
     normaliseOperationalModel,
     PlatformConfig,
 } from './utils/platformConfigService';
@@ -38704,6 +38705,7 @@ appliedUpdates.forEach(update => {
                            trainingPackageTemplates={trainingPackageTemplatesForActiveModel}
                            instructorsData={instructorsData}
                            operationalModel={activeOperationalModel}
+                           masterLmpCatalogue={normaliseMasterLmpCatalogue(platformConfig)}
                            staffQualificationCatalogue={activeStaffQualificationCatalogue}
                            currentUserName={currentUserName}
                            scoringMatrixPhraseBank={activeTrainingReportPhraseBank}
