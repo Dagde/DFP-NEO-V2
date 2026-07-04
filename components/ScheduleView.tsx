@@ -8,7 +8,7 @@ import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
 import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
-import { getOperationalModelLabel, getUnitOperationalModel, OPERATIONAL_MODEL_OPTIONS } from '../utils/platformConfigService';
+import { DEFAULT_PLATFORM_PERMISSION_PROFILES, getOperationalModelLabel, getUnitOperationalModel, OPERATIONAL_MODEL_OPTIONS } from '../utils/platformConfigService';
 import { getTaskProfilesForModel } from '../utils/taskProfiles';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { AIRCRAFT_CREW_RESOURCE_KINDS, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
@@ -804,6 +804,11 @@ const OrganisationMyUnitSettings: React.FC<{
     const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
     const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
     const personnelDisplaySettings = normalisePersonnelDisplaySettings(organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null);
+    const permissionProfiles = Array.isArray(organisationSettings.permissionProfiles) && organisationSettings.permissionProfiles.length > 0
+        ? organisationSettings.permissionProfiles
+        : DEFAULT_PLATFORM_PERMISSION_PROFILES;
+    const permissionProfileNameMap = Object.fromEntries(permissionProfiles.map((profile: any) => [String(profile.id || '').trim(), profile.name || profile.id]));
+    const platformUsers = platformConfig?.platformUsers || [];
     const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(organisationSettings.staffQualificationCatalogue || null);
     const unitCallsignSettings = normaliseUnitCallsignSettings(organisationSettings.unitCallsignSettings || null);
     const trainingReportTerminology = normaliseTrainingReportTerminology(unit?.settings?.trainingReportTerminology || organisationSettings.trainingReportTerminology || null);
@@ -838,9 +843,60 @@ const OrganisationMyUnitSettings: React.FC<{
     const masterLmpAccessForUnit = masterLmpAccessRules.filter((rule: any) => (
         !rule?.unitCode || normaliseUnitSettingsIdentifier(rule.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)
     ));
-    const userAccessForUnit = (platformConfig?.userAccess || []).filter((access: any) => (
-        !access?.unitCode || normaliseUnitSettingsIdentifier(access.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)
-    ));
+    const unitHomeLocationCode = normaliseUnitSettingsIdentifier(unit?.locationCode);
+    const userAccessForUnit = (platformConfig?.userAccess || []).filter((access: any) => {
+        const accessUnitCode = normaliseUnitSettingsIdentifier(access?.unitCode);
+        const accessLocationCode = normaliseUnitSettingsIdentifier(access?.locationCode);
+        if (accessUnitCode) return accessUnitCode === normaliseUnitSettingsIdentifier(unit?.code);
+        return !accessLocationCode || accessLocationCode === unitHomeLocationCode;
+    });
+    const getAccessUserLabel = (access: any) => {
+        const userId = String(access?.userId || '').trim();
+        const user = platformUsers.find((candidate: any) => (
+            [candidate?.userId, candidate?.username, candidate?.id]
+                .map((value) => String(value || '').trim())
+                .includes(userId)
+        ));
+        const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
+        return access?.displayName || access?.userName || fullName || user?.username || userId || 'Unknown user';
+    };
+    const getAccessProfileLabels = (access: any) => {
+        const profileIds = Array.from(new Set([
+            ...(Array.isArray(access?.settings?.permissionProfileIds) ? access.settings.permissionProfileIds : []),
+            ...(Array.isArray(access?.profileIds) ? access.profileIds : []),
+            access?.profileId,
+        ].map((value) => String(value || '').trim()).filter(Boolean)));
+        return profileIds.map((profileId) => permissionProfileNameMap[profileId] || profileId);
+    };
+    const formatAccessScopeSummary = (access: any) => {
+        const base = access?.locationCode || (access?.unitCode ? unit?.locationCode : '') || 'All bases';
+        const unitScope = access?.unitCode || 'All units';
+        const moduleScope = access?.moduleCode || 'All enabled features';
+        const role = access?.role || 'Role not set';
+        const accessLevel = access?.accessLevel || 'Access not set';
+        const status = access?.status || 'ACTIVE';
+        return `${base} / ${unitScope} / ${moduleScope} / ${role} / ${accessLevel} / ${status}`;
+    };
+    const userAccessScopeCards = Object.values(userAccessForUnit.reduce((groups: Record<string, any>, access: any) => {
+        const profiles = getAccessProfileLabels(access);
+        const summary = formatAccessScopeSummary(access);
+        const key = [
+            getAccessUserLabel(access),
+            summary,
+            profiles.join('|') || 'No permission profile assigned',
+        ].join('::');
+        if (!groups[key]) {
+            groups[key] = {
+                access,
+                userLabel: getAccessUserLabel(access),
+                summary,
+                profiles,
+                count: 0,
+            };
+        }
+        groups[key].count += 1;
+        return groups;
+    }, {}));
     const activeLicences = (platformConfig?.licenses || []).filter((license: any) => (
         String(license?.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
     ));
@@ -1406,14 +1462,27 @@ const OrganisationMyUnitSettings: React.FC<{
                         )) : <UnitSettingsReadRow label="Access rules" value="No unit-specific Master LMP restrictions. Organisation defaults apply." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="User Access Scopes" description="Users or profiles with access that includes this unit." action={settingsLink('platform-user-access', 'Take me there', { locationCode: unit.locationCode, focusSubsectionId: unit.locationCode ? `platform-user-access-location-${settingsAnchorSuffix(unit.locationCode)}` : 'platform-user-access-records' })}>
-                        {userAccessForUnit.length > 0 ? userAccessForUnit.map((access: any, index: number) => (
-                            <div key={access.id || index} className="border-t border-white/10 first:border-t-0">
-                                <UnitSettingsField label="User" value={access.displayName || access.userName || access.userId || ''} onChange={(value) => updateUserAccessScope(access, { displayName: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Profiles" value={Array.isArray(access.profileIds) ? access.profileIds.join(', ') : access.profileId || ''} onChange={(value) => updateUserAccessScope(access, { profileIds: value.split(',').map((item) => item.trim()).filter(Boolean) })} disabled={!canEdit} />
-                                <UnitSettingsField label="Module" value={access.moduleCode || ''} onChange={(value) => updateUserAccessScope(access, { moduleCode: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Unit" value={access.unitCode || ''} onChange={(value) => updateUserAccessScope(access, { unitCode: value })} disabled={!canEdit} />
+                        {userAccessScopeCards.length > 0 ? (
+                            <div className="space-y-3 border-t border-white/10 p-4">
+                                {userAccessScopeCards.map((card: any, index: number) => (
+                                    <div key={`${card.userLabel}-${card.summary}-${index}`} className="rounded-xl border border-white/10 bg-slate-950/35 p-3">
+                                        <div className="flex flex-wrap items-start justify-between gap-2">
+                                            <div>
+                                                <div className="text-sm font-semibold text-slate-50">{card.userLabel}</div>
+                                                <div className="mt-1 text-xs font-semibold leading-5 text-cyan-100">{card.summary}</div>
+                                            </div>
+                                            {card.count > 1 ? <span className={unitSettingsMutedPillClass}>{card.count} matching records</span> : null}
+                                        </div>
+                                        <div className="mt-3 grid gap-2 md:grid-cols-[120px_minmax(0,1fr)] md:items-start">
+                                            <span className={unitSettingsLabelClass}>Permission profiles</span>
+                                            <div className={`text-xs font-semibold leading-5 ${card.profiles.length > 0 ? 'text-slate-100' : 'text-slate-400'}`}>
+                                                {card.profiles.length > 0 ? card.profiles.join(', ') : 'No permission profile assigned'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        )) : <UnitSettingsReadRow label="Users" value="No access scopes currently include this unit." muted />}
+                        ) : <UnitSettingsReadRow label="Users" value="No access scopes currently include this unit." muted />}
                     </UnitSettingsGroup>
                 </div>
             );

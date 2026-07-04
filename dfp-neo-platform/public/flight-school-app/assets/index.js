@@ -9356,6 +9356,9 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
   getCrewPositionLabelMap(crewPositionTerminology);
   const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null);
+  const permissionProfiles = Array.isArray(organisationSettings.permissionProfiles) && organisationSettings.permissionProfiles.length > 0 ? organisationSettings.permissionProfiles : DEFAULT_PLATFORM_PERMISSION_PROFILES;
+  const permissionProfileNameMap = Object.fromEntries(permissionProfiles.map((profile) => [String(profile.id || "").trim(), profile.name || profile.id]));
+  const platformUsers = platformConfig?.platformUsers || [];
   const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(organisationSettings.staffQualificationCatalogue || null);
   const unitCallsignSettings = normaliseUnitCallsignSettings(organisationSettings.unitCallsignSettings || null);
   const trainingReportTerminology = normaliseTrainingReportTerminology(unit?.settings?.trainingReportTerminology || organisationSettings.trainingReportTerminology || null);
@@ -9368,7 +9371,56 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
   const standardMissionProfiles = (Array.isArray(organisationSettings.standardMissionProfiles?.profiles) ? organisationSettings.standardMissionProfiles.profiles : Array.isArray(organisationSettings.standardMissionProfiles) ? organisationSettings.standardMissionProfiles : []).filter((profile) => String(profile?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile?.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)));
   const masterLmpAccessRules = Array.isArray(organisationSettings.masterLmpAccess) ? organisationSettings.masterLmpAccess : [];
   const masterLmpAccessForUnit = masterLmpAccessRules.filter((rule) => !rule?.unitCode || normaliseUnitSettingsIdentifier(rule.unitCode) === normaliseUnitSettingsIdentifier(unit?.code));
-  const userAccessForUnit = (platformConfig?.userAccess || []).filter((access) => !access?.unitCode || normaliseUnitSettingsIdentifier(access.unitCode) === normaliseUnitSettingsIdentifier(unit?.code));
+  const unitHomeLocationCode = normaliseUnitSettingsIdentifier(unit?.locationCode);
+  const userAccessForUnit = (platformConfig?.userAccess || []).filter((access) => {
+    const accessUnitCode = normaliseUnitSettingsIdentifier(access?.unitCode);
+    const accessLocationCode = normaliseUnitSettingsIdentifier(access?.locationCode);
+    if (accessUnitCode) return accessUnitCode === normaliseUnitSettingsIdentifier(unit?.code);
+    return !accessLocationCode || accessLocationCode === unitHomeLocationCode;
+  });
+  const getAccessUserLabel = (access) => {
+    const userId = String(access?.userId || "").trim();
+    const user = platformUsers.find((candidate) => [candidate?.userId, candidate?.username, candidate?.id].map((value) => String(value || "").trim()).includes(userId));
+    const fullName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+    return access?.displayName || access?.userName || fullName || user?.username || userId || "Unknown user";
+  };
+  const getAccessProfileLabels = (access) => {
+    const profileIds = Array.from(new Set([
+      ...Array.isArray(access?.settings?.permissionProfileIds) ? access.settings.permissionProfileIds : [],
+      ...Array.isArray(access?.profileIds) ? access.profileIds : [],
+      access?.profileId
+    ].map((value) => String(value || "").trim()).filter(Boolean)));
+    return profileIds.map((profileId) => permissionProfileNameMap[profileId] || profileId);
+  };
+  const formatAccessScopeSummary = (access) => {
+    const base = access?.locationCode || (access?.unitCode ? unit?.locationCode : "") || "All bases";
+    const unitScope = access?.unitCode || "All units";
+    const moduleScope = access?.moduleCode || "All enabled features";
+    const role = access?.role || "Role not set";
+    const accessLevel = access?.accessLevel || "Access not set";
+    const status = access?.status || "ACTIVE";
+    return `${base} / ${unitScope} / ${moduleScope} / ${role} / ${accessLevel} / ${status}`;
+  };
+  const userAccessScopeCards = Object.values(userAccessForUnit.reduce((groups, access) => {
+    const profiles = getAccessProfileLabels(access);
+    const summary = formatAccessScopeSummary(access);
+    const key = [
+      getAccessUserLabel(access),
+      summary,
+      profiles.join("|") || "No permission profile assigned"
+    ].join("::");
+    if (!groups[key]) {
+      groups[key] = {
+        access,
+        userLabel: getAccessUserLabel(access),
+        summary,
+        profiles,
+        count: 0
+      };
+    }
+    groups[key].count += 1;
+    return groups;
+  }, {}));
   const activeLicences = (platformConfig?.licenses || []).filter((license) => String(license?.status || "ACTIVE").toUpperCase() === "ACTIVE");
   const unitCallsignEntries = unitCallsignSettings.entries.filter((entry) => normaliseUnitSettingsIdentifier(entry.unitCode) === normaliseUnitSettingsIdentifier(unit?.code));
   const modelCrewPositions = crewPositionTerminology.positions.filter((position) => !position.operationalModels?.length || position.operationalModels.includes(operationalModel2));
@@ -9537,13 +9589,6 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     updateOrganisationSettings({
       masterLmpAccess: masterLmpAccessRules.map((candidate) => candidate === rule || String(candidate?.id || candidate?.masterLmpId || candidate?.masterLmpName || "") === String(rule?.id || rule?.masterLmpId || rule?.masterLmpName || "") ? { ...candidate, ...patch } : candidate)
     });
-  };
-  const updateUserAccessScope = (access, patch) => {
-    if (!onUpdatePlatformConfig) return;
-    onUpdatePlatformConfig((current) => ({
-      ...current,
-      userAccess: (current?.userAccess || []).map((candidate) => candidate === access || String(candidate?.id || candidate?.userId || candidate?.userName || "") === String(access?.id || access?.userId || access?.userName || "") ? { ...candidate, ...patch } : candidate)
-    }));
   };
   const updateLicenseRecord = (license, patch) => {
     if (!onUpdatePlatformConfig) return;
@@ -9775,12 +9820,22 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Location", value: rule.locationCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { locationCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit", value: rule.unitCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { unitCode: value }), disabled: true })
         ] }, rule.id || index)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Access rules", value: "No unit-specific Master LMP restrictions. Organisation defaults apply.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "User Access Scopes", description: "Users or profiles with access that includes this unit.", action: settingsLink("platform-user-access", "Take me there", { locationCode: unit.locationCode, focusSubsectionId: unit.locationCode ? `platform-user-access-location-${settingsAnchorSuffix(unit.locationCode)}` : "platform-user-access-records" }), children: userAccessForUnit.length > 0 ? userAccessForUnit.map((access, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "User", value: access.displayName || access.userName || access.userId || "", onChange: (value) => updateUserAccessScope(access, { displayName: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profiles", value: Array.isArray(access.profileIds) ? access.profileIds.join(", ") : access.profileId || "", onChange: (value) => updateUserAccessScope(access, { profileIds: value.split(",").map((item) => item.trim()).filter(Boolean) }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Module", value: access.moduleCode || "", onChange: (value) => updateUserAccessScope(access, { moduleCode: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit", value: access.unitCode || "", onChange: (value) => updateUserAccessScope(access, { unitCode: value }), disabled: true })
-        ] }, access.id || index)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Users", value: "No access scopes currently include this unit.", muted: true }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "User Access Scopes", description: "Users or profiles with access that includes this unit.", action: settingsLink("platform-user-access", "Take me there", { locationCode: unit.locationCode, focusSubsectionId: unit.locationCode ? `platform-user-access-location-${settingsAnchorSuffix(unit.locationCode)}` : "platform-user-access-records" }), children: userAccessScopeCards.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 border-t border-white/10 p-4", children: userAccessScopeCards.map((card, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-white/10 bg-slate-950/35 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-slate-50", children: card.userLabel }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs font-semibold leading-5 text-cyan-100", children: card.summary })
+            ] }),
+            card.count > 1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
+              card.count,
+              " matching records"
+            ] }) : null
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-2 md:grid-cols-[120px_minmax(0,1fr)] md:items-start", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsLabelClass, children: "Permission profiles" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${card.profiles.length > 0 ? "text-slate-100" : "text-slate-400"}`, children: card.profiles.length > 0 ? card.profiles.join(", ") : "No permission profile assigned" })
+          ] })
+        ] }, `${card.userLabel}-${card.summary}-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Users", value: "No access scopes currently include this unit.", muted: true }) })
       ] });
     }
     if (activeCategory === "deployment") {
