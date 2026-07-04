@@ -454,15 +454,16 @@ export const normaliseMasterLmpCatalogue = (config: PlatformConfig | null): Plat
   const entriesByCode = new Map<string, PlatformMasterLmpCatalogueEntry>();
 
   source.forEach((entry: any, index: number) => {
-    const code = String(entry?.code || entry?.lmpCode || entry?.name || '').trim();
-    if (!code) return;
-    const key = normaliseAccessValue(code);
+    const rawCode = String(entry?.code || entry?.lmpCode || entry?.name || '');
+    const codeForKey = rawCode.trim();
+    if (!codeForKey) return;
+    const key = normaliseAccessValue(codeForKey);
     if (entriesByCode.has(key)) return;
     entriesByCode.set(key, {
       id: String(entry?.id || `master-lmp-catalogue-${index + 1}`),
-      code,
-      name: String(entry?.name || code).trim(),
-      description: String(entry?.description || '').trim(),
+      code: rawCode,
+      name: entry?.name !== undefined ? String(entry.name) : codeForKey,
+      description: String(entry?.description || ''),
       status: String(entry?.status || 'ACTIVE').toUpperCase(),
     });
   });

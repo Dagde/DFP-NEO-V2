@@ -8344,52 +8344,25 @@ const FieldLabel = ({ label, info }: { label: string; info?: string }) => (
   </span>
 );
 
-const insertPreventedInputSpace = (
-  event: React.KeyboardEvent<HTMLInputElement>,
-  onChange: (value: string) => void,
-  maxLength?: number,
-) => {
-  if (event.key !== ' ' || !event.defaultPrevented) return;
-  const input = event.currentTarget;
-  if (input.disabled || input.readOnly) return;
-  const currentValue = input.value || '';
-  const selectionStart = input.selectionStart ?? currentValue.length;
-  const selectionEnd = input.selectionEnd ?? selectionStart;
-  const nextValue = `${currentValue.slice(0, selectionStart)} ${currentValue.slice(selectionEnd)}`;
-  const limitedValue = typeof maxLength === 'number' ? nextValue.slice(0, maxLength) : nextValue;
-  const nextCursor = Math.min(selectionStart + 1, limitedValue.length);
-  if (limitedValue === currentValue) return;
-  onChange(limitedValue);
-  window.requestAnimationFrame(() => {
-    input.setSelectionRange(nextCursor, nextCursor);
-  });
-};
-
-const Field = ({ label, value, disabled, onChange, info, maxLength }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string; maxLength?: number }) => {
-  const handleKeyDownCapture = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    insertPreventedInputSpace(event, onChange, maxLength);
-    stopEditableKeyPropagation(event);
-  };
-
-  return (
-    <label>
-      <FieldLabel label={label} info={info} />
-      <input
-        className={fieldClass}
-        value={value || ''}
-        disabled={disabled}
-        maxLength={maxLength}
-        onKeyDownCapture={handleKeyDownCapture}
-        onChange={(event) => onChange(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value)}
-      />
-      {typeof maxLength === 'number' ? (
-        <span className="mt-1 block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-          {(value || '').length}/{maxLength}
-        </span>
-      ) : null}
-    </label>
-  );
-};
+const Field = ({ label, value, disabled, onChange, info, maxLength }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string; maxLength?: number }) => (
+  <label>
+    <FieldLabel label={label} info={info} />
+    <input
+      className={fieldClass}
+      value={value || ''}
+      disabled={disabled}
+      maxLength={maxLength}
+      onKeyDownCapture={stopEditableKeyPropagation}
+      onKeyDown={stopEditableKeyPropagation}
+      onChange={(event) => onChange(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value)}
+    />
+    {typeof maxLength === 'number' ? (
+      <span className="mt-1 block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+        {(value || '').length}/{maxLength}
+      </span>
+    ) : null}
+  </label>
+);
 
 const OffsetField = ({ label, value, disabled, onChange, listId, options = [], maxLength }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; listId?: string; options?: string[]; maxLength?: number }) => (
   <label>

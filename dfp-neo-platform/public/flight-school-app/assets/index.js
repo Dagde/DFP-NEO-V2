@@ -2288,15 +2288,16 @@ const normaliseMasterLmpCatalogue = (config) => {
   const source = configuredEntries.length > 0 ? configuredEntries : DEFAULT_MASTER_LMP_CATALOGUE;
   const entriesByCode = /* @__PURE__ */ new Map();
   source.forEach((entry, index) => {
-    const code = String(entry?.code || entry?.lmpCode || entry?.name || "").trim();
-    if (!code) return;
-    const key = normaliseAccessValue(code);
+    const rawCode = String(entry?.code || entry?.lmpCode || entry?.name || "");
+    const codeForKey = rawCode.trim();
+    if (!codeForKey) return;
+    const key = normaliseAccessValue(codeForKey);
     if (entriesByCode.has(key)) return;
     entriesByCode.set(key, {
       id: String(entry?.id || `master-lmp-catalogue-${index + 1}`),
-      code,
-      name: String(entry?.name || code).trim(),
-      description: String(entry?.description || "").trim(),
+      code: rawCode,
+      name: entry?.name !== void 0 ? String(entry.name) : codeForKey,
+      description: String(entry?.description || ""),
       status: String(entry?.status || "ACTIVE").toUpperCase()
     });
   });
@@ -65909,47 +65910,26 @@ const FieldLabel = ({ label, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: label }),
   info ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: info }) : null
 ] });
-const insertPreventedInputSpace = (event, onChange, maxLength) => {
-  if (event.key !== " " || !event.defaultPrevented) return;
-  const input = event.currentTarget;
-  if (input.disabled || input.readOnly) return;
-  const currentValue = input.value || "";
-  const selectionStart = input.selectionStart ?? currentValue.length;
-  const selectionEnd = input.selectionEnd ?? selectionStart;
-  const nextValue = `${currentValue.slice(0, selectionStart)} ${currentValue.slice(selectionEnd)}`;
-  const limitedValue = typeof maxLength === "number" ? nextValue.slice(0, maxLength) : nextValue;
-  const nextCursor = Math.min(selectionStart + 1, limitedValue.length);
-  if (limitedValue === currentValue) return;
-  onChange(limitedValue);
-  window.requestAnimationFrame(() => {
-    input.setSelectionRange(nextCursor, nextCursor);
-  });
-};
-const Field = ({ label, value, disabled, onChange, info, maxLength }) => {
-  const handleKeyDownCapture = (event) => {
-    insertPreventedInputSpace(event, onChange, maxLength);
-    stopEditableKeyPropagation(event);
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "input",
-      {
-        className: fieldClass,
-        value: value || "",
-        disabled,
-        maxLength,
-        onKeyDownCapture: handleKeyDownCapture,
-        onChange: (event) => onChange(typeof maxLength === "number" ? event.target.value.slice(0, maxLength) : event.target.value)
-      }
-    ),
-    typeof maxLength === "number" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-1 block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: [
-      (value || "").length,
-      "/",
-      maxLength
-    ] }) : null
-  ] });
-};
+const Field = ({ label, value, disabled, onChange, info, maxLength }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      className: fieldClass,
+      value: value || "",
+      disabled,
+      maxLength,
+      onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDown: stopEditableKeyPropagation,
+      onChange: (event) => onChange(typeof maxLength === "number" ? event.target.value.slice(0, maxLength) : event.target.value)
+    }
+  ),
+  typeof maxLength === "number" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-1 block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: [
+    (value || "").length,
+    "/",
+    maxLength
+  ] }) : null
+] });
 const OffsetField = ({ label, value, disabled, onChange, listId, options = [], maxLength }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label }),
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-[15px]", children: [
