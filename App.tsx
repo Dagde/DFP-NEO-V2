@@ -5250,6 +5250,7 @@ const REMEDIAL_EARLIEST_START = 10.0;
 const REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY = 'neo_remedial_force_schedule_requests';
 const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY = 'dfp_active_operational_context';
 const ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY = 'neo_context_selector_diag';
+const PLATFORM_CONFIG_UPDATED_EVENT = 'dfp-platform-config-updated';
 const HIGHEST_PRIORITY_EVENTS_STORAGE_PREFIX = 'dfp_highest_priority_events_v1';
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 
@@ -21245,6 +21246,17 @@ const App: React.FC = () => {
         return () => { cancelled = true; };
     }, []);
 
+    useEffect(() => {
+        const handlePlatformConfigUpdated = (event: Event) => {
+            const nextConfig = (event as CustomEvent<{ config?: PlatformConfig }>).detail?.config;
+            if (!nextConfig || !Array.isArray(nextConfig.units)) return;
+            setPlatformConfig(nextConfig);
+            setPlatformConfigLoaded(true);
+        };
+        window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+        return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+    }, []);
+
     const knownDfpLocationAliases = useCallback((identifier: unknown): string[] => {
         const rawIdentifier = String(identifier || '').trim();
         if (!rawIdentifier) return [];
@@ -24078,6 +24090,9 @@ const App: React.FC = () => {
                     ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
                 },
                 body: JSON.stringify(nextConfig),
+            }).then((res) => {
+                if (!res.ok) throw new Error(`Save failed (${res.status})`);
+                window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
             }).catch((error) => {
                 console.warn('[PlatformConfig] Failed to save unit training report settings:', error);
             });

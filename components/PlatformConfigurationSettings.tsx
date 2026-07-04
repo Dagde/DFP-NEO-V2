@@ -485,6 +485,12 @@ const COMMON_IANA_TIMEZONES = [
 
 const AIRFIELD_CATALOGUE_FILE = 'airfield-location-catalog.json';
 const MAX_AIRFIELD_SUGGESTIONS = 6;
+const PLATFORM_CONFIG_UPDATED_EVENT = 'dfp-platform-config-updated';
+
+const notifyPlatformConfigUpdated = (config: PlatformConfig) => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config } }));
+};
 
 const createClientRecordId = (prefix: string): string => (
   `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
@@ -1457,6 +1463,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [applyingChanges, setApplyingChanges] = useState(false);
   const [error, setError] = useState('');
   const loadedConfigRef = useRef<PlatformConfig>(emptyConfig);
+
+  useEffect(() => {
+    const handlePlatformConfigUpdated = (event: Event) => {
+      const nextConfig = (event as CustomEvent<{ config?: PlatformConfig }>).detail?.config;
+      if (!nextConfig || !Array.isArray(nextConfig.units)) return;
+      loadedConfigRef.current = nextConfig;
+      setConfig(nextConfig);
+    };
+    window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+    return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+  }, []);
   const [selectedAccessUserId, setSelectedAccessUserId] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
@@ -3810,6 +3827,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         });
       });
       loadedConfigRef.current = configToSave;
+      notifyPlatformConfigUpdated(configToSave);
       if (!reloadPage) {
         await reloadPlatformConfig();
         onShowSuccess(options?.successMessage || 'Platform configuration saved.');
