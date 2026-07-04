@@ -5384,7 +5384,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         onChange={(value) => updateMasterLmpCatalogueEntry(index, { status: value })}
                       />
                       <div>
-                        <label className={labelClass}>Delete</label>
+                        <div aria-hidden="true" className="h-[18px]" />
                         <button
                           type="button"
                           onClick={() => void deleteMasterLmpCatalogueEntry(index)}

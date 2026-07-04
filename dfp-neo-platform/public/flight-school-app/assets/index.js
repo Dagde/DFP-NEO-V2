@@ -63124,7 +63124,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: labelClass, children: "Delete" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "aria-hidden": "true", className: "h-[18px]" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
