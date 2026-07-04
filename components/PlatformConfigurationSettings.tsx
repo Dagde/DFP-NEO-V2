@@ -3159,6 +3159,49 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     ]);
   };
 
+  const deleteMasterLmpCatalogueEntry = async (index: number) => {
+    if (!canEdit) return;
+    const entry = masterLmpCatalogue[index];
+    if (!entry) return;
+    const lmpCode = String(entry.code || entry.name || '').trim();
+    const lmpLabel = entry.name || entry.code || 'this Master LMP';
+    const linkedSyllabusCount = masterLmpSyllabusCounts.get(lmpCode.toUpperCase()) || 0;
+    const linkedAccessRules = masterLmpAccessRules.filter((rule) => (
+      String(rule.lmpCode || '').trim().toUpperCase() === lmpCode.toUpperCase()
+    )).length;
+    const password = await showDarkPrompt({
+      title: 'Delete Master LMP',
+      message: `Enter your password to delete ${lmpLabel}. This removes the catalogue row and ${linkedAccessRules} access rule${linkedAccessRules === 1 ? '' : 's'}. Existing syllabus content is not deleted (${linkedSyllabusCount} event${linkedSyllabusCount === 1 ? '' : 's'} linked).`,
+      inputLabel: 'Password',
+      inputType: 'password',
+      inputPlaceholder: 'Enter password',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'warning',
+    });
+    if (!password) return;
+
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert('The password was not accepted. The Master LMP was not deleted.', 'Password Required', 'warning');
+        return;
+      }
+    } catch {
+      await showDarkAlert('The app could not verify your password. The Master LMP was not deleted.', 'Password Check Failed', 'error');
+      return;
+    }
+
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      masterLmpCatalogue: masterLmpCatalogue.filter((_, entryIndex) => entryIndex !== index),
+      masterLmpAccess: masterLmpAccessRules.filter((rule) => (
+        String(rule.lmpCode || '').trim().toUpperCase() !== lmpCode.toUpperCase()
+      )),
+    }));
+    onShowSuccess(`Deleted Master LMP ${lmpLabel}.`);
+  };
+
   const updateMasterLmpAccessRule = (index: number, changes: Partial<PlatformMasterLmpAccessRule>) => {
     updateMasterLmpAccessRules(masterLmpAccessRules.map((rule, ruleIndex) => (
       ruleIndex === index ? { ...rule, ...changes } : rule
@@ -5302,11 +5345,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">{masterLmpCatalogue.length} records</span>
             </div>
             <div className="max-w-full overflow-x-auto pb-2">
-              <div className="min-w-[1060px] space-y-3">
+              <div className="min-w-[1110px] space-y-3">
                 {masterLmpCatalogue.map((entry, index) => {
                   const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || '').trim().toUpperCase()) || 0;
                   return (
-                    <div key={entry.id || `master-lmp-catalogue-${index}`} className="grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px] gap-3 rounded border border-gray-700 bg-gray-950 p-3">
+                    <div key={entry.id || `master-lmp-catalogue-${index}`} className="grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px_42px] gap-3 rounded border border-gray-700 bg-gray-950 p-3">
                       <Field
                         label="Code"
                         value={entry.code}
@@ -5339,6 +5382,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         options={['ACTIVE', 'INACTIVE']}
                         onChange={(value) => updateMasterLmpCatalogueEntry(index, { status: value })}
                       />
+                      <div>
+                        <label className={labelClass}>Delete</label>
+                        <button
+                          type="button"
+                          onClick={() => void deleteMasterLmpCatalogueEntry(index)}
+                          disabled={!canEdit}
+                          title={`Delete ${entry.name || entry.code || 'Master LMP'}`}
+                          className="flex min-h-[38px] w-full items-center justify-center rounded border border-red-500/45 bg-red-950/35 text-sm font-bold text-red-200 transition hover:border-red-300 hover:bg-red-900/50 disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          🗑
+                        </button>
+                      </div>
                     </div>
                   );
                 })}

@@ -6383,7 +6383,7 @@ app.put('/api/syllabus/:id', async (req, res) => {
     const ARRAY_FIELDS = ['courses','methodOfDelivery','methodOfAssessment','resourcesPhysical','acceptableAircraftConfigs','assessedElements','resourcesHuman',
                           'eventDetailsCommon','eventDetailsSortie','prerequisites','prerequisitesGround','prerequisitesFlying'];
     const BOOL_FIELDS = ['isActive','isRemedial','assessmentRequired'];
-    const INT_FIELDS = ['resourceNumber'];
+    const INT_FIELDS = ['resourceNumber', 'sortOrder'];
 
     const setClauses = fields.map((f, i) => {
       if (ARRAY_FIELDS.includes(f)) return `"${f}" = $${i + 2}::text[]`;

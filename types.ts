@@ -444,6 +444,7 @@ export interface SyllabusItemDetail {
   masterEventId?: string;
   lmpSource?: 'master' | 'remedial' | 'custom';
   orderKey?: string;
+  sortOrder?: number;
   anchorAfterMasterEventId?: string;
   anchorBeforeMasterEventId?: string;
   anchorPolicy?: 'between' | 'after' | 'before' | 'fixed';

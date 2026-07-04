@@ -46267,6 +46267,8 @@ const SyllabusView = ({
   const [isDeletingEvent, setIsDeletingEvent] = reactExports.useState(false);
   const [isDeleting, setIsDeleting] = reactExports.useState(false);
   const [isSaving2, setIsSaving] = reactExports.useState(false);
+  const [draggedEventId, setDraggedEventId] = reactExports.useState(null);
+  const [isReorderingEvents, setIsReorderingEvents] = reactExports.useState(false);
   const filteredSyllabusDetails = reactExports.useMemo(() => {
     return unitScopedSyllabusDetails.filter((item) => {
       if (item.isActive === false) return false;
@@ -46276,6 +46278,10 @@ const SyllabusView = ({
         return activeTab === "master" && selectedCourseType === "BPC+IPC";
       }
       return item.courses.includes(selectedCourseType);
+    }).sort((left, right) => {
+      const leftOrder = Number.isFinite(Number(left.sortOrder)) ? Number(left.sortOrder) : Number.MAX_SAFE_INTEGER;
+      const rightOrder = Number.isFinite(Number(right.sortOrder)) ? Number(right.sortOrder) : Number.MAX_SAFE_INTEGER;
+      return leftOrder - rightOrder || String(left.code || "").localeCompare(String(right.code || ""), void 0, { numeric: true, sensitivity: "base" }) || String(left.id || "").localeCompare(String(right.id || ""));
     });
   }, [activeTab, unitScopedSyllabusDetails, selectedCourseType]);
   const selectedCourseEventCount = filteredSyllabusDetails.length;
@@ -46930,6 +46936,8 @@ const SyllabusView = ({
       alert(`Please select a ${activeCollectionNoun} before adding an event.`);
       return;
     }
+    const existingOrders = filteredSyllabusDetails.map((item) => Number(item.sortOrder)).filter((order) => Number.isFinite(order));
+    const nextSortOrder = (existingOrders.length > 0 ? Math.max(...existingOrders) : 0) + 10;
     const isAcademicCourse = filteredSyllabusDetails.some((s) => s.type === "Academics");
     const newItem = {
       id: `new-${Date.now()}`,
@@ -46958,7 +46966,8 @@ const SyllabusView = ({
       location: shouldScopeCreatedItemsToActiveUnit ? activeLocationNormalised : "",
       unit: shouldScopeCreatedItemsToActiveUnit ? activeUnitNormalised : void 0,
       courses: [selectedCourseType],
-      lmpType: activeLmpType
+      lmpType: activeLmpType,
+      sortOrder: nextSortOrder
     };
     if (onAddItem) onAddItem(newItem);
     setSelectedItem(newItem);
@@ -46969,6 +46978,41 @@ const SyllabusView = ({
       setSelectedItem(saved);
       setEditedItem(JSON.parse(JSON.stringify(saved)));
     }).catch((err) => console.warn("Could not pre-create event in DB:", err));
+  };
+  const handleEventTileDrop = async (targetId) => {
+    if (!draggedEventId || draggedEventId === targetId || isEditing || isFrozen || isReorderingEvents) return;
+    const currentIndex = filteredSyllabusDetails.findIndex((item) => item.id === draggedEventId);
+    const targetIndex = filteredSyllabusDetails.findIndex((item) => item.id === targetId);
+    if (currentIndex < 0 || targetIndex < 0) return;
+    const reordered = [...filteredSyllabusDetails];
+    const [moved] = reordered.splice(currentIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+    setIsReorderingEvents(true);
+    try {
+      const updates = reordered.map((item, index) => ({
+        item,
+        sortOrder: (index + 1) * 10
+      })).filter(({ item, sortOrder }) => Number(item.sortOrder) !== sortOrder);
+      const savedItems = await Promise.all(updates.map(async ({ item, sortOrder }) => {
+        const saved = await updateSyllabusItem(item.id, { sortOrder }, `Reordered ${activeCollectionTitle} events`);
+        return { ...item, ...saved, id: item.id, sortOrder };
+      }));
+      savedItems.forEach(onUpdateItem);
+      const selectedSaved = savedItems.find((item) => item.id === selectedItem?.id);
+      if (selectedSaved) setSelectedItem(selectedSaved);
+      logAudit({
+        action: "Edit",
+        description: `Reordered ${activeCollectionTitle} events`,
+        changes: `${moved.code || "Event"} moved to position ${targetIndex + 1}`,
+        page: "LMP/Event Details"
+      });
+    } catch (error) {
+      console.error("[LMP/Event Details] Failed to reorder events:", error);
+      alert(`Event order was not saved: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setDraggedEventId(null);
+      setIsReorderingEvents(false);
+    }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", onKeyDownCapture: stopEditableKeyPropagation, children: [
@@ -47115,16 +47159,36 @@ const SyllabusView = ({
               "button",
               {
                 type: "button",
+                draggable: !isEditing && !isFrozen && !isReorderingEvents,
+                onDragStart: (event) => {
+                  if (isEditing || isFrozen || isReorderingEvents) {
+                    event.preventDefault();
+                    return;
+                  }
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", item.id);
+                  setDraggedEventId(item.id);
+                },
+                onDragOver: (event) => {
+                  if (!draggedEventId || draggedEventId === item.id || isEditing || isFrozen || isReorderingEvents) return;
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                },
+                onDrop: (event) => {
+                  event.preventDefault();
+                  void handleEventTileDrop(item.id);
+                },
+                onDragEnd: () => setDraggedEventId(null),
                 onClick: () => {
-                  if (!isEditing) {
+                  if (!isEditing && !isReorderingEvents) {
                     setHoveredItem(null);
                     setSelectedItem(item);
                   }
                 },
-                disabled: isEditing,
+                disabled: isEditing || isReorderingEvents,
                 "aria-pressed": isSelected,
                 title: `${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ""}`,
-                className: `relative mb-2 h-[62px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? "border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40" : "border-emerald-500/60 bg-gray-900 text-gray-200 shadow-black/15"} ${isEditing ? "cursor-not-allowed opacity-55" : "hover:border-emerald-300/80 hover:bg-gray-800"}`,
+                className: `relative mb-2 h-[62px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? "border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40" : draggedEventId === item.id ? "border-cyan-300 bg-gray-800/70 text-gray-100 opacity-70 shadow-cyan-950/30" : "border-emerald-500/60 bg-gray-900 text-gray-200 shadow-black/15"} ${isEditing || isReorderingEvents ? "cursor-not-allowed opacity-55" : "cursor-grab hover:border-emerald-300/80 hover:bg-gray-800 active:cursor-grabbing"}`,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `absolute left-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-400"}`, children: [
                     "P ",
@@ -61168,6 +61232,42 @@ This permanently removes the organisation record from platform configuration and
       }
     ]);
   };
+  const deleteMasterLmpCatalogueEntry = async (index) => {
+    if (!canEdit) return;
+    const entry = masterLmpCatalogue[index];
+    if (!entry) return;
+    const lmpCode = String(entry.code || entry.name || "").trim();
+    const lmpLabel = entry.name || entry.code || "this Master LMP";
+    const linkedSyllabusCount = masterLmpSyllabusCounts.get(lmpCode.toUpperCase()) || 0;
+    const linkedAccessRules = masterLmpAccessRules.filter((rule) => String(rule.lmpCode || "").trim().toUpperCase() === lmpCode.toUpperCase()).length;
+    const password = await showDarkPrompt({
+      title: "Delete Master LMP",
+      message: `Enter your password to delete ${lmpLabel}. This removes the catalogue row and ${linkedAccessRules} access rule${linkedAccessRules === 1 ? "" : "s"}. Existing syllabus content is not deleted (${linkedSyllabusCount} event${linkedSyllabusCount === 1 ? "" : "s"} linked).`,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted. The Master LMP was not deleted.", "Password Required", "warning");
+        return;
+      }
+    } catch {
+      await showDarkAlert("The app could not verify your password. The Master LMP was not deleted.", "Password Check Failed", "error");
+      return;
+    }
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      masterLmpCatalogue: masterLmpCatalogue.filter((_, entryIndex) => entryIndex !== index),
+      masterLmpAccess: masterLmpAccessRules.filter((rule) => String(rule.lmpCode || "").trim().toUpperCase() !== lmpCode.toUpperCase())
+    }));
+    onShowSuccess(`Deleted Master LMP ${lmpLabel}.`);
+  };
   const updateMasterLmpAccessRule = (index, changes) => {
     updateMasterLmpAccessRules(masterLmpAccessRules.map((rule, ruleIndex) => ruleIndex === index ? { ...rule, ...changes } : rule));
   };
@@ -62958,9 +63058,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               " records"
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1060px] space-y-3", children: masterLmpCatalogue.map((entry, index) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1110px] space-y-3", children: masterLmpCatalogue.map((entry, index) => {
             const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || "").trim().toUpperCase()) || 0;
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px] gap-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px_42px] gap-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 Field,
                 {
@@ -63006,7 +63106,21 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   options: ["ACTIVE", "INACTIVE"],
                   onChange: (value) => updateMasterLmpCatalogueEntry(index, { status: value })
                 }
-              )
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: labelClass, children: "Delete" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => void deleteMasterLmpCatalogueEntry(index),
+                    disabled: !canEdit,
+                    title: `Delete ${entry.name || entry.code || "Master LMP"}`,
+                    className: "flex min-h-[38px] w-full items-center justify-center rounded border border-red-500/45 bg-red-950/35 text-sm font-bold text-red-200 transition hover:border-red-300 hover:bg-red-900/50 disabled:cursor-not-allowed disabled:opacity-45",
+                    children: "🗑"
+                  }
+                )
+              ] })
             ] }, entry.id || `master-lmp-catalogue-${index}`);
           }) }) })
         ] }),

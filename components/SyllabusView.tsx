@@ -1195,6 +1195,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const [isDeletingEvent, setIsDeletingEvent] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [draggedEventId, setDraggedEventId] = useState<string | null>(null);
+  const [isReorderingEvents, setIsReorderingEvents] = useState(false);
 
   // Filter items based on selected course type (exclude inactive/deleted items)
   const filteredSyllabusDetails = useMemo(() => {
@@ -1207,6 +1209,12 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               return activeTab === 'master' && selectedCourseType === 'BPC+IPC';
           }
           return item.courses.includes(selectedCourseType);
+      }).sort((left, right) => {
+          const leftOrder = Number.isFinite(Number(left.sortOrder)) ? Number(left.sortOrder) : Number.MAX_SAFE_INTEGER;
+          const rightOrder = Number.isFinite(Number(right.sortOrder)) ? Number(right.sortOrder) : Number.MAX_SAFE_INTEGER;
+          return leftOrder - rightOrder
+              || String(left.code || '').localeCompare(String(right.code || ''), undefined, { numeric: true, sensitivity: 'base' })
+              || String(left.id || '').localeCompare(String(right.id || ''));
       });
   }, [activeTab, unitScopedSyllabusDetails, selectedCourseType]);
 
@@ -1940,6 +1948,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           alert(`Please select a ${activeCollectionNoun} before adding an event.`);
           return;
       }
+      const existingOrders = filteredSyllabusDetails
+          .map(item => Number(item.sortOrder))
+          .filter(order => Number.isFinite(order));
+      const nextSortOrder = (existingOrders.length > 0 ? Math.max(...existingOrders) : 0) + 10;
       // Create a blank new item pre-filled for the currently selected course
       // Determine if this is an Academics course (so new events default to Academics type)
       const isAcademicCourse = filteredSyllabusDetails.some(s => s.type === 'Academics');
@@ -1971,6 +1983,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           unit: shouldScopeCreatedItemsToActiveUnit ? activeUnitNormalised : undefined,
           courses: [selectedCourseType],
           lmpType: activeLmpType,
+          sortOrder: nextSortOrder,
       };
       // Add optimistically to UI, then persist to DB
       if (onAddItem) onAddItem(newItem);
@@ -1981,6 +1994,44 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       createSyllabusItem({ ...newItem, id: undefined }, `New event added via ${activeCollectionTitle} editor`)
           .then(saved => { if (onAddItem) onAddItem(saved); setSelectedItem(saved); setEditedItem(JSON.parse(JSON.stringify(saved))); })
           .catch(err => console.warn('Could not pre-create event in DB:', err));
+  };
+
+  const handleEventTileDrop = async (targetId: string) => {
+      if (!draggedEventId || draggedEventId === targetId || isEditing || isFrozen || isReorderingEvents) return;
+      const currentIndex = filteredSyllabusDetails.findIndex(item => item.id === draggedEventId);
+      const targetIndex = filteredSyllabusDetails.findIndex(item => item.id === targetId);
+      if (currentIndex < 0 || targetIndex < 0) return;
+
+      const reordered = [...filteredSyllabusDetails];
+      const [moved] = reordered.splice(currentIndex, 1);
+      reordered.splice(targetIndex, 0, moved);
+      setIsReorderingEvents(true);
+      try {
+          const updates = reordered.map((item, index) => ({
+              item,
+              sortOrder: (index + 1) * 10,
+          })).filter(({ item, sortOrder }) => Number(item.sortOrder) !== sortOrder);
+
+          const savedItems = await Promise.all(updates.map(async ({ item, sortOrder }) => {
+              const saved = await updateSyllabusItem(item.id, { sortOrder }, `Reordered ${activeCollectionTitle} events`);
+              return { ...item, ...saved, id: item.id, sortOrder };
+          }));
+          savedItems.forEach(onUpdateItem);
+          const selectedSaved = savedItems.find(item => item.id === selectedItem?.id);
+          if (selectedSaved) setSelectedItem(selectedSaved);
+          logAudit({
+              action: 'Edit',
+              description: `Reordered ${activeCollectionTitle} events`,
+              changes: `${moved.code || 'Event'} moved to position ${targetIndex + 1}`,
+              page: 'LMP/Event Details',
+          });
+      } catch (error) {
+          console.error('[LMP/Event Details] Failed to reorder events:', error);
+          alert(`Event order was not saved: ${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+          setDraggedEventId(null);
+          setIsReorderingEvents(false);
+      }
   };
 
   return (
@@ -2140,20 +2191,42 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               <button
                 key={item.id}
                 type="button"
+                draggable={!isEditing && !isFrozen && !isReorderingEvents}
+                onDragStart={(event) => {
+                    if (isEditing || isFrozen || isReorderingEvents) {
+                        event.preventDefault();
+                        return;
+                    }
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/plain', item.id);
+                    setDraggedEventId(item.id);
+                }}
+                onDragOver={(event) => {
+                    if (!draggedEventId || draggedEventId === item.id || isEditing || isFrozen || isReorderingEvents) return;
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'move';
+                }}
+                onDrop={(event) => {
+                    event.preventDefault();
+                    void handleEventTileDrop(item.id);
+                }}
+                onDragEnd={() => setDraggedEventId(null)}
                 onClick={() => {
-                    if (!isEditing) {
+                    if (!isEditing && !isReorderingEvents) {
                         setHoveredItem(null);
                         setSelectedItem(item);
                     }
                 }}
-                disabled={isEditing}
+                disabled={isEditing || isReorderingEvents}
                 aria-pressed={isSelected}
                 title={`${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ''}`}
                 className={`relative mb-2 h-[62px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${
                     isSelected
                         ? 'border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40'
+                        : draggedEventId === item.id
+                            ? 'border-cyan-300 bg-gray-800/70 text-gray-100 opacity-70 shadow-cyan-950/30'
                         : 'border-emerald-500/60 bg-gray-900 text-gray-200 shadow-black/15'
-                } ${isEditing ? 'cursor-not-allowed opacity-55' : 'hover:border-emerald-300/80 hover:bg-gray-800'}`}
+                } ${isEditing || isReorderingEvents ? 'cursor-not-allowed opacity-55' : 'cursor-grab hover:border-emerald-300/80 hover:bg-gray-800 active:cursor-grabbing'}`}
               >
                 <span className={`absolute left-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? 'text-sky-100' : 'text-gray-400'}`}>
                   P {phaseNum}
