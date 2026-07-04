@@ -46268,6 +46268,7 @@ const SyllabusView = ({
   const [isDeleting, setIsDeleting] = reactExports.useState(false);
   const [isSaving2, setIsSaving] = reactExports.useState(false);
   const [draggedEventId, setDraggedEventId] = reactExports.useState(null);
+  const [eventDropIndicator, setEventDropIndicator] = reactExports.useState(null);
   const [isReorderingEvents, setIsReorderingEvents] = reactExports.useState(false);
   const filteredSyllabusDetails = reactExports.useMemo(() => {
     return unitScopedSyllabusDetails.filter((item) => {
@@ -46500,9 +46501,6 @@ const SyllabusView = ({
       setIsEditing(false);
       setEditedItem(null);
       setEditingCourseTitle("");
-      window.setTimeout(() => {
-        window.location.reload();
-      }, 700);
     } catch (err) {
       alert(`Save failed: ${err.message}`);
     } finally {
@@ -46979,14 +46977,16 @@ const SyllabusView = ({
       setEditedItem(JSON.parse(JSON.stringify(saved)));
     }).catch((err) => console.warn("Could not pre-create event in DB:", err));
   };
-  const handleEventTileDrop = async (targetId) => {
+  const handleEventTileDrop = async (targetId, position = "before") => {
     if (!draggedEventId || draggedEventId === targetId || isEditing || isFrozen || isReorderingEvents) return;
     const currentIndex = filteredSyllabusDetails.findIndex((item) => item.id === draggedEventId);
     const targetIndex = filteredSyllabusDetails.findIndex((item) => item.id === targetId);
     if (currentIndex < 0 || targetIndex < 0) return;
     const reordered = [...filteredSyllabusDetails];
     const [moved] = reordered.splice(currentIndex, 1);
-    reordered.splice(targetIndex, 0, moved);
+    const targetIndexAfterRemoval = reordered.findIndex((item) => item.id === targetId);
+    const insertIndex = position === "after" ? targetIndexAfterRemoval + 1 : targetIndexAfterRemoval;
+    reordered.splice(insertIndex, 0, moved);
     setIsReorderingEvents(true);
     try {
       const updates = reordered.map((item, index) => ({
@@ -47003,7 +47003,7 @@ const SyllabusView = ({
       logAudit({
         action: "Edit",
         description: `Reordered ${activeCollectionTitle} events`,
-        changes: `${moved.code || "Event"} moved to position ${targetIndex + 1}`,
+        changes: `${moved.code || "Event"} moved to position ${insertIndex + 1}`,
         page: "LMP/Event Details"
       });
     } catch (error) {
@@ -47011,6 +47011,7 @@ const SyllabusView = ({
       alert(`Event order was not saved: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setDraggedEventId(null);
+      setEventDropIndicator(null);
       setIsReorderingEvents(false);
     }
   };
@@ -47168,17 +47169,29 @@ const SyllabusView = ({
                   event.dataTransfer.effectAllowed = "move";
                   event.dataTransfer.setData("text/plain", item.id);
                   setDraggedEventId(item.id);
+                  setEventDropIndicator(null);
                 },
                 onDragOver: (event) => {
-                  if (!draggedEventId || draggedEventId === item.id || isEditing || isFrozen || isReorderingEvents) return;
+                  if (!draggedEventId || draggedEventId === item.id || isEditing || isFrozen || isReorderingEvents) {
+                    setEventDropIndicator(null);
+                    return;
+                  }
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "move";
+                  const bounds = event.currentTarget.getBoundingClientRect();
+                  const position = event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+                  setEventDropIndicator({ targetId: item.id, position });
                 },
                 onDrop: (event) => {
                   event.preventDefault();
-                  void handleEventTileDrop(item.id);
+                  const bounds = event.currentTarget.getBoundingClientRect();
+                  const position = event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+                  void handleEventTileDrop(item.id, position);
                 },
-                onDragEnd: () => setDraggedEventId(null),
+                onDragEnd: () => {
+                  setDraggedEventId(null);
+                  setEventDropIndicator(null);
+                },
                 onClick: () => {
                   if (!isEditing && !isReorderingEvents) {
                     setHoveredItem(null);
@@ -47190,6 +47203,8 @@ const SyllabusView = ({
                 title: `${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ""}`,
                 className: `relative mb-2 h-[62px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? "border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40" : draggedEventId === item.id ? "border-cyan-300 bg-gray-800/70 text-gray-100 opacity-70 shadow-cyan-950/30" : "border-emerald-500/60 bg-gray-900 text-gray-200 shadow-black/15"} ${isEditing || isReorderingEvents ? "cursor-not-allowed opacity-55" : "cursor-grab hover:border-emerald-300/80 hover:bg-gray-800 active:cursor-grabbing"}`,
                 children: [
+                  eventDropIndicator?.targetId === item.id && eventDropIndicator.position === "before" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute inset-x-2 top-0 z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" }),
+                  eventDropIndicator?.targetId === item.id && eventDropIndicator.position === "after" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute inset-x-2 bottom-0 z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `absolute left-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-400"}`, children: [
                     "P ",
                     phaseNum
