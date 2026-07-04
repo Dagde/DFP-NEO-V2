@@ -1,7 +1,7 @@
 
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, MouseEvent } from 'react';
-import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee, FlyingWindowExclusionPeriod } from '../types';
+import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee, FlyingWindowExclusionPeriod, FormationCallsign } from '../types';
 import FlightTile from './FlightTile';
 import AirframeColumn from './AirframeColumn';
 import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
@@ -98,6 +98,7 @@ interface ScheduleViewProps {
   platformConfig?: any;
   onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
   onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
+  formationCallsigns?: FormationCallsign[];
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -763,9 +764,10 @@ const UnitSettingsTextAreaRow: React.FC<{
 const OrganisationMyUnitSettings: React.FC<{
     platformConfig?: any;
     unitCode?: string;
+    formationCallsigns?: FormationCallsign[];
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
-}> = ({ platformConfig, unitCode, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
+}> = ({ platformConfig, unitCode, formationCallsigns = [], onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
     const [activeCategory, setActiveCategory] = useState('identity');
     const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
     const units = platformConfig?.units || [];
@@ -798,6 +800,22 @@ const OrganisationMyUnitSettings: React.FC<{
     ].map((profile) => String(profile || '').trim()).filter(Boolean)));
     const activeOrganisation = getActiveOrganisation(platformConfig);
     const organisationSettings = activeOrganisation?.settings || {};
+    const resourceSharingGroups = Array.isArray(organisationSettings.resourceSharingGroups) && organisationSettings.resourceSharingGroups.length > 0
+        ? organisationSettings.resourceSharingGroups
+        : (Array.isArray(organisationSettings.selectedUnits) && organisationSettings.selectedUnits.length > 0
+            ? [{ id: 'legacy-resource-sharing', name: `${organisationSettings.selectedUnits.join('+')} Shared Resources`, selectedUnits: organisationSettings.selectedUnits, allocationMode: organisationSettings.allocationMode }]
+            : []);
+    const staffSharingGroups = Array.isArray(organisationSettings.staffSharingGroups) && organisationSettings.staffSharingGroups.length > 0
+        ? organisationSettings.staffSharingGroups
+        : (Array.isArray(organisationSettings.staffSharingUnits) && organisationSettings.staffSharingUnits.length > 0
+            ? [{ id: 'legacy-staff-sharing', name: `${organisationSettings.staffSharingUnits.join('+')} Staff Sharing`, selectedUnits: organisationSettings.staffSharingUnits }]
+            : []);
+    const resourceSharingForUnit = organisationSettings.fleetSharingEnabled
+        ? resourceSharingGroups.filter((group: any) => (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code)))
+        : [];
+    const staffSharingForUnit = organisationSettings.staffSharingEnabled
+        ? staffSharingGroups.filter((group: any) => (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code)))
+        : [];
     const deploymentProfile = organisationSettings.deploymentProfile || {};
     const operationalRunbook = organisationSettings.operationalRunbook || {};
     const crewPositionTerminology = normaliseCrewPositionTerminology(organisationSettings.crewPositionTerminology || null);
@@ -903,6 +921,9 @@ const OrganisationMyUnitSettings: React.FC<{
     const unitCallsignEntries = unitCallsignSettings.entries.filter((entry) => (
         normaliseUnitSettingsIdentifier(entry.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)
     ));
+    const unitFormationCallsigns = formationCallsigns.filter((callsign) => (
+        normaliseUnitSettingsIdentifier(callsign.unit) === normaliseUnitSettingsIdentifier(unit?.code)
+    ));
     const modelCrewPositions = crewPositionTerminology.positions.filter((position) => (
         !position.operationalModels?.length || position.operationalModels.includes(operationalModel)
     ));
@@ -912,10 +933,10 @@ const OrganisationMyUnitSettings: React.FC<{
     ));
     const categories = [
         { id: 'identity', label: 'Unit', count: 5 },
-        { id: 'resources', label: 'Resources', count: resourcePools.length },
+        { id: 'resources', label: 'Resources', count: resourcePools.length + resourceSharingForUnit.length + staffSharingForUnit.length },
         { id: 'crew', label: 'Crew', count: aircraftTypesForUnit.length + alternateCrewProfiles.length },
-        { id: 'training', label: 'Training', count: standardMissionProfiles.length + currencyProfiles.length },
-        { id: 'labels', label: 'Labels', count: modelCrewPositions.length },
+        { id: 'training', label: 'Training', count: standardMissionProfiles.length + currencyProfiles.length + 2 },
+        { id: 'labels', label: 'Labels', count: modelCrewPositions.length + unitCallsignEntries.length + unitFormationCallsigns.length },
         { id: 'access', label: 'Access', count: userAccessForUnit.length },
     ];
     const settingsAnchorSuffix = (value: any) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
@@ -1250,7 +1271,24 @@ const OrganisationMyUnitSettings: React.FC<{
                             );
                         }) : <UnitSettingsReadRow label="Aircraft" value="No aircraft types are linked to this unit yet." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Scheduling Rule Sets" description="Enterprise rule sets that apply to this unit or broadly across the organisation." action={settingsLink('platform-scheduling-rule-sets', 'Take me there', { focusSubsectionId: 'platform-scheduling-rule-records' })}>
+                    <UnitSettingsGroup title="Resource Sharing" description="Whether this unit shares aircraft or resource pools with another unit." action={settingsLink('organisation', 'Take me there')}>
+                        {resourceSharingForUnit.length > 0 ? resourceSharingForUnit.map((group: any, index: number) => (
+                            <div key={group.id || `${group.name}-${index}`} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="Arrangement" value={group.name || 'Unnamed resource sharing arrangement'} onChange={() => {}} disabled />
+                                <UnitSettingsField label="Units" value={(group.selectedUnits || []).join(', ')} onChange={() => {}} disabled />
+                                <UnitSettingsField label="Allocation" value={group.allocationMode || organisationSettings.allocationMode || 'Combined pool'} onChange={() => {}} disabled />
+                            </div>
+                        )) : <UnitSettingsReadRow label="Resource sharing" value={organisationSettings.fleetSharingEnabled ? 'No resource sharing arrangement includes this unit.' : 'Resource sharing is not enabled for this unit.'} muted />}
+                    </UnitSettingsGroup>
+                    <UnitSettingsGroup title="Staff Sharing" description="Whether this unit may use staff from another unit for scheduling and build eligibility." action={settingsLink('organisation', 'Take me there')}>
+                        {staffSharingForUnit.length > 0 ? staffSharingForUnit.map((group: any, index: number) => (
+                            <div key={group.id || `${group.name}-${index}`} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="Arrangement" value={group.name || 'Unnamed staff sharing arrangement'} onChange={() => {}} disabled />
+                                <UnitSettingsField label="Units" value={(group.selectedUnits || []).join(', ')} onChange={() => {}} disabled />
+                            </div>
+                        )) : <UnitSettingsReadRow label="Staff sharing" value={organisationSettings.staffSharingEnabled ? 'No staff sharing arrangement includes this unit.' : 'Staff sharing is not enabled for this unit.'} muted />}
+                    </UnitSettingsGroup>
+                    <UnitSettingsGroup title="Build Rules" description="Scheduling and build rule sets relevant to this unit." action={settingsLink('platform-scheduling-rule-sets', 'Take me there', { focusSubsectionId: 'platform-scheduling-rule-records' })}>
                         {schedulingRuleSets.length > 0 ? schedulingRuleSets.map((ruleSet: any, index: number) => (
                             <div key={ruleSet.id || `${ruleSet.name}-${index}`} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Rule name" value={ruleSet.name || ''} onChange={(value) => {
@@ -1270,7 +1308,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                     onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate: any) => candidate === ruleSet || String(candidate?.id || candidate?.name || '') === String(ruleSet?.id || ruleSet?.name || '') ? { ...candidate, unitCode: value } : candidate) }));
                                 }} disabled={!canEdit} />
                             </div>
-                        )) : <UnitSettingsReadRow label="Rules" value="No specific scheduling rule sets are active for this unit." muted />}
+                        )) : <UnitSettingsReadRow label="Build rules" value="No specific scheduling rule sets are active for this unit." muted />}
                     </UnitSettingsGroup>
                 </div>
             );
@@ -1375,7 +1413,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Missions" value="No standard missions are configured for this unit." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Currency Profiles" description="Preset crew, aircraft configuration and currency selections for requests." action={settingsLink('currency-profiles', 'Take me there', { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: 'platform-currency-profile-records' })}>
+                    <UnitSettingsGroup title="Currency Builder" description="Preset crew, aircraft configuration and currency selections for requests." action={settingsLink('currency-profiles', 'Take me there', { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: 'platform-currency-profile-records' })}>
                         {currencyProfiles.length > 0 ? currencyProfiles.map((profile) => (
                             <div key={profile.id} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Profile code" value={profile.code || ''} onChange={(value) => updateCurrencyProfile(profile, { code: value })} disabled={!canEdit} />
@@ -1385,15 +1423,19 @@ const OrganisationMyUnitSettings: React.FC<{
                                 <UnitSettingsField label="Config" value={profile.config || 'ANY'} onChange={(value) => updateCurrencyProfile(profile, { config: value })} disabled={!canEdit} />
                                 <UnitSettingsNumberField label="Aircraft count" value={Number(profile.aircraftCount ?? 0)} onChange={(value) => updateCurrencyProfile(profile, { aircraftCount: value })} disabled={!canEdit} />
                             </div>
-                        )) : <UnitSettingsReadRow label="Currency" value="No currency profiles match this unit." muted />}
+                        )) : <UnitSettingsReadRow label="Currency builder" value="No currency profiles match this unit." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Training Report Template" description="Unit report naming, pass/fail wording, grading and module labels." action={settingsLink('training-report-template', 'Take me there', { unitCode: unit.code, focusSubsectionId: 'platform-unit-training-report-template' })}>
+                    <UnitSettingsGroup title="Training Reports Builder" description="Unit report naming, pass/fail wording, grading and module labels." action={settingsLink('training-report-template', 'Take me there', { unitCode: unit.code, focusSubsectionId: 'platform-unit-training-report-template' })}>
                         <UnitSettingsField label="Report short name" value={trainingReportTerminology.name} onChange={(value) => updateUnitSettings({ trainingReportTerminology: { name: value.slice(0, 10) } })} disabled={!canEdit} />
                         <UnitSettingsField label="Display name" value={trainingReportTemplate.displayName} onChange={(value) => updateUnitTrainingReportTemplate({ displayName: value.slice(0, 20) })} disabled={!canEdit} />
                         <UnitSettingsNumberField label="Grade minimum" value={Number(trainingReportTemplate.grades.scaleMin ?? 0)} onChange={(value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMin: value } })} disabled={!canEdit} />
                         <UnitSettingsNumberField label="Grade maximum" value={Number(trainingReportTemplate.grades.scaleMax ?? 5)} onChange={(value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMax: value } })} disabled={!canEdit} />
                         <UnitSettingsField label="Pass label" value={trainingReportTemplate.overallResults.passLabel || ''} onChange={(value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, passLabel: value } })} disabled={!canEdit} />
                         <UnitSettingsField label="Fail label" value={trainingReportTemplate.overallResults.failLabel || ''} onChange={(value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, failLabel: value } })} disabled={!canEdit} />
+                    </UnitSettingsGroup>
+                    <UnitSettingsGroup title="Scoring Matrix for Training Reports" description="Assessment element scoring standards used by training reports." action={settingsLink('scoring-matrix', 'Take me there')}>
+                        <UnitSettingsReadRow label="Scope" value="Organisation scoring standards used by applicable training reports." />
+                        <UnitSettingsReadRow label="Unit" value={unit.code || 'Current unit'} />
                     </UnitSettingsGroup>
                 </div>
             );
@@ -1424,6 +1466,15 @@ const OrganisationMyUnitSettings: React.FC<{
                                 <UnitSettingsSelect label="Default" value={entry.isDefault ? 'yes' : 'no'} options={['yes', 'no']} optionLabels={{ yes: 'Default callsign', no: 'Available callsign' }} onChange={(value) => updateUnitCallsignEntry(entry, { isDefault: value === 'yes' })} disabled={!canEdit} />
                             </div>
                         )) : <UnitSettingsReadRow label="Callsigns" value="No callsigns configured for this unit." muted />}
+                    </UnitSettingsGroup>
+                    <UnitSettingsGroup title="Formation Callsigns" description="Formation callsigns filtered for the current unit." action={settingsLink('location', 'Take me there')}>
+                        {unitFormationCallsigns.length > 0 ? unitFormationCallsigns.map((callsign) => (
+                            <div key={`${callsign.unit}-${callsign.code}-${callsign.locationCode}`} className="border-t border-white/10 first:border-t-0">
+                                <UnitSettingsField label="Name" value={callsign.name || ''} onChange={() => {}} disabled />
+                                <UnitSettingsField label="Code" value={callsign.code || ''} onChange={() => {}} disabled />
+                                <UnitSettingsField label="Location" value={callsign.locationCode || callsign.location || ''} onChange={() => {}} disabled />
+                            </div>
+                        )) : <UnitSettingsReadRow label="Formation callsigns" value="No formation callsigns are configured for this unit." muted />}
                     </UnitSettingsGroup>
                 </div>
             );
@@ -1552,9 +1603,10 @@ const OrganisationMyUnitSettings: React.FC<{
 const OrganisationSlideoutDiagram: React.FC<{
     platformConfig?: any;
     unitCode?: string;
+    formationCallsigns?: FormationCallsign[];
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
-}> = ({ platformConfig, unitCode, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
+}> = ({ platformConfig, unitCode, formationCallsigns = [], onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [activeView, setActiveView] = useState<OrganisationSlideoutView>('structure');
@@ -1686,6 +1738,7 @@ const OrganisationSlideoutDiagram: React.FC<{
                 <OrganisationMyUnitSettings
                     platformConfig={platformConfig}
                     unitCode={unitCode}
+                    formationCallsigns={formationCallsigns}
                     onUpdatePlatformConfig={onUpdatePlatformConfig}
                     onNavigateToSettingsSection={onNavigateToSettingsSection}
                 />
@@ -1723,6 +1776,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     platformConfig,
     onUpdatePlatformConfig,
     onNavigateToSettingsSection,
+    formationCallsigns = [],
     timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -2705,7 +2759,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         style={{ width: 'min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))' }}
                     >
                         <div className={`h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-                            <OrganisationSlideoutDiagram platformConfig={platformConfig} unitCode={unitCode} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} />
+                            <OrganisationSlideoutDiagram platformConfig={platformConfig} unitCode={unitCode} formationCallsigns={formationCallsigns} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} />
                         </div>
                         <button
                             type="button"

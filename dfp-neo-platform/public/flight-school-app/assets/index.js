@@ -9358,7 +9358,7 @@ const UnitSettingsTextAreaRow = ({ label, value, onChange, disabled = false, pla
     }
   )
 ] });
-const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
+const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsigns = [], onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
   const [activeCategory, setActiveCategory] = reactExports.useState("identity");
   const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
   const units = platformConfig?.units || [];
@@ -9383,6 +9383,10 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
   ].map((profile) => String(profile || "").trim()).filter(Boolean)));
   const activeOrganisation = getActiveOrganisation(platformConfig);
   const organisationSettings = activeOrganisation?.settings || {};
+  const resourceSharingGroups = Array.isArray(organisationSettings.resourceSharingGroups) && organisationSettings.resourceSharingGroups.length > 0 ? organisationSettings.resourceSharingGroups : Array.isArray(organisationSettings.selectedUnits) && organisationSettings.selectedUnits.length > 0 ? [{ id: "legacy-resource-sharing", name: `${organisationSettings.selectedUnits.join("+")} Shared Resources`, selectedUnits: organisationSettings.selectedUnits, allocationMode: organisationSettings.allocationMode }] : [];
+  const staffSharingGroups = Array.isArray(organisationSettings.staffSharingGroups) && organisationSettings.staffSharingGroups.length > 0 ? organisationSettings.staffSharingGroups : Array.isArray(organisationSettings.staffSharingUnits) && organisationSettings.staffSharingUnits.length > 0 ? [{ id: "legacy-staff-sharing", name: `${organisationSettings.staffSharingUnits.join("+")} Staff Sharing`, selectedUnits: organisationSettings.staffSharingUnits }] : [];
+  const resourceSharingForUnit = organisationSettings.fleetSharingEnabled ? resourceSharingGroups.filter((group) => (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code))) : [];
+  const staffSharingForUnit = organisationSettings.staffSharingEnabled ? staffSharingGroups.filter((group) => (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code))) : [];
   organisationSettings.deploymentProfile || {};
   organisationSettings.operationalRunbook || {};
   const crewPositionTerminology = normaliseCrewPositionTerminology(organisationSettings.crewPositionTerminology || null);
@@ -9456,14 +9460,15 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
   }, {}));
   (platformConfig?.licenses || []).filter((license) => String(license?.status || "ACTIVE").toUpperCase() === "ACTIVE");
   const unitCallsignEntries = unitCallsignSettings.entries.filter((entry) => normaliseUnitSettingsIdentifier(entry.unitCode) === normaliseUnitSettingsIdentifier(unit?.code));
+  const unitFormationCallsigns = formationCallsigns.filter((callsign) => normaliseUnitSettingsIdentifier(callsign.unit) === normaliseUnitSettingsIdentifier(unit?.code));
   const modelCrewPositions = crewPositionTerminology.positions.filter((position) => !position.operationalModels?.length || position.operationalModels.includes(operationalModel2));
   const modelQualifications = staffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE" && qualification.operationalModels.includes(operationalModel2));
   const categories = [
     { id: "identity", label: "Unit", count: 5 },
-    { id: "resources", label: "Resources", count: resourcePools.length },
+    { id: "resources", label: "Resources", count: resourcePools.length + resourceSharingForUnit.length + staffSharingForUnit.length },
     { id: "crew", label: "Crew", count: aircraftTypesForUnit.length + alternateCrewProfiles.length },
-    { id: "training", label: "Training", count: standardMissionProfiles.length + currencyProfiles.length },
-    { id: "labels", label: "Labels", count: modelCrewPositions.length },
+    { id: "training", label: "Training", count: standardMissionProfiles.length + currencyProfiles.length + 2 },
+    { id: "labels", label: "Labels", count: modelCrewPositions.length + unitCallsignEntries.length + unitFormationCallsigns.length },
     { id: "access", label: "Access", count: userAccessForUnit.length }
   ];
   const settingsAnchorSuffix = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
@@ -9673,7 +9678,21 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
             /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Configurations", value: configurations.length ? configurations.map((item) => item.label || item.name || item.id).join(", ") : "Default / ANY", onChange: (value) => updateAircraftType(aircraft, { settings: { ...aircraft.settings || {}, aircraftConfigurations: value.split(",").map((label) => label.trim()).filter(Boolean).map((label) => ({ id: label, label })) } }), disabled: true })
           ] }, aircraft.code);
         }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Aircraft", value: "No aircraft types are linked to this unit yet.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Scheduling Rule Sets", description: "Enterprise rule sets that apply to this unit or broadly across the organisation.", action: settingsLink("platform-scheduling-rule-sets", "Take me there", { focusSubsectionId: "platform-scheduling-rule-records" }), children: schedulingRuleSets.length > 0 ? schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Resource Sharing", description: "Whether this unit shares aircraft or resource pools with another unit.", action: settingsLink("organisation", "Take me there"), children: resourceSharingForUnit.length > 0 ? resourceSharingForUnit.map((group, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Arrangement", value: group.name || "Unnamed resource sharing arrangement", onChange: () => {
+          }, disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Units", value: (group.selectedUnits || []).join(", "), onChange: () => {
+          }, disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Allocation", value: group.allocationMode || organisationSettings.allocationMode || "Combined pool", onChange: () => {
+          }, disabled: true })
+        ] }, group.id || `${group.name}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Resource sharing", value: organisationSettings.fleetSharingEnabled ? "No resource sharing arrangement includes this unit." : "Resource sharing is not enabled for this unit.", muted: true }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Staff Sharing", description: "Whether this unit may use staff from another unit for scheduling and build eligibility.", action: settingsLink("organisation", "Take me there"), children: staffSharingForUnit.length > 0 ? staffSharingForUnit.map((group, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Arrangement", value: group.name || "Unnamed staff sharing arrangement", onChange: () => {
+          }, disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Units", value: (group.selectedUnits || []).join(", "), onChange: () => {
+          }, disabled: true })
+        ] }, group.id || `${group.name}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Staff sharing", value: organisationSettings.staffSharingEnabled ? "No staff sharing arrangement includes this unit." : "Staff sharing is not enabled for this unit.", muted: true }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Build Rules", description: "Scheduling and build rule sets relevant to this unit.", action: settingsLink("platform-scheduling-rule-sets", "Take me there", { focusSubsectionId: "platform-scheduling-rule-records" }), children: schedulingRuleSets.length > 0 ? schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Rule name", value: ruleSet.name || "", onChange: (value) => {
             if (!onUpdatePlatformConfig) return;
             onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate) => candidate === ruleSet || String(candidate?.id || candidate?.name || "") === String(ruleSet?.id || ruleSet?.name || "") ? { ...candidate, name: value } : candidate) }));
@@ -9690,7 +9709,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
             if (!onUpdatePlatformConfig) return;
             onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate) => candidate === ruleSet || String(candidate?.id || candidate?.name || "") === String(ruleSet?.id || ruleSet?.name || "") ? { ...candidate, unitCode: value } : candidate) }));
           }, disabled: true })
-        ] }, ruleSet.id || `${ruleSet.name}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Rules", value: "No specific scheduling rule sets are active for this unit.", muted: true }) })
+        ] }, ruleSet.id || `${ruleSet.name}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Build rules", value: "No specific scheduling rule sets are active for this unit.", muted: true }) })
       ] });
     }
     if (activeCategory === "crew") {
@@ -9773,21 +9792,25 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Duration minutes", value: Number(profile.durationMinutes ?? 0), onChange: (value) => updateStandardMissionProfile(profile, { durationMinutes: value }), disabled: true })
         ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Missions", value: "No standard missions are configured for this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Currency Profiles", description: "Preset crew, aircraft configuration and currency selections for requests.", action: settingsLink("currency-profiles", "Take me there", { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: "platform-currency-profile-records" }), children: currencyProfiles.length > 0 ? currencyProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Currency Builder", description: "Preset crew, aircraft configuration and currency selections for requests.", action: settingsLink("currency-profiles", "Take me there", { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: "platform-currency-profile-records" }), children: currencyProfiles.length > 0 ? currencyProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile code", value: profile.code || "", onChange: (value) => updateCurrencyProfile(profile, { code: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile name", value: profile.name || "", onChange: (value) => updateCurrencyProfile(profile, { name: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Currency", value: profile.currency || "", onChange: (value) => updateCurrencyProfile(profile, { currency: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Crew", value: profile.crew || "", onChange: (value) => updateCurrencyProfile(profile, { crew: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Config", value: profile.config || "ANY", onChange: (value) => updateCurrencyProfile(profile, { config: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Aircraft count", value: Number(profile.aircraftCount ?? 0), onChange: (value) => updateCurrencyProfile(profile, { aircraftCount: value }), disabled: true })
-        ] }, profile.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Currency", value: "No currency profiles match this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Training Report Template", description: "Unit report naming, pass/fail wording, grading and module labels.", action: settingsLink("training-report-template", "Take me there", { unitCode: unit.code, focusSubsectionId: "platform-unit-training-report-template" }), children: [
+        ] }, profile.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Currency builder", value: "No currency profiles match this unit.", muted: true }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Training Reports Builder", description: "Unit report naming, pass/fail wording, grading and module labels.", action: settingsLink("training-report-template", "Take me there", { unitCode: unit.code, focusSubsectionId: "platform-unit-training-report-template" }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Report short name", value: trainingReportTerminology.name, onChange: (value) => updateUnitSettings({ trainingReportTerminology: { name: value.slice(0, 10) } }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Display name", value: trainingReportTemplate.displayName, onChange: (value) => updateUnitTrainingReportTemplate({ displayName: value.slice(0, 20) }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Grade minimum", value: Number(trainingReportTemplate.grades.scaleMin ?? 0), onChange: (value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMin: value } }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Grade maximum", value: Number(trainingReportTemplate.grades.scaleMax ?? 5), onChange: (value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMax: value } }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Pass label", value: trainingReportTemplate.overallResults.passLabel || "", onChange: (value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, passLabel: value } }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Fail label", value: trainingReportTemplate.overallResults.failLabel || "", onChange: (value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, failLabel: value } }), disabled: true })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Scoring Matrix for Training Reports", description: "Assessment element scoring standards used by training reports.", action: settingsLink("scoring-matrix", "Take me there"), children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Scope", value: "Organisation scoring standards used by applicable training reports." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Unit", value: unit.code || "Current unit" })
         ] })
       ] });
     }
@@ -9807,7 +9830,15 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Unit Callsigns", description: "Callsign bases offered when creating or editing unit events.", action: settingsLink("platform-rank-terminology", "Take me there", { focusSubsectionId: "platform-unit-callsigns" }), children: unitCallsignEntries.length > 0 ? unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Callsign", value: entry.callsign || "", onChange: (value) => updateUnitCallsignEntry(entry, { callsign: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Default", value: entry.isDefault ? "yes" : "no", options: ["yes", "no"], optionLabels: { yes: "Default callsign", no: "Available callsign" }, onChange: (value) => updateUnitCallsignEntry(entry, { isDefault: value === "yes" }), disabled: true })
-        ] }, entry.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Callsigns", value: "No callsigns configured for this unit.", muted: true }) })
+        ] }, entry.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Callsigns", value: "No callsigns configured for this unit.", muted: true }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Formation Callsigns", description: "Formation callsigns filtered for the current unit.", action: settingsLink("location", "Take me there"), children: unitFormationCallsigns.length > 0 ? unitFormationCallsigns.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Name", value: callsign.name || "", onChange: () => {
+          }, disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Code", value: callsign.code || "", onChange: () => {
+          }, disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Location", value: callsign.locationCode || callsign.location || "", onChange: () => {
+          }, disabled: true })
+        ] }, `${callsign.unit}-${callsign.code}-${callsign.locationCode}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Formation callsigns", value: "No formation callsigns are configured for this unit.", muted: true }) })
       ] });
     }
     if (activeCategory === "access") {
@@ -9899,7 +9930,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     ] })
   ] });
 };
-const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
+const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, formationCallsigns = [], onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
   const [activeView, setActiveView] = reactExports.useState("structure");
@@ -10031,6 +10062,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, onUpdatePlatfor
       {
         platformConfig,
         unitCode,
+        formationCallsigns,
         onUpdatePlatformConfig,
         onNavigateToSettingsSection
       }
@@ -10105,6 +10137,7 @@ const ScheduleView = ({
   platformConfig,
   onUpdatePlatformConfig,
   onNavigateToSettingsSection,
+  formationCallsigns = [],
   timezoneOffset = 11
   // Default to UTC+11
 }) => {
@@ -10930,7 +10963,7 @@ const ScheduleView = ({
             className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0" : "-translate-x-full"}`,
             style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, unitCode, onUpdatePlatformConfig, onNavigateToSettingsSection }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, unitCode, formationCallsigns, onUpdatePlatformConfig, onNavigateToSettingsSection }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
@@ -106443,6 +106476,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             platformConfig,
             onUpdatePlatformConfig: handleUpdatePlatformConfigFromSchedule,
             onNavigateToSettingsSection: handleNavigateToSettingsSection,
+            formationCallsigns,
             isOracleMode,
             oraclePreviewEvent,
             onOracleMouseDown: handleOracleMouseDown,

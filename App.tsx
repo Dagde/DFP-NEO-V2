@@ -37183,6 +37183,7 @@ appliedUpdates.forEach(update => {
                            platformConfig={platformConfig}
                            onUpdatePlatformConfig={handleUpdatePlatformConfigFromSchedule}
                            onNavigateToSettingsSection={handleNavigateToSettingsSection}
+                           formationCallsigns={formationCallsigns}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
                            onOracleMouseDown={handleOracleMouseDown}
