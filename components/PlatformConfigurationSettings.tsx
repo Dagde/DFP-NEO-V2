@@ -523,6 +523,54 @@ const buildOrganisationOptionRenameMaps = (
   return maps;
 };
 
+const applyOrganisationRenameMapValue = (value: unknown, renameMap?: Map<string, string>): string => {
+  const cleanValue = String(value || '').trim();
+  if (!cleanValue || !renameMap) return cleanValue;
+  return renameMap.get(normaliseOrganisationPathKey(cleanValue)) || cleanValue;
+};
+
+const applyOrganisationStructureRenamesToStructure = (
+  structure: OrganisationStructureSettings,
+  renameMaps: Map<number, Map<string, string>>,
+): OrganisationStructureSettings => {
+  if (renameMaps.size === 0) return structure;
+  const levels = structure.levels.map((level, levelIndex) => {
+    const levelMap = renameMaps.get(levelIndex);
+    const parentLevelMap = renameMaps.get(levelIndex - 1);
+    const childrenByParent = level.childrenByParent
+      ? Object.fromEntries(
+          Object.entries(level.childrenByParent).map(([parent, children]) => [
+            applyOrganisationRenameMapValue(parent, parentLevelMap),
+            Array.from(new Set((children || []).map((child) => applyOrganisationRenameMapValue(child, levelMap)).filter(Boolean))),
+          ]).filter(([parent, children]) => parent && (children as string[]).length > 0)
+        )
+      : undefined;
+    const parentByChild = level.parentByChild
+      ? Object.fromEntries(
+          Object.entries(level.parentByChild)
+            .map(([child, parent]) => [
+              applyOrganisationRenameMapValue(child, levelMap),
+              applyOrganisationRenameMapValue(parent, parentLevelMap),
+            ])
+            .filter(([child, parent]) => child && parent)
+        )
+      : undefined;
+    return {
+      ...level,
+      ...(childrenByParent && Object.keys(childrenByParent).length > 0 ? { childrenByParent } : {}),
+      ...(parentByChild && Object.keys(parentByChild).length > 0 ? { parentByChild } : {}),
+    };
+  });
+  const relationshipPaths = structure.relationshipPaths?.map((path) => (
+    path.map((part, levelIndex) => applyOrganisationRenameMapValue(part, renameMaps.get(levelIndex)))
+  ));
+  return {
+    ...structure,
+    levels,
+    ...(relationshipPaths && relationshipPaths.length > 0 ? { relationshipPaths } : {}),
+  };
+};
+
 const applyOrganisationStructureRenamesToUnits = (
   config: PlatformConfig,
   previousStructure: OrganisationStructureSettings,
@@ -537,8 +585,7 @@ const applyOrganisationStructureRenamesToUnits = (
       : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || '').split('-');
     const cleanPath = sourcePath.map((part: unknown) => String(part || '').trim()).filter(Boolean);
     const nextPath = cleanPath.map((part: string, pathIndex: number) => {
-      const replacement = renameMaps.get(pathIndex + 1)?.get(normaliseOrganisationPathKey(part));
-      return replacement || part;
+      return applyOrganisationRenameMapValue(part, renameMaps.get(pathIndex + 1));
     });
     if (nextPath.join('\u0001') === cleanPath.join('\u0001')) return unit;
     changed = true;
@@ -2008,17 +2055,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const currentSettings = currentOrg.settings || {};
       const previousStructure = normaliseOrganisationStructure(currentSettings.organisationStructure || null, currentOrg.name || '');
       const normalisedNextStructure = normaliseOrganisationStructure(nextStructure, currentOrg.name || primaryOrganisation?.name || '');
+      const renamedNextStructure = applyOrganisationStructureRenamesToStructure(
+        normalisedNextStructure,
+        buildOrganisationOptionRenameMaps(previousStructure, normalisedNextStructure),
+      );
       organisations[orgIndex] = {
         ...currentOrg,
         settings: {
           ...currentSettings,
-          organisationStructure: normalisedNextStructure,
+          organisationStructure: renamedNextStructure,
         },
       };
       const nextConfig = applyOrganisationStructureRenamesToUnits(
         { ...prev, organisations },
         previousStructure,
-        normalisedNextStructure,
+        renamedNextStructure,
       );
       notifyPlatformConfigUpdatedSoon(nextConfig);
       return nextConfig;
@@ -2045,15 +2096,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const updateOrganisationStructureLevel = (levelIndex: number, changes: Partial<OrganisationStructureLevel>) => {
     updateOrganisationStructure({
       ...organisationStructure,
-      relationshipPaths: changes.options ? undefined : organisationStructure.relationshipPaths,
+      relationshipPaths: organisationStructure.relationshipPaths,
       levels: organisationStructure.levels.map((level, index) => (
         index === levelIndex
           ? {
               ...level,
               ...changes,
               options: changes.options ? Array.from(new Set(changes.options.filter((option) => option.trim()))) : level.options,
-              childrenByParent: changes.options ? undefined : level.childrenByParent,
-              parentByChild: changes.options ? undefined : level.parentByChild,
+              childrenByParent: level.childrenByParent,
+              parentByChild: level.parentByChild,
             }
           : level
       )),
