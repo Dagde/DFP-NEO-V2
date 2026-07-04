@@ -63116,7 +63116,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                     onClick: () => void deleteMasterLmpCatalogueEntry(index),
                     disabled: !canEdit,
                     title: `Delete ${entry.name || entry.code || "Master LMP"}`,
-                    className: "flex min-h-[38px] w-full items-center justify-center rounded border border-red-500/45 bg-red-950/35 text-sm font-bold text-red-200 transition hover:border-red-300 hover:bg-red-900/50 disabled:cursor-not-allowed disabled:opacity-45",
+                    className: "flex min-h-[38px] w-full items-center justify-center rounded bg-transparent text-sm font-bold text-red-200 transition hover:bg-red-900/35 disabled:cursor-not-allowed disabled:opacity-45",
                     children: "🗑"
                   }
                 )
