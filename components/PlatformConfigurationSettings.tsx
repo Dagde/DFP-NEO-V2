@@ -1545,6 +1545,7 @@ interface PlatformConfigurationSettingsProps {
   focusUnitCode?: string;
   focusLocationCode?: string;
   focusResourcePoolCode?: string;
+  focusAircraftTypeCode?: string;
   phraseBank?: Record<string, any>;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
@@ -1567,6 +1568,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   focusUnitCode = '',
   focusLocationCode = '',
   focusResourcePoolCode = '',
+  focusAircraftTypeCode = '',
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
@@ -1625,6 +1627,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const pendingUnitScrollIdRef = useRef<string | null>(null);
   const resourcePoolRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingResourcePoolScrollIdRef = useRef<string | null>(null);
+  const standardCrewCompositionRef = useRef<HTMLDivElement | null>(null);
   const resourcePoolExitPromptOpenRef = useRef(false);
 
   const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
@@ -1902,6 +1905,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
     return () => window.cancelAnimationFrame(frame);
   }, [config.resourcePools, focusResourcePoolCode, loading, scrollTarget, resourcePoolActiveTab]);
+
+  useEffect(() => {
+    const cleanAircraftCode = String(focusAircraftTypeCode || '').trim().toUpperCase();
+    if (loading || !cleanAircraftCode || scrollTarget !== 'platform-crew-composition') return;
+    const matchingAircraft = crewCompositionAircraftTypes.find((aircraft) => (
+      String(aircraft.code || '').trim().toUpperCase() === cleanAircraftCode
+    ));
+    if (!matchingAircraft?.code) return;
+    setCrewCompositionAircraftCode(matchingAircraft.code);
+    const frame = window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        standardCrewCompositionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 120);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [crewCompositionAircraftTypes, focusAircraftTypeCode, loading, scrollTarget]);
 
   useEffect(() => {
     if (!resourcePoolsUnlocked || !resourcePoolsDirty || saving || applyingChanges) return;
@@ -5573,7 +5592,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           </div>
 
-          <div className={resourceSectionPanelClass}>
+          <div ref={standardCrewCompositionRef} className={resourceSectionPanelClass}>
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Standard Crew Composition</h4>

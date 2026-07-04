@@ -21067,6 +21067,7 @@ const App: React.FC = () => {
         unitCode?: string;
         locationCode?: string;
         resourcePoolCode?: string;
+        aircraftTypeCode?: string;
     } | null>(null);
     const [previousView, setPreviousView] = useState<string>('Program Schedule');
     const [date, setDate] = useState<string>(() => {
@@ -27509,7 +27510,7 @@ const App: React.FC = () => {
         }
     };
 
-    const handleNavigateToSettingsSection = (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string }) => {
+    const handleNavigateToSettingsSection = (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string }) => {
         setRequestedSettingsSection(request);
         handleNavigation('Settings');
     };

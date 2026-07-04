@@ -176,6 +176,7 @@ interface SettingsViewWithMenuProps {
         unitCode?: string;
         locationCode?: string;
         resourcePoolCode?: string;
+        aircraftTypeCode?: string;
     } | null;
     onSettingsSectionRequestHandled?: () => void;
     }
@@ -1324,6 +1325,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         unitCode?: string;
         locationCode?: string;
         resourcePoolCode?: string;
+        aircraftTypeCode?: string;
     } | null>(null);
 
     useEffect(() => {
@@ -1335,6 +1337,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 unitCode: request.unitCode,
                 locationCode: request.locationCode,
                 resourcePoolCode: request.resourcePoolCode,
+                aircraftTypeCode: request.aircraftTypeCode,
             });
             setActiveSection(requestedSection as ActiveSection);
             props.onSettingsSectionRequestHandled?.();
@@ -1806,6 +1809,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusUnitCode={settingsFocusTarget?.unitCode}
                                 focusLocationCode={settingsFocusTarget?.locationCode}
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
+                                focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
                                 activeUnitCodes={props.activeUnitCodes}
                                 activeCompositeUnitCode={props.activeCompositeUnitCode}
                                 phraseBank={props.phraseBank}
@@ -1827,6 +1831,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusUnitCode={settingsFocusTarget?.unitCode}
                                 focusLocationCode={settingsFocusTarget?.locationCode}
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
+                                focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             phraseBank={props.phraseBank}
@@ -1847,6 +1852,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusUnitCode={settingsFocusTarget?.unitCode}
                                 focusLocationCode={settingsFocusTarget?.locationCode}
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
+                                focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
@@ -1868,6 +1874,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusUnitCode={settingsFocusTarget?.unitCode}
                                 focusLocationCode={settingsFocusTarget?.locationCode}
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
+                                focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
@@ -1889,6 +1896,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusUnitCode={settingsFocusTarget?.unitCode}
                                 focusLocationCode={settingsFocusTarget?.locationCode}
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
+                                focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
@@ -1995,6 +2003,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusUnitCode={settingsFocusTarget?.unitCode}
                                 focusLocationCode={settingsFocusTarget?.locationCode}
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
+                                focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             phraseBank={props.phraseBank}

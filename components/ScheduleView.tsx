@@ -97,7 +97,7 @@ interface ScheduleViewProps {
   diagnosticHighlightedEventIds?: Set<string>;
   platformConfig?: any;
   onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
-  onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string }) => void;
+  onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string }) => void;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -764,7 +764,7 @@ const OrganisationMyUnitSettings: React.FC<{
     platformConfig?: any;
     unitCode?: string;
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
-    onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string }) => void;
+    onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string }) => void;
 }> = ({ platformConfig, unitCode, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
     const [activeCategory, setActiveCategory] = useState('identity');
     const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
@@ -812,6 +812,7 @@ const OrganisationMyUnitSettings: React.FC<{
     const aircraftTypesForUnit = (platformConfig?.aircraftTypes || []).filter((aircraft: any) => (
         aircraftTypeCodes.includes(String(aircraft.code || '').trim().toUpperCase())
     ));
+    const primaryAircraftTypeCode = aircraftTypesForUnit[0]?.code || aircraftTypeCodes[0] || '';
     const alternateCrewProfiles = crewCompositionSettings.alternateCompositions.filter((profile) => (
         String(profile.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
         && (!profile.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code))
@@ -865,7 +866,7 @@ const OrganisationMyUnitSettings: React.FC<{
     const settingsLink = (
         sectionId: string,
         label = 'Take me there',
-        focus: { unitCode?: string; locationCode?: string; resourcePoolCode?: string } = {},
+        focus: { unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string } = {},
     ) => (
         <button
             type="button"
@@ -1221,7 +1222,7 @@ const OrganisationMyUnitSettings: React.FC<{
         if (activeCategory === 'crew') {
             return (
                 <div className="space-y-4">
-                    <UnitSettingsGroup title="Standard Crew Composition" description="Minimum seats and role eligibility by aircraft and resource type." action={settingsLink('crew-composition')}>
+                    <UnitSettingsGroup title="Standard Crew Composition" description="Minimum seats and role eligibility by aircraft and resource type." action={settingsLink('crew-composition', 'Take me there', { aircraftTypeCode: primaryAircraftTypeCode })}>
                         {aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft: any) => {
                             const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
                             return (
@@ -1520,7 +1521,7 @@ const OrganisationSlideoutDiagram: React.FC<{
     platformConfig?: any;
     unitCode?: string;
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
-    onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string }) => void;
+    onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string }) => void;
 }> = ({ platformConfig, unitCode, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);

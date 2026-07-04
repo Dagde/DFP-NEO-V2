@@ -9362,6 +9362,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
   const trainingReportTemplate = normaliseTrainingReportTemplate(unit?.settings?.trainingReportTemplate || organisationSettings.trainingReportTemplate || null);
   const aircraftTypeCodes = Array.from(new Set(resourcePools.map((pool) => String(pool.aircraftTypeCode || "").trim().toUpperCase()).filter(Boolean)));
   const aircraftTypesForUnit = (platformConfig?.aircraftTypes || []).filter((aircraft) => aircraftTypeCodes.includes(String(aircraft.code || "").trim().toUpperCase()));
+  const primaryAircraftTypeCode = aircraftTypesForUnit[0]?.code || aircraftTypeCodes[0] || "";
   const alternateCrewProfiles = crewCompositionSettings.alternateCompositions.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)) && (!profile.aircraftTypeCode || aircraftTypeCodes.length === 0 || aircraftTypeCodes.includes(profile.aircraftTypeCode)) && profile.operationalModels.includes(operationalModel2));
   const currencyProfiles = crewCompositionSettings.currencyProfiles.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)) && (!profile.aircraftTypeCode || aircraftTypeCodes.length === 0 || aircraftTypeCodes.includes(profile.aircraftTypeCode)));
   const standardMissionProfiles = (Array.isArray(organisationSettings.standardMissionProfiles?.profiles) ? organisationSettings.standardMissionProfiles.profiles : Array.isArray(organisationSettings.standardMissionProfiles) ? organisationSettings.standardMissionProfiles : []).filter((profile) => String(profile?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile?.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)));
@@ -9638,7 +9639,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     }
     if (activeCategory === "crew") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Standard Crew Composition", description: "Minimum seats and role eligibility by aircraft and resource type.", action: settingsLink("crew-composition"), children: aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Standard Crew Composition", description: "Minimum seats and role eligibility by aircraft and resource type.", action: settingsLink("crew-composition", "Take me there", { aircraftTypeCode: primaryAircraftTypeCode }), children: aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft) => {
           const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: `${aircraft.code || "Aircraft"} standard seats`, value: composition.crewCount, onChange: (value) => updateAircraftCrewComposition(aircraft, { crewCount: value }), disabled: true }),
@@ -59733,6 +59734,7 @@ const PlatformConfigurationSettings = ({
   focusUnitCode = "",
   focusLocationCode = "",
   focusResourcePoolCode = "",
+  focusAircraftTypeCode = "",
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
@@ -59790,6 +59792,7 @@ const PlatformConfigurationSettings = ({
   const pendingUnitScrollIdRef = reactExports.useRef(null);
   const resourcePoolRowRefs = reactExports.useRef({});
   const pendingResourcePoolScrollIdRef = reactExports.useRef(null);
+  const standardCrewCompositionRef = reactExports.useRef(null);
   const resourcePoolExitPromptOpenRef = reactExports.useRef(false);
   const canEdit = ["Super Admin", "Admin"].includes(currentUserPermission);
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.("settings.rankTerminology.edit") ?? canEdit;
@@ -60039,6 +60042,19 @@ const PlatformConfigurationSettings = ({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [config.resourcePools, focusResourcePoolCode, loading, scrollTarget, resourcePoolActiveTab]);
+  reactExports.useEffect(() => {
+    const cleanAircraftCode = String(focusAircraftTypeCode || "").trim().toUpperCase();
+    if (loading || !cleanAircraftCode || scrollTarget !== "platform-crew-composition") return;
+    const matchingAircraft = crewCompositionAircraftTypes.find((aircraft) => String(aircraft.code || "").trim().toUpperCase() === cleanAircraftCode);
+    if (!matchingAircraft?.code) return;
+    setCrewCompositionAircraftCode(matchingAircraft.code);
+    const frame = window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        standardCrewCompositionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [crewCompositionAircraftTypes, focusAircraftTypeCode, loading, scrollTarget]);
   reactExports.useEffect(() => {
     if (!resourcePoolsUnlocked || !resourcePoolsDirty || saving || applyingChanges) return;
     const handleBeforeUnload = (event) => {
@@ -63064,7 +63080,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ] }, `crew-role-${entry.id}`);
           }) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: standardCrewCompositionRef, className: resourceSectionPanelClass, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Standard Crew Composition" }),
@@ -67290,7 +67306,8 @@ const SettingsViewWithMenu = (props) => {
       setSettingsFocusTarget({
         unitCode: request.unitCode,
         locationCode: request.locationCode,
-        resourcePoolCode: request.resourcePoolCode
+        resourcePoolCode: request.resourcePoolCode,
+        aircraftTypeCode: request.aircraftTypeCode
       });
       setActiveSection(requestedSection);
       props.onSettingsSectionRequestHandled?.();
@@ -67660,6 +67677,7 @@ const SettingsViewWithMenu = (props) => {
               focusUnitCode: settingsFocusTarget?.unitCode,
               focusLocationCode: settingsFocusTarget?.locationCode,
               focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
+              focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
               activeUnitCodes: props.activeUnitCodes,
               activeCompositeUnitCode: props.activeCompositeUnitCode,
               phraseBank: props.phraseBank,
@@ -67681,6 +67699,7 @@ const SettingsViewWithMenu = (props) => {
             focusUnitCode: settingsFocusTarget?.unitCode,
             focusLocationCode: settingsFocusTarget?.locationCode,
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
+            focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             phraseBank: props.phraseBank,
@@ -67701,6 +67720,7 @@ const SettingsViewWithMenu = (props) => {
             focusUnitCode: settingsFocusTarget?.unitCode,
             focusLocationCode: settingsFocusTarget?.locationCode,
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
+            focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
@@ -67722,6 +67742,7 @@ const SettingsViewWithMenu = (props) => {
             focusUnitCode: settingsFocusTarget?.unitCode,
             focusLocationCode: settingsFocusTarget?.locationCode,
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
+            focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
@@ -67743,6 +67764,7 @@ const SettingsViewWithMenu = (props) => {
             focusUnitCode: settingsFocusTarget?.unitCode,
             focusLocationCode: settingsFocusTarget?.locationCode,
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
+            focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
@@ -67835,6 +67857,7 @@ const SettingsViewWithMenu = (props) => {
             focusUnitCode: settingsFocusTarget?.unitCode,
             focusLocationCode: settingsFocusTarget?.locationCode,
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
+            focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             phraseBank: props.phraseBank,
