@@ -1542,6 +1542,9 @@ interface PlatformConfigurationSettingsProps {
   activeUnitCodes?: string[];
   activeCompositeUnitCode?: string;
   activeOperationalModel?: string;
+  focusUnitCode?: string;
+  focusLocationCode?: string;
+  focusResourcePoolCode?: string;
   phraseBank?: Record<string, any>;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
@@ -1561,6 +1564,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   activeUnitCodes = [],
   activeCompositeUnitCode = '',
   activeOperationalModel = '',
+  focusUnitCode = '',
+  focusLocationCode = '',
+  focusResourcePoolCode = '',
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
@@ -1839,6 +1845,34 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, [config.units.length]);
 
   useEffect(() => {
+    const cleanFocusUnitCode = String(focusUnitCode || '').trim().toUpperCase();
+    if (loading || !cleanFocusUnitCode || scrollTarget !== 'platform-units') return;
+    const unitIndex = config.units.findIndex((unit) => String(unit.code || '').trim().toUpperCase() === cleanFocusUnitCode);
+    if (unitIndex < 0) return;
+    setSelectedUnitIndex(unitIndex);
+    setEditingUnitIndex(null);
+    const frame = window.requestAnimationFrame(() => {
+      window.setTimeout(() => scrollUnitRowIntoView(unitIndex), 60);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [config.units, focusUnitCode, loading, scrollTarget]);
+
+  useEffect(() => {
+    const cleanLocationCode = String(focusLocationCode || '').trim().toUpperCase();
+    if (loading || !cleanLocationCode || scrollTarget !== 'platform-organisation-locations') return;
+    const locationIndex = config.locations.findIndex((location) => String(location.code || '').trim().toUpperCase() === cleanLocationCode);
+    if (locationIndex < 0) return;
+    const location = config.locations[locationIndex];
+    const rowKey = location.id || `platform-location-${locationIndex}`;
+    const frame = window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        locationRowRefs.current[rowKey]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 60);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [config.locations, focusLocationCode, loading, scrollTarget]);
+
+  useEffect(() => {
     const pendingPoolId = pendingResourcePoolScrollIdRef.current;
     if (!pendingPoolId) return;
     const target = resourcePoolRowRefs.current[pendingPoolId];
@@ -1848,6 +1882,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 40);
   }, [config.resourcePools.length]);
+
+  useEffect(() => {
+    const cleanPoolCode = String(focusResourcePoolCode || '').trim().toUpperCase();
+    if (loading || !cleanPoolCode || scrollTarget !== 'platform-resource-pools') return;
+    const poolIndex = config.resourcePools.findIndex((pool) => String(pool.code || pool.id || '').trim().toUpperCase() === cleanPoolCode);
+    if (poolIndex < 0) return;
+    const pool = config.resourcePools[poolIndex];
+    const rowKey = pool.id || `platform-resource-pool-${poolIndex}`;
+    const frame = window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        resourcePoolRowRefs.current[rowKey]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 60);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [config.resourcePools, focusResourcePoolCode, loading, scrollTarget]);
 
   useEffect(() => {
     if (!resourcePoolsUnlocked || !resourcePoolsDirty || saving || applyingChanges) return;

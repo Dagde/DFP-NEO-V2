@@ -21062,7 +21062,12 @@ const App: React.FC = () => {
         } catch (e) { /* ignore */ }
         return 'Program Schedule';
     });
-    const [requestedSettingsSection, setRequestedSettingsSection] = useState<string | null>(null);
+    const [requestedSettingsSection, setRequestedSettingsSection] = useState<{
+        sectionId: string;
+        unitCode?: string;
+        locationCode?: string;
+        resourcePoolCode?: string;
+    } | null>(null);
     const [previousView, setPreviousView] = useState<string>('Program Schedule');
     const [date, setDate] = useState<string>(() => {
         // Restore last viewed date from localStorage (persists across hard refresh)
@@ -27504,8 +27509,8 @@ const App: React.FC = () => {
         }
     };
 
-    const handleNavigateToSettingsSection = (sectionId: string) => {
-        setRequestedSettingsSection(sectionId);
+    const handleNavigateToSettingsSection = (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string }) => {
+        setRequestedSettingsSection(request);
         handleNavigation('Settings');
     };
 

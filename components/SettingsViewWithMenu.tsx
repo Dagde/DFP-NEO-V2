@@ -171,7 +171,12 @@ interface SettingsViewWithMenuProps {
     onUpdateNeoBuildCourse?: (course: string) => void;
     excludedCourses?: string[];
     onUpdateExcludedCourses?: (courses: string[]) => void;
-    requestedSettingsSection?: string | null;
+    requestedSettingsSection?: {
+        sectionId: string;
+        unitCode?: string;
+        locationCode?: string;
+        resourcePoolCode?: string;
+    } | null;
     onSettingsSectionRequestHandled?: () => void;
     }
 
@@ -1315,11 +1320,22 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     });
     const [settingsSearch, setSettingsSearch] = useState('');
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+    const [settingsFocusTarget, setSettingsFocusTarget] = useState<{
+        unitCode?: string;
+        locationCode?: string;
+        resourcePoolCode?: string;
+    } | null>(null);
 
     useEffect(() => {
-        const requestedSection = props.requestedSettingsSection;
-        if (!requestedSection) return;
+        const request = props.requestedSettingsSection;
+        if (!request?.sectionId) return;
+        const requestedSection = request.sectionId;
         if (requestedSection === 'home' || Object.prototype.hasOwnProperty.call(sectionLabels, requestedSection)) {
+            setSettingsFocusTarget({
+                unitCode: request.unitCode,
+                locationCode: request.locationCode,
+                resourcePoolCode: request.resourcePoolCode,
+            });
             setActiveSection(requestedSection as ActiveSection);
             props.onSettingsSectionRequestHandled?.();
         }
@@ -1787,6 +1803,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 sectionOnly={true}
                                 canUsePlatformPermission={props.canUsePlatformPermission}
                                 activeUnitCode={props.activeUnitCode}
+                                focusUnitCode={settingsFocusTarget?.unitCode}
+                                focusLocationCode={settingsFocusTarget?.locationCode}
+                                focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 activeUnitCodes={props.activeUnitCodes}
                                 activeCompositeUnitCode={props.activeCompositeUnitCode}
                                 phraseBank={props.phraseBank}
@@ -1805,6 +1824,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             sectionOnly={true}
                             canUsePlatformPermission={props.canUsePlatformPermission}
                             activeUnitCode={props.activeUnitCode}
+                                focusUnitCode={settingsFocusTarget?.unitCode}
+                                focusLocationCode={settingsFocusTarget?.locationCode}
+                                focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             phraseBank={props.phraseBank}
@@ -1822,6 +1844,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             sectionOnly={true}
                             canUsePlatformPermission={props.canUsePlatformPermission}
                             activeUnitCode={props.activeUnitCode}
+                                focusUnitCode={settingsFocusTarget?.unitCode}
+                                focusLocationCode={settingsFocusTarget?.locationCode}
+                                focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
@@ -1840,6 +1865,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             sectionOnly={true}
                             canUsePlatformPermission={props.canUsePlatformPermission}
                             activeUnitCode={props.activeUnitCode}
+                                focusUnitCode={settingsFocusTarget?.unitCode}
+                                focusLocationCode={settingsFocusTarget?.locationCode}
+                                focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
@@ -1858,6 +1886,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             sectionOnly={true}
                             canUsePlatformPermission={props.canUsePlatformPermission}
                             activeUnitCode={props.activeUnitCode}
+                                focusUnitCode={settingsFocusTarget?.unitCode}
+                                focusLocationCode={settingsFocusTarget?.locationCode}
+                                focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
@@ -1961,6 +1992,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             sectionOnly={true}
                             canUsePlatformPermission={props.canUsePlatformPermission}
                             activeUnitCode={props.activeUnitCode}
+                                focusUnitCode={settingsFocusTarget?.unitCode}
+                                focusLocationCode={settingsFocusTarget?.locationCode}
+                                focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             phraseBank={props.phraseBank}

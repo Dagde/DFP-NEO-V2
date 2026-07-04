@@ -9379,11 +9379,11 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     { id: "access", label: "Access", count: userAccessForUnit.length },
     { id: "deployment", label: "Deployment", count: activeLicences.length }
   ];
-  const settingsLink = (sectionId, label = "Take me there") => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  const settingsLink = (sectionId, label = "Take me there", focus = {}) => /* @__PURE__ */ jsxRuntimeExports.jsx(
     "button",
     {
       type: "button",
-      onClick: () => onNavigateToSettingsSection?.(sectionId),
+      onClick: () => onNavigateToSettingsSection?.({ sectionId, ...focus }),
       className: "shrink-0 rounded-md border border-cyan-300/30 bg-cyan-400/10 px-3 py-1.5 text-[11px] font-semibold text-cyan-100 transition hover:border-cyan-200 hover:bg-cyan-400/20",
       children: label
     }
@@ -9814,7 +9814,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
       ] });
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Unit Identity", description: "The core settings that decide where this unit lives and which operational model it uses.", action: settingsLink("platform-units"), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Unit Identity", description: "The core settings that decide where this unit lives and which operational model it uses.", action: settingsLink("platform-units", "Take me there", { unitCode: unit.code }), children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit code", value: unit.code || "", onChange: () => {
         }, disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit name", value: unit.name || "", onChange: (value) => updateUnit(), disabled: true }),
@@ -9823,8 +9823,8 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Operating model", value: operationalModel2, options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value), optionLabels: modelOptionLabels, onChange: (value) => updateUnitSettings({ operationalModel: value }), disabled: true })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Organisation & Location", description: "Where this unit sits in the configured organisation.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-2", children: [
-        settingsLink("platform-units", "Unit ownership"),
-        settingsLink("platform-organisation-locations", "Locations")
+        settingsLink("platform-units", "Unit ownership", { unitCode: unit.code }),
+        settingsLink("platform-organisation-locations", "Locations", { locationCode: unit.locationCode })
       ] }), children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Parent organisation", value: formatPlainList(parentPath, ""), onChange: (value) => updateUnitSettings({ parentOrganisationPath: value.split("/").map((part) => part.trim()).filter(Boolean), parentOrganisation: value.split("/").map((part) => part.trim()).filter(Boolean).join("-") }), disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Home location name", value: location ? `${location.name || location.code}` : unit.locationCode || "", onChange: (value) => updateLocation(location, { name: value }), disabled: true }),
@@ -59732,6 +59732,9 @@ const PlatformConfigurationSettings = ({
   activeUnitCodes = [],
   activeCompositeUnitCode = "",
   activeOperationalModel = "",
+  focusUnitCode = "",
+  focusLocationCode = "",
+  focusResourcePoolCode = "",
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
@@ -59988,6 +59991,32 @@ const PlatformConfigurationSettings = ({
     }, 40);
   }, [config.units.length]);
   reactExports.useEffect(() => {
+    const cleanFocusUnitCode = String(focusUnitCode || "").trim().toUpperCase();
+    if (loading || !cleanFocusUnitCode || scrollTarget !== "platform-units") return;
+    const unitIndex = config.units.findIndex((unit) => String(unit.code || "").trim().toUpperCase() === cleanFocusUnitCode);
+    if (unitIndex < 0) return;
+    setSelectedUnitIndex(unitIndex);
+    setEditingUnitIndex(null);
+    const frame = window.requestAnimationFrame(() => {
+      window.setTimeout(() => scrollUnitRowIntoView(unitIndex), 60);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [config.units, focusUnitCode, loading, scrollTarget]);
+  reactExports.useEffect(() => {
+    const cleanLocationCode = String(focusLocationCode || "").trim().toUpperCase();
+    if (loading || !cleanLocationCode || scrollTarget !== "platform-organisation-locations") return;
+    const locationIndex = config.locations.findIndex((location2) => String(location2.code || "").trim().toUpperCase() === cleanLocationCode);
+    if (locationIndex < 0) return;
+    const location = config.locations[locationIndex];
+    const rowKey = location.id || `platform-location-${locationIndex}`;
+    const frame = window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        locationRowRefs.current[rowKey]?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 60);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [config.locations, focusLocationCode, loading, scrollTarget]);
+  reactExports.useEffect(() => {
     const pendingPoolId = pendingResourcePoolScrollIdRef.current;
     if (!pendingPoolId) return;
     const target = resourcePoolRowRefs.current[pendingPoolId];
@@ -59997,6 +60026,20 @@ const PlatformConfigurationSettings = ({
       target.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 40);
   }, [config.resourcePools.length]);
+  reactExports.useEffect(() => {
+    const cleanPoolCode = String(focusResourcePoolCode || "").trim().toUpperCase();
+    if (loading || !cleanPoolCode || scrollTarget !== "platform-resource-pools") return;
+    const poolIndex = config.resourcePools.findIndex((pool2) => String(pool2.code || pool2.id || "").trim().toUpperCase() === cleanPoolCode);
+    if (poolIndex < 0) return;
+    const pool = config.resourcePools[poolIndex];
+    const rowKey = pool.id || `platform-resource-pool-${poolIndex}`;
+    const frame = window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        resourcePoolRowRefs.current[rowKey]?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 60);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [config.resourcePools, focusResourcePoolCode, loading, scrollTarget]);
   reactExports.useEffect(() => {
     if (!resourcePoolsUnlocked || !resourcePoolsDirty || saving || applyingChanges) return;
     const handleBeforeUnload = (event) => {
@@ -67235,10 +67278,17 @@ const SettingsViewWithMenu = (props) => {
   });
   const [settingsSearch, setSettingsSearch] = reactExports.useState("");
   const [expandedGroups, setExpandedGroups] = reactExports.useState({});
+  const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   reactExports.useEffect(() => {
-    const requestedSection = props.requestedSettingsSection;
-    if (!requestedSection) return;
+    const request = props.requestedSettingsSection;
+    if (!request?.sectionId) return;
+    const requestedSection = request.sectionId;
     if (requestedSection === "home" || Object.prototype.hasOwnProperty.call(sectionLabels, requestedSection)) {
+      setSettingsFocusTarget({
+        unitCode: request.unitCode,
+        locationCode: request.locationCode,
+        resourcePoolCode: request.resourcePoolCode
+      });
       setActiveSection(requestedSection);
       props.onSettingsSectionRequestHandled?.();
     }
@@ -67604,6 +67654,9 @@ const SettingsViewWithMenu = (props) => {
               sectionOnly: true,
               canUsePlatformPermission: props.canUsePlatformPermission,
               activeUnitCode: props.activeUnitCode,
+              focusUnitCode: settingsFocusTarget?.unitCode,
+              focusLocationCode: settingsFocusTarget?.locationCode,
+              focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
               activeUnitCodes: props.activeUnitCodes,
               activeCompositeUnitCode: props.activeCompositeUnitCode,
               phraseBank: props.phraseBank,
@@ -67622,6 +67675,9 @@ const SettingsViewWithMenu = (props) => {
             sectionOnly: true,
             canUsePlatformPermission: props.canUsePlatformPermission,
             activeUnitCode: props.activeUnitCode,
+            focusUnitCode: settingsFocusTarget?.unitCode,
+            focusLocationCode: settingsFocusTarget?.locationCode,
+            focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             phraseBank: props.phraseBank,
@@ -67639,6 +67695,9 @@ const SettingsViewWithMenu = (props) => {
             sectionOnly: true,
             canUsePlatformPermission: props.canUsePlatformPermission,
             activeUnitCode: props.activeUnitCode,
+            focusUnitCode: settingsFocusTarget?.unitCode,
+            focusLocationCode: settingsFocusTarget?.locationCode,
+            focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
@@ -67657,6 +67716,9 @@ const SettingsViewWithMenu = (props) => {
             sectionOnly: true,
             canUsePlatformPermission: props.canUsePlatformPermission,
             activeUnitCode: props.activeUnitCode,
+            focusUnitCode: settingsFocusTarget?.unitCode,
+            focusLocationCode: settingsFocusTarget?.locationCode,
+            focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
@@ -67675,6 +67737,9 @@ const SettingsViewWithMenu = (props) => {
             sectionOnly: true,
             canUsePlatformPermission: props.canUsePlatformPermission,
             activeUnitCode: props.activeUnitCode,
+            focusUnitCode: settingsFocusTarget?.unitCode,
+            focusLocationCode: settingsFocusTarget?.locationCode,
+            focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
@@ -67764,6 +67829,9 @@ const SettingsViewWithMenu = (props) => {
             sectionOnly: true,
             canUsePlatformPermission: props.canUsePlatformPermission,
             activeUnitCode: props.activeUnitCode,
+            focusUnitCode: settingsFocusTarget?.unitCode,
+            focusLocationCode: settingsFocusTarget?.locationCode,
+            focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             phraseBank: props.phraseBank,
@@ -98186,8 +98254,8 @@ ${"=".repeat(60)}`);
       navigateToView(view2);
     }
   };
-  const handleNavigateToSettingsSection = (sectionId) => {
-    setRequestedSettingsSection(sectionId);
+  const handleNavigateToSettingsSection = (request) => {
+    setRequestedSettingsSection(request);
     handleNavigation("Settings");
   };
   const openTraineeProfileTab = reactExports.useCallback((trainee, tab = null) => {

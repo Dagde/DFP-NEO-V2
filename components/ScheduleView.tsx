@@ -97,7 +97,7 @@ interface ScheduleViewProps {
   diagnosticHighlightedEventIds?: Set<string>;
   platformConfig?: any;
   onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
-  onNavigateToSettingsSection?: (sectionId: string) => void;
+  onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string }) => void;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -764,7 +764,7 @@ const OrganisationMyUnitSettings: React.FC<{
     platformConfig?: any;
     unitCode?: string;
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
-    onNavigateToSettingsSection?: (sectionId: string) => void;
+    onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string }) => void;
 }> = ({ platformConfig, unitCode, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
     const [activeCategory, setActiveCategory] = useState('identity');
     const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
@@ -858,10 +858,14 @@ const OrganisationMyUnitSettings: React.FC<{
         { id: 'access', label: 'Access', count: userAccessForUnit.length },
         { id: 'deployment', label: 'Deployment', count: activeLicences.length },
     ];
-    const settingsLink = (sectionId: string, label = 'Take me there') => (
+    const settingsLink = (
+        sectionId: string,
+        label = 'Take me there',
+        focus: { unitCode?: string; locationCode?: string; resourcePoolCode?: string } = {},
+    ) => (
         <button
             type="button"
-            onClick={() => onNavigateToSettingsSection?.(sectionId)}
+            onClick={() => onNavigateToSettingsSection?.({ sectionId, ...focus })}
             className="shrink-0 rounded-md border border-cyan-300/30 bg-cyan-400/10 px-3 py-1.5 text-[11px] font-semibold text-cyan-100 transition hover:border-cyan-200 hover:bg-cyan-400/20"
         >
             {label}
@@ -1450,14 +1454,14 @@ const OrganisationMyUnitSettings: React.FC<{
 
         return (
             <div className="space-y-4">
-                <UnitSettingsGroup title="Unit Identity" description="The core settings that decide where this unit lives and which operational model it uses." action={settingsLink('platform-units')}>
+                <UnitSettingsGroup title="Unit Identity" description="The core settings that decide where this unit lives and which operational model it uses." action={settingsLink('platform-units', 'Take me there', { unitCode: unit.code })}>
                     <UnitSettingsField label="Unit code" value={unit.code || ''} onChange={() => {}} disabled />
                     <UnitSettingsField label="Unit name" value={unit.name || ''} onChange={(value) => updateUnit({ name: value })} disabled={!canEdit} />
                     <UnitSettingsSelect label="Location" value={unit.locationCode || ''} options={locations.map((item: any) => item.code)} onChange={(value) => updateUnit({ locationCode: value })} disabled={!canEdit} />
                     <UnitSettingsSelect label="Unit type" value={unit.unitType || 'Training'} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational']} onChange={(value) => updateUnit({ unitType: value })} disabled={!canEdit} />
                     <UnitSettingsSelect label="Operating model" value={operationalModel} options={OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)} optionLabels={modelOptionLabels} onChange={(value) => updateUnitSettings({ operationalModel: value })} disabled={!canEdit} />
                 </UnitSettingsGroup>
-                <UnitSettingsGroup title="Organisation & Location" description="Where this unit sits in the configured organisation." action={<div className="flex flex-wrap justify-end gap-2">{settingsLink('platform-units', 'Unit ownership')}{settingsLink('platform-organisation-locations', 'Locations')}</div>}>
+                <UnitSettingsGroup title="Organisation & Location" description="Where this unit sits in the configured organisation." action={<div className="flex flex-wrap justify-end gap-2">{settingsLink('platform-units', 'Unit ownership', { unitCode: unit.code })}{settingsLink('platform-organisation-locations', 'Locations', { locationCode: unit.locationCode })}</div>}>
                     <UnitSettingsField label="Parent organisation" value={formatPlainList(parentPath, '')} onChange={(value) => updateUnitSettings({ parentOrganisationPath: value.split('/').map((part) => part.trim()).filter(Boolean), parentOrganisation: value.split('/').map((part) => part.trim()).filter(Boolean).join('-') })} disabled={!canEdit} />
                     <UnitSettingsField label="Home location name" value={location ? `${location.name || location.code}` : unit.locationCode || ''} onChange={(value) => updateLocation(location, { name: value })} disabled={!canEdit || !location} />
                     <UnitSettingsField label="Timezone" value={location?.timezone || ''} onChange={(value) => updateLocation(location, { timezone: value })} disabled={!canEdit || !location} />
@@ -1514,7 +1518,7 @@ const OrganisationSlideoutDiagram: React.FC<{
     platformConfig?: any;
     unitCode?: string;
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
-    onNavigateToSettingsSection?: (sectionId: string) => void;
+    onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string }) => void;
 }> = ({ platformConfig, unitCode, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
