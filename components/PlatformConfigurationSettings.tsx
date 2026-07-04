@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { TrashIcon } from '@heroicons/react/24/outline';
 import {
   DEFAULT_PLATFORM_PERMISSION_PROFILES,
   DEFAULT_OPERATIONAL_MODEL,
@@ -5391,7 +5392,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           title={`Delete ${entry.name || entry.code || 'Master LMP'}`}
                           className="flex min-h-[38px] w-full items-center justify-center rounded bg-transparent text-sm font-bold text-red-200 transition hover:bg-red-900/35 disabled:cursor-not-allowed disabled:opacity-45"
                         >
-                          🗑
+                          <TrashIcon aria-hidden="true" className="h-4 w-4" />
                         </button>
                       </div>
                     </div>

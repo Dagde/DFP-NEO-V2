@@ -63133,7 +63133,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                     disabled: !canEdit,
                     title: `Delete ${entry.name || entry.code || "Master LMP"}`,
                     className: "flex min-h-[38px] w-full items-center justify-center rounded bg-transparent text-sm font-bold text-red-200 transition hover:bg-red-900/35 disabled:cursor-not-allowed disabled:opacity-45",
-                    children: "🗑"
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
                   }
                 )
               ] })
