@@ -8917,6 +8917,7 @@ const formatSnapshotDate = (dateStr) => {
   }).replace(/ /g, "-");
 };
 const normaliseOrgChartValue = (value) => String(value || "").trim().replace(/\s+/g, " ");
+const normaliseOrgChartKey = (value) => normaliseOrgChartValue(value).toLowerCase();
 const getActiveOrganisation = (platformConfig) => (platformConfig?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0] || null;
 const addOrganisationChartPath = (root2, path, levelNames, unitCode) => {
   let cursor = root2;
@@ -8954,6 +8955,75 @@ const addOrganisationChartPath = (root2, path, levelNames, unitCode) => {
     }
   }
 };
+const getOrganisationLevelOptions = (level) => (Array.isArray(level?.options) ? level.options : []).map(normaliseOrgChartValue).filter(Boolean);
+const findOrganisationOption = (level, value) => {
+  const valueKey = normaliseOrgChartKey(value);
+  if (!valueKey) return "";
+  return getOrganisationLevelOptions(level).find((option) => normaliseOrgChartKey(option) === valueKey) || "";
+};
+const getSingleUnusedOrganisationOption = (levels, levelIndex, staleValue) => {
+  const level = levels[levelIndex];
+  const staleKey = normaliseOrgChartKey(staleValue);
+  const options = getOrganisationLevelOptions(level);
+  if (!staleKey || options.some((option) => normaliseOrgChartKey(option) === staleKey)) return "";
+  const referenced = /* @__PURE__ */ new Set();
+  if (levelIndex > 0) {
+    Object.keys(level?.parentByChild || {}).forEach((child) => referenced.add(normaliseOrgChartKey(child)));
+  }
+  if (levelIndex < levels.length - 1) {
+    const childLevel = levels[levelIndex + 1] || {};
+    Object.keys(childLevel.childrenByParent || {}).forEach((parent) => referenced.add(normaliseOrgChartKey(parent)));
+    Object.values(childLevel.parentByChild || {}).forEach((parent) => referenced.add(normaliseOrgChartKey(parent)));
+  }
+  if (!referenced.has(staleKey)) return "";
+  const unusedOptions = options.filter((option) => !referenced.has(normaliseOrgChartKey(option)));
+  return unusedOptions.length === 1 ? unusedOptions[0] : "";
+};
+const getOrganisationParentForChild = (levels, levelIndex, child) => {
+  if (levelIndex <= 0) return "";
+  const childKey = normaliseOrgChartKey(child);
+  const parentByChild = levels[levelIndex]?.parentByChild || {};
+  const mappedParent = Object.entries(parentByChild).find(([rawChild]) => normaliseOrgChartKey(rawChild) === childKey)?.[1];
+  if (mappedParent) {
+    return findOrganisationOption(levels[levelIndex - 1], mappedParent) || getSingleUnusedOrganisationOption(levels, levelIndex - 1, mappedParent) || normaliseOrgChartValue(mappedParent);
+  }
+  const previousLevel = levels[levelIndex - 1];
+  const childrenByParent = levels[levelIndex]?.childrenByParent || {};
+  const matchedParent = Object.entries(childrenByParent).find(([, rawChildren]) => (Array.isArray(rawChildren) ? rawChildren : []).some((rawChild) => normaliseOrgChartKey(rawChild) === childKey))?.[0];
+  return matchedParent ? findOrganisationOption(previousLevel, matchedParent) || getSingleUnusedOrganisationOption(levels, levelIndex - 1, matchedParent) || normaliseOrgChartValue(matchedParent) : "";
+};
+const buildOrganisationPathToLevel = (levels, levelIndex, value) => {
+  const canonicalValue = findOrganisationOption(levels[levelIndex], value);
+  if (!canonicalValue) return [];
+  const keyedPath = /* @__PURE__ */ new Map();
+  keyedPath.set(levelIndex, canonicalValue);
+  let cursorValue = canonicalValue;
+  for (let cursorLevel = levelIndex; cursorLevel > 1; cursorLevel -= 1) {
+    const parent = getOrganisationParentForChild(levels, cursorLevel, cursorValue);
+    if (!parent) break;
+    keyedPath.set(cursorLevel - 1, parent);
+    cursorValue = parent;
+  }
+  return Array.from({ length: levelIndex }, (_, index) => keyedPath.get(index + 1) || "").filter(Boolean);
+};
+const getResolvedOrganisationPath = (levels, rawPath) => {
+  const path = rawPath.map(normaliseOrgChartValue).filter(Boolean);
+  for (let pathIndex = path.length - 1; pathIndex >= 0; pathIndex -= 1) {
+    const levelIndex = pathIndex + 1;
+    const resolvedPath = buildOrganisationPathToLevel(levels, levelIndex, path[pathIndex]);
+    if (resolvedPath.length === levelIndex) return resolvedPath;
+  }
+  return path.map((part, pathIndex) => findOrganisationOption(levels[pathIndex + 1], part) || part);
+};
+const addOrganisationStructurePaths = (root2, levels, levelNames) => {
+  levels.forEach((level, levelIndex) => {
+    if (levelIndex === 0) return;
+    getOrganisationLevelOptions(level).forEach((option) => {
+      const path = buildOrganisationPathToLevel(levels, levelIndex, option);
+      addOrganisationChartPath(root2, path.length > 0 ? path : [option], levelNames);
+    });
+  });
+};
 const buildOrganisationChart = (platformConfig) => {
   const activeOrganisation = getActiveOrganisation(platformConfig);
   if (!activeOrganisation) return null;
@@ -8975,12 +9045,15 @@ const buildOrganisationChart = (platformConfig) => {
     const displayPath = path[0]?.toLowerCase() === rootKey ? path.slice(1) : path;
     addOrganisationChartPath(root2, displayPath, levelNames);
   });
+  if (relationshipPaths.length === 0) {
+    addOrganisationStructurePaths(root2, levels, levelNames);
+  }
   const activeOrganisationCode = normaliseOrgChartValue(activeOrganisation.code).toLowerCase();
   (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!activeOrganisationCode || normaliseOrgChartValue(unit?.organisationCode).toLowerCase() === activeOrganisationCode)).forEach((unit) => {
     const unitCode = normaliseOrgChartValue(unit?.code || unit?.name);
     if (!unitCode) return;
     const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
-    const parentPath = rawPath.map(normaliseOrgChartValue).filter(Boolean);
+    const parentPath = getResolvedOrganisationPath(levels, rawPath);
     const displayPath = parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath;
     addOrganisationChartPath(root2, displayPath, levelNames, unitCode);
   });
@@ -9140,33 +9213,15 @@ const formatPlainList = (items, fallback = "Not set") => {
   const cleanItems = items.map((item) => String(item || "").trim()).filter(Boolean);
   return cleanItems.length > 0 ? cleanItems.join(" / ") : fallback;
 };
-const normaliseOrganisationDisplayKey = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
-const getStringSimilarity = (left, right) => {
-  const leftTokens = new Set(normaliseOrganisationDisplayKey(left).split(/[^a-z0-9]+/).filter(Boolean));
-  const rightTokens = new Set(normaliseOrganisationDisplayKey(right).split(/[^a-z0-9]+/).filter(Boolean));
-  if (leftTokens.size === 0 || rightTokens.size === 0) return 0;
-  let shared = 0;
-  leftTokens.forEach((token) => {
-    if (rightTokens.has(token)) shared += 1;
-  });
-  return shared / Math.max(leftTokens.size, rightTokens.size);
-};
 const getUnitParentOrganisationPath = (unit) => {
   const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
   return rawPath.map((item) => String(item || "").trim()).filter(Boolean);
 };
 const getResolvedUnitParentOrganisationPath = (platformConfig, unit) => {
-  const path = getUnitParentOrganisationPath(unit);
+  const rawPath = getUnitParentOrganisationPath(unit);
   const activeOrganisation = getActiveOrganisation(platformConfig);
   const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
-  return path.map((part, pathIndex) => {
-    const options = (levels[pathIndex + 1]?.options || []).map((option) => String(option || "").trim()).filter(Boolean);
-    if (options.length === 0) return part;
-    const exactMatch = options.find((option) => normaliseOrganisationDisplayKey(option) === normaliseOrganisationDisplayKey(part));
-    if (exactMatch) return exactMatch;
-    const bestMatch = options.map((option) => ({ option, score: getStringSimilarity(part, option) })).sort((left, right) => right.score - left.score)[0];
-    return bestMatch && bestMatch.score >= 0.45 ? bestMatch.option : part;
-  });
+  return getResolvedOrganisationPath(levels, rawPath);
 };
 const getRelevantResourcePoolsForUnit = (platformConfig, unit) => {
   const unitCode = normaliseUnitSettingsIdentifier(unit?.code);
@@ -58583,16 +58638,74 @@ const buildOrganisationOptionRenameMaps = (previousStructure, nextStructure) => 
   }
   return maps;
 };
-const applyOrganisationStructureRenamesToUnits = (config, previousStructure, nextStructure) => {
-  const renameMaps = buildOrganisationOptionRenameMaps(previousStructure, nextStructure);
+const applyOrganisationRenameMapValue = (value, renameMap) => {
+  const cleanValue = String(value || "").trim();
+  if (!cleanValue || !renameMap) return cleanValue;
+  return renameMap.get(normaliseOrganisationPathKey(cleanValue)) || cleanValue;
+};
+const applyOrganisationStructureRenamesToStructure = (structure, renameMaps) => {
+  if (renameMaps.size === 0) return structure;
+  const levels = structure.levels.map((level, levelIndex) => {
+    const levelMap = renameMaps.get(levelIndex);
+    const parentLevelMap = renameMaps.get(levelIndex - 1);
+    const childrenByParent = level.childrenByParent ? Object.fromEntries(
+      Object.entries(level.childrenByParent).map(([parent, children]) => [
+        applyOrganisationRenameMapValue(parent, parentLevelMap),
+        Array.from(new Set((children || []).map((child) => applyOrganisationRenameMapValue(child, levelMap)).filter(Boolean)))
+      ]).filter(([parent, children]) => parent && children.length > 0)
+    ) : void 0;
+    const parentByChild = level.parentByChild ? Object.fromEntries(
+      Object.entries(level.parentByChild).map(([child, parent]) => [
+        applyOrganisationRenameMapValue(child, levelMap),
+        applyOrganisationRenameMapValue(parent, parentLevelMap)
+      ]).filter(([child, parent]) => child && parent)
+    ) : void 0;
+    return {
+      ...level,
+      ...childrenByParent && Object.keys(childrenByParent).length > 0 ? { childrenByParent } : {},
+      ...parentByChild && Object.keys(parentByChild).length > 0 ? { parentByChild } : {}
+    };
+  });
+  const relationshipPaths = structure.relationshipPaths?.map((path) => path.map((part, levelIndex) => applyOrganisationRenameMapValue(part, renameMaps.get(levelIndex))));
+  return {
+    ...structure,
+    levels,
+    ...relationshipPaths && relationshipPaths.length > 0 ? { relationshipPaths } : {}
+  };
+};
+const buildStaleOrganisationRelationshipRepairMaps = (structure) => {
+  const repairMaps = /* @__PURE__ */ new Map();
+  structure.levels.forEach((level, levelIndex) => {
+    const optionKeys = new Set(level.options.map(normaliseOrganisationPathKey));
+    const referenced = /* @__PURE__ */ new Set();
+    (structure.relationshipPaths || []).forEach((path) => {
+      const value = normaliseOrganisationPathKey(path[levelIndex]);
+      if (value) referenced.add(value);
+    });
+    if (levelIndex > 0) {
+      Object.keys(level.parentByChild || {}).forEach((child) => referenced.add(normaliseOrganisationPathKey(child)));
+    }
+    if (levelIndex < structure.levels.length - 1) {
+      const childLevel = structure.levels[levelIndex + 1] || {};
+      Object.keys(childLevel.childrenByParent || {}).forEach((parent) => referenced.add(normaliseOrganisationPathKey(parent)));
+      Object.values(childLevel.parentByChild || {}).forEach((parent) => referenced.add(normaliseOrganisationPathKey(parent)));
+    }
+    const staleReferenced = Array.from(referenced).filter((value) => value && !optionKeys.has(value));
+    const unusedOptions = level.options.filter((option) => !referenced.has(normaliseOrganisationPathKey(option)));
+    if (staleReferenced.length === 1 && unusedOptions.length === 1) {
+      repairMaps.set(levelIndex, /* @__PURE__ */ new Map([[staleReferenced[0], unusedOptions[0]]]));
+    }
+  });
+  return repairMaps;
+};
+const applyOrganisationStructureRenamesToUnits = (config, renameMaps) => {
   if (renameMaps.size === 0) return config;
   let changed = false;
   const units = config.units.map((unit) => {
     const sourcePath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
     const cleanPath = sourcePath.map((part) => String(part || "").trim()).filter(Boolean);
     const nextPath = cleanPath.map((part, pathIndex) => {
-      const replacement = renameMaps.get(pathIndex + 1)?.get(normaliseOrganisationPathKey(part));
-      return replacement || part;
+      return applyOrganisationRenameMapValue(part, renameMaps.get(pathIndex + 1));
     });
     if (nextPath.join("") === cleanPath.join("")) return unit;
     changed = true;
@@ -59805,7 +59918,13 @@ const PlatformConfigurationSettings = ({
       const currentOrg = organisations[orgIndex] || organisations[0];
       const currentSettings = currentOrg.settings || {};
       const previousStructure = normaliseOrganisationStructure(currentSettings.organisationStructure || null, currentOrg.name || "");
-      const normalisedNextStructure = normaliseOrganisationStructure(nextStructure, currentOrg.name || primaryOrganisation?.name || "");
+      const renameMaps = buildOrganisationOptionRenameMaps(previousStructure, nextStructure);
+      const renamedStructure = applyOrganisationStructureRenamesToStructure(
+        normaliseOrganisationStructure(nextStructure, currentOrg.name || primaryOrganisation?.name || ""),
+        renameMaps
+      );
+      const repairMaps = buildStaleOrganisationRelationshipRepairMaps(renamedStructure);
+      const normalisedNextStructure = applyOrganisationStructureRenamesToStructure(renamedStructure, repairMaps);
       organisations[orgIndex] = {
         ...currentOrg,
         settings: {
@@ -59813,11 +59932,11 @@ const PlatformConfigurationSettings = ({
           organisationStructure: normalisedNextStructure
         }
       };
-      const nextConfig = applyOrganisationStructureRenamesToUnits(
+      const renamedConfig = applyOrganisationStructureRenamesToUnits(
         { ...prev, organisations },
-        previousStructure,
-        normalisedNextStructure
+        renameMaps
       );
+      const nextConfig = applyOrganisationStructureRenamesToUnits(renamedConfig, repairMaps);
       notifyPlatformConfigUpdatedSoon(nextConfig);
       return nextConfig;
     });
@@ -59837,13 +59956,13 @@ const PlatformConfigurationSettings = ({
   const updateOrganisationStructureLevel = (levelIndex, changes) => {
     updateOrganisationStructure({
       ...organisationStructure,
-      relationshipPaths: changes.options ? void 0 : organisationStructure.relationshipPaths,
+      relationshipPaths: organisationStructure.relationshipPaths,
       levels: organisationStructure.levels.map((level, index) => index === levelIndex ? {
         ...level,
         ...changes,
         options: changes.options ? Array.from(new Set(changes.options.filter((option) => option.trim()))) : level.options,
-        childrenByParent: changes.options ? void 0 : level.childrenByParent,
-        parentByChild: changes.options ? void 0 : level.parentByChild
+        childrenByParent: level.childrenByParent,
+        parentByChild: level.parentByChild
       } : level)
     });
   };
