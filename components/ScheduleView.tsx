@@ -97,7 +97,7 @@ interface ScheduleViewProps {
   diagnosticHighlightedEventIds?: Set<string>;
   platformConfig?: any;
   onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
-  onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string }) => void;
+  onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -764,7 +764,7 @@ const OrganisationMyUnitSettings: React.FC<{
     platformConfig?: any;
     unitCode?: string;
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
-    onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string }) => void;
+    onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
 }> = ({ platformConfig, unitCode, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
     const [activeCategory, setActiveCategory] = useState('identity');
     const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
@@ -863,10 +863,12 @@ const OrganisationMyUnitSettings: React.FC<{
         { id: 'access', label: 'Access', count: userAccessForUnit.length },
         { id: 'deployment', label: 'Deployment', count: activeLicences.length },
     ];
+    const settingsAnchorSuffix = (value: any) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
+    const unitFocusAnchor = settingsAnchorSuffix(unit?.code);
     const settingsLink = (
         sectionId: string,
         label = 'Take me there',
-        focus: { unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string } = {},
+        focus: { unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string } = {},
     ) => (
         <button
             type="button"
@@ -1179,7 +1181,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             );
                         }) : <UnitSettingsReadRow label="Pools" value="No resource pools are assigned to this unit or location." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Aircraft Numbering & Configurations" description="Aircraft type and numbering rules inherited from this unit's resource pools." action={settingsLink('platform-resource-pools')}>
+                    <UnitSettingsGroup title="Aircraft Numbering & Configurations" description="Aircraft type and numbering rules inherited from this unit's resource pools." action={settingsLink('platform-resource-pools', 'Take me there', { focusSubsectionId: 'platform-aircraft-type-settings' })}>
                         {aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft: any) => {
                             const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
                             const configurations = Array.isArray(aircraft.settings?.aircraftConfigurations) ? aircraft.settings.aircraftConfigurations : [];
@@ -1193,7 +1195,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             );
                         }) : <UnitSettingsReadRow label="Aircraft" value="No aircraft types are linked to this unit yet." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Scheduling Rule Sets" description="Enterprise rule sets that apply to this unit or broadly across the organisation." action={settingsLink('platform-scheduling-rule-sets')}>
+                    <UnitSettingsGroup title="Scheduling Rule Sets" description="Enterprise rule sets that apply to this unit or broadly across the organisation." action={settingsLink('platform-scheduling-rule-sets', 'Take me there', { focusSubsectionId: 'platform-scheduling-rule-records' })}>
                         {schedulingRuleSets.length > 0 ? schedulingRuleSets.map((ruleSet: any, index: number) => (
                             <div key={ruleSet.id || `${ruleSet.name}-${index}`} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Rule name" value={ruleSet.name || ''} onChange={(value) => {
@@ -1241,7 +1243,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             );
                         }) : <UnitSettingsReadRow label="Crew" value="No aircraft crew composition is linked to this unit yet." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Alternate Crew Profiles" description="Alternate tasking crews available to this unit and operational model." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{alternateCrewProfiles.length} profiles</span>{settingsLink('crew-composition')}</div>}>
+                    <UnitSettingsGroup title="Alternate Crew Profiles" description="Alternate tasking crews available to this unit and operational model." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{alternateCrewProfiles.length} profiles</span>{settingsLink('crew-composition', 'Take me there', { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: 'platform-alternate-crew-composition' })}</div>}>
                         {alternateCrewProfiles.length > 0 ? alternateCrewProfiles.map((profile) => (
                             <div key={profile.id} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Profile code" value={profile.code || ''} onChange={(value) => updateAlternateCrewProfile(profile, { code: value })} disabled={!canEdit} />
@@ -1251,7 +1253,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Alternate crews" value="No alternate crew profiles match this unit." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Crew Labels & Qualifications" description="The local words users see for crew roles, plus model-specific qualifications such as PIC." action={settingsLink('platform-rank-terminology')}>
+                    <UnitSettingsGroup title="Crew Labels & Qualifications" description="The local words users see for crew roles, plus model-specific qualifications such as PIC." action={settingsLink('platform-rank-terminology', 'Take me there', { focusSubsectionId: 'platform-staff-qualifications' })}>
                         {modelCrewPositions.length > 0 ? (
                             <div className="mx-4 mt-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20 first:mt-0">
                                 <div className="border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70">Crew position labels</div>
@@ -1284,7 +1286,7 @@ const OrganisationMyUnitSettings: React.FC<{
         if (activeCategory === 'training') {
             return (
                 <div className="space-y-4">
-                    <UnitSettingsGroup title="Task Tile Labels" description="Short display names for task tiles on this unit's schedule." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{Object.keys(taskAbbreviations || {}).length} configured</span>{settingsLink('platform-task-profiles')}</div>}>
+                    <UnitSettingsGroup title="Task Tile Labels" description="Short display names for task tiles on this unit's schedule." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{Object.keys(taskAbbreviations || {}).length} configured</span>{settingsLink('platform-task-profiles', 'Take me there', { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })}</div>}>
                         <div className="border-t border-white/10 px-4 py-3">
                             <p className="text-sm leading-6 text-slate-300">
                                 Use this when a full task profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task profile, training requirement, or event data.
@@ -1308,7 +1310,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         ) : <UnitSettingsReadRow label="Task tile labels" value="No task profiles are configured for this operating model." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Standard Missions" description="Regular unit mission profiles scoped to this unit." action={settingsLink('standard-missions')}>
+                    <UnitSettingsGroup title="Standard Missions" description="Regular unit mission profiles scoped to this unit." action={settingsLink('standard-missions', 'Take me there', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
                             <div key={profile.id || profile.missionName} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Short title" value={profile.shortTitle || profile.code || ''} onChange={(value) => updateStandardMissionProfile(profile, { shortTitle: value })} disabled={!canEdit} />
@@ -1318,7 +1320,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Missions" value="No standard missions are configured for this unit." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Currency Profiles" description="Preset crew, aircraft configuration and currency selections for requests." action={settingsLink('currency-profiles')}>
+                    <UnitSettingsGroup title="Currency Profiles" description="Preset crew, aircraft configuration and currency selections for requests." action={settingsLink('currency-profiles', 'Take me there', { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: 'platform-currency-profile-records' })}>
                         {currencyProfiles.length > 0 ? currencyProfiles.map((profile) => (
                             <div key={profile.id} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Profile code" value={profile.code || ''} onChange={(value) => updateCurrencyProfile(profile, { code: value })} disabled={!canEdit} />
@@ -1330,7 +1332,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Currency" value="No currency profiles match this unit." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Training Report Template" description="Unit report naming, pass/fail wording, grading and module labels." action={settingsLink('training-report-template')}>
+                    <UnitSettingsGroup title="Training Report Template" description="Unit report naming, pass/fail wording, grading and module labels." action={settingsLink('training-report-template', 'Take me there', { unitCode: unit.code, focusSubsectionId: 'platform-unit-training-report-template' })}>
                         <UnitSettingsField label="Report short name" value={trainingReportTerminology.name} onChange={(value) => updateUnitSettings({ trainingReportTerminology: { name: value.slice(0, 10) } })} disabled={!canEdit} />
                         <UnitSettingsField label="Display name" value={trainingReportTemplate.displayName} onChange={(value) => updateUnitTrainingReportTemplate({ displayName: value.slice(0, 20) })} disabled={!canEdit} />
                         <UnitSettingsNumberField label="Grade minimum" value={Number(trainingReportTemplate.grades.scaleMin ?? 0)} onChange={(value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMin: value } })} disabled={!canEdit} />
@@ -1345,13 +1347,13 @@ const OrganisationMyUnitSettings: React.FC<{
         if (activeCategory === 'labels') {
             return (
                 <div className="space-y-4">
-                    <UnitSettingsGroup title="Personnel Terminology" description="How people, ranks and instructors are named for this organisation." action={settingsLink('platform-rank-terminology')}>
+                    <UnitSettingsGroup title="Personnel Terminology" description="How people, ranks and instructors are named for this organisation." action={settingsLink('platform-rank-terminology', 'Take me there', { focusSubsectionId: 'platform-personnel-terminology' })}>
                         <UnitSettingsSelect label="Personnel sort" value={personnelDisplaySettings.sortMode || 'rank-then-name'} options={['rank-then-name', 'alphabetical']} optionLabels={{ 'rank-then-name': 'Rank then name', alphabetical: 'Alphabetical' }} onChange={(value) => updatePersonnelDisplaySettings({ sortMode: value })} disabled={!canEdit} />
                         <UnitSettingsField label="Instructor term" value={personnelDisplaySettings.instructorLabel || ''} onChange={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })} disabled={!canEdit} />
                         <UnitSettingsField label="Civilian group" value={personnelDisplaySettings.civilianContractorGroupName || ''} onChange={(value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value })} disabled={!canEdit} />
                         <UnitSettingsSelect label="Trainee ranks" value={personnelDisplaySettings.useSeparateTraineeRankOrder ? 'separate' : 'staff'} options={['staff', 'separate']} optionLabels={{ staff: 'Uses staff rank order', separate: 'Separate trainee rank order' }} onChange={(value) => updatePersonnelDisplaySettings({ useSeparateTraineeRankOrder: value === 'separate' })} disabled={!canEdit} />
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Crew Position Labels" description="Generic scheduler roles mapped to customer-facing words." action={settingsLink('platform-rank-terminology')}>
+                    <UnitSettingsGroup title="Crew Position Labels" description="Generic scheduler roles mapped to customer-facing words." action={settingsLink('platform-rank-terminology', 'Take me there', { focusSubsectionId: 'platform-crew-position-labels' })}>
                         {crewPositionTerminology.positions.map((entry) => (
                             <div key={entry.id} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Generic role" value={entry.genericName || ''} onChange={(value) => updateCrewPositionEntry(entry, { genericName: value })} disabled={!canEdit} />
@@ -1360,7 +1362,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         ))}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Unit Callsigns" description="Callsign bases offered when creating or editing unit events." action={settingsLink('platform-rank-terminology')}>
+                    <UnitSettingsGroup title="Unit Callsigns" description="Callsign bases offered when creating or editing unit events." action={settingsLink('platform-rank-terminology', 'Take me there', { focusSubsectionId: 'platform-unit-callsigns' })}>
                         {unitCallsignEntries.length > 0 ? unitCallsignEntries.map((entry) => (
                             <div key={entry.id} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Callsign" value={entry.callsign || ''} onChange={(value) => updateUnitCallsignEntry(entry, { callsign: value })} disabled={!canEdit} />
@@ -1375,7 +1377,7 @@ const OrganisationMyUnitSettings: React.FC<{
         if (activeCategory === 'access') {
             return (
                 <div className="space-y-4">
-                    <UnitSettingsGroup title="Enabled Tools" description="Feature/module switches for this unit." action={settingsLink('platform-unit-modules')}>
+                    <UnitSettingsGroup title="Enabled Tools" description="Feature/module switches for this unit." action={settingsLink('platform-unit-modules', 'Take me there', { focusSubsectionId: `platform-unit-modules-${unitFocusAnchor}` })}>
                         {modules.length > 0 ? modules.map((module: any) => {
                             const unitModule = unitModules.find((item: any) => (
                                 normaliseUnitSettingsIdentifier(item?.unitCode) === normaliseUnitSettingsIdentifier(unit.code)
@@ -1393,7 +1395,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             );
                         }) : <UnitSettingsReadRow label="Modules" value="No modules have been configured yet." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Master LMP Access" description="Which Master LMP records this unit can see or manage." action={settingsLink('platform-master-lmp-access')}>
+                    <UnitSettingsGroup title="Master LMP Access" description="Which Master LMP records this unit can see or manage." action={settingsLink('platform-master-lmp-access', 'Take me there', { focusSubsectionId: 'platform-master-lmp-access-records' })}>
                         {masterLmpAccessForUnit.length > 0 ? masterLmpAccessForUnit.map((rule: any, index: number) => (
                             <div key={rule.id || index} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Master LMP" value={rule.masterLmpName || rule.masterLmpId || ''} onChange={(value) => updateMasterLmpAccessRule(rule, { masterLmpName: value })} disabled={!canEdit} />
@@ -1403,7 +1405,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Access rules" value="No unit-specific Master LMP restrictions. Organisation defaults apply." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="User Access Scopes" description="Users or profiles with access that includes this unit." action={settingsLink('platform-user-access')}>
+                    <UnitSettingsGroup title="User Access Scopes" description="Users or profiles with access that includes this unit." action={settingsLink('platform-user-access', 'Take me there', { focusSubsectionId: userAccessForUnit.length > 0 ? `platform-user-access-${unitFocusAnchor}` : 'platform-user-access-records' })}>
                         {userAccessForUnit.length > 0 ? userAccessForUnit.map((access: any, index: number) => (
                             <div key={access.id || index} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="User" value={access.displayName || access.userName || access.userId || ''} onChange={(value) => updateUserAccessScope(access, { displayName: value })} disabled={!canEdit} />
@@ -1420,14 +1422,14 @@ const OrganisationMyUnitSettings: React.FC<{
         if (activeCategory === 'deployment') {
             return (
                 <div className="space-y-4">
-                    <UnitSettingsGroup title="Deployment Readiness" description="Organisation-level deployment posture that affects this unit." action={settingsLink('platform-deployment-readiness')}>
+                    <UnitSettingsGroup title="Deployment Readiness" description="Organisation-level deployment posture that affects this unit." action={settingsLink('platform-deployment-readiness', 'Take me there', { focusSubsectionId: 'platform-deployment-profile' })}>
                         <UnitSettingsSelect label="Operating model" value={deploymentProfile.mode || 'Online SaaS'} options={deploymentModeOptions} onChange={(value) => updateDeploymentProfile({ mode: value })} disabled={!canEdit} />
                         <UnitSettingsSelect label="Licence validation" value={deploymentProfile.validationMethod || 'Online licence check'} options={licenceValidationOptions} onChange={(value) => updateDeploymentProfile({ validationMethod: value })} disabled={!canEdit} />
                         <UnitSettingsSelect label="Enforcement" value={deploymentProfile.enforcementMode || 'Monitor Only'} options={licenceEnforcementOptions} onChange={(value) => updateDeploymentProfile({ enforcementMode: value })} disabled={!canEdit} />
                         <UnitSettingsSelect label="Authentication" value={deploymentProfile.authModel || 'Local accounts'} options={authModelOptions} onChange={(value) => updateDeploymentProfile({ authModel: value })} disabled={!canEdit} />
                         <UnitSettingsField label="Data residence" value={deploymentProfile.dataResidence || ''} onChange={(value) => updateDeploymentProfile({ dataResidence: value })} disabled={!canEdit} />
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Operational Runbook" description="Support, backup, restore, update and accreditation evidence." action={settingsLink('platform-operational-runbook')}>
+                    <UnitSettingsGroup title="Operational Runbook" description="Support, backup, restore, update and accreditation evidence." action={settingsLink('platform-operational-runbook', 'Take me there', { focusSubsectionId: 'platform-operational-runbook-identity' })}>
                         <UnitSettingsField label="Environment" value={operationalRunbook.environmentName || ''} onChange={(value) => updateOperationalRunbook({ environmentName: value })} disabled={!canEdit} />
                         <UnitSettingsSelect label="Release channel" value={operationalRunbook.releaseChannel || 'Production'} options={releaseChannelOptions} onChange={(value) => updateOperationalRunbook({ releaseChannel: value })} disabled={!canEdit} />
                         <UnitSettingsField label="Support owner" value={operationalRunbook.supportOwner || ''} onChange={(value) => updateOperationalRunbook({ supportOwner: value })} disabled={!canEdit} />
@@ -1440,7 +1442,7 @@ const OrganisationMyUnitSettings: React.FC<{
                         <UnitSettingsNumberField label="RPO hours" value={Number(operationalRunbook.restorePointObjectiveHours ?? 24)} onChange={(value) => updateOperationalRunbook({ restorePointObjectiveHours: value })} disabled={!canEdit} />
                         <UnitSettingsSelect label="Accreditation" value={operationalRunbook.accreditationStatus || 'Not started'} options={accreditationStatusOptions} onChange={(value) => updateOperationalRunbook({ accreditationStatus: value })} disabled={!canEdit} />
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Licensing" description="Active licence records and commercial limits for the deployment." action={settingsLink('platform-licensing')}>
+                    <UnitSettingsGroup title="Licensing" description="Active licence records and commercial limits for the deployment." action={settingsLink('platform-licensing', 'Take me there', { focusSubsectionId: 'platform-license-records' })}>
                         {activeLicences.length > 0 ? activeLicences.map((license: any) => (
                             <div key={license.id || license.licenseKey} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Licence name" value={license.licenseName || license.licenseKey || ''} onChange={(value) => updateLicenseRecord(license, { licenseName: value })} disabled={!canEdit} />
@@ -1521,7 +1523,7 @@ const OrganisationSlideoutDiagram: React.FC<{
     platformConfig?: any;
     unitCode?: string;
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
-    onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string }) => void;
+    onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
 }> = ({ platformConfig, unitCode, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);

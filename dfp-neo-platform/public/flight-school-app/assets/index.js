@@ -9382,6 +9382,8 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     { id: "access", label: "Access", count: userAccessForUnit.length },
     { id: "deployment", label: "Deployment", count: activeLicences.length }
   ];
+  const settingsAnchorSuffix = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
+  const unitFocusAnchor = settingsAnchorSuffix(unit?.code);
   const settingsLink = (sectionId, label = "Take me there", focus = {}) => /* @__PURE__ */ jsxRuntimeExports.jsx(
     "button",
     {
@@ -9607,7 +9609,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
             }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Pools", value: "No resource pools are assigned to this unit or location.", muted: true })
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Aircraft Numbering & Configurations", description: "Aircraft type and numbering rules inherited from this unit's resource pools.", action: settingsLink("platform-resource-pools"), children: aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Aircraft Numbering & Configurations", description: "Aircraft type and numbering rules inherited from this unit's resource pools.", action: settingsLink("platform-resource-pools", "Take me there", { focusSubsectionId: "platform-aircraft-type-settings" }), children: aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft) => {
           const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
           const configurations = Array.isArray(aircraft.settings?.aircraftConfigurations) ? aircraft.settings.aircraftConfigurations : [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
@@ -9617,7 +9619,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
             /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Configurations", value: configurations.length ? configurations.map((item) => item.label || item.name || item.id).join(", ") : "Default / ANY", onChange: (value) => updateAircraftType(aircraft, { settings: { ...aircraft.settings || {}, aircraftConfigurations: value.split(",").map((label) => label.trim()).filter(Boolean).map((label) => ({ id: label, label })) } }), disabled: true })
           ] }, aircraft.code);
         }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Aircraft", value: "No aircraft types are linked to this unit yet.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Scheduling Rule Sets", description: "Enterprise rule sets that apply to this unit or broadly across the organisation.", action: settingsLink("platform-scheduling-rule-sets"), children: schedulingRuleSets.length > 0 ? schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Scheduling Rule Sets", description: "Enterprise rule sets that apply to this unit or broadly across the organisation.", action: settingsLink("platform-scheduling-rule-sets", "Take me there", { focusSubsectionId: "platform-scheduling-rule-records" }), children: schedulingRuleSets.length > 0 ? schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Rule name", value: ruleSet.name || "", onChange: (value) => {
             if (!onUpdatePlatformConfig) return;
             onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate) => candidate === ruleSet || String(candidate?.id || candidate?.name || "") === String(ruleSet?.id || ruleSet?.name || "") ? { ...candidate, name: value } : candidate) }));
@@ -9660,14 +9662,14 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
             alternateCrewProfiles.length,
             " profiles"
           ] }),
-          settingsLink("crew-composition")
+          settingsLink("crew-composition", "Take me there", { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: "platform-alternate-crew-composition" })
         ] }), children: alternateCrewProfiles.length > 0 ? alternateCrewProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile code", value: profile.code || "", onChange: (value) => updateAlternateCrewProfile(profile, { code: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile name", value: profile.name || "", onChange: (value) => updateAlternateCrewProfile(profile, { name: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateAlternateCrewProfile(profile, { aircraftTypeCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsTextAreaRow, { label: "Role requirements", value: formatRoleRequirementsText(profile.roleRequirements), onChange: (value) => updateAlternateCrewProfile(profile, { roleRequirements: parseRoleRequirementsText(value) }), disabled: true, placeholder: "Pilot = 2" })
         ] }, profile.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Alternate crews", value: "No alternate crew profiles match this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Crew Labels & Qualifications", description: "The local words users see for crew roles, plus model-specific qualifications such as PIC.", action: settingsLink("platform-rank-terminology"), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Crew Labels & Qualifications", description: "The local words users see for crew roles, plus model-specific qualifications such as PIC.", action: settingsLink("platform-rank-terminology", "Take me there", { focusSubsectionId: "platform-staff-qualifications" }), children: [
           modelCrewPositions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mt-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20 first:mt-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70", children: "Crew position labels" }),
             modelCrewPositions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: entry.genericName, value: entry.label || "", onChange: (value) => updateCrewPositionEntry(entry, { label: value }), disabled: true }, entry.id))
@@ -9694,7 +9696,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
             Object.keys(taskAbbreviations || {}).length,
             " configured"
           ] }),
-          settingsLink("platform-task-profiles")
+          settingsLink("platform-task-profiles", "Take me there", { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })
         ] }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 px-4 py-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full task profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task profile, training requirement, or event data." }),
@@ -9711,13 +9713,13 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
             ] }, profile))
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task tile labels", value: "No task profiles are configured for this operating model.", muted: true })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Standard Missions", description: "Regular unit mission profiles scoped to this unit.", action: settingsLink("standard-missions"), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Standard Missions", description: "Regular unit mission profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Mission name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Duration minutes", value: Number(profile.durationMinutes ?? 0), onChange: (value) => updateStandardMissionProfile(profile, { durationMinutes: value }), disabled: true })
         ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Missions", value: "No standard missions are configured for this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Currency Profiles", description: "Preset crew, aircraft configuration and currency selections for requests.", action: settingsLink("currency-profiles"), children: currencyProfiles.length > 0 ? currencyProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Currency Profiles", description: "Preset crew, aircraft configuration and currency selections for requests.", action: settingsLink("currency-profiles", "Take me there", { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: "platform-currency-profile-records" }), children: currencyProfiles.length > 0 ? currencyProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile code", value: profile.code || "", onChange: (value) => updateCurrencyProfile(profile, { code: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile name", value: profile.name || "", onChange: (value) => updateCurrencyProfile(profile, { name: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Currency", value: profile.currency || "", onChange: (value) => updateCurrencyProfile(profile, { currency: value }), disabled: true }),
@@ -9725,7 +9727,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Config", value: profile.config || "ANY", onChange: (value) => updateCurrencyProfile(profile, { config: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Aircraft count", value: Number(profile.aircraftCount ?? 0), onChange: (value) => updateCurrencyProfile(profile, { aircraftCount: value }), disabled: true })
         ] }, profile.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Currency", value: "No currency profiles match this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Training Report Template", description: "Unit report naming, pass/fail wording, grading and module labels.", action: settingsLink("training-report-template"), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Training Report Template", description: "Unit report naming, pass/fail wording, grading and module labels.", action: settingsLink("training-report-template", "Take me there", { unitCode: unit.code, focusSubsectionId: "platform-unit-training-report-template" }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Report short name", value: trainingReportTerminology.name, onChange: (value) => updateUnitSettings({ trainingReportTerminology: { name: value.slice(0, 10) } }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Display name", value: trainingReportTemplate.displayName, onChange: (value) => updateUnitTrainingReportTemplate({ displayName: value.slice(0, 20) }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Grade minimum", value: Number(trainingReportTemplate.grades.scaleMin ?? 0), onChange: (value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMin: value } }), disabled: true }),
@@ -9737,18 +9739,18 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     }
     if (activeCategory === "labels") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Personnel Terminology", description: "How people, ranks and instructors are named for this organisation.", action: settingsLink("platform-rank-terminology"), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Personnel Terminology", description: "How people, ranks and instructors are named for this organisation.", action: settingsLink("platform-rank-terminology", "Take me there", { focusSubsectionId: "platform-personnel-terminology" }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Personnel sort", value: personnelDisplaySettings.sortMode || "rank-then-name", options: ["rank-then-name", "alphabetical"], optionLabels: { "rank-then-name": "Rank then name", alphabetical: "Alphabetical" }, onChange: (value) => updatePersonnelDisplaySettings({ sortMode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Instructor term", value: personnelDisplaySettings.instructorLabel || "", onChange: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Civilian group", value: personnelDisplaySettings.civilianContractorGroupName || "", onChange: (value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Trainee ranks", value: personnelDisplaySettings.useSeparateTraineeRankOrder ? "separate" : "staff", options: ["staff", "separate"], optionLabels: { staff: "Uses staff rank order", separate: "Separate trainee rank order" }, onChange: (value) => updatePersonnelDisplaySettings({ useSeparateTraineeRankOrder: value === "separate" }), disabled: true })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Crew Position Labels", description: "Generic scheduler roles mapped to customer-facing words.", action: settingsLink("platform-rank-terminology"), children: crewPositionTerminology.positions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Crew Position Labels", description: "Generic scheduler roles mapped to customer-facing words.", action: settingsLink("platform-rank-terminology", "Take me there", { focusSubsectionId: "platform-crew-position-labels" }), children: crewPositionTerminology.positions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Generic role", value: entry.genericName || "", onChange: (value) => updateCrewPositionEntry(entry, { genericName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Display label", value: entry.label || "", onChange: (value) => updateCrewPositionEntry(entry, { label: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Models", value: (entry.operationalModels || []).join(", "), onChange: (value) => updateCrewPositionEntry(entry, { operationalModels: value.split(",").map((item) => item.trim()).filter(Boolean) }), disabled: true })
         ] }, entry.id)) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Unit Callsigns", description: "Callsign bases offered when creating or editing unit events.", action: settingsLink("platform-rank-terminology"), children: unitCallsignEntries.length > 0 ? unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Unit Callsigns", description: "Callsign bases offered when creating or editing unit events.", action: settingsLink("platform-rank-terminology", "Take me there", { focusSubsectionId: "platform-unit-callsigns" }), children: unitCallsignEntries.length > 0 ? unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Callsign", value: entry.callsign || "", onChange: (value) => updateUnitCallsignEntry(entry, { callsign: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Default", value: entry.isDefault ? "yes" : "no", options: ["yes", "no"], optionLabels: { yes: "Default callsign", no: "Available callsign" }, onChange: (value) => updateUnitCallsignEntry(entry, { isDefault: value === "yes" }), disabled: true })
         ] }, entry.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Callsigns", value: "No callsigns configured for this unit.", muted: true }) })
@@ -9756,7 +9758,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     }
     if (activeCategory === "access") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Enabled Tools", description: "Feature/module switches for this unit.", action: settingsLink("platform-unit-modules"), children: modules.length > 0 ? modules.map((module) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Enabled Tools", description: "Feature/module switches for this unit.", action: settingsLink("platform-unit-modules", "Take me there", { focusSubsectionId: `platform-unit-modules-${unitFocusAnchor}` }), children: modules.length > 0 ? modules.map((module) => {
           const unitModule = unitModules.find((item) => normaliseUnitSettingsIdentifier(item?.unitCode) === normaliseUnitSettingsIdentifier(unit.code) && normaliseUnitSettingsIdentifier(item?.moduleCode) === normaliseUnitSettingsIdentifier(module.code));
           const checked = unitModule?.isEnabled !== false;
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: unitSettingsRowClass, children: [
@@ -9767,13 +9769,13 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
             ] })
           ] }, module.code);
         }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Modules", value: "No modules have been configured yet.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Master LMP Access", description: "Which Master LMP records this unit can see or manage.", action: settingsLink("platform-master-lmp-access"), children: masterLmpAccessForUnit.length > 0 ? masterLmpAccessForUnit.map((rule, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Master LMP Access", description: "Which Master LMP records this unit can see or manage.", action: settingsLink("platform-master-lmp-access", "Take me there", { focusSubsectionId: "platform-master-lmp-access-records" }), children: masterLmpAccessForUnit.length > 0 ? masterLmpAccessForUnit.map((rule, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Master LMP", value: rule.masterLmpName || rule.masterLmpId || "", onChange: (value) => updateMasterLmpAccessRule(rule, { masterLmpName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Access level", value: rule.accessLevel || "View", options: ["View", "Assign", "Manage"], onChange: (value) => updateMasterLmpAccessRule(rule, { accessLevel: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Location", value: rule.locationCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { locationCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit", value: rule.unitCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { unitCode: value }), disabled: true })
         ] }, rule.id || index)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Access rules", value: "No unit-specific Master LMP restrictions. Organisation defaults apply.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "User Access Scopes", description: "Users or profiles with access that includes this unit.", action: settingsLink("platform-user-access"), children: userAccessForUnit.length > 0 ? userAccessForUnit.map((access, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "User Access Scopes", description: "Users or profiles with access that includes this unit.", action: settingsLink("platform-user-access", "Take me there", { focusSubsectionId: userAccessForUnit.length > 0 ? `platform-user-access-${unitFocusAnchor}` : "platform-user-access-records" }), children: userAccessForUnit.length > 0 ? userAccessForUnit.map((access, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "User", value: access.displayName || access.userName || access.userId || "", onChange: (value) => updateUserAccessScope(access, { displayName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profiles", value: Array.isArray(access.profileIds) ? access.profileIds.join(", ") : access.profileId || "", onChange: (value) => updateUserAccessScope(access, { profileIds: value.split(",").map((item) => item.trim()).filter(Boolean) }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Module", value: access.moduleCode || "", onChange: (value) => updateUserAccessScope(access, { moduleCode: value }), disabled: true }),
@@ -9783,14 +9785,14 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     }
     if (activeCategory === "deployment") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Deployment Readiness", description: "Organisation-level deployment posture that affects this unit.", action: settingsLink("platform-deployment-readiness"), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Deployment Readiness", description: "Organisation-level deployment posture that affects this unit.", action: settingsLink("platform-deployment-readiness", "Take me there", { focusSubsectionId: "platform-deployment-profile" }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Operating model", value: deploymentProfile.mode || "Online SaaS", options: deploymentModeOptions, onChange: (value) => updateDeploymentProfile({ mode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Licence validation", value: deploymentProfile.validationMethod || "Online licence check", options: licenceValidationOptions, onChange: (value) => updateDeploymentProfile({ validationMethod: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Enforcement", value: deploymentProfile.enforcementMode || "Monitor Only", options: licenceEnforcementOptions, onChange: (value) => updateDeploymentProfile({ enforcementMode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Authentication", value: deploymentProfile.authModel || "Local accounts", options: authModelOptions, onChange: (value) => updateDeploymentProfile({ authModel: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Data residence", value: deploymentProfile.dataResidence || "", onChange: (value) => updateDeploymentProfile({ dataResidence: value }), disabled: true })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Operational Runbook", description: "Support, backup, restore, update and accreditation evidence.", action: settingsLink("platform-operational-runbook"), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Operational Runbook", description: "Support, backup, restore, update and accreditation evidence.", action: settingsLink("platform-operational-runbook", "Take me there", { focusSubsectionId: "platform-operational-runbook-identity" }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Environment", value: operationalRunbook.environmentName || "", onChange: (value) => updateOperationalRunbook({ environmentName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Release channel", value: operationalRunbook.releaseChannel || "Production", options: releaseChannelOptions, onChange: (value) => updateOperationalRunbook({ releaseChannel: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Support owner", value: operationalRunbook.supportOwner || "", onChange: (value) => updateOperationalRunbook({ supportOwner: value }), disabled: true }),
@@ -9803,7 +9805,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "RPO hours", value: Number(operationalRunbook.restorePointObjectiveHours ?? 24), onChange: (value) => updateOperationalRunbook({ restorePointObjectiveHours: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Accreditation", value: operationalRunbook.accreditationStatus || "Not started", options: accreditationStatusOptions, onChange: (value) => updateOperationalRunbook({ accreditationStatus: value }), disabled: true })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Licensing", description: "Active licence records and commercial limits for the deployment.", action: settingsLink("platform-licensing"), children: activeLicences.length > 0 ? activeLicences.map((license) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Licensing", description: "Active licence records and commercial limits for the deployment.", action: settingsLink("platform-licensing", "Take me there", { focusSubsectionId: "platform-license-records" }), children: activeLicences.length > 0 ? activeLicences.map((license) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Licence name", value: license.licenseName || license.licenseKey || "", onChange: (value) => updateLicenseRecord(license, { licenseName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Deployment mode", value: license.deploymentMode || deploymentProfile.mode || "", onChange: (value) => updateLicenseRecord(license, { deploymentMode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Valid until", value: license.validUntil || "", onChange: (value) => updateLicenseRecord(license, { validUntil: value }), disabled: true }),
@@ -59735,6 +59737,7 @@ const PlatformConfigurationSettings = ({
   focusLocationCode = "",
   focusResourcePoolCode = "",
   focusAircraftTypeCode = "",
+  focusSubsectionId = "",
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
@@ -60044,7 +60047,7 @@ const PlatformConfigurationSettings = ({
   }, [config.resourcePools, focusResourcePoolCode, loading, scrollTarget, resourcePoolActiveTab]);
   reactExports.useEffect(() => {
     const cleanAircraftCode = String(focusAircraftTypeCode || "").trim().toUpperCase();
-    if (loading || !cleanAircraftCode || scrollTarget !== "platform-crew-composition") return;
+    if (loading || !cleanAircraftCode || !["platform-crew-composition", "platform-currency-profiles"].includes(String(scrollTarget || ""))) return;
     const matchingAircraft = crewCompositionAircraftTypes.find((aircraft) => String(aircraft.code || "").trim().toUpperCase() === cleanAircraftCode);
     if (!matchingAircraft?.code) return;
     setCrewCompositionAircraftCode(matchingAircraft.code);
@@ -60055,6 +60058,23 @@ const PlatformConfigurationSettings = ({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [crewCompositionAircraftTypes, focusAircraftTypeCode, loading, scrollTarget]);
+  reactExports.useEffect(() => {
+    const cleanSubsectionId = String(focusSubsectionId || "").trim();
+    if (loading || !cleanSubsectionId) return;
+    if (scrollTarget === "platform-resource-pools") {
+      if (cleanSubsectionId.startsWith("platform-aircraft-type")) {
+        setResourcePoolActiveTab("aircraftTypes");
+      } else if (cleanSubsectionId.startsWith("platform-resource-pool")) {
+        setResourcePoolActiveTab("resourcePools");
+      }
+    }
+    const frame = window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        document.getElementById(cleanSubsectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 180);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusSubsectionId, focusAircraftTypeCode, loading, scrollTarget]);
   reactExports.useEffect(() => {
     if (!resourcePoolsUnlocked || !resourcePoolsDirty || saving || applyingChanges) return;
     const handleBeforeUnload = (event) => {
@@ -62029,6 +62049,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   const resourceSectionPanelHeaderClass = "mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2";
   const resourceSectionPanelTitleClass = "text-xs font-black uppercase tracking-wide text-gray-300";
   const resourceSectionPanelHintClass = "text-[11px] leading-relaxed text-gray-500";
+  const getSettingsFocusAnchor = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
   const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
   const crewCompositionAircraftTypes = config.aircraftTypes.length > 0 ? config.aircraftTypes : [{ code: "AIRCRAFT", name: "Aircraft", crewComposition: DEFAULT_AIRCRAFT_CREW_COMPOSITION }];
   const activeCrewCompositionAircraftIndex = Math.max(
@@ -62688,12 +62709,12 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             )
           ] }, option.value);
         }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-task-tile-abbreviations", className: "mt-5", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-sm font-bold text-white", children: "Unit Task Tile Abbreviations" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: config.units.filter(isActiveRecord).map((unit) => {
             const unitIndex = config.units.findIndex((candidate) => candidate === unit);
             const abbreviations = unit.settings?.taskProfileAbbreviations || {};
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: `platform-task-tile-abbreviations-${getSettingsFocusAnchor(unit.code)}`, className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("h5", { className: "text-sm font-bold text-white", children: [
@@ -62732,7 +62753,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addMasterLmpAccessRule, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Access" }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-master-lmp-access-records", className: "space-y-3 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees." }),
         masterLmpAccessRules.map((rule, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_0.8fr_auto]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -62831,14 +62852,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New profiles default to the unit home location and unit default callsign. Values can be manually edited per mission." })
         ] }),
-        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No Standard Missions configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
+        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No Standard Missions configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
           const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || "").trim().toUpperCase();
           const missionCrewOptions = getStandardMissionCrewOptions(missionAircraftTypeCode);
           const aircraftConfigOptions = getAircraftConfigOptions(missionAircraftTypeCode);
           const selectedCrewCompositionId = profile.selectedCrewCompositionId || profile.acceptableCrewCompositionIds[0] || missionCrewOptions[0]?.id || "";
           const crewMode = profile.crewCompositionMode || (selectedCrewCompositionId.startsWith("alternate:") ? "ALTERNATE" : selectedCrewCompositionId ? "STANDARD" : "CUSTOM");
           const selectedCrewOption = missionCrewOptions.find((option) => option.id === selectedCrewCompositionId);
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-gray-700 bg-gray-900/85 shadow-lg", children: [
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: `platform-standard-mission-${getSettingsFocusAnchor(profile.id || profile.shortTitle || profile.missionName)}`, className: "overflow-hidden rounded-lg border border-gray-700 bg-gray-900/85 shadow-lg", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 border-b border-gray-800 bg-gray-950/70 px-4 py-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
@@ -63194,7 +63215,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             }) })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-alternate-crew-composition", className: resourceSectionPanelClass, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Alternate Crew Composition" }),
@@ -63293,7 +63314,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             `currency-profile-aircraft-tab-${code || aircraft.name}`
           );
         }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-currency-profile-records", className: resourceSectionPanelClass, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Currency Profiles" }),
@@ -63499,7 +63520,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             }
           )
         ] }),
-        resourcePoolActiveTab === "aircraftTypes" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", role: "tabpanel", children: [
+        resourcePoolActiveTab === "aircraftTypes" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-aircraft-type-settings", className: "space-y-3", role: "tabpanel", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Aircraft Types" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Define aircraft capability and normal seat eligibility." })
@@ -63870,7 +63891,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Unit" }),
           config.modules.map((module) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: module.name }, module.code))
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: config.units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: config.units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { id: `platform-unit-modules-${getSettingsFocusAnchor(unit.code)}`, className: "border-t border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 font-semibold text-white", children: unit.name }),
           config.modules.map((module) => {
             const unitModuleIndex = config.unitModules.findIndex((item) => item.unitCode === unit.code && item.moduleCode === module.code);
@@ -63935,7 +63956,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ) })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-deployment-profile", className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Deployment Profile" }),
@@ -64031,7 +64052,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ) })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-operational-runbook-identity", className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
@@ -64195,7 +64216,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           licenseImportError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-100", children: licenseImportError })
         ] }),
         config.licenses.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "No licence records exist yet. Add one before introducing licence enforcement." }),
-        config.licenses.map((license, index) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-license-records", className: "space-y-4", children: config.licenses.map((license, index) => {
           const moduleCodes = Array.isArray(license.moduleCodes) ? license.moduleCodes : [];
           const licenceFeatures = license.features || {};
           const licenceStatus = getLicenceStatusSummary(license);
@@ -64319,7 +64340,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               ] }, module.code)) })
             ] })
           ] }, license.id || `platform-license-${index}`);
-        })
+        }) })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-permission-profiles", className: getSectionClass("platform-permission-profiles"), children: [
@@ -64405,7 +64426,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 p-4", children: [
         !canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Training Report settings are read-only. Super Admin or Admin permission is required to edit the template." }) : !trainingReportTemplateUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Training Report settings are locked. Press Edit before changing report names, field labels, grade text or repeat rules." }) : null,
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-unit-training-report-template", className: "rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-sky-100", children: "Unit Training Report Template" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-sky-100/70", children: "These settings rename and configure the active unit report layout. Core dimensions and descriptor phrases come from this unit's Scoring Matrix." })
         ] }),
@@ -64936,7 +64957,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
         !hasRankTerminologyEditPermission ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80", children: "Rank, Terminology & Labels is read-only for your permission profile. Grant “Edit rank and terminology settings” in Permission Profiles before this section can be edited." }) : !rankTerminologyUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Rank, Terminology & Labels is locked. Press Edit and confirm your password before changing rank order, terminology or labels." }) : null,
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-700 bg-gray-950/70 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-personnel-terminology", className: "flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-700 bg-gray-950/70 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Personnel Terminology" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "Configure sort mode, local instructor wording, contractor grouping and the customer-facing training report name." })
@@ -65004,7 +65025,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             info: `The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: PT-051, Report, Grade Form.`
           }
         ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-orange-400/25 bg-orange-500/10 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-crew-position-labels", className: "rounded-lg border border-orange-400/25 bg-orange-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-orange-100", children: "Crew Position Labels" }),
@@ -65091,7 +65112,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ] }, entry.id);
           }) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-staff-qualifications", className: "rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-emerald-100", children: "Staff Qualifications" }),
@@ -65187,7 +65208,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ) })
           ] }, entry.id)) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-sky-400/25 bg-sky-500/10 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-unit-callsigns", className: "rounded-lg border border-sky-400/25 bg-sky-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-sky-100", children: "Unit Callsigns" }),
@@ -65302,7 +65323,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Scope" }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-user-access-records", className: "space-y-3 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(160px,auto)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -65367,6 +65388,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           return /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
+              id: access.unitCode ? `platform-user-access-${getSettingsFocusAnchor(access.unitCode)}` : void 0,
               className: "rounded border p-3",
               style: {
                 backgroundColor: ACCESS_SCOPE_TONE.fill,
@@ -65511,13 +65533,13 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ) })
           ] }, `${eventType.label}-${eventTypeIndex}`)) })
         ] }),
-        config.schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-scheduling-rule-records", className: "space-y-3", children: config.schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: ruleSet.name, disabled: !canEdit, onChange: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEdit, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Scope", value: ruleSet.scope || "Unit", disabled: !canEdit, options: ["Organisation", "Location", "Unit", "AircraftType"], onChange: (value) => updateRow("schedulingRuleSets", index, { scope: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Active", value: ruleSet.isActive === false ? "No" : "Yes", disabled: !canEdit, options: ["Yes", "No"], onChange: (value) => updateRow("schedulingRuleSets", index, { isActive: value === "Yes" }) })
-        ] }, ruleSet.id || index))
+        ] }, ruleSet.id || index)) })
       ] })
     ] })
   ] });
@@ -67307,7 +67329,8 @@ const SettingsViewWithMenu = (props) => {
         unitCode: request.unitCode,
         locationCode: request.locationCode,
         resourcePoolCode: request.resourcePoolCode,
-        aircraftTypeCode: request.aircraftTypeCode
+        aircraftTypeCode: request.aircraftTypeCode,
+        focusSubsectionId: request.focusSubsectionId
       });
       setActiveSection(requestedSection);
       props.onSettingsSectionRequestHandled?.();
@@ -67678,6 +67701,7 @@ const SettingsViewWithMenu = (props) => {
               focusLocationCode: settingsFocusTarget?.locationCode,
               focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
               focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
+              focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
               activeUnitCodes: props.activeUnitCodes,
               activeCompositeUnitCode: props.activeCompositeUnitCode,
               phraseBank: props.phraseBank,
@@ -67700,6 +67724,7 @@ const SettingsViewWithMenu = (props) => {
             focusLocationCode: settingsFocusTarget?.locationCode,
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
+            focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             phraseBank: props.phraseBank,
@@ -67721,6 +67746,7 @@ const SettingsViewWithMenu = (props) => {
             focusLocationCode: settingsFocusTarget?.locationCode,
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
+            focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
@@ -67743,6 +67769,7 @@ const SettingsViewWithMenu = (props) => {
             focusLocationCode: settingsFocusTarget?.locationCode,
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
+            focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
@@ -67765,6 +67792,7 @@ const SettingsViewWithMenu = (props) => {
             focusLocationCode: settingsFocusTarget?.locationCode,
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
+            focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
@@ -67858,6 +67886,7 @@ const SettingsViewWithMenu = (props) => {
             focusLocationCode: settingsFocusTarget?.locationCode,
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
+            focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             phraseBank: props.phraseBank,

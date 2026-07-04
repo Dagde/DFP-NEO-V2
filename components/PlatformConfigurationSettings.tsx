@@ -1546,6 +1546,7 @@ interface PlatformConfigurationSettingsProps {
   focusLocationCode?: string;
   focusResourcePoolCode?: string;
   focusAircraftTypeCode?: string;
+  focusSubsectionId?: string;
   phraseBank?: Record<string, any>;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
@@ -1569,6 +1570,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   focusLocationCode = '',
   focusResourcePoolCode = '',
   focusAircraftTypeCode = '',
+  focusSubsectionId = '',
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
@@ -1908,7 +1910,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   useEffect(() => {
     const cleanAircraftCode = String(focusAircraftTypeCode || '').trim().toUpperCase();
-    if (loading || !cleanAircraftCode || scrollTarget !== 'platform-crew-composition') return;
+    if (loading || !cleanAircraftCode || !['platform-crew-composition', 'platform-currency-profiles'].includes(String(scrollTarget || ''))) return;
     const matchingAircraft = crewCompositionAircraftTypes.find((aircraft) => (
       String(aircraft.code || '').trim().toUpperCase() === cleanAircraftCode
     ));
@@ -1921,6 +1923,24 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
     return () => window.cancelAnimationFrame(frame);
   }, [crewCompositionAircraftTypes, focusAircraftTypeCode, loading, scrollTarget]);
+
+  useEffect(() => {
+    const cleanSubsectionId = String(focusSubsectionId || '').trim();
+    if (loading || !cleanSubsectionId) return;
+    if (scrollTarget === 'platform-resource-pools') {
+      if (cleanSubsectionId.startsWith('platform-aircraft-type')) {
+        setResourcePoolActiveTab('aircraftTypes');
+      } else if (cleanSubsectionId.startsWith('platform-resource-pool')) {
+        setResourcePoolActiveTab('resourcePools');
+      }
+    }
+    const frame = window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        document.getElementById(cleanSubsectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 180);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusSubsectionId, focusAircraftTypeCode, loading, scrollTarget]);
 
   useEffect(() => {
     if (!resourcePoolsUnlocked || !resourcePoolsDirty || saving || applyingChanges) return;
@@ -4358,6 +4378,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const resourceSectionPanelHeaderClass = 'mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2';
   const resourceSectionPanelTitleClass = 'text-xs font-black uppercase tracking-wide text-gray-300';
   const resourceSectionPanelHintClass = 'text-[11px] leading-relaxed text-gray-500';
+  const getSettingsFocusAnchor = (value: any) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
   const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
   const crewCompositionAircraftTypes = config.aircraftTypes.length > 0
     ? config.aircraftTypes
@@ -5158,14 +5179,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               );
             })}
           </div>
-          <div className="mt-5">
+          <div id="platform-task-tile-abbreviations" className="mt-5">
             <h4 className="mb-2 text-sm font-bold text-white">Unit Task Tile Abbreviations</h4>
             <div className="grid gap-4 lg:grid-cols-2">
               {config.units.filter(isActiveRecord).map((unit) => {
                 const unitIndex = config.units.findIndex((candidate) => candidate === unit);
                 const abbreviations = unit.settings?.taskProfileAbbreviations || {};
                 return (
-                  <div key={unit.code} className="rounded-lg border border-gray-700 bg-gray-900 p-3">
+                  <div id={`platform-task-tile-abbreviations-${getSettingsFocusAnchor(unit.code)}`} key={unit.code} className="rounded-lg border border-gray-700 bg-gray-900 p-3">
                     <div className="mb-3 flex items-start justify-between gap-3">
                       <div>
                         <h5 className="text-sm font-bold text-white">{unit.code} - {unit.name}</h5>
@@ -5198,7 +5219,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           subtitle="Restrict which locations and units can view, assign or manage each Master LMP. Empty location or unit values apply broadly."
           action={canEdit ? <button type="button" onClick={addMasterLmpAccessRule} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Access</button> : null}
         />
-        <div className="space-y-3 p-4">
+        <div id="platform-master-lmp-access-records" className="space-y-3 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
             Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees.
           </div>
@@ -5293,7 +5314,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   No Standard Missions configured for this Fixed Crew unit.
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div id="platform-standard-mission-records" className="space-y-4">
                   {standardMissionProfilesForContext.map((profile) => {
                     const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || '').trim().toUpperCase();
                     const missionCrewOptions = getStandardMissionCrewOptions(missionAircraftTypeCode);
@@ -5302,7 +5323,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     const crewMode = profile.crewCompositionMode || (selectedCrewCompositionId.startsWith('alternate:') ? 'ALTERNATE' : selectedCrewCompositionId ? 'STANDARD' : 'CUSTOM');
                     const selectedCrewOption = missionCrewOptions.find((option) => option.id === selectedCrewCompositionId);
                     return (
-                    <div key={profile.id} className="overflow-hidden rounded-lg border border-gray-700 bg-gray-900/85 shadow-lg">
+                    <div id={`platform-standard-mission-${getSettingsFocusAnchor(profile.id || profile.shortTitle || profile.missionName)}`} key={profile.id} className="overflow-hidden rounded-lg border border-gray-700 bg-gray-900/85 shadow-lg">
                       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-800 bg-gray-950/70 px-4 py-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
@@ -5701,7 +5722,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           </div>
 
-          <div className={resourceSectionPanelClass}>
+          <div id="platform-alternate-crew-composition" className={resourceSectionPanelClass}>
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Alternate Crew Composition</h4>
@@ -5828,7 +5849,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             })}
           </div>
 
-          <div className={resourceSectionPanelClass}>
+          <div id="platform-currency-profile-records" className={resourceSectionPanelClass}>
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Currency Profiles</h4>
@@ -6029,7 +6050,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </button>
           </div>
           {resourcePoolActiveTab === 'aircraftTypes' ? (
-          <div className="space-y-3" role="tabpanel">
+          <div id="platform-aircraft-type-settings" className="space-y-3" role="tabpanel">
             <div>
               <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Aircraft Types</h4>
               <p className="mt-1 text-xs text-gray-500">Define aircraft capability and normal seat eligibility.</p>
@@ -6403,7 +6424,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </thead>
             <tbody>
               {config.units.map((unit) => (
-                <tr key={unit.code} className="border-t border-gray-700">
+                <tr id={`platform-unit-modules-${getSettingsFocusAnchor(unit.code)}`} key={unit.code} className="border-t border-gray-700">
                   <td className="px-3 py-2 font-semibold text-white">{unit.name}</td>
                   {config.modules.map((module) => {
                     const unitModuleIndex = config.unitModules.findIndex((item) => item.unitCode === unit.code && item.moduleCode === module.code);
@@ -6467,7 +6488,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+          <div id="platform-deployment-profile" className="rounded-lg border border-gray-700 bg-gray-900 p-4">
             <div className="mb-4 flex flex-wrap items-start gap-3">
               <div>
                 <h5 className="text-sm font-bold text-white">Deployment Profile</h5>
@@ -6555,7 +6576,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+          <div id="platform-operational-runbook-identity" className="rounded-lg border border-gray-700 bg-gray-900 p-4">
             <div className="mb-4 flex flex-wrap items-start gap-3">
               <div>
                 <div className="flex items-center gap-2">
@@ -6736,6 +6757,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               No licence records exist yet. Add one before introducing licence enforcement.
             </div>
           )}
+          <div id="platform-license-records" className="space-y-4">
           {config.licenses.map((license, index) => {
             const moduleCodes = Array.isArray(license.moduleCodes) ? license.moduleCodes : [];
             const licenceFeatures = license.features || {};
@@ -6858,6 +6880,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             );
           })}
+          </div>
         </div>
       </section>
 
@@ -6955,7 +6978,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               Training Report settings are locked. Press Edit before changing report names, field labels, grade text or repeat rules.
             </div>
           ) : null}
-          <div className="rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3">
+          <div id="platform-unit-training-report-template" className="rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3">
             <h4 className="text-sm font-bold text-sky-100">Unit Training Report Template</h4>
             <p className="mt-1 text-sm text-sky-100/70">
               These settings rename and configure the active unit report layout. Core dimensions and descriptor phrases come from this unit's Scoring Matrix.
@@ -7464,7 +7487,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               Rank, Terminology & Labels is locked. Press Edit and confirm your password before changing rank order, terminology or labels.
             </div>
           ) : null}
-          <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-700 bg-gray-950/70 p-4">
+          <div id="platform-personnel-terminology" className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-700 bg-gray-950/70 p-4">
             <div>
               <h5 className="text-sm font-bold text-cyan-100">Personnel Terminology</h5>
               <p className="mt-1 text-xs leading-relaxed text-gray-400">
@@ -7521,7 +7544,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               info={`The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: PT-051, Report, Grade Form.`}
             />
           </div>
-          <div className="rounded-lg border border-orange-400/25 bg-orange-500/10 p-4">
+          <div id="platform-crew-position-labels" className="rounded-lg border border-orange-400/25 bg-orange-500/10 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h5 className="text-sm font-bold text-orange-100">Crew Position Labels</h5>
@@ -7611,7 +7634,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               })}
             </div>
           </div>
-          <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-4">
+          <div id="platform-staff-qualifications" className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h5 className="text-sm font-bold text-emerald-100">Staff Qualifications</h5>
@@ -7709,7 +7732,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               ))}
             </div>
           </div>
-          <div className="rounded-lg border border-sky-400/25 bg-sky-500/10 p-4">
+          <div id="platform-unit-callsigns" className="rounded-lg border border-sky-400/25 bg-sky-500/10 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h5 className="text-sm font-bold text-sky-100">Unit Callsigns</h5>
@@ -7833,7 +7856,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           subtitle="Search by user name, assign permission profiles, then define where those profiles apply."
           action={canEdit ? <button type="button" onClick={addUserAccess} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Scope</button> : null}
         />
-        <div className="space-y-3 p-4">
+        <div id="platform-user-access-records" className="space-y-3 p-4">
           <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
             <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(160px,auto)]">
               <UserSearchSelect
@@ -7912,6 +7935,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             const showAdvancedFeatureArea = advancedFeatureAreaOpenByScope[scopeKey] === true;
             return (
               <div
+                id={access.unitCode ? `platform-user-access-${getSettingsFocusAnchor(access.unitCode)}` : undefined}
                 key={scopeKey}
                 className="rounded border p-3"
                 style={{
@@ -8049,6 +8073,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               ))}
             </div>
           </div>
+          <div id="platform-scheduling-rule-records" className="space-y-3">
           {config.schedulingRuleSets.map((ruleSet, index) => (
             <div key={ruleSet.id || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5">
               <Field label="Name" value={ruleSet.name} disabled={!canEdit} onChange={(value) => updateRow('schedulingRuleSets', index, { name: value })} />
@@ -8058,6 +8083,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <SelectField label="Active" value={ruleSet.isActive === false ? 'No' : 'Yes'} disabled={!canEdit} options={['Yes', 'No']} onChange={(value) => updateRow('schedulingRuleSets', index, { isActive: value === 'Yes' })} />
             </div>
           ))}
+          </div>
         </div>
       </section>
     </div>
