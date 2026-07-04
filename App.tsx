@@ -38734,6 +38734,7 @@ appliedUpdates.forEach(update => {
                            staffQualificationCatalogue={activeStaffQualificationCatalogue}
                            currentUserName={currentUserName}
                            scoringMatrixPhraseBank={activeTrainingReportPhraseBank}
+                           onNavigateToSettingsSection={handleNavigateToSettingsSection}
                            onAddScoringMatrixElement={() => {
                                try {
                                    sessionStorage.setItem('dfp_restore_settings_section_after_reload', 'scoring-matrix');

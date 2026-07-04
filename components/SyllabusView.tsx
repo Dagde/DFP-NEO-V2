@@ -60,6 +60,7 @@ interface SyllabusViewProps {
   currentUserName?: string;
   scoringMatrixPhraseBank?: PhraseBank;
   onAddScoringMatrixElement?: () => void;
+  onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
 }
 
 // Reusable components for view mode
@@ -968,6 +969,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     currentUserName,
     scoringMatrixPhraseBank,
     onAddScoringMatrixElement,
+    onNavigateToSettingsSection,
 }) => {
     const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
@@ -1485,6 +1487,13 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       setIsEditing(false);
       setEditedItem(null);
       setEditingCourseTitle('');
+  };
+
+  const handleManageMasterLmps = () => {
+      onNavigateToSettingsSection?.({
+          sectionId: 'platform-master-lmp-access',
+          focusSubsectionId: 'platform-master-lmp-catalogue',
+      });
   };
 
   const handleDeleteCourse = async () => {
@@ -2147,19 +2156,23 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
             ) : (
                 <div className="flex items-center gap-[1px]">
                     <AuditButton pageName="LMP/Event Details" />
-                    <button onClick={handleAddLMP} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span>
-                            Add<br />{isTrainingPackagesTab ? 'Package' : 'Course'}
-                        </span>
-                    </button>
+                    {isTrainingPackagesTab ? (
+                        <button onClick={handleAddLMP} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span>Add<br />Package</span>
+                        </button>
+                    ) : (
+                        <button onClick={handleManageMasterLmps} className="w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed">
+                            <span>Manage<br />LMPs</span>
+                        </button>
+                    )}
                     <button onClick={handleAddEvent} disabled={isFrozen || !selectedCourseType} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">
                         <span>Add<br />Event</span>
                     </button>
-                    <button onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span>
-                            Del<br />{isTrainingPackagesTab ? 'Package' : 'Course'}
-                        </span>
-                    </button>
+                    {isTrainingPackagesTab && (
+                        <button onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span>Del<br />Package</span>
+                        </button>
+                    )}
                     {isAirCombatModel && (
                         <button onClick={openAssignTraining} disabled={isFrozen || !activeTrainingAssignment || !onUpdateInstructor} className="w-[68px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">
                             <span>Assign<br />Training</span>

@@ -46084,7 +46084,8 @@ const SyllabusView = ({
   staffQualificationCatalogue,
   currentUserName,
   scoringMatrixPhraseBank,
-  onAddScoringMatrixElement
+  onAddScoringMatrixElement,
+  onNavigateToSettingsSection
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -46511,6 +46512,12 @@ const SyllabusView = ({
     setIsEditing(false);
     setEditedItem(null);
     setEditingCourseTitle("");
+  };
+  const handleManageMasterLmps = () => {
+    onNavigateToSettingsSection?.({
+      sectionId: "platform-master-lmp-access",
+      focusSubsectionId: "platform-master-lmp-catalogue"
+    });
   };
   const handleDeleteCourse = async () => {
     if (!deletePassword) {
@@ -47109,24 +47116,28 @@ const SyllabusView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" })
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "LMP/Event Details" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddLMP, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            isTrainingPackagesTab ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddLMP, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               "Add",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              isTrainingPackagesTab ? "Package" : "Course"
+              "Package"
+            ] }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleManageMasterLmps, className: "w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              "Manage",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "LMPs"
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddEvent, disabled: isFrozen || !selectedCourseType, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               "Add",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "Event"
             ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
+            isTrainingPackagesTab && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
               setDeletePassword("");
               setDeleteError("");
               setShowDeleteModal(true);
             }, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               "Del",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              isTrainingPackagesTab ? "Package" : "Course"
+              "Package"
             ] }) }),
             isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: openAssignTraining, disabled: isFrozen || !activeTrainingAssignment || !onUpdateInstructor, className: "w-[68px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               "Assign",
@@ -63063,7 +63074,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-master-lmp-access-records", className: "space-y-3 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Add Master LMP records to the catalogue first, then create access rules that decide which locations or units can View, Assign, or Manage each Master LMP." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-master-lmp-catalogue", className: "space-y-3 rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: "Master LMP Catalogue" }),
@@ -107946,6 +107957,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             currentUserName,
             scoringMatrixPhraseBank: activeTrainingReportPhraseBank,
+            onNavigateToSettingsSection: handleNavigateToSettingsSection,
             onAddScoringMatrixElement: () => {
               try {
                 sessionStorage.setItem("dfp_restore_settings_section_after_reload", "scoring-matrix");

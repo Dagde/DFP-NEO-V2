@@ -5337,7 +5337,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
             Add Master LMP records to the catalogue first, then create access rules that decide which locations or units can View, Assign, or Manage each Master LMP.
           </div>
-          <div className="space-y-3 rounded-lg border border-gray-700 bg-gray-900 p-3">
+          <div id="platform-master-lmp-catalogue" className="space-y-3 rounded-lg border border-gray-700 bg-gray-900 p-3">
             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h4 className="text-sm font-bold text-white">Master LMP Catalogue</h4>
