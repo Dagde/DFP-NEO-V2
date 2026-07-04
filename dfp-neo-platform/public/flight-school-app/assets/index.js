@@ -9233,13 +9233,6 @@ const unitSettingsSelectClass = `${unitSettingsInputClass} cursor-pointer`;
 const unitSettingsRowClass = "grid gap-2 border-t border-white/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(150px,0.65fr)_minmax(0,1fr)] md:items-center";
 const unitSettingsMutedPillClass = "rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1 text-[11px] font-semibold text-slate-300";
 const unitSettingsScrollClass = "max-w-full overflow-x-auto";
-const deploymentModeOptions = ["Online SaaS", "Private Defence Network", "Fully Offline", "Hybrid Offline Sync"];
-const licenceValidationOptions = ["Online licence check", "Private network licence server", "Offline signed licence file", "Hybrid cached licence"];
-const licenceEnforcementOptions = ["Monitor Only", "Warn Only", "Block Expired Licence"];
-const authModelOptions = ["Local accounts", "Defence SSO", "Hybrid local and SSO"];
-const releaseChannelOptions = ["Production", "Staging", "Customer Acceptance", "Offline Package"];
-const backupFrequencyOptions = ["Hourly", "Daily", "Weekly", "Manual"];
-const accreditationStatusOptions = ["Not started", "In preparation", "Submitted", "Approved", "Renewal due"];
 const normaliseUnitSettingsIdentifier = (value) => String(value || "").trim().toUpperCase();
 const formatPlainList = (items, fallback = "Not set") => {
   const cleanItems = items.map((item) => String(item || "").trim()).filter(Boolean);
@@ -9390,8 +9383,8 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
   ].map((profile) => String(profile || "").trim()).filter(Boolean)));
   const activeOrganisation = getActiveOrganisation(platformConfig);
   const organisationSettings = activeOrganisation?.settings || {};
-  const deploymentProfile = organisationSettings.deploymentProfile || {};
-  const operationalRunbook = organisationSettings.operationalRunbook || {};
+  organisationSettings.deploymentProfile || {};
+  organisationSettings.operationalRunbook || {};
   const crewPositionTerminology = normaliseCrewPositionTerminology(organisationSettings.crewPositionTerminology || null);
   getCrewPositionLabelMap(crewPositionTerminology);
   const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
@@ -9461,7 +9454,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     groups[key].count += 1;
     return groups;
   }, {}));
-  const activeLicences = (platformConfig?.licenses || []).filter((license) => String(license?.status || "ACTIVE").toUpperCase() === "ACTIVE");
+  (platformConfig?.licenses || []).filter((license) => String(license?.status || "ACTIVE").toUpperCase() === "ACTIVE");
   const unitCallsignEntries = unitCallsignSettings.entries.filter((entry) => normaliseUnitSettingsIdentifier(entry.unitCode) === normaliseUnitSettingsIdentifier(unit?.code));
   const modelCrewPositions = crewPositionTerminology.positions.filter((position) => !position.operationalModels?.length || position.operationalModels.includes(operationalModel2));
   const modelQualifications = staffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE" && qualification.operationalModels.includes(operationalModel2));
@@ -9471,8 +9464,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     { id: "crew", label: "Crew", count: aircraftTypesForUnit.length + alternateCrewProfiles.length },
     { id: "training", label: "Training", count: standardMissionProfiles.length + currencyProfiles.length },
     { id: "labels", label: "Labels", count: modelCrewPositions.length },
-    { id: "access", label: "Access", count: userAccessForUnit.length },
-    { id: "deployment", label: "Deployment", count: activeLicences.length }
+    { id: "access", label: "Access", count: userAccessForUnit.length }
   ];
   const settingsAnchorSuffix = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
   const unitFocusAnchor = settingsAnchorSuffix(unit?.code);
@@ -9508,22 +9500,6 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
         }
       } : organisation)
     }));
-  };
-  const updateDeploymentProfile = (patch) => {
-    updateOrganisationSettings({
-      deploymentProfile: {
-        ...deploymentProfile,
-        ...patch
-      }
-    });
-  };
-  const updateOperationalRunbook = (patch) => {
-    updateOrganisationSettings({
-      operationalRunbook: {
-        ...operationalRunbook,
-        ...patch
-      }
-    });
   };
   const updatePersonnelDisplaySettings = (patch) => {
     updateOrganisationSettings({
@@ -9629,13 +9605,6 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     updateOrganisationSettings({
       masterLmpAccess: masterLmpAccessRules.map((candidate) => candidate === rule || String(candidate?.id || candidate?.masterLmpId || candidate?.masterLmpName || "") === String(rule?.id || rule?.masterLmpId || rule?.masterLmpName || "") ? { ...candidate, ...patch } : candidate)
     });
-  };
-  const updateLicenseRecord = (license, patch) => {
-    if (!onUpdatePlatformConfig) return;
-    onUpdatePlatformConfig((current) => ({
-      ...current,
-      licenses: (current?.licenses || []).map((candidate) => candidate === license || String(candidate?.id || candidate?.licenseKey || candidate?.licenseName || "") === String(license?.id || license?.licenseKey || license?.licenseName || "") ? { ...candidate, ...patch } : candidate)
-    }));
   };
   const updateUnitModule = (moduleCode, isEnabled) => {
     if (!onUpdatePlatformConfig || !unit?.code) return;
@@ -9876,37 +9845,6 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${card.profiles.length > 0 ? "text-slate-100" : "text-slate-400"}`, children: card.profiles.length > 0 ? card.profiles.join(", ") : "No permission profile assigned" })
           ] })
         ] }, `${card.userLabel}-${card.summary}-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Users", value: "No access scopes currently include this unit.", muted: true }) })
-      ] });
-    }
-    if (activeCategory === "deployment") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Deployment Readiness", description: "Organisation-level deployment posture that affects this unit.", action: settingsLink("platform-deployment-readiness", "Take me there", { focusSubsectionId: "platform-deployment-profile" }), children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Operating model", value: deploymentProfile.mode || "Online SaaS", options: deploymentModeOptions, onChange: (value) => updateDeploymentProfile({ mode: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Licence validation", value: deploymentProfile.validationMethod || "Online licence check", options: licenceValidationOptions, onChange: (value) => updateDeploymentProfile({ validationMethod: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Enforcement", value: deploymentProfile.enforcementMode || "Monitor Only", options: licenceEnforcementOptions, onChange: (value) => updateDeploymentProfile({ enforcementMode: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Authentication", value: deploymentProfile.authModel || "Local accounts", options: authModelOptions, onChange: (value) => updateDeploymentProfile({ authModel: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Data residence", value: deploymentProfile.dataResidence || "", onChange: (value) => updateDeploymentProfile({ dataResidence: value }), disabled: true })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Operational Runbook", description: "Support, backup, restore, update and accreditation evidence.", action: settingsLink("platform-operational-runbook", "Take me there", { focusSubsectionId: "platform-operational-runbook-identity" }), children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Environment", value: operationalRunbook.environmentName || "", onChange: (value) => updateOperationalRunbook({ environmentName: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Release channel", value: operationalRunbook.releaseChannel || "Production", options: releaseChannelOptions, onChange: (value) => updateOperationalRunbook({ releaseChannel: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Support owner", value: operationalRunbook.supportOwner || "", onChange: (value) => updateOperationalRunbook({ supportOwner: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Support contact", value: operationalRunbook.supportContact || "", onChange: (value) => updateOperationalRunbook({ supportContact: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Backup frequency", value: operationalRunbook.backupFrequency || "Daily", options: backupFrequencyOptions, onChange: (value) => updateOperationalRunbook({ backupFrequency: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Backup retention days", value: Number(operationalRunbook.backupRetentionDays ?? 30), onChange: (value) => updateOperationalRunbook({ backupRetentionDays: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Backup location", value: operationalRunbook.backupStorageLocation || "", onChange: (value) => updateOperationalRunbook({ backupStorageLocation: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Last restore test", value: operationalRunbook.lastRestoreTestDate || "", onChange: (value) => updateOperationalRunbook({ lastRestoreTestDate: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "RTO hours", value: Number(operationalRunbook.restoreTimeObjectiveHours ?? 24), onChange: (value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "RPO hours", value: Number(operationalRunbook.restorePointObjectiveHours ?? 24), onChange: (value) => updateOperationalRunbook({ restorePointObjectiveHours: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Accreditation", value: operationalRunbook.accreditationStatus || "Not started", options: accreditationStatusOptions, onChange: (value) => updateOperationalRunbook({ accreditationStatus: value }), disabled: true })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Licensing", description: "Active licence records and commercial limits for the deployment.", action: settingsLink("platform-licensing", "Take me there", { focusSubsectionId: "platform-license-records" }), children: activeLicences.length > 0 ? activeLicences.map((license) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Licence name", value: license.licenseName || license.licenseKey || "", onChange: (value) => updateLicenseRecord(license, { licenseName: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Deployment mode", value: license.deploymentMode || deploymentProfile.mode || "", onChange: (value) => updateLicenseRecord(license, { deploymentMode: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Valid until", value: license.validUntil || "", onChange: (value) => updateLicenseRecord(license, { validUntil: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Max units", value: Number(license.maxUnits ?? 0), onChange: (value) => updateLicenseRecord(license, { maxUnits: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Max users", value: Number(license.maxUsers ?? 0), onChange: (value) => updateLicenseRecord(license, { maxUsers: value }), disabled: true })
-        ] }, license.id || license.licenseKey)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Licences", value: "No active licence records configured.", muted: true }) })
       ] });
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [

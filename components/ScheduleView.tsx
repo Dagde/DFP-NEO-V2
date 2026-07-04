@@ -917,7 +917,6 @@ const OrganisationMyUnitSettings: React.FC<{
         { id: 'training', label: 'Training', count: standardMissionProfiles.length + currencyProfiles.length },
         { id: 'labels', label: 'Labels', count: modelCrewPositions.length },
         { id: 'access', label: 'Access', count: userAccessForUnit.length },
-        { id: 'deployment', label: 'Deployment', count: activeLicences.length },
     ];
     const settingsAnchorSuffix = (value: any) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
     const unitFocusAnchor = settingsAnchorSuffix(unit?.code);
@@ -1483,44 +1482,6 @@ const OrganisationMyUnitSettings: React.FC<{
                                 ))}
                             </div>
                         ) : <UnitSettingsReadRow label="Users" value="No access scopes currently include this unit." muted />}
-                    </UnitSettingsGroup>
-                </div>
-            );
-        }
-
-        if (activeCategory === 'deployment') {
-            return (
-                <div className="space-y-4">
-                    <UnitSettingsGroup title="Deployment Readiness" description="Organisation-level deployment posture that affects this unit." action={settingsLink('platform-deployment-readiness', 'Take me there', { focusSubsectionId: 'platform-deployment-profile' })}>
-                        <UnitSettingsSelect label="Operating model" value={deploymentProfile.mode || 'Online SaaS'} options={deploymentModeOptions} onChange={(value) => updateDeploymentProfile({ mode: value })} disabled={!canEdit} />
-                        <UnitSettingsSelect label="Licence validation" value={deploymentProfile.validationMethod || 'Online licence check'} options={licenceValidationOptions} onChange={(value) => updateDeploymentProfile({ validationMethod: value })} disabled={!canEdit} />
-                        <UnitSettingsSelect label="Enforcement" value={deploymentProfile.enforcementMode || 'Monitor Only'} options={licenceEnforcementOptions} onChange={(value) => updateDeploymentProfile({ enforcementMode: value })} disabled={!canEdit} />
-                        <UnitSettingsSelect label="Authentication" value={deploymentProfile.authModel || 'Local accounts'} options={authModelOptions} onChange={(value) => updateDeploymentProfile({ authModel: value })} disabled={!canEdit} />
-                        <UnitSettingsField label="Data residence" value={deploymentProfile.dataResidence || ''} onChange={(value) => updateDeploymentProfile({ dataResidence: value })} disabled={!canEdit} />
-                    </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Operational Runbook" description="Support, backup, restore, update and accreditation evidence." action={settingsLink('platform-operational-runbook', 'Take me there', { focusSubsectionId: 'platform-operational-runbook-identity' })}>
-                        <UnitSettingsField label="Environment" value={operationalRunbook.environmentName || ''} onChange={(value) => updateOperationalRunbook({ environmentName: value })} disabled={!canEdit} />
-                        <UnitSettingsSelect label="Release channel" value={operationalRunbook.releaseChannel || 'Production'} options={releaseChannelOptions} onChange={(value) => updateOperationalRunbook({ releaseChannel: value })} disabled={!canEdit} />
-                        <UnitSettingsField label="Support owner" value={operationalRunbook.supportOwner || ''} onChange={(value) => updateOperationalRunbook({ supportOwner: value })} disabled={!canEdit} />
-                        <UnitSettingsField label="Support contact" value={operationalRunbook.supportContact || ''} onChange={(value) => updateOperationalRunbook({ supportContact: value })} disabled={!canEdit} />
-                        <UnitSettingsSelect label="Backup frequency" value={operationalRunbook.backupFrequency || 'Daily'} options={backupFrequencyOptions} onChange={(value) => updateOperationalRunbook({ backupFrequency: value })} disabled={!canEdit} />
-                        <UnitSettingsNumberField label="Backup retention days" value={Number(operationalRunbook.backupRetentionDays ?? 30)} onChange={(value) => updateOperationalRunbook({ backupRetentionDays: value })} disabled={!canEdit} />
-                        <UnitSettingsField label="Backup location" value={operationalRunbook.backupStorageLocation || ''} onChange={(value) => updateOperationalRunbook({ backupStorageLocation: value })} disabled={!canEdit} />
-                        <UnitSettingsField label="Last restore test" value={operationalRunbook.lastRestoreTestDate || ''} onChange={(value) => updateOperationalRunbook({ lastRestoreTestDate: value })} disabled={!canEdit} />
-                        <UnitSettingsNumberField label="RTO hours" value={Number(operationalRunbook.restoreTimeObjectiveHours ?? 24)} onChange={(value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value })} disabled={!canEdit} />
-                        <UnitSettingsNumberField label="RPO hours" value={Number(operationalRunbook.restorePointObjectiveHours ?? 24)} onChange={(value) => updateOperationalRunbook({ restorePointObjectiveHours: value })} disabled={!canEdit} />
-                        <UnitSettingsSelect label="Accreditation" value={operationalRunbook.accreditationStatus || 'Not started'} options={accreditationStatusOptions} onChange={(value) => updateOperationalRunbook({ accreditationStatus: value })} disabled={!canEdit} />
-                    </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Licensing" description="Active licence records and commercial limits for the deployment." action={settingsLink('platform-licensing', 'Take me there', { focusSubsectionId: 'platform-license-records' })}>
-                        {activeLicences.length > 0 ? activeLicences.map((license: any) => (
-                            <div key={license.id || license.licenseKey} className="border-t border-white/10 first:border-t-0">
-                                <UnitSettingsField label="Licence name" value={license.licenseName || license.licenseKey || ''} onChange={(value) => updateLicenseRecord(license, { licenseName: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Deployment mode" value={license.deploymentMode || deploymentProfile.mode || ''} onChange={(value) => updateLicenseRecord(license, { deploymentMode: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Valid until" value={license.validUntil || ''} onChange={(value) => updateLicenseRecord(license, { validUntil: value })} disabled={!canEdit} />
-                                <UnitSettingsNumberField label="Max units" value={Number(license.maxUnits ?? 0)} onChange={(value) => updateLicenseRecord(license, { maxUnits: value })} disabled={!canEdit} />
-                                <UnitSettingsNumberField label="Max users" value={Number(license.maxUsers ?? 0)} onChange={(value) => updateLicenseRecord(license, { maxUsers: value })} disabled={!canEdit} />
-                            </div>
-                        )) : <UnitSettingsReadRow label="Licences" value="No active licence records configured." muted />}
                     </UnitSettingsGroup>
                 </div>
             );
