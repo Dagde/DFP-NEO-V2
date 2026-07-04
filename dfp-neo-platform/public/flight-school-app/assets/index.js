@@ -9270,6 +9270,22 @@ const UnitSettingsNumberField = ({ label, value, onChange, disabled = false }) =
     }
   )
 ] });
+const UnitSettingsResourceNumberField = ({ label, value, onChange, disabled = false }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-[132px] shrink-0 border-r border-white/10 px-3 py-3 last:border-r-0", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400", children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      type: "number",
+      min: 0,
+      className: "mt-2 h-9 w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 text-center text-sm font-semibold text-slate-100 outline-none transition focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60",
+      value: Number.isFinite(Number(value)) ? value : 0,
+      disabled,
+      onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDown: stopEditableKeyPropagation,
+      onChange: (event) => onChange(Math.max(0, Math.round(Number(event.target.value) || 0)))
+    }
+  )
+] });
 const UnitSettingsGroup = ({ title, description, children, action }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: unitSettingsPanelClass, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -9449,22 +9465,33 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
   const renderCategory = () => {
     if (activeCategory === "resources") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Aircraft & Resource Pools", description: "Live counts for pools assigned to this unit or its home location.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
-          resourcePools.length,
-          " pools"
-        ] }), children: resourcePools.length > 0 ? resourcePools.map((pool) => {
-          const settings = pool.settings || {};
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: pool.name || pool.code || "Resource pool", value: `${pool.aircraftTypeCode || "Aircraft not set"} / ${pool.poolType || "Dedicated"} / ${pool.locationCode || unit.locationCode || "Location not set"}` }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${unitSettingsScrollClass} border-t border-white/10`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[760px] grid-cols-5", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Aircraft", value: settings.aircraft ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { aircraft: value }), disabled: !onUpdatePlatformConfig }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Sim", value: settings.ftd ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { ftd: value }), disabled: !onUpdatePlatformConfig }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Trainer", value: settings.cpt ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { cpt: value }), disabled: !onUpdatePlatformConfig }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Standby", value: settings.standby ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { standby: value }), disabled: !onUpdatePlatformConfig }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Ground", value: settings.ground ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { ground: value }), disabled: !onUpdatePlatformConfig })
-            ] }) })
-          ] }, pool.id || pool.code);
-        }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Pools", value: "No resource pools are assigned to this unit or location.", muted: true }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          UnitSettingsGroup,
+          {
+            title: "Aircraft & Resource Pools",
+            description: "Live counts for pools assigned to this unit or its home location.",
+            action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
+                resourcePools.length,
+                " pools"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsMutedPillClass, children: canEdit ? "Live edit" : "Read only" })
+            ] }),
+            children: resourcePools.length > 0 ? resourcePools.map((pool) => {
+              const settings = pool.settings || {};
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: pool.name || pool.code || "Resource pool", value: `${pool.aircraftTypeCode || "Aircraft not set"} / ${pool.poolType || "Dedicated"} / ${pool.locationCode || unit.locationCode || "Location not set"}` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${unitSettingsScrollClass} border-t border-white/10 bg-slate-950/25`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-[720px]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsResourceNumberField, { label: "Aircraft", value: settings.aircraft ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { aircraft: value }), disabled: !canEdit }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsResourceNumberField, { label: "Sim", value: settings.ftd ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { ftd: value }), disabled: !canEdit }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsResourceNumberField, { label: "Trainer", value: settings.cpt ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { cpt: value }), disabled: !canEdit }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsResourceNumberField, { label: "Standby", value: settings.standby ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { standby: value }), disabled: !canEdit }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsResourceNumberField, { label: "Ground", value: settings.ground ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { ground: value }), disabled: !canEdit })
+                ] }) })
+              ] }, pool.id || pool.code);
+            }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Pools", value: "No resource pools are assigned to this unit or location.", muted: true })
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Aircraft Numbering & Configurations", description: "Aircraft type and numbering rules inherited from this unit's resource pools.", children: aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft) => {
           const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
           const configurations = Array.isArray(aircraft.settings?.aircraftConfigurations) ? aircraft.settings.aircraftConfigurations : [];

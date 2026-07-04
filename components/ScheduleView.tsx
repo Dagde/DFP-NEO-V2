@@ -665,6 +665,27 @@ const UnitSettingsNumberField: React.FC<{
     </label>
 );
 
+const UnitSettingsResourceNumberField: React.FC<{
+    label: string;
+    value: number;
+    onChange: (value: number) => void;
+    disabled?: boolean;
+}> = ({ label, value, onChange, disabled = false }) => (
+    <label className="min-w-[132px] shrink-0 border-r border-white/10 px-3 py-3 last:border-r-0">
+        <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400">{label}</span>
+        <input
+            type="number"
+            min={0}
+            className="mt-2 h-9 w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 text-center text-sm font-semibold text-slate-100 outline-none transition focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+            value={Number.isFinite(Number(value)) ? value : 0}
+            disabled={disabled}
+            onKeyDownCapture={stopEditableKeyPropagation}
+            onKeyDown={stopEditableKeyPropagation}
+            onChange={(event) => onChange(Math.max(0, Math.round(Number(event.target.value) || 0)))}
+        />
+    </label>
+);
+
 const UnitSettingsGroup: React.FC<{ title: string; description?: string; children: React.ReactNode; action?: React.ReactNode }> = ({ title, description, children, action }) => (
     <section className={unitSettingsPanelClass}>
         <div className="flex items-start justify-between gap-3 px-4 py-3">
@@ -923,19 +944,23 @@ const OrganisationMyUnitSettings: React.FC<{
         if (activeCategory === 'resources') {
             return (
                 <div className="space-y-4">
-                    <UnitSettingsGroup title="Aircraft & Resource Pools" description="Live counts for pools assigned to this unit or its home location." action={<span className={unitSettingsMutedPillClass}>{resourcePools.length} pools</span>}>
+                    <UnitSettingsGroup
+                        title="Aircraft & Resource Pools"
+                        description="Live counts for pools assigned to this unit or its home location."
+                        action={<div className="flex flex-wrap justify-end gap-2"><span className={unitSettingsMutedPillClass}>{resourcePools.length} pools</span><span className={unitSettingsMutedPillClass}>{canEdit ? 'Live edit' : 'Read only'}</span></div>}
+                    >
                         {resourcePools.length > 0 ? resourcePools.map((pool: any) => {
                             const settings = pool.settings || {};
                             return (
                                 <div key={pool.id || pool.code} className="border-t border-white/10 first:border-t-0">
                                     <UnitSettingsReadRow label={pool.name || pool.code || 'Resource pool'} value={`${pool.aircraftTypeCode || 'Aircraft not set'} / ${pool.poolType || 'Dedicated'} / ${pool.locationCode || unit.locationCode || 'Location not set'}`} />
-                                    <div className={`${unitSettingsScrollClass} border-t border-white/10`}>
-                                        <div className="grid min-w-[760px] grid-cols-5">
-                                            <UnitSettingsNumberField label="Aircraft" value={settings.aircraft ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { aircraft: value })} disabled={!onUpdatePlatformConfig} />
-                                            <UnitSettingsNumberField label="Sim" value={settings.ftd ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ftd: value })} disabled={!onUpdatePlatformConfig} />
-                                            <UnitSettingsNumberField label="Trainer" value={settings.cpt ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { cpt: value })} disabled={!onUpdatePlatformConfig} />
-                                            <UnitSettingsNumberField label="Standby" value={settings.standby ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { standby: value })} disabled={!onUpdatePlatformConfig} />
-                                            <UnitSettingsNumberField label="Ground" value={settings.ground ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ground: value })} disabled={!onUpdatePlatformConfig} />
+                                    <div className={`${unitSettingsScrollClass} border-t border-white/10 bg-slate-950/25`}>
+                                        <div className="flex min-w-[720px]">
+                                            <UnitSettingsResourceNumberField label="Aircraft" value={settings.aircraft ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { aircraft: value })} disabled={!canEdit} />
+                                            <UnitSettingsResourceNumberField label="Sim" value={settings.ftd ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ftd: value })} disabled={!canEdit} />
+                                            <UnitSettingsResourceNumberField label="Trainer" value={settings.cpt ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { cpt: value })} disabled={!canEdit} />
+                                            <UnitSettingsResourceNumberField label="Standby" value={settings.standby ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { standby: value })} disabled={!canEdit} />
+                                            <UnitSettingsResourceNumberField label="Ground" value={settings.ground ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ground: value })} disabled={!canEdit} />
                                         </div>
                                     </div>
                                 </div>
