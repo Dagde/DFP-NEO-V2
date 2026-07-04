@@ -492,6 +492,68 @@ const notifyPlatformConfigUpdated = (config: PlatformConfig) => {
   window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config } }));
 };
 
+const notifyPlatformConfigUpdatedSoon = (config: PlatformConfig) => {
+  if (typeof window === 'undefined') return;
+  window.setTimeout(() => notifyPlatformConfigUpdated(config), 0);
+};
+
+const normaliseOrganisationPathKey = (value: unknown): string => (
+  String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+);
+
+const buildOrganisationOptionRenameMaps = (
+  previousStructure: OrganisationStructureSettings,
+  nextStructure: OrganisationStructureSettings,
+): Map<number, Map<string, string>> => {
+  const maps = new Map<number, Map<string, string>>();
+  const maxLevels = Math.max(previousStructure.levels.length, nextStructure.levels.length);
+  for (let levelIndex = 0; levelIndex < maxLevels; levelIndex += 1) {
+    const previousOptions = previousStructure.levels[levelIndex]?.options || [];
+    const nextOptions = nextStructure.levels[levelIndex]?.options || [];
+    const nextOptionKeys = new Set(nextOptions.map(normaliseOrganisationPathKey));
+    const levelMap = new Map<string, string>();
+    previousOptions.forEach((previousOption, optionIndex) => {
+      const nextOption = nextOptions[optionIndex];
+      const previousKey = normaliseOrganisationPathKey(previousOption);
+      if (!previousKey || !nextOption || normaliseOrganisationPathKey(nextOption) === previousKey || nextOptionKeys.has(previousKey)) return;
+      levelMap.set(previousKey, String(nextOption || '').trim());
+    });
+    if (levelMap.size > 0) maps.set(levelIndex, levelMap);
+  }
+  return maps;
+};
+
+const applyOrganisationStructureRenamesToUnits = (
+  config: PlatformConfig,
+  previousStructure: OrganisationStructureSettings,
+  nextStructure: OrganisationStructureSettings,
+): PlatformConfig => {
+  const renameMaps = buildOrganisationOptionRenameMaps(previousStructure, nextStructure);
+  if (renameMaps.size === 0) return config;
+  let changed = false;
+  const units = config.units.map((unit) => {
+    const sourcePath = Array.isArray(unit?.settings?.parentOrganisationPath)
+      ? unit.settings.parentOrganisationPath
+      : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || '').split('-');
+    const cleanPath = sourcePath.map((part: unknown) => String(part || '').trim()).filter(Boolean);
+    const nextPath = cleanPath.map((part: string, pathIndex: number) => {
+      const replacement = renameMaps.get(pathIndex + 1)?.get(normaliseOrganisationPathKey(part));
+      return replacement || part;
+    });
+    if (nextPath.join('\u0001') === cleanPath.join('\u0001')) return unit;
+    changed = true;
+    return {
+      ...unit,
+      settings: {
+        ...(unit.settings || {}),
+        parentOrganisationPath: nextPath,
+        parentOrganisation: nextPath.join('-'),
+      },
+    };
+  });
+  return changed ? { ...config, units } : config;
+};
+
 const createClientRecordId = (prefix: string): string => (
   `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 );
@@ -1930,15 +1992,37 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ? updater(currentSettings)
         : { ...currentSettings, ...updater };
       organisations[orgIndex] = { ...currentOrg, settings: nextSettings };
-      return { ...prev, organisations };
+      const nextConfig = { ...prev, organisations };
+      notifyPlatformConfigUpdatedSoon(nextConfig);
+      return nextConfig;
     });
   };
 
   const updateOrganisationStructure = (nextStructure: OrganisationStructureSettings) => {
-    updatePrimaryOrganisationSettings((settings) => ({
-      ...settings,
-      organisationStructure: normaliseOrganisationStructure(nextStructure, primaryOrganisation?.name || ''),
-    }));
+    setConfig((prev) => {
+      if (prev.organisations.length === 0) return prev;
+      const organisations = [...prev.organisations];
+      const activeIndex = organisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
+      const orgIndex = activeIndex >= 0 ? activeIndex : 0;
+      const currentOrg = organisations[orgIndex] || organisations[0];
+      const currentSettings = currentOrg.settings || {};
+      const previousStructure = normaliseOrganisationStructure(currentSettings.organisationStructure || null, currentOrg.name || '');
+      const normalisedNextStructure = normaliseOrganisationStructure(nextStructure, currentOrg.name || primaryOrganisation?.name || '');
+      organisations[orgIndex] = {
+        ...currentOrg,
+        settings: {
+          ...currentSettings,
+          organisationStructure: normalisedNextStructure,
+        },
+      };
+      const nextConfig = applyOrganisationStructureRenamesToUnits(
+        { ...prev, organisations },
+        previousStructure,
+        normalisedNextStructure,
+      );
+      notifyPlatformConfigUpdatedSoon(nextConfig);
+      return nextConfig;
+    });
   };
 
   const updateOrganisationStructureLevelCount = (levelCount: number) => {
@@ -2934,12 +3018,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const updateRow = (collection: keyof PlatformConfig, index: number, changes: Record<string, any>) => {
-    setConfig((prev) => ({
-      ...prev,
-      [collection]: prev[collection].map((item, itemIndex) => (
-        itemIndex === index ? { ...item, ...changes } : item
-      )),
-    }));
+    setConfig((prev) => {
+      const nextConfig = {
+        ...prev,
+        [collection]: prev[collection].map((item, itemIndex) => (
+          itemIndex === index ? { ...item, ...changes } : item
+        )),
+      };
+      notifyPlatformConfigUpdatedSoon(nextConfig);
+      return nextConfig;
+    });
   };
 
   const updateAircraftCrewCount = (aircraftIndex: number, crewCount: number) => {

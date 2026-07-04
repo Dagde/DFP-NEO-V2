@@ -484,11 +484,44 @@ const formatPlainList = (items: string[], fallback = 'Not set'): string => {
     return cleanItems.length > 0 ? cleanItems.join(' / ') : fallback;
 };
 
+const normaliseOrganisationDisplayKey = (value: unknown): string => (
+    String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+);
+
+const getStringSimilarity = (left: string, right: string): number => {
+    const leftTokens = new Set(normaliseOrganisationDisplayKey(left).split(/[^a-z0-9]+/).filter(Boolean));
+    const rightTokens = new Set(normaliseOrganisationDisplayKey(right).split(/[^a-z0-9]+/).filter(Boolean));
+    if (leftTokens.size === 0 || rightTokens.size === 0) return 0;
+    let shared = 0;
+    leftTokens.forEach((token) => {
+        if (rightTokens.has(token)) shared += 1;
+    });
+    return shared / Math.max(leftTokens.size, rightTokens.size);
+};
+
 const getUnitParentOrganisationPath = (unit: any): string[] => {
     const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath)
         ? unit.settings.parentOrganisationPath
         : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || '').split('-');
     return rawPath.map((item: unknown) => String(item || '').trim()).filter(Boolean);
+};
+
+const getResolvedUnitParentOrganisationPath = (platformConfig: any, unit: any): string[] => {
+    const path = getUnitParentOrganisationPath(unit);
+    const activeOrganisation = getActiveOrganisation(platformConfig);
+    const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels)
+        ? activeOrganisation.settings.organisationStructure.levels
+        : [];
+    return path.map((part, pathIndex) => {
+        const options = (levels[pathIndex + 1]?.options || []).map((option: unknown) => String(option || '').trim()).filter(Boolean);
+        if (options.length === 0) return part;
+        const exactMatch = options.find((option: string) => normaliseOrganisationDisplayKey(option) === normaliseOrganisationDisplayKey(part));
+        if (exactMatch) return exactMatch;
+        const bestMatch = options
+            .map((option: string) => ({ option, score: getStringSimilarity(part, option) }))
+            .sort((left: { score: number }, right: { score: number }) => right.score - left.score)[0];
+        return bestMatch && bestMatch.score >= 0.45 ? bestMatch.option : part;
+    });
 };
 
 const getRelevantResourcePoolsForUnit = (platformConfig: any, unit: any): any[] => {
@@ -631,7 +664,7 @@ const OrganisationMyUnitSettings: React.FC<{
         && (!ruleSet?.unitCode || normaliseUnitSettingsIdentifier(ruleSet.unitCode) === normaliseUnitSettingsIdentifier(unit?.code))
     ));
     const location = locations.find((candidate: any) => normaliseUnitSettingsIdentifier(candidate?.code) === normaliseUnitSettingsIdentifier(unit?.locationCode));
-    const parentPath = getUnitParentOrganisationPath(unit);
+    const parentPath = getResolvedUnitParentOrganisationPath(platformConfig, unit);
     const operationalModel = getUnitOperationalModel(unit);
     const modelOptionLabels = Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
     const taskAbbreviations = unit?.settings?.taskProfileAbbreviations || {};

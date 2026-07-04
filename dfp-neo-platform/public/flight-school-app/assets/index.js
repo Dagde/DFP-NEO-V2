@@ -9140,9 +9140,33 @@ const formatPlainList = (items, fallback = "Not set") => {
   const cleanItems = items.map((item) => String(item || "").trim()).filter(Boolean);
   return cleanItems.length > 0 ? cleanItems.join(" / ") : fallback;
 };
+const normaliseOrganisationDisplayKey = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+const getStringSimilarity = (left, right) => {
+  const leftTokens = new Set(normaliseOrganisationDisplayKey(left).split(/[^a-z0-9]+/).filter(Boolean));
+  const rightTokens = new Set(normaliseOrganisationDisplayKey(right).split(/[^a-z0-9]+/).filter(Boolean));
+  if (leftTokens.size === 0 || rightTokens.size === 0) return 0;
+  let shared = 0;
+  leftTokens.forEach((token) => {
+    if (rightTokens.has(token)) shared += 1;
+  });
+  return shared / Math.max(leftTokens.size, rightTokens.size);
+};
 const getUnitParentOrganisationPath = (unit) => {
   const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
   return rawPath.map((item) => String(item || "").trim()).filter(Boolean);
+};
+const getResolvedUnitParentOrganisationPath = (platformConfig, unit) => {
+  const path = getUnitParentOrganisationPath(unit);
+  const activeOrganisation = getActiveOrganisation(platformConfig);
+  const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
+  return path.map((part, pathIndex) => {
+    const options = (levels[pathIndex + 1]?.options || []).map((option) => String(option || "").trim()).filter(Boolean);
+    if (options.length === 0) return part;
+    const exactMatch = options.find((option) => normaliseOrganisationDisplayKey(option) === normaliseOrganisationDisplayKey(part));
+    if (exactMatch) return exactMatch;
+    const bestMatch = options.map((option) => ({ option, score: getStringSimilarity(part, option) })).sort((left, right) => right.score - left.score)[0];
+    return bestMatch && bestMatch.score >= 0.45 ? bestMatch.option : part;
+  });
 };
 const getRelevantResourcePoolsForUnit = (platformConfig, unit) => {
   const unitCode = normaliseUnitSettingsIdentifier(unit?.code);
@@ -9240,7 +9264,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
   const unitModules = platformConfig?.unitModules || [];
   const schedulingRuleSets = (platformConfig?.schedulingRuleSets || []).filter((ruleSet) => String(ruleSet?.isActive ?? true) !== "false" && (!ruleSet?.unitCode || normaliseUnitSettingsIdentifier(ruleSet.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)));
   const location = locations.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === normaliseUnitSettingsIdentifier(unit?.locationCode));
-  const parentPath = getUnitParentOrganisationPath(unit);
+  const parentPath = getResolvedUnitParentOrganisationPath(platformConfig, unit);
   const operationalModel2 = getUnitOperationalModel(unit);
   const modelOptionLabels = Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
   const taskAbbreviations = unit?.settings?.taskProfileAbbreviations || {};
@@ -58536,6 +58560,53 @@ const notifyPlatformConfigUpdated = (config) => {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT$1, { detail: { config } }));
 };
+const notifyPlatformConfigUpdatedSoon = (config) => {
+  if (typeof window === "undefined") return;
+  window.setTimeout(() => notifyPlatformConfigUpdated(config), 0);
+};
+const normaliseOrganisationPathKey = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+const buildOrganisationOptionRenameMaps = (previousStructure, nextStructure) => {
+  const maps = /* @__PURE__ */ new Map();
+  const maxLevels = Math.max(previousStructure.levels.length, nextStructure.levels.length);
+  for (let levelIndex = 0; levelIndex < maxLevels; levelIndex += 1) {
+    const previousOptions = previousStructure.levels[levelIndex]?.options || [];
+    const nextOptions = nextStructure.levels[levelIndex]?.options || [];
+    const nextOptionKeys = new Set(nextOptions.map(normaliseOrganisationPathKey));
+    const levelMap = /* @__PURE__ */ new Map();
+    previousOptions.forEach((previousOption, optionIndex) => {
+      const nextOption = nextOptions[optionIndex];
+      const previousKey = normaliseOrganisationPathKey(previousOption);
+      if (!previousKey || !nextOption || normaliseOrganisationPathKey(nextOption) === previousKey || nextOptionKeys.has(previousKey)) return;
+      levelMap.set(previousKey, String(nextOption || "").trim());
+    });
+    if (levelMap.size > 0) maps.set(levelIndex, levelMap);
+  }
+  return maps;
+};
+const applyOrganisationStructureRenamesToUnits = (config, previousStructure, nextStructure) => {
+  const renameMaps = buildOrganisationOptionRenameMaps(previousStructure, nextStructure);
+  if (renameMaps.size === 0) return config;
+  let changed = false;
+  const units = config.units.map((unit) => {
+    const sourcePath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
+    const cleanPath = sourcePath.map((part) => String(part || "").trim()).filter(Boolean);
+    const nextPath = cleanPath.map((part, pathIndex) => {
+      const replacement = renameMaps.get(pathIndex + 1)?.get(normaliseOrganisationPathKey(part));
+      return replacement || part;
+    });
+    if (nextPath.join("") === cleanPath.join("")) return unit;
+    changed = true;
+    return {
+      ...unit,
+      settings: {
+        ...unit.settings || {},
+        parentOrganisationPath: nextPath,
+        parentOrganisation: nextPath.join("-")
+      }
+    };
+  });
+  return changed ? { ...config, units } : config;
+};
 const createClientRecordId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 const normaliseSeparationUnitCode = (value) => String(value || "").trim().toUpperCase();
 const parseCompositeUnitCodes = (value) => Array.from(new Set(
@@ -59720,14 +59791,36 @@ const PlatformConfigurationSettings = ({
       const currentSettings = currentOrg.settings || {};
       const nextSettings = typeof updater === "function" ? updater(currentSettings) : { ...currentSettings, ...updater };
       organisations[orgIndex] = { ...currentOrg, settings: nextSettings };
-      return { ...prev, organisations };
+      const nextConfig = { ...prev, organisations };
+      notifyPlatformConfigUpdatedSoon(nextConfig);
+      return nextConfig;
     });
   };
   const updateOrganisationStructure = (nextStructure) => {
-    updatePrimaryOrganisationSettings((settings) => ({
-      ...settings,
-      organisationStructure: normaliseOrganisationStructure(nextStructure, primaryOrganisation?.name || "")
-    }));
+    setConfig((prev) => {
+      if (prev.organisations.length === 0) return prev;
+      const organisations = [...prev.organisations];
+      const activeIndex = organisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
+      const orgIndex = activeIndex >= 0 ? activeIndex : 0;
+      const currentOrg = organisations[orgIndex] || organisations[0];
+      const currentSettings = currentOrg.settings || {};
+      const previousStructure = normaliseOrganisationStructure(currentSettings.organisationStructure || null, currentOrg.name || "");
+      const normalisedNextStructure = normaliseOrganisationStructure(nextStructure, currentOrg.name || primaryOrganisation?.name || "");
+      organisations[orgIndex] = {
+        ...currentOrg,
+        settings: {
+          ...currentSettings,
+          organisationStructure: normalisedNextStructure
+        }
+      };
+      const nextConfig = applyOrganisationStructureRenamesToUnits(
+        { ...prev, organisations },
+        previousStructure,
+        normalisedNextStructure
+      );
+      notifyPlatformConfigUpdatedSoon(nextConfig);
+      return nextConfig;
+    });
   };
   const updateOrganisationStructureLevelCount = (levelCount) => {
     const count = Math.max(1, Math.min(12, Math.round(Number(levelCount) || 1)));
@@ -60496,10 +60589,14 @@ This permanently removes the organisation record from platform configuration and
     });
   };
   const updateRow = (collection, index, changes) => {
-    setConfig((prev) => ({
-      ...prev,
-      [collection]: prev[collection].map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item)
-    }));
+    setConfig((prev) => {
+      const nextConfig = {
+        ...prev,
+        [collection]: prev[collection].map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item)
+      };
+      notifyPlatformConfigUpdatedSoon(nextConfig);
+      return nextConfig;
+    });
   };
   const updateAircraftCrewCount = (aircraftIndex, crewCount) => {
     const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
