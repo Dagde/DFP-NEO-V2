@@ -206,6 +206,10 @@ const normaliseOrgChartValue = (value: unknown): string =>
 const normaliseOrgChartKey = (value: unknown): string =>
     normaliseOrgChartValue(value).toLowerCase();
 
+const ORGANISATION_LABEL_ALIASES: Record<string, string> = {
+    'air movements group': 'Air Mobility Group',
+};
+
 const getActiveOrganisation = (platformConfig: any): any => (
     (platformConfig?.organisations || []).find((organisation: any) => (
         String(organisation?.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
@@ -267,6 +271,11 @@ const getCanonicalOrganisationLabel = (
     const options = (Array.isArray(levels[levelIndex]?.options) ? levels[levelIndex].options : [])
         .map(normaliseOrgChartValue)
         .filter(Boolean);
+    const alias = ORGANISATION_LABEL_ALIASES[normaliseOrgChartKey(label)];
+    if (alias) {
+        const aliasOption = options.find((option) => normaliseOrgChartKey(option) === normaliseOrgChartKey(alias));
+        if (aliasOption) return aliasOption;
+    }
     const exactOption = options.find((option) => normaliseOrgChartKey(option) === normaliseOrgChartKey(label));
     if (exactOption) return exactOption;
     return repairMaps.get(levelIndex)?.get(normaliseOrgChartKey(label)) || label;

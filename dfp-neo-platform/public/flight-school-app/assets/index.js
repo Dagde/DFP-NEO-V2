@@ -8918,6 +8918,9 @@ const formatSnapshotDate = (dateStr) => {
 };
 const normaliseOrgChartValue = (value) => String(value || "").trim().replace(/\s+/g, " ");
 const normaliseOrgChartKey = (value) => normaliseOrgChartValue(value).toLowerCase();
+const ORGANISATION_LABEL_ALIASES = {
+  "air movements group": "Air Mobility Group"
+};
 const getActiveOrganisation = (platformConfig) => (platformConfig?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0] || null;
 const getOrganisationRepairMaps = (platformConfig, levels) => {
   const repairMaps = /* @__PURE__ */ new Map();
@@ -8960,6 +8963,11 @@ const getCanonicalOrganisationLabel = (levels, repairMaps, levelIndex, value) =>
   const label = normaliseOrgChartValue(value);
   if (!label) return "";
   const options = (Array.isArray(levels[levelIndex]?.options) ? levels[levelIndex].options : []).map(normaliseOrgChartValue).filter(Boolean);
+  const alias = ORGANISATION_LABEL_ALIASES[normaliseOrgChartKey(label)];
+  if (alias) {
+    const aliasOption = options.find((option) => normaliseOrgChartKey(option) === normaliseOrgChartKey(alias));
+    if (aliasOption) return aliasOption;
+  }
   const exactOption = options.find((option) => normaliseOrgChartKey(option) === normaliseOrgChartKey(label));
   if (exactOption) return exactOption;
   return repairMaps.get(levelIndex)?.get(normaliseOrgChartKey(label)) || label;
