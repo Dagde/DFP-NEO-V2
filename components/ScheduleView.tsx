@@ -203,9 +203,6 @@ type OrganisationChartNode = {
 const normaliseOrgChartValue = (value: unknown): string =>
     String(value || '').trim().replace(/\s+/g, ' ');
 
-const normaliseOrgChartKey = (value: unknown): string =>
-    normaliseOrgChartValue(value).toLowerCase();
-
 const getActiveOrganisation = (platformConfig: any): any => (
     (platformConfig?.organisations || []).find((organisation: any) => (
         String(organisation?.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
@@ -254,98 +251,6 @@ const addOrganisationChartPath = (
     }
 };
 
-const getOrganisationLevelOptions = (level: any): string[] => (
-    (Array.isArray(level?.options) ? level.options : [])
-        .map(normaliseOrgChartValue)
-        .filter(Boolean)
-);
-
-const findOrganisationOption = (level: any, value: unknown): string => {
-    const valueKey = normaliseOrgChartKey(value);
-    if (!valueKey) return '';
-    return getOrganisationLevelOptions(level).find((option) => normaliseOrgChartKey(option) === valueKey) || '';
-};
-
-const getSingleUnusedOrganisationOption = (levels: any[], levelIndex: number, staleValue: unknown): string => {
-    const level = levels[levelIndex];
-    const staleKey = normaliseOrgChartKey(staleValue);
-    const options = getOrganisationLevelOptions(level);
-    if (!staleKey || options.some((option) => normaliseOrgChartKey(option) === staleKey)) return '';
-    const referenced = new Set<string>();
-    if (levelIndex > 0) {
-        Object.keys(level?.parentByChild || {}).forEach((child) => referenced.add(normaliseOrgChartKey(child)));
-    }
-    if (levelIndex < levels.length - 1) {
-        const childLevel = levels[levelIndex + 1] || {};
-        Object.keys(childLevel.childrenByParent || {}).forEach((parent) => referenced.add(normaliseOrgChartKey(parent)));
-        Object.values(childLevel.parentByChild || {}).forEach((parent) => referenced.add(normaliseOrgChartKey(parent)));
-    }
-    if (!referenced.has(staleKey)) return '';
-    const unusedOptions = options.filter((option) => !referenced.has(normaliseOrgChartKey(option)));
-    return unusedOptions.length === 1 ? unusedOptions[0] : '';
-};
-
-const getOrganisationParentForChild = (levels: any[], levelIndex: number, child: string): string => {
-    if (levelIndex <= 0) return '';
-    const childKey = normaliseOrgChartKey(child);
-    const parentByChild = levels[levelIndex]?.parentByChild || {};
-    const mappedParent = Object.entries(parentByChild).find(([rawChild]) => normaliseOrgChartKey(rawChild) === childKey)?.[1];
-    if (mappedParent) {
-        return findOrganisationOption(levels[levelIndex - 1], mappedParent)
-            || getSingleUnusedOrganisationOption(levels, levelIndex - 1, mappedParent)
-            || normaliseOrgChartValue(mappedParent);
-    }
-    const previousLevel = levels[levelIndex - 1];
-    const childrenByParent = levels[levelIndex]?.childrenByParent || {};
-    const matchedParent = Object.entries(childrenByParent).find(([, rawChildren]) => (
-        (Array.isArray(rawChildren) ? rawChildren : []).some((rawChild) => normaliseOrgChartKey(rawChild) === childKey)
-    ))?.[0];
-    return matchedParent
-        ? findOrganisationOption(previousLevel, matchedParent)
-            || getSingleUnusedOrganisationOption(levels, levelIndex - 1, matchedParent)
-            || normaliseOrgChartValue(matchedParent)
-        : '';
-};
-
-const buildOrganisationPathToLevel = (levels: any[], levelIndex: number, value: unknown): string[] => {
-    const canonicalValue = findOrganisationOption(levels[levelIndex], value);
-    if (!canonicalValue) return [];
-    const keyedPath = new Map<number, string>();
-    keyedPath.set(levelIndex, canonicalValue);
-    let cursorValue = canonicalValue;
-    for (let cursorLevel = levelIndex; cursorLevel > 1; cursorLevel -= 1) {
-        const parent = getOrganisationParentForChild(levels, cursorLevel, cursorValue);
-        if (!parent) break;
-        keyedPath.set(cursorLevel - 1, parent);
-        cursorValue = parent;
-    }
-    return Array.from({ length: levelIndex }, (_, index) => keyedPath.get(index + 1) || '').filter(Boolean);
-};
-
-const getResolvedOrganisationPath = (levels: any[], rawPath: unknown[]): string[] => {
-    const path = rawPath.map(normaliseOrgChartValue).filter(Boolean);
-    for (let pathIndex = path.length - 1; pathIndex >= 0; pathIndex -= 1) {
-        const levelIndex = pathIndex + 1;
-        const resolvedPath = buildOrganisationPathToLevel(levels, levelIndex, path[pathIndex]);
-        if (resolvedPath.length === levelIndex) return resolvedPath;
-    }
-    return path.map((part, pathIndex) => findOrganisationOption(levels[pathIndex + 1], part) || part);
-};
-
-const addOrganisationStructurePaths = (
-    root: OrganisationChartNode,
-    levels: any[],
-    levelNames: string[],
-) => {
-    levels.forEach((level, levelIndex) => {
-        if (levelIndex === 0) return;
-        getOrganisationLevelOptions(level).forEach((option) => {
-            const path = buildOrganisationPathToLevel(levels, levelIndex, option);
-            addOrganisationChartPath(root, path.length > 0 ? path : [option], levelNames);
-        });
-    });
-};
-
 const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | null => {
     const activeOrganisation = getActiveOrganisation(platformConfig);
     if (!activeOrganisation) return null;
@@ -369,9 +274,6 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
         const displayPath = path[0]?.toLowerCase() === rootKey ? path.slice(1) : path;
         addOrganisationChartPath(root, displayPath, levelNames);
     });
-    if (relationshipPaths.length === 0) {
-        addOrganisationStructurePaths(root, levels, levelNames);
-    }
     const activeOrganisationCode = normaliseOrgChartValue(activeOrganisation.code).toLowerCase();
     (platformConfig?.units || [])
         .filter((unit: any) => (
@@ -384,7 +286,7 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
             const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath)
                 ? unit.settings.parentOrganisationPath
                 : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || '').split('-');
-            const parentPath = getResolvedOrganisationPath(levels, rawPath);
+            const parentPath = rawPath.map(normaliseOrgChartValue).filter(Boolean);
             const displayPath = parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath;
             addOrganisationChartPath(root, displayPath, levelNames, unitCode);
         });
@@ -582,6 +484,21 @@ const formatPlainList = (items: string[], fallback = 'Not set'): string => {
     return cleanItems.length > 0 ? cleanItems.join(' / ') : fallback;
 };
 
+const normaliseOrganisationDisplayKey = (value: unknown): string => (
+    String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+);
+
+const getStringSimilarity = (left: string, right: string): number => {
+    const leftTokens = new Set(normaliseOrganisationDisplayKey(left).split(/[^a-z0-9]+/).filter(Boolean));
+    const rightTokens = new Set(normaliseOrganisationDisplayKey(right).split(/[^a-z0-9]+/).filter(Boolean));
+    if (leftTokens.size === 0 || rightTokens.size === 0) return 0;
+    let shared = 0;
+    leftTokens.forEach((token) => {
+        if (rightTokens.has(token)) shared += 1;
+    });
+    return shared / Math.max(leftTokens.size, rightTokens.size);
+};
+
 const getUnitParentOrganisationPath = (unit: any): string[] => {
     const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath)
         ? unit.settings.parentOrganisationPath
@@ -590,12 +507,21 @@ const getUnitParentOrganisationPath = (unit: any): string[] => {
 };
 
 const getResolvedUnitParentOrganisationPath = (platformConfig: any, unit: any): string[] => {
-    const rawPath = getUnitParentOrganisationPath(unit);
+    const path = getUnitParentOrganisationPath(unit);
     const activeOrganisation = getActiveOrganisation(platformConfig);
     const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels)
         ? activeOrganisation.settings.organisationStructure.levels
         : [];
-    return getResolvedOrganisationPath(levels, rawPath);
+    return path.map((part, pathIndex) => {
+        const options = (levels[pathIndex + 1]?.options || []).map((option: unknown) => String(option || '').trim()).filter(Boolean);
+        if (options.length === 0) return part;
+        const exactMatch = options.find((option: string) => normaliseOrganisationDisplayKey(option) === normaliseOrganisationDisplayKey(part));
+        if (exactMatch) return exactMatch;
+        const bestMatch = options
+            .map((option: string) => ({ option, score: getStringSimilarity(part, option) }))
+            .sort((left: { score: number }, right: { score: number }) => right.score - left.score)[0];
+        return bestMatch && bestMatch.score >= 0.45 ? bestMatch.option : part;
+    });
 };
 
 const getRelevantResourcePoolsForUnit = (platformConfig: any, unit: any): any[] => {
