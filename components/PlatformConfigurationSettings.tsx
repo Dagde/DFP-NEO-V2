@@ -4686,7 +4686,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       disabled={!canEdit || !organisationStructureUnlocked}
                       onChange={(value) => updateOrganisationStructureLevel(levelIndex, { name: value })}
                     />
-                    <label>
+                    <label className="min-w-0">
                       <FieldLabel label={`Options (${level.options.length})`} />
                       {organisationStructureUnlocked ? (
                         <textarea
@@ -4702,14 +4702,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           }}
                         />
                       ) : (
-                        <div className="flex min-h-[42px] items-center gap-2 overflow-hidden rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300">
+                        <div className="max-w-full overflow-x-auto rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300">
                           {level.options.length > 0 ? (
-                            <>
-                              {level.options.slice(0, 3).map((option) => (
-                                <span key={option} className="max-w-[180px] truncate rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-gray-200" title={option}>{option}</span>
+                            <div className="flex min-w-max items-center gap-2 pb-1">
+                              {level.options.map((option) => (
+                                <span key={option} className="max-w-[220px] shrink-0 truncate rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-gray-200" title={option}>{option}</span>
                               ))}
-                              {level.options.length > 3 ? <span className="text-xs font-semibold text-cyan-200">+{level.options.length - 3}</span> : null}
-                            </>
+                            </div>
                           ) : (
                             <span className="text-xs text-gray-500">No options defined</span>
                           )}
