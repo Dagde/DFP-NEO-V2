@@ -63653,7 +63653,11 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   const rowKey = pool.id || `platform-resource-pool-${index}`;
                   resourcePoolRowRefs.current[rowKey] = node;
                 },
-                className: "overflow-hidden rounded-lg border border-gray-700 bg-gray-900",
+                className: "overflow-hidden rounded-lg border-2 bg-gray-900/95",
+                style: {
+                  borderColor: platformLocationRowTone.border,
+                  boxShadow: `inset 4px 0 0 ${platformLocationRowTone.accent}, 0 12px 24px rgba(0,0,0,0.22)`
+                },
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 bg-gray-950/65 px-3 py-2", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
