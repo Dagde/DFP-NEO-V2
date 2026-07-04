@@ -454,6 +454,8 @@ export const normaliseMasterLmpCatalogue = (config: PlatformConfig | null): Plat
   const entriesByCode = new Map<string, PlatformMasterLmpCatalogueEntry>();
 
   source.forEach((entry: any, index: number) => {
+    // These fields are bound directly to editable Settings inputs. Keep the live text
+    // exactly as typed so a trailing space can be entered; trim only the comparison key.
     const rawCode = String(entry?.code || entry?.lmpCode || entry?.name || '');
     const codeForKey = rawCode.trim();
     if (!codeForKey) return;
