@@ -9370,7 +9370,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const primaryResourcePool = resourcePools[0] || null;
   const primaryResourcePoolFocusKey = primaryResourcePool ? String(primaryResourcePool.id || primaryResourcePool.code || primaryResourcePool.name || "").trim() : "";
   const unitModules = platformConfig?.unitModules || [];
-  const schedulingRuleSets = (platformConfig?.schedulingRuleSets || []).filter((ruleSet) => String(ruleSet?.isActive ?? true) !== "false" && (!ruleSet?.unitCode || normaliseUnitSettingsIdentifier(ruleSet.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)));
+  (platformConfig?.schedulingRuleSets || []).filter((ruleSet) => String(ruleSet?.isActive ?? true) !== "false" && (!ruleSet?.unitCode || normaliseUnitSettingsIdentifier(ruleSet.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)));
   const location = locations.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === normaliseUnitSettingsIdentifier(unit?.locationCode));
   const parentPath = getResolvedUnitParentOrganisationPath(platformConfig, unit);
   const operationalModel2 = getUnitOperationalModel(unit);
@@ -9692,24 +9692,15 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Units", value: (group.selectedUnits || []).join(", "), onChange: () => {
           }, disabled: true })
         ] }, group.id || `${group.name}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Staff sharing", value: organisationSettings.staffSharingEnabled ? "No staff sharing arrangement includes this unit." : "Staff sharing is not enabled for this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Build Rules", description: "Scheduling and build rule sets relevant to this unit.", action: settingsLink("platform-scheduling-rule-sets", "Take me there", { focusSubsectionId: "platform-scheduling-rule-records" }), children: schedulingRuleSets.length > 0 ? schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Rule name", value: ruleSet.name || "", onChange: (value) => {
-            if (!onUpdatePlatformConfig) return;
-            onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate) => candidate === ruleSet || String(candidate?.id || candidate?.name || "") === String(ruleSet?.id || ruleSet?.name || "") ? { ...candidate, name: value } : candidate) }));
-          }, disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Scope", value: ruleSet.scope || "Unit", onChange: (value) => {
-            if (!onUpdatePlatformConfig) return;
-            onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate) => candidate === ruleSet || String(candidate?.id || candidate?.name || "") === String(ruleSet?.id || ruleSet?.name || "") ? { ...candidate, scope: value } : candidate) }));
-          }, disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft", value: ruleSet.aircraftTypeCode || "", onChange: (value) => {
-            if (!onUpdatePlatformConfig) return;
-            onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate) => candidate === ruleSet || String(candidate?.id || candidate?.name || "") === String(ruleSet?.id || ruleSet?.name || "") ? { ...candidate, aircraftTypeCode: value } : candidate) }));
-          }, disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit", value: ruleSet.unitCode || unit.code || "", onChange: (value) => {
-            if (!onUpdatePlatformConfig) return;
-            onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate) => candidate === ruleSet || String(candidate?.id || candidate?.name || "") === String(ruleSet?.id || ruleSet?.name || "") ? { ...candidate, unitCode: value } : candidate) }));
-          }, disabled: true })
-        ] }, ruleSet.id || `${ruleSet.name}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Build rules", value: "No specific scheduling rule sets are active for this unit.", muted: true }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Build Rules", description: "Business logic, duty and turnaround rules, and event limit settings used by the build.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-2", children: [
+          settingsLink("business-rules", "Business Rules"),
+          settingsLink("duty-turnaround", "Duty & Turnaround"),
+          settingsLink("event-limits", "Event Limits")
+        ] }), children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Business Rules", value: "System logic and automation settings that affect how the DFP and NEO Build behave." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Duty & Turnaround", value: "Crew duty limits, rest periods, turnarounds and related timing limits." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Event Limits", value: "Operational thresholds and limits for how events may be built and displayed." })
+        ] })
       ] });
     }
     if (activeCategory === "crew") {

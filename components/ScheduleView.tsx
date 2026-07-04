@@ -1288,27 +1288,10 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Staff sharing" value={organisationSettings.staffSharingEnabled ? 'No staff sharing arrangement includes this unit.' : 'Staff sharing is not enabled for this unit.'} muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Build Rules" description="Scheduling and build rule sets relevant to this unit." action={settingsLink('platform-scheduling-rule-sets', 'Take me there', { focusSubsectionId: 'platform-scheduling-rule-records' })}>
-                        {schedulingRuleSets.length > 0 ? schedulingRuleSets.map((ruleSet: any, index: number) => (
-                            <div key={ruleSet.id || `${ruleSet.name}-${index}`} className="border-t border-white/10 first:border-t-0">
-                                <UnitSettingsField label="Rule name" value={ruleSet.name || ''} onChange={(value) => {
-                                    if (!onUpdatePlatformConfig) return;
-                                    onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate: any) => candidate === ruleSet || String(candidate?.id || candidate?.name || '') === String(ruleSet?.id || ruleSet?.name || '') ? { ...candidate, name: value } : candidate) }));
-                                }} disabled={!canEdit} />
-                                <UnitSettingsField label="Scope" value={ruleSet.scope || 'Unit'} onChange={(value) => {
-                                    if (!onUpdatePlatformConfig) return;
-                                    onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate: any) => candidate === ruleSet || String(candidate?.id || candidate?.name || '') === String(ruleSet?.id || ruleSet?.name || '') ? { ...candidate, scope: value } : candidate) }));
-                                }} disabled={!canEdit} />
-                                <UnitSettingsField label="Aircraft" value={ruleSet.aircraftTypeCode || ''} onChange={(value) => {
-                                    if (!onUpdatePlatformConfig) return;
-                                    onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate: any) => candidate === ruleSet || String(candidate?.id || candidate?.name || '') === String(ruleSet?.id || ruleSet?.name || '') ? { ...candidate, aircraftTypeCode: value } : candidate) }));
-                                }} disabled={!canEdit} />
-                                <UnitSettingsField label="Unit" value={ruleSet.unitCode || unit.code || ''} onChange={(value) => {
-                                    if (!onUpdatePlatformConfig) return;
-                                    onUpdatePlatformConfig((current) => ({ ...current, schedulingRuleSets: (current?.schedulingRuleSets || []).map((candidate: any) => candidate === ruleSet || String(candidate?.id || candidate?.name || '') === String(ruleSet?.id || ruleSet?.name || '') ? { ...candidate, unitCode: value } : candidate) }));
-                                }} disabled={!canEdit} />
-                            </div>
-                        )) : <UnitSettingsReadRow label="Build rules" value="No specific scheduling rule sets are active for this unit." muted />}
+                    <UnitSettingsGroup title="Build Rules" description="Business logic, duty and turnaround rules, and event limit settings used by the build." action={<div className="flex flex-wrap justify-end gap-2">{settingsLink('business-rules', 'Business Rules')}{settingsLink('duty-turnaround', 'Duty & Turnaround')}{settingsLink('event-limits', 'Event Limits')}</div>}>
+                        <UnitSettingsReadRow label="Business Rules" value="System logic and automation settings that affect how the DFP and NEO Build behave." />
+                        <UnitSettingsReadRow label="Duty & Turnaround" value="Crew duty limits, rest periods, turnarounds and related timing limits." />
+                        <UnitSettingsReadRow label="Event Limits" value="Operational thresholds and limits for how events may be built and displayed." />
                     </UnitSettingsGroup>
                 </div>
             );
