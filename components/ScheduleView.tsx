@@ -1206,15 +1206,41 @@ const OrganisationMyUnitSettings: React.FC<{
                         )) : <UnitSettingsReadRow label="Alternate crews" value="No alternate crew profiles match this unit." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Crew Labels & Qualifications" description="The local words users see for crew roles, plus model-specific qualifications such as PIC.">
-                        {modelCrewPositions.map((entry) => (
-                            <UnitSettingsField key={entry.id} label={entry.genericName} value={entry.label || ''} onChange={(value) => updateCrewPositionEntry(entry, { label: value })} disabled={!canEdit} />
-                        ))}
-                        {modelQualifications.map((entry) => (
-                            <div key={entry.id} className="border-t border-white/10 first:border-t-0">
-                                <UnitSettingsField label="Qualification code" value={entry.code || ''} onChange={(value) => updateQualificationEntry(entry, { code: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Qualification name" value={entry.name || entry.code || ''} onChange={(value) => updateQualificationEntry(entry, { name: value })} disabled={!canEdit} />
+                        {modelCrewPositions.length > 0 ? (
+                            <div className="border-t border-white/10 first:border-t-0">
+                                <div className="px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70">Crew position labels</div>
+                                {modelCrewPositions.map((entry) => (
+                                    <UnitSettingsField key={entry.id} label={entry.genericName} value={entry.label || ''} onChange={(value) => updateCrewPositionEntry(entry, { label: value })} disabled={!canEdit} />
+                                ))}
                             </div>
-                        ))}
+                        ) : null}
+                        {modelQualifications.length > 0 ? (
+                            <div className="border-t border-white/10">
+                                <div className="px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70">Qualifications</div>
+                                {modelQualifications.map((entry) => (
+                                    <div key={entry.id} className="grid gap-2 border-t border-white/10 px-4 py-3 md:grid-cols-[minmax(120px,0.4fr)_minmax(0,1fr)] md:items-center">
+                                        <input
+                                            className={unitSettingsInputClass}
+                                            value={entry.code || ''}
+                                            disabled={!canEdit}
+                                            aria-label="Qualification code"
+                                            onKeyDownCapture={stopEditableKeyPropagation}
+                                            onKeyDown={stopEditableKeyPropagation}
+                                            onChange={(event) => updateQualificationEntry(entry, { code: event.target.value })}
+                                        />
+                                        <input
+                                            className={unitSettingsInputClass}
+                                            value={entry.name || entry.code || ''}
+                                            disabled={!canEdit}
+                                            aria-label="Qualification name"
+                                            onKeyDownCapture={stopEditableKeyPropagation}
+                                            onKeyDown={stopEditableKeyPropagation}
+                                            onChange={(event) => updateQualificationEntry(entry, { name: event.target.value })}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
                         {modelCrewPositions.length === 0 && modelQualifications.length === 0 ? <UnitSettingsReadRow label="Crew labels" value="No crew labels or qualifications for this model." muted /> : null}
                     </UnitSettingsGroup>
                 </div>

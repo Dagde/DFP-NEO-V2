@@ -9662,11 +9662,39 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsTextAreaRow, { label: "Role requirements", value: formatRoleRequirementsText(profile.roleRequirements), onChange: (value) => updateAlternateCrewProfile(profile, { roleRequirements: parseRoleRequirementsText(value) }), disabled: !canEdit, placeholder: "Pilot = 2" })
         ] }, profile.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Alternate crews", value: "No alternate crew profiles match this unit.", muted: true }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Crew Labels & Qualifications", description: "The local words users see for crew roles, plus model-specific qualifications such as PIC.", children: [
-          modelCrewPositions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: entry.genericName, value: entry.label || "", onChange: (value) => updateCrewPositionEntry(entry, { label: value }), disabled: !canEdit }, entry.id)),
-          modelQualifications.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Qualification code", value: entry.code || "", onChange: (value) => updateQualificationEntry(entry, { code: value }), disabled: !canEdit }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Qualification name", value: entry.name || entry.code || "", onChange: (value) => updateQualificationEntry(entry, { name: value }), disabled: !canEdit })
-          ] }, entry.id)),
+          modelCrewPositions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70", children: "Crew position labels" }),
+            modelCrewPositions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: entry.genericName, value: entry.label || "", onChange: (value) => updateCrewPositionEntry(entry, { label: value }), disabled: !canEdit }, entry.id))
+          ] }) : null,
+          modelQualifications.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70", children: "Qualifications" }),
+            modelQualifications.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-t border-white/10 px-4 py-3 md:grid-cols-[minmax(120px,0.4fr)_minmax(0,1fr)] md:items-center", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: unitSettingsInputClass,
+                  value: entry.code || "",
+                  disabled: !canEdit,
+                  "aria-label": "Qualification code",
+                  onKeyDownCapture: stopEditableKeyPropagation,
+                  onKeyDown: stopEditableKeyPropagation,
+                  onChange: (event) => updateQualificationEntry(entry, { code: event.target.value })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: unitSettingsInputClass,
+                  value: entry.name || entry.code || "",
+                  disabled: !canEdit,
+                  "aria-label": "Qualification name",
+                  onKeyDownCapture: stopEditableKeyPropagation,
+                  onKeyDown: stopEditableKeyPropagation,
+                  onChange: (event) => updateQualificationEntry(entry, { name: event.target.value })
+                }
+              )
+            ] }, entry.id))
+          ] }) : null,
           modelCrewPositions.length === 0 && modelQualifications.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Crew labels", value: "No crew labels or qualifications for this model.", muted: true }) : null
         ] })
       ] });
