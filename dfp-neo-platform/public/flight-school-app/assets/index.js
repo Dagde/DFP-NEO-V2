@@ -9662,13 +9662,13 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsTextAreaRow, { label: "Role requirements", value: formatRoleRequirementsText(profile.roleRequirements), onChange: (value) => updateAlternateCrewProfile(profile, { roleRequirements: parseRoleRequirementsText(value) }), disabled: !canEdit, placeholder: "Pilot = 2" })
         ] }, profile.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Alternate crews", value: "No alternate crew profiles match this unit.", muted: true }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Crew Labels & Qualifications", description: "The local words users see for crew roles, plus model-specific qualifications such as PIC.", children: [
-          modelCrewPositions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70", children: "Crew position labels" }),
+          modelCrewPositions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mt-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20 first:mt-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70", children: "Crew position labels" }),
             modelCrewPositions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: entry.genericName, value: entry.label || "", onChange: (value) => updateCrewPositionEntry(entry, { label: value }), disabled: !canEdit }, entry.id))
           ] }) : null,
-          modelQualifications.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70", children: "Qualifications" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-t border-white/10 px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(120px,0.4fr)]", children: [
+          modelQualifications.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mb-4 mt-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20 first:mt-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70", children: "Qualifications" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(120px,0.4fr)]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Qualification" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Code" })
             ] }),

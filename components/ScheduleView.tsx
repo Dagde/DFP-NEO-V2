@@ -1207,17 +1207,17 @@ const OrganisationMyUnitSettings: React.FC<{
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Crew Labels & Qualifications" description="The local words users see for crew roles, plus model-specific qualifications such as PIC.">
                         {modelCrewPositions.length > 0 ? (
-                            <div className="border-t border-white/10 first:border-t-0">
-                                <div className="px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70">Crew position labels</div>
+                            <div className="mx-4 mt-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20 first:mt-0">
+                                <div className="border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70">Crew position labels</div>
                                 {modelCrewPositions.map((entry) => (
                                     <UnitSettingsField key={entry.id} label={entry.genericName} value={entry.label || ''} onChange={(value) => updateCrewPositionEntry(entry, { label: value })} disabled={!canEdit} />
                                 ))}
                             </div>
                         ) : null}
                         {modelQualifications.length > 0 ? (
-                            <div className="border-t border-white/10">
-                                <div className="px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70">Qualifications</div>
-                                <div className="grid gap-2 border-t border-white/10 px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(120px,0.4fr)]">
+                            <div className="mx-4 mb-4 mt-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20 first:mt-0">
+                                <div className="border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-cyan-100/70">Qualifications</div>
+                                <div className="grid gap-2 px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(120px,0.4fr)]">
                                     <span>Qualification</span>
                                     <span>Code</span>
                                 </div>
