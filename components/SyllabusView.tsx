@@ -2189,8 +2189,14 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               const durationLabel = formatMasterLmpHours(item.totalEventHours || item.duration);
 
               return (
+              <div key={item.id} className="relative mb-2">
+                {eventDropIndicator?.targetId === item.id && eventDropIndicator.position === 'before' && (
+                    <span className="pointer-events-none absolute inset-x-2 -top-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" />
+                )}
+                {eventDropIndicator?.targetId === item.id && eventDropIndicator.position === 'after' && (
+                    <span className="pointer-events-none absolute inset-x-2 -bottom-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" />
+                )}
               <button
-                key={item.id}
                 type="button"
                 draggable={!isEditing && !isFrozen && !isReorderingEvents}
                 onDragStart={(event) => {
@@ -2233,7 +2239,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 disabled={isEditing || isReorderingEvents}
                 aria-pressed={isSelected}
                 title={`${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ''}`}
-                className={`relative mb-2 h-[62px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${
+                className={`relative h-[62px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${
                     isSelected
                         ? 'border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40'
                         : draggedEventId === item.id
@@ -2241,12 +2247,6 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         : 'border-emerald-500/60 bg-gray-900 text-gray-200 shadow-black/15'
                 } ${isEditing || isReorderingEvents ? 'cursor-not-allowed opacity-55' : 'cursor-grab hover:border-emerald-300/80 hover:bg-gray-800 active:cursor-grabbing'}`}
               >
-                {eventDropIndicator?.targetId === item.id && eventDropIndicator.position === 'before' && (
-                    <span className="pointer-events-none absolute inset-x-2 top-0 z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" />
-                )}
-                {eventDropIndicator?.targetId === item.id && eventDropIndicator.position === 'after' && (
-                    <span className="pointer-events-none absolute inset-x-2 bottom-0 z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" />
-                )}
                 <span className={`absolute left-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? 'text-sky-100' : 'text-gray-400'}`}>
                   P {phaseNum}
                 </span>
@@ -2264,6 +2264,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                   <span className="shrink-0">{durationLabel}</span>
                 </span>
               </button>
+              </div>
             );})}
             {filteredSyllabusDetails.length === 0 && (
                 <div className="p-4 text-center text-gray-500 italic text-sm">No events found for this syllabus.</div>
