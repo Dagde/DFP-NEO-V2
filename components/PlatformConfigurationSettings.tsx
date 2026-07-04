@@ -1639,6 +1639,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const canEditTrainingReportTemplate = canEdit && trainingReportTemplateUnlocked;
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
   const canEditCrewComposition = canEdit && crewCompositionUnlocked;
+  const crewCompositionAircraftTypes = config.aircraftTypes.length > 0
+    ? config.aircraftTypes
+    : [{ code: 'AIRCRAFT', name: 'Aircraft', crewComposition: DEFAULT_AIRCRAFT_CREW_COMPOSITION }];
   const resourcePoolsDirty = useMemo(() => (
     JSON.stringify({
       aircraftTypes: config.aircraftTypes,
@@ -4380,9 +4383,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const resourceSectionPanelHintClass = 'text-[11px] leading-relaxed text-gray-500';
   const getSettingsFocusAnchor = (value: any) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
   const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
-  const crewCompositionAircraftTypes = config.aircraftTypes.length > 0
-    ? config.aircraftTypes
-    : [{ code: 'AIRCRAFT', name: 'Aircraft', crewComposition: DEFAULT_AIRCRAFT_CREW_COMPOSITION }];
   const activeCrewCompositionAircraftIndex = Math.max(
     0,
     crewCompositionAircraftTypes.findIndex((aircraft) => String(aircraft.code || '').trim().toUpperCase() === crewCompositionAircraftCode.trim().toUpperCase()),
