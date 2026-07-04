@@ -9334,6 +9334,8 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
   const locations = platformConfig?.locations || [];
   const modules = platformConfig?.modules || [];
   const resourcePools = unit ? getRelevantResourcePoolsForUnit(platformConfig, unit) : [];
+  const primaryResourcePool = resourcePools[0] || null;
+  const primaryResourcePoolFocusKey = primaryResourcePool ? String(primaryResourcePool.id || primaryResourcePool.code || primaryResourcePool.name || "").trim() : "";
   const unitModules = platformConfig?.unitModules || [];
   const schedulingRuleSets = (platformConfig?.schedulingRuleSets || []).filter((ruleSet) => String(ruleSet?.isActive ?? true) !== "false" && (!ruleSet?.unitCode || normaliseUnitSettingsIdentifier(ruleSet.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)));
   const location = locations.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === normaliseUnitSettingsIdentifier(unit?.locationCode));
@@ -9584,7 +9586,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
                 resourcePools.length,
                 " pools"
               ] }),
-              settingsLink("platform-resource-pools")
+              settingsLink("platform-resource-pools", "Take me there", { resourcePoolCode: primaryResourcePoolFocusKey })
             ] }),
             children: resourcePools.length > 0 ? resourcePools.map((pool) => {
               const settings = pool.settings || {};
@@ -60025,17 +60027,18 @@ const PlatformConfigurationSettings = ({
   reactExports.useEffect(() => {
     const cleanPoolCode = String(focusResourcePoolCode || "").trim().toUpperCase();
     if (loading || !cleanPoolCode || scrollTarget !== "platform-resource-pools") return;
-    const poolIndex = config.resourcePools.findIndex((pool2) => String(pool2.code || pool2.id || "").trim().toUpperCase() === cleanPoolCode);
+    const poolIndex = config.resourcePools.findIndex((pool2) => [pool2.id, pool2.code, pool2.name].map((value) => String(value || "").trim().toUpperCase()).some((value) => value === cleanPoolCode));
     if (poolIndex < 0) return;
     const pool = config.resourcePools[poolIndex];
     const rowKey = pool.id || `platform-resource-pool-${poolIndex}`;
+    setResourcePoolActiveTab("resourcePools");
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => {
         resourcePoolRowRefs.current[rowKey]?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 60);
+      }, 120);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [config.resourcePools, focusResourcePoolCode, loading, scrollTarget]);
+  }, [config.resourcePools, focusResourcePoolCode, loading, scrollTarget, resourcePoolActiveTab]);
   reactExports.useEffect(() => {
     if (!resourcePoolsUnlocked || !resourcePoolsDirty || saving || applyingChanges) return;
     const handleBeforeUnload = (event) => {

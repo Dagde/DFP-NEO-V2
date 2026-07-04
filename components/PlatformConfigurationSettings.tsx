@@ -1886,17 +1886,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   useEffect(() => {
     const cleanPoolCode = String(focusResourcePoolCode || '').trim().toUpperCase();
     if (loading || !cleanPoolCode || scrollTarget !== 'platform-resource-pools') return;
-    const poolIndex = config.resourcePools.findIndex((pool) => String(pool.code || pool.id || '').trim().toUpperCase() === cleanPoolCode);
+    const poolIndex = config.resourcePools.findIndex((pool) => (
+      [pool.id, pool.code, pool.name]
+        .map((value) => String(value || '').trim().toUpperCase())
+        .some((value) => value === cleanPoolCode)
+    ));
     if (poolIndex < 0) return;
     const pool = config.resourcePools[poolIndex];
     const rowKey = pool.id || `platform-resource-pool-${poolIndex}`;
+    setResourcePoolActiveTab('resourcePools');
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => {
         resourcePoolRowRefs.current[rowKey]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 60);
+      }, 120);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [config.resourcePools, focusResourcePoolCode, loading, scrollTarget]);
+  }, [config.resourcePools, focusResourcePoolCode, loading, scrollTarget, resourcePoolActiveTab]);
 
   useEffect(() => {
     if (!resourcePoolsUnlocked || !resourcePoolsDirty || saving || applyingChanges) return;

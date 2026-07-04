@@ -777,6 +777,10 @@ const OrganisationMyUnitSettings: React.FC<{
     const locations = platformConfig?.locations || [];
     const modules = platformConfig?.modules || [];
     const resourcePools = unit ? getRelevantResourcePoolsForUnit(platformConfig, unit) : [];
+    const primaryResourcePool = resourcePools[0] || null;
+    const primaryResourcePoolFocusKey = primaryResourcePool
+        ? String(primaryResourcePool.id || primaryResourcePool.code || primaryResourcePool.name || '').trim()
+        : '';
     const unitModules = platformConfig?.unitModules || [];
     const schedulingRuleSets = (platformConfig?.schedulingRuleSets || []).filter((ruleSet: any) => (
         String(ruleSet?.isActive ?? true) !== 'false'
@@ -1149,7 +1153,7 @@ const OrganisationMyUnitSettings: React.FC<{
                     <UnitSettingsGroup
                         title="Aircraft & Resource Pools"
                         description="Live counts for pools assigned to this unit or its home location."
-                        action={<div className="flex flex-wrap justify-end gap-2"><span className={unitSettingsMutedPillClass}>{resourcePools.length} pools</span>{settingsLink('platform-resource-pools')}</div>}
+                        action={<div className="flex flex-wrap justify-end gap-2"><span className={unitSettingsMutedPillClass}>{resourcePools.length} pools</span>{settingsLink('platform-resource-pools', 'Take me there', { resourcePoolCode: primaryResourcePoolFocusKey })}</div>}
                     >
                         {resourcePools.length > 0 ? resourcePools.map((pool: any) => {
                             const settings = pool.settings || {};
