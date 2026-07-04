@@ -1405,7 +1405,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Access rules" value="No unit-specific Master LMP restrictions. Organisation defaults apply." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="User Access Scopes" description="Users or profiles with access that includes this unit." action={settingsLink('platform-user-access', 'Take me there', { focusSubsectionId: userAccessForUnit.length > 0 ? `platform-user-access-${unitFocusAnchor}` : 'platform-user-access-records' })}>
+                    <UnitSettingsGroup title="User Access Scopes" description="Users or profiles with access that includes this unit." action={settingsLink('platform-user-access', 'Take me there', { locationCode: unit.locationCode, focusSubsectionId: unit.locationCode ? `platform-user-access-location-${settingsAnchorSuffix(unit.locationCode)}` : 'platform-user-access-records' })}>
                         {userAccessForUnit.length > 0 ? userAccessForUnit.map((access: any, index: number) => (
                             <div key={access.id || index} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="User" value={access.displayName || access.userName || access.userId || ''} onChange={(value) => updateUserAccessScope(access, { displayName: value })} disabled={!canEdit} />

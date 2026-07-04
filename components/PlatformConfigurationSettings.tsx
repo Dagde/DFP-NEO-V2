@@ -1928,6 +1928,23 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, [crewCompositionAircraftTypes, focusAircraftTypeCode, loading, scrollTarget]);
 
   useEffect(() => {
+    const cleanLocationCode = String(focusLocationCode || '').trim().toUpperCase();
+    if (loading || scrollTarget !== 'platform-user-access' || !cleanLocationCode) return;
+    const matchingAccess = config.userAccess.find((access) => {
+      const accessLocationCode = String(access.locationCode || '').trim().toUpperCase();
+      const accessUnitCode = String(access.unitCode || '').trim().toUpperCase();
+      const accessUnit = accessUnitCode
+        ? config.units.find((unit) => String(unit.code || '').trim().toUpperCase() === accessUnitCode)
+        : null;
+      const unitHomeLocationCode = String(accessUnit?.locationCode || '').trim().toUpperCase();
+      return accessLocationCode === cleanLocationCode || unitHomeLocationCode === cleanLocationCode;
+    });
+    if (matchingAccess?.userId) {
+      setSelectedAccessUserId(matchingAccess.userId);
+    }
+  }, [config.units, config.userAccess, focusLocationCode, loading, scrollTarget]);
+
+  useEffect(() => {
     const cleanSubsectionId = String(focusSubsectionId || '').trim();
     if (loading || !cleanSubsectionId) return;
     if (scrollTarget === 'platform-resource-pools') {
@@ -1943,7 +1960,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       }, 180);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [focusSubsectionId, focusAircraftTypeCode, loading, scrollTarget]);
+  }, [focusSubsectionId, focusAircraftTypeCode, loading, scrollTarget, selectedAccessUserId]);
 
   useEffect(() => {
     if (!resourcePoolsUnlocked || !resourcePoolsDirty || saving || applyingChanges) return;
@@ -7933,9 +7950,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             const appliesToAllFeatures = !access.moduleCode;
             const scopeKey = access.id || `${access.userId}-${index}`;
             const showAdvancedFeatureArea = advancedFeatureAreaOpenByScope[scopeKey] === true;
+            const accessUnit = access.unitCode
+              ? config.units.find((unit) => String(unit.code || '').trim().toUpperCase() === String(access.unitCode || '').trim().toUpperCase())
+              : null;
+            const accessHomeLocationCode = String(access.locationCode || accessUnit?.locationCode || '').trim().toUpperCase();
             return (
               <div
-                id={access.unitCode ? `platform-user-access-${getSettingsFocusAnchor(access.unitCode)}` : undefined}
+                id={accessHomeLocationCode ? `platform-user-access-location-${getSettingsFocusAnchor(accessHomeLocationCode)}` : undefined}
                 key={scopeKey}
                 className="rounded border p-3"
                 style={{

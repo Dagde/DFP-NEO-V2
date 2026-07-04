@@ -9775,7 +9775,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Location", value: rule.locationCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { locationCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit", value: rule.unitCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { unitCode: value }), disabled: true })
         ] }, rule.id || index)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Access rules", value: "No unit-specific Master LMP restrictions. Organisation defaults apply.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "User Access Scopes", description: "Users or profiles with access that includes this unit.", action: settingsLink("platform-user-access", "Take me there", { focusSubsectionId: userAccessForUnit.length > 0 ? `platform-user-access-${unitFocusAnchor}` : "platform-user-access-records" }), children: userAccessForUnit.length > 0 ? userAccessForUnit.map((access, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "User Access Scopes", description: "Users or profiles with access that includes this unit.", action: settingsLink("platform-user-access", "Take me there", { locationCode: unit.locationCode, focusSubsectionId: unit.locationCode ? `platform-user-access-location-${settingsAnchorSuffix(unit.locationCode)}` : "platform-user-access-records" }), children: userAccessForUnit.length > 0 ? userAccessForUnit.map((access, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "User", value: access.displayName || access.userName || access.userId || "", onChange: (value) => updateUserAccessScope(access, { displayName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profiles", value: Array.isArray(access.profileIds) ? access.profileIds.join(", ") : access.profileId || "", onChange: (value) => updateUserAccessScope(access, { profileIds: value.split(",").map((item) => item.trim()).filter(Boolean) }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Module", value: access.moduleCode || "", onChange: (value) => updateUserAccessScope(access, { moduleCode: value }), disabled: true }),
@@ -60060,6 +60060,20 @@ const PlatformConfigurationSettings = ({
     return () => window.cancelAnimationFrame(frame);
   }, [crewCompositionAircraftTypes, focusAircraftTypeCode, loading, scrollTarget]);
   reactExports.useEffect(() => {
+    const cleanLocationCode = String(focusLocationCode || "").trim().toUpperCase();
+    if (loading || scrollTarget !== "platform-user-access" || !cleanLocationCode) return;
+    const matchingAccess = config.userAccess.find((access) => {
+      const accessLocationCode = String(access.locationCode || "").trim().toUpperCase();
+      const accessUnitCode = String(access.unitCode || "").trim().toUpperCase();
+      const accessUnit = accessUnitCode ? config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === accessUnitCode) : null;
+      const unitHomeLocationCode = String(accessUnit?.locationCode || "").trim().toUpperCase();
+      return accessLocationCode === cleanLocationCode || unitHomeLocationCode === cleanLocationCode;
+    });
+    if (matchingAccess?.userId) {
+      setSelectedAccessUserId(matchingAccess.userId);
+    }
+  }, [config.units, config.userAccess, focusLocationCode, loading, scrollTarget]);
+  reactExports.useEffect(() => {
     const cleanSubsectionId = String(focusSubsectionId || "").trim();
     if (loading || !cleanSubsectionId) return;
     if (scrollTarget === "platform-resource-pools") {
@@ -60075,7 +60089,7 @@ const PlatformConfigurationSettings = ({
       }, 180);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [focusSubsectionId, focusAircraftTypeCode, loading, scrollTarget]);
+  }, [focusSubsectionId, focusAircraftTypeCode, loading, scrollTarget, selectedAccessUserId]);
   reactExports.useEffect(() => {
     if (!resourcePoolsUnlocked || !resourcePoolsDirty || saving || applyingChanges) return;
     const handleBeforeUnload = (event) => {
@@ -65385,10 +65399,12 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           const appliesToAllFeatures = !access.moduleCode;
           const scopeKey = access.id || `${access.userId}-${index}`;
           const showAdvancedFeatureArea = advancedFeatureAreaOpenByScope[scopeKey] === true;
+          const accessUnit = access.unitCode ? config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === String(access.unitCode || "").trim().toUpperCase()) : null;
+          const accessHomeLocationCode = String(access.locationCode || accessUnit?.locationCode || "").trim().toUpperCase();
           return /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
-              id: access.unitCode ? `platform-user-access-${getSettingsFocusAnchor(access.unitCode)}` : void 0,
+              id: accessHomeLocationCode ? `platform-user-access-location-${getSettingsFocusAnchor(accessHomeLocationCode)}` : void 0,
               className: "rounded border p-3",
               style: {
                 backgroundColor: ACCESS_SCOPE_TONE.fill,
