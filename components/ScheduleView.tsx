@@ -548,8 +548,8 @@ const EmptyOrganisationChartSet = new Set<string>();
 
 type OrganisationSlideoutView = 'structure' | 'unitSettings' | 'setupWizard';
 
-const organisationSlideoutActiveButtonClass = 'btn-aluminium-brushed inline-flex h-9 w-40 items-center justify-center rounded-md border border-orange-300 px-3 text-center text-[11px] font-semibold text-orange-500 shadow-[0_0_16px_rgba(251,146,60,0.4),inset_0_1px_0_rgba(255,255,255,0.82)] ring-1 ring-orange-300/55 transition hover:border-orange-200 hover:text-orange-400';
-const organisationSlideoutInactiveButtonClass = 'btn-aluminium-brushed inline-flex h-9 w-40 items-center justify-center rounded-md border border-orange-400/70 px-3 text-center text-[11px] font-semibold text-orange-500 shadow-[0_0_12px_rgba(251,146,60,0.26),inset_0_1px_0_rgba(255,255,255,0.82)] ring-1 ring-orange-300/35 transition hover:border-orange-200 hover:text-orange-400';
+const organisationSlideoutActiveButtonClass = 'inline-flex h-9 w-40 items-center justify-center rounded-md border border-cyan-400/45 bg-[#143142] px-3 text-center text-[11px] font-semibold text-cyan-50 transition hover:bg-[#18394c]';
+const organisationSlideoutInactiveButtonClass = 'inline-flex h-9 w-40 items-center justify-center rounded-md border border-cyan-400/35 bg-[#143142] px-3 text-center text-[11px] font-semibold text-cyan-50/85 transition hover:bg-[#18394c] hover:text-cyan-50';
 const unitSettingsPanelClass = 'overflow-hidden rounded-2xl border border-white/10 bg-white/[0.055] shadow-[0_18px_44px_rgba(0,0,0,0.22)] backdrop-blur';
 const unitSettingsLabelClass = 'text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400';
 const unitSettingsInputClass = 'w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-100 outline-none transition focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60';
