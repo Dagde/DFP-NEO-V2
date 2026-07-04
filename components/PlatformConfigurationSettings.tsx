@@ -2160,21 +2160,28 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     ? Math.round((operationalCompleteCount / operationalSignals.length) * 100)
     : 0;
 
+  const buildConfigWithPrimaryOrganisationSettings = (
+    baseConfig: PlatformConfig,
+    updater: Record<string, any> | ((settings: Record<string, any>) => Record<string, any>),
+  ): PlatformConfig => {
+    if (baseConfig.organisations.length === 0) return baseConfig;
+    const organisations = [...baseConfig.organisations];
+    const activeIndex = organisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
+    const orgIndex = activeIndex >= 0 ? activeIndex : 0;
+    const currentOrg = organisations[orgIndex] || organisations[0];
+    const currentSettings = currentOrg.settings || {};
+    const nextSettings = typeof updater === 'function'
+      ? updater(currentSettings)
+      : { ...currentSettings, ...updater };
+    organisations[orgIndex] = { ...currentOrg, settings: nextSettings };
+    return { ...baseConfig, organisations };
+  };
+
   const updatePrimaryOrganisationSettings = (
     updater: Record<string, any> | ((settings: Record<string, any>) => Record<string, any>),
   ) => {
     setConfig((prev) => {
-      if (prev.organisations.length === 0) return prev;
-      const organisations = [...prev.organisations];
-      const activeIndex = organisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
-      const orgIndex = activeIndex >= 0 ? activeIndex : 0;
-      const currentOrg = organisations[orgIndex] || organisations[0];
-      const currentSettings = currentOrg.settings || {};
-      const nextSettings = typeof updater === 'function'
-        ? updater(currentSettings)
-        : { ...currentSettings, ...updater };
-      organisations[orgIndex] = { ...currentOrg, settings: nextSettings };
-      const nextConfig = { ...prev, organisations };
+      const nextConfig = buildConfigWithPrimaryOrganisationSettings(prev, updater);
       notifyPlatformConfigUpdatedSoon(nextConfig);
       return nextConfig;
     });
@@ -3193,14 +3200,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       return;
     }
 
-    updatePrimaryOrganisationSettings((settings) => ({
+    const nextConfig = buildConfigWithPrimaryOrganisationSettings(config, (settings) => ({
       ...settings,
       masterLmpCatalogue: masterLmpCatalogue.filter((_, entryIndex) => entryIndex !== index),
       masterLmpAccess: masterLmpAccessRules.filter((rule) => (
         String(rule.lmpCode || '').trim().toUpperCase() !== lmpCode.toUpperCase()
       )),
     }));
-    onShowSuccess(`Deleted Master LMP ${lmpLabel}.`);
+    setConfig(nextConfig);
+    notifyPlatformConfigUpdatedSoon(nextConfig);
+    await save(nextConfig, 'platform-master-lmp-access', {
+      reloadPage: false,
+      successMessage: `Deleted Master LMP ${lmpLabel}.`,
+    });
   };
 
   const updateMasterLmpAccessRule = (index: number, changes: Partial<PlatformMasterLmpAccessRule>) => {
