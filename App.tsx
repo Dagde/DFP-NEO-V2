@@ -24102,6 +24102,9 @@ const App: React.FC = () => {
         setPlatformConfig((prev) => {
             if (!prev) return prev;
             const nextConfig = updater(prev);
+            window.setTimeout(() => {
+                window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
+            }, 0);
             savePlatformConfigDebounced(nextConfig);
             return nextConfig;
         });

@@ -9192,6 +9192,14 @@ const unitSettingsInputClass = "w-full rounded-xl border border-white/10 bg-slat
 const unitSettingsSelectClass = `${unitSettingsInputClass} cursor-pointer`;
 const unitSettingsRowClass = "grid gap-2 border-t border-white/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(150px,0.65fr)_minmax(0,1fr)] md:items-center";
 const unitSettingsMutedPillClass = "rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1 text-[11px] font-semibold text-slate-300";
+const unitSettingsScrollClass = "max-w-full overflow-x-auto";
+const deploymentModeOptions = ["Online SaaS", "Private Defence Network", "Fully Offline", "Hybrid Offline Sync"];
+const licenceValidationOptions = ["Online licence check", "Private network licence server", "Offline signed licence file", "Hybrid cached licence"];
+const licenceEnforcementOptions = ["Monitor Only", "Warn Only", "Block Expired Licence"];
+const authModelOptions = ["Local accounts", "Defence SSO", "Hybrid local and SSO"];
+const releaseChannelOptions = ["Production", "Staging", "Customer Acceptance", "Offline Package"];
+const backupFrequencyOptions = ["Hourly", "Daily", "Weekly", "Manual"];
+const accreditationStatusOptions = ["Not started", "In preparation", "Submitted", "Approved", "Renewal due"];
 const normaliseUnitSettingsIdentifier = (value) => String(value || "").trim().toUpperCase();
 const formatPlainList = (items, fallback = "Not set") => {
   const cleanItems = items.map((item) => String(item || "").trim()).filter(Boolean);
@@ -9356,6 +9364,43 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
       }
     });
   };
+  const updateOrganisationSettings = (patch) => {
+    if (!onUpdatePlatformConfig || !activeOrganisation) return;
+    onUpdatePlatformConfig((current) => ({
+      ...current,
+      organisations: (current?.organisations || []).map((organisation) => organisation === activeOrganisation || String(organisation?.id || organisation?.code || "") === String(activeOrganisation?.id || activeOrganisation?.code || "") ? {
+        ...organisation,
+        settings: {
+          ...organisation.settings || {},
+          ...patch
+        }
+      } : organisation)
+    }));
+  };
+  const updateDeploymentProfile = (patch) => {
+    updateOrganisationSettings({
+      deploymentProfile: {
+        ...deploymentProfile,
+        ...patch
+      }
+    });
+  };
+  const updateOperationalRunbook = (patch) => {
+    updateOrganisationSettings({
+      operationalRunbook: {
+        ...operationalRunbook,
+        ...patch
+      }
+    });
+  };
+  const updatePersonnelDisplaySettings = (patch) => {
+    updateOrganisationSettings({
+      personnelDisplaySettings: {
+        ...personnelDisplaySettings,
+        ...patch
+      }
+    });
+  };
   const updateUnitTrainingReportTemplate = (patch) => {
     updateUnitSettings({
       trainingReportTemplate: {
@@ -9411,13 +9456,13 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
           const settings = pool.settings || {};
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: pool.name || pool.code || "Resource pool", value: `${pool.aircraftTypeCode || "Aircraft not set"} / ${pool.poolType || "Dedicated"} / ${pool.locationCode || unit.locationCode || "Location not set"}` }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid border-t border-white/10 md:grid-cols-5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${unitSettingsScrollClass} border-t border-white/10`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[760px] grid-cols-5", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Aircraft", value: settings.aircraft ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { aircraft: value }), disabled: !onUpdatePlatformConfig }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Sim", value: settings.ftd ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { ftd: value }), disabled: !onUpdatePlatformConfig }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Trainer", value: settings.cpt ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { cpt: value }), disabled: !onUpdatePlatformConfig }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Standby", value: settings.standby ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { standby: value }), disabled: !onUpdatePlatformConfig }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Ground", value: settings.ground ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { ground: value }), disabled: !onUpdatePlatformConfig })
-            ] })
+            ] }) })
           ] }, pool.id || pool.code);
         }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Pools", value: "No resource pools are assigned to this unit or location.", muted: true }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Aircraft Numbering & Configurations", description: "Aircraft type and numbering rules inherited from this unit's resource pools.", children: aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft) => {
@@ -9481,10 +9526,10 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     if (activeCategory === "labels") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Personnel Terminology", description: "How people, ranks and instructors are named for this organisation.", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Personnel sort", value: personnelDisplaySettings.sortMode === "alphabetical" ? "Alphabetical" : "Rank then name" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Instructor term", value: personnelDisplaySettings.instructorLabel }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Civilian group", value: personnelDisplaySettings.civilianContractorGroupName }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Trainee ranks", value: personnelDisplaySettings.useSeparateTraineeRankOrder ? "Separate trainee rank order" : "Uses staff rank order" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Personnel sort", value: personnelDisplaySettings.sortMode || "rank-then-name", options: ["rank-then-name", "alphabetical"], optionLabels: { "rank-then-name": "Rank then name", alphabetical: "Alphabetical" }, onChange: (value) => updatePersonnelDisplaySettings({ sortMode: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Instructor term", value: personnelDisplaySettings.instructorLabel || "", onChange: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Civilian group", value: personnelDisplaySettings.civilianContractorGroupName || "", onChange: (value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Trainee ranks", value: personnelDisplaySettings.useSeparateTraineeRankOrder ? "separate" : "staff", options: ["staff", "separate"], optionLabels: { staff: "Uses staff rank order", separate: "Separate trainee rank order" }, onChange: (value) => updatePersonnelDisplaySettings({ useSeparateTraineeRankOrder: value === "separate" }), disabled: !canEdit })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Crew Position Labels", description: "Generic scheduler roles mapped to customer-facing words.", children: crewPositionTerminology.positions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: entry.genericName, value: `${entry.label} / ${(entry.operationalModels || []).map((model) => getOperationalModelLabel(model).replace(" Model", "")).join(", ")}` }, entry.id)) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Unit Callsigns", description: "Callsign bases offered when creating or editing unit events.", children: unitCallsignEntries.length > 0 ? unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: entry.callsign, value: entry.isDefault ? "Default callsign" : "Available callsign" }, entry.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Callsigns", value: "No callsigns configured for this unit.", muted: true }) })
@@ -9510,18 +9555,24 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     if (activeCategory === "deployment") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Deployment Readiness", description: "Organisation-level deployment posture that affects this unit.", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Operating model", value: deploymentProfile.mode || "Online SaaS" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Licence validation", value: deploymentProfile.validationMethod || "Online licence check" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Enforcement", value: deploymentProfile.enforcementMode || "Monitor Only" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Authentication", value: deploymentProfile.authModel || "Local accounts" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Data residence", value: deploymentProfile.dataResidence || "Not set" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Operating model", value: deploymentProfile.mode || "Online SaaS", options: deploymentModeOptions, onChange: (value) => updateDeploymentProfile({ mode: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Licence validation", value: deploymentProfile.validationMethod || "Online licence check", options: licenceValidationOptions, onChange: (value) => updateDeploymentProfile({ validationMethod: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Enforcement", value: deploymentProfile.enforcementMode || "Monitor Only", options: licenceEnforcementOptions, onChange: (value) => updateDeploymentProfile({ enforcementMode: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Authentication", value: deploymentProfile.authModel || "Local accounts", options: authModelOptions, onChange: (value) => updateDeploymentProfile({ authModel: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Data residence", value: deploymentProfile.dataResidence || "", onChange: (value) => updateDeploymentProfile({ dataResidence: value }), disabled: !canEdit })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Operational Runbook", description: "Support, backup, restore, update and accreditation evidence.", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Environment", value: operationalRunbook.environmentName || "Not set" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Support", value: `${operationalRunbook.supportOwner || "No owner"} / ${operationalRunbook.supportContact || "No contact"}` }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Backup", value: `${operationalRunbook.backupFrequency || "Not set"} / ${operationalRunbook.backupRetentionDays || 0} days / ${operationalRunbook.backupStorageLocation || "No location"}` }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Restore", value: `Last test: ${operationalRunbook.lastRestoreTestDate || "Not set"} / RTO ${operationalRunbook.restoreTimeObjectiveHours || 0}h / RPO ${operationalRunbook.restorePointObjectiveHours || 0}h` }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Accreditation", value: operationalRunbook.accreditationStatus || "Not started" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Environment", value: operationalRunbook.environmentName || "", onChange: (value) => updateOperationalRunbook({ environmentName: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Release channel", value: operationalRunbook.releaseChannel || "Production", options: releaseChannelOptions, onChange: (value) => updateOperationalRunbook({ releaseChannel: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Support owner", value: operationalRunbook.supportOwner || "", onChange: (value) => updateOperationalRunbook({ supportOwner: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Support contact", value: operationalRunbook.supportContact || "", onChange: (value) => updateOperationalRunbook({ supportContact: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Backup frequency", value: operationalRunbook.backupFrequency || "Daily", options: backupFrequencyOptions, onChange: (value) => updateOperationalRunbook({ backupFrequency: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Backup retention days", value: Number(operationalRunbook.backupRetentionDays ?? 30), onChange: (value) => updateOperationalRunbook({ backupRetentionDays: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Backup location", value: operationalRunbook.backupStorageLocation || "", onChange: (value) => updateOperationalRunbook({ backupStorageLocation: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Last restore test", value: operationalRunbook.lastRestoreTestDate || "", onChange: (value) => updateOperationalRunbook({ lastRestoreTestDate: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "RTO hours", value: Number(operationalRunbook.restoreTimeObjectiveHours ?? 24), onChange: (value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "RPO hours", value: Number(operationalRunbook.restorePointObjectiveHours ?? 24), onChange: (value) => updateOperationalRunbook({ restorePointObjectiveHours: value }), disabled: !canEdit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Accreditation", value: operationalRunbook.accreditationStatus || "Not started", options: accreditationStatusOptions, onChange: (value) => updateOperationalRunbook({ accreditationStatus: value }), disabled: !canEdit })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Licensing", description: "Active licence records and commercial limits for the deployment.", children: activeLicences.length > 0 ? activeLicences.map((license) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: license.licenseName || license.licenseKey || "Licence", value: `${license.deploymentMode || deploymentProfile.mode || "Deployment"} / Valid until ${license.validUntil || "No expiry"} / Units: ${license.maxUnits || "Unlimited"} / Users: ${license.maxUsers || "Unlimited"}` }, license.id || license.licenseKey)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Licences", value: "No active licence records configured.", muted: true }) })
       ] });
@@ -95206,6 +95257,9 @@ const App = () => {
     setPlatformConfig((prev) => {
       if (!prev) return prev;
       const nextConfig = updater(prev);
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
+      }, 0);
       savePlatformConfigDebounced(nextConfig);
       return nextConfig;
     });

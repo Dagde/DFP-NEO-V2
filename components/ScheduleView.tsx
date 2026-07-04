@@ -555,6 +555,14 @@ const unitSettingsInputClass = 'w-full rounded-xl border border-white/10 bg-slat
 const unitSettingsSelectClass = `${unitSettingsInputClass} cursor-pointer`;
 const unitSettingsRowClass = 'grid gap-2 border-t border-white/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(150px,0.65fr)_minmax(0,1fr)] md:items-center';
 const unitSettingsMutedPillClass = 'rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1 text-[11px] font-semibold text-slate-300';
+const unitSettingsScrollClass = 'max-w-full overflow-x-auto';
+const deploymentModeOptions = ['Online SaaS', 'Private Defence Network', 'Fully Offline', 'Hybrid Offline Sync'];
+const licenceValidationOptions = ['Online licence check', 'Private network licence server', 'Offline signed licence file', 'Hybrid cached licence'];
+const licenceEnforcementOptions = ['Monitor Only', 'Warn Only', 'Block Expired Licence'];
+const authModelOptions = ['Local accounts', 'Defence SSO', 'Hybrid local and SSO'];
+const releaseChannelOptions = ['Production', 'Staging', 'Customer Acceptance', 'Offline Package'];
+const backupFrequencyOptions = ['Hourly', 'Daily', 'Weekly', 'Manual'];
+const accreditationStatusOptions = ['Not started', 'In preparation', 'Submitted', 'Approved', 'Renewal due'];
 
 const normaliseUnitSettingsIdentifier = (value: unknown): string => String(value || '').trim().toUpperCase();
 
@@ -823,9 +831,33 @@ const OrganisationMyUnitSettings: React.FC<{
                             ...patch,
                         },
                     }
-                    : organisation
+                : organisation
             )),
         }));
+    };
+    const updateDeploymentProfile = (patch: Record<string, any>) => {
+        updateOrganisationSettings({
+            deploymentProfile: {
+                ...deploymentProfile,
+                ...patch,
+            },
+        });
+    };
+    const updateOperationalRunbook = (patch: Record<string, any>) => {
+        updateOrganisationSettings({
+            operationalRunbook: {
+                ...operationalRunbook,
+                ...patch,
+            },
+        });
+    };
+    const updatePersonnelDisplaySettings = (patch: Record<string, any>) => {
+        updateOrganisationSettings({
+            personnelDisplaySettings: {
+                ...personnelDisplaySettings,
+                ...patch,
+            },
+        });
     };
     const updateUnitTrainingReportTemplate = (patch: Record<string, any>) => {
         updateUnitSettings({
@@ -897,12 +929,14 @@ const OrganisationMyUnitSettings: React.FC<{
                             return (
                                 <div key={pool.id || pool.code} className="border-t border-white/10 first:border-t-0">
                                     <UnitSettingsReadRow label={pool.name || pool.code || 'Resource pool'} value={`${pool.aircraftTypeCode || 'Aircraft not set'} / ${pool.poolType || 'Dedicated'} / ${pool.locationCode || unit.locationCode || 'Location not set'}`} />
-                                    <div className="grid border-t border-white/10 md:grid-cols-5">
-                                        <UnitSettingsNumberField label="Aircraft" value={settings.aircraft ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { aircraft: value })} disabled={!onUpdatePlatformConfig} />
-                                        <UnitSettingsNumberField label="Sim" value={settings.ftd ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ftd: value })} disabled={!onUpdatePlatformConfig} />
-                                        <UnitSettingsNumberField label="Trainer" value={settings.cpt ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { cpt: value })} disabled={!onUpdatePlatformConfig} />
-                                        <UnitSettingsNumberField label="Standby" value={settings.standby ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { standby: value })} disabled={!onUpdatePlatformConfig} />
-                                        <UnitSettingsNumberField label="Ground" value={settings.ground ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ground: value })} disabled={!onUpdatePlatformConfig} />
+                                    <div className={`${unitSettingsScrollClass} border-t border-white/10`}>
+                                        <div className="grid min-w-[760px] grid-cols-5">
+                                            <UnitSettingsNumberField label="Aircraft" value={settings.aircraft ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { aircraft: value })} disabled={!onUpdatePlatformConfig} />
+                                            <UnitSettingsNumberField label="Sim" value={settings.ftd ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ftd: value })} disabled={!onUpdatePlatformConfig} />
+                                            <UnitSettingsNumberField label="Trainer" value={settings.cpt ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { cpt: value })} disabled={!onUpdatePlatformConfig} />
+                                            <UnitSettingsNumberField label="Standby" value={settings.standby ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { standby: value })} disabled={!onUpdatePlatformConfig} />
+                                            <UnitSettingsNumberField label="Ground" value={settings.ground ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ground: value })} disabled={!onUpdatePlatformConfig} />
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -1000,10 +1034,10 @@ const OrganisationMyUnitSettings: React.FC<{
             return (
                 <div className="space-y-4">
                     <UnitSettingsGroup title="Personnel Terminology" description="How people, ranks and instructors are named for this organisation.">
-                        <UnitSettingsReadRow label="Personnel sort" value={personnelDisplaySettings.sortMode === 'alphabetical' ? 'Alphabetical' : 'Rank then name'} />
-                        <UnitSettingsReadRow label="Instructor term" value={personnelDisplaySettings.instructorLabel} />
-                        <UnitSettingsReadRow label="Civilian group" value={personnelDisplaySettings.civilianContractorGroupName} />
-                        <UnitSettingsReadRow label="Trainee ranks" value={personnelDisplaySettings.useSeparateTraineeRankOrder ? 'Separate trainee rank order' : 'Uses staff rank order'} />
+                        <UnitSettingsSelect label="Personnel sort" value={personnelDisplaySettings.sortMode || 'rank-then-name'} options={['rank-then-name', 'alphabetical']} optionLabels={{ 'rank-then-name': 'Rank then name', alphabetical: 'Alphabetical' }} onChange={(value) => updatePersonnelDisplaySettings({ sortMode: value })} disabled={!canEdit} />
+                        <UnitSettingsField label="Instructor term" value={personnelDisplaySettings.instructorLabel || ''} onChange={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })} disabled={!canEdit} />
+                        <UnitSettingsField label="Civilian group" value={personnelDisplaySettings.civilianContractorGroupName || ''} onChange={(value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value })} disabled={!canEdit} />
+                        <UnitSettingsSelect label="Trainee ranks" value={personnelDisplaySettings.useSeparateTraineeRankOrder ? 'separate' : 'staff'} options={['staff', 'separate']} optionLabels={{ staff: 'Uses staff rank order', separate: 'Separate trainee rank order' }} onChange={(value) => updatePersonnelDisplaySettings({ useSeparateTraineeRankOrder: value === 'separate' })} disabled={!canEdit} />
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Crew Position Labels" description="Generic scheduler roles mapped to customer-facing words.">
                         {crewPositionTerminology.positions.map((entry) => (
@@ -1058,18 +1092,24 @@ const OrganisationMyUnitSettings: React.FC<{
             return (
                 <div className="space-y-4">
                     <UnitSettingsGroup title="Deployment Readiness" description="Organisation-level deployment posture that affects this unit.">
-                        <UnitSettingsReadRow label="Operating model" value={deploymentProfile.mode || 'Online SaaS'} />
-                        <UnitSettingsReadRow label="Licence validation" value={deploymentProfile.validationMethod || 'Online licence check'} />
-                        <UnitSettingsReadRow label="Enforcement" value={deploymentProfile.enforcementMode || 'Monitor Only'} />
-                        <UnitSettingsReadRow label="Authentication" value={deploymentProfile.authModel || 'Local accounts'} />
-                        <UnitSettingsReadRow label="Data residence" value={deploymentProfile.dataResidence || 'Not set'} />
+                        <UnitSettingsSelect label="Operating model" value={deploymentProfile.mode || 'Online SaaS'} options={deploymentModeOptions} onChange={(value) => updateDeploymentProfile({ mode: value })} disabled={!canEdit} />
+                        <UnitSettingsSelect label="Licence validation" value={deploymentProfile.validationMethod || 'Online licence check'} options={licenceValidationOptions} onChange={(value) => updateDeploymentProfile({ validationMethod: value })} disabled={!canEdit} />
+                        <UnitSettingsSelect label="Enforcement" value={deploymentProfile.enforcementMode || 'Monitor Only'} options={licenceEnforcementOptions} onChange={(value) => updateDeploymentProfile({ enforcementMode: value })} disabled={!canEdit} />
+                        <UnitSettingsSelect label="Authentication" value={deploymentProfile.authModel || 'Local accounts'} options={authModelOptions} onChange={(value) => updateDeploymentProfile({ authModel: value })} disabled={!canEdit} />
+                        <UnitSettingsField label="Data residence" value={deploymentProfile.dataResidence || ''} onChange={(value) => updateDeploymentProfile({ dataResidence: value })} disabled={!canEdit} />
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Operational Runbook" description="Support, backup, restore, update and accreditation evidence.">
-                        <UnitSettingsReadRow label="Environment" value={operationalRunbook.environmentName || 'Not set'} />
-                        <UnitSettingsReadRow label="Support" value={`${operationalRunbook.supportOwner || 'No owner'} / ${operationalRunbook.supportContact || 'No contact'}`} />
-                        <UnitSettingsReadRow label="Backup" value={`${operationalRunbook.backupFrequency || 'Not set'} / ${operationalRunbook.backupRetentionDays || 0} days / ${operationalRunbook.backupStorageLocation || 'No location'}`} />
-                        <UnitSettingsReadRow label="Restore" value={`Last test: ${operationalRunbook.lastRestoreTestDate || 'Not set'} / RTO ${operationalRunbook.restoreTimeObjectiveHours || 0}h / RPO ${operationalRunbook.restorePointObjectiveHours || 0}h`} />
-                        <UnitSettingsReadRow label="Accreditation" value={operationalRunbook.accreditationStatus || 'Not started'} />
+                        <UnitSettingsField label="Environment" value={operationalRunbook.environmentName || ''} onChange={(value) => updateOperationalRunbook({ environmentName: value })} disabled={!canEdit} />
+                        <UnitSettingsSelect label="Release channel" value={operationalRunbook.releaseChannel || 'Production'} options={releaseChannelOptions} onChange={(value) => updateOperationalRunbook({ releaseChannel: value })} disabled={!canEdit} />
+                        <UnitSettingsField label="Support owner" value={operationalRunbook.supportOwner || ''} onChange={(value) => updateOperationalRunbook({ supportOwner: value })} disabled={!canEdit} />
+                        <UnitSettingsField label="Support contact" value={operationalRunbook.supportContact || ''} onChange={(value) => updateOperationalRunbook({ supportContact: value })} disabled={!canEdit} />
+                        <UnitSettingsSelect label="Backup frequency" value={operationalRunbook.backupFrequency || 'Daily'} options={backupFrequencyOptions} onChange={(value) => updateOperationalRunbook({ backupFrequency: value })} disabled={!canEdit} />
+                        <UnitSettingsNumberField label="Backup retention days" value={Number(operationalRunbook.backupRetentionDays ?? 30)} onChange={(value) => updateOperationalRunbook({ backupRetentionDays: value })} disabled={!canEdit} />
+                        <UnitSettingsField label="Backup location" value={operationalRunbook.backupStorageLocation || ''} onChange={(value) => updateOperationalRunbook({ backupStorageLocation: value })} disabled={!canEdit} />
+                        <UnitSettingsField label="Last restore test" value={operationalRunbook.lastRestoreTestDate || ''} onChange={(value) => updateOperationalRunbook({ lastRestoreTestDate: value })} disabled={!canEdit} />
+                        <UnitSettingsNumberField label="RTO hours" value={Number(operationalRunbook.restoreTimeObjectiveHours ?? 24)} onChange={(value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value })} disabled={!canEdit} />
+                        <UnitSettingsNumberField label="RPO hours" value={Number(operationalRunbook.restorePointObjectiveHours ?? 24)} onChange={(value) => updateOperationalRunbook({ restorePointObjectiveHours: value })} disabled={!canEdit} />
+                        <UnitSettingsSelect label="Accreditation" value={operationalRunbook.accreditationStatus || 'Not started'} options={accreditationStatusOptions} onChange={(value) => updateOperationalRunbook({ accreditationStatus: value })} disabled={!canEdit} />
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Licensing" description="Active licence records and commercial limits for the deployment.">
                         {activeLicences.length > 0 ? activeLicences.map((license: any) => (
