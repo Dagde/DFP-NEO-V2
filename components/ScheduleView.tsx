@@ -9,7 +9,7 @@ import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { getOperationalModelLabel, getUnitOperationalModel, OPERATIONAL_MODEL_OPTIONS } from '../utils/platformConfigService';
-import { formatTaskProfileAbbreviationText, parseTaskProfileAbbreviationText } from '../utils/taskProfiles';
+import { getTaskProfilesForModel } from '../utils/taskProfiles';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { AIRCRAFT_CREW_RESOURCE_KINDS, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import { normaliseCrewCompositionSettings } from '../utils/crewCompositionProfiles';
@@ -772,6 +772,11 @@ const OrganisationMyUnitSettings: React.FC<{
     const operationalModel = getUnitOperationalModel(unit);
     const modelOptionLabels = Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
     const taskAbbreviations = unit?.settings?.taskProfileAbbreviations || {};
+    const taskProfilesForUnit = getTaskProfilesForModel(platformConfig, operationalModel);
+    const taskTileLabelProfiles = Array.from(new Set([
+        ...taskProfilesForUnit,
+        ...Object.keys(taskAbbreviations || {}),
+    ].map((profile) => String(profile || '').trim()).filter(Boolean)));
     const activeOrganisation = getActiveOrganisation(platformConfig);
     const organisationSettings = activeOrganisation?.settings || {};
     const deploymentProfile = organisationSettings.deploymentProfile || {};
@@ -855,6 +860,16 @@ const OrganisationMyUnitSettings: React.FC<{
                 ...patch,
             },
         });
+    };
+    const updateTaskTileLabel = (profile: string, label: string) => {
+        const nextAbbreviations = { ...(taskAbbreviations || {}) };
+        const cleanLabel = String(label || '').trim();
+        if (cleanLabel) {
+            nextAbbreviations[profile] = label;
+        } else {
+            delete nextAbbreviations[profile];
+        }
+        updateUnitSettings({ taskProfileAbbreviations: nextAbbreviations });
     };
     const updateOrganisationSettings = (patch: Record<string, any>) => {
         if (!onUpdatePlatformConfig || !activeOrganisation) return;
@@ -1254,8 +1269,38 @@ const OrganisationMyUnitSettings: React.FC<{
         if (activeCategory === 'training') {
             return (
                 <div className="space-y-4">
-                    <UnitSettingsGroup title="Task Profiles" description="Tasking labels used by Directed Events for this unit's operating model.">
-                        <UnitSettingsTextAreaRow label="Unit tile abbreviations" value={formatTaskProfileAbbreviationText(taskAbbreviations)} disabled={!canEdit} onChange={(value) => updateUnitSettings({ taskProfileAbbreviations: parseTaskProfileAbbreviationText(value) })} placeholder="Task Profile = SHORT" />
+                    <UnitSettingsGroup title="Task Tile Labels" description="Short display names for task tiles on this unit's schedule." action={<span className={unitSettingsMutedPillClass}>{Object.keys(taskAbbreviations || {}).length} configured</span>}>
+                        <div className="border-t border-white/10 px-4 py-3">
+                            <p className="text-sm leading-6 text-slate-300">
+                                Use this when a full task profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task profile, training requirement, or event data.
+                            </p>
+                            <p className="mt-2 text-xs leading-5 text-cyan-100/75">
+                                Example: if the task profile is Close Air Support and the tile label is CAS, the schedule tile can show Task - CAS.
+                            </p>
+                        </div>
+                        {taskTileLabelProfiles.length > 0 ? (
+                            <div className="mx-4 mb-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20">
+                                <div className="grid gap-2 border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)]">
+                                    <span>Task profile</span>
+                                    <span>Tile label</span>
+                                </div>
+                                {taskTileLabelProfiles.map((profile) => (
+                                    <div key={profile} className="grid gap-2 border-t border-white/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)] md:items-center">
+                                        <div className="min-w-0 text-sm font-semibold text-slate-100">{profile}</div>
+                                        <input
+                                            className={unitSettingsInputClass}
+                                            value={taskAbbreviations[profile] || ''}
+                                            disabled={!canEdit}
+                                            aria-label={`${profile} tile label`}
+                                            placeholder="Optional"
+                                            onKeyDownCapture={stopEditableKeyPropagation}
+                                            onKeyDown={stopEditableKeyPropagation}
+                                            onChange={(event) => updateTaskTileLabel(profile, event.target.value)}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : <UnitSettingsReadRow label="Task tile labels" value="No task profiles are configured for this operating model." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Standard Missions" description="Regular unit mission profiles scoped to this unit.">
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (

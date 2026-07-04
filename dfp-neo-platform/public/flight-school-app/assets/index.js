@@ -9339,6 +9339,11 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
   const operationalModel2 = getUnitOperationalModel(unit);
   const modelOptionLabels = Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
   const taskAbbreviations = unit?.settings?.taskProfileAbbreviations || {};
+  const taskProfilesForUnit = getTaskProfilesForModel(platformConfig, operationalModel2);
+  const taskTileLabelProfiles = Array.from(new Set([
+    ...taskProfilesForUnit,
+    ...Object.keys(taskAbbreviations || {})
+  ].map((profile) => String(profile || "").trim()).filter(Boolean)));
   const activeOrganisation = getActiveOrganisation(platformConfig);
   const organisationSettings = activeOrganisation?.settings || {};
   const deploymentProfile = organisationSettings.deploymentProfile || {};
@@ -9386,6 +9391,16 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
         ...patch
       }
     });
+  };
+  const updateTaskTileLabel = (profile, label) => {
+    const nextAbbreviations = { ...taskAbbreviations || {} };
+    const cleanLabel2 = String(label || "").trim();
+    if (cleanLabel2) {
+      nextAbbreviations[profile] = label;
+    } else {
+      delete nextAbbreviations[profile];
+    }
+    updateUnitSettings({ taskProfileAbbreviations: nextAbbreviations });
   };
   const updateOrganisationSettings = (patch) => {
     if (!onUpdatePlatformConfig || !activeOrganisation) return;
@@ -9705,7 +9720,37 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, onUpdatePlatform
     }
     if (activeCategory === "training") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Task Profiles", description: "Tasking labels used by Directed Events for this unit's operating model.", children: /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsTextAreaRow, { label: "Unit tile abbreviations", value: formatTaskProfileAbbreviationText(taskAbbreviations), disabled: !canEdit, onChange: (value) => updateUnitSettings({ taskProfileAbbreviations: parseTaskProfileAbbreviationText(value) }), placeholder: "Task Profile = SHORT" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Task Tile Labels", description: "Short display names for task tiles on this unit's schedule.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
+          Object.keys(taskAbbreviations || {}).length,
+          " configured"
+        ] }), children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 px-4 py-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full task profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task profile, training requirement, or event data." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the task profile is Close Air Support and the tile label is CAS, the schedule tile can show Task - CAS." })
+          ] }),
+          taskTileLabelProfiles.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mb-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Task profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Tile label" })
+            ] }),
+            taskTileLabelProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-t border-white/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)] md:items-center", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 text-sm font-semibold text-slate-100", children: profile }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: unitSettingsInputClass,
+                  value: taskAbbreviations[profile] || "",
+                  disabled: !canEdit,
+                  "aria-label": `${profile} tile label`,
+                  placeholder: "Optional",
+                  onKeyDownCapture: stopEditableKeyPropagation,
+                  onKeyDown: stopEditableKeyPropagation,
+                  onChange: (event) => updateTaskTileLabel(profile, event.target.value)
+                }
+              )
+            ] }, profile))
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task tile labels", value: "No task profiles are configured for this operating model.", muted: true })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Standard Missions", description: "Regular unit mission profiles scoped to this unit.", children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: !canEdit }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Mission name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: !canEdit }),
