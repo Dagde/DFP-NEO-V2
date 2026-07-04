@@ -21062,6 +21062,7 @@ const App: React.FC = () => {
         } catch (e) { /* ignore */ }
         return 'Program Schedule';
     });
+    const [requestedSettingsSection, setRequestedSettingsSection] = useState<string | null>(null);
     const [previousView, setPreviousView] = useState<string>('Program Schedule');
     const [date, setDate] = useState<string>(() => {
         // Restore last viewed date from localStorage (persists across hard refresh)
@@ -27501,6 +27502,11 @@ const App: React.FC = () => {
         } else {
             navigateToView(view);
         }
+    };
+
+    const handleNavigateToSettingsSection = (sectionId: string) => {
+        setRequestedSettingsSection(sectionId);
+        handleNavigation('Settings');
     };
 
     const openTraineeProfileTab = useCallback((trainee: Trainee, tab: 'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null = null) => {
@@ -37143,6 +37149,7 @@ appliedUpdates.forEach(update => {
                            diagnosticHighlightedEventIds={staffAvailabilityDiagnosticEventIds}
                            platformConfig={platformConfig}
                            onUpdatePlatformConfig={handleUpdatePlatformConfigFromSchedule}
+                           onNavigateToSettingsSection={handleNavigateToSettingsSection}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
                            onOracleMouseDown={handleOracleMouseDown}
@@ -38843,6 +38850,8 @@ appliedUpdates.forEach(update => {
                        activeOperationalModel={activeOperationalModel}
                        fixedCrewTileColourMode={activeFixedCrewTileColourMode}
                        onUpdateFixedCrewTileColourMode={handleUpdateFixedCrewTileColourMode}
+                       requestedSettingsSection={requestedSettingsSection}
+                       onSettingsSectionRequestHandled={() => setRequestedSettingsSection(null)}
 
                 />;
             case 'CurrencyBuilder':

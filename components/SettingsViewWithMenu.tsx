@@ -171,6 +171,8 @@ interface SettingsViewWithMenuProps {
     onUpdateNeoBuildCourse?: (course: string) => void;
     excludedCourses?: string[];
     onUpdateExcludedCourses?: (courses: string[]) => void;
+    requestedSettingsSection?: string | null;
+    onSettingsSectionRequestHandled?: () => void;
     }
 
 type SettingsSection =
@@ -1313,6 +1315,15 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     });
     const [settingsSearch, setSettingsSearch] = useState('');
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+    useEffect(() => {
+        const requestedSection = props.requestedSettingsSection;
+        if (!requestedSection) return;
+        if (requestedSection === 'home' || Object.prototype.hasOwnProperty.call(sectionLabels, requestedSection)) {
+            setActiveSection(requestedSection as ActiveSection);
+            props.onSettingsSectionRequestHandled?.();
+        }
+    }, [props.requestedSettingsSection]);
 
     useEffect(() => {
         let restoreScrollTop: number | null = null;
