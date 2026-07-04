@@ -548,8 +548,8 @@ const EmptyOrganisationChartSet = new Set<string>();
 
 type OrganisationSlideoutView = 'structure' | 'unitSettings' | 'setupWizard';
 
-const organisationSlideoutActiveButtonClass = 'rounded-md border border-orange-300 bg-orange-500/20 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18';
-const organisationSlideoutInactiveButtonClass = 'rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-100/80 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18';
+const organisationSlideoutActiveButtonClass = 'inline-flex h-9 w-40 items-center justify-center rounded-md border border-orange-300 bg-orange-500/20 px-3 text-center text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18';
+const organisationSlideoutInactiveButtonClass = 'inline-flex h-9 w-40 items-center justify-center rounded-md border border-orange-400/55 bg-orange-500/10 px-3 text-center text-[11px] font-semibold text-orange-100/80 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18';
 const unitSettingsPanelClass = 'overflow-hidden rounded-2xl border border-white/10 bg-white/[0.055] shadow-[0_18px_44px_rgba(0,0,0,0.22)] backdrop-blur';
 const unitSettingsLabelClass = 'text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400';
 const unitSettingsInputClass = 'w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-100 outline-none transition focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60';
@@ -696,11 +696,11 @@ const UnitSettingsResourceNumberField: React.FC<{
     disabled?: boolean;
 }> = ({ label, value, onChange, disabled = false }) => (
     disabled ? (
-        <div className="min-w-[132px] shrink-0 border-r border-white/10 px-3 py-3 last:border-r-0">
+        <div className="min-w-[78px] shrink-0 border-r border-white/10 px-2 py-3 last:border-r-0">
             <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400">{label}</span>
             <span className="mt-2 block text-sm font-semibold text-slate-100">{Number.isFinite(Number(value)) ? value : 0}</span>
         </div>
-    ) : <label className="min-w-[132px] shrink-0 border-r border-white/10 px-3 py-3 last:border-r-0">
+    ) : <label className="min-w-[78px] shrink-0 border-r border-white/10 px-2 py-3 last:border-r-0">
         <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-400">{label}</span>
         <input
             type="number"
@@ -1160,13 +1160,11 @@ const OrganisationMyUnitSettings: React.FC<{
                                     <UnitSettingsSelect label="Pool type" value={pool.poolType || 'Dedicated'} options={['Dedicated', 'Shared', 'Combined']} onChange={(value) => updateResourcePool(pool, { poolType: value })} disabled={!canEdit} />
                                     <UnitSettingsSelect label="Location" value={pool.locationCode || unit.locationCode || ''} options={locations.map((item: any) => item.code)} onChange={(value) => updateResourcePool(pool, { locationCode: value })} disabled={!canEdit} />
                                     <div className={`${unitSettingsScrollClass} border-t border-white/10 bg-slate-950/25`}>
-                                        <div className="min-w-[440px]">
-                                            <div className="grid grid-cols-3 border-b border-white/10">
+                                        <div className="min-w-[390px]">
+                                            <div className="grid grid-cols-5">
                                                 <UnitSettingsResourceNumberField label="Aircraft" value={settings.aircraft ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { aircraft: value })} disabled={!canEdit} />
                                                 <UnitSettingsResourceNumberField label="Sim" value={settings.ftd ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ftd: value })} disabled={!canEdit} />
                                                 <UnitSettingsResourceNumberField label="Trainer" value={settings.cpt ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { cpt: value })} disabled={!canEdit} />
-                                            </div>
-                                            <div className="grid grid-cols-2">
                                                 <UnitSettingsResourceNumberField label="Standby" value={settings.standby ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { standby: value })} disabled={!canEdit} />
                                                 <UnitSettingsResourceNumberField label="Ground" value={settings.ground ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ground: value })} disabled={!canEdit} />
                                             </div>
