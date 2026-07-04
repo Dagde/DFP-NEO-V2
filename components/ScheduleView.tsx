@@ -955,12 +955,16 @@ const OrganisationMyUnitSettings: React.FC<{
                                 <div key={pool.id || pool.code} className="border-t border-white/10 first:border-t-0">
                                     <UnitSettingsReadRow label={pool.name || pool.code || 'Resource pool'} value={`${pool.aircraftTypeCode || 'Aircraft not set'} / ${pool.poolType || 'Dedicated'} / ${pool.locationCode || unit.locationCode || 'Location not set'}`} />
                                     <div className={`${unitSettingsScrollClass} border-t border-white/10 bg-slate-950/25`}>
-                                        <div className="flex min-w-[720px]">
-                                            <UnitSettingsResourceNumberField label="Aircraft" value={settings.aircraft ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { aircraft: value })} disabled={!canEdit} />
-                                            <UnitSettingsResourceNumberField label="Sim" value={settings.ftd ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ftd: value })} disabled={!canEdit} />
-                                            <UnitSettingsResourceNumberField label="Trainer" value={settings.cpt ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { cpt: value })} disabled={!canEdit} />
-                                            <UnitSettingsResourceNumberField label="Standby" value={settings.standby ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { standby: value })} disabled={!canEdit} />
-                                            <UnitSettingsResourceNumberField label="Ground" value={settings.ground ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ground: value })} disabled={!canEdit} />
+                                        <div className="min-w-[440px]">
+                                            <div className="grid grid-cols-3 border-b border-white/10">
+                                                <UnitSettingsResourceNumberField label="Aircraft" value={settings.aircraft ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { aircraft: value })} disabled={!canEdit} />
+                                                <UnitSettingsResourceNumberField label="Sim" value={settings.ftd ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ftd: value })} disabled={!canEdit} />
+                                                <UnitSettingsResourceNumberField label="Trainer" value={settings.cpt ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { cpt: value })} disabled={!canEdit} />
+                                            </div>
+                                            <div className="grid grid-cols-2">
+                                                <UnitSettingsResourceNumberField label="Standby" value={settings.standby ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { standby: value })} disabled={!canEdit} />
+                                                <UnitSettingsResourceNumberField label="Ground" value={settings.ground ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ground: value })} disabled={!canEdit} />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
