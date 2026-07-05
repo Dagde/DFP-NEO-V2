@@ -44414,10 +44414,10 @@ const END_HOUR$2 = 24;
 const TOTAL_HOURS$2 = END_HOUR$2 - START_HOUR$2;
 const CREW_COLUMN_WIDTH = 180;
 const TIME_HEADER_HEIGHT$2 = 40;
-const normaliseUnitCode$1 = (value) => String(value || "").trim().toUpperCase();
+const normaliseUnitCode = (value) => String(value || "").trim().toUpperCase();
 const normaliseCrewLabel = (value) => String(value || "").replace(/^CREW\s*/i, "").replace(/\s*\/\s*[A-Z0-9-]+$/i, "").trim();
 const makeCrewKey = (unit, crew) => {
-  const unitCode = normaliseUnitCode$1(unit);
+  const unitCode = normaliseUnitCode(unit);
   const crewLabel = normaliseCrewLabel(crew);
   return unitCode && crewLabel ? `${unitCode}::${crewLabel}` : "";
 };
@@ -44492,7 +44492,7 @@ const CrewScheduleView = ({
     instructorsData.forEach((staff) => {
       const key = makeCrewKey(staff.unit, staff.crew);
       if (!key) return;
-      const unit = normaliseUnitCode$1(staff.unit);
+      const unit = normaliseUnitCode(staff.unit);
       const unitCrews = unitMap.get(unit) || /* @__PURE__ */ new Map();
       const crew = unitCrews.get(key) || { key, label: formatCrewDisplay(key), unit, members: [] };
       if (staff.name && !crew.members.includes(staff.name)) crew.members.push(staff.name);
@@ -94079,10 +94079,11 @@ const App = () => {
     [activeContextUnitCodes]
   );
   const activeUnitHasTrainees = reactExports.useMemo(() => {
+    const normaliseActiveUnitCode = (value) => String(value || "").trim().toUpperCase();
     const activeUnitKeys = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
     if (activeUnitKeys.length === 0) return true;
-    const activeUnitKeySet = new Set(activeUnitKeys.map((unitCode) => normaliseUnitCode(unitCode)));
-    const matchingUnits = (platformConfig?.units || []).filter((unit) => activeUnitKeySet.has(normaliseUnitCode(unit?.code)));
+    const activeUnitKeySet = new Set(activeUnitKeys.map((unitCode) => normaliseActiveUnitCode(unitCode)));
+    const matchingUnits = (platformConfig?.units || []).filter((unit) => activeUnitKeySet.has(normaliseActiveUnitCode(unit?.code)));
     if (matchingUnits.length === 0) return true;
     return matchingUnits.some((unit) => unit?.settings?.hasTrainees !== false);
   }, [activeContextUnitCodes, activeUnitCode, platformConfig]);

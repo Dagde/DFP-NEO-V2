@@ -21566,13 +21566,14 @@ const App: React.FC = () => {
         [activeContextUnitCodes],
     );
     const activeUnitHasTrainees = useMemo(() => {
+        const normaliseActiveUnitCode = (value: unknown): string => String(value || '').trim().toUpperCase();
         const activeUnitKeys = activeContextUnitCodes.length > 0
             ? activeContextUnitCodes
             : String(activeUnitCode || '').split('+').map(code => String(code || '').trim().toUpperCase()).filter(Boolean);
         if (activeUnitKeys.length === 0) return true;
-        const activeUnitKeySet = new Set(activeUnitKeys.map(unitCode => normaliseUnitCode(unitCode)));
+        const activeUnitKeySet = new Set(activeUnitKeys.map(unitCode => normaliseActiveUnitCode(unitCode)));
         const matchingUnits = (platformConfig?.units || []).filter((unit: any) => (
-            activeUnitKeySet.has(normaliseUnitCode(unit?.code))
+            activeUnitKeySet.has(normaliseActiveUnitCode(unit?.code))
         ));
         if (matchingUnits.length === 0) return true;
         return matchingUnits.some((unit: any) => unit?.settings?.hasTrainees !== false);
