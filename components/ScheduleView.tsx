@@ -889,6 +889,38 @@ const buildWizardParentMaps = (rows: Array<{ child: string; parent: string }>) =
     return { childrenByParent, parentByChild };
 };
 
+const buildWizardParentRowsForChildren = (
+    children: string[],
+    parentMappings: string,
+    parentOptions: string[],
+): Array<{ child: string; parent: string }> => {
+    const existingParentByChild = new Map(
+        parseWizardParentRows(parentMappings).map((row) => [normaliseUnitSettingsIdentifier(row.child), row.parent]),
+    );
+    const defaultParent = parentOptions.find((parent) => String(parent || '').trim()) || '';
+    return children
+        .map((child) => {
+            const cleanChild = String(child || '').trim();
+            const parent = existingParentByChild.get(normaliseUnitSettingsIdentifier(cleanChild)) || defaultParent;
+            return { child: cleanChild, parent: String(parent || '').trim() };
+        })
+        .filter((row) => row.child && row.parent);
+};
+
+const updateWizardParentMapping = (
+    parentMappings: string,
+    child: string,
+    parent: string,
+): string => {
+    const cleanChild = String(child || '').trim();
+    const cleanParent = String(parent || '').trim();
+    if (!cleanChild) return parentMappings;
+    const rows = parseWizardParentRows(parentMappings);
+    const nextRows = rows.filter((row) => normaliseUnitSettingsIdentifier(row.child) !== normaliseUnitSettingsIdentifier(cleanChild));
+    if (cleanParent) nextRows.push({ child: cleanChild, parent: cleanParent });
+    return nextRows.map((row) => `${row.child} = ${row.parent}`).join('\n');
+};
+
 const buildWizardRelationshipPaths = (
     rootLabel: string,
     level1Rows: Array<{ child: string; parent: string }>,
@@ -2258,9 +2290,9 @@ const InitialSetupWizard: React.FC<{
 
     const saveOrganisationDraft = () => {
         const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
-        const level1ParentRows = parseWizardParentRows(organisationDraft.level1Parents);
-        const level2ParentRows = parseWizardParentRows(organisationDraft.level2Parents);
-        const level3ParentRows = parseWizardParentRows(organisationDraft.level3Parents);
+        const level1ParentRows = buildWizardParentRowsForChildren(fromLines(organisationDraft.level1Options), organisationDraft.level1Parents, [rootLabel]);
+        const level2ParentRows = buildWizardParentRowsForChildren(fromLines(organisationDraft.level2Options), organisationDraft.level2Parents, fromLines(organisationDraft.level1Options));
+        const level3ParentRows = buildWizardParentRowsForChildren(fromLines(organisationDraft.level3Options), organisationDraft.level3Parents, fromLines(organisationDraft.level2Options));
         const parentMapsByLevel = [
             buildWizardParentMaps([]),
             buildWizardParentMaps(level1ParentRows),
@@ -2886,12 +2918,19 @@ const InitialSetupWizard: React.FC<{
         { name: organisationDraft.level2Name || 'Level 2', options: fromLines(organisationDraft.level2Options) },
         { name: organisationDraft.level3Name || 'Level 3', options: fromLines(organisationDraft.level3Options) },
     ].filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || '').trim());
+    const organisationRootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
+    const level1ParentOptions = [organisationRootLabel].filter(Boolean);
+    const level2ParentOptions = fromLines(organisationDraft.level1Options);
+    const level3ParentOptions = fromLines(organisationDraft.level2Options);
+    const level1ParentRows = buildWizardParentRowsForChildren(fromLines(organisationDraft.level1Options), organisationDraft.level1Parents, level1ParentOptions);
+    const level2ParentRows = buildWizardParentRowsForChildren(fromLines(organisationDraft.level2Options), organisationDraft.level2Parents, level2ParentOptions);
+    const level3ParentRows = buildWizardParentRowsForChildren(fromLines(organisationDraft.level3Options), organisationDraft.level3Parents, level3ParentOptions);
     const organisationPreviewLinks = [
         ...buildWizardRelationshipPaths(
-            fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || 'Organisation',
-            parseWizardParentRows(organisationDraft.level1Parents),
-            parseWizardParentRows(organisationDraft.level2Parents),
-            parseWizardParentRows(organisationDraft.level3Parents),
+            organisationRootLabel,
+            level1ParentRows,
+            level2ParentRows,
+            level3ParentRows,
         ),
     ];
     const renderOrganisationPreview = () => (
@@ -2958,18 +2997,51 @@ const InitialSetupWizard: React.FC<{
         onOptionsChange: (value: string) => void,
         onParentMappingsChange: (value: string) => void,
         placeholder: string,
-        parentPlaceholder: string,
+        parentOptions: string[],
     ) => (
         <div>
             <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
                 {wizardField(`Level ${levelNumber} type`, levelName, onNameChange, undefined, levelNumber === 1 ? 'Branch / HQ' : levelNumber === 2 ? 'Command' : 'Numbered Air Force')}
                 {wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true)}
                 <div className="md:col-span-2">
-                    {wizardTextArea('Parent links for this level', parentMappings, onParentMappingsChange, parentPlaceholder)}
+                    <div>
+                        <span className={wizardLabelClass}>Parents for this level</span>
+                        <div className="mt-2 overflow-hidden rounded-lg border border-slate-300 bg-white">
+                            {fromLines(levelOptions).length > 0 && parentOptions.length > 0 ? (
+                                <div className="divide-y divide-slate-200">
+                                    {fromLines(levelOptions).map((child) => {
+                                        const currentParent = buildWizardParentRowsForChildren([child], parentMappings, parentOptions)[0]?.parent || '';
+                                        return (
+                                            <div key={`${levelNumber}-${child}`} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.7fr)] md:items-center">
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Child</p>
+                                                    <p className="mt-1 text-sm font-bold text-slate-950">{child}</p>
+                                                </div>
+                                                <label className="block">
+                                                    <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Parent</span>
+                                                    <select
+                                                        className={`${wizardInputClass} mt-1`}
+                                                        value={currentParent}
+                                                        onChange={(event) => onParentMappingsChange(updateWizardParentMapping(parentMappings, child, event.target.value))}
+                                                    >
+                                                        {parentOptions.map((parent) => <option key={`${child}-${parent}`} value={parent}>{parent}</option>)}
+                                                    </select>
+                                                </label>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p className="px-3 py-3 text-xs font-semibold leading-5 text-slate-500">
+                                    Add names for this level and the level above it first, then choose each parent here.
+                                </p>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-600">
-                The names box lists the organisations on this level. The parent links box tells DFP-NEO where each one sits. Use one line per organisation, for example <strong>84WG = Air Mobility Group</strong>.
+                The names box lists the organisations on this level. The parent selector tells DFP-NEO where each one sits, so the organisation diagram can build the correct tree.
             </p>
             {renderOrganisationPreview()}
         </div>
@@ -3104,7 +3176,7 @@ const InitialSetupWizard: React.FC<{
                     (value) => setOrganisationDraft((draft) => ({ ...draft, level1Options: value })),
                     (value) => setOrganisationDraft((draft) => ({ ...draft, level1Parents: value })),
                     'Air Command',
-                    `Air Command = ${organisationDraft.name || organisationDraft.code || 'RAAF'}`,
+                    level1ParentOptions,
                 ),
             );
         }
@@ -3120,7 +3192,7 @@ const InitialSetupWizard: React.FC<{
                     (value) => setOrganisationDraft((draft) => ({ ...draft, level2Options: value })),
                     (value) => setOrganisationDraft((draft) => ({ ...draft, level2Parents: value })),
                     'Air Combat Group\nAir Mobility Group',
-                    'Air Combat Group = Air Command\nAir Mobility Group = Air Command',
+                    level2ParentOptions,
                 ),
             );
         }
@@ -3136,7 +3208,7 @@ const InitialSetupWizard: React.FC<{
                     (value) => setOrganisationDraft((draft) => ({ ...draft, level3Options: value })),
                     (value) => setOrganisationDraft((draft) => ({ ...draft, level3Parents: value })),
                     '78WG\n81WG\n82WG\n84WG',
-                    '78WG = Air Combat Group\n84WG = Air Mobility Group',
+                    level3ParentOptions,
                 ),
             );
         }
