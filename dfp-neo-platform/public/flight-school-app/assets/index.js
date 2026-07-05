@@ -9233,6 +9233,192 @@ const unitSettingsSelectClass = `${unitSettingsInputClass} cursor-pointer`;
 const unitSettingsRowClass = "grid gap-2 border-t border-white/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(150px,0.65fr)_minmax(0,1fr)] md:items-center";
 const unitSettingsMutedPillClass = "rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1 text-[11px] font-semibold text-slate-300";
 const unitSettingsScrollClass = "max-w-full overflow-x-auto";
+const initialSetupWizardStorageKey = "dfp-initial-setup-wizard-step";
+const initialSetupTemplates = [
+  {
+    id: "organisation",
+    label: "Organisation structure",
+    fileName: "DFP_NEO_Organisation_Structure_Template.csv",
+    requiredHeaders: ["Level", "Name"],
+    optionalHeaders: ["Parent", "Notes"],
+    exampleRows: [
+      ["0", "RAAF", "", "Top level organisation"],
+      ["1", "Air Command", "RAAF", "Branch or command"],
+      ["2", "Air Mobility Group", "Air Command", "Command group"]
+    ],
+    settingsSection: "platform-organisation-locations",
+    focusSubsectionId: "platform-organisation-structure"
+  },
+  {
+    id: "locations",
+    label: "Locations and bases",
+    fileName: "DFP_NEO_Locations_Template.csv",
+    requiredHeaders: ["Code", "Name", "Timezone"],
+    optionalHeaders: ["Training Areas", "Notes"],
+    exampleRows: [
+      ["YAMB", "Amberley", "Australia/Brisbane", "Area A; Area B", "Home base"],
+      ["YMES", "East Sale", "Australia/Melbourne", "Area 1; Area 2", "Training base"]
+    ],
+    settingsSection: "platform-organisation-locations",
+    focusSubsectionId: "platform-locations"
+  },
+  {
+    id: "units",
+    label: "Units and ownership",
+    fileName: "DFP_NEO_Units_Template.csv",
+    requiredHeaders: ["Unit Code", "Unit Name", "Location", "Unit Type", "Operating Model"],
+    optionalHeaders: ["Parent Organisation", "Trainees", "Notes"],
+    exampleRows: [
+      ["36SQN", "36SQN", "YAMB", "Airlift", "Pooled Crew Model", "Air Command / Air Mobility Group / 84WG", "No", ""],
+      ["1FTS", "1FTS", "YMES", "Training", "Flight School Model", "Air Command / Air Force Training Group / AirA", "Yes", ""]
+    ],
+    settingsSection: "platform-units"
+  },
+  {
+    id: "resources",
+    label: "Aircraft and resource pools",
+    fileName: "DFP_NEO_Resource_Pools_Template.csv",
+    requiredHeaders: ["Pool Name", "Aircraft Type", "Unit", "Location", "Aircraft", "Sim", "Trainer", "Standby", "Ground"],
+    optionalHeaders: ["Notes"],
+    exampleRows: [
+      ["Amberley C-17A Resource Pool", "C-17A", "36SQN", "YAMB", "4", "0", "0", "1", "0", ""]
+    ],
+    settingsSection: "platform-resource-pools"
+  },
+  {
+    id: "staff",
+    label: "Staff",
+    fileName: "DFP_NEO_Staff_Template.csv",
+    requiredHeaders: ["Name", "Unit", "Role"],
+    optionalHeaders: ["Rank", "PMKeyS", "Qualifications", "Email"],
+    exampleRows: [
+      ["Smith, Alex", "36SQN", "Pilot", "SQNLDR", "1234567", "PIC; CFI", "alex.smith@example.com"]
+    ],
+    settingsSection: "staff-database"
+  },
+  {
+    id: "trainees",
+    label: "Trainees",
+    fileName: "DFP_NEO_Trainees_Template.csv",
+    requiredHeaders: ["Name", "Unit", "Course"],
+    optionalHeaders: ["Rank", "PMKeyS", "Start Date", "Master LMP"],
+    exampleRows: [
+      ["Jones, Taylor", "1FTS", "BPC+IPC", "PLTOFF", "7654321", "2026-01-15", "BPC+IPC"]
+    ],
+    settingsSection: "trainee-database"
+  },
+  {
+    id: "courses",
+    label: "Courses and LMP events",
+    fileName: "DFP_NEO_Courses_Template.csv",
+    requiredHeaders: ["Master LMP", "Event Code", "Event Title", "Type", "Duration Minutes"],
+    optionalHeaders: ["Aircraft Type", "Crew Required", "Pre Flight Minutes", "Post Flight Minutes"],
+    exampleRows: [
+      ["C-17A Conversion", "C17-001", "Conversion sortie 1", "Flight", "90", "C-17A", "Pilot 2, Loadmaster 1", "90", "60"]
+    ],
+    settingsSection: "platform-master-lmp-access"
+  }
+];
+const getWizardTemplateHeaders = (template) => [
+  ...template.requiredHeaders,
+  ...template.optionalHeaders || []
+];
+const normaliseWizardHeader = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+const downloadWizardTemplate = (template) => {
+  const rows = [
+    getWizardTemplateHeaders(template),
+    ...template.exampleRows
+  ];
+  if (typeof XLSX !== "undefined") {
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, template.label.slice(0, 28));
+    XLSX.writeFile(workbook, template.fileName.replace(/\.csv$/i, ".xlsx"));
+    return;
+  }
+  const csv = rows.map((row) => row.map((cell) => `"${String(cell || "").replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = template.fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+const parseWizardCsvRows = (text) => {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (char === '"' && quoted && next === '"') {
+      cell += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(cell.trim());
+      if (row.some((value) => value)) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  row.push(cell.trim());
+  if (row.some((value) => value)) rows.push(row);
+  return rows;
+};
+const readWizardTemplateRows = async (file) => {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  if (["xlsx", "xls"].includes(extension || "")) {
+    if (typeof XLSX === "undefined") throw new Error("Excel support is not available in this browser session.");
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: "array" });
+    const firstSheet = workbook.SheetNames[0];
+    if (!firstSheet) return [];
+    return XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { header: 1, defval: "" });
+  }
+  const text = await file.text();
+  return parseWizardCsvRows(text);
+};
+const validateWizardTemplateFile = async (template, file) => {
+  const rows = await readWizardTemplateRows(file);
+  const headers = (rows[0] || []).map((cell) => String(cell || "").trim()).filter(Boolean);
+  const headerKeys = new Set(headers.map(normaliseWizardHeader));
+  const missingHeaders = template.requiredHeaders.filter((header) => !headerKeys.has(normaliseWizardHeader(header)));
+  const dataRows = rows.slice(1).filter((row) => row.some((cell) => String(cell || "").trim()));
+  const issues = [];
+  if (headers.length === 0) issues.push("The first row needs column headers.");
+  if (missingHeaders.length > 0) issues.push(`Missing required column${missingHeaders.length === 1 ? "" : "s"}: ${missingHeaders.join(", ")}.`);
+  if (dataRows.length === 0) issues.push("No setup rows were found below the headers.");
+  if (issues.length > 0) {
+    return {
+      status: "error",
+      fileName: file.name,
+      rowCount: dataRows.length,
+      message: `I checked ${file.name}, but it is not ready to import yet.`,
+      issues: [
+        ...issues,
+        `Example: the ${template.label} template should include ${template.requiredHeaders.join(", ")}.`
+      ]
+    };
+  }
+  return {
+    status: "valid",
+    fileName: file.name,
+    rowCount: dataRows.length,
+    message: `${file.name} looks ready. ${dataRows.length} row${dataRows.length === 1 ? "" : "s"} passed the basic format check.`
+  };
+};
 const normaliseUnitSettingsIdentifier = (value) => String(value || "").trim().toUpperCase();
 const formatPlainList = (items, fallback = "Not set") => {
   const cleanItems = items.map((item) => String(item || "").trim()).filter(Boolean);
@@ -9942,6 +10128,356 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     ] })
   ] });
 };
+const InitialSetupWizard = ({ platformConfig, unitCode, onNavigateToSettingsSection }) => {
+  const [mode, setMode] = reactExports.useState("detect");
+  const [wizardStep, setWizardStep] = reactExports.useState(() => {
+    if (typeof window === "undefined") return 0;
+    const stored = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
+    return Number.isFinite(stored) ? Math.max(0, stored) : 0;
+  });
+  const [uploadResults, setUploadResults] = reactExports.useState({});
+  const [pendingTemplateId, setPendingTemplateId] = reactExports.useState(null);
+  const fileInputRef = reactExports.useRef(null);
+  const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
+  const organisationStructureLevels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
+  const activeLocations = (platformConfig?.locations || []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const activeUnits = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const activeAircraftTypes = (platformConfig?.aircraftTypes || []).filter((aircraft) => String(aircraft?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const activeResourcePools = (platformConfig?.resourcePools || []).filter((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const activeUserAccess = (platformConfig?.userAccess || []).filter((access) => String(access?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const activeMasterLmpCatalogue = Array.isArray(activeOrganisation?.settings?.masterLmpCatalogue) ? activeOrganisation.settings.masterLmpCatalogue.filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE") : [];
+  const activeMasterLmpAccess = Array.isArray(activeOrganisation?.settings?.masterLmpAccess) ? activeOrganisation.settings.masterLmpAccess.filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE") : [];
+  const crewCompositionSettings = normaliseCrewCompositionSettings(activeOrganisation?.settings?.crewCompositionSettings || null);
+  const standardCrewConfigured = activeAircraftTypes.some((aircraft) => normaliseAircraftCrewComposition(aircraft?.crewComposition || null).standardSeats.length > 0) || crewCompositionSettings.alternateCompositions.length > 0;
+  const orgStructureConfigured = organisationStructureLevels.length > 0 && organisationStructureLevels.some((level) => String(level?.name || "").trim() && Array.isArray(level?.options) && level.options.length > 0);
+  const checks = [
+    {
+      id: "organisation",
+      label: "Organisation",
+      mandatory: true,
+      complete: Boolean(activeOrganisation?.code && activeOrganisation?.name && orgStructureConfigured),
+      summary: orgStructureConfigured ? `${organisationStructureLevels.length} organisation levels configured` : "Organisation name and structure are needed.",
+      settingsSection: "platform-organisation-locations",
+      focusSubsectionId: "platform-organisation-structure"
+    },
+    {
+      id: "locations",
+      label: "Locations",
+      mandatory: true,
+      complete: activeLocations.length > 0,
+      summary: activeLocations.length > 0 ? `${activeLocations.length} locations configured` : "At least one base or airfield is needed.",
+      settingsSection: "platform-organisation-locations",
+      focusSubsectionId: "platform-locations"
+    },
+    {
+      id: "units",
+      label: "Units",
+      mandatory: true,
+      complete: activeUnits.length > 0 && activeUnits.every((unit) => unit.locationCode && getUnitOperationalModel(unit)),
+      summary: activeUnits.length > 0 ? `${activeUnits.length} units configured` : "At least one unit is needed.",
+      settingsSection: "platform-units"
+    },
+    {
+      id: "resources",
+      label: "Aircraft and resource pools",
+      mandatory: true,
+      complete: activeAircraftTypes.length > 0 && activeResourcePools.length > 0,
+      summary: activeResourcePools.length > 0 ? `${activeResourcePools.length} resource pools configured` : "Aircraft types and pools are needed before NEO can build.",
+      settingsSection: "platform-resource-pools"
+    },
+    {
+      id: "crew",
+      label: "Crew composition",
+      mandatory: true,
+      complete: standardCrewConfigured,
+      summary: standardCrewConfigured ? "Crew requirements are configured." : "Minimum crew rules are needed for scheduling.",
+      settingsSection: "crew-composition"
+    },
+    {
+      id: "training",
+      label: "Courses and Master LMPs",
+      mandatory: true,
+      complete: activeMasterLmpCatalogue.length > 0 && activeMasterLmpAccess.length > 0,
+      summary: activeMasterLmpCatalogue.length > 0 ? `${activeMasterLmpCatalogue.length} Master LMP records configured` : "Training streams are needed for NEO build and records.",
+      settingsSection: "platform-master-lmp-access"
+    },
+    {
+      id: "access",
+      label: "People and access",
+      mandatory: true,
+      complete: activeUserAccess.length > 0,
+      summary: activeUserAccess.length > 0 ? `${activeUserAccess.length} access scopes configured` : "User access scopes are needed for secure operation.",
+      settingsSection: "platform-user-access"
+    },
+    {
+      id: "rules",
+      label: "Build rules",
+      mandatory: false,
+      complete: true,
+      summary: "Default build rules can be used now and refined later.",
+      settingsSection: "business-rules"
+    }
+  ];
+  const mandatoryChecks = checks.filter((check) => check.mandatory);
+  const completedMandatory = mandatoryChecks.filter((check) => check.complete).length;
+  const completedChecks = checks.filter((check) => check.complete).length;
+  const isBrandNew = completedMandatory <= 1;
+  const isPartiallyConfigured = completedMandatory > 1 && completedMandatory < mandatoryChecks.length;
+  const allMandatoryComplete = completedMandatory === mandatoryChecks.length;
+  const steps = [
+    {
+      id: "analysis",
+      title: "Check what is already set up",
+      label: "Check",
+      body: "I will look at the current platform settings first. Mandatory items are needed for DFP-NEO and NEO Build to work. Optional items can be done later, but the wizard keeps them in one place.",
+      checkIds: checks.map((check) => check.id)
+    },
+    {
+      id: "organisation",
+      title: "Organisation, bases and units",
+      label: "Organisation",
+      body: "Set the organisation structure, locations and units first. Everything else uses this foundation.",
+      checkIds: ["organisation", "locations", "units"]
+    },
+    {
+      id: "resources",
+      title: "Aircraft, pools and crew",
+      label: "Resources",
+      body: "Define aircraft types, resource pools and minimum crew composition so the scheduler knows what can be used and who is required.",
+      checkIds: ["resources", "crew"]
+    },
+    {
+      id: "people",
+      title: "People and access",
+      label: "People",
+      body: "Add staff, trainees where the unit uses trainees, and user access scopes. This keeps data secure and unit-specific.",
+      checkIds: ["access"]
+    },
+    {
+      id: "training",
+      title: "Training and build rules",
+      label: "Training",
+      body: "Connect Master LMPs, courses, event details and build rules. This is what lets NEO build useful schedules instead of empty plans.",
+      checkIds: ["training", "rules"]
+    },
+    {
+      id: "review",
+      title: "Review and finish",
+      label: "Review",
+      body: allMandatoryComplete ? "The mandatory setup areas look ready. You can keep refining optional settings from My Unit Settings or the Settings pages." : "Some mandatory setup areas still need attention. Use the buttons below to go directly to the right Settings page.",
+      checkIds: checks.map((check) => check.id)
+    }
+  ];
+  const currentStep = Math.min(wizardStep, steps.length - 1);
+  const visibleStep = steps[currentStep];
+  const visibleChecks = checks.filter((check) => visibleStep.checkIds.includes(check.id));
+  const visibleTemplates = initialSetupTemplates.filter((template) => visibleStep.id === "analysis" || visibleStep.id === "review" || visibleStep.checkIds.includes(template.id) || visibleStep.id === "people" && ["staff", "trainees"].includes(template.id) || visibleStep.id === "training" && template.id === "courses");
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(initialSetupWizardStorageKey, String(currentStep));
+  }, [currentStep]);
+  reactExports.useEffect(() => {
+    setWizardStep((step) => Math.min(step, steps.length - 1));
+  }, [steps.length]);
+  reactExports.useEffect(() => {
+    if (mode === "detect" && !isPartiallyConfigured) {
+      setMode("active");
+    }
+  }, [isPartiallyConfigured, mode]);
+  const navigateToCheck = (check) => {
+    onNavigateToSettingsSection?.({
+      sectionId: check.settingsSection,
+      unitCode,
+      focusSubsectionId: check.focusSubsectionId
+    });
+  };
+  const navigateToTemplateImport = (template) => {
+    onNavigateToSettingsSection?.({
+      sectionId: template.settingsSection,
+      unitCode,
+      focusSubsectionId: template.focusSubsectionId
+    });
+  };
+  const selectTemplateFile = (templateId) => {
+    setPendingTemplateId(templateId);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    fileInputRef.current?.click();
+  };
+  const handleTemplateFile = async (templateId, file) => {
+    if (!file) return;
+    const template = initialSetupTemplates.find((item) => item.id === templateId);
+    if (!template) return;
+    setUploadResults((current) => ({
+      ...current,
+      [templateId]: { status: "idle", fileName: file.name, message: `Checking ${file.name}...` }
+    }));
+    try {
+      const result = await validateWizardTemplateFile(template, file);
+      setUploadResults((current) => ({ ...current, [templateId]: result }));
+    } catch (error) {
+      setUploadResults((current) => ({
+        ...current,
+        [templateId]: {
+          status: "error",
+          fileName: file.name,
+          message: `I could not read ${file.name}.`,
+          issues: [error?.message || "Try saving the file as CSV or XLSX and upload it again."]
+        }
+      }));
+    }
+  };
+  const resetWizard = () => {
+    setWizardStep(0);
+    setMode("active");
+    setUploadResults({});
+    if (typeof window !== "undefined") window.localStorage.setItem(initialSetupWizardStorageKey, "0");
+  };
+  const resumeWizard = () => {
+    setMode("active");
+    setWizardStep((step) => Math.min(Math.max(0, step), steps.length - 1));
+  };
+  const wizardChoiceClass = "rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
+  const wizardSmallButtonClass = "rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
+  const wizardPrimaryButtonClass = "rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600";
+  if (mode === "detect" && isPartiallyConfigured) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: "Initial Setup Wizard" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-xl font-bold text-slate-950", children: "DFP-NEO is partly configured" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-3 text-sm leading-6 text-slate-700", children: [
+        "I found ",
+        completedMandatory,
+        " of ",
+        mandatoryChecks.length,
+        " mandatory setup areas already complete. You can continue from the last saved wizard step, or start the guide again from the beginning. Starting again resets the wizard progress only; existing settings are not changed until you edit or import data."
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 grid gap-3 sm:grid-cols-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: resumeWizard, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-bold", children: "Continue setup" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-medium text-slate-600", children: "Resume from the last saved step." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: resetWizard, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-bold", children: "Start again" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-medium text-slate-600", children: "Restart the guide from step one." })
+        ] })
+      ] })
+    ] });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        ref: fileInputRef,
+        type: "file",
+        accept: ".xlsx,.xls,.csv",
+        className: "hidden",
+        onChange: (event) => {
+          const file = event.target.files?.[0];
+          if (pendingTemplateId) void handleTemplateFile(pendingTemplateId, file);
+        }
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: [
+            "Step ",
+            currentStep + 1,
+            " of ",
+            steps.length
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-xl font-bold text-slate-950", children: visibleStep.title }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 max-w-3xl text-sm leading-6 text-slate-700", children: visibleStep.body })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white px-3 py-2 text-right shadow-sm", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500", children: "Mandatory" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-lg font-black text-slate-950", children: [
+            completedMandatory,
+            "/",
+            mandatoryChecks.length
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-5 grid gap-2 sm:grid-cols-3 lg:grid-cols-6", children: steps.map((step, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => setWizardStep(index),
+          className: `rounded-lg border px-3 py-2 text-center text-[11px] font-bold transition ${index === currentStep ? "border-orange-400 bg-orange-100 text-orange-950 ring-2 ring-orange-300/70" : "border-slate-300 bg-white text-slate-700 hover:border-orange-300 hover:bg-orange-50"}`,
+          children: step.label
+        },
+        step.id
+      )) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: visibleChecks.map((check) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-xl border border-slate-300 bg-white p-4 text-slate-900 shadow-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${check.complete ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`, children: check.complete ? "Ready" : "Needs setup" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${check.mandatory ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-600"}`, children: check.mandatory ? "Mandatory" : "Optional" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-2 text-base font-bold text-slate-950", children: check.label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm leading-5 text-slate-600", children: check.summary })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => navigateToCheck(check), children: "Take me there" })
+      ] }) }, check.id)) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "h-fit rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black text-slate-950", children: "Templates and uploads" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "Download a template, fill it in, then upload it here. I will check the format before you import anything." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: visibleTemplates.map((template) => {
+          const result = uploadResults[template.id];
+          const isValid = result?.status === "valid";
+          const isError = result?.status === "error";
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: `rounded-lg border bg-white p-3 shadow-sm ${isValid ? "border-emerald-300" : isError ? "border-red-300" : "border-slate-300"}`,
+              onDragOver: (event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "copy";
+              },
+              onDrop: (event) => {
+                event.preventDefault();
+                void handleTemplateFile(template.id, event.dataTransfer.files?.[0]);
+              },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-bold text-slate-950", children: template.label }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-[11px] leading-4 text-slate-500", children: [
+                      "Required: ",
+                      template.requiredHeaders.join(", ")
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => downloadWizardTemplate(template), children: "Download" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    className: "mt-3 w-full rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-center text-xs font-semibold text-slate-600 transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900",
+                    onClick: () => selectTemplateFile(template.id),
+                    children: "Drop file here or click to upload"
+                  }
+                ),
+                result ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 rounded-md px-3 py-2 text-xs leading-5 ${isValid ? "bg-emerald-50 text-emerald-800" : isError ? "bg-red-50 text-red-800" : "bg-slate-100 text-slate-600"}`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold", children: result.message }),
+                  result.issues?.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-1 list-disc space-y-1 pl-4", children: result.issues.map((issue) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: issue }, issue)) }) : null,
+                  isValid ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: `${wizardPrimaryButtonClass} mt-2`, onClick: () => navigateToTemplateImport(template), children: "Import or finish in Settings" }) : null
+                ] }) : null
+              ]
+            },
+            template.id
+          );
+        }) })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setWizardStep(Math.max(0, currentStep - 1)), disabled: currentStep === 0, children: "Back" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold text-slate-600", children: isBrandNew ? "This looks like a new setup." : allMandatoryComplete ? "Mandatory setup looks ready." : `${completedChecks} of ${checks.length} setup areas look ready.` }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: () => setWizardStep(Math.min(steps.length - 1, currentStep + 1)), children: currentStep === steps.length - 1 ? "Stay on review" : "Next" })
+    ] })
+  ] });
+};
 const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
@@ -10079,10 +10615,14 @@ const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, formationCallsi
         onUpdatePlatformConfig,
         onNavigateToSettingsSection
       }
-    ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-400/15 bg-slate-950/60 p-5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-100", children: "Initial Setup Wizard" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-slate-400", children: "This area is reserved for a guided setup flow for new units. The current unit settings remain available from My Unit Settings." })
-    ] })
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+      InitialSetupWizard,
+      {
+        platformConfig,
+        unitCode,
+        onNavigateToSettingsSection
+      }
+    )
   ] });
 };
 const ScheduleView = ({
