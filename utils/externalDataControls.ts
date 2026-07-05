@@ -1,3 +1,5 @@
+import { isSetupTestMode } from './setupTestMode';
+
 export interface ExternalDataControls {
   externalDataEnabled: boolean;
   weatherDataEnabled: boolean;
@@ -57,6 +59,7 @@ export const isExternalDataAllowed = (key?: keyof Omit<ExternalDataControls, 'ex
 export const getAppApiBase = (): string => {
   const win = safeWindow();
   if (!win) return '/api';
+  if (isSetupTestMode()) return '/api';
   const currentOrigin = win.location.origin;
   if (currentOrigin === PRODUCTION_API_ORIGIN || currentOrigin.includes('railway.app')) return '/api';
   return isExternalDataAllowed('productionApiFallbackEnabled') ? `${PRODUCTION_API_ORIGIN}/api` : '/api';

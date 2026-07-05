@@ -1376,61 +1376,13 @@ function logAudit(pageOrParams, action, description, changes) {
     console.error("Error logging audit entry:", error);
   }
 }
-const EXTERNAL_DATA_CONTROLS_STORAGE_KEY = "neo_external_data_controls";
-const EXTERNAL_DATA_CONTROLS_EVENT = "neo-external-data-controls-changed";
-const PRODUCTION_API_ORIGIN = "https://dfp-neo-v2-production.up.railway.app";
-const DEFAULT_EXTERNAL_DATA_CONTROLS = {
-  externalDataEnabled: true,
-  weatherDataEnabled: true,
-  flightTrackingEnabled: true,
-  productionApiFallbackEnabled: true,
-  externalMediaEnabled: true
-};
-const safeWindow$1 = () => typeof window === "undefined" ? null : window;
-const normalizeExternalDataControls = (value) => ({
-  externalDataEnabled: value?.externalDataEnabled !== false,
-  weatherDataEnabled: value?.weatherDataEnabled !== false,
-  flightTrackingEnabled: value?.flightTrackingEnabled !== false,
-  productionApiFallbackEnabled: value?.productionApiFallbackEnabled !== false,
-  externalMediaEnabled: value?.externalMediaEnabled !== false
-});
-const readExternalDataControls = () => {
-  const win = safeWindow$1();
-  if (!win) return DEFAULT_EXTERNAL_DATA_CONTROLS;
-  try {
-    const stored = win.localStorage.getItem(EXTERNAL_DATA_CONTROLS_STORAGE_KEY);
-    if (!stored) return DEFAULT_EXTERNAL_DATA_CONTROLS;
-    return normalizeExternalDataControls(JSON.parse(stored));
-  } catch {
-    return DEFAULT_EXTERNAL_DATA_CONTROLS;
-  }
-};
-const writeExternalDataControls = (settings) => {
-  const win = safeWindow$1();
-  if (!win) return;
-  const normalized = normalizeExternalDataControls(settings);
-  win.localStorage.setItem(EXTERNAL_DATA_CONTROLS_STORAGE_KEY, JSON.stringify(normalized));
-  win.dispatchEvent(new CustomEvent(EXTERNAL_DATA_CONTROLS_EVENT, { detail: normalized }));
-};
-const isExternalDataAllowed = (key) => {
-  const settings = readExternalDataControls();
-  if (!settings.externalDataEnabled) return false;
-  return key ? settings[key] !== false : true;
-};
-const getAppApiBase = () => {
-  const win = safeWindow$1();
-  if (!win) return "/api";
-  const currentOrigin = win.location.origin;
-  if (currentOrigin === PRODUCTION_API_ORIGIN || currentOrigin.includes("railway.app")) return "/api";
-  return isExternalDataAllowed("productionApiFallbackEnabled") ? `${PRODUCTION_API_ORIGIN}/api` : "/api";
-};
 const SETUP_TEST_QUERY_PARAM = "setupTest";
 const SETUP_TEST_RESET_QUERY_PARAM = "resetSetupTest";
 const AIR_MOVEMENTS_TEST_PROFILE = "air-movements";
 const SETUP_TEST_PLATFORM_EVENT = "dfp-setup-test-platform-config-updated";
-const safeWindow = () => typeof window === "undefined" ? null : window;
+const safeWindow$1 = () => typeof window === "undefined" ? null : window;
 const getSetupTestProfile = () => {
-  const win = safeWindow();
+  const win = safeWindow$1();
   if (!win) return null;
   const params = new URLSearchParams(win.location.search);
   const urlProfile = params.get(SETUP_TEST_QUERY_PARAM);
@@ -1465,7 +1417,7 @@ const createEmptySetupTestPlatformConfig = () => ({
   schedulingRuleSets: []
 });
 const readSetupTestPlatformConfig = () => {
-  const win = safeWindow();
+  const win = safeWindow$1();
   if (!win) return createEmptySetupTestPlatformConfig();
   try {
     const stored = win.localStorage.getItem(getSetupTestStorageKey("platform_config"));
@@ -1479,7 +1431,7 @@ const readSetupTestPlatformConfig = () => {
   }
 };
 const writeSetupTestPlatformConfig = (config) => {
-  const win = safeWindow();
+  const win = safeWindow$1();
   if (!win) return;
   const nextConfig = {
     ...createEmptySetupTestPlatformConfig(),
@@ -1489,7 +1441,7 @@ const writeSetupTestPlatformConfig = (config) => {
   win.dispatchEvent(new CustomEvent(SETUP_TEST_PLATFORM_EVENT, { detail: { config: nextConfig } }));
 };
 const readSetupTestSettings = () => {
-  const win = safeWindow();
+  const win = safeWindow$1();
   if (!win) return null;
   try {
     const stored = win.localStorage.getItem(getSetupTestStorageKey("settings"));
@@ -1499,17 +1451,66 @@ const readSetupTestSettings = () => {
   }
 };
 const writeSetupTestSettings = (settings) => {
-  const win = safeWindow();
+  const win = safeWindow$1();
   if (!win) return;
   win.localStorage.setItem(getSetupTestStorageKey("settings"), JSON.stringify(settings || {}));
 };
 const writeSetupTestCurrencies = (masterCurrencies, currencyRequirements) => {
-  const win = safeWindow();
+  const win = safeWindow$1();
   if (!win) return;
   win.localStorage.setItem(getSetupTestStorageKey("currencies"), JSON.stringify({
     masterCurrencies: Array.isArray(masterCurrencies) ? masterCurrencies : [],
     currencyRequirements: Array.isArray(currencyRequirements) ? currencyRequirements : []
   }));
+};
+const EXTERNAL_DATA_CONTROLS_STORAGE_KEY = "neo_external_data_controls";
+const EXTERNAL_DATA_CONTROLS_EVENT = "neo-external-data-controls-changed";
+const PRODUCTION_API_ORIGIN = "https://dfp-neo-v2-production.up.railway.app";
+const DEFAULT_EXTERNAL_DATA_CONTROLS = {
+  externalDataEnabled: true,
+  weatherDataEnabled: true,
+  flightTrackingEnabled: true,
+  productionApiFallbackEnabled: true,
+  externalMediaEnabled: true
+};
+const safeWindow = () => typeof window === "undefined" ? null : window;
+const normalizeExternalDataControls = (value) => ({
+  externalDataEnabled: value?.externalDataEnabled !== false,
+  weatherDataEnabled: value?.weatherDataEnabled !== false,
+  flightTrackingEnabled: value?.flightTrackingEnabled !== false,
+  productionApiFallbackEnabled: value?.productionApiFallbackEnabled !== false,
+  externalMediaEnabled: value?.externalMediaEnabled !== false
+});
+const readExternalDataControls = () => {
+  const win = safeWindow();
+  if (!win) return DEFAULT_EXTERNAL_DATA_CONTROLS;
+  try {
+    const stored = win.localStorage.getItem(EXTERNAL_DATA_CONTROLS_STORAGE_KEY);
+    if (!stored) return DEFAULT_EXTERNAL_DATA_CONTROLS;
+    return normalizeExternalDataControls(JSON.parse(stored));
+  } catch {
+    return DEFAULT_EXTERNAL_DATA_CONTROLS;
+  }
+};
+const writeExternalDataControls = (settings) => {
+  const win = safeWindow();
+  if (!win) return;
+  const normalized = normalizeExternalDataControls(settings);
+  win.localStorage.setItem(EXTERNAL_DATA_CONTROLS_STORAGE_KEY, JSON.stringify(normalized));
+  win.dispatchEvent(new CustomEvent(EXTERNAL_DATA_CONTROLS_EVENT, { detail: normalized }));
+};
+const isExternalDataAllowed = (key) => {
+  const settings = readExternalDataControls();
+  if (!settings.externalDataEnabled) return false;
+  return key ? settings[key] !== false : true;
+};
+const getAppApiBase = () => {
+  const win = safeWindow();
+  if (!win) return "/api";
+  if (isSetupTestMode()) return "/api";
+  const currentOrigin = win.location.origin;
+  if (currentOrigin === PRODUCTION_API_ORIGIN || currentOrigin.includes("railway.app")) return "/api";
+  return isExternalDataAllowed("productionApiFallbackEnabled") ? `${PRODUCTION_API_ORIGIN}/api` : "/api";
 };
 const DEFAULT_TILE_STATUS_SETTINGS = {
   authorizationUrgentMinutes: 15,
@@ -94958,6 +94959,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
 }
 const App = () => {
   const zoomLevel = 1;
+  const setupTestProfile = getSetupTestProfile();
   const { theme } = useTheme();
   const { checkAndWarn, freezeState } = useSystemFreeze$1();
   const freezeStateRef = React.useRef(freezeState);
@@ -110463,6 +110465,10 @@ Do you want to replace the existing entry?`,
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    setupTestProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed left-1/2 top-2 z-[500] -translate-x-1/2 rounded-md border border-amber-300/70 bg-amber-100 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-2xl shadow-black/30", children: [
+      "Setup Wizard Test Mode - Local Browser Data Only - ",
+      setupTestProfile
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(SystemFreezeBanner, {}),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       DataLoadingMonitor,

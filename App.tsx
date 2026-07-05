@@ -78,7 +78,7 @@ import {
 } from './utils/staffQualifications';
 import { getInsertEventTypes } from './utils/insertEventTypes';
 import { getAppApiBase } from './utils/externalDataControls';
-import { isSetupTestMode, writeSetupTestPlatformConfig } from './utils/setupTestMode';
+import { getSetupTestProfile, isSetupTestMode, writeSetupTestPlatformConfig } from './utils/setupTestMode';
 import {
     classifyDayNightBySunTimes,
     getDefaultAirfieldSolarProfile,
@@ -20846,6 +20846,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 const App: React.FC = () => {
        // Default zoom level (fixed at 1 since zoom functionality was removed)
        const zoomLevel = 1;
+    const setupTestProfile = getSetupTestProfile();
 
     // Theme
     const { theme } = useTheme();
@@ -39965,6 +39966,11 @@ appliedUpdates.forEach(update => {
     };
     return (
     <>
+        {setupTestProfile && (
+            <div className="fixed left-1/2 top-2 z-[500] -translate-x-1/2 rounded-md border border-amber-300/70 bg-amber-100 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-2xl shadow-black/30">
+                Setup Wizard Test Mode - Local Browser Data Only - {setupTestProfile}
+            </div>
+        )}
         <SystemFreezeBanner />
         <DataLoadingMonitor
             isStaffLoaded={isStaffLoaded}
