@@ -868,6 +868,61 @@ const parseWizardUnitRows = (value: string): Array<{ code: string; name: string 
     }).filter((row) => row.code || row.name)
 );
 
+const parseWizardParentRows = (value: string): Array<{ child: string; parent: string }> => (
+    parseWizardLineItems(value).map((line) => {
+        const separator = line.includes('=') ? '=' : line.includes('|') ? '|' : '>';
+        const [childPart, parentPart] = line.split(separator).map((part) => part.trim());
+        return { child: childPart || '', parent: parentPart || '' };
+    }).filter((row) => row.child && row.parent)
+);
+
+const buildWizardParentMaps = (rows: Array<{ child: string; parent: string }>) => {
+    const childrenByParent: Record<string, string[]> = {};
+    const parentByChild: Record<string, string> = {};
+    rows.forEach((row) => {
+        const parent = row.parent.trim();
+        const child = row.child.trim();
+        if (!parent || !child) return;
+        childrenByParent[parent] = Array.from(new Set([...(childrenByParent[parent] || []), child]));
+        parentByChild[child] = parent;
+    });
+    return { childrenByParent, parentByChild };
+};
+
+const buildWizardRelationshipPaths = (
+    rootLabel: string,
+    level1Rows: Array<{ child: string; parent: string }>,
+    level2Rows: Array<{ child: string; parent: string }>,
+    level3Rows: Array<{ child: string; parent: string }>,
+): string[][] => {
+    const root = String(rootLabel || '').trim() || 'Organisation';
+    const parentByLevel1 = new Map(level1Rows.map((row) => [normaliseUnitSettingsIdentifier(row.child), row.parent || root]));
+    const parentByLevel2 = new Map(level2Rows.map((row) => [normaliseUnitSettingsIdentifier(row.child), row.parent]));
+    const parentByLevel3 = new Map(level3Rows.map((row) => [normaliseUnitSettingsIdentifier(row.child), row.parent]));
+    const pathFor = (child: string, level: 1 | 2 | 3): string[] => {
+        const cleanChild = String(child || '').trim();
+        if (!cleanChild) return [];
+        if (level === 1) {
+            const parent = parentByLevel1.get(normaliseUnitSettingsIdentifier(cleanChild)) || root;
+            return [parent || root, cleanChild].filter(Boolean);
+        }
+        if (level === 2) {
+            const parent = parentByLevel2.get(normaliseUnitSettingsIdentifier(cleanChild)) || '';
+            const grandParent = parent ? parentByLevel1.get(normaliseUnitSettingsIdentifier(parent)) || root : root;
+            return [grandParent || root, parent, cleanChild].filter(Boolean);
+        }
+        const parent = parentByLevel3.get(normaliseUnitSettingsIdentifier(cleanChild)) || '';
+        const grandParent = parent ? parentByLevel2.get(normaliseUnitSettingsIdentifier(parent)) || '' : '';
+        const greatGrandParent = grandParent ? parentByLevel1.get(normaliseUnitSettingsIdentifier(grandParent)) || root : root;
+        return [greatGrandParent || root, grandParent, parent, cleanChild].filter(Boolean);
+    };
+    return [
+        ...level1Rows.map((row) => pathFor(row.child, 1)),
+        ...level2Rows.map((row) => pathFor(row.child, 2)),
+        ...level3Rows.map((row) => pathFor(row.child, 3)),
+    ].filter((path) => path.length > 1);
+};
+
 const getUnitParentOrganisationPath = (unit: any): string[] => {
     const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath)
         ? unit.settings.parentOrganisationPath
@@ -1955,6 +2010,36 @@ const InitialSetupWizard: React.FC<{
         normaliseUnitSettingsIdentifier(rule?.unitCode || rule?.unit) === normaliseUnitSettingsIdentifier(currentUnit?.code)
     )) || activeMasterLmpAccess[0] || null;
     const levelDraftSource = (levelIndex: number) => organisationStructureLevels.find((level: any) => Number(level?.levelIndex ?? level?.level ?? levelIndex) === levelIndex) || organisationStructureLevels[levelIndex] || {};
+    const parentLinesForLevel = (levelIndex: 1 | 2 | 3, fallback = '') => {
+        const level = levelDraftSource(levelIndex) || {};
+        const parentByChild = level?.parentByChild && typeof level.parentByChild === 'object' ? level.parentByChild : {};
+        const directLines: string[] = [];
+        const seenChildren = new Set<string>();
+        Object.entries(parentByChild).forEach(([child, parent]) => {
+            const cleanChild = String(child || '').trim();
+            const cleanParent = String(parent || '').trim();
+            const childKey = normaliseUnitSettingsIdentifier(cleanChild);
+            if (!cleanChild || !cleanParent || seenChildren.has(childKey)) return;
+            directLines.push(`${cleanChild} = ${cleanParent}`);
+            seenChildren.add(childKey);
+        });
+        if (directLines.length > 0) return directLines.join('\n');
+        const relationshipPaths = Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths)
+            ? activeOrganisation.settings.organisationStructure.relationshipPaths
+            : [];
+        const pathLines: string[] = [];
+        const seenPathChildren = new Set<string>();
+        relationshipPaths.forEach((rawPath: any) => {
+            const path = Array.isArray(rawPath) ? rawPath.map((part) => String(part || '').trim()).filter(Boolean) : [];
+            const child = path[levelIndex];
+            const parent = path[levelIndex - 1];
+            const childKey = normaliseUnitSettingsIdentifier(child);
+            if (!child || !parent || seenPathChildren.has(childKey)) return;
+            pathLines.push(`${child} = ${parent}`);
+            seenPathChildren.add(childKey);
+        });
+        return pathLines.length > 0 ? pathLines.join('\n') : fallback;
+    };
     const toLines = (items: any[]) => (Array.isArray(items) ? items.map((item) => String(item || '').trim()).filter(Boolean).join('\n') : '');
     const fromLines = (value: string) => String(value || '').split(/\n/).map((item) => item.trim()).filter(Boolean);
     const parseNumberDraft = (value: string, fallback = 0) => {
@@ -1968,10 +2053,13 @@ const InitialSetupWizard: React.FC<{
         level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || 'RAAF']),
         level1Name: String(levelDraftSource(1)?.name || 'Branch / HQ'),
         level1Options: toLines(levelDraftSource(1)?.options || []),
+        level1Parents: parentLinesForLevel(1, `Air Command = ${activeOrganisation?.name || activeOrganisation?.code || 'RAAF'}`),
         level2Name: String(levelDraftSource(2)?.name || 'Command'),
         level2Options: toLines(levelDraftSource(2)?.options || []),
+        level2Parents: parentLinesForLevel(2, 'Air Combat Group = Air Command\nAir Mobility Group = Air Command'),
         level3Name: String(levelDraftSource(3)?.name || 'Wing / Group'),
         level3Options: toLines(levelDraftSource(3)?.options || []),
+        level3Parents: parentLinesForLevel(3, '78WG = Air Combat Group\n84WG = Air Mobility Group'),
     });
     const [locationDraft, setLocationDraft] = useState({
         code: String(currentLocation?.code || currentUnit?.locationCode || 'YAMB'),
@@ -2052,10 +2140,13 @@ const InitialSetupWizard: React.FC<{
             level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || 'RAAF']),
             level1Name: String(levelDraftSource(1)?.name || 'Branch / HQ'),
             level1Options: toLines(levelDraftSource(1)?.options || []),
+            level1Parents: parentLinesForLevel(1, `Air Command = ${activeOrganisation?.name || activeOrganisation?.code || 'RAAF'}`),
             level2Name: String(levelDraftSource(2)?.name || 'Command'),
             level2Options: toLines(levelDraftSource(2)?.options || []),
+            level2Parents: parentLinesForLevel(2, 'Air Combat Group = Air Command\nAir Mobility Group = Air Command'),
             level3Name: String(levelDraftSource(3)?.name || 'Wing / Group'),
             level3Options: toLines(levelDraftSource(3)?.options || []),
+            level3Parents: parentLinesForLevel(3, '78WG = Air Combat Group\n84WG = Air Mobility Group'),
         });
     }, [activeOrganisation?.code, activeOrganisation?.name, JSON.stringify(organisationStructureLevels)]);
 
@@ -2166,6 +2257,17 @@ const InitialSetupWizard: React.FC<{
     };
 
     const saveOrganisationDraft = () => {
+        const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
+        const level1ParentRows = parseWizardParentRows(organisationDraft.level1Parents);
+        const level2ParentRows = parseWizardParentRows(organisationDraft.level2Parents);
+        const level3ParentRows = parseWizardParentRows(organisationDraft.level3Parents);
+        const parentMapsByLevel = [
+            buildWizardParentMaps([]),
+            buildWizardParentMaps(level1ParentRows),
+            buildWizardParentMaps(level2ParentRows),
+            buildWizardParentMaps(level3ParentRows),
+        ];
+        const relationshipPaths = buildWizardRelationshipPaths(rootLabel, level1ParentRows, level2ParentRows, level3ParentRows);
         const levelDrafts = [
             { name: organisationDraft.level0Name, options: fromLines(organisationDraft.level0Options) },
             { name: organisationDraft.level1Name, options: fromLines(organisationDraft.level1Options) },
@@ -2181,7 +2283,10 @@ const InitialSetupWizard: React.FC<{
                     levelIndex,
                     name: draft.name,
                     options: draft.options,
+                    childrenByParent: parentMapsByLevel[levelIndex]?.childrenByParent || {},
+                    parentByChild: parentMapsByLevel[levelIndex]?.parentByChild || {},
                 })).filter((level) => String(level.name || '').trim() || level.options.length > 0),
+                relationshipPaths,
             },
         })));
     };
@@ -2781,6 +2886,14 @@ const InitialSetupWizard: React.FC<{
         { name: organisationDraft.level2Name || 'Level 2', options: fromLines(organisationDraft.level2Options) },
         { name: organisationDraft.level3Name || 'Level 3', options: fromLines(organisationDraft.level3Options) },
     ].filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || '').trim());
+    const organisationPreviewLinks = [
+        ...buildWizardRelationshipPaths(
+            fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || 'Organisation',
+            parseWizardParentRows(organisationDraft.level1Parents),
+            parseWizardParentRows(organisationDraft.level2Parents),
+            parseWizardParentRows(organisationDraft.level3Parents),
+        ),
+    ];
     const renderOrganisationPreview = () => (
         <div className="mt-4 rounded-xl border border-slate-300 bg-slate-950 p-4 text-white shadow-inner">
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -2813,23 +2926,50 @@ const InitialSetupWizard: React.FC<{
                     );
                 })}
             </div>
+            {organisationPreviewLinks.length > 0 ? (
+                <div className="mt-4 rounded-lg border border-cyan-300/20 bg-cyan-950/20 p-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Parent links</p>
+                    <div className="mt-2 space-y-2">
+                        {organisationPreviewLinks.slice(0, 12).map((path, index) => (
+                            <div key={`${path.join('-')}-${index}`} className="flex min-w-0 flex-wrap items-center gap-1 text-[11px] font-bold text-slate-100">
+                                {path.map((part, pathIndex) => (
+                                    <React.Fragment key={`${part}-${pathIndex}`}>
+                                        {pathIndex > 0 && <span className="text-cyan-200/70">&gt;</span>}
+                                        <span className="rounded border border-white/10 bg-white/10 px-2 py-1">{part}</span>
+                                    </React.Fragment>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                <p className="mt-3 rounded-lg border border-amber-300/30 bg-amber-950/20 px-3 py-2 text-xs font-semibold leading-5 text-amber-100">
+                    Add parent links so DFP-NEO knows which organisation owns each child.
+                </p>
+            )}
         </div>
     );
     const organisationLevelAnswer = (
         levelNumber: 1 | 2 | 3,
         levelName: string,
         levelOptions: string,
+        parentMappings: string,
         onNameChange: (value: string) => void,
         onOptionsChange: (value: string) => void,
+        onParentMappingsChange: (value: string) => void,
         placeholder: string,
+        parentPlaceholder: string,
     ) => (
         <div>
-            <div className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
+            <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
                 {wizardField(`Level ${levelNumber} type`, levelName, onNameChange, undefined, levelNumber === 1 ? 'Branch / HQ' : levelNumber === 2 ? 'Command' : 'Numbered Air Force')}
                 {wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true)}
+                <div className="md:col-span-2">
+                    {wizardTextArea('Parent links for this level', parentMappings, onParentMappingsChange, parentPlaceholder)}
+                </div>
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-600">
-                The left box names what this layer is called. Most users can leave that generic name alone. The right box is where you enter the actual organisations at that layer, one per line.
+                The names box lists the organisations on this level. The parent links box tells DFP-NEO where each one sits. Use one line per organisation, for example <strong>84WG = Air Mobility Group</strong>.
             </p>
             {renderOrganisationPreview()}
         </div>
@@ -2959,9 +3099,12 @@ const InitialSetupWizard: React.FC<{
                     1,
                     organisationDraft.level1Name,
                     organisationDraft.level1Options,
+                    organisationDraft.level1Parents,
                     (value) => setOrganisationDraft((draft) => ({ ...draft, level1Name: value })),
                     (value) => setOrganisationDraft((draft) => ({ ...draft, level1Options: value })),
+                    (value) => setOrganisationDraft((draft) => ({ ...draft, level1Parents: value })),
                     'Air Command',
+                    `Air Command = ${organisationDraft.name || organisationDraft.code || 'RAAF'}`,
                 ),
             );
         }
@@ -2972,9 +3115,12 @@ const InitialSetupWizard: React.FC<{
                     2,
                     organisationDraft.level2Name,
                     organisationDraft.level2Options,
+                    organisationDraft.level2Parents,
                     (value) => setOrganisationDraft((draft) => ({ ...draft, level2Name: value })),
                     (value) => setOrganisationDraft((draft) => ({ ...draft, level2Options: value })),
+                    (value) => setOrganisationDraft((draft) => ({ ...draft, level2Parents: value })),
                     'Air Combat Group\nAir Mobility Group',
+                    'Air Combat Group = Air Command\nAir Mobility Group = Air Command',
                 ),
             );
         }
@@ -2985,9 +3131,12 @@ const InitialSetupWizard: React.FC<{
                     3,
                     organisationDraft.level3Name,
                     organisationDraft.level3Options,
+                    organisationDraft.level3Parents,
                     (value) => setOrganisationDraft((draft) => ({ ...draft, level3Name: value })),
                     (value) => setOrganisationDraft((draft) => ({ ...draft, level3Options: value })),
+                    (value) => setOrganisationDraft((draft) => ({ ...draft, level3Parents: value })),
                     '78WG\n81WG\n82WG\n84WG',
+                    '78WG = Air Combat Group\n84WG = Air Mobility Group',
                 ),
             );
         }
@@ -3198,7 +3347,7 @@ const InitialSetupWizard: React.FC<{
             <div className="grid gap-2 text-sm">
                 {[
                     ['Organisation', `${organisationDraft.name || organisationDraft.code || 'Not set'} (${organisationDraft.code || 'no code'})`],
-                    ['Structure', `${fromLines(organisationDraft.level1Options).length} ${organisationDraft.level1Name || 'Level 1'}, ${fromLines(organisationDraft.level2Options).length} ${organisationDraft.level2Name || 'Level 2'}, ${fromLines(organisationDraft.level3Options).length} ${organisationDraft.level3Name || 'Level 3'}`],
+                    ['Structure', `${fromLines(organisationDraft.level1Options).length} ${organisationDraft.level1Name || 'Level 1'}, ${fromLines(organisationDraft.level2Options).length} ${organisationDraft.level2Name || 'Level 2'}, ${fromLines(organisationDraft.level3Options).length} ${organisationDraft.level3Name || 'Level 3'} / ${organisationPreviewLinks.length} parent links`],
                     ['Location', `${locationDraft.code || 'Not set'} - ${locationDraft.name || 'not named'}`],
                     ['Units today', parseWizardUnitRows(unitsTodayDraft).map((unit) => `${unit.code} ${unit.name}`).join('\n') || 'Not set'],
                     ['Locations today', parseWizardLocationRows(locationsTodayDraft).map((location) => `${location.icao} / ${location.iata || '-'} / ${location.name}`).join('\n') || 'Not set'],

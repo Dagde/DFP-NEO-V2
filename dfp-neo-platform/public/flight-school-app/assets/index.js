@@ -9557,6 +9557,51 @@ const parseWizardUnitRows = (value) => parseWizardLineItems(value).map((line) =>
     name: parts[1] || parts[0] || ""
   };
 }).filter((row) => row.code || row.name);
+const parseWizardParentRows = (value) => parseWizardLineItems(value).map((line) => {
+  const separator = line.includes("=") ? "=" : line.includes("|") ? "|" : ">";
+  const [childPart, parentPart] = line.split(separator).map((part) => part.trim());
+  return { child: childPart || "", parent: parentPart || "" };
+}).filter((row) => row.child && row.parent);
+const buildWizardParentMaps = (rows) => {
+  const childrenByParent = {};
+  const parentByChild = {};
+  rows.forEach((row) => {
+    const parent = row.parent.trim();
+    const child = row.child.trim();
+    if (!parent || !child) return;
+    childrenByParent[parent] = Array.from(/* @__PURE__ */ new Set([...childrenByParent[parent] || [], child]));
+    parentByChild[child] = parent;
+  });
+  return { childrenByParent, parentByChild };
+};
+const buildWizardRelationshipPaths = (rootLabel, level1Rows, level2Rows, level3Rows) => {
+  const root2 = String(rootLabel || "").trim() || "Organisation";
+  const parentByLevel1 = new Map(level1Rows.map((row) => [normaliseUnitSettingsIdentifier(row.child), row.parent || root2]));
+  const parentByLevel2 = new Map(level2Rows.map((row) => [normaliseUnitSettingsIdentifier(row.child), row.parent]));
+  const parentByLevel3 = new Map(level3Rows.map((row) => [normaliseUnitSettingsIdentifier(row.child), row.parent]));
+  const pathFor = (child, level) => {
+    const cleanChild = String(child || "").trim();
+    if (!cleanChild) return [];
+    if (level === 1) {
+      const parent2 = parentByLevel1.get(normaliseUnitSettingsIdentifier(cleanChild)) || root2;
+      return [parent2, cleanChild].filter(Boolean);
+    }
+    if (level === 2) {
+      const parent2 = parentByLevel2.get(normaliseUnitSettingsIdentifier(cleanChild)) || "";
+      const grandParent2 = parent2 ? parentByLevel1.get(normaliseUnitSettingsIdentifier(parent2)) || root2 : root2;
+      return [grandParent2, parent2, cleanChild].filter(Boolean);
+    }
+    const parent = parentByLevel3.get(normaliseUnitSettingsIdentifier(cleanChild)) || "";
+    const grandParent = parent ? parentByLevel2.get(normaliseUnitSettingsIdentifier(parent)) || "" : "";
+    const greatGrandParent = grandParent ? parentByLevel1.get(normaliseUnitSettingsIdentifier(grandParent)) || root2 : root2;
+    return [greatGrandParent, grandParent, parent, cleanChild].filter(Boolean);
+  };
+  return [
+    ...level1Rows.map((row) => pathFor(row.child, 1)),
+    ...level2Rows.map((row) => pathFor(row.child, 2)),
+    ...level3Rows.map((row) => pathFor(row.child, 3))
+  ].filter((path) => path.length > 1);
+};
 const getUnitParentOrganisationPath = (unit) => {
   const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
   return rawPath.map((item) => String(item || "").trim()).filter(Boolean);
@@ -10288,6 +10333,34 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
   const primaryMasterLmp = activeMasterLmpCatalogue[0] || null;
   const primaryMasterLmpRule = activeMasterLmpAccess.find((rule) => normaliseUnitSettingsIdentifier(rule?.unitCode || rule?.unit) === normaliseUnitSettingsIdentifier(currentUnit?.code)) || activeMasterLmpAccess[0] || null;
   const levelDraftSource = (levelIndex) => organisationStructureLevels.find((level) => Number(level?.levelIndex ?? level?.level ?? levelIndex) === levelIndex) || organisationStructureLevels[levelIndex] || {};
+  const parentLinesForLevel = (levelIndex, fallback = "") => {
+    const level = levelDraftSource(levelIndex) || {};
+    const parentByChild = level?.parentByChild && typeof level.parentByChild === "object" ? level.parentByChild : {};
+    const directLines = [];
+    const seenChildren = /* @__PURE__ */ new Set();
+    Object.entries(parentByChild).forEach(([child, parent]) => {
+      const cleanChild = String(child || "").trim();
+      const cleanParent = String(parent || "").trim();
+      const childKey = normaliseUnitSettingsIdentifier(cleanChild);
+      if (!cleanChild || !cleanParent || seenChildren.has(childKey)) return;
+      directLines.push(`${cleanChild} = ${cleanParent}`);
+      seenChildren.add(childKey);
+    });
+    if (directLines.length > 0) return directLines.join("\n");
+    const relationshipPaths = Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths) ? activeOrganisation.settings.organisationStructure.relationshipPaths : [];
+    const pathLines = [];
+    const seenPathChildren = /* @__PURE__ */ new Set();
+    relationshipPaths.forEach((rawPath) => {
+      const path = Array.isArray(rawPath) ? rawPath.map((part) => String(part || "").trim()).filter(Boolean) : [];
+      const child = path[levelIndex];
+      const parent = path[levelIndex - 1];
+      const childKey = normaliseUnitSettingsIdentifier(child);
+      if (!child || !parent || seenPathChildren.has(childKey)) return;
+      pathLines.push(`${child} = ${parent}`);
+      seenPathChildren.add(childKey);
+    });
+    return pathLines.length > 0 ? pathLines.join("\n") : fallback;
+  };
   const toLines = (items) => Array.isArray(items) ? items.map((item) => String(item || "").trim()).filter(Boolean).join("\n") : "";
   const fromLines = (value) => String(value || "").split(/\n/).map((item) => item.trim()).filter(Boolean);
   const parseNumberDraft = (value, fallback = 0) => {
@@ -10301,10 +10374,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || "RAAF"]),
     level1Name: String(levelDraftSource(1)?.name || "Branch / HQ"),
     level1Options: toLines(levelDraftSource(1)?.options || []),
+    level1Parents: parentLinesForLevel(1, `Air Command = ${activeOrganisation?.name || activeOrganisation?.code || "RAAF"}`),
     level2Name: String(levelDraftSource(2)?.name || "Command"),
     level2Options: toLines(levelDraftSource(2)?.options || []),
+    level2Parents: parentLinesForLevel(2, "Air Combat Group = Air Command\nAir Mobility Group = Air Command"),
     level3Name: String(levelDraftSource(3)?.name || "Wing / Group"),
-    level3Options: toLines(levelDraftSource(3)?.options || [])
+    level3Options: toLines(levelDraftSource(3)?.options || []),
+    level3Parents: parentLinesForLevel(3, "78WG = Air Combat Group\n84WG = Air Mobility Group")
   });
   const [locationDraft, setLocationDraft] = reactExports.useState({
     code: String(currentLocation?.code || currentUnit?.locationCode || "YAMB"),
@@ -10376,10 +10452,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || "RAAF"]),
       level1Name: String(levelDraftSource(1)?.name || "Branch / HQ"),
       level1Options: toLines(levelDraftSource(1)?.options || []),
+      level1Parents: parentLinesForLevel(1, `Air Command = ${activeOrganisation?.name || activeOrganisation?.code || "RAAF"}`),
       level2Name: String(levelDraftSource(2)?.name || "Command"),
       level2Options: toLines(levelDraftSource(2)?.options || []),
+      level2Parents: parentLinesForLevel(2, "Air Combat Group = Air Command\nAir Mobility Group = Air Command"),
       level3Name: String(levelDraftSource(3)?.name || "Wing / Group"),
-      level3Options: toLines(levelDraftSource(3)?.options || [])
+      level3Options: toLines(levelDraftSource(3)?.options || []),
+      level3Parents: parentLinesForLevel(3, "78WG = Air Combat Group\n84WG = Air Mobility Group")
     });
   }, [activeOrganisation?.code, activeOrganisation?.name, JSON.stringify(organisationStructureLevels)]);
   reactExports.useEffect(() => {
@@ -10478,6 +10557,17 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     };
   };
   const saveOrganisationDraft = () => {
+    const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || "Organisation";
+    const level1ParentRows = parseWizardParentRows(organisationDraft.level1Parents);
+    const level2ParentRows = parseWizardParentRows(organisationDraft.level2Parents);
+    const level3ParentRows = parseWizardParentRows(organisationDraft.level3Parents);
+    const parentMapsByLevel = [
+      buildWizardParentMaps([]),
+      buildWizardParentMaps(level1ParentRows),
+      buildWizardParentMaps(level2ParentRows),
+      buildWizardParentMaps(level3ParentRows)
+    ];
+    const relationshipPaths = buildWizardRelationshipPaths(rootLabel, level1ParentRows, level2ParentRows, level3ParentRows);
     const levelDrafts = [
       { name: organisationDraft.level0Name, options: fromLines(organisationDraft.level0Options) },
       { name: organisationDraft.level1Name, options: fromLines(organisationDraft.level1Options) },
@@ -10492,8 +10582,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
           ...levelDraftSource(levelIndex) || {},
           levelIndex,
           name: draft.name,
-          options: draft.options
-        })).filter((level) => String(level.name || "").trim() || level.options.length > 0)
+          options: draft.options,
+          childrenByParent: parentMapsByLevel[levelIndex]?.childrenByParent || {},
+          parentByChild: parentMapsByLevel[levelIndex]?.parentByChild || {}
+        })).filter((level) => String(level.name || "").trim() || level.options.length > 0),
+        relationshipPaths
       }
     })));
   };
@@ -11030,6 +11123,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     { name: organisationDraft.level2Name || "Level 2", options: fromLines(organisationDraft.level2Options) },
     { name: organisationDraft.level3Name || "Level 3", options: fromLines(organisationDraft.level3Options) }
   ].filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || "").trim());
+  const organisationPreviewLinks = [
+    ...buildWizardRelationshipPaths(
+      fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || "Organisation",
+      parseWizardParentRows(organisationDraft.level1Parents),
+      parseWizardParentRows(organisationDraft.level2Parents),
+      parseWizardParentRows(organisationDraft.level3Parents)
+    )
+  ];
   const renderOrganisationPreview = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-xl border border-slate-300 bg-slate-950 p-4 text-white shadow-inner", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200", children: "Organisation tree preview" }),
@@ -11052,14 +11153,26 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
           `${levelIndex}-${option}`
         )) })
       ] }, `wizard-org-preview-${levelIndex}`);
-    }) })
+    }) }),
+    organisationPreviewLinks.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-cyan-300/20 bg-cyan-950/20 p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200", children: "Parent links" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-2", children: organisationPreviewLinks.slice(0, 12).map((path, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-0 flex-wrap items-center gap-1 text-[11px] font-bold text-slate-100", children: path.map((part, pathIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
+        pathIndex > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-cyan-200/70", children: ">" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-white/10 bg-white/10 px-2 py-1", children: part })
+      ] }, `${part}-${pathIndex}`)) }, `${path.join("-")}-${index}`)) })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-lg border border-amber-300/30 bg-amber-950/20 px-3 py-2 text-xs font-semibold leading-5 text-amber-100", children: "Add parent links so DFP-NEO knows which organisation owns each child." })
   ] });
-  const organisationLevelAnswer = (levelNumber, levelName, levelOptions, onNameChange, onOptionsChange, placeholder) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]", children: [
+  const organisationLevelAnswer = (levelNumber, levelName, levelOptions, parentMappings, onNameChange, onOptionsChange, onParentMappingsChange, placeholder, parentPlaceholder) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]", children: [
       wizardField(`Level ${levelNumber} type`, levelName, onNameChange, void 0, levelNumber === 1 ? "Branch / HQ" : levelNumber === 2 ? "Command" : "Numbered Air Force"),
-      wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true)
+      wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: wizardTextArea("Parent links for this level", parentMappings, onParentMappingsChange, parentPlaceholder) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "The left box names what this layer is called. Most users can leave that generic name alone. The right box is where you enter the actual organisations at that layer, one per line." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: [
+      "The names box lists the organisations on this level. The parent links box tells DFP-NEO where each one sits. Use one line per organisation, for example ",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "84WG = Air Mobility Group" }),
+      "."
+    ] }),
     renderOrganisationPreview()
   ] });
   const saveAllWizardDrafts = () => {
@@ -11206,9 +11319,12 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
           1,
           organisationDraft.level1Name,
           organisationDraft.level1Options,
+          organisationDraft.level1Parents,
           (value) => setOrganisationDraft((draft) => ({ ...draft, level1Name: value })),
           (value) => setOrganisationDraft((draft) => ({ ...draft, level1Options: value })),
-          "Air Command"
+          (value) => setOrganisationDraft((draft) => ({ ...draft, level1Parents: value })),
+          "Air Command",
+          `Air Command = ${organisationDraft.name || organisationDraft.code || "RAAF"}`
         )
       );
     }
@@ -11223,9 +11339,12 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
           2,
           organisationDraft.level2Name,
           organisationDraft.level2Options,
+          organisationDraft.level2Parents,
           (value) => setOrganisationDraft((draft) => ({ ...draft, level2Name: value })),
           (value) => setOrganisationDraft((draft) => ({ ...draft, level2Options: value })),
-          "Air Combat Group\nAir Mobility Group"
+          (value) => setOrganisationDraft((draft) => ({ ...draft, level2Parents: value })),
+          "Air Combat Group\nAir Mobility Group",
+          "Air Combat Group = Air Command\nAir Mobility Group = Air Command"
         )
       );
     }
@@ -11236,9 +11355,12 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
           3,
           organisationDraft.level3Name,
           organisationDraft.level3Options,
+          organisationDraft.level3Parents,
           (value) => setOrganisationDraft((draft) => ({ ...draft, level3Name: value })),
           (value) => setOrganisationDraft((draft) => ({ ...draft, level3Options: value })),
-          "78WG\n81WG\n82WG\n84WG"
+          (value) => setOrganisationDraft((draft) => ({ ...draft, level3Parents: value })),
+          "78WG\n81WG\n82WG\n84WG",
+          "78WG = Air Combat Group\n84WG = Air Mobility Group"
         )
       );
     }
@@ -11472,7 +11594,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 text-sm", children: [
         ["Organisation", `${organisationDraft.name || organisationDraft.code || "Not set"} (${organisationDraft.code || "no code"})`],
-        ["Structure", `${fromLines(organisationDraft.level1Options).length} ${organisationDraft.level1Name || "Level 1"}, ${fromLines(organisationDraft.level2Options).length} ${organisationDraft.level2Name || "Level 2"}, ${fromLines(organisationDraft.level3Options).length} ${organisationDraft.level3Name || "Level 3"}`],
+        ["Structure", `${fromLines(organisationDraft.level1Options).length} ${organisationDraft.level1Name || "Level 1"}, ${fromLines(organisationDraft.level2Options).length} ${organisationDraft.level2Name || "Level 2"}, ${fromLines(organisationDraft.level3Options).length} ${organisationDraft.level3Name || "Level 3"} / ${organisationPreviewLinks.length} parent links`],
         ["Location", `${locationDraft.code || "Not set"} - ${locationDraft.name || "not named"}`],
         ["Units today", parseWizardUnitRows(unitsTodayDraft).map((unit) => `${unit.code} ${unit.name}`).join("\n") || "Not set"],
         ["Locations today", parseWizardLocationRows(locationsTodayDraft).map((location) => `${location.icao} / ${location.iata || "-"} / ${location.name}`).join("\n") || "Not set"],
