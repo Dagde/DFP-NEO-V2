@@ -9446,6 +9446,12 @@ const wizardHeaderMatchesRequired = (headerKeys, requiredHeader) => {
   const acceptedKeys = [requiredKey, ...wizardRequiredHeaderAliases[requiredKey] || []];
   return acceptedKeys.some((key) => headerKeys.has(key));
 };
+const getWizardCellByHeader = (headers, row, headerName) => {
+  const requiredKey = normaliseWizardHeader(headerName);
+  const acceptedKeys = [requiredKey, ...wizardRequiredHeaderAliases[requiredKey] || []];
+  const index = headers.findIndex((header) => acceptedKeys.includes(normaliseWizardHeader(header)));
+  return index >= 0 ? String(row[index] || "").trim() : "";
+};
 const downloadWizardTemplate = (template) => {
   const rows = [
     getWizardTemplateHeaders(template),
@@ -9538,7 +9544,9 @@ const validateWizardTemplateFile = async (template, file) => {
     status: "valid",
     fileName: file.name,
     rowCount: dataRows.length,
-    message: `${file.name} looks ready. ${dataRows.length} row${dataRows.length === 1 ? "" : "s"} passed the basic format check.`
+    message: `${file.name} looks ready. ${dataRows.length} row${dataRows.length === 1 ? "" : "s"} passed the basic format check.`,
+    headers,
+    dataRows
   };
 };
 const normaliseUnitSettingsIdentifier = (value) => String(value || "").trim().toUpperCase();
@@ -11193,6 +11201,26 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       }));
     }
   };
+  const importWizardTemplateRows = (template, result) => {
+    if (!result || result.status !== "valid" || !result.headers || !result.dataRows) return;
+    if (template.id === "staff") {
+      const importedRows = result.dataRows.map((row) => {
+        const nameValue = getWizardCellByHeader(result.headers || [], row, "Name");
+        const [surnamePart, givenPart] = nameValue.includes(",") ? nameValue.split(",").map((part) => part.trim()) : ["", nameValue.trim()];
+        return {
+          surname: surnamePart || "",
+          givenNames: givenPart || "",
+          unit: getWizardCellByHeader(result.headers || [], row, "Unit") || unitDraft.code || "",
+          position: getWizardCellByHeader(result.headers || [], row, "Role"),
+          qualifications: getWizardCellByHeader(result.headers || [], row, "Qualifications")
+        };
+      }).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications);
+      setStaffDraft(formatWizardStaffRows(importedRows));
+      setSaveMessage(`Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into Step 14. They will be saved when you press Save setup at the end.`);
+      return;
+    }
+    setSaveMessage(`${template.label} passed validation. Import for this template step has not been added yet.`);
+  };
   const resetWizard = () => {
     setWizardStep(0);
     setMode("active");
@@ -12008,7 +12036,19 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
             ),
             result ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 rounded-md px-3 py-2 text-xs leading-5 ${isValid ? "bg-emerald-50 text-emerald-800" : isError ? "bg-red-50 text-red-800" : "bg-slate-100 text-slate-600"}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold", children: result.message }),
-              result.issues?.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-1 list-disc space-y-1 pl-4", children: result.issues.map((issue) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: issue }, issue)) }) : null
+              result.issues?.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-1 list-disc space-y-1 pl-4", children: result.issues.map((issue) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: issue }, issue)) }) : null,
+              isValid ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  className: `${wizardPrimaryButtonClass} mt-3`,
+                  onClick: () => importWizardTemplateRows(template, result),
+                  children: [
+                    "Import into ",
+                    template.id === "staff" ? "staff list" : "wizard"
+                  ]
+                }
+              ) : null
             ] }) : null
           ]
         },

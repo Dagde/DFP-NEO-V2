@@ -583,6 +583,8 @@ type InitialSetupWizardUploadResult = {
     rowCount?: number;
     message: string;
     issues?: string[];
+    headers?: string[];
+    dataRows?: string[][];
 };
 
 type InitialSetupWizardCheck = {
@@ -724,6 +726,13 @@ const wizardHeaderMatchesRequired = (headerKeys: Set<string>, requiredHeader: st
     return acceptedKeys.some((key) => headerKeys.has(key));
 };
 
+const getWizardCellByHeader = (headers: string[], row: string[], headerName: string): string => {
+    const requiredKey = normaliseWizardHeader(headerName);
+    const acceptedKeys = [requiredKey, ...(wizardRequiredHeaderAliases[requiredKey] || [])];
+    const index = headers.findIndex((header) => acceptedKeys.includes(normaliseWizardHeader(header)));
+    return index >= 0 ? String(row[index] || '').trim() : '';
+};
+
 const downloadWizardTemplate = (template: InitialSetupWizardTemplate) => {
     const rows = [
         getWizardTemplateHeaders(template),
@@ -825,6 +834,8 @@ const validateWizardTemplateFile = async (
         fileName: file.name,
         rowCount: dataRows.length,
         message: `${file.name} looks ready. ${dataRows.length} row${dataRows.length === 1 ? '' : 's'} passed the basic format check.`,
+        headers,
+        dataRows,
     };
 };
 
@@ -3005,6 +3016,29 @@ const InitialSetupWizard: React.FC<{
         }
     };
 
+    const importWizardTemplateRows = (template: InitialSetupWizardTemplate, result?: InitialSetupWizardUploadResult) => {
+        if (!result || result.status !== 'valid' || !result.headers || !result.dataRows) return;
+        if (template.id === 'staff') {
+            const importedRows = result.dataRows.map((row) => {
+                const nameValue = getWizardCellByHeader(result.headers || [], row, 'Name');
+                const [surnamePart, givenPart] = nameValue.includes(',')
+                    ? nameValue.split(',').map((part) => part.trim())
+                    : ['', nameValue.trim()];
+                return {
+                    surname: surnamePart || '',
+                    givenNames: givenPart || '',
+                    unit: getWizardCellByHeader(result.headers || [], row, 'Unit') || unitDraft.code || '',
+                    position: getWizardCellByHeader(result.headers || [], row, 'Role'),
+                    qualifications: getWizardCellByHeader(result.headers || [], row, 'Qualifications'),
+                };
+            }).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications);
+            setStaffDraft(formatWizardStaffRows(importedRows));
+            setSaveMessage(`Imported ${importedRows.length} staff row${importedRows.length === 1 ? '' : 's'} into Step 14. They will be saved when you press Save setup at the end.`);
+            return;
+        }
+        setSaveMessage(`${template.label} passed validation. Import for this template step has not been added yet.`);
+    };
+
     const resetWizard = () => {
         setWizardStep(0);
         setMode('active');
@@ -3906,6 +3940,15 @@ const InitialSetupWizard: React.FC<{
                                         <ul className="mt-1 list-disc space-y-1 pl-4">
                                             {result.issues.map((issue) => <li key={issue}>{issue}</li>)}
                                         </ul>
+                                    ) : null}
+                                    {isValid ? (
+                                        <button
+                                            type="button"
+                                            className={`${wizardPrimaryButtonClass} mt-3`}
+                                            onClick={() => importWizardTemplateRows(template, result)}
+                                        >
+                                            Import into {template.id === 'staff' ? 'staff list' : 'wizard'}
+                                        </button>
                                     ) : null}
                                 </div>
                             ) : null}
