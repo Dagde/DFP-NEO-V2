@@ -9433,6 +9433,19 @@ const getWizardTemplateHeaders = (template) => [
   ...template.optionalHeaders || []
 ];
 const normaliseWizardHeader = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+const wizardRequiredHeaderAliases = {
+  name: ["fullname", "nameandsurname", "namesurnamefirstname", "namesurnamefirstnames", "surnamefirstname", "surnamefirstnames"],
+  role: ["position", "crewrole", "primaryrole"],
+  qualifications: ["qualification", "qualificationsandroles", "qualificationsroles", "quals", "roles"],
+  pmkeys: ["pmkeysid", "pmkey", "employeeid", "serviceid"],
+  code: ["icao", "locationcode", "basecode"],
+  aircrafttype: ["aircraft", "resource"]
+};
+const wizardHeaderMatchesRequired = (headerKeys, requiredHeader) => {
+  const requiredKey = normaliseWizardHeader(requiredHeader);
+  const acceptedKeys = [requiredKey, ...wizardRequiredHeaderAliases[requiredKey] || []];
+  return acceptedKeys.some((key) => headerKeys.has(key));
+};
 const downloadWizardTemplate = (template) => {
   const rows = [
     getWizardTemplateHeaders(template),
@@ -9503,7 +9516,7 @@ const validateWizardTemplateFile = async (template, file) => {
   const rows = await readWizardTemplateRows(file);
   const headers = (rows[0] || []).map((cell) => String(cell || "").trim()).filter(Boolean);
   const headerKeys = new Set(headers.map(normaliseWizardHeader));
-  const missingHeaders = template.requiredHeaders.filter((header) => !headerKeys.has(normaliseWizardHeader(header)));
+  const missingHeaders = template.requiredHeaders.filter((header) => !wizardHeaderMatchesRequired(headerKeys, header));
   const dataRows = rows.slice(1).filter((row) => row.some((cell) => String(cell || "").trim()));
   const issues = [];
   if (headers.length === 0) issues.push("The first row needs column headers.");
