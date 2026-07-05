@@ -488,6 +488,29 @@ const COMMON_IANA_TIMEZONES = [
 const AIRFIELD_CATALOGUE_FILE = 'airfield-location-catalog.json';
 const MAX_AIRFIELD_SUGGESTIONS = 6;
 const PLATFORM_CONFIG_UPDATED_EVENT = 'dfp-platform-config-updated';
+const TRAINEE_DEFAULT_ON_UNIT_CODES = new Set(['1FTS', '2FTS', 'CFS']);
+
+const getDefaultHasTraineesForUnit = (unitCode: unknown): boolean => (
+  TRAINEE_DEFAULT_ON_UNIT_CODES.has(String(unitCode || '').trim().toUpperCase())
+);
+
+const applyDefaultUnitTraineeAvailability = (config: PlatformConfig): PlatformConfig => {
+  if (!config || !Array.isArray(config.units)) return config;
+  let changed = false;
+  const units = config.units.map((unit) => {
+    const settings = unit.settings || {};
+    if (Object.prototype.hasOwnProperty.call(settings, 'hasTrainees')) return unit;
+    changed = true;
+    return {
+      ...unit,
+      settings: {
+        ...settings,
+        hasTrainees: getDefaultHasTraineesForUnit(unit.code),
+      },
+    };
+  });
+  return changed ? { ...config, units } : config;
+};
 
 const notifyPlatformConfigUpdated = (config: PlatformConfig) => {
   if (typeof window === 'undefined') return;
@@ -1589,7 +1612,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   useEffect(() => {
     const handlePlatformConfigUpdated = (event: Event) => {
-      const nextConfig = (event as CustomEvent<{ config?: PlatformConfig }>).detail?.config;
+      const rawConfig = (event as CustomEvent<{ config?: PlatformConfig }>).detail?.config;
+      const nextConfig = rawConfig && Array.isArray(rawConfig.units)
+        ? applyDefaultUnitTraineeAvailability(rawConfig)
+        : rawConfig;
       if (!nextConfig || !Array.isArray(nextConfig.units)) return;
       loadedConfigRef.current = nextConfig;
       setConfig(nextConfig);
@@ -1756,7 +1782,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         const data = await res.json();
         const nextLicenseStatus = licenseRes.ok ? await licenseRes.json() : null;
         if (!cancelled) {
-          const nextConfig = { ...emptyConfig, ...data };
+          const nextConfig = applyDefaultUnitTraineeAvailability({ ...emptyConfig, ...data });
           setConfig(nextConfig);
           loadedConfigRef.current = nextConfig;
           if (nextLicenseStatus) setLicenseStatus(nextLicenseStatus);
