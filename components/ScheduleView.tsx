@@ -869,6 +869,32 @@ const formatWizardCrewLabelRows = (rows: Array<{ term?: string; label?: string }
         .join('\n')
 );
 
+const formatWizardBuildRulesDraft = (draft: {
+    businessRules: string;
+    maxCrewDutyHours: string;
+    preferredDutyHours: string;
+    aircraftTurnaroundMinutes: string;
+    simTurnaroundMinutes: string;
+    trainerTurnaroundMinutes: string;
+    maxDispatchPerHour: string;
+    maxEventsPerDay: string;
+    maxFlightsPerDay: string;
+    minGapBetweenEventsMinutes: string;
+}) => (
+    [
+        `Business rules: ${draft.businessRules || 'Use default'}`,
+        `Maximum crew duty: ${draft.maxCrewDutyHours || '12'} hours`,
+        `Preferred duty period: ${draft.preferredDutyHours || '10'} hours`,
+        `Aircraft turnaround: ${draft.aircraftTurnaroundMinutes || '60'} minutes`,
+        `Simulator turnaround: ${draft.simTurnaroundMinutes || '30'} minutes`,
+        `Trainer turnaround: ${draft.trainerTurnaroundMinutes || '30'} minutes`,
+        `Maximum dispatch per hour: ${draft.maxDispatchPerHour || '2'}`,
+        `Maximum events per day: ${draft.maxEventsPerDay || 'Not set'}`,
+        `Maximum flights per day: ${draft.maxFlightsPerDay || 'Not set'}`,
+        `Minimum gap between events: ${draft.minGapBetweenEventsMinutes || '0'} minutes`,
+    ].join('\n')
+);
+
 const getWizardOperationalModelLabel = (value: unknown): string => (
     OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value)
 );
@@ -2223,7 +2249,19 @@ const InitialSetupWizard: React.FC<{
     });
     const [crewLabelsDraft, setCrewLabelsDraft] = useState('Pilot = Pilot\nLoadmaster = Loadmaster');
     const [alternateCrewDraft, setAlternateCrewDraft] = useState('Reduced crew = Pilot 1, Loadmaster 1');
-    const [buildRulesDraft, setBuildRulesDraft] = useState('Business rules: use default\nDuty limit: 12 hours\nAircraft turnaround: 60 minutes\nSimulator turnaround: 30 minutes\nMax dispatch per hour: 2');
+    const [buildRulesDraft, setBuildRulesDraft] = useState({
+        businessRules: 'Use default',
+        maxCrewDutyHours: '12',
+        preferredDutyHours: '10',
+        aircraftTurnaroundMinutes: '60',
+        simTurnaroundMinutes: '30',
+        trainerTurnaroundMinutes: '30',
+        maxDispatchPerHour: '2',
+        maxEventsPerDay: '',
+        maxFlightsPerDay: '',
+        minGapBetweenEventsMinutes: '0',
+    });
+    const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
     const [staffDraft, setStaffDraft] = useState('Burns, Alexander | 36SQN | Pilot | PIC');
     const [traineeDraft, setTraineeDraft] = useState('Only complete if this unit has trainees.');
     const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('Use default training report template\nUse standard training records fields');
@@ -3314,7 +3352,7 @@ const InitialSetupWizard: React.FC<{
                 locationsToday: parseWizardLocationRows(locationsTodayDraft),
                 crewLabels: crewLabelsDraft,
                 alternateCrews: alternateCrewDraft,
-                buildRules: buildRulesDraft,
+                buildRules: buildRulesDraftText,
                 staff: staffDraft,
                 traineesEnabled: unitDraft.hasTrainees,
                 trainees: traineeDraft,
@@ -3555,8 +3593,39 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'build-rules') {
             return promptShell(
-                <p>Set the practical limits NEO must respect when building this unit schedule. Keep defaults if you are unsure.</p>,
-                wizardTextArea('Build rules, duty limits, turnaround times and event limits', buildRulesDraft, setBuildRulesDraft, 'Business rules: use default\nDuty limit: 12 hours\nAircraft turnaround: 60 minutes\nMax dispatch per hour: 2', true),
+                <p>Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the default values and refine them later in Settings.</p>,
+                <div className="space-y-4">
+                    <div className="rounded-lg border border-slate-300 bg-white p-3">
+                        <p className={wizardLabelClass}>Business rules</p>
+                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                            {wizardField('Rule set', buildRulesDraft.businessRules, (value) => setBuildRulesDraft((draft) => ({ ...draft, businessRules: value })), undefined, 'Use default')}
+                            {wizardField('Max dispatch per hour', buildRulesDraft.maxDispatchPerHour, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), undefined, '2')}
+                        </div>
+                    </div>
+                    <div className="rounded-lg border border-slate-300 bg-white p-3">
+                        <p className={wizardLabelClass}>Duty limits</p>
+                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                            {wizardField('Maximum crew duty hours', buildRulesDraft.maxCrewDutyHours, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxCrewDutyHours: value })), undefined, '12')}
+                            {wizardField('Preferred duty period hours', buildRulesDraft.preferredDutyHours, (value) => setBuildRulesDraft((draft) => ({ ...draft, preferredDutyHours: value })), undefined, '10')}
+                        </div>
+                    </div>
+                    <div className="rounded-lg border border-slate-300 bg-white p-3">
+                        <p className={wizardLabelClass}>Turnaround times</p>
+                        <div className="mt-3 grid gap-3 md:grid-cols-3">
+                            {wizardField('Aircraft turnaround minutes', buildRulesDraft.aircraftTurnaroundMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, aircraftTurnaroundMinutes: value })), undefined, '60')}
+                            {wizardField('Simulator turnaround minutes', buildRulesDraft.simTurnaroundMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, simTurnaroundMinutes: value })), undefined, '30')}
+                            {wizardField('Trainer turnaround minutes', buildRulesDraft.trainerTurnaroundMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, trainerTurnaroundMinutes: value })), undefined, '30')}
+                        </div>
+                    </div>
+                    <div className="rounded-lg border border-slate-300 bg-white p-3">
+                        <p className={wizardLabelClass}>Event limits</p>
+                        <div className="mt-3 grid gap-3 md:grid-cols-3">
+                            {wizardField('Maximum events per day', buildRulesDraft.maxEventsPerDay, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxEventsPerDay: value })), undefined, 'Optional')}
+                            {wizardField('Maximum flights per day', buildRulesDraft.maxFlightsPerDay, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxFlightsPerDay: value })), undefined, 'Optional')}
+                            {wizardField('Minimum gap between events minutes', buildRulesDraft.minGapBetweenEventsMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, minGapBetweenEventsMinutes: value })), undefined, '0')}
+                        </div>
+                    </div>
+                </div>,
             );
         }
         if (visibleStep.id === 'staff') {
@@ -3655,7 +3724,7 @@ const InitialSetupWizard: React.FC<{
                     ['Unit', `${unitDraft.code || 'Not set'} - ${getWizardOperationalModelLabel(unitDraft.operationalModel)}`],
                     ['Resources', `${resourceDraft.aircraftCode || 'Not set'} / Aircraft ${resourceDraft.aircraft || '0'} / Sim ${resourceDraft.sim || '0'} / Trainer ${resourceDraft.trainer || '0'} / Standby ${resourceDraft.standby || '0'} / Ground ${resourceDraft.ground || '0'}`],
                     ['Crew', crewDraft.standardSeats || 'Not set'],
-                    ['Build rules', buildRulesDraft || 'Not set'],
+                    ['Build rules', buildRulesDraftText || 'Not set'],
                     ['Staff', staffDraft || 'Not set'],
                     ['Trainees', unitDraft.hasTrainees ? traineeDraft || 'Not set' : 'Trainees off'],
                     ['Master LMP', `${trainingDraft.lmpCode || 'Not set'} - ${trainingDraft.lmpName || 'not named'}`],
