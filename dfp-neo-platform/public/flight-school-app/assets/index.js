@@ -9331,11 +9331,11 @@ const UnitSettingsResourceNumberField = ({ label, value, onChange, disabled = fa
 ] });
 const UnitSettingsGroup = ({ title, description, children, action }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: unitSettingsPanelClass, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3 px-4 py-3", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1 pr-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-slate-50", children: title }),
-      description ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-400", children: description }) : null
+      description ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-lg text-xs leading-5 text-slate-400", children: description }) : null
     ] }),
-    action
+    action ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "shrink-0", children: action }) : null
   ] }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-white/10", children })
 ] });
@@ -9358,7 +9358,7 @@ const UnitSettingsTextAreaRow = ({ label, value, onChange, disabled = false, pla
     }
   )
 ] });
-const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsigns = [], onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
+const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
   const [activeCategory, setActiveCategory] = reactExports.useState("identity");
   const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
   const units = platformConfig?.units || [];
@@ -9461,6 +9461,12 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   (platformConfig?.licenses || []).filter((license) => String(license?.status || "ACTIVE").toUpperCase() === "ACTIVE");
   const unitCallsignEntries = unitCallsignSettings.entries.filter((entry) => normaliseUnitSettingsIdentifier(entry.unitCode) === normaliseUnitSettingsIdentifier(unit?.code));
   const unitFormationCallsigns = formationCallsigns.filter((callsign) => normaliseUnitSettingsIdentifier(callsign.unit) === normaliseUnitSettingsIdentifier(unit?.code));
+  const buildRules = buildRuleSettings || {};
+  const eventLimits = buildRules.eventLimits;
+  const formatHours2 = (value) => `${Number.isFinite(Number(value)) ? Number(value) : 0} hrs`;
+  const formatMinutes = (value) => `${Number.isFinite(Number(value)) ? Math.round(Number(value)) : 0} min`;
+  const flightStaggerMinutes = getEffectiveDispatchStaggerMinutes(buildRules.dispatchStaggerSettings, "flight");
+  const simStaggerMinutes = getEffectiveDispatchStaggerMinutes(buildRules.dispatchStaggerSettings, "ftd");
   const modelCrewPositions = crewPositionTerminology.positions.filter((position) => !position.operationalModels?.length || position.operationalModels.includes(operationalModel2));
   const modelQualifications = staffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE" && qualification.operationalModels.includes(operationalModel2));
   const categories = [
@@ -9692,14 +9698,24 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Units", value: (group.selectedUnits || []).join(", "), onChange: () => {
           }, disabled: true })
         ] }, group.id || `${group.name}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Staff sharing", value: organisationSettings.staffSharingEnabled ? "No staff sharing arrangement includes this unit." : "Staff sharing is not enabled for this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Build Rules", description: "Business logic, duty and turnaround rules, and event limit settings used by the build.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-2", children: [
-          settingsLink("business-rules", "Business Rules"),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Build Rules", description: "Current build rule values for this unit.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap justify-end gap-2", children: [
+          settingsLink("business-rules", "Build Rules"),
           settingsLink("duty-turnaround", "Duty & Turnaround"),
           settingsLink("event-limits", "Event Limits")
         ] }), children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Business Rules", value: "System logic and automation settings that affect how the DFP and NEO Build behave." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Duty & Turnaround", value: "Crew duty limits, rest periods, turnarounds and related timing limits." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Event Limits", value: "Operational thresholds and limits for how events may be built and displayed." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Max dispatch per hour", value: buildRules.maxDispatchPerHour ?? 8 }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Flight dispatch stagger", value: formatMinutes(flightStaggerMinutes) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Sim dispatch stagger", value: formatMinutes(simStaggerMinutes) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Preferred duty period", value: formatHours2(buildRules.preferredDutyPeriod ?? 8) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Max crew duty period", value: formatHours2(buildRules.maxCrewDutyPeriod ?? 10) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Flight turnaround", value: formatHours2(buildRules.flightTurnaround ?? 1.2) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Sim turnaround", value: formatHours2(buildRules.ftdTurnaround ?? 0.5) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "CPT turnaround", value: formatHours2(buildRules.cptTurnaround ?? 0.5) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Staff max flights", value: eventLimits?.instructor?.maxFlights ?? 1 }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Staff max sim", value: eventLimits?.instructor?.maxSimulators ?? 2 }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Staff max total", value: eventLimits?.instructor?.maxTotal ?? 3 }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Trainee max flight/sim", value: eventLimits?.trainee?.maxFlightFtd ?? 1 }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Trainee max total", value: eventLimits?.trainee?.maxTotal ?? 2 })
         ] })
       ] });
     }
@@ -9921,7 +9937,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     ] })
   ] });
 };
-const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, formationCallsigns = [], onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
+const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
   const [activeView, setActiveView] = reactExports.useState("structure");
@@ -10054,6 +10070,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, formationCallsi
         platformConfig,
         unitCode,
         formationCallsigns,
+        buildRuleSettings,
         onUpdatePlatformConfig,
         onNavigateToSettingsSection
       }
@@ -10129,6 +10146,7 @@ const ScheduleView = ({
   onUpdatePlatformConfig,
   onNavigateToSettingsSection,
   formationCallsigns = [],
+  buildRuleSettings,
   timezoneOffset = 11
   // Default to UTC+11
 }) => {
@@ -10954,7 +10972,7 @@ const ScheduleView = ({
             className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0" : "-translate-x-full"}`,
             style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, unitCode, formationCallsigns, onUpdatePlatformConfig, onNavigateToSettingsSection }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, unitCode, formationCallsigns, buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
@@ -106468,6 +106486,16 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdatePlatformConfig: handleUpdatePlatformConfigFromSchedule,
             onNavigateToSettingsSection: handleNavigateToSettingsSection,
             formationCallsigns,
+            buildRuleSettings: {
+              maxDispatchPerHour,
+              dispatchStaggerSettings,
+              preferredDutyPeriod,
+              maxCrewDutyPeriod,
+              flightTurnaround,
+              ftdTurnaround,
+              cptTurnaround,
+              eventLimits
+            },
             isOracleMode,
             oraclePreviewEvent,
             onOracleMouseDown: handleOracleMouseDown,

@@ -1,7 +1,7 @@
 
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, MouseEvent } from 'react';
-import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee, FlyingWindowExclusionPeriod, FormationCallsign } from '../types';
+import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee, FlyingWindowExclusionPeriod, FormationCallsign, EventLimits } from '../types';
 import FlightTile from './FlightTile';
 import AirframeColumn from './AirframeColumn';
 import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
@@ -18,6 +18,7 @@ import { normalisePersonnelDisplaySettings } from '../utils/personnelDisplaySett
 import { normaliseStaffQualificationCatalogue } from '../utils/staffQualifications';
 import { normaliseTrainingReportTemplate, normaliseTrainingReportTerminology } from '../utils/trainingReportTerminology';
 import { normaliseUnitCallsignSettings } from '../utils/unitCallsigns';
+import { getEffectiveDispatchStaggerMinutes, type DispatchStaggerSettings } from '../utils/dispatchStagger';
    
 
 interface ScheduleViewProps {
@@ -99,6 +100,16 @@ interface ScheduleViewProps {
   onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
   onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
   formationCallsigns?: FormationCallsign[];
+  buildRuleSettings?: {
+    maxDispatchPerHour?: number;
+    dispatchStaggerSettings?: DispatchStaggerSettings;
+    preferredDutyPeriod?: number;
+    maxCrewDutyPeriod?: number;
+    flightTurnaround?: number;
+    ftdTurnaround?: number;
+    cptTurnaround?: number;
+    eventLimits?: EventLimits;
+  };
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -719,11 +730,11 @@ const UnitSettingsResourceNumberField: React.FC<{
 const UnitSettingsGroup: React.FC<{ title: string; description?: string; children: React.ReactNode; action?: React.ReactNode }> = ({ title, description, children, action }) => (
     <section className={unitSettingsPanelClass}>
         <div className="flex items-start justify-between gap-3 px-4 py-3">
-            <div>
+            <div className="min-w-0 flex-1 pr-2">
                 <h4 className="text-sm font-semibold text-slate-50">{title}</h4>
-                {description ? <p className="mt-1 text-xs leading-5 text-slate-400">{description}</p> : null}
+                {description ? <p className="mt-1 max-w-lg text-xs leading-5 text-slate-400">{description}</p> : null}
             </div>
-            {action}
+            {action ? <div className="shrink-0">{action}</div> : null}
         </div>
         <div className="border-t border-white/10">
             {children}
@@ -765,9 +776,10 @@ const OrganisationMyUnitSettings: React.FC<{
     platformConfig?: any;
     unitCode?: string;
     formationCallsigns?: FormationCallsign[];
+    buildRuleSettings?: ScheduleViewProps['buildRuleSettings'];
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
-}> = ({ platformConfig, unitCode, formationCallsigns = [], onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
+}> = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
     const [activeCategory, setActiveCategory] = useState('identity');
     const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
     const units = platformConfig?.units || [];
@@ -924,6 +936,12 @@ const OrganisationMyUnitSettings: React.FC<{
     const unitFormationCallsigns = formationCallsigns.filter((callsign) => (
         normaliseUnitSettingsIdentifier(callsign.unit) === normaliseUnitSettingsIdentifier(unit?.code)
     ));
+    const buildRules = buildRuleSettings || {};
+    const eventLimits = buildRules.eventLimits;
+    const formatHours = (value: unknown) => `${Number.isFinite(Number(value)) ? Number(value) : 0} hrs`;
+    const formatMinutes = (value: unknown) => `${Number.isFinite(Number(value)) ? Math.round(Number(value)) : 0} min`;
+    const flightStaggerMinutes = getEffectiveDispatchStaggerMinutes(buildRules.dispatchStaggerSettings, 'flight');
+    const simStaggerMinutes = getEffectiveDispatchStaggerMinutes(buildRules.dispatchStaggerSettings, 'ftd');
     const modelCrewPositions = crewPositionTerminology.positions.filter((position) => (
         !position.operationalModels?.length || position.operationalModels.includes(operationalModel)
     ));
@@ -1288,10 +1306,20 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Staff sharing" value={organisationSettings.staffSharingEnabled ? 'No staff sharing arrangement includes this unit.' : 'Staff sharing is not enabled for this unit.'} muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Build Rules" description="Business logic, duty and turnaround rules, and event limit settings used by the build." action={<div className="flex flex-wrap justify-end gap-2">{settingsLink('business-rules', 'Business Rules')}{settingsLink('duty-turnaround', 'Duty & Turnaround')}{settingsLink('event-limits', 'Event Limits')}</div>}>
-                        <UnitSettingsReadRow label="Business Rules" value="System logic and automation settings that affect how the DFP and NEO Build behave." />
-                        <UnitSettingsReadRow label="Duty & Turnaround" value="Crew duty limits, rest periods, turnarounds and related timing limits." />
-                        <UnitSettingsReadRow label="Event Limits" value="Operational thresholds and limits for how events may be built and displayed." />
+                    <UnitSettingsGroup title="Build Rules" description="Current build rule values for this unit." action={<div className="flex flex-nowrap justify-end gap-2">{settingsLink('business-rules', 'Build Rules')}{settingsLink('duty-turnaround', 'Duty & Turnaround')}{settingsLink('event-limits', 'Event Limits')}</div>}>
+                        <UnitSettingsReadRow label="Max dispatch per hour" value={buildRules.maxDispatchPerHour ?? 8} />
+                        <UnitSettingsReadRow label="Flight dispatch stagger" value={formatMinutes(flightStaggerMinutes)} />
+                        <UnitSettingsReadRow label="Sim dispatch stagger" value={formatMinutes(simStaggerMinutes)} />
+                        <UnitSettingsReadRow label="Preferred duty period" value={formatHours(buildRules.preferredDutyPeriod ?? 8)} />
+                        <UnitSettingsReadRow label="Max crew duty period" value={formatHours(buildRules.maxCrewDutyPeriod ?? 10)} />
+                        <UnitSettingsReadRow label="Flight turnaround" value={formatHours(buildRules.flightTurnaround ?? 1.2)} />
+                        <UnitSettingsReadRow label="Sim turnaround" value={formatHours(buildRules.ftdTurnaround ?? 0.5)} />
+                        <UnitSettingsReadRow label="CPT turnaround" value={formatHours(buildRules.cptTurnaround ?? 0.5)} />
+                        <UnitSettingsReadRow label="Staff max flights" value={eventLimits?.instructor?.maxFlights ?? 1} />
+                        <UnitSettingsReadRow label="Staff max sim" value={eventLimits?.instructor?.maxSimulators ?? 2} />
+                        <UnitSettingsReadRow label="Staff max total" value={eventLimits?.instructor?.maxTotal ?? 3} />
+                        <UnitSettingsReadRow label="Trainee max flight/sim" value={eventLimits?.trainee?.maxFlightFtd ?? 1} />
+                        <UnitSettingsReadRow label="Trainee max total" value={eventLimits?.trainee?.maxTotal ?? 2} />
                     </UnitSettingsGroup>
                 </div>
             );
@@ -1587,9 +1615,10 @@ const OrganisationSlideoutDiagram: React.FC<{
     platformConfig?: any;
     unitCode?: string;
     formationCallsigns?: FormationCallsign[];
+    buildRuleSettings?: ScheduleViewProps['buildRuleSettings'];
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
-}> = ({ platformConfig, unitCode, formationCallsigns = [], onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
+}> = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [activeView, setActiveView] = useState<OrganisationSlideoutView>('structure');
@@ -1722,6 +1751,7 @@ const OrganisationSlideoutDiagram: React.FC<{
                     platformConfig={platformConfig}
                     unitCode={unitCode}
                     formationCallsigns={formationCallsigns}
+                    buildRuleSettings={buildRuleSettings}
                     onUpdatePlatformConfig={onUpdatePlatformConfig}
                     onNavigateToSettingsSection={onNavigateToSettingsSection}
                 />
@@ -1760,6 +1790,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     onUpdatePlatformConfig,
     onNavigateToSettingsSection,
     formationCallsigns = [],
+    buildRuleSettings,
     timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -2742,7 +2773,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         style={{ width: 'min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))' }}
                     >
                         <div className={`h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-                            <OrganisationSlideoutDiagram platformConfig={platformConfig} unitCode={unitCode} formationCallsigns={formationCallsigns} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} />
+                            <OrganisationSlideoutDiagram platformConfig={platformConfig} unitCode={unitCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} />
                         </div>
                         <button
                             type="button"

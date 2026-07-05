@@ -37184,6 +37184,16 @@ appliedUpdates.forEach(update => {
                            onUpdatePlatformConfig={handleUpdatePlatformConfigFromSchedule}
                            onNavigateToSettingsSection={handleNavigateToSettingsSection}
                            formationCallsigns={formationCallsigns}
+                           buildRuleSettings={{
+                               maxDispatchPerHour,
+                               dispatchStaggerSettings,
+                               preferredDutyPeriod,
+                               maxCrewDutyPeriod,
+                               flightTurnaround,
+                               ftdTurnaround,
+                               cptTurnaround,
+                               eventLimits,
+                           }}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
                            onOracleMouseDown={handleOracleMouseDown}
