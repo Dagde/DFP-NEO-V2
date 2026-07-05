@@ -9409,10 +9409,10 @@ const initialSetupTemplates = [
     id: "trainees",
     label: "Trainees",
     fileName: "DFP_NEO_Trainees_Template.csv",
-    requiredHeaders: ["Name", "Unit", "Course"],
-    optionalHeaders: ["Rank", "PMKeyS", "Start Date", "Master LMP"],
+    requiredHeaders: ["Name", "Unit"],
+    optionalHeaders: ["Rank", "PMKeyS", "Course Number", "Course", "Start Date", "Master LMP"],
     exampleRows: [
-      ["Jones, Taylor", "1FTS", "BPC+IPC", "PLTOFF", "7654321", "2026-01-15", "BPC+IPC"]
+      ["Jones, Taylor", "1FTS", "PLTOFF", "7654321", "1", "", "2026-01-15", "BPC+IPC"]
     ],
     settingsSection: "trainee-database"
   },
@@ -9439,7 +9439,11 @@ const wizardRequiredHeaderAliases = {
   qualifications: ["qualification", "qualificationsandroles", "qualificationsroles", "quals", "roles"],
   pmkeys: ["pmkeysid", "pmkey", "employeeid", "serviceid"],
   code: ["icao", "locationcode", "basecode"],
-  aircrafttype: ["aircraft", "resource"]
+  aircrafttype: ["aircraft", "resource"],
+  course: ["courseallocation", "allocatedcourse", "courseassigned", "trainingcourse"],
+  coursenumber: ["courseno", "coursenum", "courseid", "coursecode"],
+  masterlmp: ["masterlmpname", "lmp", "lmpname"],
+  startdate: ["start", "coursestart", "startdt"]
 };
 const wizardHeaderMatchesRequired = (headerKeys, requiredHeader) => {
   const requiredKey = normaliseWizardHeader(requiredHeader);
@@ -9607,6 +9611,35 @@ const parseWizardStaffRows = (value) => parseWizardLineItems(value).map((line) =
 const formatWizardStaffRows = (rows) => rows.filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications).map((row) => {
   const name = [String(row.surname || "").trim(), String(row.givenNames || "").trim()].filter(Boolean).join(", ");
   return `${name} | ${String(row.unit || "").trim()} | ${String(row.position || "").trim()} | ${String(row.qualifications || "").trim()}`;
+}).join("\n");
+const parseWizardTraineeRows = (value) => parseWizardLineItems(value).map((line) => {
+  const parts = line.split("|").map((part) => part.trim());
+  const namePart = parts[0] || "";
+  const [surnamePart, givenPart] = namePart.includes(",") ? namePart.split(",").map((part) => part.trim()) : ["", namePart];
+  return {
+    surname: surnamePart || "",
+    givenNames: givenPart || "",
+    unit: parts[1] || "",
+    rank: parts[2] || "",
+    pmkeys: parts[3] || "",
+    courseNumber: parts[4] || "",
+    course: parts[5] || "",
+    masterLmp: parts[6] || "",
+    startDate: parts[7] || ""
+  };
+}).filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.course || row.masterLmp || row.startDate);
+const formatWizardTraineeRows = (rows) => rows.filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.course || row.masterLmp || row.startDate).map((row) => {
+  const name = [String(row.surname || "").trim(), String(row.givenNames || "").trim()].filter(Boolean).join(", ");
+  return [
+    name,
+    String(row.unit || "").trim(),
+    String(row.rank || "").trim(),
+    String(row.pmkeys || "").trim(),
+    String(row.courseNumber || "").trim(),
+    String(row.course || "").trim(),
+    String(row.masterLmp || "").trim(),
+    String(row.startDate || "").trim()
+  ].join(" | ");
 }).join("\n");
 const getWizardOperationalModelLabel = (value) => OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value);
 const parseWizardLineItems = (value) => String(value || "").split(/\n/).map((item) => item.trim()).filter(Boolean);
@@ -10560,7 +10593,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
   });
   const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
   const [staffDraft, setStaffDraft] = reactExports.useState("Burns, Alexander | 36SQN | Pilot | PIC");
-  const [traineeDraft, setTraineeDraft] = reactExports.useState("Only complete if this unit has trainees.");
+  const [traineeDraft, setTraineeDraft] = reactExports.useState("");
   const [trainingRecordsDraft, setTrainingRecordsDraft] = reactExports.useState("Use default training report template\nUse standard training records fields");
   const [unitModulesDraft, setUnitModulesDraft] = reactExports.useState("DFP\nNEO Build\nProgram Schedule\nTraining Records");
   const [rankLabelsDraft, setRankLabelsDraft] = reactExports.useState("Use existing defence aviation rank and label set");
@@ -11219,6 +11252,27 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       setSaveMessage(`Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into Step 14. They will be saved when you press Save setup at the end.`);
       return;
     }
+    if (template.id === "trainees") {
+      const importedRows = result.dataRows.map((row) => {
+        const nameValue = getWizardCellByHeader(result.headers || [], row, "Name");
+        const [surnamePart, givenPart] = nameValue.includes(",") ? nameValue.split(",").map((part) => part.trim()) : ["", nameValue.trim()];
+        return {
+          surname: surnamePart || "",
+          givenNames: givenPart || "",
+          unit: getWizardCellByHeader(result.headers || [], row, "Unit") || unitDraft.code || "",
+          rank: getWizardCellByHeader(result.headers || [], row, "Rank"),
+          pmkeys: getWizardCellByHeader(result.headers || [], row, "PMKeyS"),
+          courseNumber: getWizardCellByHeader(result.headers || [], row, "Course Number"),
+          course: "",
+          masterLmp: getWizardCellByHeader(result.headers || [], row, "Master LMP"),
+          startDate: getWizardCellByHeader(result.headers || [], row, "Start Date")
+        };
+      }).filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.masterLmp || row.startDate);
+      setTraineeDraft(formatWizardTraineeRows(importedRows));
+      setUnitDraft((draft) => ({ ...draft, hasTrainees: true }));
+      setSaveMessage(`Imported ${importedRows.length} trainee row${importedRows.length === 1 ? "" : "s"} into the master trainee list. Course allocation is blank until you assign each trainee.`);
+      return;
+    }
     setSaveMessage(`${template.label} passed validation. Import for this template step has not been added yet.`);
   };
   const resetWizard = () => {
@@ -11359,6 +11413,57 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
           className: wizardSmallButtonClass,
           onClick: () => setStaffDraft(formatWizardStaffRows([...editableRows, { surname: "", givenNames: "", unit: unitDraft.code || "", position: "", qualifications: "" }])),
           children: "Add staff member"
+        }
+      )
+    ] });
+  };
+  const renderTraineeEditor = () => {
+    const rows = parseWizardTraineeRows(traineeDraft);
+    const editableRows = rows.length > 0 ? rows : [{ surname: "", givenNames: "", unit: unitDraft.code || "", rank: "", pmkeys: "", courseNumber: "", course: "", masterLmp: "", startDate: "" }];
+    const updateTraineeRow = (index, field, value) => {
+      const nextRows = [...editableRows];
+      nextRows[index] = { ...nextRows[index], [field]: value };
+      setTraineeDraft(formatWizardTraineeRows(nextRows));
+    };
+    const unitOptions = Array.from(new Set([
+      unitDraft.code,
+      ...parseWizardUnitRows(unitsTodayDraft).map((unit) => unit.code),
+      ...activeUnits.map((unit) => String(unit.code || ""))
+    ].filter(Boolean)));
+    const courseOptions = Array.from(new Set([
+      trainingDraft.lmpCode,
+      trainingDraft.lmpName,
+      ...activeMasterLmpCatalogue.flatMap((lmp) => [String(lmp?.name || ""), String(lmp?.code || "")])
+    ].map((item) => String(item || "").trim()).filter(Boolean)));
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "This is the master trainee list for this setup. Leave Course allocation blank until you decide which course each trainee belongs to. Blank means the trainee exists in the app but has not been allocated to a course yet." }),
+      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: wizardLabelClass, children: [
+            "Trainee ",
+            index + 1
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setTraineeDraft(formatWizardTraineeRows(editableRows.filter((_, rowIndex) => rowIndex !== index))), children: "Delete" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
+          wizardField("Surname", row.surname || "", (value) => updateTraineeRow(index, "surname", value), void 0, "Jones"),
+          wizardField("Given names", row.givenNames || "", (value) => updateTraineeRow(index, "givenNames", value), void 0, "Taylor"),
+          wizardDataListField("Unit", row.unit || "", (value) => updateTraineeRow(index, "unit", value.toUpperCase()), unitOptions, unitDraft.code || "36SQN", `trainee-unit-${index}`),
+          wizardField("Rank", row.rank || "", (value) => updateTraineeRow(index, "rank", value), void 0, "PLTOFF"),
+          wizardField("PMKeyS", row.pmkeys || "", (value) => updateTraineeRow(index, "pmkeys", value), void 0, "7654321"),
+          wizardField("Course number", row.courseNumber || "", (value) => updateTraineeRow(index, "courseNumber", value), void 0, "1"),
+          wizardDataListField("Course allocation", row.course || "", (value) => updateTraineeRow(index, "course", value), courseOptions, "Select later", `trainee-course-${index}`),
+          wizardDataListField("Master LMP", row.masterLmp || "", (value) => updateTraineeRow(index, "masterLmp", value), courseOptions, trainingDraft.lmpCode || "BPC+IPC", `trainee-master-lmp-${index}`),
+          wizardField("Start date", row.startDate || "", (value) => updateTraineeRow(index, "startDate", value), void 0, "2026-01-15")
+        ] })
+      ] }, `trainee-row-${index}`)),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          className: wizardSmallButtonClass,
+          onClick: () => setTraineeDraft(formatWizardTraineeRows([...editableRows, { surname: "", givenNames: "", unit: unitDraft.code || "", rank: "", pmkeys: "", courseNumber: "", course: "", masterLmp: "", startDate: "" }])),
+          children: "Add trainee"
         }
       )
     ] });
@@ -11856,7 +11961,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     }
     if (visibleStep.id === "trainees") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: unitDraft.hasTrainees ? "This unit is marked as having trainees. Add the trainee details now." : "This unit is marked as not having trainees. You can leave this blank and continue." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: unitDraft.hasTrainees ? "This unit is marked as having trainees. Add trainees to the master list, then allocate each trainee to a course when you are ready." : "This unit is marked as not having trainees. You can leave this blank and continue." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
@@ -11867,7 +11972,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
               children: unitDraft.hasTrainees ? "Trainees on" : "Trainees off"
             }
           ),
-          unitDraft.hasTrainees ? wizardTextArea("Trainee details", traineeDraft, setTraineeDraft, "Citizen, Pat | 36SQN | C-17A Conversion | 2026-01-15", true) : null
+          unitDraft.hasTrainees ? renderTraineeEditor() : null
         ] })
       );
     }
@@ -12045,7 +12150,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
                   onClick: () => importWizardTemplateRows(template, result),
                   children: [
                     "Import into ",
-                    template.id === "staff" ? "staff list" : "wizard"
+                    template.id === "staff" ? "staff list" : template.id === "trainees" ? "trainee master list" : "wizard"
                   ]
                 }
               ) : null
@@ -12056,7 +12161,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       );
     }) })
   ] });
-  const placeTemplatesBelow = visibleStep.id === "staff";
+  const placeTemplatesBelow = visibleStep.id === "staff" || visibleStep.id === "trainees";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "input",
