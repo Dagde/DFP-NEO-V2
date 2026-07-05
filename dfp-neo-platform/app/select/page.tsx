@@ -30,8 +30,8 @@ const apps = [
     subtitle: 'Air Movements Edition', 
     description: 'Strategic air transport and logistics management',
     image: '/images/c17-aircraft.jpg',
-    status: 'coming-soon',
-    href: '#',
+    status: 'active',
+    href: '/air-movements-test',
   },
   {
     id: 'hybrid',

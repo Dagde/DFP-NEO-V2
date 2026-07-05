@@ -1,5 +1,6 @@
 import { getAppApiBase } from './externalDataControls';
 import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from './sunTimes.js';
+import { isSetupTestMode, readSetupTestPlatformConfig } from './setupTestMode';
 
 export interface PlatformLocation {
   code: string;
@@ -378,6 +379,9 @@ const locationCodesAreEquivalent = (left: string, right: string): boolean => {
 };
 
 export const loadPlatformConfigFromDB = async (): Promise<PlatformConfig | null> => {
+  if (isSetupTestMode()) {
+    return readSetupTestPlatformConfig() as PlatformConfig;
+  }
   try {
     const res = await fetch(`${getApiBase()}/platform-config`, {
       method: 'GET',

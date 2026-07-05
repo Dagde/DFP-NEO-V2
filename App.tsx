@@ -78,6 +78,7 @@ import {
 } from './utils/staffQualifications';
 import { getInsertEventTypes } from './utils/insertEventTypes';
 import { getAppApiBase } from './utils/externalDataControls';
+import { isSetupTestMode, writeSetupTestPlatformConfig } from './utils/setupTestMode';
 import {
     classifyDayNightBySunTimes,
     getDefaultAirfieldSolarProfile,
@@ -24153,6 +24154,11 @@ const App: React.FC = () => {
             clearTimeout(platformConfigSaveTimerRef.current);
         }
         platformConfigSaveTimerRef.current = setTimeout(() => {
+            if (isSetupTestMode()) {
+                writeSetupTestPlatformConfig(nextConfig);
+                window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
+                return;
+            }
             const sessionToken = localStorage.getItem('dfp_session_token') || '';
             fetch(`${getApiBase()}/platform-config`, {
                 method: 'POST',

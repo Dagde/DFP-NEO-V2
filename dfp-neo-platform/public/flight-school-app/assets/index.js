@@ -1386,7 +1386,7 @@ const DEFAULT_EXTERNAL_DATA_CONTROLS = {
   productionApiFallbackEnabled: true,
   externalMediaEnabled: true
 };
-const safeWindow = () => typeof window === "undefined" ? null : window;
+const safeWindow$1 = () => typeof window === "undefined" ? null : window;
 const normalizeExternalDataControls = (value) => ({
   externalDataEnabled: value?.externalDataEnabled !== false,
   weatherDataEnabled: value?.weatherDataEnabled !== false,
@@ -1395,7 +1395,7 @@ const normalizeExternalDataControls = (value) => ({
   externalMediaEnabled: value?.externalMediaEnabled !== false
 });
 const readExternalDataControls = () => {
-  const win = safeWindow();
+  const win = safeWindow$1();
   if (!win) return DEFAULT_EXTERNAL_DATA_CONTROLS;
   try {
     const stored = win.localStorage.getItem(EXTERNAL_DATA_CONTROLS_STORAGE_KEY);
@@ -1406,7 +1406,7 @@ const readExternalDataControls = () => {
   }
 };
 const writeExternalDataControls = (settings) => {
-  const win = safeWindow();
+  const win = safeWindow$1();
   if (!win) return;
   const normalized = normalizeExternalDataControls(settings);
   win.localStorage.setItem(EXTERNAL_DATA_CONTROLS_STORAGE_KEY, JSON.stringify(normalized));
@@ -1418,11 +1418,98 @@ const isExternalDataAllowed = (key) => {
   return key ? settings[key] !== false : true;
 };
 const getAppApiBase = () => {
-  const win = safeWindow();
+  const win = safeWindow$1();
   if (!win) return "/api";
   const currentOrigin = win.location.origin;
   if (currentOrigin === PRODUCTION_API_ORIGIN || currentOrigin.includes("railway.app")) return "/api";
   return isExternalDataAllowed("productionApiFallbackEnabled") ? `${PRODUCTION_API_ORIGIN}/api` : "/api";
+};
+const SETUP_TEST_QUERY_PARAM = "setupTest";
+const SETUP_TEST_RESET_QUERY_PARAM = "resetSetupTest";
+const AIR_MOVEMENTS_TEST_PROFILE = "air-movements";
+const SETUP_TEST_PLATFORM_EVENT = "dfp-setup-test-platform-config-updated";
+const safeWindow = () => typeof window === "undefined" ? null : window;
+const getSetupTestProfile = () => {
+  const win = safeWindow();
+  if (!win) return null;
+  const params = new URLSearchParams(win.location.search);
+  const urlProfile = params.get(SETUP_TEST_QUERY_PARAM);
+  const cleanUrlProfile = String(urlProfile || "").trim();
+  if (cleanUrlProfile) {
+    win.sessionStorage.setItem("dfp_setup_test_profile", cleanUrlProfile);
+    if (params.get(SETUP_TEST_RESET_QUERY_PARAM) === "1") {
+      ["platform_config", "settings", "currencies"].forEach((kind) => {
+        win.localStorage.removeItem(`dfp_setup_test_${cleanUrlProfile}_${kind}`);
+      });
+      params.delete(SETUP_TEST_RESET_QUERY_PARAM);
+      const nextSearch = params.toString();
+      win.history.replaceState({}, "", `${win.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${win.location.hash}`);
+    }
+    return cleanUrlProfile;
+  }
+  return win.sessionStorage.getItem("dfp_setup_test_profile");
+};
+const isSetupTestMode = () => Boolean(getSetupTestProfile());
+const getSetupTestStorageKey = (kind) => `dfp_setup_test_${getSetupTestProfile() || AIR_MOVEMENTS_TEST_PROFILE}_${kind}`;
+const createEmptySetupTestPlatformConfig = () => ({
+  organisations: [],
+  locations: [],
+  units: [],
+  aircraftTypes: [],
+  resourcePools: [],
+  modules: [],
+  unitModules: [],
+  licenses: [],
+  userAccess: [],
+  platformUsers: [],
+  schedulingRuleSets: []
+});
+const readSetupTestPlatformConfig = () => {
+  const win = safeWindow();
+  if (!win) return createEmptySetupTestPlatformConfig();
+  try {
+    const stored = win.localStorage.getItem(getSetupTestStorageKey("platform_config"));
+    if (!stored) return createEmptySetupTestPlatformConfig();
+    return {
+      ...createEmptySetupTestPlatformConfig(),
+      ...JSON.parse(stored)
+    };
+  } catch {
+    return createEmptySetupTestPlatformConfig();
+  }
+};
+const writeSetupTestPlatformConfig = (config) => {
+  const win = safeWindow();
+  if (!win) return;
+  const nextConfig = {
+    ...createEmptySetupTestPlatformConfig(),
+    ...config || {}
+  };
+  win.localStorage.setItem(getSetupTestStorageKey("platform_config"), JSON.stringify(nextConfig));
+  win.dispatchEvent(new CustomEvent(SETUP_TEST_PLATFORM_EVENT, { detail: { config: nextConfig } }));
+};
+const readSetupTestSettings = () => {
+  const win = safeWindow();
+  if (!win) return null;
+  try {
+    const stored = win.localStorage.getItem(getSetupTestStorageKey("settings"));
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+};
+const writeSetupTestSettings = (settings) => {
+  const win = safeWindow();
+  if (!win) return;
+  win.localStorage.setItem(getSetupTestStorageKey("settings"), JSON.stringify(settings || {}));
+};
+const writeSetupTestCurrencies = (masterCurrencies, currencyRequirements) => {
+  const win = safeWindow();
+  if (!win) return;
+  win.localStorage.setItem(getSetupTestStorageKey("currencies"), JSON.stringify({
+    masterCurrencies: Array.isArray(masterCurrencies) ? masterCurrencies : [],
+    currencyRequirements: Array.isArray(currencyRequirements) ? currencyRequirements : []
+  }));
 };
 const DEFAULT_TILE_STATUS_SETTINGS = {
   authorizationUrgentMinutes: 15,
@@ -1606,6 +1693,9 @@ let pendingSettings = null;
 let isSaving = false;
 const getApiBase$3 = () => getAppApiBase();
 const loadSettingsFromDB = async () => {
+  if (isSetupTestMode()) {
+    return readSetupTestSettings();
+  }
   try {
     const apiBase2 = getApiBase$3();
     const url = `${apiBase2}/settings?orgId=${ORG_ID}`;
@@ -1633,6 +1723,14 @@ const loadSettingsFromDB = async () => {
   }
 };
 const saveSettingsNow = async (settings, userId) => {
+  if (isSetupTestMode()) {
+    writeSetupTestSettings({
+      ...settings,
+      savedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      version: SETTINGS_VERSION
+    });
+    return true;
+  }
   if (isSaving) {
     console.log("[Settings] ⏳ Already saving — queuing this save");
     pendingSettings = settings;
@@ -1771,6 +1869,10 @@ const buildSettingsSnapshot = (state) => {
   };
 };
 const saveCurrenciesToDB = async (masterCurrencies, currencyRequirements, userId) => {
+  if (isSetupTestMode()) {
+    writeSetupTestCurrencies(masterCurrencies, currencyRequirements);
+    return true;
+  }
   try {
     const apiBase2 = getApiBase$3();
     const url = `${apiBase2}/currencies`;
@@ -2235,6 +2337,9 @@ const locationCodesAreEquivalent = (left, right) => {
   return getKnownLocationAliases(right).some((alias) => leftAliases.has(normaliseLocationIdentifier(alias)));
 };
 const loadPlatformConfigFromDB = async () => {
+  if (isSetupTestMode()) {
+    return readSetupTestPlatformConfig();
+  }
   try {
     const res = await fetch(`${getApiBase$2()}/platform-config`, {
       method: "GET",
@@ -61411,6 +61516,16 @@ const PlatformConfigurationSettings = ({
       setLoading(true);
       setError("");
       try {
+        if (isSetupTestMode()) {
+          const nextConfig = applyDefaultUnitTraineeAvailability$1({ ...emptyConfig, ...readSetupTestPlatformConfig() });
+          if (!cancelled) {
+            setConfig(nextConfig);
+            loadedConfigRef.current = nextConfig;
+            const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || "";
+            setSelectedAccessUserId((current) => current || firstUserId);
+          }
+          return;
+        }
         const [res, licenseRes] = await Promise.all([
           fetch(`${getApiBase()}/platform-config`),
           fetch(`${getApiBase()}/platform-license/status`)
@@ -63341,6 +63456,13 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     setError("");
     let shouldReload = false;
     try {
+      if (isSetupTestMode()) {
+        writeSetupTestPlatformConfig(configToSave);
+        loadedConfigRef.current = configToSave;
+        setConfig(configToSave);
+        onShowSuccess(options?.successMessage || "Platform configuration saved.");
+        return true;
+      }
       const sessionToken = localStorage.getItem("dfp_session_token");
       const res = await fetch(`${getApiBase()}/platform-config`, {
         method: "POST",
@@ -63566,6 +63688,12 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     return data;
   };
   const reloadPlatformConfig = async () => {
+    if (isSetupTestMode()) {
+      const nextConfig2 = { ...emptyConfig, ...readSetupTestPlatformConfig() };
+      setConfig(nextConfig2);
+      loadedConfigRef.current = nextConfig2;
+      return;
+    }
     const res = await fetch(`${getApiBase()}/platform-config`);
     if (!res.ok) throw new Error(`Configuration reload failed (${res.status})`);
     const data = await res.json();
@@ -97384,6 +97512,11 @@ const App = () => {
       clearTimeout(platformConfigSaveTimerRef.current);
     }
     platformConfigSaveTimerRef.current = setTimeout(() => {
+      if (isSetupTestMode()) {
+        writeSetupTestPlatformConfig(nextConfig);
+        window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
+        return;
+      }
       const sessionToken = localStorage.getItem("dfp_session_token") || "";
       fetch(`${getApiBase2()}/platform-config`, {
         method: "POST",

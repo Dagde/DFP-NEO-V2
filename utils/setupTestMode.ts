@@ -1,0 +1,115 @@
+export const SETUP_TEST_QUERY_PARAM = 'setupTest';
+export const SETUP_TEST_RESET_QUERY_PARAM = 'resetSetupTest';
+export const AIR_MOVEMENTS_TEST_PROFILE = 'air-movements';
+export const SETUP_TEST_PLATFORM_EVENT = 'dfp-setup-test-platform-config-updated';
+
+const safeWindow = (): Window | null => (typeof window === 'undefined' ? null : window);
+
+export const getSetupTestProfile = (): string | null => {
+  const win = safeWindow();
+  if (!win) return null;
+  const params = new URLSearchParams(win.location.search);
+  const urlProfile = params.get(SETUP_TEST_QUERY_PARAM);
+  const cleanUrlProfile = String(urlProfile || '').trim();
+  if (cleanUrlProfile) {
+    win.sessionStorage.setItem('dfp_setup_test_profile', cleanUrlProfile);
+    if (params.get(SETUP_TEST_RESET_QUERY_PARAM) === '1') {
+      ['platform_config', 'settings', 'currencies'].forEach((kind) => {
+        win.localStorage.removeItem(`dfp_setup_test_${cleanUrlProfile}_${kind}`);
+      });
+      params.delete(SETUP_TEST_RESET_QUERY_PARAM);
+      const nextSearch = params.toString();
+      win.history.replaceState({}, '', `${win.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${win.location.hash}`);
+    }
+    return cleanUrlProfile;
+  }
+  return win.sessionStorage.getItem('dfp_setup_test_profile');
+};
+
+export const isSetupTestMode = (): boolean => Boolean(getSetupTestProfile());
+
+const getSetupTestStorageKey = (kind: string): string => (
+  `dfp_setup_test_${getSetupTestProfile() || AIR_MOVEMENTS_TEST_PROFILE}_${kind}`
+);
+
+export const createEmptySetupTestPlatformConfig = () => ({
+  organisations: [],
+  locations: [],
+  units: [],
+  aircraftTypes: [],
+  resourcePools: [],
+  modules: [],
+  unitModules: [],
+  licenses: [],
+  userAccess: [],
+  platformUsers: [],
+  schedulingRuleSets: [],
+});
+
+export const readSetupTestPlatformConfig = (): any => {
+  const win = safeWindow();
+  if (!win) return createEmptySetupTestPlatformConfig();
+  try {
+    const stored = win.localStorage.getItem(getSetupTestStorageKey('platform_config'));
+    if (!stored) return createEmptySetupTestPlatformConfig();
+    return {
+      ...createEmptySetupTestPlatformConfig(),
+      ...JSON.parse(stored),
+    };
+  } catch {
+    return createEmptySetupTestPlatformConfig();
+  }
+};
+
+export const writeSetupTestPlatformConfig = (config: any): void => {
+  const win = safeWindow();
+  if (!win) return;
+  const nextConfig = {
+    ...createEmptySetupTestPlatformConfig(),
+    ...(config || {}),
+  };
+  win.localStorage.setItem(getSetupTestStorageKey('platform_config'), JSON.stringify(nextConfig));
+  win.dispatchEvent(new CustomEvent(SETUP_TEST_PLATFORM_EVENT, { detail: { config: nextConfig } }));
+};
+
+export const readSetupTestSettings = <T = any>(): T | null => {
+  const win = safeWindow();
+  if (!win) return null;
+  try {
+    const stored = win.localStorage.getItem(getSetupTestStorageKey('settings'));
+    return stored ? JSON.parse(stored) as T : null;
+  } catch {
+    return null;
+  }
+};
+
+export const writeSetupTestSettings = (settings: any): void => {
+  const win = safeWindow();
+  if (!win) return;
+  win.localStorage.setItem(getSetupTestStorageKey('settings'), JSON.stringify(settings || {}));
+};
+
+export const readSetupTestCurrencies = (): { masterCurrencies: any[]; currencyRequirements: any[] } | null => {
+  const win = safeWindow();
+  if (!win) return null;
+  try {
+    const stored = win.localStorage.getItem(getSetupTestStorageKey('currencies'));
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    return {
+      masterCurrencies: Array.isArray(parsed?.masterCurrencies) ? parsed.masterCurrencies : [],
+      currencyRequirements: Array.isArray(parsed?.currencyRequirements) ? parsed.currencyRequirements : [],
+    };
+  } catch {
+    return null;
+  }
+};
+
+export const writeSetupTestCurrencies = (masterCurrencies: any[], currencyRequirements: any[]): void => {
+  const win = safeWindow();
+  if (!win) return;
+  win.localStorage.setItem(getSetupTestStorageKey('currencies'), JSON.stringify({
+    masterCurrencies: Array.isArray(masterCurrencies) ? masterCurrencies : [],
+    currencyRequirements: Array.isArray(currencyRequirements) ? currencyRequirements : [],
+  }));
+};

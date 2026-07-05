@@ -74,6 +74,11 @@ import {
   type UnitCallsignEntry,
 } from '../utils/unitCallsigns';
 import { getAppApiBase } from '../utils/externalDataControls';
+import {
+  isSetupTestMode,
+  readSetupTestPlatformConfig,
+  writeSetupTestPlatformConfig,
+} from '../utils/setupTestMode';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
@@ -1774,6 +1779,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       setLoading(true);
       setError('');
       try {
+        if (isSetupTestMode()) {
+          const nextConfig = applyDefaultUnitTraineeAvailability({ ...emptyConfig, ...readSetupTestPlatformConfig() });
+          if (!cancelled) {
+            setConfig(nextConfig);
+            loadedConfigRef.current = nextConfig;
+            const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || '';
+            setSelectedAccessUserId((current) => current || firstUserId);
+          }
+          return;
+        }
         const [res, licenseRes] = await Promise.all([
           fetch(`${getApiBase()}/platform-config`),
           fetch(`${getApiBase()}/platform-license/status`),
@@ -4170,6 +4185,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setError('');
     let shouldReload = false;
     try {
+      if (isSetupTestMode()) {
+        writeSetupTestPlatformConfig(configToSave);
+        loadedConfigRef.current = configToSave;
+        setConfig(configToSave);
+        onShowSuccess(options?.successMessage || 'Platform configuration saved.');
+        return true;
+      }
       const sessionToken = localStorage.getItem('dfp_session_token');
       const res = await fetch(`${getApiBase()}/platform-config`, {
         method: 'POST',
@@ -4429,6 +4451,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const reloadPlatformConfig = async () => {
+    if (isSetupTestMode()) {
+      const nextConfig = { ...emptyConfig, ...readSetupTestPlatformConfig() };
+      setConfig(nextConfig);
+      loadedConfigRef.current = nextConfig;
+      return;
+    }
     const res = await fetch(`${getApiBase()}/platform-config`);
     if (!res.ok) throw new Error(`Configuration reload failed (${res.status})`);
     const data = await res.json();

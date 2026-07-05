@@ -5,6 +5,13 @@
  */
 
 import { getAppApiBase } from './externalDataControls';
+import {
+  isSetupTestMode,
+  readSetupTestCurrencies,
+  readSetupTestSettings,
+  writeSetupTestCurrencies,
+  writeSetupTestSettings,
+} from './setupTestMode';
 import { DEFAULT_TILE_STATUS_SETTINGS, normaliseTileStatusSettings, type TileStatusSettings } from './tileStatusSettings';
 import { normaliseFixedCrewTileColourModeByUnit, type FixedCrewTileColourMode } from './fixedCrewTileColours';
 import { DEFAULT_DISPATCH_STAGGER_SETTINGS, normaliseDispatchStaggerSettings, type DispatchStaggerSettings } from './dispatchStagger';
@@ -164,6 +171,9 @@ const getApiBase = (): string => getAppApiBase();
  * Returns null if no settings found (use defaults)
  */
 export const loadSettingsFromDB = async (): Promise<AppSettingsData | null> => {
+  if (isSetupTestMode()) {
+    return readSetupTestSettings<AppSettingsData>();
+  }
   try {
     const apiBase = getApiBase();
     const url = `${apiBase}/settings?orgId=${ORG_ID}`;
@@ -200,6 +210,14 @@ export const loadSettingsFromDB = async (): Promise<AppSettingsData | null> => {
  * Save settings to the database immediately
  */
 const saveSettingsNow = async (settings: AppSettingsData, userId?: string): Promise<boolean> => {
+  if (isSetupTestMode()) {
+    writeSetupTestSettings({
+      ...settings,
+      savedAt: new Date().toISOString(),
+      version: SETTINGS_VERSION,
+    });
+    return true;
+  }
   if (isSaving) {
     console.log('[Settings] ⏳ Already saving — queuing this save');
     pendingSettings = settings;
@@ -372,6 +390,10 @@ export const saveCurrenciesToDB = async (
   currencyRequirements: any[],
   userId?: string
 ): Promise<boolean> => {
+  if (isSetupTestMode()) {
+    writeSetupTestCurrencies(masterCurrencies, currencyRequirements);
+    return true;
+  }
   try {
     const apiBase = getApiBase();
     const url = `${apiBase}/currencies`;
@@ -404,6 +426,9 @@ export const loadCurrenciesFromDB = async (): Promise<{
   masterCurrencies: any[];
   currencyRequirements: any[];
 } | null> => {
+  if (isSetupTestMode()) {
+    return readSetupTestCurrencies();
+  }
   try {
     const apiBase = getApiBase();
     const url = `${apiBase}/currencies?orgId=${ORG_ID}`;
