@@ -7159,7 +7159,7 @@ const Header = ({
     }).catch(() => setActiveCommit("err"));
   }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "bg-gray-800 h-16 flex-shrink-0 flex items-center z-[60] relative", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "bg-gray-800 h-16 flex-shrink-0 flex items-center z-[120] relative", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 flex items-center justify-center", style: { width: "140px", paddingLeft: "8px", paddingRight: "8px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: contextSelectorRef, className: "relative w-full", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
@@ -7186,7 +7186,7 @@ const Header = ({
             ]
           }
         ),
-        showContextMenu && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-0 top-9 z-[100] flex overflow-visible rounded-md border border-gray-600 bg-gray-800 shadow-2xl", role: "menu", children: [
+        showContextMenu && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-0 top-9 z-[130] flex overflow-visible rounded-md border border-gray-600 bg-gray-800 shadow-2xl", role: "menu", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[96px] border-r border-gray-700 py-1", children: contextOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {

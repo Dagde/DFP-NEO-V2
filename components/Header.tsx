@@ -144,7 +144,7 @@ const Header: React.FC<HeaderProps> = ({
                 The 140px spacer on the right balances the context controls on the left,
                 so the button group is perfectly centered in the header.
             */}
-            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-[60] relative">
+            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-[120] relative">
 
                 {/* LEFT: Operational context - Location and Unit */}
                 <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '140px', paddingLeft: '8px', paddingRight: '8px' }}>
@@ -169,7 +169,7 @@ const Header: React.FC<HeaderProps> = ({
                         <span className="ml-2 text-[10px] text-gray-300">v</span>
                     </button>
                     {showContextMenu && (
-                        <div className="absolute left-0 top-9 z-[100] flex overflow-visible rounded-md border border-gray-600 bg-gray-800 shadow-2xl" role="menu">
+                        <div className="absolute left-0 top-9 z-[130] flex overflow-visible rounded-md border border-gray-600 bg-gray-800 shadow-2xl" role="menu">
                             <div className="w-[96px] border-r border-gray-700 py-1">
                                 {contextOptions.map(option => (
                                     <button
