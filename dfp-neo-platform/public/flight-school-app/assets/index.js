@@ -94960,6 +94960,7 @@ const App = () => {
   const zoomLevel = 1;
   const { theme } = useTheme();
   const { checkAndWarn, freezeState } = useSystemFreeze$1();
+  const setupTestMode = reactExports.useMemo(() => isSetupTestMode(), []);
   const freezeStateRef = React.useRef(freezeState);
   React.useEffect(() => {
     freezeStateRef.current = freezeState;
@@ -95156,6 +95157,9 @@ const App = () => {
     return { staff: false, trainee: false, staffDb: true, traineeDb: true };
   });
   const getStoredOperationalContext = () => {
+    if (setupTestMode) {
+      return { location: "", unit: "" };
+    }
     try {
       const raw = localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
       if (!raw) return { location: "ESL", unit: "1FTS" };
@@ -96220,6 +96224,12 @@ const App = () => {
     });
   }, [activeOperationalModel, activeUnitCode, getOperationalModelForUnitCode, syllabusDetails]);
   reactExports.useEffect(() => {
+    if (setupTestMode) {
+      setSyllabusDetails([]);
+      setSyllabusError(null);
+      setSyllabusLoading(false);
+      return;
+    }
     const loadSyllabus = async () => {
       setSyllabusLoading(true);
       setSyllabusError(null);
@@ -96248,9 +96258,28 @@ const App = () => {
       }
     };
     loadSyllabus();
-  }, []);
+  }, [setupTestMode]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
+    if (setupTestMode) {
+      setInstructorsData([]);
+      setArchivedInstructorsData([]);
+      setTraineesData([]);
+      setArchivedTraineesData([]);
+      setEvents([]);
+      setScores(/* @__PURE__ */ new Map());
+      setCourses([]);
+      setCourseColors({});
+      setCoursePriorities([]);
+      setCoursePercentages(/* @__PURE__ */ new Map());
+      setPackagePriorities([]);
+      setFixedCrewTrainingPriorities([]);
+      setTraineeLMPs(/* @__PURE__ */ new Map());
+      setIsStaffLoaded(true);
+      setIsTraineeLoaded(true);
+      setIsCoursesLoaded(true);
+      return;
+    }
     try {
       const stored = localStorage.getItem("dataSourceSettings");
       if (stored) {
@@ -96621,7 +96650,7 @@ const App = () => {
       }
     };
     loadInitialData();
-  }, [platformConfigLoaded]);
+  }, [platformConfigLoaded, setupTestMode]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded || !syllabusDetails.length || !allTraineesData.length) return;
     console.log(`[LMP Re-init] syllabusDetails loaded (${syllabusDetails.length} items), re-initializing traineeLMPs for ${allTraineesData.length} trainees`);
@@ -96664,6 +96693,13 @@ const App = () => {
     });
   }, [allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, resolveMasterLmpUnitForTrainee, syllabusDetails]);
   reactExports.useEffect(() => {
+    if (setupTestMode) {
+      setPublishedSchedules({});
+      setSnapshotDates([]);
+      setPt051Assessments(/* @__PURE__ */ new Map());
+      setPt051PerformanceLoading(false);
+      return;
+    }
     let cancelled = false;
     const requestedSchool = school;
     const requestedUnit = activeUnitCode;
@@ -96834,8 +96870,12 @@ const App = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeUnitCode, school]);
+  }, [activeUnitCode, school, setupTestMode]);
   reactExports.useEffect(() => {
+    if (setupTestMode) {
+      setSnapshotDates([]);
+      return;
+    }
     const loadSnapshotDates = async () => {
       try {
         const apiBase2 = getAppApiBase();
@@ -96861,7 +96901,7 @@ const App = () => {
       }
     };
     loadSnapshotDates();
-  }, []);
+  }, [setupTestMode]);
   const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snapshotUnit, snap2, replace, source) => {
     if (!snap2) return 0;
     const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
@@ -96922,6 +96962,15 @@ const App = () => {
     ].map((alias) => String(alias || "").trim().toUpperCase()).filter((alias, index, aliases) => Boolean(alias) && aliases.indexOf(alias) === index);
   }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
+    if (setupTestMode) {
+      setDfpSnapshotLoadState({
+        status: "empty",
+        date: targetDate,
+        message: "No DFP data in setup test mode",
+        progress: 100
+      });
+      return;
+    }
     const { force = false, replace = false, schoolOverride, unitOverride, useCache = true } = options;
     const snapshotSchool = schoolOverride ?? school;
     const snapshotUnit = unitOverride ?? activeUnitCode;
@@ -97111,7 +97160,7 @@ const App = () => {
     } finally {
       loadingSnapshotDates.current.delete(snapshotKey);
     }
-  }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
+  }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school, setupTestMode]);
   reactExports.useEffect(() => {
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     void loadSnapshotForDate(date, { useCache: true });
