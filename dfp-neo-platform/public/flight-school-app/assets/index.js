@@ -10690,6 +10690,8 @@ const ScheduleView = ({
   platformConfig,
   onUpdatePlatformConfig,
   onNavigateToSettingsSection,
+  isNeoAssistPanelOpen = false,
+  onOrganisationSlideoutOpen,
   formationCallsigns = [],
   buildRuleSettings,
   timezoneOffset = 11
@@ -10698,6 +10700,9 @@ const ScheduleView = ({
   const scrollContainerRef = reactExports.useRef(null);
   const [showDatePicker, setShowDatePicker] = reactExports.useState(false);
   const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
+  }, [isNeoAssistPanelOpen]);
   const [resourceSlideoutFrame, setResourceSlideoutFrame] = reactExports.useState(null);
   const scheduleGridRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
@@ -11522,7 +11527,11 @@ const ScheduleView = ({
                 "button",
                 {
                   type: "button",
-                  onClick: () => setShowResourceUnderlayPanel((value) => !value),
+                  onClick: () => setShowResourceUnderlayPanel((value) => {
+                    const nextValue = !value;
+                    if (nextValue) onOrganisationSlideoutOpen?.();
+                    return nextValue;
+                  }),
                   "aria-label": showResourceUnderlayPanel ? "Close resource slideout" : "Open resource slideout",
                   className: "pointer-events-auto absolute right-[-56px] top-1/2 z-[1] flex h-7 w-[96px] -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
                   children: [
@@ -107118,6 +107127,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             platformConfig,
             onUpdatePlatformConfig: handleUpdatePlatformConfigFromSchedule,
             onNavigateToSettingsSection: handleNavigateToSettingsSection,
+            isNeoAssistPanelOpen: showDfpSidePanel,
+            onOrganisationSlideoutOpen: () => setShowDfpSidePanel(false),
             formationCallsigns,
             buildRuleSettings: {
               maxDispatchPerHour,

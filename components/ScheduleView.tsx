@@ -101,6 +101,8 @@ interface ScheduleViewProps {
   platformConfig?: any;
   onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
   onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
+  isNeoAssistPanelOpen?: boolean;
+  onOrganisationSlideoutOpen?: () => void;
   formationCallsigns?: FormationCallsign[];
   buildRuleSettings?: {
     maxDispatchPerHour?: number;
@@ -2462,6 +2464,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     platformConfig,
     onUpdatePlatformConfig,
     onNavigateToSettingsSection,
+    isNeoAssistPanelOpen = false,
+    onOrganisationSlideoutOpen,
     formationCallsigns = [],
     buildRuleSettings,
     timezoneOffset = 11 // Default to UTC+11
@@ -2469,6 +2473,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = useState(false);
+    useEffect(() => {
+        if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
+    }, [isNeoAssistPanelOpen]);
     const [resourceSlideoutFrame, setResourceSlideoutFrame] = useState<{ left: number; top: number; height: number } | null>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
     // Initialize with timezone-adjusted time
@@ -3450,7 +3457,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         </div>
                         <button
                             type="button"
-                            onClick={() => setShowResourceUnderlayPanel(value => !value)}
+                            onClick={() => setShowResourceUnderlayPanel((value) => {
+                                const nextValue = !value;
+                                if (nextValue) onOrganisationSlideoutOpen?.();
+                                return nextValue;
+                            })}
                             aria-label={showResourceUnderlayPanel ? 'Close resource slideout' : 'Open resource slideout'}
                             className="pointer-events-auto absolute right-[-56px] top-1/2 z-[1] flex h-7 w-[96px] -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
                         >

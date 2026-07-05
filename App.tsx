@@ -37221,6 +37221,8 @@ appliedUpdates.forEach(update => {
                            platformConfig={platformConfig}
                            onUpdatePlatformConfig={handleUpdatePlatformConfigFromSchedule}
                            onNavigateToSettingsSection={handleNavigateToSettingsSection}
+                           isNeoAssistPanelOpen={showDfpSidePanel}
+                           onOrganisationSlideoutOpen={() => setShowDfpSidePanel(false)}
                            formationCallsigns={formationCallsigns}
                            buildRuleSettings={{
                                maxDispatchPerHour,
