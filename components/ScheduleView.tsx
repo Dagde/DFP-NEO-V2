@@ -1894,9 +1894,10 @@ const InitialSetupWizard: React.FC<{
         ? activeOrganisation.settings.masterLmpAccess.filter((item: any) => String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
         : [];
     const crewCompositionSettings = normaliseCrewCompositionSettings(activeOrganisation?.settings?.crewCompositionSettings || null);
-    const standardCrewConfigured = activeAircraftTypes.some((aircraft: any) => (
-        normaliseAircraftCrewComposition(aircraft?.crewComposition || null).standardSeats.length > 0
-    )) || crewCompositionSettings.alternateCompositions.length > 0;
+    const standardCrewConfigured = activeAircraftTypes.some((aircraft: any) => {
+        const standardSeats = normaliseAircraftCrewComposition(aircraft?.crewComposition || null)?.standardSeats;
+        return Array.isArray(standardSeats) && standardSeats.length > 0;
+    }) || crewCompositionSettings.alternateCompositions.length > 0;
     const orgStructureConfigured = organisationStructureLevels.length > 0 && organisationStructureLevels.some((level: any) => (
         String(level?.name || '').trim() && Array.isArray(level?.options) && level.options.length > 0
     ));

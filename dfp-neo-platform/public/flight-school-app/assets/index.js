@@ -10148,7 +10148,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onNavigateToSettingsSect
   const activeMasterLmpCatalogue = Array.isArray(activeOrganisation?.settings?.masterLmpCatalogue) ? activeOrganisation.settings.masterLmpCatalogue.filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE") : [];
   const activeMasterLmpAccess = Array.isArray(activeOrganisation?.settings?.masterLmpAccess) ? activeOrganisation.settings.masterLmpAccess.filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE") : [];
   const crewCompositionSettings = normaliseCrewCompositionSettings(activeOrganisation?.settings?.crewCompositionSettings || null);
-  const standardCrewConfigured = activeAircraftTypes.some((aircraft) => normaliseAircraftCrewComposition(aircraft?.crewComposition || null).standardSeats.length > 0) || crewCompositionSettings.alternateCompositions.length > 0;
+  const standardCrewConfigured = activeAircraftTypes.some((aircraft) => {
+    const standardSeats = normaliseAircraftCrewComposition(aircraft?.crewComposition || null)?.standardSeats;
+    return Array.isArray(standardSeats) && standardSeats.length > 0;
+  }) || crewCompositionSettings.alternateCompositions.length > 0;
   const orgStructureConfigured = organisationStructureLevels.length > 0 && organisationStructureLevels.some((level) => String(level?.name || "").trim() && Array.isArray(level?.options) && level.options.length > 0);
   const checks = [
     {
