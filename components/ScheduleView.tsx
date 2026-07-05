@@ -700,6 +700,19 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         ],
         settingsSection: 'platform-master-lmp-access',
     },
+    {
+        id: 'scoring',
+        label: 'Scoring matrix',
+        fileName: 'DFP_NEO_Scoring_Matrix_Template.csv',
+        requiredHeaders: ['Dimension', 'Pass Standard', 'Fail Standard'],
+        optionalHeaders: ['Grade 0', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Notes'],
+        exampleRows: [
+            ['Preparation', 'Prepared, safe and able to continue training.', 'Unsafe or not prepared for the event.', 'Not safe', 'Needs major help', 'Needs help', 'Meets standard', 'Above standard', 'Excellent', ''],
+            ['Airmanship', 'Maintains safe judgement and prioritises appropriately.', 'Poor judgement or unsafe prioritisation.', 'Unsafe', 'Weak judgement', 'Developing', 'Meets standard', 'Strong', 'Excellent', ''],
+        ],
+        settingsSection: 'platform-training-report-template',
+        focusSubsectionId: 'platform-unit-training-report-template',
+    },
 ];
 
 const getWizardTemplateHeaders = (template: InitialSetupWizardTemplate): string[] => [
@@ -991,6 +1004,53 @@ const formatWizardTraineeRows = (rows: Array<{ surname?: string; givenNames?: st
         })
         .join('\n')
 );
+
+const parseWizardPipeRows = <T extends Record<string, string>>(value: string, keys: Array<keyof T>): T[] => (
+    parseWizardLineItems(value).map((line) => {
+        const parts = line.split('|').map((part) => part.trim());
+        return keys.reduce((row, key, index) => ({
+            ...row,
+            [key]: parts[index] || '',
+        }), {} as T);
+    }).filter((row) => Object.values(row).some((entry) => String(entry || '').trim()))
+);
+
+const formatWizardPipeRows = <T extends Record<string, string>>(rows: T[], keys: Array<keyof T>): string => (
+    rows
+        .filter((row) => keys.some((key) => String(row[key] || '').trim()))
+        .map((row) => keys.map((key) => String(row[key] || '').trim()).join(' | '))
+        .join('\n')
+);
+
+const parseWizardTrainingReportRows = (value: string) => parseWizardPipeRows<{
+    genericName: string;
+    organisationName: string;
+    gradeMin: string;
+    gradeMax: string;
+    showNumbers: string;
+    demoGrade: string;
+    passLabel: string;
+    failLabel: string;
+}>(value, ['genericName', 'organisationName', 'gradeMin', 'gradeMax', 'showNumbers', 'demoGrade', 'passLabel', 'failLabel']);
+
+const formatWizardTrainingReportRows = (rows: ReturnType<typeof parseWizardTrainingReportRows>) => (
+    formatWizardPipeRows(rows, ['genericName', 'organisationName', 'gradeMin', 'gradeMax', 'showNumbers', 'demoGrade', 'passLabel', 'failLabel'])
+);
+
+const parseWizardRankRows = (value: string) => parseWizardPipeRows<{ order: string; ranks: string; notes: string }>(value, ['order', 'ranks', 'notes']);
+const formatWizardRankRows = (rows: ReturnType<typeof parseWizardRankRows>) => formatWizardPipeRows(rows, ['order', 'ranks', 'notes']);
+
+const parseWizardSharingRows = (value: string) => parseWizardPipeRows<{ type: string; enabled: string; units: string; consequence: string }>(value, ['type', 'enabled', 'units', 'consequence']);
+const formatWizardSharingRows = (rows: ReturnType<typeof parseWizardSharingRows>) => formatWizardPipeRows(rows, ['type', 'enabled', 'units', 'consequence']);
+
+const parseWizardCurrencyRows = (value: string) => parseWizardPipeRows<{ name: string; code: string; crew: string; config: string; currency: string; aircraftCount: string }>(value, ['name', 'code', 'crew', 'config', 'currency', 'aircraftCount']);
+const formatWizardCurrencyRows = (rows: ReturnType<typeof parseWizardCurrencyRows>) => formatWizardPipeRows(rows, ['name', 'code', 'crew', 'config', 'currency', 'aircraftCount']);
+
+const parseWizardScoringRows = (value: string) => parseWizardPipeRows<{ dimension: string; passStandard: string; failStandard: string; grade0: string; grade1: string; grade2: string; grade3: string; grade4: string; grade5: string }>(value, ['dimension', 'passStandard', 'failStandard', 'grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5']);
+const formatWizardScoringRows = (rows: ReturnType<typeof parseWizardScoringRows>) => formatWizardPipeRows(rows, ['dimension', 'passStandard', 'failStandard', 'grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5']);
+
+const parseWizardStandardCurrencyEventRows = (value: string) => parseWizardPipeRows<{ name: string; shortTitle: string; resourceType: string; duration: string; preFlight: string; postFlight: string; crew: string; currency: string; config: string; aircraftCount: string }>(value, ['name', 'shortTitle', 'resourceType', 'duration', 'preFlight', 'postFlight', 'crew', 'currency', 'config', 'aircraftCount']);
+const formatWizardStandardCurrencyEventRows = (rows: ReturnType<typeof parseWizardStandardCurrencyEventRows>) => formatWizardPipeRows(rows, ['name', 'shortTitle', 'resourceType', 'duration', 'preFlight', 'postFlight', 'crew', 'currency', 'config', 'aircraftCount']);
 
 const getWizardOperationalModelLabel = (value: unknown): string => (
     OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value)
@@ -2361,13 +2421,13 @@ const InitialSetupWizard: React.FC<{
     const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
     const [staffDraft, setStaffDraft] = useState('Burns, Alexander | 36SQN | Pilot | PIC');
     const [traineeDraft, setTraineeDraft] = useState('');
-    const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('Use default training report template\nUse standard training records fields');
-    const [unitModulesDraft, setUnitModulesDraft] = useState('DFP\nNEO Build\nProgram Schedule\nTraining Records');
-    const [rankLabelsDraft, setRankLabelsDraft] = useState('Use existing defence aviation rank and label set');
-    const [resourceSharingDraft, setResourceSharingDraft] = useState('No resource sharing for initial setup');
-    const [currencyDraft, setCurrencyDraft] = useState('PIC Currency\nInstrument Currency\nNight Currency');
-    const [scoringDraft, setScoringDraft] = useState('Set up later');
-    const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = useState('Staff currency events can be added after setup');
+    const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('Training Report | PT-051 | 0 | 5 | Yes | No | PASS | FAIL');
+    const [unitModulesDraft, setUnitModulesDraft] = useState('DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On');
+    const [rankLabelsDraft, setRankLabelsDraft] = useState('1 | AIRCDRE = BRIG = CDRE | Same seniority across services\n2 | GPCAPT = COL = CAPT | Same seniority across services\n3 | WGCDR = LTCOL = CMDR | Same seniority across services\n4 | SQNLDR = MAJ = LCDR | Same seniority across services');
+    const [resourceSharingDraft, setResourceSharingDraft] = useState('Resource sharing | Off |  | Unit keeps its own aircraft and resource pool capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.');
+    const [currencyDraft, setCurrencyDraft] = useState('PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1');
+    const [scoringDraft, setScoringDraft] = useState('Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent');
+    const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = useState('Annual Instrument Check | INST | Flight | 90 | 90 | 60 | Standard crew | Instrument Currency | ANY | 1');
 
     useEffect(() => {
         setOrganisationDraft({
@@ -3010,6 +3070,7 @@ const InitialSetupWizard: React.FC<{
         'staff': ['staff'],
         'trainees': unitDraft.hasTrainees ? ['trainees'] : [],
         'master-lmp': ['courses'],
+        'scoring': ['scoring'],
     };
     const visibleTemplates = initialSetupTemplates.filter((template) => (
         (templateIdsByStep[visibleStep.id] || []).includes(template.id)
@@ -3101,6 +3162,22 @@ const InitialSetupWizard: React.FC<{
             setTraineeDraft(formatWizardTraineeRows(importedRows));
             setUnitDraft((draft) => ({ ...draft, hasTrainees: true }));
             setSaveMessage(`Imported ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} into the master trainee list. Course allocation is blank until you assign each trainee.`);
+            return;
+        }
+        if (template.id === 'scoring') {
+            const importedRows = result.dataRows.map((row) => ({
+                dimension: getWizardCellByHeader(result.headers || [], row, 'Dimension'),
+                passStandard: getWizardCellByHeader(result.headers || [], row, 'Pass Standard'),
+                failStandard: getWizardCellByHeader(result.headers || [], row, 'Fail Standard'),
+                grade0: getWizardCellByHeader(result.headers || [], row, 'Grade 0'),
+                grade1: getWizardCellByHeader(result.headers || [], row, 'Grade 1'),
+                grade2: getWizardCellByHeader(result.headers || [], row, 'Grade 2'),
+                grade3: getWizardCellByHeader(result.headers || [], row, 'Grade 3'),
+                grade4: getWizardCellByHeader(result.headers || [], row, 'Grade 4'),
+                grade5: getWizardCellByHeader(result.headers || [], row, 'Grade 5'),
+            })).filter((row) => row.dimension || row.passStandard || row.failStandard);
+            setScoringDraft(formatWizardScoringRows(importedRows));
+            setSaveMessage(`Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? '' : 's'} into the wizard. They will be saved when you press Save setup at the end.`);
             return;
         }
         setSaveMessage(`${template.label} passed validation. Import for this template step has not been added yet.`);
@@ -3345,6 +3422,236 @@ const InitialSetupWizard: React.FC<{
                     onClick={() => setTraineeDraft(formatWizardTraineeRows([...editableRows, { surname: '', givenNames: '', unit: unitDraft.code || '', rank: '', pmkeys: '', courseNumber: '', course: '', masterLmp: '', startDate: '' }]))}
                 >
                     Add trainee
+                </button>
+            </div>
+        );
+    };
+    const renderTrainingRecordsEditor = () => {
+        const rows = parseWizardTrainingReportRows(trainingRecordsDraft);
+        const row = rows[0] || { genericName: 'Training Report', organisationName: 'PT-051', gradeMin: '0', gradeMax: '5', showNumbers: 'Yes', demoGrade: 'No', passLabel: 'PASS', failLabel: 'FAIL' };
+        const updateRow = (field: keyof typeof row, value: string) => {
+            setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, [field]: value }]));
+        };
+        return (
+            <div className="space-y-3">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
+                    This mirrors the Training Reports settings in plain English. It names the report, sets the grade range, and decides what users see when they complete an assessment.
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                    {wizardField('Generic form name', row.genericName, (value) => updateRow('genericName', value), undefined, 'Training Report')}
+                    {wizardField('Organisation form name', row.organisationName, (value) => updateRow('organisationName', value), undefined, 'PT-051')}
+                    {wizardField('Lowest grade', row.gradeMin, (value) => updateRow('gradeMin', value), undefined, '0')}
+                    {wizardField('Highest grade', row.gradeMax, (value) => updateRow('gradeMax', value), undefined, '5')}
+                    {wizardField('Show grade numbers', row.showNumbers, (value) => updateRow('showNumbers', value), ['Yes', 'No'])}
+                    {wizardField('Include DEMO grade', row.demoGrade, (value) => updateRow('demoGrade', value), ['No', 'Yes'])}
+                    {wizardField('Pass label', row.passLabel, (value) => updateRow('passLabel', value), undefined, 'PASS')}
+                    {wizardField('Fail label', row.failLabel, (value) => updateRow('failLabel', value), undefined, 'FAIL')}
+                </div>
+            </div>
+        );
+    };
+    const renderUnitModulesEditor = () => {
+        const configuredRows = parseWizardPipeRows<{ module: string; enabled: string }>(unitModulesDraft, ['module', 'enabled']);
+        const moduleNames = Array.from(new Set([
+            ...((platformConfig?.modules || []).map((module: any) => String(module?.name || module?.code || '').trim())),
+            'DFP',
+            'NEO Build',
+            'Program Schedule',
+            'Training Records',
+            'Build Intelligence',
+        ].filter(Boolean)));
+        const rows = moduleNames.map((module) => {
+            const existing = configuredRows.find((row) => normaliseUnitSettingsIdentifier(row.module) === normaliseUnitSettingsIdentifier(module));
+            return { module, enabled: existing?.enabled || 'On' };
+        });
+        const updateModuleRow = (module: string, enabled: string) => {
+            const nextRows = rows.map((row) => normaliseUnitSettingsIdentifier(row.module) === normaliseUnitSettingsIdentifier(module) ? { ...row, enabled } : row);
+            setUnitModulesDraft(formatWizardPipeRows(nextRows, ['module', 'enabled']));
+        };
+        return (
+            <div className="space-y-3">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
+                    Modules are the app areas this unit can see. Turning a module off hides that capability for the unit and can also support future licensing controls.
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                    {rows.map((row) => (
+                        <button
+                            key={row.module}
+                            type="button"
+                            className={`rounded-lg border px-3 py-3 text-left text-sm font-bold transition ${row.enabled === 'On' ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-slate-300 bg-white text-slate-500'}`}
+                            onClick={() => updateModuleRow(row.module, row.enabled === 'On' ? 'Off' : 'On')}
+                        >
+                            <span className="block">{row.module}</span>
+                            <span className="mt-1 block text-[11px] font-semibold">{row.enabled === 'On' ? 'Enabled for this unit' : 'Hidden for this unit'}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+    const renderRankLabelsEditor = () => {
+        const rows = parseWizardRankRows(rankLabelsDraft);
+        const editableRows = rows.length > 0 ? rows : [{ order: '1', ranks: '', notes: '' }];
+        const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
+            const nextRows = [...editableRows];
+            nextRows[index] = { ...nextRows[index], [field]: value };
+            setRankLabelsDraft(formatWizardRankRows(nextRows));
+        };
+        return (
+            <div className="space-y-3">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
+                    Rank order controls how people are sorted in lists. Put the most senior rank at order 1. If more than one service or arm of the military will use this unit, include equivalent ranks on the same line, for example GPCAPT = COL = CAPT.
+                </div>
+                {editableRows.map((row, index) => (
+                    <div key={`rank-row-${index}`} className="grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[90px_minmax(0,1fr)_minmax(0,1fr)_82px] md:items-end">
+                        {wizardField('Order', row.order || String(index + 1), (value) => updateRow(index, 'order', value), undefined, String(index + 1))}
+                        {wizardField('Ranks at this level', row.ranks || '', (value) => updateRow(index, 'ranks', value), undefined, 'SQNLDR = MAJ = LCDR')}
+                        {wizardField('Notes', row.notes || '', (value) => updateRow(index, 'notes', value), undefined, 'Same seniority across services')}
+                        <button type="button" className={wizardSmallButtonClass} onClick={() => setRankLabelsDraft(formatWizardRankRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
+                            Delete
+                        </button>
+                    </div>
+                ))}
+                <button type="button" className={wizardSmallButtonClass} onClick={() => setRankLabelsDraft(formatWizardRankRows([...editableRows, { order: String(editableRows.length + 1), ranks: '', notes: '' }]))}>
+                    Add rank level
+                </button>
+            </div>
+        );
+    };
+    const renderSharingEditor = () => {
+        const rows = parseWizardSharingRows(resourceSharingDraft);
+        const editableRows = rows.length > 0 ? rows : [
+            { type: 'Resource sharing', enabled: 'Off', units: '', consequence: 'Unit keeps its own aircraft and resource pool capacity.' },
+            { type: 'Staff sharing', enabled: 'Off', units: '', consequence: 'Unit only schedules its own staff unless changed later.' },
+        ];
+        const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
+            const nextRows = [...editableRows];
+            nextRows[index] = { ...nextRows[index], [field]: value };
+            setResourceSharingDraft(formatWizardSharingRows(nextRows));
+        };
+        const unitOptions = parseWizardUnitRows(unitsTodayDraft).map((unit) => unit.code);
+        return (
+            <div className="space-y-3">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
+                    Resource sharing lets this unit use another unit's aircraft, simulators, trainers or ground lines. Staff sharing lets this unit schedule people from another unit. Turning either on can increase scheduling flexibility, but it also means conflicts and availability must be managed across units.
+                </div>
+                {editableRows.map((row, index) => (
+                    <div key={`sharing-row-${index}`} className="grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[170px_120px_minmax(0,1fr)]">
+                        {wizardField('Sharing type', row.type || '', (value) => updateRow(index, 'type', value), ['Resource sharing', 'Staff sharing'])}
+                        {wizardField('Enabled', row.enabled || 'Off', (value) => updateRow(index, 'enabled', value), ['Off', 'On'])}
+                        {wizardDataListField('Shared with units', row.units || '', (value) => updateRow(index, 'units', value.toUpperCase()), unitOptions, '6SQN, 35SQN', `sharing-units-${index}`)}
+                        <div className="md:col-span-3">
+                            {wizardField('Consequence / plain English note', row.consequence || '', (value) => updateRow(index, 'consequence', value), undefined, 'Unit can borrow aircraft capacity from listed units.')}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+    const renderCurrencyEditor = () => {
+        const rows = parseWizardCurrencyRows(currencyDraft);
+        const editableRows = rows.length > 0 ? rows : [{ name: '', code: '', crew: '', config: 'ANY', currency: '', aircraftCount: '1' }];
+        const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
+            const nextRows = [...editableRows];
+            nextRows[index] = { ...nextRows[index], [field]: value };
+            setCurrencyDraft(formatWizardCurrencyRows(nextRows));
+        };
+        return (
+            <div className="space-y-3">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
+                    A currency profile is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests a currency event.
+                </div>
+                {editableRows.map((row, index) => (
+                    <div key={`currency-row-${index}`} className="grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_110px_minmax(0,1fr)_110px_minmax(0,1fr)_90px_82px] xl:items-end">
+                        {wizardField('Profile name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'PIC Currency')}
+                        {wizardField('Code', row.code || '', (value) => updateRow(index, 'code', value.toUpperCase()), undefined, 'PIC')}
+                        {wizardField('Crew', row.crew || '', (value) => updateRow(index, 'crew', value), undefined, 'Standard crew')}
+                        {wizardField('CONFIG', row.config || 'ANY', (value) => updateRow(index, 'config', value), undefined, 'ANY')}
+                        {wizardField('Currency', row.currency || '', (value) => updateRow(index, 'currency', value), undefined, 'PIC Currency')}
+                        {wizardField('No. aircraft', row.aircraftCount || '1', (value) => updateRow(index, 'aircraftCount', value), undefined, '1')}
+                        <button type="button" className={wizardSmallButtonClass} onClick={() => setCurrencyDraft(formatWizardCurrencyRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
+                            Delete
+                        </button>
+                    </div>
+                ))}
+                <button type="button" className={wizardSmallButtonClass} onClick={() => setCurrencyDraft(formatWizardCurrencyRows([...editableRows, { name: '', code: '', crew: '', config: 'ANY', currency: '', aircraftCount: '1' }]))}>
+                    Add currency
+                </button>
+            </div>
+        );
+    };
+    const renderScoringEditor = () => {
+        const rows = parseWizardScoringRows(scoringDraft);
+        const editableRows = rows.length > 0 ? rows : [{ dimension: '', passStandard: '', failStandard: '', grade0: '', grade1: '', grade2: '', grade3: '', grade4: '', grade5: '' }];
+        const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
+            const nextRows = [...editableRows];
+            nextRows[index] = { ...nextRows[index], [field]: value };
+            setScoringDraft(formatWizardScoringRows(nextRows));
+        };
+        return (
+            <div className="space-y-3">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
+                    The scoring matrix defines what each training report grade means. In practice, instructors use these words to explain why a trainee passed, failed, or needs more training.
+                </div>
+                {editableRows.map((row, index) => (
+                    <div key={`scoring-row-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
+                        <div className="grid gap-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_82px] md:items-end">
+                            {wizardField('Assessment area', row.dimension || '', (value) => updateRow(index, 'dimension', value), undefined, 'Preparation')}
+                            {wizardField('Pass standard', row.passStandard || '', (value) => updateRow(index, 'passStandard', value), undefined, 'Prepared, safe and ready.')}
+                            {wizardField('Fail standard', row.failStandard || '', (value) => updateRow(index, 'failStandard', value), undefined, 'Unsafe or not prepared.')}
+                            <button type="button" className={wizardSmallButtonClass} onClick={() => setScoringDraft(formatWizardScoringRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
+                                Delete
+                            </button>
+                        </div>
+                        <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
+                            {(['grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5'] as const).map((field, gradeIndex) => (
+                                wizardField(`Grade ${gradeIndex}`, row[field] || '', (value) => updateRow(index, field, value), undefined, gradeIndex === 0 ? 'Unsafe' : gradeIndex < 3 ? 'Needs help' : 'Meets standard')
+                            ))}
+                        </div>
+                    </div>
+                ))}
+                <button type="button" className={wizardSmallButtonClass} onClick={() => setScoringDraft(formatWizardScoringRows([...editableRows, { dimension: '', passStandard: '', failStandard: '', grade0: '', grade1: '', grade2: '', grade3: '', grade4: '', grade5: '' }]))}>
+                    Add assessment area
+                </button>
+            </div>
+        );
+    };
+    const renderStandardCurrencyEventsEditor = () => {
+        const rows = parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft);
+        const editableRows = rows.length > 0 ? rows : [{ name: '', shortTitle: '', resourceType: 'Flight', duration: '90', preFlight: '90', postFlight: '60', crew: 'Standard crew', currency: '', config: 'ANY', aircraftCount: '1' }];
+        const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
+            const nextRows = [...editableRows];
+            nextRows[index] = { ...nextRows[index], [field]: value };
+            setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows(nextRows));
+        };
+        return (
+            <div className="space-y-3">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
+                    Standard staff currency events are reusable event templates. They save time later by pre-filling duration, resource type, crew, currency and aircraft configuration for common staff currency checks.
+                </div>
+                {editableRows.map((row, index) => (
+                    <div key={`standard-currency-event-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_110px_120px_90px_90px_90px]">
+                            {wizardField('Event name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'Annual Instrument Check')}
+                            {wizardField('Short title', row.shortTitle || '', (value) => updateRow(index, 'shortTitle', value.toUpperCase()), undefined, 'INST')}
+                            {wizardField('Resource type', row.resourceType || 'Flight', (value) => updateRow(index, 'resourceType', value), ['Flight', 'FTD', 'CPT', 'Ground'])}
+                            {wizardField('Duration min', row.duration || '90', (value) => updateRow(index, 'duration', value), undefined, '90')}
+                            {wizardField('Pre-flight min', row.preFlight || '90', (value) => updateRow(index, 'preFlight', value), undefined, '90')}
+                            {wizardField('Post-flight min', row.postFlight || '60', (value) => updateRow(index, 'postFlight', value), undefined, '60')}
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_110px_90px_82px] xl:items-end">
+                            {wizardField('Crew', row.crew || 'Standard crew', (value) => updateRow(index, 'crew', value), undefined, 'Standard crew')}
+                            {wizardField('Currency', row.currency || '', (value) => updateRow(index, 'currency', value), undefined, 'Instrument Currency')}
+                            {wizardField('CONFIG', row.config || 'ANY', (value) => updateRow(index, 'config', value), undefined, 'ANY')}
+                            {wizardField('No. aircraft', row.aircraftCount || '1', (value) => updateRow(index, 'aircraftCount', value), undefined, '1')}
+                            <button type="button" className={wizardSmallButtonClass} onClick={() => setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                ))}
+                <button type="button" className={wizardSmallButtonClass} onClick={() => setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows([...editableRows, { name: '', shortTitle: '', resourceType: 'Flight', duration: '90', preFlight: '90', postFlight: '60', crew: 'Standard crew', currency: '', config: 'ANY', aircraftCount: '1' }]))}>
+                    Add standard currency event
                 </button>
             </div>
         );
@@ -3900,55 +4207,56 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'training-records') {
             return promptShell(
-                <p>Set the training records defaults this unit should start with. Reports and templates can be refined after setup.</p>,
-                wizardTextArea('Training records setup', trainingRecordsDraft, setTrainingRecordsDraft, 'Use default training report template\nUse standard training records fields', true),
+                <p>Set the training report defaults for this unit. These choices control what the report is called and how pass/fail grading appears to users.</p>,
+                renderTrainingRecordsEditor(),
             );
         }
         if (visibleStep.id === 'unit-modules') {
             return promptShell(
-                <p>Choose which modules this unit should see and use.</p>,
-                wizardTextArea('Unit modules', unitModulesDraft, setUnitModulesDraft, 'DFP\nNEO Build\nProgram Schedule\nTraining Records', true),
+                <p>Choose which app modules this unit should see. Leave a module on if the unit needs that workflow; turn it off if the unit should not use it yet.</p>,
+                renderUnitModulesEditor(),
             );
         }
         if (visibleStep.id === 'ranks-labels') {
             return promptShell(
-                <p>If an existing rank and terminology set fits, use it. If not, write the changes needed for this unit.</p>,
-                wizardTextArea('Ranks and labels', rankLabelsDraft, setRankLabelsDraft, 'Use existing defence aviation rank and label set', true),
+                <p>Set the display order for ranks and equivalent titles. This matters anywhere DFP-NEO sorts people by rank.</p>,
+                renderRankLabelsEditor(),
             );
         }
         if (visibleStep.id === 'resource-sharing') {
             return promptShell(
-                <p>Decide whether this unit shares resources or staff with other units.</p>,
-                wizardTextArea('Resource and staff sharing', resourceSharingDraft, setResourceSharingDraft, '36SQN shares C-17A resources with 6SQN\nStaff sharing: off', true),
+                <p>Decide whether this unit can borrow resources or staff from other units, and make the consequence clear before setup is saved.</p>,
+                renderSharingEditor(),
             );
         }
         if (visibleStep.id === 'currencies') {
             return promptShell(
-                <p>Enter the currency names this unit will use. Detailed currency rules can be built later in the Currency Builder.</p>,
-                wizardTextArea('Currencies to use', currencyDraft, setCurrencyDraft, 'PIC Currency\nInstrument Currency\nNight Currency', true),
+                <p>Create the currency profiles this unit will use. The full Currency Builder can still be refined after setup, but these profiles give the unit useful defaults immediately.</p>,
+                renderCurrencyEditor(),
             );
         }
         if (visibleStep.id === 'access') {
             return promptShell(
-                <p>Who should be able to use <strong>{trainingDraft.lmpName || trainingDraft.lmpCode || 'this Master LMP'}</strong> first?</p>,
+                <p>Access scopes decide who can view, assign, or manage a Master LMP for a location and unit. Practically: if a user has no access scope here, they should not be offered this LMP for this unit.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardField('User', accessDraft.userName, (value) => setAccessDraft((draft) => ({ ...draft, userName: value })), undefined, 'Alexander Burns')}
                     {wizardField('Location', accessDraft.locationCode, (value) => setAccessDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
                     {wizardField('Unit', accessDraft.unitCode, (value) => setAccessDraft((draft) => ({ ...draft, unitCode: value })), activeUnits.map((unit: any) => unit.code))}
+                    {wizardField('Module', accessDraft.moduleCode, (value) => setAccessDraft((draft) => ({ ...draft, moduleCode: value })), ['DFP', 'NEO Build', 'Training Records', 'Build Intelligence'])}
                     {wizardField('Access level', trainingDraft.accessLevel, (value) => setTrainingDraft((draft) => ({ ...draft, accessLevel: value })), ['View', 'Assign', 'Manage'])}
                 </div>,
             );
         }
         if (visibleStep.id === 'scoring') {
             return promptShell(
-                <p>Set up the training report scoring matrix now, or leave it for later if the unit is not ready.</p>,
-                wizardTextArea('Scoring matrix', scoringDraft, setScoringDraft, 'Set up later\nGrades 1-5 pass, grade 0 fail', true),
+                <p>Set up the wording instructors will use when grading training report assessment areas. You can enter it here or upload the scoring matrix template below.</p>,
+                renderScoringEditor(),
             );
         }
         if (visibleStep.id === 'staff-currency-events') {
             return promptShell(
-                <p>Add the standard staff currency events this unit expects to track. You can also add these after setup.</p>,
-                wizardTextArea('Standard staff currency events', staffCurrencyEventsDraft, setStaffCurrencyEventsDraft, 'Annual check\nInstrument check\nNight currency', true),
+                <p>Set up common staff currency event templates for this unit. These become reusable starting points for standard staff checks and currency events.</p>,
+                renderStandardCurrencyEventsEditor(),
             );
         }
         return promptShell(
@@ -4068,7 +4376,7 @@ const InitialSetupWizard: React.FC<{
                                             className={`${wizardPrimaryButtonClass} mt-3`}
                                             onClick={() => importWizardTemplateRows(template, result)}
                                         >
-                                            Import into {template.id === 'staff' ? 'staff list' : template.id === 'trainees' ? 'trainee master list' : 'wizard'}
+                                            Import into {template.id === 'staff' ? 'staff list' : template.id === 'trainees' ? 'trainee master list' : template.id === 'scoring' ? 'scoring matrix' : 'wizard'}
                                         </button>
                                     ) : null}
                                 </div>
@@ -4079,7 +4387,7 @@ const InitialSetupWizard: React.FC<{
             </div>
         </aside>
     );
-    const placeTemplatesBelow = visibleStep.id === 'staff' || visibleStep.id === 'trainees';
+    const placeTemplatesBelow = visibleStep.id === 'staff' || visibleStep.id === 'trainees' || visibleStep.id === 'scoring';
 
     return (
         <div className="space-y-4">
