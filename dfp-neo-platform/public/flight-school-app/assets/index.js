@@ -2147,7 +2147,7 @@ const OPERATIONAL_MODEL_OPTIONS = [
   { value: "pooled_crew", label: "Pooled Crew Model" }
 ];
 const operationalModelLabels = new Map(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
-const normaliseOperationalModel = (value) => {
+const normaliseOperationalModel$1 = (value) => {
   const token = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
   if (token === "air_combat" || token === "fighter" || token === "fighter_model") return "air_combat";
   if (token === "fixed_crew" || token === "crewed" || token === "crewed_model") return "fixed_crew";
@@ -2156,11 +2156,11 @@ const normaliseOperationalModel = (value) => {
   return DEFAULT_OPERATIONAL_MODEL;
 };
 const isFixedCrewLikeOperationalModel = (value) => {
-  const model = normaliseOperationalModel(value);
+  const model = normaliseOperationalModel$1(value);
   return model === "fixed_crew" || model === "pooled_crew";
 };
-const getUnitOperationalModel = (unit) => normaliseOperationalModel(unit?.operationalModel || unit?.settings?.operationalModel);
-const getOperationalModelLabel = (value) => operationalModelLabels.get(normaliseOperationalModel(value)) || operationalModelLabels.get(DEFAULT_OPERATIONAL_MODEL);
+const getUnitOperationalModel = (unit) => normaliseOperationalModel$1(unit?.operationalModel || unit?.settings?.operationalModel);
+const getOperationalModelLabel = (value) => operationalModelLabels.get(normaliseOperationalModel$1(value)) || operationalModelLabels.get(DEFAULT_OPERATIONAL_MODEL);
 const PLATFORM_PERMISSION_CATALOG = [
   {
     group: "Daily Flying Program",
@@ -2432,9 +2432,9 @@ const getMasterLmpAccessLevel = (config, lmpCode, context = {}) => {
     context.unitCode
   ].flatMap((unit) => String(unit || "").split("+")).map(normaliseAccessValue).filter(Boolean);
   const targetUnitSet = new Set(targetUnits);
-  const targetModel = normaliseOperationalModel(context.operationalModel);
+  const targetModel = normaliseOperationalModel$1(context.operationalModel);
   const activeRulesForLmp = normaliseMasterLmpAccessRules(config).filter((rule) => String(rule.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((rule) => normaliseAccessValue(rule.lmpCode) === targetLmp);
-  const matchingLevels = activeRulesForLmp.filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation).filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation).filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode))).filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel).map((rule) => normaliseAccessLevel(rule.accessLevel));
+  const matchingLevels = activeRulesForLmp.filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation).filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation).filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode))).filter((rule) => !rule.operationalModel || normaliseOperationalModel$1(rule.operationalModel) === targetModel).map((rule) => normaliseAccessLevel(rule.accessLevel));
   if (matchingLevels.length === 0 && activeRulesForLmp.length === 0 && targetModel === "air_combat") {
     return "Manage";
   }
@@ -2810,7 +2810,7 @@ const normaliseTaskProfileConfig = (value) => {
   }, { ...DEFAULT_TASK_PROFILE_CONFIG });
 };
 const getTaskProfilesForModel = (config, model = DEFAULT_OPERATIONAL_MODEL) => {
-  const activeModel = normaliseOperationalModel(model);
+  const activeModel = normaliseOperationalModel$1(model);
   const organisations = config?.organisations || [];
   const primaryOrganisation = organisations.find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
   const taskProfiles = normaliseTaskProfileConfig(primaryOrganisation?.settings?.taskProfiles || null);
@@ -3104,7 +3104,7 @@ const makeCrewPositionId = (genericName, index) => {
 };
 const normaliseOperationalModelList = (source, fallback = ALL_OPERATIONAL_MODEL_CODES$1) => {
   const rawValues = Array.isArray(source) ? source : [];
-  const models = rawValues.map((value) => normaliseOperationalModel(value)).filter((model, index, list) => list.indexOf(model) === index);
+  const models = rawValues.map((value) => normaliseOperationalModel$1(value)).filter((model, index, list) => list.indexOf(model) === index);
   return models.length > 0 ? models : [...fallback];
 };
 const getFallbackEntry = (entry, index) => {
@@ -3163,7 +3163,7 @@ const getCrewPositionLabelMap = (terminology) => normaliseCrewPositionTerminolog
   [entry.genericName]: entry.label
 }), {});
 const getCrewPositionOptions = (terminology, extraValues = [], operationalModel2) => {
-  const model = operationalModel2 ? normaliseOperationalModel(operationalModel2) : null;
+  const model = operationalModel2 ? normaliseOperationalModel$1(operationalModel2) : null;
   const positions = normaliseCrewPositionTerminology(terminology).positions;
   const modelPositions = model ? positions.filter((entry) => isCrewPositionAvailableForOperationalModel(entry, model)) : positions;
   const options = (modelPositions.length > 0 ? modelPositions : positions).map((entry) => entry.genericName);
@@ -3177,7 +3177,7 @@ const getCrewPositionOptions = (terminology, extraValues = [], operationalModel2
 };
 const isCrewPositionAvailableForOperationalModel = (entry, operationalModel2) => {
   if (!operationalModel2) return true;
-  const model = normaliseOperationalModel(operationalModel2 || DEFAULT_OPERATIONAL_MODEL);
+  const model = normaliseOperationalModel$1(operationalModel2 || DEFAULT_OPERATIONAL_MODEL);
   const models = normaliseOperationalModelList(entry.operationalModels, ALL_OPERATIONAL_MODEL_CODES$1);
   return models.includes(model);
 };
@@ -4011,7 +4011,7 @@ const normaliseCrewCompositionSettings = (value) => {
     let code = normaliseCode$3(row?.code || row?.name, fallbackCode);
     code = nextAvailableThreeLetterCode(code, usedCodes);
     usedCodes.add(code);
-    const operationalModels = Array.isArray(row?.operationalModels) ? Array.from(new Set(row.operationalModels.map((model) => normaliseOperationalModel(model)).filter((model) => SUPPORTED_MODELS.includes(model)))) : SUPPORTED_MODELS;
+    const operationalModels = Array.isArray(row?.operationalModels) ? Array.from(new Set(row.operationalModels.map((model) => normaliseOperationalModel$1(model)).filter((model) => SUPPORTED_MODELS.includes(model)))) : SUPPORTED_MODELS;
     return {
       id: String(row?.id || `alternate-crew-${index + 1}`),
       code,
@@ -4183,7 +4183,7 @@ const normaliseStringList = (source) => {
 const normaliseOperationalModels = (source) => {
   const values = normaliseStringList(source);
   if (values.length === 0) return [DEFAULT_OPERATIONAL_MODEL];
-  return Array.from(new Set(values.map((value) => normaliseOperationalModel(value))));
+  return Array.from(new Set(values.map((value) => normaliseOperationalModel$1(value))));
 };
 const normaliseQualification = (entry, index) => {
   const name = String(entry?.name || entry?.label || entry?.code || "").trim();
@@ -4238,7 +4238,7 @@ const normaliseAssignedQualificationIds = (source, catalogue, preserveUnknown = 
   return result;
 };
 const getQualificationsForOperationalModel = (catalogue, operationalModel2) => {
-  const model = normaliseOperationalModel(operationalModel2);
+  const model = normaliseOperationalModel$1(operationalModel2);
   return normaliseStaffQualificationCatalogue(catalogue).qualifications.filter((qualification) => qualification.status !== "INACTIVE").filter((qualification) => {
     const models = qualification.operationalModels?.length ? qualification.operationalModels : OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
     return models.includes(model);
@@ -9538,6 +9538,23 @@ const parseRoleRequirementsText = (value) => String(value || "").split(/\n/).map
   const count = Math.max(1, Math.round(Number(String(countPart || "1").trim()) || 1));
   return { role, count };
 });
+const getWizardOperationalModelLabel = (value) => OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value);
+const parseWizardLineItems = (value) => String(value || "").split(/\n/).map((item) => item.trim()).filter(Boolean);
+const parseWizardLocationRows = (value) => parseWizardLineItems(value).map((line) => {
+  const parts = line.split(/[|,]/).map((part) => part.trim());
+  return {
+    icao: String(parts[0] || "").toUpperCase(),
+    iata: String(parts[1] || "").toUpperCase(),
+    name: parts[2] || parts[0] || ""
+  };
+}).filter((row) => row.icao || row.iata || row.name);
+const parseWizardUnitRows = (value) => parseWizardLineItems(value).map((line) => {
+  const parts = line.split(/[|,]/).map((part) => part.trim());
+  return {
+    code: String(parts[0] || "").toUpperCase(),
+    name: parts[1] || parts[0] || ""
+  };
+}).filter((row) => row.code || row.name);
 const getUnitParentOrganisationPath = (unit) => {
   const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
   return rawPath.map((item) => String(item || "").trim()).filter(Boolean);
@@ -10289,10 +10306,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
   });
   const [locationDraft, setLocationDraft] = reactExports.useState({
     code: String(currentLocation?.code || currentUnit?.locationCode || "YAMB"),
+    iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || "AMB"),
     name: String(currentLocation?.name || "Amberley"),
     timezone: String(currentLocation?.timezone || "Australia/Brisbane"),
     trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""
   });
+  const [unitsTodayDraft, setUnitsTodayDraft] = reactExports.useState(() => activeUnits.length > 0 ? activeUnits.map((unit) => `${unit.code}${unit.name && unit.name !== unit.code ? ` | ${unit.name}` : ""}`).join("\n") : "36SQN | 36SQN");
+  const [locationsTodayDraft, setLocationsTodayDraft] = reactExports.useState(() => activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : "YAMB | AMB | Amberley");
   const [unitDraft, setUnitDraft] = reactExports.useState({
     code: String(currentUnit?.code || unitCode || "36SQN"),
     name: String(currentUnit?.name || currentUnit?.code || unitCode || "36SQN"),
@@ -10334,6 +10354,18 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     accessModel: String(primaryMasterLmpRule?.model || "Any Model"),
     accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || "View")
   });
+  const [crewLabelsDraft, setCrewLabelsDraft] = reactExports.useState("Pilot = Pilot\nLoadmaster = Loadmaster");
+  const [alternateCrewDraft, setAlternateCrewDraft] = reactExports.useState("Reduced crew = Pilot 1, Loadmaster 1");
+  const [buildRulesDraft, setBuildRulesDraft] = reactExports.useState("Business rules: use default\nDuty limit: 12 hours\nAircraft turnaround: 60 minutes\nSimulator turnaround: 30 minutes\nMax dispatch per hour: 2");
+  const [staffDraft, setStaffDraft] = reactExports.useState("Burns, Alexander | 36SQN | Pilot | PIC");
+  const [traineeDraft, setTraineeDraft] = reactExports.useState("Only complete if this unit has trainees.");
+  const [trainingRecordsDraft, setTrainingRecordsDraft] = reactExports.useState("Use default training report template\nUse standard training records fields");
+  const [unitModulesDraft, setUnitModulesDraft] = reactExports.useState("DFP\nNEO Build\nProgram Schedule\nTraining Records");
+  const [rankLabelsDraft, setRankLabelsDraft] = reactExports.useState("Use existing defence aviation rank and label set");
+  const [resourceSharingDraft, setResourceSharingDraft] = reactExports.useState("No resource sharing for initial setup");
+  const [currencyDraft, setCurrencyDraft] = reactExports.useState("PIC Currency\nInstrument Currency\nNight Currency");
+  const [scoringDraft, setScoringDraft] = reactExports.useState("Set up later");
+  const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = reactExports.useState("Staff currency events can be added after setup");
   reactExports.useEffect(() => {
     setOrganisationDraft({
       code: String(activeOrganisation?.code || "RAAF"),
@@ -10351,6 +10383,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
   reactExports.useEffect(() => {
     setLocationDraft({
       code: String(currentLocation?.code || currentUnit?.locationCode || "YAMB"),
+      iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || "AMB"),
       name: String(currentLocation?.name || "Amberley"),
       timezone: String(currentLocation?.timezone || "Australia/Brisbane"),
       trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""
@@ -10473,10 +10506,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       const nextLocation = {
         id: currentLocation?.id || createWizardRecordId("location"),
         code: cleanCode,
+        iataCode: String(locationDraft.iataCode || "").trim().toUpperCase(),
         name: locationDraft.name || cleanCode,
         timezone: locationDraft.timezone || "Australia/Brisbane",
         trainingAreas: locationDraft.trainingAreas.split(",").map((item) => item.trim()).filter(Boolean),
-        status: "ACTIVE"
+        status: "ACTIVE",
+        settings: {
+          ...currentLocation?.settings || {},
+          iataCode: String(locationDraft.iataCode || "").trim().toUpperCase()
+        }
       };
       const exists = locations.some((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode));
       return {
@@ -10732,31 +10770,31 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       checkIds: ["organisation"]
     },
     {
-      id: "location-code",
-      title: "What is the first base or location code?",
-      label: "Base code",
-      body: "This is the short code users recognise, such as YAMB or YMES.",
+      id: "units-today",
+      title: "Which units do you want to set up today?",
+      label: "Units",
+      body: "List the units you want this wizard to prepare. You can add more units later in Settings.",
+      checkIds: ["units"]
+    },
+    {
+      id: "locations-today",
+      title: "Which localities do you want to set up?",
+      label: "Locations",
+      body: "A locality is a base, airfield, or operating location. Add the ICAO and IATA codes where known.",
       checkIds: ["locations"]
     },
     {
       id: "location-details",
-      title: `Tell me about ${locationDraft.code || "this location"}`,
-      label: "Base details",
-      body: "Add the plain English name, timezone and any local training areas. Saving this step writes the location into Settings.",
+      title: "Add details for the first locality",
+      label: "Location details",
+      body: "Confirm the first locality details. Repeat this pattern for each locality listed above.",
       checkIds: ["locations"]
     },
     {
-      id: "unit-code",
-      title: "What unit are we setting up first?",
-      label: "Unit",
-      body: "Start with the current user unit. You can add more units later.",
-      checkIds: ["units"]
-    },
-    {
       id: "unit-model",
-      title: `How does ${unitDraft.code || "this unit"} operate?`,
-      label: "Model",
-      body: "The operational model controls the scheduling rules. Saving this step writes the unit into Settings.",
+      title: "Set up the first unit",
+      label: "Unit setup",
+      body: "We will repeat this setup pattern for each unit you listed. Start with the first/current unit.",
       checkIds: ["units"]
     },
     {
@@ -10775,16 +10813,72 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     },
     {
       id: "crew",
-      title: `What is the minimum crew for ${resourceDraft.aircraftCode || "this aircraft"}?`,
+      title: "Set the crew rules",
       label: "Crew",
-      body: "Enter one crew requirement per line. Example: Pilot = 2, Loadmaster = 1. Saving this step writes the crew composition into Settings.",
+      body: "Set the standard crew, labels, and any alternate crew patterns for this unit and aircraft.",
       checkIds: ["crew"]
     },
     {
+      id: "build-rules",
+      title: "Set the build rules and limits",
+      label: "Build rules",
+      body: "These are the rules NEO uses when it builds a schedule: business rules, duty limits, turnaround times, and event limits.",
+      checkIds: ["rules"]
+    },
+    {
+      id: "staff",
+      title: "Add staff for this unit",
+      label: "Staff",
+      body: "Add the people NEO can schedule or use for permissions. You can upload a staff template on this step.",
+      checkIds: ["access"]
+    },
+    {
+      id: "trainees",
+      title: "Does this unit have trainees?",
+      label: "Trainees",
+      body: "If this unit has trainees, add their details now. If not, switch trainees off and continue.",
+      checkIds: ["access"]
+    },
+    {
       id: "master-lmp",
-      title: "What is the first Master LMP or training stream?",
+      title: "Choose or build the LMPs this unit will use",
       label: "LMP",
-      body: "This is the selectable training stream used by LMP/Event Details and access rules.",
+      body: "Choose an existing Master LMP or define a new one. Events can be uploaded from the courses template on this step.",
+      checkIds: ["training"]
+    },
+    {
+      id: "training-records",
+      title: "Set up training records",
+      label: "Records",
+      body: "Choose the training record defaults for this unit. Detailed report design can still be refined later.",
+      checkIds: ["training"]
+    },
+    {
+      id: "unit-modules",
+      title: "Choose unit modules",
+      label: "Modules",
+      body: "Choose which app modules this unit should use.",
+      checkIds: ["access"]
+    },
+    {
+      id: "ranks-labels",
+      title: "Choose ranks and labels",
+      label: "Ranks",
+      body: "Use an existing rank and label set if one fits, or write the changes needed for this unit.",
+      checkIds: ["access"]
+    },
+    {
+      id: "resource-sharing",
+      title: "Set resource and staff sharing",
+      label: "Sharing",
+      body: "Decide whether this unit shares aircraft, crew, staff, or other resources with another unit.",
+      checkIds: ["resources"]
+    },
+    {
+      id: "currencies",
+      title: "Set the currencies this unit uses",
+      label: "Currencies",
+      body: "Enter only the currencies now. The full Currency Builder can be opened after setup for detailed rules.",
       checkIds: ["training"]
     },
     {
@@ -10793,6 +10887,20 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       label: "Access",
       body: "Create the first access scope so the selected user can work with the location, unit and Master LMP.",
       checkIds: ["access", "training"]
+    },
+    {
+      id: "scoring",
+      title: "Set up the scoring matrix",
+      label: "Scoring",
+      body: "You can set this up now or mark it for later. This controls training report scoring.",
+      checkIds: ["training"]
+    },
+    {
+      id: "staff-currency-events",
+      title: "Set standard staff currency events",
+      label: "Staff events",
+      body: "Add common staff currency events now, or leave them for later if the unit is not ready.",
+      checkIds: ["training"]
     },
     {
       id: "review",
@@ -10804,7 +10912,17 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
   ];
   const currentStep = Math.min(wizardStep, steps.length - 1);
   const visibleStep = steps[currentStep];
-  const visibleTemplates = initialSetupTemplates.filter((template) => visibleStep.id === "analysis" || visibleStep.id === "review" || visibleStep.checkIds.includes(template.id) || ["access"].includes(visibleStep.id) && ["staff", "trainees"].includes(template.id) || ["master-lmp", "access"].includes(visibleStep.id) && template.id === "courses");
+  const templateIdsByStep = {
+    "org-level1": ["organisation"],
+    "org-level2": ["organisation"],
+    "org-level3": ["organisation"],
+    "units-today": ["units"],
+    "locations-today": ["locations"],
+    "staff": ["staff"],
+    "trainees": unitDraft.hasTrainees ? ["trainees"] : [],
+    "master-lmp": ["courses"]
+  };
+  const visibleTemplates = initialSetupTemplates.filter((template) => (templateIdsByStep[visibleStep.id] || []).includes(template.id));
   reactExports.useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(initialSetupWizardStorageKey, String(currentStep));
@@ -10944,12 +11062,88 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
   ] });
   const saveAllWizardDrafts = () => {
     saveOrganisationDraft();
+    const locationRows = parseWizardLocationRows(locationsTodayDraft);
+    const unitRows = parseWizardUnitRows(unitsTodayDraft);
+    if (onUpdatePlatformConfig && (locationRows.length > 0 || unitRows.length > 0)) {
+      onUpdatePlatformConfig((current) => {
+        const baseConfig = current || platformConfig || {};
+        const existingLocations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
+        const existingUnits = Array.isArray(baseConfig.units) ? baseConfig.units : [];
+        const nextLocations = [...existingLocations];
+        locationRows.forEach((row) => {
+          const code = row.icao || row.iata;
+          if (!code) return;
+          const existingIndex = nextLocations.findIndex((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(code));
+          const nextLocation = {
+            ...existingIndex >= 0 ? nextLocations[existingIndex] : { id: createWizardRecordId("location") },
+            code,
+            iataCode: row.iata,
+            name: row.name || code,
+            timezone: existingIndex >= 0 ? nextLocations[existingIndex].timezone || "Australia/Brisbane" : "Australia/Brisbane",
+            status: "ACTIVE",
+            settings: {
+              ...existingIndex >= 0 ? nextLocations[existingIndex].settings || {} : {},
+              iataCode: row.iata
+            }
+          };
+          if (existingIndex >= 0) nextLocations[existingIndex] = nextLocation;
+          else nextLocations.push(nextLocation);
+        });
+        const defaultLocationCode = locationRows[0]?.icao || locationDraft.code;
+        const nextUnits = [...existingUnits];
+        unitRows.forEach((row) => {
+          const code = row.code;
+          if (!code) return;
+          const existingIndex = nextUnits.findIndex((unit) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(code));
+          const nextUnit = {
+            ...existingIndex >= 0 ? nextUnits[existingIndex] : { id: createWizardRecordId("unit") },
+            code,
+            name: row.name || code,
+            locationCode: existingIndex >= 0 ? nextUnits[existingIndex].locationCode || defaultLocationCode : defaultLocationCode,
+            unitType: existingIndex >= 0 ? nextUnits[existingIndex].unitType || unitDraft.unitType : unitDraft.unitType,
+            status: "ACTIVE",
+            settings: {
+              ...existingIndex >= 0 ? nextUnits[existingIndex].settings || {} : {},
+              operationalModel: existingIndex >= 0 ? nextUnits[existingIndex].settings?.operationalModel || unitDraft.operationalModel : unitDraft.operationalModel,
+              hasTrainees: existingIndex >= 0 ? nextUnits[existingIndex].settings?.hasTrainees ?? unitDraft.hasTrainees : unitDraft.hasTrainees
+            }
+          };
+          if (existingIndex >= 0) nextUnits[existingIndex] = nextUnit;
+          else nextUnits.push(nextUnit);
+        });
+        return {
+          ...baseConfig,
+          locations: nextLocations,
+          units: nextUnits
+        };
+      });
+    }
     saveLocationDraft();
     saveUnitDraft();
     saveResourceDraft();
     saveCrewDraft();
     saveTrainingDraft();
     saveAccessDraft();
+    saveWizardConfig("Setup saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
+      ...settings,
+      initialSetupWizardDraft: {
+        unitsToday: parseWizardUnitRows(unitsTodayDraft),
+        locationsToday: parseWizardLocationRows(locationsTodayDraft),
+        crewLabels: crewLabelsDraft,
+        alternateCrews: alternateCrewDraft,
+        buildRules: buildRulesDraft,
+        staff: staffDraft,
+        traineesEnabled: unitDraft.hasTrainees,
+        trainees: traineeDraft,
+        trainingRecords: trainingRecordsDraft,
+        unitModules: unitModulesDraft,
+        ranksAndLabels: rankLabelsDraft,
+        resourceSharing: resourceSharingDraft,
+        currencies: currencyDraft,
+        scoringMatrix: scoringDraft,
+        staffCurrencyEvents: staffCurrencyEventsDraft
+      }
+    })));
     setSaveMessage("Setup saved into Settings.");
   };
   const renderWizardDataEntry = () => {
@@ -11046,6 +11240,32 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
         )
       );
     }
+    if (visibleStep.id === "units-today") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "List each unit you want to configure in this setup run. Use one line per unit. Format: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Unit code | Unit name" }),
+          "."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          wizardTextArea("Units to set up today", unitsTodayDraft, setUnitsTodayDraft, "36SQN | 36SQN\n12SQN | 12SQN", true),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "The wizard will use the first unit as the detailed example, then the same setup questions apply to every other unit you listed." })
+        ] })
+      );
+    }
+    if (visibleStep.id === "locations-today") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "List every locality, base, airfield, or operating location you want available. Use one line per locality. Format: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "ICAO | IATA | Name" }),
+          "."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          wizardTextArea("Localities to set up", locationsTodayDraft, setLocationsTodayDraft, "YMES | ESL | East Sale\nYAMB | AMB | Amberley", true),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "ICAO is the four-letter aviation code, for example YMES. IATA is the shorter three-letter code, for example ESL. If a location does not have an IATA code, leave that part blank." })
+        ] })
+      );
+    }
     if (visibleStep.id === "location-code") {
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Next we will set up the first base or operating location. What is the location code?" }),
@@ -11054,12 +11274,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     }
     if (visibleStep.id === "location-details") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "Tell me the details for ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: locationDraft.code || "this location" }),
-          "."
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Confirm the details for the first locality. You will use the same pattern for every locality listed earlier." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+          wizardField("ICAO code", locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "YMES"),
+          wizardField("IATA code", locationDraft.iataCode, (value) => setLocationDraft((draft) => ({ ...draft, iataCode: value.toUpperCase() })), void 0, "ESL"),
           wizardField("Location name", locationDraft.name, (value) => setLocationDraft((draft) => ({ ...draft, name: value })), void 0, "Amberley"),
           wizardField("Timezone", locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })), void 0, "Australia/Brisbane"),
           wizardField("Training areas", locationDraft.trainingAreas, (value) => setLocationDraft((draft) => ({ ...draft, trainingAreas: value })), void 0, "Area A, Area B")
@@ -11077,15 +11295,21 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     }
     if (visibleStep.id === "unit-model") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "How does ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: unitDraft.code || "this unit" }),
-          " operate?"
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the identity and operating model for the first unit. The operating model is important because it controls which scheduler logic applies." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+          wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "36SQN"),
+          wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "36SQN"),
           wizardField("Home location", unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location) => location.code)),
           wizardField("Unit type", unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"]),
-          wizardField("Operational model", unitDraft.operationalModel, (value) => setUnitDraft((draft) => ({ ...draft, operationalModel: value })), OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)),
+          wizardField(
+            "Operational model",
+            getWizardOperationalModelLabel(unitDraft.operationalModel),
+            (label) => {
+              const selected = OPERATIONAL_MODEL_OPTIONS.find((option) => option.label === label);
+              setUnitDraft((draft) => ({ ...draft, operationalModel: selected?.value || draft.operationalModel }));
+            },
+            OPERATIONAL_MODEL_OPTIONS.map((option) => option.label)
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Does this unit use trainees?" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -11133,25 +11357,82 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     }
     if (visibleStep.id === "crew") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "What minimum crew must be scheduled for ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: crewDraft.aircraftCode || resourceDraft.aircraftCode || "this aircraft" }),
-          "?"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardField("Aircraft type", crewDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value })), activeAircraftTypes.map((aircraft) => aircraft.code)),
-          wizardTextArea("Required seats", crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })), "Pilot = 2\nLoadmaster = 1")
+          wizardTextArea("Standard crew composition", crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })), "Pilot = 2\nLoadmaster = 1"),
+          wizardTextArea("Crew labels", crewLabelsDraft, setCrewLabelsDraft, "PIC = Aircraft Captain\nPilot = Pilot\nLoadmaster = Loadmaster"),
+          wizardTextArea("Alternate crew patterns", alternateCrewDraft, setAlternateCrewDraft, "Reduced crew = Pilot 1, Loadmaster 1")
+        ] })
+      );
+    }
+    if (visibleStep.id === "build-rules") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the practical limits NEO must respect when building this unit schedule. Keep defaults if you are unsure." }),
+        wizardTextArea("Build rules, duty limits, turnaround times and event limits", buildRulesDraft, setBuildRulesDraft, "Business rules: use default\nDuty limit: 12 hours\nAircraft turnaround: 60 minutes\nMax dispatch per hour: 2", true)
+      );
+    }
+    if (visibleStep.id === "staff") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add the staff this unit needs for scheduling, permissions, and records. Use one line per person." }),
+        wizardTextArea("Staff names and details", staffDraft, setStaffDraft, "Burns, Alexander | 36SQN | Pilot | PIC\nSmith, Alex | 36SQN | Loadmaster | LM", true)
+      );
+    }
+    if (visibleStep.id === "trainees") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: unitDraft.hasTrainees ? "This unit is marked as having trainees. Add the trainee details now." : "This unit is marked as not having trainees. You can leave this blank and continue." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: `${wizardInputClass} mb-3 text-left ${unitDraft.hasTrainees ? "bg-emerald-50 text-emerald-900" : "bg-slate-100 text-slate-600"}`,
+              onClick: () => setUnitDraft((draft) => ({ ...draft, hasTrainees: !draft.hasTrainees })),
+              children: unitDraft.hasTrainees ? "Trainees on" : "Trainees off"
+            }
+          ),
+          unitDraft.hasTrainees ? wizardTextArea("Trainee details", traineeDraft, setTraineeDraft, "Citizen, Pat | 36SQN | C-17A Conversion | 2026-01-15", true) : null
         ] })
       );
     }
     if (visibleStep.id === "master-lmp") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "What is the first Master LMP or training stream this organisation should use?" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose an existing LMP if it exists, or enter the first LMP to build. This does not change the scheduler logic; it only defines the training stream the unit can use." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Master LMP code", trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), void 0, "C-17A Conversion"),
+          wizardField("Master LMP code", trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp) => String(lmp.code || lmp.name || "")).filter(Boolean), "C-17A Conversion"),
           wizardField("Master LMP name", trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), void 0, "C-17A Conversion"),
           wizardTextArea("Description", trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), "Initial conversion training stream")
         ] })
+      );
+    }
+    if (visibleStep.id === "training-records") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the training records defaults this unit should start with. Reports and templates can be refined after setup." }),
+        wizardTextArea("Training records setup", trainingRecordsDraft, setTrainingRecordsDraft, "Use default training report template\nUse standard training records fields", true)
+      );
+    }
+    if (visibleStep.id === "unit-modules") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose which modules this unit should see and use." }),
+        wizardTextArea("Unit modules", unitModulesDraft, setUnitModulesDraft, "DFP\nNEO Build\nProgram Schedule\nTraining Records", true)
+      );
+    }
+    if (visibleStep.id === "ranks-labels") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "If an existing rank and terminology set fits, use it. If not, write the changes needed for this unit." }),
+        wizardTextArea("Ranks and labels", rankLabelsDraft, setRankLabelsDraft, "Use existing defence aviation rank and label set", true)
+      );
+    }
+    if (visibleStep.id === "resource-sharing") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Decide whether this unit shares resources or staff with other units." }),
+        wizardTextArea("Resource and staff sharing", resourceSharingDraft, setResourceSharingDraft, "36SQN shares C-17A resources with 6SQN\nStaff sharing: off", true)
+      );
+    }
+    if (visibleStep.id === "currencies") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Enter the currency names this unit will use. Detailed currency rules can be built later in the Currency Builder." }),
+        wizardTextArea("Currencies to use", currencyDraft, setCurrencyDraft, "PIC Currency\nInstrument Currency\nNight Currency", true)
       );
     }
     if (visibleStep.id === "access") {
@@ -11169,6 +11450,18 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
         ] })
       );
     }
+    if (visibleStep.id === "scoring") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up the training report scoring matrix now, or leave it for later if the unit is not ready." }),
+        wizardTextArea("Scoring matrix", scoringDraft, setScoringDraft, "Set up later\nGrades 1-5 pass, grade 0 fail", true)
+      );
+    }
+    if (visibleStep.id === "staff-currency-events") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add the standard staff currency events this unit expects to track. You can also add these after setup." }),
+        wizardTextArea("Standard staff currency events", staffCurrencyEventsDraft, setStaffCurrencyEventsDraft, "Annual check\nInstrument check\nNight currency", true)
+      );
+    }
     return promptShell(
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
         "Review the setup below. Nothing from this wizard is written to Settings until you press ",
@@ -11179,11 +11472,22 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
         ["Organisation", `${organisationDraft.name || organisationDraft.code || "Not set"} (${organisationDraft.code || "no code"})`],
         ["Structure", `${fromLines(organisationDraft.level1Options).length} ${organisationDraft.level1Name || "Level 1"}, ${fromLines(organisationDraft.level2Options).length} ${organisationDraft.level2Name || "Level 2"}, ${fromLines(organisationDraft.level3Options).length} ${organisationDraft.level3Name || "Level 3"}`],
         ["Location", `${locationDraft.code || "Not set"} - ${locationDraft.name || "not named"}`],
-        ["Unit", `${unitDraft.code || "Not set"} - ${unitDraft.operationalModel || "no model"}`],
+        ["Units today", parseWizardUnitRows(unitsTodayDraft).map((unit) => `${unit.code} ${unit.name}`).join("\n") || "Not set"],
+        ["Locations today", parseWizardLocationRows(locationsTodayDraft).map((location) => `${location.icao} / ${location.iata || "-"} / ${location.name}`).join("\n") || "Not set"],
+        ["Unit", `${unitDraft.code || "Not set"} - ${getWizardOperationalModelLabel(unitDraft.operationalModel)}`],
         ["Resources", `${resourceDraft.aircraftCode || "Not set"} / Aircraft ${resourceDraft.aircraft || "0"} / Sim ${resourceDraft.sim || "0"} / Trainer ${resourceDraft.trainer || "0"} / Standby ${resourceDraft.standby || "0"} / Ground ${resourceDraft.ground || "0"}`],
         ["Crew", crewDraft.standardSeats || "Not set"],
+        ["Build rules", buildRulesDraft || "Not set"],
+        ["Staff", staffDraft || "Not set"],
+        ["Trainees", unitDraft.hasTrainees ? traineeDraft || "Not set" : "Trainees off"],
         ["Master LMP", `${trainingDraft.lmpCode || "Not set"} - ${trainingDraft.lmpName || "not named"}`],
-        ["Access", `${accessDraft.userName || "Not set"} / ${accessDraft.locationCode || "no location"} / ${accessDraft.unitCode || "no unit"} / ${trainingDraft.accessLevel || "View"}`]
+        ["Modules", unitModulesDraft || "Not set"],
+        ["Ranks and labels", rankLabelsDraft || "Not set"],
+        ["Sharing", resourceSharingDraft || "Not set"],
+        ["Currencies", currencyDraft || "Not set"],
+        ["Access", `${accessDraft.userName || "Not set"} / ${accessDraft.locationCode || "no location"} / ${accessDraft.unitCode || "no unit"} / ${trainingDraft.accessLevel || "View"}`],
+        ["Scoring", scoringDraft || "Not set"],
+        ["Staff currency events", staffCurrencyEventsDraft || "Not set"]
       ].map(([label, value]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[150px_minmax(0,1fr)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black uppercase tracking-[0.12em] text-slate-500", children: label }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-pre-line font-bold text-slate-900", children: value })
@@ -11229,14 +11533,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
         }
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid gap-4 ${visibleTemplates.length > 0 ? "xl:grid-cols-[minmax(0,1fr)_360px]" : ""}`, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
         renderWizardDataEntry(),
         saveMessage ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-sm", children: saveMessage }) : null
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "h-fit rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm", children: [
+      visibleTemplates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "h-fit rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black text-slate-950", children: "Templates and uploads" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "Download a template, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: visibleTemplates.map((template) => {
           const result = uploadResults[template.id];
           const isValid = result?.status === "valid";
@@ -13329,7 +13633,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
               onRowLeave: () => setHoveredRowIndex(null),
               showUnits: showUnitHeadings,
               useUnitColors: true,
-              useRoleColors: normaliseOperationalModel(operationalModel2) === "air_combat",
+              useRoleColors: normaliseOperationalModel$1(operationalModel2) === "air_combat",
               crewPositionTerminology,
               instructorLabel
             }
@@ -27743,7 +28047,7 @@ const AddGroundEventFlyout = ({
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("ground");
   const crewLabel = reactExports.useMemo(() => {
-    const model = normaliseOperationalModel(operationalModel2);
+    const model = normaliseOperationalModel$1(operationalModel2);
     return model === "air_combat" || isFixedCrewLikeOperationalModel(model) ? "Crew" : "Trainees";
   }, [operationalModel2]);
   const [flightNumber, setFlightNumber] = reactExports.useState(groundSyllabus[0]?.code || "");
@@ -35354,7 +35658,7 @@ const PeopleTab = ({
   const fieldsetShell = "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
   const legendClass = "px-2 text-lg font-semibold text-white";
   const inputClass = "bg-slate-950 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all";
-  const activeModel = normaliseOperationalModel(operationalModel2);
+  const activeModel = normaliseOperationalModel$1(operationalModel2);
   const isCrewOperationalModel = activeModel === "air_combat" || isFixedCrewLikeOperationalModel(activeModel);
   const activeModelLabel = getOperationalModelLabel(activeModel);
   const activeUnitCodes = reactExports.useMemo(() => {
@@ -36020,7 +36324,7 @@ const CourseMetricsTab = ({
   operationalModel: operationalModel2,
   operationalContext
 }) => {
-  const activeModel = normaliseOperationalModel(operationalModel2);
+  const activeModel = normaliseOperationalModel$1(operationalModel2);
   const isCrewOperationalModel = activeModel === "air_combat" || isFixedCrewLikeOperationalModel(activeModel);
   const activeModelLabel = getOperationalModelLabel(activeModel);
   const percentLabel = (numerator, denominator) => {
@@ -40486,7 +40790,7 @@ const AirCombatIntelligenceTab = ({
   operationalContext,
   operationalModel: operationalModel2
 }) => {
-  const model = normaliseOperationalModel(operationalModel2);
+  const model = normaliseOperationalModel$1(operationalModel2);
   const isFixedCrewLike = isFixedCrewLikeOperationalModel(model);
   const modelLabel = getOperationalModelLabel(model);
   const analysis = reactExports.useMemo(() => {
@@ -42285,7 +42589,7 @@ const ACHistoryIntelligencePanel = ({
   ] });
 };
 const BuildIntelligenceView = (props) => {
-  const activeModel = normaliseOperationalModel(props.operationalModel);
+  const activeModel = normaliseOperationalModel$1(props.operationalModel);
   const isAirCombatModel = activeModel === "air_combat";
   const isCrewOperationalModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeModel);
   const activeModelLabel = getOperationalModelLabel(activeModel);
@@ -42947,7 +43251,7 @@ const InstructorProfileFlyout = ({
     }).sort((a, b) => a.name.localeCompare(b.name));
     return { primaryTrainees: primary, secondaryTrainees: secondary };
   }, [traineesData, instructor.name]);
-  const activeOperationalModel = normaliseOperationalModel(operationalModel2);
+  const activeOperationalModel = normaliseOperationalModel$1(operationalModel2);
   const isAirCombatModel = activeOperationalModel === "air_combat";
   const isStaffTrainingReportModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeOperationalModel);
   const assignedTraining = reactExports.useMemo(
@@ -45239,7 +45543,7 @@ const InstructorListView = ({
       }
     }
   }, [instructorsData]);
-  const activeOperationalModel = normaliseOperationalModel(operationalModel2);
+  const activeOperationalModel = normaliseOperationalModel$1(operationalModel2);
   const isAirCombatModel = activeOperationalModel === "air_combat";
   const isPooledCrewModel = activeOperationalModel === "pooled_crew";
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
@@ -47449,7 +47753,7 @@ const SyllabusView = ({
   const activeCollectionNoun = isTrainingPackagesTab ? "package" : "course";
   const activeCollectionTitle = isTrainingPackagesTab ? "Training Packages" : "Master LMP";
   const activeCollectionSelectLabel = isTrainingPackagesTab ? "Package:" : "Course:";
-  const activeOperationalModel = normaliseOperationalModel(operationalModel2);
+  const activeOperationalModel = normaliseOperationalModel$1(operationalModel2);
   const isAirCombatModel = activeOperationalModel === "air_combat";
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
   const usesPackageTab = activeOperationalModel === "air_combat" || isFixedCrewModel;
@@ -76365,7 +76669,7 @@ const NextDayInstructorScheduleView = ({
             onPersonClick: onSelectInstructor,
             showUnits: showUnitHeadings,
             useUnitColors: true,
-            useRoleColors: normaliseOperationalModel(operationalModel2) === "air_combat",
+            useRoleColors: normaliseOperationalModel$1(operationalModel2) === "air_combat",
             crewPositionTerminology,
             instructorLabel
           }
@@ -78274,7 +78578,7 @@ const DfpSidePanelTimeline = ({
   const [selectedPackageEventCode, setSelectedPackageEventCode] = reactExports.useState("");
   const [selectedCourseName, setSelectedCourseName] = reactExports.useState("");
   const [selectedPackageName, setSelectedPackageName] = reactExports.useState("");
-  const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel2);
+  const normalisedAssistOperationalModel = normaliseOperationalModel$1(operationalModel2);
   const isAirCombatNeoAssist = normalisedAssistOperationalModel === "air_combat";
   const isFixedCrewNeoAssist = isFixedCrewLikeOperationalModel(normalisedAssistOperationalModel);
   const defaultAssistTaskDuration = isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS : 1.2;
@@ -83061,7 +83365,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const ftdResourceLabel = buildResourceDisplayNames.ftd;
   const cptResourceLabel = buildResourceDisplayNames.cpt;
   const timingReport = config.timingReport;
-  const buildOperationalModel = normaliseOperationalModel(config.operationalModel || "flight_school");
+  const buildOperationalModel = normaliseOperationalModel$1(config.operationalModel || "flight_school");
   const buildActiveUnitCode = String(config.activeUnitCode || "").trim().toUpperCase();
   const buildActiveContextUnitCodes = Array.from(new Set(
     (Array.isArray(config.activeContextUnitCodes) && config.activeContextUnitCodes.length > 0 ? config.activeContextUnitCodes : String(config.activeUnitCode || "").split("+")).map((unitCode) => String(unitCode || "").trim().toUpperCase()).filter(Boolean)
@@ -95347,7 +95651,7 @@ const App = () => {
         return [{
           code: sharedUnitCodes.join("+"),
           name: String(group?.name || `${sharedUnitCodes.join("+")} Shared Fleet`),
-          model: sharedModels.size === 1 ? sharedUnits[0].model : normaliseOperationalModel("flight_school"),
+          model: sharedModels.size === 1 ? sharedUnits[0].model : normaliseOperationalModel$1("flight_school"),
           memberUnits: sharedUnitCodes,
           isSharedFleetContext: true
         }];
@@ -95374,7 +95678,7 @@ const App = () => {
     const fallbackUnits = fallbackCodes.map((code) => ({
       code,
       name: code,
-      model: normaliseOperationalModel("flight_school")
+      model: normaliseOperationalModel$1("flight_school")
     }));
     const sharingGroups = Array.isArray(organisationSettings.resourceSharingGroups) && organisationSettings.resourceSharingGroups.length > 0 ? organisationSettings.resourceSharingGroups : (organisationSettings.selectedUnits || []).length > 1 ? [{
       id: "legacy-resource-sharing",
@@ -95394,7 +95698,7 @@ const App = () => {
       return [{
         code: sharedFallbackUnits.join("+"),
         name: String(group?.name || `${sharedFallbackUnits.join("+")} Shared Fleet`),
-        model: normaliseOperationalModel("flight_school"),
+        model: normaliseOperationalModel$1("flight_school"),
         memberUnits: sharedFallbackUnits,
         isSharedFleetContext: true
       }];
@@ -95511,7 +95815,7 @@ const App = () => {
   }, [activeContextUnitCodes, activeUnitCode, platformConfig]);
   const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
   const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
-  const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
+  const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel$1("flight_school");
   const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
   const fixedCrewSharedResourceUnitTabs = reactExports.useMemo(() => isFixedCrewLikeOperationalModel(activeOperationalModel) && organisationSettings.fleetSharingEnabled && activeContextUnitCodes.length > 1 ? activeContextUnitCodes : [], [activeContextUnitCodes, activeOperationalModel, organisationSettings.fleetSharingEnabled]);
   const activeFixedCrewTileColourUnitKey = reactExports.useMemo(() => String(activeContextUnitCodes[0] || activeUnitCode || "DEFAULT").trim().toUpperCase() || "DEFAULT", [activeContextUnitCodes, activeUnitCode]);
@@ -98466,7 +98770,7 @@ ${"=".repeat(60)}`);
             status: "ACTIVE",
             settings: {
               source: "legacy-settings",
-              operationalModel: normaliseOperationalModel("flight_school"),
+              operationalModel: normaliseOperationalModel$1("flight_school"),
               hasTrainees: getDefaultHasTraineesForUnit(code)
             }
           };
@@ -100638,7 +100942,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     );
   };
   const generateAssessmentRequiredDraftTrainingReport = async (sourceEvent, dcoResult) => {
-    const operationalModel2 = normaliseOperationalModel(activeOperationalModel);
+    const operationalModel2 = normaliseOperationalModel$1(activeOperationalModel);
     if (operationalModel2 !== "air_combat" && !isFixedCrewLikeOperationalModel(operationalModel2)) return;
     const staffName = sourceEvent.fixedCrewPic || sourceEvent.pilot || sourceEvent.instructor || sourceEvent.crew || "";
     const eventCode2 = String(sourceEvent.flightNumber || sourceEvent.eventCode || "").trim();
@@ -107223,7 +107527,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           break;
       }
     }
-    const hasAirCombatCrewPair = normaliseOperationalModel(activeOperationalModel) === "air_combat" && String(event.pilot || "").trim().length > 0 && String(event.crew || "").trim().length > 0;
+    const hasAirCombatCrewPair = normaliseOperationalModel$1(activeOperationalModel) === "air_combat" && String(event.pilot || "").trim().length > 0 && String(event.crew || "").trim().length > 0;
     if (event.flightType === "Dual" && !hasAirCombatCrewPair && (!event.instructor || event.instructor.trim() === "" || event.instructor === "TBD")) {
       errors.push("❌ No instructor assigned - Dual flights require an instructor.");
     }
@@ -110325,7 +110629,7 @@ Do you want to replace the existing entry?`,
                   }
                 }
                 const isCurrencyPostFlightEvent = !!eventForPostFlight && (eventForPostFlight.eventCategory === "currency" || !!eventForPostFlight.currencyDraftId || eventForPostFlight.flightNumber === "CURR");
-                const isAirCombatPostFlightEvent = normaliseOperationalModel(activeOperationalModel) === "air_combat";
+                const isAirCombatPostFlightEvent = normaliseOperationalModel$1(activeOperationalModel) === "air_combat";
                 if (!isAirCombatPostFlightEvent && !isCurrencyPostFlightEvent && data.result && ["DCO", "DPCO", "DNCO"].includes(data.result) && eventForPostFlight) {
                   const pfEvtForPt051 = eventForPostFlight;
                   const pt051TraineeName = pfEvtForPt051.student || pfEvtForPt051.pilot || "";
@@ -111011,7 +111315,7 @@ Do you want to replace the existing entry?`,
             logAudit("Flight Detail", "View", `Viewed PT-051 for ${trainee.fullName} - Event: ${selectedEvent.flightNumber} (${selectedEvent.date})`);
             handleNavigation("PT051");
           },
-          onOpenTrainingReport: normaliseOperationalModel(activeOperationalModel) === "air_combat" || isFixedCrewLikeOperationalModel(activeOperationalModel) ? handleOpenAirCombatTrainingReportFromFlightDetails : void 0,
+          onOpenTrainingReport: normaliseOperationalModel$1(activeOperationalModel) === "air_combat" || isFixedCrewLikeOperationalModel(activeOperationalModel) ? handleOpenAirCombatTrainingReportFromFlightDetails : void 0,
           onOpenAuth: (e) => {
             const latestEvent = events.find((ev) => ev.id === e.id) || e;
             setEventForAuth(latestEvent);

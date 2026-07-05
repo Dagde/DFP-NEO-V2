@@ -836,6 +836,38 @@ const parseRoleRequirementsText = (value: string): any[] => (
         })
 );
 
+const getWizardOperationalModelLabel = (value: unknown): string => (
+    OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value)
+);
+
+const parseWizardLineItems = (value: string): string[] => (
+    String(value || '')
+        .split(/\n/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+);
+
+const parseWizardLocationRows = (value: string): Array<{ icao: string; iata: string; name: string }> => (
+    parseWizardLineItems(value).map((line) => {
+        const parts = line.split(/[|,]/).map((part) => part.trim());
+        return {
+            icao: String(parts[0] || '').toUpperCase(),
+            iata: String(parts[1] || '').toUpperCase(),
+            name: parts[2] || parts[0] || '',
+        };
+    }).filter((row) => row.icao || row.iata || row.name)
+);
+
+const parseWizardUnitRows = (value: string): Array<{ code: string; name: string }> => (
+    parseWizardLineItems(value).map((line) => {
+        const parts = line.split(/[|,]/).map((part) => part.trim());
+        return {
+            code: String(parts[0] || '').toUpperCase(),
+            name: parts[1] || parts[0] || '',
+        };
+    }).filter((row) => row.code || row.name)
+);
+
 const getUnitParentOrganisationPath = (unit: any): string[] => {
     const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath)
         ? unit.settings.parentOrganisationPath
@@ -1943,10 +1975,21 @@ const InitialSetupWizard: React.FC<{
     });
     const [locationDraft, setLocationDraft] = useState({
         code: String(currentLocation?.code || currentUnit?.locationCode || 'YAMB'),
+        iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || 'AMB'),
         name: String(currentLocation?.name || 'Amberley'),
         timezone: String(currentLocation?.timezone || 'Australia/Brisbane'),
         trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(', ') : '',
     });
+    const [unitsTodayDraft, setUnitsTodayDraft] = useState(() => (
+        activeUnits.length > 0
+            ? activeUnits.map((unit: any) => `${unit.code}${unit.name && unit.name !== unit.code ? ` | ${unit.name}` : ''}`).join('\n')
+            : '36SQN | 36SQN'
+    ));
+    const [locationsTodayDraft, setLocationsTodayDraft] = useState(() => (
+        activeLocations.length > 0
+            ? activeLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
+            : 'YAMB | AMB | Amberley'
+    ));
     const [unitDraft, setUnitDraft] = useState({
         code: String(currentUnit?.code || unitCode || '36SQN'),
         name: String(currentUnit?.name || currentUnit?.code || unitCode || '36SQN'),
@@ -1988,6 +2031,18 @@ const InitialSetupWizard: React.FC<{
         accessModel: String(primaryMasterLmpRule?.model || 'Any Model'),
         accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || 'View'),
     });
+    const [crewLabelsDraft, setCrewLabelsDraft] = useState('Pilot = Pilot\nLoadmaster = Loadmaster');
+    const [alternateCrewDraft, setAlternateCrewDraft] = useState('Reduced crew = Pilot 1, Loadmaster 1');
+    const [buildRulesDraft, setBuildRulesDraft] = useState('Business rules: use default\nDuty limit: 12 hours\nAircraft turnaround: 60 minutes\nSimulator turnaround: 30 minutes\nMax dispatch per hour: 2');
+    const [staffDraft, setStaffDraft] = useState('Burns, Alexander | 36SQN | Pilot | PIC');
+    const [traineeDraft, setTraineeDraft] = useState('Only complete if this unit has trainees.');
+    const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('Use default training report template\nUse standard training records fields');
+    const [unitModulesDraft, setUnitModulesDraft] = useState('DFP\nNEO Build\nProgram Schedule\nTraining Records');
+    const [rankLabelsDraft, setRankLabelsDraft] = useState('Use existing defence aviation rank and label set');
+    const [resourceSharingDraft, setResourceSharingDraft] = useState('No resource sharing for initial setup');
+    const [currencyDraft, setCurrencyDraft] = useState('PIC Currency\nInstrument Currency\nNight Currency');
+    const [scoringDraft, setScoringDraft] = useState('Set up later');
+    const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = useState('Staff currency events can be added after setup');
 
     useEffect(() => {
         setOrganisationDraft({
@@ -2007,6 +2062,7 @@ const InitialSetupWizard: React.FC<{
     useEffect(() => {
         setLocationDraft({
             code: String(currentLocation?.code || currentUnit?.locationCode || 'YAMB'),
+            iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || 'AMB'),
             name: String(currentLocation?.name || 'Amberley'),
             timezone: String(currentLocation?.timezone || 'Australia/Brisbane'),
             trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(', ') : '',
@@ -2141,10 +2197,15 @@ const InitialSetupWizard: React.FC<{
             const nextLocation = {
                 id: currentLocation?.id || createWizardRecordId('location'),
                 code: cleanCode,
+                iataCode: String(locationDraft.iataCode || '').trim().toUpperCase(),
                 name: locationDraft.name || cleanCode,
                 timezone: locationDraft.timezone || 'Australia/Brisbane',
                 trainingAreas: locationDraft.trainingAreas.split(',').map((item) => item.trim()).filter(Boolean),
                 status: 'ACTIVE',
+                settings: {
+                    ...(currentLocation?.settings || {}),
+                    iataCode: String(locationDraft.iataCode || '').trim().toUpperCase(),
+                },
             };
             const exists = locations.some((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode));
             return {
@@ -2433,31 +2494,31 @@ const InitialSetupWizard: React.FC<{
             checkIds: ['organisation'],
         },
         {
-            id: 'location-code',
-            title: 'What is the first base or location code?',
-            label: 'Base code',
-            body: 'This is the short code users recognise, such as YAMB or YMES.',
+            id: 'units-today',
+            title: 'Which units do you want to set up today?',
+            label: 'Units',
+            body: 'List the units you want this wizard to prepare. You can add more units later in Settings.',
+            checkIds: ['units'],
+        },
+        {
+            id: 'locations-today',
+            title: 'Which localities do you want to set up?',
+            label: 'Locations',
+            body: 'A locality is a base, airfield, or operating location. Add the ICAO and IATA codes where known.',
             checkIds: ['locations'],
         },
         {
             id: 'location-details',
-            title: `Tell me about ${locationDraft.code || 'this location'}`,
-            label: 'Base details',
-            body: 'Add the plain English name, timezone and any local training areas. Saving this step writes the location into Settings.',
+            title: 'Add details for the first locality',
+            label: 'Location details',
+            body: 'Confirm the first locality details. Repeat this pattern for each locality listed above.',
             checkIds: ['locations'],
         },
         {
-            id: 'unit-code',
-            title: 'What unit are we setting up first?',
-            label: 'Unit',
-            body: 'Start with the current user unit. You can add more units later.',
-            checkIds: ['units'],
-        },
-        {
             id: 'unit-model',
-            title: `How does ${unitDraft.code || 'this unit'} operate?`,
-            label: 'Model',
-            body: 'The operational model controls the scheduling rules. Saving this step writes the unit into Settings.',
+            title: 'Set up the first unit',
+            label: 'Unit setup',
+            body: 'We will repeat this setup pattern for each unit you listed. Start with the first/current unit.',
             checkIds: ['units'],
         },
         {
@@ -2476,16 +2537,72 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'crew',
-            title: `What is the minimum crew for ${resourceDraft.aircraftCode || 'this aircraft'}?`,
+            title: 'Set the crew rules',
             label: 'Crew',
-            body: 'Enter one crew requirement per line. Example: Pilot = 2, Loadmaster = 1. Saving this step writes the crew composition into Settings.',
+            body: 'Set the standard crew, labels, and any alternate crew patterns for this unit and aircraft.',
             checkIds: ['crew'],
         },
         {
+            id: 'build-rules',
+            title: 'Set the build rules and limits',
+            label: 'Build rules',
+            body: 'These are the rules NEO uses when it builds a schedule: business rules, duty limits, turnaround times, and event limits.',
+            checkIds: ['rules'],
+        },
+        {
+            id: 'staff',
+            title: 'Add staff for this unit',
+            label: 'Staff',
+            body: 'Add the people NEO can schedule or use for permissions. You can upload a staff template on this step.',
+            checkIds: ['access'],
+        },
+        {
+            id: 'trainees',
+            title: 'Does this unit have trainees?',
+            label: 'Trainees',
+            body: 'If this unit has trainees, add their details now. If not, switch trainees off and continue.',
+            checkIds: ['access'],
+        },
+        {
             id: 'master-lmp',
-            title: 'What is the first Master LMP or training stream?',
+            title: 'Choose or build the LMPs this unit will use',
             label: 'LMP',
-            body: 'This is the selectable training stream used by LMP/Event Details and access rules.',
+            body: 'Choose an existing Master LMP or define a new one. Events can be uploaded from the courses template on this step.',
+            checkIds: ['training'],
+        },
+        {
+            id: 'training-records',
+            title: 'Set up training records',
+            label: 'Records',
+            body: 'Choose the training record defaults for this unit. Detailed report design can still be refined later.',
+            checkIds: ['training'],
+        },
+        {
+            id: 'unit-modules',
+            title: 'Choose unit modules',
+            label: 'Modules',
+            body: 'Choose which app modules this unit should use.',
+            checkIds: ['access'],
+        },
+        {
+            id: 'ranks-labels',
+            title: 'Choose ranks and labels',
+            label: 'Ranks',
+            body: 'Use an existing rank and label set if one fits, or write the changes needed for this unit.',
+            checkIds: ['access'],
+        },
+        {
+            id: 'resource-sharing',
+            title: 'Set resource and staff sharing',
+            label: 'Sharing',
+            body: 'Decide whether this unit shares aircraft, crew, staff, or other resources with another unit.',
+            checkIds: ['resources'],
+        },
+        {
+            id: 'currencies',
+            title: 'Set the currencies this unit uses',
+            label: 'Currencies',
+            body: 'Enter only the currencies now. The full Currency Builder can be opened after setup for detailed rules.',
             checkIds: ['training'],
         },
         {
@@ -2494,6 +2611,20 @@ const InitialSetupWizard: React.FC<{
             label: 'Access',
             body: 'Create the first access scope so the selected user can work with the location, unit and Master LMP.',
             checkIds: ['access', 'training'],
+        },
+        {
+            id: 'scoring',
+            title: 'Set up the scoring matrix',
+            label: 'Scoring',
+            body: 'You can set this up now or mark it for later. This controls training report scoring.',
+            checkIds: ['training'],
+        },
+        {
+            id: 'staff-currency-events',
+            title: 'Set standard staff currency events',
+            label: 'Staff events',
+            body: 'Add common staff currency events now, or leave them for later if the unit is not ready.',
+            checkIds: ['training'],
         },
         {
             id: 'review',
@@ -2507,12 +2638,18 @@ const InitialSetupWizard: React.FC<{
     ];
     const currentStep = Math.min(wizardStep, steps.length - 1);
     const visibleStep = steps[currentStep];
+    const templateIdsByStep: Record<string, string[]> = {
+        'org-level1': ['organisation'],
+        'org-level2': ['organisation'],
+        'org-level3': ['organisation'],
+        'units-today': ['units'],
+        'locations-today': ['locations'],
+        'staff': ['staff'],
+        'trainees': unitDraft.hasTrainees ? ['trainees'] : [],
+        'master-lmp': ['courses'],
+    };
     const visibleTemplates = initialSetupTemplates.filter((template) => (
-        visibleStep.id === 'analysis'
-        || visibleStep.id === 'review'
-        || visibleStep.checkIds.includes(template.id)
-        || (['access'].includes(visibleStep.id) && ['staff', 'trainees'].includes(template.id))
-        || (['master-lmp', 'access'].includes(visibleStep.id) && template.id === 'courses')
+        (templateIdsByStep[visibleStep.id] || []).includes(template.id)
     ));
 
     useEffect(() => {
@@ -2699,12 +2836,88 @@ const InitialSetupWizard: React.FC<{
     );
     const saveAllWizardDrafts = () => {
         saveOrganisationDraft();
+        const locationRows = parseWizardLocationRows(locationsTodayDraft);
+        const unitRows = parseWizardUnitRows(unitsTodayDraft);
+        if (onUpdatePlatformConfig && (locationRows.length > 0 || unitRows.length > 0)) {
+            onUpdatePlatformConfig((current) => {
+                const baseConfig = current || platformConfig || {};
+                const existingLocations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
+                const existingUnits = Array.isArray(baseConfig.units) ? baseConfig.units : [];
+                const nextLocations = [...existingLocations];
+                locationRows.forEach((row) => {
+                    const code = row.icao || row.iata;
+                    if (!code) return;
+                    const existingIndex = nextLocations.findIndex((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(code));
+                    const nextLocation = {
+                        ...(existingIndex >= 0 ? nextLocations[existingIndex] : { id: createWizardRecordId('location') }),
+                        code,
+                        iataCode: row.iata,
+                        name: row.name || code,
+                        timezone: existingIndex >= 0 ? nextLocations[existingIndex].timezone || 'Australia/Brisbane' : 'Australia/Brisbane',
+                        status: 'ACTIVE',
+                        settings: {
+                            ...(existingIndex >= 0 ? nextLocations[existingIndex].settings || {} : {}),
+                            iataCode: row.iata,
+                        },
+                    };
+                    if (existingIndex >= 0) nextLocations[existingIndex] = nextLocation;
+                    else nextLocations.push(nextLocation);
+                });
+                const defaultLocationCode = locationRows[0]?.icao || locationDraft.code;
+                const nextUnits = [...existingUnits];
+                unitRows.forEach((row) => {
+                    const code = row.code;
+                    if (!code) return;
+                    const existingIndex = nextUnits.findIndex((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(code));
+                    const nextUnit = {
+                        ...(existingIndex >= 0 ? nextUnits[existingIndex] : { id: createWizardRecordId('unit') }),
+                        code,
+                        name: row.name || code,
+                        locationCode: existingIndex >= 0 ? nextUnits[existingIndex].locationCode || defaultLocationCode : defaultLocationCode,
+                        unitType: existingIndex >= 0 ? nextUnits[existingIndex].unitType || unitDraft.unitType : unitDraft.unitType,
+                        status: 'ACTIVE',
+                        settings: {
+                            ...(existingIndex >= 0 ? nextUnits[existingIndex].settings || {} : {}),
+                            operationalModel: existingIndex >= 0 ? nextUnits[existingIndex].settings?.operationalModel || unitDraft.operationalModel : unitDraft.operationalModel,
+                            hasTrainees: existingIndex >= 0 ? nextUnits[existingIndex].settings?.hasTrainees ?? unitDraft.hasTrainees : unitDraft.hasTrainees,
+                        },
+                    };
+                    if (existingIndex >= 0) nextUnits[existingIndex] = nextUnit;
+                    else nextUnits.push(nextUnit);
+                });
+                return {
+                    ...baseConfig,
+                    locations: nextLocations,
+                    units: nextUnits,
+                };
+            });
+        }
         saveLocationDraft();
         saveUnitDraft();
         saveResourceDraft();
         saveCrewDraft();
         saveTrainingDraft();
         saveAccessDraft();
+        saveWizardConfig('Setup saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
+            ...settings,
+            initialSetupWizardDraft: {
+                unitsToday: parseWizardUnitRows(unitsTodayDraft),
+                locationsToday: parseWizardLocationRows(locationsTodayDraft),
+                crewLabels: crewLabelsDraft,
+                alternateCrews: alternateCrewDraft,
+                buildRules: buildRulesDraft,
+                staff: staffDraft,
+                traineesEnabled: unitDraft.hasTrainees,
+                trainees: traineeDraft,
+                trainingRecords: trainingRecordsDraft,
+                unitModules: unitModulesDraft,
+                ranksAndLabels: rankLabelsDraft,
+                resourceSharing: resourceSharingDraft,
+                currencies: currencyDraft,
+                scoringMatrix: scoringDraft,
+                staffCurrencyEvents: staffCurrencyEventsDraft,
+            },
+        })));
         setSaveMessage('Setup saved into Settings.');
     };
     const renderWizardDataEntry = () => {
@@ -2778,6 +2991,28 @@ const InitialSetupWizard: React.FC<{
                 ),
             );
         }
+        if (visibleStep.id === 'units-today') {
+            return promptShell(
+                <p>List each unit you want to configure in this setup run. Use one line per unit. Format: <strong>Unit code | Unit name</strong>.</p>,
+                <div>
+                    {wizardTextArea('Units to set up today', unitsTodayDraft, setUnitsTodayDraft, '36SQN | 36SQN\n12SQN | 12SQN', true)}
+                    <p className="mt-3 text-xs leading-5 text-slate-600">
+                        The wizard will use the first unit as the detailed example, then the same setup questions apply to every other unit you listed.
+                    </p>
+                </div>,
+            );
+        }
+        if (visibleStep.id === 'locations-today') {
+            return promptShell(
+                <p>List every locality, base, airfield, or operating location you want available. Use one line per locality. Format: <strong>ICAO | IATA | Name</strong>.</p>,
+                <div>
+                    {wizardTextArea('Localities to set up', locationsTodayDraft, setLocationsTodayDraft, 'YMES | ESL | East Sale\nYAMB | AMB | Amberley', true)}
+                    <p className="mt-3 text-xs leading-5 text-slate-600">
+                        ICAO is the four-letter aviation code, for example YMES. IATA is the shorter three-letter code, for example ESL. If a location does not have an IATA code, leave that part blank.
+                    </p>
+                </div>,
+            );
+        }
         if (visibleStep.id === 'location-code') {
             return promptShell(
                 <p>Next we will set up the first base or operating location. What is the location code?</p>,
@@ -2786,8 +3021,10 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'location-details') {
             return promptShell(
-                <p>Tell me the details for <strong>{locationDraft.code || 'this location'}</strong>.</p>,
+                <p>Confirm the details for the first locality. You will use the same pattern for every locality listed earlier.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
+                    {wizardField('ICAO code', locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'YMES')}
+                    {wizardField('IATA code', locationDraft.iataCode, (value) => setLocationDraft((draft) => ({ ...draft, iataCode: value.toUpperCase() })), undefined, 'ESL')}
                     {wizardField('Location name', locationDraft.name, (value) => setLocationDraft((draft) => ({ ...draft, name: value })), undefined, 'Amberley')}
                     {wizardField('Timezone', locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })), undefined, 'Australia/Brisbane')}
                     {wizardField('Training areas', locationDraft.trainingAreas, (value) => setLocationDraft((draft) => ({ ...draft, trainingAreas: value })), undefined, 'Area A, Area B')}
@@ -2805,11 +3042,21 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'unit-model') {
             return promptShell(
-                <p>How does <strong>{unitDraft.code || 'this unit'}</strong> operate?</p>,
+                <p>Set the identity and operating model for the first unit. The operating model is important because it controls which scheduler logic applies.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
+                    {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, '36SQN')}
+                    {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, '36SQN')}
                     {wizardField('Home location', unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
                     {wizardField('Unit type', unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), ['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational'])}
-                    {wizardField('Operational model', unitDraft.operationalModel, (value) => setUnitDraft((draft) => ({ ...draft, operationalModel: value })), OPERATIONAL_MODEL_OPTIONS.map((option) => option.value))}
+                    {wizardField(
+                        'Operational model',
+                        getWizardOperationalModelLabel(unitDraft.operationalModel),
+                        (label) => {
+                            const selected = OPERATIONAL_MODEL_OPTIONS.find((option) => option.label === label);
+                            setUnitDraft((draft) => ({ ...draft, operationalModel: selected?.value || draft.operationalModel }));
+                        },
+                        OPERATIONAL_MODEL_OPTIONS.map((option) => option.label)
+                    )}
                     <label className="block">
                         <span className={wizardLabelClass}>Does this unit use trainees?</span>
                         <button
@@ -2847,21 +3094,80 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'crew') {
             return promptShell(
-                <p>What minimum crew must be scheduled for <strong>{crewDraft.aircraftCode || resourceDraft.aircraftCode || 'this aircraft'}</strong>?</p>,
-                <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
+                <p>Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events.</p>,
+                <div className="grid gap-3 md:grid-cols-2">
                     {wizardField('Aircraft type', crewDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value })), activeAircraftTypes.map((aircraft: any) => aircraft.code))}
-                    {wizardTextArea('Required seats', crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })), 'Pilot = 2\nLoadmaster = 1')}
+                    {wizardTextArea('Standard crew composition', crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })), 'Pilot = 2\nLoadmaster = 1')}
+                    {wizardTextArea('Crew labels', crewLabelsDraft, setCrewLabelsDraft, 'PIC = Aircraft Captain\nPilot = Pilot\nLoadmaster = Loadmaster')}
+                    {wizardTextArea('Alternate crew patterns', alternateCrewDraft, setAlternateCrewDraft, 'Reduced crew = Pilot 1, Loadmaster 1')}
+                </div>,
+            );
+        }
+        if (visibleStep.id === 'build-rules') {
+            return promptShell(
+                <p>Set the practical limits NEO must respect when building this unit schedule. Keep defaults if you are unsure.</p>,
+                wizardTextArea('Build rules, duty limits, turnaround times and event limits', buildRulesDraft, setBuildRulesDraft, 'Business rules: use default\nDuty limit: 12 hours\nAircraft turnaround: 60 minutes\nMax dispatch per hour: 2', true),
+            );
+        }
+        if (visibleStep.id === 'staff') {
+            return promptShell(
+                <p>Add the staff this unit needs for scheduling, permissions, and records. Use one line per person.</p>,
+                wizardTextArea('Staff names and details', staffDraft, setStaffDraft, 'Burns, Alexander | 36SQN | Pilot | PIC\nSmith, Alex | 36SQN | Loadmaster | LM', true),
+            );
+        }
+        if (visibleStep.id === 'trainees') {
+            return promptShell(
+                <p>{unitDraft.hasTrainees ? 'This unit is marked as having trainees. Add the trainee details now.' : 'This unit is marked as not having trainees. You can leave this blank and continue.'}</p>,
+                <div>
+                    <button
+                        type="button"
+                        className={`${wizardInputClass} mb-3 text-left ${unitDraft.hasTrainees ? 'bg-emerald-50 text-emerald-900' : 'bg-slate-100 text-slate-600'}`}
+                        onClick={() => setUnitDraft((draft) => ({ ...draft, hasTrainees: !draft.hasTrainees }))}
+                    >
+                        {unitDraft.hasTrainees ? 'Trainees on' : 'Trainees off'}
+                    </button>
+                    {unitDraft.hasTrainees ? wizardTextArea('Trainee details', traineeDraft, setTraineeDraft, 'Citizen, Pat | 36SQN | C-17A Conversion | 2026-01-15', true) : null}
                 </div>,
             );
         }
         if (visibleStep.id === 'master-lmp') {
             return promptShell(
-                <p>What is the first Master LMP or training stream this organisation should use?</p>,
+                <p>Choose an existing LMP if it exists, or enter the first LMP to build. This does not change the scheduler logic; it only defines the training stream the unit can use.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), undefined, 'C-17A Conversion')}
+                    {wizardField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp: any) => String(lmp.code || lmp.name || '')).filter(Boolean), 'C-17A Conversion')}
                     {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), undefined, 'C-17A Conversion')}
                     {wizardTextArea('Description', trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), 'Initial conversion training stream')}
                 </div>,
+            );
+        }
+        if (visibleStep.id === 'training-records') {
+            return promptShell(
+                <p>Set the training records defaults this unit should start with. Reports and templates can be refined after setup.</p>,
+                wizardTextArea('Training records setup', trainingRecordsDraft, setTrainingRecordsDraft, 'Use default training report template\nUse standard training records fields', true),
+            );
+        }
+        if (visibleStep.id === 'unit-modules') {
+            return promptShell(
+                <p>Choose which modules this unit should see and use.</p>,
+                wizardTextArea('Unit modules', unitModulesDraft, setUnitModulesDraft, 'DFP\nNEO Build\nProgram Schedule\nTraining Records', true),
+            );
+        }
+        if (visibleStep.id === 'ranks-labels') {
+            return promptShell(
+                <p>If an existing rank and terminology set fits, use it. If not, write the changes needed for this unit.</p>,
+                wizardTextArea('Ranks and labels', rankLabelsDraft, setRankLabelsDraft, 'Use existing defence aviation rank and label set', true),
+            );
+        }
+        if (visibleStep.id === 'resource-sharing') {
+            return promptShell(
+                <p>Decide whether this unit shares resources or staff with other units.</p>,
+                wizardTextArea('Resource and staff sharing', resourceSharingDraft, setResourceSharingDraft, '36SQN shares C-17A resources with 6SQN\nStaff sharing: off', true),
+            );
+        }
+        if (visibleStep.id === 'currencies') {
+            return promptShell(
+                <p>Enter the currency names this unit will use. Detailed currency rules can be built later in the Currency Builder.</p>,
+                wizardTextArea('Currencies to use', currencyDraft, setCurrencyDraft, 'PIC Currency\nInstrument Currency\nNight Currency', true),
             );
         }
         if (visibleStep.id === 'access') {
@@ -2875,6 +3181,18 @@ const InitialSetupWizard: React.FC<{
                 </div>,
             );
         }
+        if (visibleStep.id === 'scoring') {
+            return promptShell(
+                <p>Set up the training report scoring matrix now, or leave it for later if the unit is not ready.</p>,
+                wizardTextArea('Scoring matrix', scoringDraft, setScoringDraft, 'Set up later\nGrades 1-5 pass, grade 0 fail', true),
+            );
+        }
+        if (visibleStep.id === 'staff-currency-events') {
+            return promptShell(
+                <p>Add the standard staff currency events this unit expects to track. You can also add these after setup.</p>,
+                wizardTextArea('Standard staff currency events', staffCurrencyEventsDraft, setStaffCurrencyEventsDraft, 'Annual check\nInstrument check\nNight currency', true),
+            );
+        }
         return promptShell(
             <p>Review the setup below. Nothing from this wizard is written to Settings until you press <strong>Save setup</strong>.</p>,
             <div className="grid gap-2 text-sm">
@@ -2882,11 +3200,22 @@ const InitialSetupWizard: React.FC<{
                     ['Organisation', `${organisationDraft.name || organisationDraft.code || 'Not set'} (${organisationDraft.code || 'no code'})`],
                     ['Structure', `${fromLines(organisationDraft.level1Options).length} ${organisationDraft.level1Name || 'Level 1'}, ${fromLines(organisationDraft.level2Options).length} ${organisationDraft.level2Name || 'Level 2'}, ${fromLines(organisationDraft.level3Options).length} ${organisationDraft.level3Name || 'Level 3'}`],
                     ['Location', `${locationDraft.code || 'Not set'} - ${locationDraft.name || 'not named'}`],
-                    ['Unit', `${unitDraft.code || 'Not set'} - ${unitDraft.operationalModel || 'no model'}`],
+                    ['Units today', parseWizardUnitRows(unitsTodayDraft).map((unit) => `${unit.code} ${unit.name}`).join('\n') || 'Not set'],
+                    ['Locations today', parseWizardLocationRows(locationsTodayDraft).map((location) => `${location.icao} / ${location.iata || '-'} / ${location.name}`).join('\n') || 'Not set'],
+                    ['Unit', `${unitDraft.code || 'Not set'} - ${getWizardOperationalModelLabel(unitDraft.operationalModel)}`],
                     ['Resources', `${resourceDraft.aircraftCode || 'Not set'} / Aircraft ${resourceDraft.aircraft || '0'} / Sim ${resourceDraft.sim || '0'} / Trainer ${resourceDraft.trainer || '0'} / Standby ${resourceDraft.standby || '0'} / Ground ${resourceDraft.ground || '0'}`],
                     ['Crew', crewDraft.standardSeats || 'Not set'],
+                    ['Build rules', buildRulesDraft || 'Not set'],
+                    ['Staff', staffDraft || 'Not set'],
+                    ['Trainees', unitDraft.hasTrainees ? traineeDraft || 'Not set' : 'Trainees off'],
                     ['Master LMP', `${trainingDraft.lmpCode || 'Not set'} - ${trainingDraft.lmpName || 'not named'}`],
+                    ['Modules', unitModulesDraft || 'Not set'],
+                    ['Ranks and labels', rankLabelsDraft || 'Not set'],
+                    ['Sharing', resourceSharingDraft || 'Not set'],
+                    ['Currencies', currencyDraft || 'Not set'],
                     ['Access', `${accessDraft.userName || 'Not set'} / ${accessDraft.locationCode || 'no location'} / ${accessDraft.unitCode || 'no unit'} / ${trainingDraft.accessLevel || 'View'}`],
+                    ['Scoring', scoringDraft || 'Not set'],
+                    ['Staff currency events', staffCurrencyEventsDraft || 'Not set'],
                 ].map(([label, value]) => (
                     <div key={label} className="grid gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[150px_minmax(0,1fr)]">
                         <span className="font-black uppercase tracking-[0.12em] text-slate-500">{label}</span>
@@ -2933,7 +3262,7 @@ const InitialSetupWizard: React.FC<{
                     if (pendingTemplateId) void handleTemplateFile(pendingTemplateId, file);
                 }}
             />
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className={`grid gap-4 ${visibleTemplates.length > 0 ? 'xl:grid-cols-[minmax(0,1fr)_360px]' : ''}`}>
                 <div className="space-y-3">
                     {renderWizardDataEntry()}
                     {saveMessage ? (
@@ -2943,10 +3272,10 @@ const InitialSetupWizard: React.FC<{
                     ) : null}
                 </div>
 
-                <aside className="h-fit rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm">
+                {visibleTemplates.length > 0 && <aside className="h-fit rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm">
                     <h4 className="text-sm font-black text-slate-950">Templates and uploads</h4>
                     <p className="mt-1 text-xs leading-5 text-slate-600">
-                        Download a template, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English.
+                        This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English.
                     </p>
                     <div className="mt-4 space-y-3">
                         {visibleTemplates.map((template) => {
@@ -3002,7 +3331,7 @@ const InitialSetupWizard: React.FC<{
                             );
                         })}
                     </div>
-                </aside>
+                </aside>}
             </div>
 
         </div>
