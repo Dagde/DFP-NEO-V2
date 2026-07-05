@@ -788,6 +788,7 @@ const OrganisationMyUnitSettings: React.FC<{
         || units[0];
     const unitIndex = unit ? units.findIndex((candidate: any) => candidate === unit) : -1;
     const canEdit = false;
+    const unitHasTrainees = unit?.settings?.hasTrainees !== false;
     const locations = platformConfig?.locations || [];
     const modules = platformConfig?.modules || [];
     const resourcePools = unit ? getRelevantResourcePoolsForUnit(platformConfig, unit) : [];
@@ -950,7 +951,7 @@ const OrganisationMyUnitSettings: React.FC<{
         && qualification.operationalModels.includes(operationalModel)
     ));
     const categories = [
-        { id: 'identity', label: 'Unit', count: 5 },
+        { id: 'identity', label: 'Unit', count: 6 },
         { id: 'resources', label: 'Resources', count: resourcePools.length + resourceSharingForUnit.length + staffSharingForUnit.length },
         { id: 'crew', label: 'Crew', count: aircraftTypesForUnit.length + alternateCrewProfiles.length },
         { id: 'training', label: 'Training', count: standardMissionProfiles.length + currencyProfiles.length + 2 },
@@ -1318,8 +1319,12 @@ const OrganisationMyUnitSettings: React.FC<{
                         <UnitSettingsReadRow label="Staff max flights" value={eventLimits?.instructor?.maxFlights ?? 1} />
                         <UnitSettingsReadRow label="Staff max sim" value={eventLimits?.instructor?.maxSimulators ?? 2} />
                         <UnitSettingsReadRow label="Staff max total" value={eventLimits?.instructor?.maxTotal ?? 3} />
-                        <UnitSettingsReadRow label="Trainee max flight/sim" value={eventLimits?.trainee?.maxFlightFtd ?? 1} />
-                        <UnitSettingsReadRow label="Trainee max total" value={eventLimits?.trainee?.maxTotal ?? 2} />
+                        {unitHasTrainees ? (
+                            <>
+                                <UnitSettingsReadRow label="Trainee max flight/sim" value={eventLimits?.trainee?.maxFlightFtd ?? 1} />
+                                <UnitSettingsReadRow label="Trainee max total" value={eventLimits?.trainee?.maxTotal ?? 2} />
+                            </>
+                        ) : null}
                     </UnitSettingsGroup>
                 </div>
             );
@@ -1556,6 +1561,7 @@ const OrganisationMyUnitSettings: React.FC<{
                     <UnitSettingsField label="Unit name" value={unit.name || ''} onChange={(value) => updateUnit({ name: value })} disabled={!canEdit} />
                     <UnitSettingsSelect label="Location" value={unit.locationCode || ''} options={locations.map((item: any) => item.code)} onChange={(value) => updateUnit({ locationCode: value })} disabled={!canEdit} />
                     <UnitSettingsSelect label="Unit type" value={unit.unitType || 'Training'} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational']} onChange={(value) => updateUnit({ unitType: value })} disabled={!canEdit} />
+                    <UnitSettingsField label="Trainees" value={unitHasTrainees ? 'On' : 'Off'} onChange={() => {}} disabled />
                     <UnitSettingsSelect label="Operating model" value={operationalModel} options={OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)} optionLabels={modelOptionLabels} onChange={(value) => updateUnitSettings({ operationalModel: value })} disabled={!canEdit} />
                 </UnitSettingsGroup>
                 <UnitSettingsGroup title="Organisation & Location" description="Where this unit sits in the configured organisation." action={<div className="flex flex-wrap justify-end gap-2">{settingsLink('platform-units', 'Unit ownership', { unitCode: unit.code })}{settingsLink('platform-organisation-locations', 'Locations', { locationCode: unit.locationCode })}</div>}>

@@ -9364,6 +9364,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const units = platformConfig?.units || [];
   const unit = units.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === activeUnitCode) || units.find((candidate) => String(candidate?.status || "ACTIVE").toUpperCase() !== "INACTIVE") || units[0];
   unit ? units.findIndex((candidate) => candidate === unit) : -1;
+  const unitHasTrainees = unit?.settings?.hasTrainees !== false;
   const locations = platformConfig?.locations || [];
   const modules = platformConfig?.modules || [];
   const resourcePools = unit ? getRelevantResourcePoolsForUnit(platformConfig, unit) : [];
@@ -9470,7 +9471,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const modelCrewPositions = crewPositionTerminology.positions.filter((position) => !position.operationalModels?.length || position.operationalModels.includes(operationalModel2));
   const modelQualifications = staffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE" && qualification.operationalModels.includes(operationalModel2));
   const categories = [
-    { id: "identity", label: "Unit", count: 5 },
+    { id: "identity", label: "Unit", count: 6 },
     { id: "resources", label: "Resources", count: resourcePools.length + resourceSharingForUnit.length + staffSharingForUnit.length },
     { id: "crew", label: "Crew", count: aircraftTypesForUnit.length + alternateCrewProfiles.length },
     { id: "training", label: "Training", count: standardMissionProfiles.length + currencyProfiles.length + 2 },
@@ -9491,7 +9492,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const updateUnit = (patch) => {
     return;
   };
-  const updateUnitSettings = (patch) => {
+  const updateUnitSettings2 = (patch) => {
     updateUnit({
       settings: {
         ...unit?.settings || {},
@@ -9521,7 +9522,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     });
   };
   const updateUnitTrainingReportTemplate = (patch) => {
-    updateUnitSettings({
+    updateUnitSettings2({
       trainingReportTemplate: {
         ...trainingReportTemplate,
         ...patch
@@ -9714,8 +9715,10 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Staff max flights", value: eventLimits?.instructor?.maxFlights ?? 1 }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Staff max sim", value: eventLimits?.instructor?.maxSimulators ?? 2 }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Staff max total", value: eventLimits?.instructor?.maxTotal ?? 3 }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Trainee max flight/sim", value: eventLimits?.trainee?.maxFlightFtd ?? 1 }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Trainee max total", value: eventLimits?.trainee?.maxTotal ?? 2 })
+          unitHasTrainees ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Trainee max flight/sim", value: eventLimits?.trainee?.maxFlightFtd ?? 1 }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Trainee max total", value: eventLimits?.trainee?.maxTotal ?? 2 })
+          ] }) : null
         ] })
       ] });
     }
@@ -9808,7 +9811,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Aircraft count", value: Number(profile.aircraftCount ?? 0), onChange: (value) => updateCurrencyProfile(profile, { aircraftCount: value }), disabled: true })
         ] }, profile.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Currency builder", value: "No currency profiles match this unit.", muted: true }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Training Reports Builder", description: "Unit report naming, pass/fail wording, grading and module labels.", action: settingsLink("training-report-template", "Take me there", { unitCode: unit.code, focusSubsectionId: "platform-unit-training-report-template" }), children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Report short name", value: trainingReportTerminology.name, onChange: (value) => updateUnitSettings({ trainingReportTerminology: { name: value.slice(0, 10) } }), disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Report short name", value: trainingReportTerminology.name, onChange: (value) => updateUnitSettings2({ trainingReportTerminology: { name: value.slice(0, 10) } }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Display name", value: trainingReportTemplate.displayName, onChange: (value) => updateUnitTrainingReportTemplate({ displayName: value.slice(0, 20) }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Grade minimum", value: Number(trainingReportTemplate.grades.scaleMin ?? 0), onChange: (value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMin: value } }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Grade maximum", value: Number(trainingReportTemplate.grades.scaleMax ?? 5), onChange: (value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMax: value } }), disabled: true }),
@@ -9892,17 +9895,19 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit name", value: unit.name || "", onChange: (value) => updateUnit(), disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Location", value: unit.locationCode || "", options: locations.map((item) => item.code), onChange: (value) => updateUnit(), disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Unit type", value: unit.unitType || "Training", options: ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"], onChange: (value) => updateUnit(), disabled: true }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Operating model", value: operationalModel2, options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value), optionLabels: modelOptionLabels, onChange: (value) => updateUnitSettings({ operationalModel: value }), disabled: true })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Trainees", value: unitHasTrainees ? "On" : "Off", onChange: () => {
+        }, disabled: true }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Operating model", value: operationalModel2, options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value), optionLabels: modelOptionLabels, onChange: (value) => updateUnitSettings2({ operationalModel: value }), disabled: true })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Organisation & Location", description: "Where this unit sits in the configured organisation.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-2", children: [
         settingsLink("platform-units", "Unit ownership", { unitCode: unit.code }),
         settingsLink("platform-organisation-locations", "Locations", { locationCode: unit.locationCode })
       ] }), children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Parent organisation", value: formatPlainList(parentPath, ""), onChange: (value) => updateUnitSettings({ parentOrganisationPath: value.split("/").map((part) => part.trim()).filter(Boolean), parentOrganisation: value.split("/").map((part) => part.trim()).filter(Boolean).join("-") }), disabled: true }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Parent organisation", value: formatPlainList(parentPath, ""), onChange: (value) => updateUnitSettings2({ parentOrganisationPath: value.split("/").map((part) => part.trim()).filter(Boolean), parentOrganisation: value.split("/").map((part) => part.trim()).filter(Boolean).join("-") }), disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Home location name", value: location ? `${location.name || location.code}` : unit.locationCode || "", onChange: (value) => updateLocation(location, { name: value }), disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Timezone", value: location?.timezone || "", onChange: (value) => updateLocation(location, { timezone: value }), disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Training areas", value: Array.isArray(location?.trainingAreas) ? location.trainingAreas.join(", ") : "", onChange: (value) => updateLocation(location, { trainingAreas: value.split(",").map((item) => item.trim()).filter(Boolean) }), disabled: true }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Scheduling model", value: operationalModel2, options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value), optionLabels: modelOptionLabels, onChange: (value) => updateUnitSettings({ operationalModel: value }), disabled: true })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Scheduling model", value: operationalModel2, options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value), optionLabels: modelOptionLabels, onChange: (value) => updateUnitSettings2({ operationalModel: value }), disabled: true })
       ] })
     ] });
   };
@@ -44409,10 +44414,10 @@ const END_HOUR$2 = 24;
 const TOTAL_HOURS$2 = END_HOUR$2 - START_HOUR$2;
 const CREW_COLUMN_WIDTH = 180;
 const TIME_HEADER_HEIGHT$2 = 40;
-const normaliseUnitCode = (value) => String(value || "").trim().toUpperCase();
+const normaliseUnitCode$1 = (value) => String(value || "").trim().toUpperCase();
 const normaliseCrewLabel = (value) => String(value || "").replace(/^CREW\s*/i, "").replace(/\s*\/\s*[A-Z0-9-]+$/i, "").trim();
 const makeCrewKey = (unit, crew) => {
-  const unitCode = normaliseUnitCode(unit);
+  const unitCode = normaliseUnitCode$1(unit);
   const crewLabel = normaliseCrewLabel(crew);
   return unitCode && crewLabel ? `${unitCode}::${crewLabel}` : "";
 };
@@ -44487,7 +44492,7 @@ const CrewScheduleView = ({
     instructorsData.forEach((staff) => {
       const key = makeCrewKey(staff.unit, staff.crew);
       if (!key) return;
-      const unit = normaliseUnitCode(staff.unit);
+      const unit = normaliseUnitCode$1(staff.unit);
       const unitCrews = unitMap.get(unit) || /* @__PURE__ */ new Map();
       const crew = unitCrews.get(key) || { key, label: formatCrewDisplay(key), unit, members: [] };
       if (staff.name && !crew.members.includes(staff.name)) crew.members.push(staff.name);
@@ -52249,6 +52254,7 @@ const SettingsView = ({
   scoringMatrixReadOnly = false,
   onScoringMatrixElementAdded,
   activeOperationalModel,
+  activeUnitHasTrainees = true,
   maxDispatchPerHour,
   onUpdateMaxDispatchPerHour,
   dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS,
@@ -52311,6 +52317,7 @@ const SettingsView = ({
   const [selectedCurrency, setSelectedCurrency] = reactExports.useState(null);
   const [isEditingLimits, setIsEditingLimits] = reactExports.useState(false);
   const [tempLimits, setTempLimits] = reactExports.useState(eventLimits);
+  const canEditTraineeLimits = isEditingLimits && activeUnitHasTrainees;
   const [showScoringMatrix, setShowScoringMatrix] = reactExports.useState(false);
   const [scoringMatrixTab, setScoringMatrixTab] = reactExports.useState("Airmanship");
   const [repoFiles, setRepoFiles] = reactExports.useState([]);
@@ -54217,23 +54224,33 @@ const SettingsView = ({
               ] })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Trainees" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
-                  "Max Flight/",
-                  resourceDisplayNames.ftd,
-                  ":"
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "fieldset",
+            {
+              className: `p-3 border rounded-lg transition ${activeUnitHasTrainees ? "border-gray-600" : "border-gray-700 bg-gray-900/50 opacity-45"}`,
+              disabled: !activeUnitHasTrainees,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: [
+                  "Trainees",
+                  activeUnitHasTrainees ? "" : " (Off for current unit)"
                 ] }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxFlightFtd || 1, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.trainee.maxFlightFtd })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total all events:" }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.trainee.maxTotal })
-              ] })
-            ] })
-          ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
+                      "Max Flight/",
+                      resourceDisplayNames.ftd,
+                      ":"
+                    ] }),
+                    canEditTraineeLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxFlightFtd || 1, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.trainee.maxFlightFtd })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total all events:" }),
+                    canEditTraineeLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.trainee.maxTotal })
+                  ] })
+                ] })
+              ]
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "SIM IPs" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
@@ -62843,7 +62860,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1060px] space-y-3", children: config.units.map((unit, index) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1180px] space-y-3", children: config.units.map((unit, index) => {
         const unitSettings = unit.settings || {};
         const isSelectedUnit = selectedUnitIndex === index;
         const isUnitEditing = canEdit && editingUnitIndex === index;
@@ -62857,7 +62874,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               unitRowRefs.current[rowKey] = node;
             },
             onClick: () => setSelectedUnitIndex(index),
-            className: `relative grid cursor-pointer grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(138px,1.14fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(190px,1.45fr)] gap-3 rounded border-2 p-3 transition-colors ${isSelectedUnit ? "border-cyan-300 bg-cyan-500/10 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40" : "border-gray-700 bg-gray-900 hover:border-gray-500"}`,
+            className: `relative grid cursor-pointer grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(138px,1.14fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(105px,0.7fr)_minmax(190px,1.45fr)] gap-3 rounded border-2 p-3 transition-colors ${isSelectedUnit ? "border-cyan-300 bg-cyan-500/10 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40" : "border-gray-700 bg-gray-900 hover:border-gray-500"}`,
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit", value: unit.code, disabled: !isUnitEditing, onChange: (value) => updateUnitCode(index, value) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit Name", value: unit.name, disabled: !isUnitEditing, onChange: (value) => updateRow("units", index, { name: value }) }) }),
@@ -62956,6 +62973,32 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !isUnitEditing, options: config.locations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit Type", value: unit.unitType || "Training", disabled: !isUnitEditing, options: ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"], onChange: (value) => updateRow("units", index, { unitType: value }) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  FieldLabel,
+                  {
+                    label: "Trainees",
+                    info: "Turn off for units that do not use trainee records. Trainee event limits stay saved, but are greyed out for that unit."
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    "aria-pressed": unitSettings.hasTrainees !== false,
+                    disabled: !isUnitEditing,
+                    onClick: (event) => {
+                      event.stopPropagation();
+                      updateUnitSettings(unit, { hasTrainees: unitSettings.hasTrainees === false });
+                    },
+                    className: `flex h-[38px] w-full items-center justify-between rounded border px-3 text-xs font-black uppercase tracking-wide transition ${unitSettings.hasTrainees !== false ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-100" : "border-gray-700 bg-gray-950 text-gray-400"} disabled:cursor-not-allowed disabled:opacity-60`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: unitSettings.hasTrainees !== false ? "On" : "Off" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `relative h-5 w-9 rounded-full border transition ${unitSettings.hasTrainees !== false ? "border-cyan-300 bg-cyan-400/30" : "border-gray-600 bg-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full transition ${unitSettings.hasTrainees !== false ? "left-[18px] bg-cyan-100" : "left-1 bg-gray-500"}` }) })
+                    ]
+                  }
+                )
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 SelectField,
                 {
@@ -94035,6 +94078,14 @@ const App = () => {
     () => new Set(activeContextUnitCodes),
     [activeContextUnitCodes]
   );
+  const activeUnitHasTrainees = reactExports.useMemo(() => {
+    const activeUnitKeys = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
+    if (activeUnitKeys.length === 0) return true;
+    const activeUnitKeySet = new Set(activeUnitKeys.map((unitCode) => normaliseUnitCode(unitCode)));
+    const matchingUnits = (platformConfig?.units || []).filter((unit) => activeUnitKeySet.has(normaliseUnitCode(unit?.code)));
+    if (matchingUnits.length === 0) return true;
+    return matchingUnits.some((unit) => unit?.settings?.hasTrainees !== false);
+  }, [activeContextUnitCodes, activeUnitCode, platformConfig]);
   const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
   const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
   const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
@@ -108105,6 +108156,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             activeUnitCodes: activeContextUnitCodes,
             activeCompositeUnitCode: activeUnitCode,
             activeOperationalModel,
+            activeUnitHasTrainees,
             fixedCrewTileColourMode: activeFixedCrewTileColourMode,
             onUpdateFixedCrewTileColourMode: handleUpdateFixedCrewTileColourMode,
             requestedSettingsSection,

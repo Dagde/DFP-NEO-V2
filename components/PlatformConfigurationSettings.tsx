@@ -5109,7 +5109,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="p-4">
           <div className="max-w-full overflow-x-auto pb-2">
-            <div className="min-w-[1060px] space-y-3">
+            <div className="min-w-[1180px] space-y-3">
               {config.units.map((unit, index) => {
                 const unitSettings = unit.settings || {};
                 const isSelectedUnit = selectedUnitIndex === index;
@@ -5122,7 +5122,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     key={rowKey}
                     ref={(node) => { unitRowRefs.current[rowKey] = node; }}
                     onClick={() => setSelectedUnitIndex(index)}
-                    className={`relative grid cursor-pointer grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(138px,1.14fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(190px,1.45fr)] gap-3 rounded border-2 p-3 transition-colors ${
+                    className={`relative grid cursor-pointer grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(138px,1.14fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(105px,0.7fr)_minmax(190px,1.45fr)] gap-3 rounded border-2 p-3 transition-colors ${
                       isSelectedUnit
                         ? 'border-cyan-300 bg-cyan-500/10 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40'
                         : 'border-gray-700 bg-gray-900 hover:border-gray-500'
@@ -5239,6 +5239,35 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div>
                   <SelectField label="Unit Type" value={unit.unitType || 'Training'} disabled={!isUnitEditing} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational']} onChange={(value) => updateRow('units', index, { unitType: value })} />
                 </div>
+                <label>
+                  <FieldLabel
+                    label="Trainees"
+                    info="Turn off for units that do not use trainee records. Trainee event limits stay saved, but are greyed out for that unit."
+                  />
+                  <button
+                    type="button"
+                    aria-pressed={unitSettings.hasTrainees !== false}
+                    disabled={!isUnitEditing}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      updateUnitSettings(unit, { hasTrainees: unitSettings.hasTrainees === false });
+                    }}
+                    className={`flex h-[38px] w-full items-center justify-between rounded border px-3 text-xs font-black uppercase tracking-wide transition ${
+                      unitSettings.hasTrainees !== false
+                        ? 'border-cyan-400/50 bg-cyan-500/15 text-cyan-100'
+                        : 'border-gray-700 bg-gray-950 text-gray-400'
+                    } disabled:cursor-not-allowed disabled:opacity-60`}
+                  >
+                    <span>{unitSettings.hasTrainees !== false ? 'On' : 'Off'}</span>
+                    <span className={`relative h-5 w-9 rounded-full border transition ${
+                      unitSettings.hasTrainees !== false ? 'border-cyan-300 bg-cyan-400/30' : 'border-gray-600 bg-gray-800'
+                    }`}>
+                      <span className={`absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full transition ${
+                        unitSettings.hasTrainees !== false ? 'left-[18px] bg-cyan-100' : 'left-1 bg-gray-500'
+                      }`} />
+                    </span>
+                  </button>
+                </label>
                 <div>
                   <SelectField
                     label="Model"

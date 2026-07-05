@@ -103,6 +103,7 @@ interface SettingsViewWithMenuProps {
     activeUnitCodes?: string[];
     activeCompositeUnitCode?: string;
     activeOperationalModel?: string;
+    activeUnitHasTrainees?: boolean;
     fixedCrewTileColourMode?: FixedCrewTileColourMode;
     onUpdateFixedCrewTileColourMode?: (mode: FixedCrewTileColourMode) => void;
     dispatchStaggerSettings?: DispatchStaggerSettings;

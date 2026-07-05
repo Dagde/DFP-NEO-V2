@@ -21565,6 +21565,18 @@ const App: React.FC = () => {
         () => new Set(activeContextUnitCodes),
         [activeContextUnitCodes],
     );
+    const activeUnitHasTrainees = useMemo(() => {
+        const activeUnitKeys = activeContextUnitCodes.length > 0
+            ? activeContextUnitCodes
+            : String(activeUnitCode || '').split('+').map(code => String(code || '').trim().toUpperCase()).filter(Boolean);
+        if (activeUnitKeys.length === 0) return true;
+        const activeUnitKeySet = new Set(activeUnitKeys.map(unitCode => normaliseUnitCode(unitCode)));
+        const matchingUnits = (platformConfig?.units || []).filter((unit: any) => (
+            activeUnitKeySet.has(normaliseUnitCode(unit?.code))
+        ));
+        if (matchingUnits.length === 0) return true;
+        return matchingUnits.some((unit: any) => unit?.settings?.hasTrainees !== false);
+    }, [activeContextUnitCodes, activeUnitCode, platformConfig]);
     const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
     const activeResourcePoolUnitCode = isSharedFleetOperationalContext
         ? null
@@ -38894,6 +38906,7 @@ appliedUpdates.forEach(update => {
                        activeUnitCodes={activeContextUnitCodes}
                        activeCompositeUnitCode={activeUnitCode}
                        activeOperationalModel={activeOperationalModel}
+                       activeUnitHasTrainees={activeUnitHasTrainees}
                        fixedCrewTileColourMode={activeFixedCrewTileColourMode}
                        onUpdateFixedCrewTileColourMode={handleUpdateFixedCrewTileColourMode}
                        requestedSettingsSection={requestedSettingsSection}

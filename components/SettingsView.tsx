@@ -96,6 +96,7 @@ interface SettingsViewProps {
     scoringMatrixReadOnly?: boolean;
     onScoringMatrixElementAdded?: (elementName: string) => void;
     activeOperationalModel?: string;
+    activeUnitHasTrainees?: boolean;
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
     dispatchStaggerSettings?: DispatchStaggerSettings;
@@ -504,6 +505,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     scoringMatrixReadOnly = false,
     onScoringMatrixElementAdded,
     activeOperationalModel,
+    activeUnitHasTrainees = true,
     maxDispatchPerHour,
     onUpdateMaxDispatchPerHour,
     dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS,
@@ -586,6 +588,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     // Event Limits State
     const [isEditingLimits, setIsEditingLimits] = useState(false);
     const [tempLimits, setTempLimits] = useState<EventLimits>(eventLimits);
+    const canEditTraineeLimits = isEditingLimits && activeUnitHasTrainees;
 
     // Scoring Matrix State
     const [showScoringMatrix, setShowScoringMatrix] = useState(false);
@@ -2989,18 +2992,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         </div>
                                     </fieldset>
                                     {/* Trainees */}
-                                    <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                        <legend className="px-2 text-sm font-semibold text-gray-300">Trainees</legend>
+                                    <fieldset
+                                        className={`p-3 border rounded-lg transition ${activeUnitHasTrainees ? 'border-gray-600' : 'border-gray-700 bg-gray-900/50 opacity-45'}`}
+                                        disabled={!activeUnitHasTrainees}
+                                    >
+                                        <legend className="px-2 text-sm font-semibold text-gray-300">
+                                            Trainees{activeUnitHasTrainees ? '' : ' (Off for current unit)'}
+                                        </legend>
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
-                                                {isEditingLimits ? (
+                                                {canEditTraineeLimits ? (
                                                     <input type="number" value={tempLimits.trainee.maxFlightFtd || 1} onChange={e => setTempLimits({...tempLimits, trainee: {...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.trainee.maxFlightFtd}</span>}
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-400">Max total all events:</span>
-                                                {isEditingLimits ? (
+                                                {canEditTraineeLimits ? (
                                                     <input type="number" value={tempLimits.trainee.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, trainee: {...tempLimits.trainee, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.trainee.maxTotal}</span>}
                                             </div>
