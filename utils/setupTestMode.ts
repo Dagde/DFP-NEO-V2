@@ -2,6 +2,7 @@ export const SETUP_TEST_QUERY_PARAM = 'setupTest';
 export const SETUP_TEST_RESET_QUERY_PARAM = 'resetSetupTest';
 export const AIR_MOVEMENTS_TEST_PROFILE = 'air-movements';
 export const SETUP_TEST_PLATFORM_EVENT = 'dfp-setup-test-platform-config-updated';
+const INITIAL_SETUP_WIZARD_STEP_KEY = 'dfp-initial-setup-wizard-step';
 
 const safeWindow = (): Window | null => (typeof window === 'undefined' ? null : window);
 
@@ -16,6 +17,7 @@ export const getSetupTestProfile = (): string | null => {
       ['platform_config', 'settings', 'currencies'].forEach((kind) => {
         win.localStorage.removeItem(`dfp_setup_test_${cleanUrlProfile}_${kind}`);
       });
+      win.localStorage.removeItem(INITIAL_SETUP_WIZARD_STEP_KEY);
       params.delete(SETUP_TEST_RESET_QUERY_PARAM);
       const nextSearch = params.toString();
       win.history.replaceState({}, '', `${win.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${win.location.hash}`);
