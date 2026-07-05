@@ -1436,7 +1436,6 @@ const getSetupTestProfile = () => {
   const urlProfile = params.get(SETUP_TEST_QUERY_PARAM);
   const cleanUrlProfile = String(urlProfile || "").trim();
   if (cleanUrlProfile) {
-    win.sessionStorage.setItem("dfp_setup_test_profile", cleanUrlProfile);
     if (params.get(SETUP_TEST_RESET_QUERY_PARAM) === "1") {
       ["platform_config", "settings", "currencies"].forEach((kind) => {
         win.localStorage.removeItem(`dfp_setup_test_${cleanUrlProfile}_${kind}`);
@@ -1447,7 +1446,8 @@ const getSetupTestProfile = () => {
     }
     return cleanUrlProfile;
   }
-  return win.sessionStorage.getItem("dfp_setup_test_profile");
+  win.sessionStorage.removeItem("dfp_setup_test_profile");
+  return null;
 };
 const isSetupTestMode = () => Boolean(getSetupTestProfile());
 const getSetupTestStorageKey = (kind) => `dfp_setup_test_${getSetupTestProfile() || AIR_MOVEMENTS_TEST_PROFILE}_${kind}`;

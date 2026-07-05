@@ -12,7 +12,6 @@ export const getSetupTestProfile = (): string | null => {
   const urlProfile = params.get(SETUP_TEST_QUERY_PARAM);
   const cleanUrlProfile = String(urlProfile || '').trim();
   if (cleanUrlProfile) {
-    win.sessionStorage.setItem('dfp_setup_test_profile', cleanUrlProfile);
     if (params.get(SETUP_TEST_RESET_QUERY_PARAM) === '1') {
       ['platform_config', 'settings', 'currencies'].forEach((kind) => {
         win.localStorage.removeItem(`dfp_setup_test_${cleanUrlProfile}_${kind}`);
@@ -23,7 +22,8 @@ export const getSetupTestProfile = (): string | null => {
     }
     return cleanUrlProfile;
   }
-  return win.sessionStorage.getItem('dfp_setup_test_profile');
+  win.sessionStorage.removeItem('dfp_setup_test_profile');
+  return null;
 };
 
 export const isSetupTestMode = (): boolean => Boolean(getSetupTestProfile());
