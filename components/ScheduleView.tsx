@@ -2412,45 +2412,24 @@ const InitialSetupWizard: React.FC<{
             checkIds: ['organisation'],
         },
         {
-            id: 'org-level1-name',
-            title: 'What is the next level down called?',
+            id: 'org-level1',
+            title: 'Build the next level down',
             label: 'Level 1',
-            body: `Thanks. ${organisationDraft.name || organisationDraft.code || 'Your organisation'} will be Level 0. Now name the type of group directly below it.`,
+            body: `Thanks. ${organisationDraft.name || organisationDraft.code || 'Your organisation'} will be Level 0. Now add the first layer below it.`,
             checkIds: ['organisation'],
         },
         {
-            id: 'org-level1-options',
-            title: `Which ${organisationDraft.level1Name || 'Level 1'} options sit under ${organisationDraft.name || organisationDraft.code || 'your organisation'}?`,
-            label: 'Level 1 list',
-            body: 'Enter one option per line. You can add more later.',
-            checkIds: ['organisation'],
-        },
-        {
-            id: 'org-level2-name',
-            title: `What is the next level down from ${organisationDraft.level1Name || 'Level 1'} called?`,
+            id: 'org-level2',
+            title: `Build the level below ${organisationDraft.level1Name || 'Level 1'}`,
             label: 'Level 2',
             body: 'For example, this might be Command, Group, Wing, Region, or Directorate.',
             checkIds: ['organisation'],
         },
         {
-            id: 'org-level2-options',
-            title: `Which ${organisationDraft.level2Name || 'Level 2'} options do you need?`,
-            label: 'Level 2 list',
-            body: 'Enter one option per line. These are the selectable organisations at this level.',
-            checkIds: ['organisation'],
-        },
-        {
-            id: 'org-level3-name',
-            title: `What is the next level down from ${organisationDraft.level2Name || 'Level 2'} called?`,
+            id: 'org-level3',
+            title: `Build the level below ${organisationDraft.level2Name || 'Level 2'}`,
             label: 'Level 3',
             body: 'This is normally the level units are attached to or owned by.',
-            checkIds: ['organisation'],
-        },
-        {
-            id: 'org-level3-options',
-            title: `Which ${organisationDraft.level3Name || 'Level 3'} options do you need?`,
-            label: 'Level 3 list',
-            body: 'Enter one option per line. Saving this step writes the organisation hierarchy into Settings.',
             checkIds: ['organisation'],
         },
         {
@@ -2622,23 +2601,20 @@ const InitialSetupWizard: React.FC<{
             )}
         </label>
     );
-    const wizardTextArea = (label: string, value: string, onChange: (value: string) => void, placeholder?: string) => (
+    const wizardTextArea = (label: string, value: string, onChange: (value: string) => void, placeholder?: string, autoFocus = false) => (
         <label className="block">
             <span className={wizardLabelClass}>{label}</span>
             <textarea
                 className={`${wizardInputClass} mt-1 min-h-[84px] resize-y`}
                 value={value}
                 placeholder={placeholder}
+                autoFocus={autoFocus}
                 onKeyDown={stopEditableKeyPropagation}
                 onChange={(event) => onChange(event.target.value)}
             />
         </label>
     );
-    const saveAndContinue = (saveAction: () => void) => {
-        saveAction();
-        setWizardStep((step) => Math.min(steps.length - 1, step + 1));
-    };
-    const promptShell = (question: React.ReactNode, answer: React.ReactNode, actionLabel = 'Save and continue', saveAction?: () => void) => (
+    const promptShell = (question: React.ReactNode, answer: React.ReactNode, actionLabel = 'Next', saveAction?: () => void) => (
         <div key={visibleStep.id} className="animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm">
             <div className="mb-5">
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Step {currentStep + 1} of {steps.length}</p>
@@ -2651,17 +2627,86 @@ const InitialSetupWizard: React.FC<{
                     Back
                 </button>
                 {saveAction ? (
-                    <button type="button" className={wizardPrimaryButtonClass} onClick={() => saveAndContinue(saveAction)}>
+                    <button type="button" className={wizardPrimaryButtonClass} onClick={saveAction}>
                         {actionLabel}
                     </button>
                 ) : (
                     <button type="button" className={wizardPrimaryButtonClass} onClick={() => setWizardStep(Math.min(steps.length - 1, currentStep + 1))}>
-                        Continue
+                        Next
                     </button>
                 )}
             </div>
         </div>
     );
+    const organisationPreviewLevels = [
+        { name: organisationDraft.level0Name || 'Organisation', options: fromLines(organisationDraft.level0Options || organisationDraft.name || organisationDraft.code) },
+        { name: organisationDraft.level1Name || 'Level 1', options: fromLines(organisationDraft.level1Options) },
+        { name: organisationDraft.level2Name || 'Level 2', options: fromLines(organisationDraft.level2Options) },
+        { name: organisationDraft.level3Name || 'Level 3', options: fromLines(organisationDraft.level3Options) },
+    ].filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || '').trim());
+    const renderOrganisationPreview = () => (
+        <div className="mt-4 rounded-xl border border-slate-300 bg-slate-950 p-4 text-white shadow-inner">
+            <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">Organisation tree preview</p>
+                <p className="text-[10px] font-semibold text-slate-400">This builds live as you type.</p>
+            </div>
+            <div className="space-y-4 overflow-x-auto pb-1">
+                {organisationPreviewLevels.map((level, levelIndex) => {
+                    const options = level.options.length > 0
+                        ? level.options
+                        : levelIndex === 0
+                            ? [organisationDraft.name || organisationDraft.code || 'Organisation']
+                            : [];
+                    if (options.length === 0) return null;
+                    return (
+                        <div key={`wizard-org-preview-${levelIndex}`} className="relative">
+                            {levelIndex > 0 && <div className="mx-auto mb-2 h-4 w-px bg-cyan-300/40" />}
+                            <div className="flex min-w-max justify-center gap-2">
+                                {options.slice(0, 10).map((option) => (
+                                    <div
+                                        key={`${levelIndex}-${option}`}
+                                        className={`flex min-h-[46px] w-[116px] flex-col items-center justify-center rounded border border-cyan-300/45 bg-slate-900 px-2 py-2 text-center shadow-[0_10px_18px_rgba(0,0,0,0.26)] ${levelIndex === 0 ? 'bg-cyan-950/80' : ''}`}
+                                    >
+                                        <span className="text-[7px] font-black uppercase tracking-[0.14em] text-cyan-200/80">{level.name}</span>
+                                        <span className="mt-1 break-words text-[10px] font-black leading-tight text-white">{option}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+    const organisationLevelAnswer = (
+        levelNumber: 1 | 2 | 3,
+        levelName: string,
+        levelOptions: string,
+        onNameChange: (value: string) => void,
+        onOptionsChange: (value: string) => void,
+        placeholder: string,
+    ) => (
+        <div>
+            <div className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
+                {wizardField(`Level ${levelNumber} type`, levelName, onNameChange, undefined, levelNumber === 1 ? 'Branch / HQ' : levelNumber === 2 ? 'Command' : 'Numbered Air Force')}
+                {wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true)}
+            </div>
+            <p className="mt-3 text-xs leading-5 text-slate-600">
+                The left box names what this layer is called. Most users can leave that generic name alone. The right box is where you enter the actual organisations at that layer, one per line.
+            </p>
+            {renderOrganisationPreview()}
+        </div>
+    );
+    const saveAllWizardDrafts = () => {
+        saveOrganisationDraft();
+        saveLocationDraft();
+        saveUnitDraft();
+        saveResourceDraft();
+        saveCrewDraft();
+        saveTrainingDraft();
+        saveAccessDraft();
+        setSaveMessage('Setup saved into Settings.');
+    };
     const renderWizardDataEntry = () => {
         if (visibleStep.id === 'analysis') {
             return promptShell(
@@ -2690,65 +2735,53 @@ const InitialSetupWizard: React.FC<{
                         level0Options: value || draft.level0Options,
                     })), undefined, 'RAAF')}
                     {wizardField('Short code', organisationDraft.code, (value) => setOrganisationDraft((draft) => ({ ...draft, code: value })), undefined, 'RAAF')}
+                    <div className="md:col-span-2">{renderOrganisationPreview()}</div>
                 </div>,
-                'Save organisation',
-                saveOrganisationDraft,
             );
         }
-        if (visibleStep.id === 'org-level1-name') {
+        if (visibleStep.id === 'org-level1') {
             return promptShell(
-                <p>Thanks. <strong>{organisationDraft.name || organisationDraft.code || 'Your organisation'}</strong> will be Level 0. What would Level 1 be, the next level down?</p>,
-                wizardField('Level 1 name', organisationDraft.level1Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level1Name: value })), undefined, 'Branch / HQ'),
-                'Save level name',
-                saveOrganisationDraft,
+                <p><strong>{organisationDraft.name || organisationDraft.code || 'Your organisation'}</strong> is the top of the tree. The next layer is usually the broadest grouping below it, such as a headquarters, command, service branch, region, or division.</p>,
+                organisationLevelAnswer(
+                    1,
+                    organisationDraft.level1Name,
+                    organisationDraft.level1Options,
+                    (value) => setOrganisationDraft((draft) => ({ ...draft, level1Name: value })),
+                    (value) => setOrganisationDraft((draft) => ({ ...draft, level1Options: value })),
+                    'Air Command',
+                ),
             );
         }
-        if (visibleStep.id === 'org-level1-options') {
+        if (visibleStep.id === 'org-level2') {
             return promptShell(
-                <p>Now list the <strong>{organisationDraft.level1Name || 'Level 1'}</strong> options under <strong>{organisationDraft.name || organisationDraft.code || 'your organisation'}</strong>.</p>,
-                wizardTextArea('Level 1 options', organisationDraft.level1Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level1Options: value })), 'Air Command'),
-                'Save level 1',
-                saveOrganisationDraft,
+                <p>This layer sits underneath <strong>{organisationDraft.level1Name || 'Level 1'}</strong>. Use it for the organisations that own or manage several lower groups. Example: Air Combat Group, Air Mobility Group, Training Group.</p>,
+                organisationLevelAnswer(
+                    2,
+                    organisationDraft.level2Name,
+                    organisationDraft.level2Options,
+                    (value) => setOrganisationDraft((draft) => ({ ...draft, level2Name: value })),
+                    (value) => setOrganisationDraft((draft) => ({ ...draft, level2Options: value })),
+                    'Air Combat Group\nAir Mobility Group',
+                ),
             );
         }
-        if (visibleStep.id === 'org-level2-name') {
+        if (visibleStep.id === 'org-level3') {
             return promptShell(
-                <p>What is the next level down from <strong>{organisationDraft.level1Name || 'Level 1'}</strong> called?</p>,
-                wizardField('Level 2 name', organisationDraft.level2Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level2Name: value })), undefined, 'Command'),
-                'Save level name',
-                saveOrganisationDraft,
-            );
-        }
-        if (visibleStep.id === 'org-level2-options') {
-            return promptShell(
-                <p>Which <strong>{organisationDraft.level2Name || 'Level 2'}</strong> options do you need?</p>,
-                wizardTextArea('Level 2 options', organisationDraft.level2Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level2Options: value })), 'Air Combat Group\nAir Mobility Group'),
-                'Save level 2',
-                saveOrganisationDraft,
-            );
-        }
-        if (visibleStep.id === 'org-level3-name') {
-            return promptShell(
-                <p>What is the next level down from <strong>{organisationDraft.level2Name || 'Level 2'}</strong> called?</p>,
-                wizardField('Level 3 name', organisationDraft.level3Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level3Name: value })), undefined, 'Numbered Air Force'),
-                'Save level name',
-                saveOrganisationDraft,
-            );
-        }
-        if (visibleStep.id === 'org-level3-options') {
-            return promptShell(
-                <p>Which <strong>{organisationDraft.level3Name || 'Level 3'}</strong> options do you need?</p>,
-                wizardTextArea('Level 3 options', organisationDraft.level3Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level3Options: value })), '78WG\n81WG\n82WG\n84WG'),
-                'Save hierarchy',
-                saveOrganisationDraft,
+                <p>This layer is usually closest to the units using the app. It might be wings, groups, squadrons, departments, or any other owner level your organisation uses.</p>,
+                organisationLevelAnswer(
+                    3,
+                    organisationDraft.level3Name,
+                    organisationDraft.level3Options,
+                    (value) => setOrganisationDraft((draft) => ({ ...draft, level3Name: value })),
+                    (value) => setOrganisationDraft((draft) => ({ ...draft, level3Options: value })),
+                    '78WG\n81WG\n82WG\n84WG',
+                ),
             );
         }
         if (visibleStep.id === 'location-code') {
             return promptShell(
                 <p>Next we will set up the first base or operating location. What is the location code?</p>,
                 wizardField('Location code', locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'YAMB'),
-                'Save location code',
-                saveLocationDraft,
             );
         }
         if (visibleStep.id === 'location-details') {
@@ -2759,8 +2792,6 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Timezone', locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })), undefined, 'Australia/Brisbane')}
                     {wizardField('Training areas', locationDraft.trainingAreas, (value) => setLocationDraft((draft) => ({ ...draft, trainingAreas: value })), undefined, 'Area A, Area B')}
                 </div>,
-                'Save location',
-                saveLocationDraft,
             );
         }
         if (visibleStep.id === 'unit-code') {
@@ -2770,8 +2801,6 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, '36SQN')}
                     {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, '36SQN')}
                 </div>,
-                'Save unit identity',
-                saveUnitDraft,
             );
         }
         if (visibleStep.id === 'unit-model') {
@@ -2792,8 +2821,6 @@ const InitialSetupWizard: React.FC<{
                         </button>
                     </label>
                 </div>,
-                'Save unit model',
-                saveUnitDraft,
             );
         }
         if (visibleStep.id === 'resource-aircraft') {
@@ -2804,8 +2831,6 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), undefined, 'C-17A')}
                     {wizardField('Resource pool name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), undefined, 'Amberley C-17A Resource Pool')}
                 </div>,
-                'Save aircraft',
-                saveResourceDraft,
             );
         }
         if (visibleStep.id === 'resource-counts') {
@@ -2818,8 +2843,6 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Standby', resourceDraft.standby, (value) => setResourceDraft((draft) => ({ ...draft, standby: value })))}
                     {wizardField('Ground', resourceDraft.ground, (value) => setResourceDraft((draft) => ({ ...draft, ground: value })))}
                 </div>,
-                'Save resource counts',
-                saveResourceDraft,
             );
         }
         if (visibleStep.id === 'crew') {
@@ -2829,8 +2852,6 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Aircraft type', crewDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value })), activeAircraftTypes.map((aircraft: any) => aircraft.code))}
                     {wizardTextArea('Required seats', crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })), 'Pilot = 2\nLoadmaster = 1')}
                 </div>,
-                'Save crew',
-                saveCrewDraft,
             );
         }
         if (visibleStep.id === 'master-lmp') {
@@ -2841,8 +2862,6 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), undefined, 'C-17A Conversion')}
                     {wizardTextArea('Description', trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), 'Initial conversion training stream')}
                 </div>,
-                'Save Master LMP',
-                saveTrainingDraft,
             );
         }
         if (visibleStep.id === 'access') {
@@ -2854,27 +2873,29 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Unit', accessDraft.unitCode, (value) => setAccessDraft((draft) => ({ ...draft, unitCode: value })), activeUnits.map((unit: any) => unit.code))}
                     {wizardField('Access level', trainingDraft.accessLevel, (value) => setTrainingDraft((draft) => ({ ...draft, accessLevel: value })), ['View', 'Assign', 'Manage'])}
                 </div>,
-                'Save access',
-                () => {
-                    saveAccessDraft();
-                    saveTrainingDraft();
-                },
             );
         }
         return promptShell(
-            <p>Review the setup below. Anything saved in this wizard has already been written to the shared Settings configuration.</p>,
-            <div className="grid gap-2">
-                {checks.map((check) => (
-                    <div key={check.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
-                        <span className="text-sm font-bold text-slate-800">{check.label}</span>
-                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${check.complete ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                            {check.complete ? 'Ready' : 'Needs setup'}
-                        </span>
+            <p>Review the setup below. Nothing from this wizard is written to Settings until you press <strong>Save setup</strong>.</p>,
+            <div className="grid gap-2 text-sm">
+                {[
+                    ['Organisation', `${organisationDraft.name || organisationDraft.code || 'Not set'} (${organisationDraft.code || 'no code'})`],
+                    ['Structure', `${fromLines(organisationDraft.level1Options).length} ${organisationDraft.level1Name || 'Level 1'}, ${fromLines(organisationDraft.level2Options).length} ${organisationDraft.level2Name || 'Level 2'}, ${fromLines(organisationDraft.level3Options).length} ${organisationDraft.level3Name || 'Level 3'}`],
+                    ['Location', `${locationDraft.code || 'Not set'} - ${locationDraft.name || 'not named'}`],
+                    ['Unit', `${unitDraft.code || 'Not set'} - ${unitDraft.operationalModel || 'no model'}`],
+                    ['Resources', `${resourceDraft.aircraftCode || 'Not set'} / Aircraft ${resourceDraft.aircraft || '0'} / Sim ${resourceDraft.sim || '0'} / Trainer ${resourceDraft.trainer || '0'} / Standby ${resourceDraft.standby || '0'} / Ground ${resourceDraft.ground || '0'}`],
+                    ['Crew', crewDraft.standardSeats || 'Not set'],
+                    ['Master LMP', `${trainingDraft.lmpCode || 'Not set'} - ${trainingDraft.lmpName || 'not named'}`],
+                    ['Access', `${accessDraft.userName || 'Not set'} / ${accessDraft.locationCode || 'no location'} / ${accessDraft.unitCode || 'no unit'} / ${trainingDraft.accessLevel || 'View'}`],
+                ].map(([label, value]) => (
+                    <div key={label} className="grid gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[150px_minmax(0,1fr)]">
+                        <span className="font-black uppercase tracking-[0.12em] text-slate-500">{label}</span>
+                        <span className="whitespace-pre-line font-bold text-slate-900">{value}</span>
                     </div>
                 ))}
             </div>,
-            undefined,
-            undefined,
+            'Save setup',
+            saveAllWizardDrafts,
         );
     };
 
@@ -2884,12 +2905,12 @@ const InitialSetupWizard: React.FC<{
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Initial Setup Wizard</p>
                 <h3 className="mt-1 text-xl font-bold text-slate-950">DFP-NEO is partly configured</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-700">
-                    I found {completedMandatory} of {mandatoryChecks.length} mandatory setup areas already complete. You can continue from the last saved wizard step, or start the guide again from the beginning. Starting again resets the wizard progress only; existing settings are not changed until you edit or import data.
+                    I found {completedMandatory} of {mandatoryChecks.length} mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. Starting again resets the wizard progress only. Settings are not updated until the final Save setup step.
                 </p>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <button type="button" className={wizardChoiceClass} onClick={resumeWizard}>
                         <span className="block text-base font-bold">Continue setup</span>
-                        <span className="mt-1 block text-xs font-medium text-slate-600">Resume from the last saved step.</span>
+                        <span className="mt-1 block text-xs font-medium text-slate-600">Resume from the last wizard page.</span>
                     </button>
                     <button type="button" className={wizardChoiceClass} onClick={resetWizard}>
                         <span className="block text-base font-bold">Start again</span>

@@ -10711,45 +10711,24 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       checkIds: ["organisation"]
     },
     {
-      id: "org-level1-name",
-      title: "What is the next level down called?",
+      id: "org-level1",
+      title: "Build the next level down",
       label: "Level 1",
-      body: `Thanks. ${organisationDraft.name || organisationDraft.code || "Your organisation"} will be Level 0. Now name the type of group directly below it.`,
+      body: `Thanks. ${organisationDraft.name || organisationDraft.code || "Your organisation"} will be Level 0. Now add the first layer below it.`,
       checkIds: ["organisation"]
     },
     {
-      id: "org-level1-options",
-      title: `Which ${organisationDraft.level1Name || "Level 1"} options sit under ${organisationDraft.name || organisationDraft.code || "your organisation"}?`,
-      label: "Level 1 list",
-      body: "Enter one option per line. You can add more later.",
-      checkIds: ["organisation"]
-    },
-    {
-      id: "org-level2-name",
-      title: `What is the next level down from ${organisationDraft.level1Name || "Level 1"} called?`,
+      id: "org-level2",
+      title: `Build the level below ${organisationDraft.level1Name || "Level 1"}`,
       label: "Level 2",
       body: "For example, this might be Command, Group, Wing, Region, or Directorate.",
       checkIds: ["organisation"]
     },
     {
-      id: "org-level2-options",
-      title: `Which ${organisationDraft.level2Name || "Level 2"} options do you need?`,
-      label: "Level 2 list",
-      body: "Enter one option per line. These are the selectable organisations at this level.",
-      checkIds: ["organisation"]
-    },
-    {
-      id: "org-level3-name",
-      title: `What is the next level down from ${organisationDraft.level2Name || "Level 2"} called?`,
+      id: "org-level3",
+      title: `Build the level below ${organisationDraft.level2Name || "Level 2"}`,
       label: "Level 3",
       body: "This is normally the level units are attached to or owned by.",
-      checkIds: ["organisation"]
-    },
-    {
-      id: "org-level3-options",
-      title: `Which ${organisationDraft.level3Name || "Level 3"} options do you need?`,
-      label: "Level 3 list",
-      body: "Enter one option per line. Saving this step writes the organisation hierarchy into Settings.",
       checkIds: ["organisation"]
     },
     {
@@ -10894,7 +10873,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       }
     )
   ] });
-  const wizardTextArea = (label, value, onChange, placeholder) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+  const wizardTextArea = (label, value, onChange, placeholder, autoFocus = false) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "textarea",
@@ -10902,16 +10881,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
         className: `${wizardInputClass} mt-1 min-h-[84px] resize-y`,
         value,
         placeholder,
+        autoFocus,
         onKeyDown: stopEditableKeyPropagation,
         onChange: (event) => onChange(event.target.value)
       }
     )
   ] });
-  const saveAndContinue = (saveAction) => {
-    saveAction();
-    setWizardStep((step) => Math.min(steps.length - 1, step + 1));
-  };
-  const promptShell = (question, answer, actionLabel = "Save and continue", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm", children: [
+  const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: [
         "Step ",
@@ -10925,9 +10901,57 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-xl border border-slate-300 bg-white/80 p-4 shadow-sm", children: answer }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex flex-wrap items-center justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setWizardStep(Math.max(0, currentStep - 1)), disabled: currentStep === 0, children: "Back" }),
-      saveAction ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: () => saveAndContinue(saveAction), children: actionLabel }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: () => setWizardStep(Math.min(steps.length - 1, currentStep + 1)), children: "Continue" })
+      saveAction ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: saveAction, children: actionLabel }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: () => setWizardStep(Math.min(steps.length - 1, currentStep + 1)), children: "Next" })
     ] })
   ] }, visibleStep.id);
+  const organisationPreviewLevels = [
+    { name: organisationDraft.level0Name || "Organisation", options: fromLines(organisationDraft.level0Options || organisationDraft.name || organisationDraft.code) },
+    { name: organisationDraft.level1Name || "Level 1", options: fromLines(organisationDraft.level1Options) },
+    { name: organisationDraft.level2Name || "Level 2", options: fromLines(organisationDraft.level2Options) },
+    { name: organisationDraft.level3Name || "Level 3", options: fromLines(organisationDraft.level3Options) }
+  ].filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || "").trim());
+  const renderOrganisationPreview = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-xl border border-slate-300 bg-slate-950 p-4 text-white shadow-inner", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200", children: "Organisation tree preview" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-semibold text-slate-400", children: "This builds live as you type." })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 overflow-x-auto pb-1", children: organisationPreviewLevels.map((level, levelIndex) => {
+      const options = level.options.length > 0 ? level.options : levelIndex === 0 ? [organisationDraft.name || organisationDraft.code || "Organisation"] : [];
+      if (options.length === 0) return null;
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+        levelIndex > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto mb-2 h-4 w-px bg-cyan-300/40" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-max justify-center gap-2", children: options.slice(0, 10).map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: `flex min-h-[46px] w-[116px] flex-col items-center justify-center rounded border border-cyan-300/45 bg-slate-900 px-2 py-2 text-center shadow-[0_10px_18px_rgba(0,0,0,0.26)] ${levelIndex === 0 ? "bg-cyan-950/80" : ""}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[7px] font-black uppercase tracking-[0.14em] text-cyan-200/80", children: level.name }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 break-words text-[10px] font-black leading-tight text-white", children: option })
+            ]
+          },
+          `${levelIndex}-${option}`
+        )) })
+      ] }, `wizard-org-preview-${levelIndex}`);
+    }) })
+  ] });
+  const organisationLevelAnswer = (levelNumber, levelName, levelOptions, onNameChange, onOptionsChange, placeholder) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]", children: [
+      wizardField(`Level ${levelNumber} type`, levelName, onNameChange, void 0, levelNumber === 1 ? "Branch / HQ" : levelNumber === 2 ? "Command" : "Numbered Air Force"),
+      wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true)
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "The left box names what this layer is called. Most users can leave that generic name alone. The right box is where you enter the actual organisations at that layer, one per line." }),
+    renderOrganisationPreview()
+  ] });
+  const saveAllWizardDrafts = () => {
+    saveOrganisationDraft();
+    saveLocationDraft();
+    saveUnitDraft();
+    saveResourceDraft();
+    saveCrewDraft();
+    saveTrainingDraft();
+    saveAccessDraft();
+    setSaveMessage("Setup saved into Settings.");
+  };
   const renderWizardDataEntry = () => {
     if (visibleStep.id === "analysis") {
       return promptShell(
@@ -10971,92 +10995,61 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
             level0Name: value || draft.level0Name,
             level0Options: value || draft.level0Options
           })), void 0, "RAAF"),
-          wizardField("Short code", organisationDraft.code, (value) => setOrganisationDraft((draft) => ({ ...draft, code: value })), void 0, "RAAF")
-        ] }),
-        "Save organisation",
-        saveOrganisationDraft
+          wizardField("Short code", organisationDraft.code, (value) => setOrganisationDraft((draft) => ({ ...draft, code: value })), void 0, "RAAF"),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: renderOrganisationPreview() })
+        ] })
       );
     }
-    if (visibleStep.id === "org-level1-name") {
+    if (visibleStep.id === "org-level1") {
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "Thanks. ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: organisationDraft.name || organisationDraft.code || "Your organisation" }),
-          " will be Level 0. What would Level 1 be, the next level down?"
+          " is the top of the tree. The next layer is usually the broadest grouping below it, such as a headquarters, command, service branch, region, or division."
         ] }),
-        wizardField("Level 1 name", organisationDraft.level1Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level1Name: value })), void 0, "Branch / HQ"),
-        "Save level name",
-        saveOrganisationDraft
+        organisationLevelAnswer(
+          1,
+          organisationDraft.level1Name,
+          organisationDraft.level1Options,
+          (value) => setOrganisationDraft((draft) => ({ ...draft, level1Name: value })),
+          (value) => setOrganisationDraft((draft) => ({ ...draft, level1Options: value })),
+          "Air Command"
+        )
       );
     }
-    if (visibleStep.id === "org-level1-options") {
+    if (visibleStep.id === "org-level2") {
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "Now list the ",
+          "This layer sits underneath ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: organisationDraft.level1Name || "Level 1" }),
-          " options under ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: organisationDraft.name || organisationDraft.code || "your organisation" }),
-          "."
+          ". Use it for the organisations that own or manage several lower groups. Example: Air Combat Group, Air Mobility Group, Training Group."
         ] }),
-        wizardTextArea("Level 1 options", organisationDraft.level1Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level1Options: value })), "Air Command"),
-        "Save level 1",
-        saveOrganisationDraft
+        organisationLevelAnswer(
+          2,
+          organisationDraft.level2Name,
+          organisationDraft.level2Options,
+          (value) => setOrganisationDraft((draft) => ({ ...draft, level2Name: value })),
+          (value) => setOrganisationDraft((draft) => ({ ...draft, level2Options: value })),
+          "Air Combat Group\nAir Mobility Group"
+        )
       );
     }
-    if (visibleStep.id === "org-level2-name") {
+    if (visibleStep.id === "org-level3") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "What is the next level down from ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: organisationDraft.level1Name || "Level 1" }),
-          " called?"
-        ] }),
-        wizardField("Level 2 name", organisationDraft.level2Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level2Name: value })), void 0, "Command"),
-        "Save level name",
-        saveOrganisationDraft
-      );
-    }
-    if (visibleStep.id === "org-level2-options") {
-      return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "Which ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: organisationDraft.level2Name || "Level 2" }),
-          " options do you need?"
-        ] }),
-        wizardTextArea("Level 2 options", organisationDraft.level2Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level2Options: value })), "Air Combat Group\nAir Mobility Group"),
-        "Save level 2",
-        saveOrganisationDraft
-      );
-    }
-    if (visibleStep.id === "org-level3-name") {
-      return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "What is the next level down from ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: organisationDraft.level2Name || "Level 2" }),
-          " called?"
-        ] }),
-        wizardField("Level 3 name", organisationDraft.level3Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level3Name: value })), void 0, "Numbered Air Force"),
-        "Save level name",
-        saveOrganisationDraft
-      );
-    }
-    if (visibleStep.id === "org-level3-options") {
-      return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "Which ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: organisationDraft.level3Name || "Level 3" }),
-          " options do you need?"
-        ] }),
-        wizardTextArea("Level 3 options", organisationDraft.level3Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level3Options: value })), "78WG\n81WG\n82WG\n84WG"),
-        "Save hierarchy",
-        saveOrganisationDraft
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "This layer is usually closest to the units using the app. It might be wings, groups, squadrons, departments, or any other owner level your organisation uses." }),
+        organisationLevelAnswer(
+          3,
+          organisationDraft.level3Name,
+          organisationDraft.level3Options,
+          (value) => setOrganisationDraft((draft) => ({ ...draft, level3Name: value })),
+          (value) => setOrganisationDraft((draft) => ({ ...draft, level3Options: value })),
+          "78WG\n81WG\n82WG\n84WG"
+        )
       );
     }
     if (visibleStep.id === "location-code") {
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Next we will set up the first base or operating location. What is the location code?" }),
-        wizardField("Location code", locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "YAMB"),
-        "Save location code",
-        saveLocationDraft
+        wizardField("Location code", locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "YAMB")
       );
     }
     if (visibleStep.id === "location-details") {
@@ -11070,9 +11063,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
           wizardField("Location name", locationDraft.name, (value) => setLocationDraft((draft) => ({ ...draft, name: value })), void 0, "Amberley"),
           wizardField("Timezone", locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })), void 0, "Australia/Brisbane"),
           wizardField("Training areas", locationDraft.trainingAreas, (value) => setLocationDraft((draft) => ({ ...draft, trainingAreas: value })), void 0, "Area A, Area B")
-        ] }),
-        "Save location",
-        saveLocationDraft
+        ] })
       );
     }
     if (visibleStep.id === "unit-code") {
@@ -11081,9 +11072,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "36SQN"),
           wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "36SQN")
-        ] }),
-        "Save unit identity",
-        saveUnitDraft
+        ] })
       );
     }
     if (visibleStep.id === "unit-model") {
@@ -11109,9 +11098,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
               }
             )
           ] })
-        ] }),
-        "Save unit model",
-        saveUnitDraft
+        ] })
       );
     }
     if (visibleStep.id === "resource-aircraft") {
@@ -11125,9 +11112,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
           wizardField("Aircraft type code", resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), void 0, "C-17A"),
           wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "C-17A"),
           wizardField("Resource pool name", resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "Amberley C-17A Resource Pool")
-        ] }),
-        "Save aircraft",
-        saveResourceDraft
+        ] })
       );
     }
     if (visibleStep.id === "resource-counts") {
@@ -11143,9 +11128,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
           wizardField("Trainer", resourceDraft.trainer, (value) => setResourceDraft((draft) => ({ ...draft, trainer: value }))),
           wizardField("Standby", resourceDraft.standby, (value) => setResourceDraft((draft) => ({ ...draft, standby: value }))),
           wizardField("Ground", resourceDraft.ground, (value) => setResourceDraft((draft) => ({ ...draft, ground: value })))
-        ] }),
-        "Save resource counts",
-        saveResourceDraft
+        ] })
       );
     }
     if (visibleStep.id === "crew") {
@@ -11158,9 +11141,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]", children: [
           wizardField("Aircraft type", crewDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value })), activeAircraftTypes.map((aircraft) => aircraft.code)),
           wizardTextArea("Required seats", crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })), "Pilot = 2\nLoadmaster = 1")
-        ] }),
-        "Save crew",
-        saveCrewDraft
+        ] })
       );
     }
     if (visibleStep.id === "master-lmp") {
@@ -11170,9 +11151,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
           wizardField("Master LMP code", trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), void 0, "C-17A Conversion"),
           wizardField("Master LMP name", trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), void 0, "C-17A Conversion"),
           wizardTextArea("Description", trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), "Initial conversion training stream")
-        ] }),
-        "Save Master LMP",
-        saveTrainingDraft
+        ] })
       );
     }
     if (visibleStep.id === "access") {
@@ -11187,22 +11166,30 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
           wizardField("Location", accessDraft.locationCode, (value) => setAccessDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location) => location.code)),
           wizardField("Unit", accessDraft.unitCode, (value) => setAccessDraft((draft) => ({ ...draft, unitCode: value })), activeUnits.map((unit) => unit.code)),
           wizardField("Access level", trainingDraft.accessLevel, (value) => setTrainingDraft((draft) => ({ ...draft, accessLevel: value })), ["View", "Assign", "Manage"])
-        ] }),
-        "Save access",
-        () => {
-          saveAccessDraft();
-          saveTrainingDraft();
-        }
+        ] })
       );
     }
     return promptShell(
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Review the setup below. Anything saved in this wizard has already been written to the shared Settings configuration." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2", children: checks.map((check) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-slate-800", children: check.label }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${check.complete ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`, children: check.complete ? "Ready" : "Needs setup" })
-      ] }, check.id)) }),
-      void 0,
-      void 0
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+        "Review the setup below. Nothing from this wizard is written to Settings until you press ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Save setup" }),
+        "."
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 text-sm", children: [
+        ["Organisation", `${organisationDraft.name || organisationDraft.code || "Not set"} (${organisationDraft.code || "no code"})`],
+        ["Structure", `${fromLines(organisationDraft.level1Options).length} ${organisationDraft.level1Name || "Level 1"}, ${fromLines(organisationDraft.level2Options).length} ${organisationDraft.level2Name || "Level 2"}, ${fromLines(organisationDraft.level3Options).length} ${organisationDraft.level3Name || "Level 3"}`],
+        ["Location", `${locationDraft.code || "Not set"} - ${locationDraft.name || "not named"}`],
+        ["Unit", `${unitDraft.code || "Not set"} - ${unitDraft.operationalModel || "no model"}`],
+        ["Resources", `${resourceDraft.aircraftCode || "Not set"} / Aircraft ${resourceDraft.aircraft || "0"} / Sim ${resourceDraft.sim || "0"} / Trainer ${resourceDraft.trainer || "0"} / Standby ${resourceDraft.standby || "0"} / Ground ${resourceDraft.ground || "0"}`],
+        ["Crew", crewDraft.standardSeats || "Not set"],
+        ["Master LMP", `${trainingDraft.lmpCode || "Not set"} - ${trainingDraft.lmpName || "not named"}`],
+        ["Access", `${accessDraft.userName || "Not set"} / ${accessDraft.locationCode || "no location"} / ${accessDraft.unitCode || "no unit"} / ${trainingDraft.accessLevel || "View"}`]
+      ].map(([label, value]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[150px_minmax(0,1fr)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black uppercase tracking-[0.12em] text-slate-500", children: label }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-pre-line font-bold text-slate-900", children: value })
+      ] }, label)) }),
+      "Save setup",
+      saveAllWizardDrafts
     );
   };
   if (mode === "detect" && isPartiallyConfigured) {
@@ -11214,12 +11201,12 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
         completedMandatory,
         " of ",
         mandatoryChecks.length,
-        " mandatory setup areas already complete. You can continue from the last saved wizard step, or start the guide again from the beginning. Starting again resets the wizard progress only; existing settings are not changed until you edit or import data."
+        " mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. Starting again resets the wizard progress only. Settings are not updated until the final Save setup step."
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 grid gap-3 sm:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: resumeWizard, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-bold", children: "Continue setup" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-medium text-slate-600", children: "Resume from the last saved step." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-medium text-slate-600", children: "Resume from the last wizard page." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: resetWizard, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-bold", children: "Start again" }),
