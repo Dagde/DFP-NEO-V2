@@ -95914,6 +95914,34 @@ const App = () => {
   };
   reactExports.useEffect(() => {
     const checkExistingSession = async () => {
+      if (setupTestProfile) {
+        const setupUser = {
+          userId: `setup-test-${setupTestProfile}`,
+          username: `setup-test-${setupTestProfile}`,
+          firstName: "Setup",
+          lastName: "Admin",
+          displayName: "Setup Test Admin",
+          email: null,
+          role: "SUPER_ADMIN",
+          isActive: true,
+          mustChangePassword: false,
+          permissionsRoleId: "super-admin"
+        };
+        setAuthUser(setupUser);
+        setAuthSessionToken("");
+        setIsAuthenticated(true);
+        setCurrentUserName("Setup Admin");
+        setSessionUser({
+          firstName: setupUser.firstName,
+          lastName: setupUser.lastName,
+          role: setupUser.role,
+          militaryRank: "SETUP",
+          userId: setupUser.userId,
+          username: setupUser.username
+        });
+        setAuthLoading(false);
+        return;
+      }
       const ssoUserData = localStorage.getItem("dfp_sso_user");
       if (ssoUserData) {
         try {
@@ -95989,7 +96017,7 @@ const App = () => {
       setAuthLoading(false);
     };
     checkExistingSession();
-  }, []);
+  }, [setupTestProfile]);
   const handleLoginSuccess = (user, token) => {
     setAuthUser(user);
     setAuthSessionToken(token);

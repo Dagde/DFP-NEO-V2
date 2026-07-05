@@ -22145,6 +22145,35 @@ const App: React.FC = () => {
     // Check for existing session on app load
     useEffect(() => {
         const checkExistingSession = async () => {
+            if (setupTestProfile) {
+                const setupUser: AuthUser = {
+                    userId: `setup-test-${setupTestProfile}`,
+                    username: `setup-test-${setupTestProfile}`,
+                    firstName: 'Setup',
+                    lastName: 'Admin',
+                    displayName: 'Setup Test Admin',
+                    email: null,
+                    role: 'SUPER_ADMIN',
+                    isActive: true,
+                    mustChangePassword: false,
+                    permissionsRoleId: 'super-admin',
+                };
+                setAuthUser(setupUser);
+                setAuthSessionToken('');
+                setIsAuthenticated(true);
+                setCurrentUserName('Setup Admin');
+                setSessionUser({
+                    firstName: setupUser.firstName,
+                    lastName: setupUser.lastName,
+                    role: setupUser.role,
+                    militaryRank: 'SETUP',
+                    userId: setupUser.userId,
+                    username: setupUser.username,
+                });
+                setAuthLoading(false);
+                return;
+            }
+
             // FIRST: Check for SSO user data from Next.js wrapper
             const ssoUserData = localStorage.getItem('dfp_sso_user');
             if (ssoUserData) {
@@ -22230,7 +22259,7 @@ const App: React.FC = () => {
             setAuthLoading(false);
         };
         checkExistingSession();
-    }, []);
+    }, [setupTestProfile]);
 
     const handleLoginSuccess = (user: AuthUser, token: string) => {
         setAuthUser(user);
