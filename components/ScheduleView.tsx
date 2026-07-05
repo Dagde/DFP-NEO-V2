@@ -2393,65 +2393,147 @@ const InitialSetupWizard: React.FC<{
     const mandatoryChecks = checks.filter((check) => check.mandatory);
     const completedMandatory = mandatoryChecks.filter((check) => check.complete).length;
     const completedChecks = checks.filter((check) => check.complete).length;
-    const isBrandNew = completedMandatory <= 1;
     const isPartiallyConfigured = completedMandatory > 1 && completedMandatory < mandatoryChecks.length;
     const allMandatoryComplete = completedMandatory === mandatoryChecks.length;
 
     const steps = [
         {
             id: 'analysis',
-            title: 'Check what is already set up',
+            title: 'Let us check what is already set up',
             label: 'Check',
-            body: 'I will look at the current platform settings first. Mandatory items are needed for DFP-NEO and NEO Build to work. Optional items can be done later, but the wizard keeps them in one place.',
+            body: 'I will quickly read the current Settings data first, then guide you through the setup one question at a time.',
             checkIds: checks.map((check) => check.id),
         },
         {
-            id: 'organisation',
-            title: 'Organisation, bases and units',
-            label: 'Organisation',
-            body: 'Set the organisation structure, locations and units first. Everything else uses this foundation.',
-            checkIds: ['organisation', 'locations', 'units'],
+            id: 'org-name',
+            title: 'What is the name of your organisation?',
+            label: 'Org name',
+            body: 'This becomes Level 0, the top of the organisation structure.',
+            checkIds: ['organisation'],
         },
         {
-            id: 'resources',
-            title: 'Aircraft, pools and crew',
-            label: 'Resources',
-            body: 'Define aircraft types, resource pools and minimum crew composition so the scheduler knows what can be used and who is required.',
-            checkIds: ['resources', 'crew'],
+            id: 'org-level1-name',
+            title: 'What is the next level down called?',
+            label: 'Level 1',
+            body: `Thanks. ${organisationDraft.name || organisationDraft.code || 'Your organisation'} will be Level 0. Now name the type of group directly below it.`,
+            checkIds: ['organisation'],
         },
         {
-            id: 'people',
-            title: 'People and access',
-            label: 'People',
-            body: 'Add staff, trainees where the unit uses trainees, and user access scopes. This keeps data secure and unit-specific.',
-            checkIds: ['access'],
+            id: 'org-level1-options',
+            title: `Which ${organisationDraft.level1Name || 'Level 1'} options sit under ${organisationDraft.name || organisationDraft.code || 'your organisation'}?`,
+            label: 'Level 1 list',
+            body: 'Enter one option per line. You can add more later.',
+            checkIds: ['organisation'],
         },
         {
-            id: 'training',
-            title: 'Training and build rules',
-            label: 'Training',
-            body: 'Connect Master LMPs, courses, event details and build rules. This is what lets NEO build useful schedules instead of empty plans.',
-            checkIds: ['training', 'rules'],
+            id: 'org-level2-name',
+            title: `What is the next level down from ${organisationDraft.level1Name || 'Level 1'} called?`,
+            label: 'Level 2',
+            body: 'For example, this might be Command, Group, Wing, Region, or Directorate.',
+            checkIds: ['organisation'],
+        },
+        {
+            id: 'org-level2-options',
+            title: `Which ${organisationDraft.level2Name || 'Level 2'} options do you need?`,
+            label: 'Level 2 list',
+            body: 'Enter one option per line. These are the selectable organisations at this level.',
+            checkIds: ['organisation'],
+        },
+        {
+            id: 'org-level3-name',
+            title: `What is the next level down from ${organisationDraft.level2Name || 'Level 2'} called?`,
+            label: 'Level 3',
+            body: 'This is normally the level units are attached to or owned by.',
+            checkIds: ['organisation'],
+        },
+        {
+            id: 'org-level3-options',
+            title: `Which ${organisationDraft.level3Name || 'Level 3'} options do you need?`,
+            label: 'Level 3 list',
+            body: 'Enter one option per line. Saving this step writes the organisation hierarchy into Settings.',
+            checkIds: ['organisation'],
+        },
+        {
+            id: 'location-code',
+            title: 'What is the first base or location code?',
+            label: 'Base code',
+            body: 'This is the short code users recognise, such as YAMB or YMES.',
+            checkIds: ['locations'],
+        },
+        {
+            id: 'location-details',
+            title: `Tell me about ${locationDraft.code || 'this location'}`,
+            label: 'Base details',
+            body: 'Add the plain English name, timezone and any local training areas. Saving this step writes the location into Settings.',
+            checkIds: ['locations'],
+        },
+        {
+            id: 'unit-code',
+            title: 'What unit are we setting up first?',
+            label: 'Unit',
+            body: 'Start with the current user unit. You can add more units later.',
+            checkIds: ['units'],
+        },
+        {
+            id: 'unit-model',
+            title: `How does ${unitDraft.code || 'this unit'} operate?`,
+            label: 'Model',
+            body: 'The operational model controls the scheduling rules. Saving this step writes the unit into Settings.',
+            checkIds: ['units'],
+        },
+        {
+            id: 'resource-aircraft',
+            title: `What aircraft or main resource does ${unitDraft.code || 'this unit'} use?`,
+            label: 'Aircraft',
+            body: 'This creates or updates the aircraft type and the resource pool name.',
+            checkIds: ['resources'],
+        },
+        {
+            id: 'resource-counts',
+            title: `What can ${unitDraft.code || 'this unit'} schedule?`,
+            label: 'Counts',
+            body: 'Enter the numbers NEO can use for aircraft, simulators, trainers, standby and ground rows. Saving this step writes the resource pool into Settings.',
+            checkIds: ['resources'],
+        },
+        {
+            id: 'crew',
+            title: `What is the minimum crew for ${resourceDraft.aircraftCode || 'this aircraft'}?`,
+            label: 'Crew',
+            body: 'Enter one crew requirement per line. Example: Pilot = 2, Loadmaster = 1. Saving this step writes the crew composition into Settings.',
+            checkIds: ['crew'],
+        },
+        {
+            id: 'master-lmp',
+            title: 'What is the first Master LMP or training stream?',
+            label: 'LMP',
+            body: 'This is the selectable training stream used by LMP/Event Details and access rules.',
+            checkIds: ['training'],
+        },
+        {
+            id: 'access',
+            title: 'Who should have access first?',
+            label: 'Access',
+            body: 'Create the first access scope so the selected user can work with the location, unit and Master LMP.',
+            checkIds: ['access', 'training'],
         },
         {
             id: 'review',
-            title: 'Review and finish',
+            title: 'Review the setup',
             label: 'Review',
             body: allMandatoryComplete
-                ? 'The mandatory setup areas look ready. You can keep refining optional settings from My Unit Settings or the Settings pages.'
-                : 'Some mandatory setup areas still need attention. Enter the missing data in the wizard panels and save each section.',
+                ? 'The mandatory setup areas look ready.'
+                : 'Some mandatory setup areas still need attention. Step through the questions again or continue refining values here.',
             checkIds: checks.map((check) => check.id),
         },
     ];
     const currentStep = Math.min(wizardStep, steps.length - 1);
     const visibleStep = steps[currentStep];
-    const visibleChecks = checks.filter((check) => visibleStep.checkIds.includes(check.id));
     const visibleTemplates = initialSetupTemplates.filter((template) => (
         visibleStep.id === 'analysis'
         || visibleStep.id === 'review'
         || visibleStep.checkIds.includes(template.id)
-        || (visibleStep.id === 'people' && ['staff', 'trainees'].includes(template.id))
-        || (visibleStep.id === 'training' && template.id === 'courses')
+        || (['access'].includes(visibleStep.id) && ['staff', 'trainees'].includes(template.id))
+        || (['master-lmp', 'access'].includes(visibleStep.id) && template.id === 'courses')
     ));
 
     useEffect(() => {
@@ -2516,7 +2598,6 @@ const InitialSetupWizard: React.FC<{
     const wizardPrimaryButtonClass = 'rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600';
     const wizardInputClass = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200';
     const wizardLabelClass = 'text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
-    const wizardPanelClass = 'rounded-xl border border-slate-300 bg-white p-4 text-slate-900 shadow-sm';
     const wizardField = (
         label: string,
         value: string,
@@ -2553,190 +2634,247 @@ const InitialSetupWizard: React.FC<{
             />
         </label>
     );
-    const wizardSaveButton = (label: string, onClick: () => void) => (
-        <button type="button" className={wizardPrimaryButtonClass} onClick={onClick}>
-            {label}
-        </button>
+    const saveAndContinue = (saveAction: () => void) => {
+        saveAction();
+        setWizardStep((step) => Math.min(steps.length - 1, step + 1));
+    };
+    const promptShell = (question: React.ReactNode, answer: React.ReactNode, actionLabel = 'Save and continue', saveAction?: () => void) => (
+        <div key={visibleStep.id} className="animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm">
+            <div className="mb-5">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Step {currentStep + 1} of {steps.length}</p>
+                <h4 className="mt-1 text-xl font-bold text-slate-950">{visibleStep.title}</h4>
+                <div className="mt-3 text-sm leading-6 text-slate-700">{question}</div>
+            </div>
+            <div className="rounded-xl border border-slate-300 bg-white/80 p-4 shadow-sm">{answer}</div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <button type="button" className={wizardSmallButtonClass} onClick={() => setWizardStep(Math.max(0, currentStep - 1))} disabled={currentStep === 0}>
+                    Back
+                </button>
+                {saveAction ? (
+                    <button type="button" className={wizardPrimaryButtonClass} onClick={() => saveAndContinue(saveAction)}>
+                        {actionLabel}
+                    </button>
+                ) : (
+                    <button type="button" className={wizardPrimaryButtonClass} onClick={() => setWizardStep(Math.min(steps.length - 1, currentStep + 1))}>
+                        Continue
+                    </button>
+                )}
+            </div>
+        </div>
     );
     const renderWizardDataEntry = () => {
         if (visibleStep.id === 'analysis') {
-            return (
-                <div className={wizardPanelClass}>
-                    <h4 className="text-base font-black text-slate-950">Setup analysis</h4>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">
-                        The wizard checks the live Settings data first, then each step below lets you enter or refine the same records directly here.
-                    </p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                            <p className={wizardLabelClass}>Mandatory setup</p>
-                            <p className="mt-1 text-2xl font-black text-slate-950">{completedMandatory}/{mandatoryChecks.length}</p>
-                        </div>
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                            <p className={wizardLabelClass}>Overall setup</p>
-                            <p className="mt-1 text-2xl font-black text-slate-950">{completedChecks}/{checks.length}</p>
-                        </div>
+            return promptShell(
+                <p>I found <strong>{completedMandatory} of {mandatoryChecks.length}</strong> mandatory setup areas ready. We will now walk through the setup in plain English, one decision at a time.</p>,
+                <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <p className={wizardLabelClass}>Mandatory setup</p>
+                        <p className="mt-1 text-2xl font-black text-slate-950">{completedMandatory}/{mandatoryChecks.length}</p>
                     </div>
-                </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <p className={wizardLabelClass}>Overall setup</p>
+                        <p className="mt-1 text-2xl font-black text-slate-950">{completedChecks}/{checks.length}</p>
+                    </div>
+                </div>,
             );
         }
-        if (visibleStep.id === 'organisation') {
-            return (
-                <div className="space-y-3">
-                    <div className={wizardPanelClass}>
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <h4 className="text-base font-black text-slate-950">Organisation</h4>
-                                <p className="mt-1 text-sm leading-5 text-slate-600">Enter the organisation name and the first four structure levels used by units.</p>
-                            </div>
-                            {wizardSaveButton('Save organisation', saveOrganisationDraft)}
-                        </div>
-                        <div className="mt-4 grid gap-3 md:grid-cols-2">
-                            {wizardField('Organisation code', organisationDraft.code, (value) => setOrganisationDraft((draft) => ({ ...draft, code: value })))}
-                            {wizardField('Organisation name', organisationDraft.name, (value) => setOrganisationDraft((draft) => ({ ...draft, name: value })))}
-                            {wizardField('Level 0 name', organisationDraft.level0Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level0Name: value })))}
-                            {wizardTextArea('Level 0 options', organisationDraft.level0Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level0Options: value })), 'One option per line')}
-                            {wizardField('Level 1 name', organisationDraft.level1Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level1Name: value })))}
-                            {wizardTextArea('Level 1 options', organisationDraft.level1Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level1Options: value })), 'One option per line')}
-                            {wizardField('Level 2 name', organisationDraft.level2Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level2Name: value })))}
-                            {wizardTextArea('Level 2 options', organisationDraft.level2Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level2Options: value })), 'One option per line')}
-                            {wizardField('Level 3 name', organisationDraft.level3Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level3Name: value })))}
-                            {wizardTextArea('Level 3 options', organisationDraft.level3Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level3Options: value })), 'One option per line')}
-                        </div>
-                    </div>
-                    <div className={wizardPanelClass}>
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <h4 className="text-base font-black text-slate-950">Location</h4>
-                                <p className="mt-1 text-sm leading-5 text-slate-600">Add the home base or airfield used by the unit.</p>
-                            </div>
-                            {wizardSaveButton('Save location', saveLocationDraft)}
-                        </div>
-                        <div className="mt-4 grid gap-3 md:grid-cols-2">
-                            {wizardField('Location code', locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value })))}
-                            {wizardField('Location name', locationDraft.name, (value) => setLocationDraft((draft) => ({ ...draft, name: value })))}
-                            {wizardField('Timezone', locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })))}
-                            {wizardField('Training areas', locationDraft.trainingAreas, (value) => setLocationDraft((draft) => ({ ...draft, trainingAreas: value })), undefined, 'Area A, Area B')}
-                        </div>
-                    </div>
-                    <div className={wizardPanelClass}>
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <h4 className="text-base font-black text-slate-950">Unit</h4>
-                                <p className="mt-1 text-sm leading-5 text-slate-600">Set the unit identity and operational model. The unit model controls which scheduling behaviour applies.</p>
-                            </div>
-                            {wizardSaveButton('Save unit', saveUnitDraft)}
-                        </div>
-                        <div className="mt-4 grid gap-3 md:grid-cols-2">
-                            {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value })))}
-                            {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })))}
-                            {wizardField('Location code', unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
-                            {wizardField('Unit type', unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), ['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational'])}
-                            {wizardField('Operational model', unitDraft.operationalModel, (value) => setUnitDraft((draft) => ({ ...draft, operationalModel: value })), OPERATIONAL_MODEL_OPTIONS.map((option) => option.value))}
-                            <label className="block">
-                                <span className={wizardLabelClass}>Trainees</span>
-                                <button
-                                    type="button"
-                                    className={`${wizardInputClass} mt-1 text-left ${unitDraft.hasTrainees ? 'bg-emerald-50 text-emerald-900' : 'bg-slate-100 text-slate-600'}`}
-                                    onClick={() => setUnitDraft((draft) => ({ ...draft, hasTrainees: !draft.hasTrainees }))}
-                                >
-                                    {unitDraft.hasTrainees ? 'On' : 'Off'}
-                                </button>
-                            </label>
-                        </div>
-                    </div>
-                </div>
+        if (visibleStep.id === 'org-name') {
+            return promptShell(
+                <p>First we are going to set up your organisation. What is the name of your organisation?</p>,
+                <div className="grid gap-3 md:grid-cols-2">
+                    {wizardField('Organisation name', organisationDraft.name, (value) => setOrganisationDraft((draft) => ({
+                        ...draft,
+                        name: value,
+                        code: draft.code || value,
+                        level0Name: value || draft.level0Name,
+                        level0Options: value || draft.level0Options,
+                    })), undefined, 'RAAF')}
+                    {wizardField('Short code', organisationDraft.code, (value) => setOrganisationDraft((draft) => ({ ...draft, code: value })), undefined, 'RAAF')}
+                </div>,
+                'Save organisation',
+                saveOrganisationDraft,
             );
         }
-        if (visibleStep.id === 'resources') {
-            return (
-                <div className="space-y-3">
-                    <div className={wizardPanelClass}>
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <h4 className="text-base font-black text-slate-950">Aircraft and resource pool</h4>
-                                <p className="mt-1 text-sm leading-5 text-slate-600">Enter the aircraft type and the pool counts NEO can schedule against.</p>
-                            </div>
-                            {wizardSaveButton('Save resources', saveResourceDraft)}
-                        </div>
-                        <div className="mt-4 grid gap-3 md:grid-cols-2">
-                            {wizardField('Aircraft type code', resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value })))}
-                            {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })))}
-                            {wizardField('Pool name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })))}
-                            {wizardField('Pool unit', resourceDraft.poolUnitCode, (value) => setResourceDraft((draft) => ({ ...draft, poolUnitCode: value })), activeUnits.map((unit: any) => unit.code))}
-                            {wizardField('Pool location', resourceDraft.poolLocationCode, (value) => setResourceDraft((draft) => ({ ...draft, poolLocationCode: value })), activeLocations.map((location: any) => location.code))}
-                            {wizardField('Aircraft count', resourceDraft.aircraft, (value) => setResourceDraft((draft) => ({ ...draft, aircraft: value })))}
-                            {wizardField('Sim count', resourceDraft.sim, (value) => setResourceDraft((draft) => ({ ...draft, sim: value })))}
-                            {wizardField('Trainer count', resourceDraft.trainer, (value) => setResourceDraft((draft) => ({ ...draft, trainer: value })))}
-                            {wizardField('Standby count', resourceDraft.standby, (value) => setResourceDraft((draft) => ({ ...draft, standby: value })))}
-                            {wizardField('Ground count', resourceDraft.ground, (value) => setResourceDraft((draft) => ({ ...draft, ground: value })))}
-                        </div>
-                    </div>
-                    <div className={wizardPanelClass}>
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <h4 className="text-base font-black text-slate-950">Standard crew composition</h4>
-                                <p className="mt-1 text-sm leading-5 text-slate-600">Enter one crew requirement per line, for example Pilot = 2 or Loadmaster = 1.</p>
-                            </div>
-                            {wizardSaveButton('Save crew', saveCrewDraft)}
-                        </div>
-                        <div className="mt-4 grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
-                            {wizardField('Aircraft type', crewDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value })), activeAircraftTypes.map((aircraft: any) => aircraft.code))}
-                            {wizardTextArea('Required seats', crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })), 'Pilot = 2\nLoadmaster = 1')}
-                        </div>
-                    </div>
-                </div>
+        if (visibleStep.id === 'org-level1-name') {
+            return promptShell(
+                <p>Thanks. <strong>{organisationDraft.name || organisationDraft.code || 'Your organisation'}</strong> will be Level 0. What would Level 1 be, the next level down?</p>,
+                wizardField('Level 1 name', organisationDraft.level1Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level1Name: value })), undefined, 'Branch / HQ'),
+                'Save level name',
+                saveOrganisationDraft,
             );
         }
-        if (visibleStep.id === 'people') {
-            return (
-                <div className={wizardPanelClass}>
-                    <div className="flex items-start justify-between gap-3">
-                        <div>
-                            <h4 className="text-base font-black text-slate-950">User access scope</h4>
-                            <p className="mt-1 text-sm leading-5 text-slate-600">Set who can access this location, unit and module. Staff and trainee spreadsheets can still be checked in the template panel.</p>
-                        </div>
-                        {wizardSaveButton('Save access', saveAccessDraft)}
-                    </div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                        {wizardField('User', accessDraft.userName, (value) => setAccessDraft((draft) => ({ ...draft, userName: value })))}
-                        {wizardField('Location', accessDraft.locationCode, (value) => setAccessDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
-                        {wizardField('Unit', accessDraft.unitCode, (value) => setAccessDraft((draft) => ({ ...draft, unitCode: value })), activeUnits.map((unit: any) => unit.code))}
-                        {wizardField('Module', accessDraft.moduleCode, (value) => setAccessDraft((draft) => ({ ...draft, moduleCode: value })), ['DFP', 'NEO Build', 'Settings', 'Training Records'])}
-                        {wizardField('Access level', accessDraft.accessLevel, (value) => setAccessDraft((draft) => ({ ...draft, accessLevel: value })), ['View', 'Assign', 'Manage'])}
-                    </div>
-                </div>
+        if (visibleStep.id === 'org-level1-options') {
+            return promptShell(
+                <p>Now list the <strong>{organisationDraft.level1Name || 'Level 1'}</strong> options under <strong>{organisationDraft.name || organisationDraft.code || 'your organisation'}</strong>.</p>,
+                wizardTextArea('Level 1 options', organisationDraft.level1Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level1Options: value })), 'Air Command'),
+                'Save level 1',
+                saveOrganisationDraft,
             );
         }
-        if (visibleStep.id === 'training') {
-            return (
-                <div className={wizardPanelClass}>
-                    <div className="flex items-start justify-between gap-3">
-                        <div>
-                            <h4 className="text-base font-black text-slate-950">Master LMP and access</h4>
-                            <p className="mt-1 text-sm leading-5 text-slate-600">Add the training stream, then set which unit can view, assign or manage it.</p>
-                        </div>
-                        {wizardSaveButton('Save training', saveTrainingDraft)}
-                    </div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                        {wizardField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value })))}
-                        {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })))}
-                        {wizardTextArea('Description', trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })))}
-                        {wizardField('Status', trainingDraft.status, (value) => setTrainingDraft((draft) => ({ ...draft, status: value })), ['ACTIVE', 'INACTIVE'])}
-                        {wizardField('Access location', trainingDraft.accessLocationCode, (value) => setTrainingDraft((draft) => ({ ...draft, accessLocationCode: value })), activeLocations.map((location: any) => location.code))}
-                        {wizardField('Access unit', trainingDraft.accessUnitCode, (value) => setTrainingDraft((draft) => ({ ...draft, accessUnitCode: value })), activeUnits.map((unit: any) => unit.code))}
-                        {wizardField('Access model', trainingDraft.accessModel, (value) => setTrainingDraft((draft) => ({ ...draft, accessModel: value })), ['Any Model', ...OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)])}
-                        {wizardField('Access level', trainingDraft.accessLevel, (value) => setTrainingDraft((draft) => ({ ...draft, accessLevel: value })), ['View', 'Assign', 'Manage'])}
-                    </div>
-                </div>
+        if (visibleStep.id === 'org-level2-name') {
+            return promptShell(
+                <p>What is the next level down from <strong>{organisationDraft.level1Name || 'Level 1'}</strong> called?</p>,
+                wizardField('Level 2 name', organisationDraft.level2Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level2Name: value })), undefined, 'Command'),
+                'Save level name',
+                saveOrganisationDraft,
             );
         }
-        return (
-            <div className={wizardPanelClass}>
-                <h4 className="text-base font-black text-slate-950">Review</h4>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                    Review the readiness cards above. Any saved wizard data is already written to the shared platform configuration that Settings uses.
-                </p>
-            </div>
+        if (visibleStep.id === 'org-level2-options') {
+            return promptShell(
+                <p>Which <strong>{organisationDraft.level2Name || 'Level 2'}</strong> options do you need?</p>,
+                wizardTextArea('Level 2 options', organisationDraft.level2Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level2Options: value })), 'Air Combat Group\nAir Mobility Group'),
+                'Save level 2',
+                saveOrganisationDraft,
+            );
+        }
+        if (visibleStep.id === 'org-level3-name') {
+            return promptShell(
+                <p>What is the next level down from <strong>{organisationDraft.level2Name || 'Level 2'}</strong> called?</p>,
+                wizardField('Level 3 name', organisationDraft.level3Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level3Name: value })), undefined, 'Numbered Air Force'),
+                'Save level name',
+                saveOrganisationDraft,
+            );
+        }
+        if (visibleStep.id === 'org-level3-options') {
+            return promptShell(
+                <p>Which <strong>{organisationDraft.level3Name || 'Level 3'}</strong> options do you need?</p>,
+                wizardTextArea('Level 3 options', organisationDraft.level3Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level3Options: value })), '78WG\n81WG\n82WG\n84WG'),
+                'Save hierarchy',
+                saveOrganisationDraft,
+            );
+        }
+        if (visibleStep.id === 'location-code') {
+            return promptShell(
+                <p>Next we will set up the first base or operating location. What is the location code?</p>,
+                wizardField('Location code', locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'YAMB'),
+                'Save location code',
+                saveLocationDraft,
+            );
+        }
+        if (visibleStep.id === 'location-details') {
+            return promptShell(
+                <p>Tell me the details for <strong>{locationDraft.code || 'this location'}</strong>.</p>,
+                <div className="grid gap-3 md:grid-cols-2">
+                    {wizardField('Location name', locationDraft.name, (value) => setLocationDraft((draft) => ({ ...draft, name: value })), undefined, 'Amberley')}
+                    {wizardField('Timezone', locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })), undefined, 'Australia/Brisbane')}
+                    {wizardField('Training areas', locationDraft.trainingAreas, (value) => setLocationDraft((draft) => ({ ...draft, trainingAreas: value })), undefined, 'Area A, Area B')}
+                </div>,
+                'Save location',
+                saveLocationDraft,
+            );
+        }
+        if (visibleStep.id === 'unit-code') {
+            return promptShell(
+                <p>Now we will set up the first unit using the app. What is the unit code and name?</p>,
+                <div className="grid gap-3 md:grid-cols-2">
+                    {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, '36SQN')}
+                    {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, '36SQN')}
+                </div>,
+                'Save unit identity',
+                saveUnitDraft,
+            );
+        }
+        if (visibleStep.id === 'unit-model') {
+            return promptShell(
+                <p>How does <strong>{unitDraft.code || 'this unit'}</strong> operate?</p>,
+                <div className="grid gap-3 md:grid-cols-2">
+                    {wizardField('Home location', unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
+                    {wizardField('Unit type', unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), ['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational'])}
+                    {wizardField('Operational model', unitDraft.operationalModel, (value) => setUnitDraft((draft) => ({ ...draft, operationalModel: value })), OPERATIONAL_MODEL_OPTIONS.map((option) => option.value))}
+                    <label className="block">
+                        <span className={wizardLabelClass}>Does this unit use trainees?</span>
+                        <button
+                            type="button"
+                            className={`${wizardInputClass} mt-1 text-left ${unitDraft.hasTrainees ? 'bg-emerald-50 text-emerald-900' : 'bg-slate-100 text-slate-600'}`}
+                            onClick={() => setUnitDraft((draft) => ({ ...draft, hasTrainees: !draft.hasTrainees }))}
+                        >
+                            {unitDraft.hasTrainees ? 'Yes, trainees on' : 'No, trainees off'}
+                        </button>
+                    </label>
+                </div>,
+                'Save unit model',
+                saveUnitDraft,
+            );
+        }
+        if (visibleStep.id === 'resource-aircraft') {
+            return promptShell(
+                <p>What aircraft type or primary resource should <strong>{unitDraft.code || 'this unit'}</strong> use?</p>,
+                <div className="grid gap-3 md:grid-cols-2">
+                    {wizardField('Aircraft type code', resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), undefined, 'C-17A')}
+                    {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), undefined, 'C-17A')}
+                    {wizardField('Resource pool name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), undefined, 'Amberley C-17A Resource Pool')}
+                </div>,
+                'Save aircraft',
+                saveResourceDraft,
+            );
+        }
+        if (visibleStep.id === 'resource-counts') {
+            return promptShell(
+                <p>How many schedule rows should NEO use for <strong>{resourceDraft.poolName || 'this resource pool'}</strong>?</p>,
+                <div className="grid gap-3 md:grid-cols-5">
+                    {wizardField('Aircraft', resourceDraft.aircraft, (value) => setResourceDraft((draft) => ({ ...draft, aircraft: value })))}
+                    {wizardField('Sim', resourceDraft.sim, (value) => setResourceDraft((draft) => ({ ...draft, sim: value })))}
+                    {wizardField('Trainer', resourceDraft.trainer, (value) => setResourceDraft((draft) => ({ ...draft, trainer: value })))}
+                    {wizardField('Standby', resourceDraft.standby, (value) => setResourceDraft((draft) => ({ ...draft, standby: value })))}
+                    {wizardField('Ground', resourceDraft.ground, (value) => setResourceDraft((draft) => ({ ...draft, ground: value })))}
+                </div>,
+                'Save resource counts',
+                saveResourceDraft,
+            );
+        }
+        if (visibleStep.id === 'crew') {
+            return promptShell(
+                <p>What minimum crew must be scheduled for <strong>{crewDraft.aircraftCode || resourceDraft.aircraftCode || 'this aircraft'}</strong>?</p>,
+                <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
+                    {wizardField('Aircraft type', crewDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value })), activeAircraftTypes.map((aircraft: any) => aircraft.code))}
+                    {wizardTextArea('Required seats', crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })), 'Pilot = 2\nLoadmaster = 1')}
+                </div>,
+                'Save crew',
+                saveCrewDraft,
+            );
+        }
+        if (visibleStep.id === 'master-lmp') {
+            return promptShell(
+                <p>What is the first Master LMP or training stream this organisation should use?</p>,
+                <div className="grid gap-3 md:grid-cols-2">
+                    {wizardField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), undefined, 'C-17A Conversion')}
+                    {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), undefined, 'C-17A Conversion')}
+                    {wizardTextArea('Description', trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), 'Initial conversion training stream')}
+                </div>,
+                'Save Master LMP',
+                saveTrainingDraft,
+            );
+        }
+        if (visibleStep.id === 'access') {
+            return promptShell(
+                <p>Who should be able to use <strong>{trainingDraft.lmpName || trainingDraft.lmpCode || 'this Master LMP'}</strong> first?</p>,
+                <div className="grid gap-3 md:grid-cols-2">
+                    {wizardField('User', accessDraft.userName, (value) => setAccessDraft((draft) => ({ ...draft, userName: value })), undefined, 'Alexander Burns')}
+                    {wizardField('Location', accessDraft.locationCode, (value) => setAccessDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
+                    {wizardField('Unit', accessDraft.unitCode, (value) => setAccessDraft((draft) => ({ ...draft, unitCode: value })), activeUnits.map((unit: any) => unit.code))}
+                    {wizardField('Access level', trainingDraft.accessLevel, (value) => setTrainingDraft((draft) => ({ ...draft, accessLevel: value })), ['View', 'Assign', 'Manage'])}
+                </div>,
+                'Save access',
+                () => {
+                    saveAccessDraft();
+                    saveTrainingDraft();
+                },
+            );
+        }
+        return promptShell(
+            <p>Review the setup below. Anything saved in this wizard has already been written to the shared Settings configuration.</p>,
+            <div className="grid gap-2">
+                {checks.map((check) => (
+                    <div key={check.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                        <span className="text-sm font-bold text-slate-800">{check.label}</span>
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${check.complete ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                            {check.complete ? 'Ready' : 'Needs setup'}
+                        </span>
+                    </div>
+                ))}
+            </div>,
+            undefined,
+            undefined,
         );
     };
 
@@ -2774,62 +2912,8 @@ const InitialSetupWizard: React.FC<{
                     if (pendingTemplateId) void handleTemplateFile(pendingTemplateId, file);
                 }}
             />
-            <div className="rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">
-                            Step {currentStep + 1} of {steps.length}
-                        </p>
-                        <h3 className="mt-1 text-xl font-bold text-slate-950">{visibleStep.title}</h3>
-                        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">{visibleStep.body}</p>
-                    </div>
-                    <div className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-right shadow-sm">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Mandatory</p>
-                        <p className="mt-1 text-lg font-black text-slate-950">{completedMandatory}/{mandatoryChecks.length}</p>
-                    </div>
-                </div>
-                <div className="mt-5 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
-                    {steps.map((step, index) => (
-                        <button
-                            key={step.id}
-                            type="button"
-                            onClick={() => setWizardStep(index)}
-                            className={`rounded-lg border px-3 py-2 text-center text-[11px] font-bold transition ${
-                                index === currentStep
-                                    ? 'border-orange-400 bg-orange-100 text-orange-950 ring-2 ring-orange-300/70'
-                                    : 'border-slate-300 bg-white text-slate-700 hover:border-orange-300 hover:bg-orange-50'
-                            }`}
-                        >
-                            {step.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
                 <div className="space-y-3">
-                    {visibleChecks.map((check) => (
-                        <div key={check.id} className="rounded-xl border border-slate-300 bg-white p-4 text-slate-900 shadow-sm">
-                            <div className="flex flex-wrap items-start gap-3">
-                                <div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
-                                            check.complete ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                                        }`}>
-                                            {check.complete ? 'Ready' : 'Needs setup'}
-                                        </span>
-                                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
-                                            check.mandatory ? 'bg-orange-100 text-orange-800' : 'bg-slate-100 text-slate-600'
-                                        }`}>
-                                            {check.mandatory ? 'Mandatory' : 'Optional'}
-                                        </span>
-                                    </div>
-                                    <h4 className="mt-2 text-base font-bold text-slate-950">{check.label}</h4>
-                                    <p className="mt-1 text-sm leading-5 text-slate-600">{check.summary}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
                     {renderWizardDataEntry()}
                     {saveMessage ? (
                         <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-sm">
@@ -2900,17 +2984,6 @@ const InitialSetupWizard: React.FC<{
                 </aside>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm">
-                <button type="button" className={wizardSmallButtonClass} onClick={() => setWizardStep(Math.max(0, currentStep - 1))} disabled={currentStep === 0}>
-                    Back
-                </button>
-                <div className="text-xs font-semibold text-slate-600">
-                    {isBrandNew ? 'This looks like a new setup.' : allMandatoryComplete ? 'Mandatory setup looks ready.' : `${completedChecks} of ${checks.length} setup areas look ready.`}
-                </div>
-                <button type="button" className={wizardPrimaryButtonClass} onClick={() => setWizardStep(Math.min(steps.length - 1, currentStep + 1))}>
-                    {currentStep === steps.length - 1 ? 'Stay on review' : 'Next'}
-                </button>
-            </div>
         </div>
     );
 };
