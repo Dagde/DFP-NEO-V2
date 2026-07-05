@@ -20850,7 +20850,6 @@ const App: React.FC = () => {
     // Theme
     const { theme } = useTheme();
     const { checkAndWarn, freezeState } = useSystemFreeze();
-    const setupTestMode = useMemo(() => isSetupTestMode(), []);
     const freezeStateRef = React.useRef(freezeState);
     React.useEffect(() => {
         freezeStateRef.current = freezeState;
@@ -21173,9 +21172,6 @@ const App: React.FC = () => {
     });
 
     const getStoredOperationalContext = (): { location: string; unit: string } => {
-        if (setupTestMode) {
-            return { location: '', unit: '' };
-        }
         try {
             const raw = localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
             if (!raw) return { location: 'ESL', unit: '1FTS' };
@@ -22577,12 +22573,6 @@ const App: React.FC = () => {
 
 // Load syllabus from DB on mount — DB only, no mock data fallback
     useEffect(() => {
-        if (setupTestMode) {
-            setSyllabusDetails([]);
-            setSyllabusError(null);
-            setSyllabusLoading(false);
-            return;
-        }
         const loadSyllabus = async () => {
             setSyllabusLoading(true);
             setSyllabusError(null);
@@ -22611,30 +22601,11 @@ const App: React.FC = () => {
             }
         };
         loadSyllabus();
-    }, [setupTestMode]);
+    }, []);
 
 // Load data from API on mount — credentials:include sends session cookie automatically
     useEffect(() => {
         if (!platformConfigLoaded) return;
-        if (setupTestMode) {
-            setInstructorsData([]);
-            setArchivedInstructorsData([]);
-            setTraineesData([]);
-            setArchivedTraineesData([]);
-            setEvents([]);
-            setScores(new Map());
-            setCourses([]);
-            setCourseColors({});
-            setCoursePriorities([]);
-            setCoursePercentages(new Map());
-            setPackagePriorities([]);
-            setFixedCrewTrainingPriorities([]);
-            setTraineeLMPs(new Map());
-            setIsStaffLoaded(true);
-            setIsTraineeLoaded(true);
-            setIsCoursesLoaded(true);
-            return;
-        }
         // One-time migration: reset mock data toggles to OFF if they were previously defaulted ON
         // This prevents mock data contaminating real staff/trainee lists after DB is populated
         try {
@@ -23093,7 +23064,7 @@ const App: React.FC = () => {
             }
         };
         loadInitialData();
-    }, [platformConfigLoaded, setupTestMode]);
+    }, [platformConfigLoaded]);
 
     // Re-initialize traineeLMPs whenever syllabusDetails loads (fixes race condition where
     // loadInitialData runs before syllabusDetails is populated, leaving all LMPs empty)
@@ -23143,13 +23114,6 @@ const App: React.FC = () => {
 
     // Load persisted daily snapshots (last 5 days) + legacy historical data from DB
     useEffect(() => {
-        if (setupTestMode) {
-            setPublishedSchedules({});
-            setSnapshotDates([]);
-            setPt051Assessments(new Map());
-            setPt051PerformanceLoading(false);
-            return;
-        }
         let cancelled = false;
         const requestedSchool = school;
         const requestedUnit = activeUnitCode;
@@ -23351,14 +23315,10 @@ const App: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [activeUnitCode, school, setupTestMode]);
+    }, [activeUnitCode, school]);
 
     // Load snapshot dates for calendar dropdown
     useEffect(() => {
-        if (setupTestMode) {
-            setSnapshotDates([]);
-            return;
-        }
         const loadSnapshotDates = async () => {
             try {
                 const apiBase = getAppApiBase();
@@ -23387,7 +23347,7 @@ const App: React.FC = () => {
             }
         };
         loadSnapshotDates();
-    }, [setupTestMode]);
+    }, []);
 
     const applyDailySnapshot = React.useCallback((
         targetDate: string,
@@ -23474,15 +23434,6 @@ const App: React.FC = () => {
         targetDate: string,
         options: { force?: boolean; replace?: boolean; schoolOverride?: string; unitOverride?: string; useCache?: boolean } = {}
     ) => {
-        if (setupTestMode) {
-            setDfpSnapshotLoadState({
-                status: 'empty',
-                date: targetDate,
-                message: 'No DFP data in setup test mode',
-                progress: 100
-            });
-            return;
-        }
         const { force = false, replace = false, schoolOverride, unitOverride, useCache = true } = options;
         const snapshotSchool = schoolOverride ?? school;
         const snapshotUnit = unitOverride ?? activeUnitCode;
@@ -23688,7 +23639,7 @@ const App: React.FC = () => {
         } finally {
             loadingSnapshotDates.current.delete(snapshotKey);
         }
-    }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school, setupTestMode]);
+    }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
 
     useEffect(() => {
         if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;

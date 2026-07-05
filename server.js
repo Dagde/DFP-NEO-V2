@@ -13742,22 +13742,6 @@ app.post('/api/flight-log', async (req, res) => {
 });
 
 // Fallback: serve index-v2.html for all non-API routes
-app.get(['/air-movements-test', '/air-movements-test/'], (req, res) => {
-  const params = new URLSearchParams();
-  Object.entries(req.query || {}).forEach(([key, value]) => {
-    if (Array.isArray(value)) {
-      value.forEach((item) => params.append(key, String(item)));
-    } else if (value !== undefined) {
-      params.set(key, String(value));
-    }
-  });
-  params.set('setupTest', 'air-movements');
-  if (!params.has('resetSetupTest')) {
-    params.set('resetSetupTest', '1');
-  }
-  res.redirect(302, `/flight-school-app/index-v2.html?${params.toString()}`);
-});
-
 app.get('*', (req, res) => {
   const indexPath = path.join(staticPath, 'index-v2.html');
   if (fs.existsSync(indexPath)) {
