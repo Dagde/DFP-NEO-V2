@@ -611,6 +611,7 @@ const releaseChannelOptions = ['Production', 'Staging', 'Customer Acceptance', '
 const backupFrequencyOptions = ['Hourly', 'Daily', 'Weekly', 'Manual'];
 const accreditationStatusOptions = ['Not started', 'In preparation', 'Submitted', 'Approved', 'Renewal due'];
 const initialSetupWizardStorageKey = 'dfp-initial-setup-wizard-step';
+const createWizardRecordId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const initialSetupTemplates: InitialSetupWizardTemplate[] = [
     {
@@ -1854,8 +1855,9 @@ const OrganisationMyUnitSettings: React.FC<{
 const InitialSetupWizard: React.FC<{
     platformConfig?: any;
     unitCode?: string;
+    onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
-}> = ({ platformConfig, unitCode, onNavigateToSettingsSection }) => {
+}> = ({ platformConfig, unitCode, onUpdatePlatformConfig }) => {
     const [mode, setMode] = useState<InitialSetupWizardMode>('detect');
     const [wizardStep, setWizardStep] = useState(() => {
         if (typeof window === 'undefined') return 0;
@@ -1864,11 +1866,18 @@ const InitialSetupWizard: React.FC<{
     });
     const [uploadResults, setUploadResults] = useState<Record<string, InitialSetupWizardUploadResult>>({});
     const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
+    const [saveMessage, setSaveMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
         String(organisation?.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
     )) || platformConfig?.organisations?.[0];
+    const currentUnit = (platformConfig?.units || []).find((unit: any) => (
+        normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(unitCode)
+    )) || (platformConfig?.units || [])[0];
+    const currentLocation = (platformConfig?.locations || []).find((location: any) => (
+        normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(currentUnit?.locationCode)
+    )) || (platformConfig?.locations || [])[0];
     const organisationStructureLevels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels)
         ? activeOrganisation.settings.organisationStructure.levels
         : [];
@@ -1901,6 +1910,417 @@ const InitialSetupWizard: React.FC<{
     const orgStructureConfigured = organisationStructureLevels.length > 0 && organisationStructureLevels.some((level: any) => (
         String(level?.name || '').trim() && Array.isArray(level?.options) && level.options.length > 0
     ));
+    const primaryAircraftType = activeAircraftTypes[0] || null;
+    const primaryResourcePool = activeResourcePools.find((pool: any) => (
+        normaliseUnitSettingsIdentifier(pool?.unitCode) === normaliseUnitSettingsIdentifier(currentUnit?.code)
+    )) || activeResourcePools[0] || null;
+    const primaryUserAccess = activeUserAccess.find((access: any) => (
+        normaliseUnitSettingsIdentifier(access?.unitCode || access?.unit) === normaliseUnitSettingsIdentifier(currentUnit?.code)
+        || normaliseUnitSettingsIdentifier(access?.locationCode || access?.location) === normaliseUnitSettingsIdentifier(currentLocation?.code)
+    )) || activeUserAccess[0] || null;
+    const primaryMasterLmp = activeMasterLmpCatalogue[0] || null;
+    const primaryMasterLmpRule = activeMasterLmpAccess.find((rule: any) => (
+        normaliseUnitSettingsIdentifier(rule?.unitCode || rule?.unit) === normaliseUnitSettingsIdentifier(currentUnit?.code)
+    )) || activeMasterLmpAccess[0] || null;
+    const levelDraftSource = (levelIndex: number) => organisationStructureLevels.find((level: any) => Number(level?.levelIndex ?? level?.level ?? levelIndex) === levelIndex) || organisationStructureLevels[levelIndex] || {};
+    const toLines = (items: any[]) => (Array.isArray(items) ? items.map((item) => String(item || '').trim()).filter(Boolean).join('\n') : '');
+    const fromLines = (value: string) => String(value || '').split(/\n/).map((item) => item.trim()).filter(Boolean);
+    const parseNumberDraft = (value: string, fallback = 0) => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : fallback;
+    };
+    const [organisationDraft, setOrganisationDraft] = useState({
+        code: String(activeOrganisation?.code || 'RAAF'),
+        name: String(activeOrganisation?.name || activeOrganisation?.code || 'RAAF'),
+        level0Name: String(levelDraftSource(0)?.name || activeOrganisation?.name || 'Organisation'),
+        level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || 'RAAF']),
+        level1Name: String(levelDraftSource(1)?.name || 'Branch / HQ'),
+        level1Options: toLines(levelDraftSource(1)?.options || []),
+        level2Name: String(levelDraftSource(2)?.name || 'Command'),
+        level2Options: toLines(levelDraftSource(2)?.options || []),
+        level3Name: String(levelDraftSource(3)?.name || 'Wing / Group'),
+        level3Options: toLines(levelDraftSource(3)?.options || []),
+    });
+    const [locationDraft, setLocationDraft] = useState({
+        code: String(currentLocation?.code || currentUnit?.locationCode || 'YAMB'),
+        name: String(currentLocation?.name || 'Amberley'),
+        timezone: String(currentLocation?.timezone || 'Australia/Brisbane'),
+        trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(', ') : '',
+    });
+    const [unitDraft, setUnitDraft] = useState({
+        code: String(currentUnit?.code || unitCode || '36SQN'),
+        name: String(currentUnit?.name || currentUnit?.code || unitCode || '36SQN'),
+        locationCode: String(currentUnit?.locationCode || currentLocation?.code || ''),
+        unitType: String(currentUnit?.unitType || 'Operational'),
+        operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
+        hasTrainees: currentUnit?.settings?.hasTrainees !== false,
+    });
+    const [resourceDraft, setResourceDraft] = useState({
+        aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'C-17A'),
+        aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'C-17A'),
+        poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || 'Home'} ${primaryAircraftType?.code || 'Aircraft'} Resource Pool`),
+        poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ''),
+        poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ''),
+        aircraft: String(primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft ?? ''),
+        sim: String(primaryResourcePool?.settings?.ftd ?? primaryResourcePool?.settings?.sim ?? primaryResourcePool?.ftd ?? primaryResourcePool?.sim ?? ''),
+        trainer: String(primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer ?? ''),
+        standby: String(primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? ''),
+        ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ''),
+    });
+    const [crewDraft, setCrewDraft] = useState({
+        aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || 'C-17A'),
+        standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || []),
+    });
+    const [accessDraft, setAccessDraft] = useState({
+        userName: String(primaryUserAccess?.userName || primaryUserAccess?.user || 'New user'),
+        locationCode: String(primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || ''),
+        unitCode: String(primaryUserAccess?.unitCode || primaryUserAccess?.unit || currentUnit?.code || ''),
+        moduleCode: String(primaryUserAccess?.moduleCode || primaryUserAccess?.module || 'DFP'),
+        accessLevel: String(primaryUserAccess?.accessLevel || primaryUserAccess?.access || 'View'),
+    });
+    const [trainingDraft, setTrainingDraft] = useState({
+        lmpCode: String(primaryMasterLmp?.code || 'New Master LMP'),
+        lmpName: String(primaryMasterLmp?.name || primaryMasterLmp?.code || 'New Master LMP'),
+        description: String(primaryMasterLmp?.description || ''),
+        status: String(primaryMasterLmp?.status || 'ACTIVE'),
+        accessLocationCode: String(primaryMasterLmpRule?.locationCode || currentLocation?.code || ''),
+        accessUnitCode: String(primaryMasterLmpRule?.unitCode || currentUnit?.code || ''),
+        accessModel: String(primaryMasterLmpRule?.model || 'Any Model'),
+        accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || 'View'),
+    });
+
+    useEffect(() => {
+        setOrganisationDraft({
+            code: String(activeOrganisation?.code || 'RAAF'),
+            name: String(activeOrganisation?.name || activeOrganisation?.code || 'RAAF'),
+            level0Name: String(levelDraftSource(0)?.name || activeOrganisation?.name || 'Organisation'),
+            level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || 'RAAF']),
+            level1Name: String(levelDraftSource(1)?.name || 'Branch / HQ'),
+            level1Options: toLines(levelDraftSource(1)?.options || []),
+            level2Name: String(levelDraftSource(2)?.name || 'Command'),
+            level2Options: toLines(levelDraftSource(2)?.options || []),
+            level3Name: String(levelDraftSource(3)?.name || 'Wing / Group'),
+            level3Options: toLines(levelDraftSource(3)?.options || []),
+        });
+    }, [activeOrganisation?.code, activeOrganisation?.name, JSON.stringify(organisationStructureLevels)]);
+
+    useEffect(() => {
+        setLocationDraft({
+            code: String(currentLocation?.code || currentUnit?.locationCode || 'YAMB'),
+            name: String(currentLocation?.name || 'Amberley'),
+            timezone: String(currentLocation?.timezone || 'Australia/Brisbane'),
+            trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(', ') : '',
+        });
+    }, [currentLocation?.code, currentLocation?.name, currentLocation?.timezone, JSON.stringify(currentLocation?.trainingAreas || [])]);
+
+    useEffect(() => {
+        setUnitDraft({
+            code: String(currentUnit?.code || unitCode || '36SQN'),
+            name: String(currentUnit?.name || currentUnit?.code || unitCode || '36SQN'),
+            locationCode: String(currentUnit?.locationCode || currentLocation?.code || ''),
+            unitType: String(currentUnit?.unitType || 'Operational'),
+            operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
+            hasTrainees: currentUnit?.settings?.hasTrainees !== false,
+        });
+    }, [currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code]);
+
+    useEffect(() => {
+        setResourceDraft({
+            aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'C-17A'),
+            aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'C-17A'),
+            poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || 'Home'} ${primaryAircraftType?.code || 'Aircraft'} Resource Pool`),
+            poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ''),
+            poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ''),
+            aircraft: String(primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft ?? ''),
+            sim: String(primaryResourcePool?.settings?.ftd ?? primaryResourcePool?.settings?.sim ?? primaryResourcePool?.ftd ?? primaryResourcePool?.sim ?? ''),
+            trainer: String(primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer ?? ''),
+            standby: String(primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? ''),
+            ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ''),
+        });
+        setCrewDraft({
+            aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'C-17A'),
+            standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || []),
+        });
+    }, [primaryAircraftType?.code, primaryAircraftType?.name, JSON.stringify(primaryAircraftType?.crewComposition || {}), primaryResourcePool?.name, primaryResourcePool?.unitCode, primaryResourcePool?.locationCode, primaryResourcePool?.aircraftTypeCode, JSON.stringify(primaryResourcePool?.settings || {}), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name]);
+
+    useEffect(() => {
+        setAccessDraft({
+            userName: String(primaryUserAccess?.userName || primaryUserAccess?.user || 'New user'),
+            locationCode: String(primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || ''),
+            unitCode: String(primaryUserAccess?.unitCode || primaryUserAccess?.unit || currentUnit?.code || ''),
+            moduleCode: String(primaryUserAccess?.moduleCode || primaryUserAccess?.module || 'DFP'),
+            accessLevel: String(primaryUserAccess?.accessLevel || primaryUserAccess?.access || 'View'),
+        });
+    }, [primaryUserAccess?.userName, primaryUserAccess?.user, primaryUserAccess?.locationCode, primaryUserAccess?.unitCode, primaryUserAccess?.moduleCode, primaryUserAccess?.accessLevel, primaryUserAccess?.access, currentLocation?.code, currentUnit?.code]);
+
+    useEffect(() => {
+        setTrainingDraft({
+            lmpCode: String(primaryMasterLmp?.code || 'New Master LMP'),
+            lmpName: String(primaryMasterLmp?.name || primaryMasterLmp?.code || 'New Master LMP'),
+            description: String(primaryMasterLmp?.description || ''),
+            status: String(primaryMasterLmp?.status || 'ACTIVE'),
+            accessLocationCode: String(primaryMasterLmpRule?.locationCode || currentLocation?.code || ''),
+            accessUnitCode: String(primaryMasterLmpRule?.unitCode || currentUnit?.code || ''),
+            accessModel: String(primaryMasterLmpRule?.model || 'Any Model'),
+            accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || 'View'),
+        });
+    }, [primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code]);
+
+    const saveWizardConfig = (message: string, updater: (baseConfig: any) => any) => {
+        if (!onUpdatePlatformConfig) {
+            setSaveMessage('This screen is not connected to the platform configuration in this session.');
+            return;
+        }
+        onUpdatePlatformConfig((current) => updater(current || platformConfig || {}));
+        setSaveMessage(message);
+    };
+
+    const updatePrimaryOrganisationWithSettings = (baseConfig: any, settingsUpdater: (settings: any, organisation: any) => any) => {
+        const organisations = Array.isArray(baseConfig.organisations) ? baseConfig.organisations : [];
+        const fallbackOrganisation = {
+            id: createWizardRecordId('organisation'),
+            code: organisationDraft.code || 'RAAF',
+            name: organisationDraft.name || organisationDraft.code || 'RAAF',
+            status: 'ACTIVE',
+            settings: {},
+        };
+        const targetKey = String(activeOrganisation?.id || activeOrganisation?.code || organisations[0]?.id || organisations[0]?.code || '').trim();
+        const nextOrganisations = organisations.length > 0
+            ? organisations.map((organisation: any, index: number) => {
+                const isTarget = targetKey
+                    ? String(organisation?.id || organisation?.code || '').trim() === targetKey
+                    : index === 0;
+                if (!isTarget) return organisation;
+                return {
+                    ...organisation,
+                    code: organisationDraft.code || organisation.code,
+                    name: organisationDraft.name || organisation.name,
+                    status: organisation.status || 'ACTIVE',
+                    settings: settingsUpdater(organisation.settings || {}, organisation),
+                };
+            })
+            : [{
+                ...fallbackOrganisation,
+                settings: settingsUpdater({}, fallbackOrganisation),
+            }];
+        return {
+            ...baseConfig,
+            organisations: nextOrganisations,
+        };
+    };
+
+    const saveOrganisationDraft = () => {
+        const levelDrafts = [
+            { name: organisationDraft.level0Name, options: fromLines(organisationDraft.level0Options) },
+            { name: organisationDraft.level1Name, options: fromLines(organisationDraft.level1Options) },
+            { name: organisationDraft.level2Name, options: fromLines(organisationDraft.level2Options) },
+            { name: organisationDraft.level3Name, options: fromLines(organisationDraft.level3Options) },
+        ];
+        saveWizardConfig('Organisation details saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
+            ...settings,
+            organisationStructure: {
+                ...(settings.organisationStructure || {}),
+                levels: levelDrafts.map((draft, levelIndex) => ({
+                    ...(levelDraftSource(levelIndex) || {}),
+                    levelIndex,
+                    name: draft.name,
+                    options: draft.options,
+                })).filter((level) => String(level.name || '').trim() || level.options.length > 0),
+            },
+        })));
+    };
+
+    const saveLocationDraft = () => {
+        const cleanCode = String(locationDraft.code || '').trim().toUpperCase();
+        if (!cleanCode) {
+            setSaveMessage('Enter a location code before saving.');
+            return;
+        }
+        saveWizardConfig('Location saved into Settings.', (baseConfig) => {
+            const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
+            const nextLocation = {
+                id: currentLocation?.id || createWizardRecordId('location'),
+                code: cleanCode,
+                name: locationDraft.name || cleanCode,
+                timezone: locationDraft.timezone || 'Australia/Brisbane',
+                trainingAreas: locationDraft.trainingAreas.split(',').map((item) => item.trim()).filter(Boolean),
+                status: 'ACTIVE',
+            };
+            const exists = locations.some((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode));
+            return {
+                ...baseConfig,
+                locations: exists
+                    ? locations.map((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode) ? { ...location, ...nextLocation } : location)
+                    : [...locations, nextLocation],
+            };
+        });
+    };
+
+    const saveUnitDraft = () => {
+        const cleanCode = String(unitDraft.code || '').trim().toUpperCase();
+        if (!cleanCode) {
+            setSaveMessage('Enter a unit code before saving.');
+            return;
+        }
+        saveWizardConfig('Unit saved into Settings.', (baseConfig) => {
+            const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
+            const nextUnit = {
+                id: currentUnit?.id || createWizardRecordId('unit'),
+                code: cleanCode,
+                name: unitDraft.name || cleanCode,
+                locationCode: unitDraft.locationCode,
+                unitType: unitDraft.unitType || 'Operational',
+                status: 'ACTIVE',
+                settings: {
+                    ...(currentUnit?.settings || {}),
+                    operationalModel: unitDraft.operationalModel,
+                    hasTrainees: unitDraft.hasTrainees,
+                },
+            };
+            const exists = units.some((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(cleanCode));
+            return {
+                ...baseConfig,
+                units: exists
+                    ? units.map((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(cleanCode) ? { ...unit, ...nextUnit, settings: { ...(unit.settings || {}), ...nextUnit.settings } } : unit)
+                    : [...units, nextUnit],
+            };
+        });
+    };
+
+    const saveResourceDraft = () => {
+        const aircraftCode = String(resourceDraft.aircraftCode || '').trim().toUpperCase();
+        if (!aircraftCode) {
+            setSaveMessage('Enter an aircraft type code before saving.');
+            return;
+        }
+        saveWizardConfig('Aircraft type and resource pool saved into Settings.', (baseConfig) => {
+            const aircraftTypes = Array.isArray(baseConfig.aircraftTypes) ? baseConfig.aircraftTypes : [];
+            const resourcePools = Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : [];
+            const aircraftExists = aircraftTypes.some((aircraft: any) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode));
+            const poolKey = primaryResourcePool?.id || primaryResourcePool?.code || '';
+            const nextPool = {
+                id: primaryResourcePool?.id || createWizardRecordId('pool'),
+                code: primaryResourcePool?.code || `POOL-${resourcePools.length + 1}`,
+                name: resourceDraft.poolName || `${aircraftCode} Resource Pool`,
+                organisationCode: activeOrganisation?.code || organisationDraft.code || 'DEFAULT',
+                locationCode: resourceDraft.poolLocationCode,
+                unitCode: resourceDraft.poolUnitCode,
+                aircraftTypeCode: aircraftCode,
+                poolType: primaryResourcePool?.poolType || 'Dedicated',
+                status: 'ACTIVE',
+                settings: {
+                    ...(primaryResourcePool?.settings || {}),
+                    aircraft: parseNumberDraft(resourceDraft.aircraft),
+                    ftd: parseNumberDraft(resourceDraft.sim),
+                    cpt: parseNumberDraft(resourceDraft.trainer),
+                    standby: parseNumberDraft(resourceDraft.standby),
+                    ground: parseNumberDraft(resourceDraft.ground),
+                },
+            };
+            const poolExists = resourcePools.some((pool: any) => (
+                (poolKey && String(pool?.id || pool?.code || '') === String(poolKey))
+                || String(pool?.name || '').trim().toUpperCase() === String(nextPool.name || '').trim().toUpperCase()
+            ));
+            return {
+                ...baseConfig,
+                aircraftTypes: aircraftExists
+                    ? aircraftTypes.map((aircraft: any) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode) ? { ...aircraft, name: resourceDraft.aircraftName || aircraftCode, status: aircraft.status || 'ACTIVE' } : aircraft)
+                    : [...aircraftTypes, { id: createWizardRecordId('aircraft-type'), code: aircraftCode, name: resourceDraft.aircraftName || aircraftCode, category: 'Other', status: 'ACTIVE', crewComposition: normaliseAircraftCrewComposition(null) }],
+                resourcePools: poolExists
+                    ? resourcePools.map((pool: any) => (
+                        (poolKey && String(pool?.id || pool?.code || '') === String(poolKey))
+                        || String(pool?.name || '').trim().toUpperCase() === String(nextPool.name || '').trim().toUpperCase()
+                            ? { ...pool, ...nextPool, settings: { ...(pool.settings || {}), ...nextPool.settings } }
+                            : pool
+                    ))
+                    : [...resourcePools, nextPool],
+            };
+        });
+    };
+
+    const saveCrewDraft = () => {
+        const aircraftCode = String(crewDraft.aircraftCode || '').trim().toUpperCase();
+        if (!aircraftCode) {
+            setSaveMessage('Choose an aircraft type before saving crew composition.');
+            return;
+        }
+        saveWizardConfig('Crew composition saved into Settings.', (baseConfig) => ({
+            ...baseConfig,
+            aircraftTypes: (baseConfig.aircraftTypes || []).map((aircraft: any) => (
+                normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode)
+                    ? {
+                        ...aircraft,
+                        crewComposition: {
+                            ...normaliseAircraftCrewComposition(aircraft.crewComposition || null),
+                            standardSeats: parseRoleRequirementsText(crewDraft.standardSeats),
+                        },
+                    }
+                    : aircraft
+            )),
+        }));
+    };
+
+    const saveAccessDraft = () => {
+        saveWizardConfig('User access scope saved into Settings.', (baseConfig) => {
+            const userAccess = Array.isArray(baseConfig.userAccess) ? baseConfig.userAccess : [];
+            const targetKey = primaryUserAccess?.id || primaryUserAccess?.userId || primaryUserAccess?.userName || '';
+            const nextAccess = {
+                id: primaryUserAccess?.id || createWizardRecordId('user-access'),
+                userName: accessDraft.userName,
+                locationCode: accessDraft.locationCode,
+                unitCode: accessDraft.unitCode,
+                moduleCode: accessDraft.moduleCode,
+                accessLevel: accessDraft.accessLevel,
+                status: 'ACTIVE',
+            };
+            const exists = userAccess.some((access: any) => targetKey && String(access?.id || access?.userId || access?.userName || '') === String(targetKey));
+            return {
+                ...baseConfig,
+                userAccess: exists
+                    ? userAccess.map((access: any) => targetKey && String(access?.id || access?.userId || access?.userName || '') === String(targetKey) ? { ...access, ...nextAccess } : access)
+                    : [...userAccess, nextAccess],
+            };
+        });
+    };
+
+    const saveTrainingDraft = () => {
+        const lmpCode = String(trainingDraft.lmpCode || '').trim();
+        if (!lmpCode) {
+            setSaveMessage('Enter a Master LMP code before saving.');
+            return;
+        }
+        saveWizardConfig('Master LMP and access rule saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+            const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+            const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+            const catalogueExists = catalogue.some((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(lmpCode));
+            const ruleKey = primaryMasterLmpRule?.id || '';
+            const nextCatalogueEntry = {
+                id: primaryMasterLmp?.id || createWizardRecordId('master-lmp-catalogue'),
+                code: lmpCode,
+                name: trainingDraft.lmpName || lmpCode,
+                description: trainingDraft.description,
+                status: trainingDraft.status || 'ACTIVE',
+            };
+            const nextRule = {
+                id: primaryMasterLmpRule?.id || createWizardRecordId('master-lmp-access'),
+                lmpCode,
+                locationCode: trainingDraft.accessLocationCode,
+                unitCode: trainingDraft.accessUnitCode,
+                model: trainingDraft.accessModel,
+                access: trainingDraft.accessLevel,
+                status: 'ACTIVE',
+            };
+            return {
+                ...settings,
+                masterLmpCatalogue: catalogueExists
+                    ? catalogue.map((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(lmpCode) ? { ...item, ...nextCatalogueEntry } : item)
+                    : [...catalogue, nextCatalogueEntry],
+                masterLmpAccess: ruleKey
+                    ? accessRules.map((rule: any) => String(rule?.id || '') === String(ruleKey) ? { ...rule, ...nextRule } : rule)
+                    : [...accessRules, nextRule],
+            };
+        }));
+    };
 
     const checks: InitialSetupWizardCheck[] = [
         {
@@ -2019,7 +2439,7 @@ const InitialSetupWizard: React.FC<{
             label: 'Review',
             body: allMandatoryComplete
                 ? 'The mandatory setup areas look ready. You can keep refining optional settings from My Unit Settings or the Settings pages.'
-                : 'Some mandatory setup areas still need attention. Use the buttons below to go directly to the right Settings page.',
+                : 'Some mandatory setup areas still need attention. Enter the missing data in the wizard panels and save each section.',
             checkIds: checks.map((check) => check.id),
         },
     ];
@@ -2048,22 +2468,6 @@ const InitialSetupWizard: React.FC<{
             setMode('active');
         }
     }, [isPartiallyConfigured, mode]);
-
-    const navigateToCheck = (check: InitialSetupWizardCheck) => {
-        onNavigateToSettingsSection?.({
-            sectionId: check.settingsSection,
-            unitCode,
-            focusSubsectionId: check.focusSubsectionId,
-        });
-    };
-
-    const navigateToTemplateImport = (template: InitialSetupWizardTemplate) => {
-        onNavigateToSettingsSection?.({
-            sectionId: template.settingsSection,
-            unitCode,
-            focusSubsectionId: template.focusSubsectionId,
-        });
-    };
 
     const selectTemplateFile = (templateId: string) => {
         setPendingTemplateId(templateId);
@@ -2110,6 +2514,231 @@ const InitialSetupWizard: React.FC<{
     const wizardChoiceClass = 'rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
     const wizardSmallButtonClass = 'rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
     const wizardPrimaryButtonClass = 'rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600';
+    const wizardInputClass = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200';
+    const wizardLabelClass = 'text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
+    const wizardPanelClass = 'rounded-xl border border-slate-300 bg-white p-4 text-slate-900 shadow-sm';
+    const wizardField = (
+        label: string,
+        value: string,
+        onChange: (value: string) => void,
+        options?: string[],
+        placeholder?: string,
+    ) => (
+        <label className="block">
+            <span className={wizardLabelClass}>{label}</span>
+            {options ? (
+                <select className={`${wizardInputClass} mt-1`} value={value} onChange={(event) => onChange(event.target.value)}>
+                    {Array.from(new Set([value, ...options].filter(Boolean))).map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+            ) : (
+                <input
+                    className={`${wizardInputClass} mt-1`}
+                    value={value}
+                    placeholder={placeholder}
+                    onKeyDown={stopEditableKeyPropagation}
+                    onChange={(event) => onChange(event.target.value)}
+                />
+            )}
+        </label>
+    );
+    const wizardTextArea = (label: string, value: string, onChange: (value: string) => void, placeholder?: string) => (
+        <label className="block">
+            <span className={wizardLabelClass}>{label}</span>
+            <textarea
+                className={`${wizardInputClass} mt-1 min-h-[84px] resize-y`}
+                value={value}
+                placeholder={placeholder}
+                onKeyDown={stopEditableKeyPropagation}
+                onChange={(event) => onChange(event.target.value)}
+            />
+        </label>
+    );
+    const wizardSaveButton = (label: string, onClick: () => void) => (
+        <button type="button" className={wizardPrimaryButtonClass} onClick={onClick}>
+            {label}
+        </button>
+    );
+    const renderWizardDataEntry = () => {
+        if (visibleStep.id === 'analysis') {
+            return (
+                <div className={wizardPanelClass}>
+                    <h4 className="text-base font-black text-slate-950">Setup analysis</h4>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                        The wizard checks the live Settings data first, then each step below lets you enter or refine the same records directly here.
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <p className={wizardLabelClass}>Mandatory setup</p>
+                            <p className="mt-1 text-2xl font-black text-slate-950">{completedMandatory}/{mandatoryChecks.length}</p>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <p className={wizardLabelClass}>Overall setup</p>
+                            <p className="mt-1 text-2xl font-black text-slate-950">{completedChecks}/{checks.length}</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        if (visibleStep.id === 'organisation') {
+            return (
+                <div className="space-y-3">
+                    <div className={wizardPanelClass}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <h4 className="text-base font-black text-slate-950">Organisation</h4>
+                                <p className="mt-1 text-sm leading-5 text-slate-600">Enter the organisation name and the first four structure levels used by units.</p>
+                            </div>
+                            {wizardSaveButton('Save organisation', saveOrganisationDraft)}
+                        </div>
+                        <div className="mt-4 grid gap-3 md:grid-cols-2">
+                            {wizardField('Organisation code', organisationDraft.code, (value) => setOrganisationDraft((draft) => ({ ...draft, code: value })))}
+                            {wizardField('Organisation name', organisationDraft.name, (value) => setOrganisationDraft((draft) => ({ ...draft, name: value })))}
+                            {wizardField('Level 0 name', organisationDraft.level0Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level0Name: value })))}
+                            {wizardTextArea('Level 0 options', organisationDraft.level0Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level0Options: value })), 'One option per line')}
+                            {wizardField('Level 1 name', organisationDraft.level1Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level1Name: value })))}
+                            {wizardTextArea('Level 1 options', organisationDraft.level1Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level1Options: value })), 'One option per line')}
+                            {wizardField('Level 2 name', organisationDraft.level2Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level2Name: value })))}
+                            {wizardTextArea('Level 2 options', organisationDraft.level2Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level2Options: value })), 'One option per line')}
+                            {wizardField('Level 3 name', organisationDraft.level3Name, (value) => setOrganisationDraft((draft) => ({ ...draft, level3Name: value })))}
+                            {wizardTextArea('Level 3 options', organisationDraft.level3Options, (value) => setOrganisationDraft((draft) => ({ ...draft, level3Options: value })), 'One option per line')}
+                        </div>
+                    </div>
+                    <div className={wizardPanelClass}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <h4 className="text-base font-black text-slate-950">Location</h4>
+                                <p className="mt-1 text-sm leading-5 text-slate-600">Add the home base or airfield used by the unit.</p>
+                            </div>
+                            {wizardSaveButton('Save location', saveLocationDraft)}
+                        </div>
+                        <div className="mt-4 grid gap-3 md:grid-cols-2">
+                            {wizardField('Location code', locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value })))}
+                            {wizardField('Location name', locationDraft.name, (value) => setLocationDraft((draft) => ({ ...draft, name: value })))}
+                            {wizardField('Timezone', locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })))}
+                            {wizardField('Training areas', locationDraft.trainingAreas, (value) => setLocationDraft((draft) => ({ ...draft, trainingAreas: value })), undefined, 'Area A, Area B')}
+                        </div>
+                    </div>
+                    <div className={wizardPanelClass}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <h4 className="text-base font-black text-slate-950">Unit</h4>
+                                <p className="mt-1 text-sm leading-5 text-slate-600">Set the unit identity and operational model. The unit model controls which scheduling behaviour applies.</p>
+                            </div>
+                            {wizardSaveButton('Save unit', saveUnitDraft)}
+                        </div>
+                        <div className="mt-4 grid gap-3 md:grid-cols-2">
+                            {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value })))}
+                            {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })))}
+                            {wizardField('Location code', unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
+                            {wizardField('Unit type', unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), ['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational'])}
+                            {wizardField('Operational model', unitDraft.operationalModel, (value) => setUnitDraft((draft) => ({ ...draft, operationalModel: value })), OPERATIONAL_MODEL_OPTIONS.map((option) => option.value))}
+                            <label className="block">
+                                <span className={wizardLabelClass}>Trainees</span>
+                                <button
+                                    type="button"
+                                    className={`${wizardInputClass} mt-1 text-left ${unitDraft.hasTrainees ? 'bg-emerald-50 text-emerald-900' : 'bg-slate-100 text-slate-600'}`}
+                                    onClick={() => setUnitDraft((draft) => ({ ...draft, hasTrainees: !draft.hasTrainees }))}
+                                >
+                                    {unitDraft.hasTrainees ? 'On' : 'Off'}
+                                </button>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        if (visibleStep.id === 'resources') {
+            return (
+                <div className="space-y-3">
+                    <div className={wizardPanelClass}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <h4 className="text-base font-black text-slate-950">Aircraft and resource pool</h4>
+                                <p className="mt-1 text-sm leading-5 text-slate-600">Enter the aircraft type and the pool counts NEO can schedule against.</p>
+                            </div>
+                            {wizardSaveButton('Save resources', saveResourceDraft)}
+                        </div>
+                        <div className="mt-4 grid gap-3 md:grid-cols-2">
+                            {wizardField('Aircraft type code', resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value })))}
+                            {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })))}
+                            {wizardField('Pool name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })))}
+                            {wizardField('Pool unit', resourceDraft.poolUnitCode, (value) => setResourceDraft((draft) => ({ ...draft, poolUnitCode: value })), activeUnits.map((unit: any) => unit.code))}
+                            {wizardField('Pool location', resourceDraft.poolLocationCode, (value) => setResourceDraft((draft) => ({ ...draft, poolLocationCode: value })), activeLocations.map((location: any) => location.code))}
+                            {wizardField('Aircraft count', resourceDraft.aircraft, (value) => setResourceDraft((draft) => ({ ...draft, aircraft: value })))}
+                            {wizardField('Sim count', resourceDraft.sim, (value) => setResourceDraft((draft) => ({ ...draft, sim: value })))}
+                            {wizardField('Trainer count', resourceDraft.trainer, (value) => setResourceDraft((draft) => ({ ...draft, trainer: value })))}
+                            {wizardField('Standby count', resourceDraft.standby, (value) => setResourceDraft((draft) => ({ ...draft, standby: value })))}
+                            {wizardField('Ground count', resourceDraft.ground, (value) => setResourceDraft((draft) => ({ ...draft, ground: value })))}
+                        </div>
+                    </div>
+                    <div className={wizardPanelClass}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <h4 className="text-base font-black text-slate-950">Standard crew composition</h4>
+                                <p className="mt-1 text-sm leading-5 text-slate-600">Enter one crew requirement per line, for example Pilot = 2 or Loadmaster = 1.</p>
+                            </div>
+                            {wizardSaveButton('Save crew', saveCrewDraft)}
+                        </div>
+                        <div className="mt-4 grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
+                            {wizardField('Aircraft type', crewDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value })), activeAircraftTypes.map((aircraft: any) => aircraft.code))}
+                            {wizardTextArea('Required seats', crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })), 'Pilot = 2\nLoadmaster = 1')}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        if (visibleStep.id === 'people') {
+            return (
+                <div className={wizardPanelClass}>
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <h4 className="text-base font-black text-slate-950">User access scope</h4>
+                            <p className="mt-1 text-sm leading-5 text-slate-600">Set who can access this location, unit and module. Staff and trainee spreadsheets can still be checked in the template panel.</p>
+                        </div>
+                        {wizardSaveButton('Save access', saveAccessDraft)}
+                    </div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        {wizardField('User', accessDraft.userName, (value) => setAccessDraft((draft) => ({ ...draft, userName: value })))}
+                        {wizardField('Location', accessDraft.locationCode, (value) => setAccessDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
+                        {wizardField('Unit', accessDraft.unitCode, (value) => setAccessDraft((draft) => ({ ...draft, unitCode: value })), activeUnits.map((unit: any) => unit.code))}
+                        {wizardField('Module', accessDraft.moduleCode, (value) => setAccessDraft((draft) => ({ ...draft, moduleCode: value })), ['DFP', 'NEO Build', 'Settings', 'Training Records'])}
+                        {wizardField('Access level', accessDraft.accessLevel, (value) => setAccessDraft((draft) => ({ ...draft, accessLevel: value })), ['View', 'Assign', 'Manage'])}
+                    </div>
+                </div>
+            );
+        }
+        if (visibleStep.id === 'training') {
+            return (
+                <div className={wizardPanelClass}>
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <h4 className="text-base font-black text-slate-950">Master LMP and access</h4>
+                            <p className="mt-1 text-sm leading-5 text-slate-600">Add the training stream, then set which unit can view, assign or manage it.</p>
+                        </div>
+                        {wizardSaveButton('Save training', saveTrainingDraft)}
+                    </div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        {wizardField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value })))}
+                        {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })))}
+                        {wizardTextArea('Description', trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })))}
+                        {wizardField('Status', trainingDraft.status, (value) => setTrainingDraft((draft) => ({ ...draft, status: value })), ['ACTIVE', 'INACTIVE'])}
+                        {wizardField('Access location', trainingDraft.accessLocationCode, (value) => setTrainingDraft((draft) => ({ ...draft, accessLocationCode: value })), activeLocations.map((location: any) => location.code))}
+                        {wizardField('Access unit', trainingDraft.accessUnitCode, (value) => setTrainingDraft((draft) => ({ ...draft, accessUnitCode: value })), activeUnits.map((unit: any) => unit.code))}
+                        {wizardField('Access model', trainingDraft.accessModel, (value) => setTrainingDraft((draft) => ({ ...draft, accessModel: value })), ['Any Model', ...OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)])}
+                        {wizardField('Access level', trainingDraft.accessLevel, (value) => setTrainingDraft((draft) => ({ ...draft, accessLevel: value })), ['View', 'Assign', 'Manage'])}
+                    </div>
+                </div>
+            );
+        }
+        return (
+            <div className={wizardPanelClass}>
+                <h4 className="text-base font-black text-slate-950">Review</h4>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                    Review the readiness cards above. Any saved wizard data is already written to the shared platform configuration that Settings uses.
+                </p>
+            </div>
+        );
+    };
 
     if (mode === 'detect' && isPartiallyConfigured) {
         return (
@@ -2181,7 +2810,7 @@ const InitialSetupWizard: React.FC<{
                 <div className="space-y-3">
                     {visibleChecks.map((check) => (
                         <div key={check.id} className="rounded-xl border border-slate-300 bg-white p-4 text-slate-900 shadow-sm">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="flex flex-wrap items-start gap-3">
                                 <div>
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
@@ -2198,18 +2827,21 @@ const InitialSetupWizard: React.FC<{
                                     <h4 className="mt-2 text-base font-bold text-slate-950">{check.label}</h4>
                                     <p className="mt-1 text-sm leading-5 text-slate-600">{check.summary}</p>
                                 </div>
-                                <button type="button" className={wizardSmallButtonClass} onClick={() => navigateToCheck(check)}>
-                                    Take me there
-                                </button>
                             </div>
                         </div>
                     ))}
+                    {renderWizardDataEntry()}
+                    {saveMessage ? (
+                        <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-sm">
+                            {saveMessage}
+                        </div>
+                    ) : null}
                 </div>
 
                 <aside className="h-fit rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm">
                     <h4 className="text-sm font-black text-slate-950">Templates and uploads</h4>
                     <p className="mt-1 text-xs leading-5 text-slate-600">
-                        Download a template, fill it in, then upload it here. I will check the format before you import anything.
+                        Download a template, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English.
                     </p>
                     <div className="mt-4 space-y-3">
                         {visibleTemplates.map((template) => {
@@ -2258,11 +2890,6 @@ const InitialSetupWizard: React.FC<{
                                                 <ul className="mt-1 list-disc space-y-1 pl-4">
                                                     {result.issues.map((issue) => <li key={issue}>{issue}</li>)}
                                                 </ul>
-                                            ) : null}
-                                            {isValid ? (
-                                                <button type="button" className={`${wizardPrimaryButtonClass} mt-2`} onClick={() => navigateToTemplateImport(template)}>
-                                                    Import or finish in Settings
-                                                </button>
                                             ) : null}
                                         </div>
                                     ) : null}
@@ -2436,6 +3063,7 @@ const OrganisationSlideoutDiagram: React.FC<{
                 <InitialSetupWizard
                     platformConfig={platformConfig}
                     unitCode={unitCode}
+                    onUpdatePlatformConfig={onUpdatePlatformConfig}
                     onNavigateToSettingsSection={onNavigateToSettingsSection}
                 />
             )}
