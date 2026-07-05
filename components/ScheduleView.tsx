@@ -8,7 +8,7 @@ import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
 import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
-import { DEFAULT_PLATFORM_PERMISSION_PROFILES, getOperationalModelLabel, getUnitOperationalModel, OPERATIONAL_MODEL_OPTIONS } from '../utils/platformConfigService';
+import { DEFAULT_PLATFORM_PERMISSION_PROFILES, getOperationalModelLabel, getUnitOperationalModel, normaliseOperationalModel, OPERATIONAL_MODEL_OPTIONS } from '../utils/platformConfigService';
 import { getTaskProfilesForModel } from '../utils/taskProfiles';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { AIRCRAFT_CREW_RESOURCE_KINDS, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
@@ -19,6 +19,7 @@ import { normaliseStaffQualificationCatalogue } from '../utils/staffQualificatio
 import { normaliseTrainingReportTemplate, normaliseTrainingReportTerminology } from '../utils/trainingReportTerminology';
 import { normaliseUnitCallsignSettings } from '../utils/unitCallsigns';
 import { getEffectiveDispatchStaggerMinutes, type DispatchStaggerSettings } from '../utils/dispatchStagger';
+import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from '../utils/sunTimes';
    
 declare const XLSX: any;
 
@@ -857,6 +858,20 @@ const parseWizardLocationRows = (value: string): Array<{ icao: string; iata: str
         };
     }).filter((row) => row.icao || row.iata || row.name)
 );
+
+const formatWizardLocationRows = (rows: Array<{ icao?: string; iata?: string; name?: string }>): string => (
+    rows
+        .filter((row) => row.icao || row.iata || row.name)
+        .map((row) => `${String(row.icao || '').trim().toUpperCase()} | ${String(row.iata || '').trim().toUpperCase()} | ${String(row.name || '').trim()}`)
+        .join('\n')
+);
+
+const normaliseWizardLocationProfile = (location: any) => ({
+    icao: String(location?.icao || location?.code || '').trim().toUpperCase(),
+    iata: String(location?.iataCode || location?.settings?.iataCode || location?.iata || '').trim().toUpperCase(),
+    name: String(location?.name || location?.label || location?.code || '').trim(),
+    timezone: String(location?.timezone || 'Australia/Brisbane').trim(),
+});
 
 const parseWizardUnitRows = (value: string): Array<{ code: string; name: string }> => (
     parseWizardLineItems(value).map((line) => {
@@ -2003,6 +2018,24 @@ const InitialSetupWizard: React.FC<{
     const activeLocations = (platformConfig?.locations || []).filter((location: any) => (
         String(location?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
     ));
+    const wizardLocationProfiles = Array.from(new Map([
+        ...Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {}).map(normaliseWizardLocationProfile),
+        ...activeLocations.map(normaliseWizardLocationProfile),
+    ].filter((profile) => profile.icao || profile.iata || profile.name).map((profile) => [
+        normaliseUnitSettingsIdentifier(profile.icao || profile.iata || profile.name),
+        profile,
+    ])).values());
+    const wizardLocationIcaoOptions = wizardLocationProfiles.map((profile) => profile.icao).filter(Boolean);
+    const wizardLocationIataOptions = wizardLocationProfiles.map((profile) => profile.iata).filter(Boolean);
+    const wizardLocationNameOptions = wizardLocationProfiles.map((profile) => profile.name).filter(Boolean);
+    const findWizardLocationProfile = (value: string) => {
+        const key = normaliseUnitSettingsIdentifier(value);
+        return wizardLocationProfiles.find((profile) => (
+            normaliseUnitSettingsIdentifier(profile.icao) === key
+            || normaliseUnitSettingsIdentifier(profile.iata) === key
+            || normaliseUnitSettingsIdentifier(profile.name) === key
+        ));
+    };
     const activeUnits = (platformConfig?.units || []).filter((unit: any) => (
         String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
     ));
@@ -2110,6 +2143,11 @@ const InitialSetupWizard: React.FC<{
             ? activeLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
             : 'YAMB | AMB | Amberley'
     ));
+    const [locationDraftRowCount, setLocationDraftRowCount] = useState(() => Math.max(1, parseWizardLocationRows(
+        activeLocations.length > 0
+            ? activeLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
+            : 'YAMB | AMB | Amberley',
+    ).length));
     const [unitDraft, setUnitDraft] = useState({
         code: String(currentUnit?.code || unitCode || '36SQN'),
         name: String(currentUnit?.name || currentUnit?.code || unitCode || '36SQN'),
@@ -2191,6 +2229,20 @@ const InitialSetupWizard: React.FC<{
             trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(', ') : '',
         });
     }, [currentLocation?.code, currentLocation?.name, currentLocation?.timezone, JSON.stringify(currentLocation?.trainingAreas || [])]);
+
+    useEffect(() => {
+        const firstLocation = parseWizardLocationRows(locationsTodayDraft)[0];
+        setLocationDraftRowCount((count) => Math.max(count, parseWizardLocationRows(locationsTodayDraft).length, 1));
+        if (!firstLocation) return;
+        const matchedProfile = findWizardLocationProfile(firstLocation.icao || firstLocation.iata || firstLocation.name);
+        setLocationDraft((draft) => ({
+            ...draft,
+            code: firstLocation.icao || matchedProfile?.icao || draft.code,
+            iataCode: firstLocation.iata || matchedProfile?.iata || draft.iataCode,
+            name: firstLocation.name || matchedProfile?.name || draft.name,
+            timezone: matchedProfile?.timezone || draft.timezone,
+        }));
+    }, [locationsTodayDraft]);
 
     useEffect(() => {
         setUnitDraft({
@@ -2875,6 +2927,49 @@ const InitialSetupWizard: React.FC<{
             )}
         </label>
     );
+    const wizardDataListField = (
+        label: string,
+        value: string,
+        onChange: (value: string) => void,
+        options: string[],
+        placeholder?: string,
+        listKey?: string,
+    ) => {
+        const listId = `wizard-${(listKey || label).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+        return (
+            <label className="block">
+                <span className={wizardLabelClass}>{label}</span>
+                <input
+                    className={`${wizardInputClass} mt-1`}
+                    value={value}
+                    list={listId}
+                    placeholder={placeholder}
+                    onKeyDown={stopEditableKeyPropagation}
+                    onChange={(event) => onChange(event.target.value)}
+                />
+                <datalist id={listId}>
+                    {Array.from(new Set(options.filter(Boolean))).map((option) => <option key={option} value={option} />)}
+                </datalist>
+            </label>
+        );
+    };
+    const updateWizardLocationRow = (rowIndex: number, field: 'icao' | 'iata' | 'name', value: string) => {
+        const rows = parseWizardLocationRows(locationsTodayDraft);
+        const nextRows = rows.length > 0 ? [...rows] : [{ icao: '', iata: '', name: '' }];
+        while (nextRows.length <= rowIndex) nextRows.push({ icao: '', iata: '', name: '' });
+        const formattedValue = field === 'name' ? value : value.toUpperCase();
+        const matchedProfile = findWizardLocationProfile(formattedValue);
+        nextRows[rowIndex] = {
+            ...nextRows[rowIndex],
+            [field]: formattedValue,
+            ...(matchedProfile ? {
+                icao: matchedProfile.icao || nextRows[rowIndex].icao,
+                iata: matchedProfile.iata || nextRows[rowIndex].iata,
+                name: matchedProfile.name || nextRows[rowIndex].name,
+            } : {}),
+        };
+        setLocationsTodayDraft(formatWizardLocationRows(nextRows));
+    };
     const wizardTextArea = (label: string, value: string, onChange: (value: string) => void, placeholder?: string, autoFocus = false) => (
         <label className="block">
             <span className={wizardLabelClass}>{label}</span>
@@ -3224,12 +3319,31 @@ const InitialSetupWizard: React.FC<{
             );
         }
         if (visibleStep.id === 'locations-today') {
+            const locationRows = parseWizardLocationRows(locationsTodayDraft);
+            const editableLocationRows = Array.from({ length: Math.max(locationDraftRowCount, locationRows.length, 1) }, (_, index) => (
+                locationRows[index] || { icao: '', iata: '', name: '' }
+            ));
             return promptShell(
-                <p>List every locality, base, airfield, or operating location you want available. Use one line per locality. Format: <strong>ICAO | IATA | Name</strong>.</p>,
+                <p>Add every locality, base, airfield, or operating location you want available. Use ICAO where known, IATA where available, and the plain English location name.</p>,
                 <div>
-                    {wizardTextArea('Localities to set up', locationsTodayDraft, setLocationsTodayDraft, 'YMES | ESL | East Sale\nYAMB | AMB | Amberley', true)}
+                    <div className="space-y-3">
+                        {editableLocationRows.map((row, rowIndex) => (
+                            <div key={`wizard-location-row-${rowIndex}`} className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(120px,0.4fr)_minmax(100px,0.35fr)_minmax(180px,1fr)]">
+                                {wizardDataListField('ICAO code', row.icao, (value) => updateWizardLocationRow(rowIndex, 'icao', value), wizardLocationIcaoOptions, 'YMES', `icao-${rowIndex}`)}
+                                {wizardDataListField('IATA code', row.iata, (value) => updateWizardLocationRow(rowIndex, 'iata', value), wizardLocationIataOptions, 'ESL', `iata-${rowIndex}`)}
+                                {wizardDataListField('Location name', row.name, (value) => updateWizardLocationRow(rowIndex, 'name', value), wizardLocationNameOptions, 'East Sale', `location-name-${rowIndex}`)}
+                            </div>
+                        ))}
+                    </div>
+                    <button
+                        type="button"
+                        className={`${wizardSmallButtonClass} mt-3`}
+                        onClick={() => setLocationDraftRowCount((count) => count + 1)}
+                    >
+                        Add another locality
+                    </button>
                     <p className="mt-3 text-xs leading-5 text-slate-600">
-                        ICAO is the four-letter aviation code, for example YMES. IATA is the shorter three-letter code, for example ESL. If a location does not have an IATA code, leave that part blank.
+                        ICAO is the four-letter aviation code, for example YMES. IATA is the shorter three-letter code, for example ESL. Start typing a known code or location name to see matching suggestions.
                     </p>
                 </div>,
             );
@@ -3244,9 +3358,18 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Confirm the details for the first locality. You will use the same pattern for every locality listed earlier.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('ICAO code', locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'YMES')}
-                    {wizardField('IATA code', locationDraft.iataCode, (value) => setLocationDraft((draft) => ({ ...draft, iataCode: value.toUpperCase() })), undefined, 'ESL')}
-                    {wizardField('Location name', locationDraft.name, (value) => setLocationDraft((draft) => ({ ...draft, name: value })), undefined, 'Amberley')}
+                    {wizardDataListField('ICAO code', locationDraft.code, (value) => {
+                        const matchedProfile = findWizardLocationProfile(value);
+                        setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase(), iataCode: matchedProfile?.iata || draft.iataCode, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone }));
+                    }, wizardLocationIcaoOptions, 'YMES')}
+                    {wizardDataListField('IATA code', locationDraft.iataCode, (value) => {
+                        const matchedProfile = findWizardLocationProfile(value);
+                        setLocationDraft((draft) => ({ ...draft, iataCode: value.toUpperCase(), code: matchedProfile?.icao || draft.code, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone }));
+                    }, wizardLocationIataOptions, 'ESL')}
+                    {wizardDataListField('Location name', locationDraft.name, (value) => {
+                        const matchedProfile = findWizardLocationProfile(value);
+                        setLocationDraft((draft) => ({ ...draft, name: value, code: matchedProfile?.icao || draft.code, iataCode: matchedProfile?.iata || draft.iataCode, timezone: matchedProfile?.timezone || draft.timezone }));
+                    }, wizardLocationNameOptions, 'Amberley')}
                     {wizardField('Timezone', locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })), undefined, 'Australia/Brisbane')}
                     {wizardField('Training areas', locationDraft.trainingAreas, (value) => setLocationDraft((draft) => ({ ...draft, trainingAreas: value })), undefined, 'Area A, Area B')}
                 </div>,

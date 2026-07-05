@@ -2149,7 +2149,7 @@ const OPERATIONAL_MODEL_OPTIONS = [
   { value: "pooled_crew", label: "Pooled Crew Model" }
 ];
 const operationalModelLabels = new Map(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
-const normaliseOperationalModel$1 = (value) => {
+const normaliseOperationalModel = (value) => {
   const token = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
   if (token === "air_combat" || token === "fighter" || token === "fighter_model") return "air_combat";
   if (token === "fixed_crew" || token === "crewed" || token === "crewed_model") return "fixed_crew";
@@ -2158,11 +2158,11 @@ const normaliseOperationalModel$1 = (value) => {
   return DEFAULT_OPERATIONAL_MODEL;
 };
 const isFixedCrewLikeOperationalModel = (value) => {
-  const model = normaliseOperationalModel$1(value);
+  const model = normaliseOperationalModel(value);
   return model === "fixed_crew" || model === "pooled_crew";
 };
-const getUnitOperationalModel = (unit) => normaliseOperationalModel$1(unit?.operationalModel || unit?.settings?.operationalModel);
-const getOperationalModelLabel = (value) => operationalModelLabels.get(normaliseOperationalModel$1(value)) || operationalModelLabels.get(DEFAULT_OPERATIONAL_MODEL);
+const getUnitOperationalModel = (unit) => normaliseOperationalModel(unit?.operationalModel || unit?.settings?.operationalModel);
+const getOperationalModelLabel = (value) => operationalModelLabels.get(normaliseOperationalModel(value)) || operationalModelLabels.get(DEFAULT_OPERATIONAL_MODEL);
 const PLATFORM_PERMISSION_CATALOG = [
   {
     group: "Daily Flying Program",
@@ -2434,9 +2434,9 @@ const getMasterLmpAccessLevel = (config, lmpCode, context = {}) => {
     context.unitCode
   ].flatMap((unit) => String(unit || "").split("+")).map(normaliseAccessValue).filter(Boolean);
   const targetUnitSet = new Set(targetUnits);
-  const targetModel = normaliseOperationalModel$1(context.operationalModel);
+  const targetModel = normaliseOperationalModel(context.operationalModel);
   const activeRulesForLmp = normaliseMasterLmpAccessRules(config).filter((rule) => String(rule.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((rule) => normaliseAccessValue(rule.lmpCode) === targetLmp);
-  const matchingLevels = activeRulesForLmp.filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation).filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation).filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode))).filter((rule) => !rule.operationalModel || normaliseOperationalModel$1(rule.operationalModel) === targetModel).map((rule) => normaliseAccessLevel(rule.accessLevel));
+  const matchingLevels = activeRulesForLmp.filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation).filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation).filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode))).filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel).map((rule) => normaliseAccessLevel(rule.accessLevel));
   if (matchingLevels.length === 0 && activeRulesForLmp.length === 0 && targetModel === "air_combat") {
     return "Manage";
   }
@@ -2812,7 +2812,7 @@ const normaliseTaskProfileConfig = (value) => {
   }, { ...DEFAULT_TASK_PROFILE_CONFIG });
 };
 const getTaskProfilesForModel = (config, model = DEFAULT_OPERATIONAL_MODEL) => {
-  const activeModel = normaliseOperationalModel$1(model);
+  const activeModel = normaliseOperationalModel(model);
   const organisations = config?.organisations || [];
   const primaryOrganisation = organisations.find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
   const taskProfiles = normaliseTaskProfileConfig(primaryOrganisation?.settings?.taskProfiles || null);
@@ -3106,7 +3106,7 @@ const makeCrewPositionId = (genericName, index) => {
 };
 const normaliseOperationalModelList = (source, fallback = ALL_OPERATIONAL_MODEL_CODES$1) => {
   const rawValues = Array.isArray(source) ? source : [];
-  const models = rawValues.map((value) => normaliseOperationalModel$1(value)).filter((model, index, list) => list.indexOf(model) === index);
+  const models = rawValues.map((value) => normaliseOperationalModel(value)).filter((model, index, list) => list.indexOf(model) === index);
   return models.length > 0 ? models : [...fallback];
 };
 const getFallbackEntry = (entry, index) => {
@@ -3165,7 +3165,7 @@ const getCrewPositionLabelMap = (terminology) => normaliseCrewPositionTerminolog
   [entry.genericName]: entry.label
 }), {});
 const getCrewPositionOptions = (terminology, extraValues = [], operationalModel2) => {
-  const model = operationalModel2 ? normaliseOperationalModel$1(operationalModel2) : null;
+  const model = operationalModel2 ? normaliseOperationalModel(operationalModel2) : null;
   const positions = normaliseCrewPositionTerminology(terminology).positions;
   const modelPositions = model ? positions.filter((entry) => isCrewPositionAvailableForOperationalModel(entry, model)) : positions;
   const options = (modelPositions.length > 0 ? modelPositions : positions).map((entry) => entry.genericName);
@@ -3179,7 +3179,7 @@ const getCrewPositionOptions = (terminology, extraValues = [], operationalModel2
 };
 const isCrewPositionAvailableForOperationalModel = (entry, operationalModel2) => {
   if (!operationalModel2) return true;
-  const model = normaliseOperationalModel$1(operationalModel2 || DEFAULT_OPERATIONAL_MODEL);
+  const model = normaliseOperationalModel(operationalModel2 || DEFAULT_OPERATIONAL_MODEL);
   const models = normaliseOperationalModelList(entry.operationalModels, ALL_OPERATIONAL_MODEL_CODES$1);
   return models.includes(model);
 };
@@ -4013,7 +4013,7 @@ const normaliseCrewCompositionSettings = (value) => {
     let code = normaliseCode$3(row?.code || row?.name, fallbackCode);
     code = nextAvailableThreeLetterCode(code, usedCodes);
     usedCodes.add(code);
-    const operationalModels = Array.isArray(row?.operationalModels) ? Array.from(new Set(row.operationalModels.map((model) => normaliseOperationalModel$1(model)).filter((model) => SUPPORTED_MODELS.includes(model)))) : SUPPORTED_MODELS;
+    const operationalModels = Array.isArray(row?.operationalModels) ? Array.from(new Set(row.operationalModels.map((model) => normaliseOperationalModel(model)).filter((model) => SUPPORTED_MODELS.includes(model)))) : SUPPORTED_MODELS;
     return {
       id: String(row?.id || `alternate-crew-${index + 1}`),
       code,
@@ -4185,7 +4185,7 @@ const normaliseStringList = (source) => {
 const normaliseOperationalModels = (source) => {
   const values = normaliseStringList(source);
   if (values.length === 0) return [DEFAULT_OPERATIONAL_MODEL];
-  return Array.from(new Set(values.map((value) => normaliseOperationalModel$1(value))));
+  return Array.from(new Set(values.map((value) => normaliseOperationalModel(value))));
 };
 const normaliseQualification = (entry, index) => {
   const name = String(entry?.name || entry?.label || entry?.code || "").trim();
@@ -4240,7 +4240,7 @@ const normaliseAssignedQualificationIds = (source, catalogue, preserveUnknown = 
   return result;
 };
 const getQualificationsForOperationalModel = (catalogue, operationalModel2) => {
-  const model = normaliseOperationalModel$1(operationalModel2);
+  const model = normaliseOperationalModel(operationalModel2);
   return normaliseStaffQualificationCatalogue(catalogue).qualifications.filter((qualification) => qualification.status !== "INACTIVE").filter((qualification) => {
     const models = qualification.operationalModels?.length ? qualification.operationalModels : OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
     return models.includes(model);
@@ -9550,6 +9550,13 @@ const parseWizardLocationRows = (value) => parseWizardLineItems(value).map((line
     name: parts[2] || parts[0] || ""
   };
 }).filter((row) => row.icao || row.iata || row.name);
+const formatWizardLocationRows = (rows) => rows.filter((row) => row.icao || row.iata || row.name).map((row) => `${String(row.icao || "").trim().toUpperCase()} | ${String(row.iata || "").trim().toUpperCase()} | ${String(row.name || "").trim()}`).join("\n");
+const normaliseWizardLocationProfile = (location) => ({
+  icao: String(location?.icao || location?.code || "").trim().toUpperCase(),
+  iata: String(location?.iataCode || location?.settings?.iataCode || location?.iata || "").trim().toUpperCase(),
+  name: String(location?.name || location?.label || location?.code || "").trim(),
+  timezone: String(location?.timezone || "Australia/Brisbane").trim()
+});
 const parseWizardUnitRows = (value) => parseWizardLineItems(value).map((line) => {
   const parts = line.split(/[|,]/).map((part) => part.trim());
   return {
@@ -10335,6 +10342,20 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
   const currentLocation = (platformConfig?.locations || []).find((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(currentUnit?.locationCode)) || (platformConfig?.locations || [])[0];
   const organisationStructureLevels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
   const activeLocations = (platformConfig?.locations || []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const wizardLocationProfiles = Array.from(new Map([
+    ...Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {}).map(normaliseWizardLocationProfile),
+    ...activeLocations.map(normaliseWizardLocationProfile)
+  ].filter((profile) => profile.icao || profile.iata || profile.name).map((profile) => [
+    normaliseUnitSettingsIdentifier(profile.icao || profile.iata || profile.name),
+    profile
+  ])).values());
+  const wizardLocationIcaoOptions = wizardLocationProfiles.map((profile) => profile.icao).filter(Boolean);
+  const wizardLocationIataOptions = wizardLocationProfiles.map((profile) => profile.iata).filter(Boolean);
+  const wizardLocationNameOptions = wizardLocationProfiles.map((profile) => profile.name).filter(Boolean);
+  const findWizardLocationProfile = (value) => {
+    const key = normaliseUnitSettingsIdentifier(value);
+    return wizardLocationProfiles.find((profile) => normaliseUnitSettingsIdentifier(profile.icao) === key || normaliseUnitSettingsIdentifier(profile.iata) === key || normaliseUnitSettingsIdentifier(profile.name) === key);
+  };
   const activeUnits = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const activeAircraftTypes = (platformConfig?.aircraftTypes || []).filter((aircraft) => String(aircraft?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const activeResourcePools = (platformConfig?.resourcePools || []).filter((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
@@ -10411,6 +10432,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
   });
   const [unitsTodayDraft, setUnitsTodayDraft] = reactExports.useState(() => activeUnits.length > 0 ? activeUnits.map((unit) => `${unit.code}${unit.name && unit.name !== unit.code ? ` | ${unit.name}` : ""}`).join("\n") : "36SQN | 36SQN");
   const [locationsTodayDraft, setLocationsTodayDraft] = reactExports.useState(() => activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : "YAMB | AMB | Amberley");
+  const [locationDraftRowCount, setLocationDraftRowCount] = reactExports.useState(() => Math.max(1, parseWizardLocationRows(
+    activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : "YAMB | AMB | Amberley"
+  ).length));
   const [unitDraft, setUnitDraft] = reactExports.useState({
     code: String(currentUnit?.code || unitCode || "36SQN"),
     name: String(currentUnit?.name || currentUnit?.code || unitCode || "36SQN"),
@@ -10490,6 +10514,19 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""
     });
   }, [currentLocation?.code, currentLocation?.name, currentLocation?.timezone, JSON.stringify(currentLocation?.trainingAreas || [])]);
+  reactExports.useEffect(() => {
+    const firstLocation = parseWizardLocationRows(locationsTodayDraft)[0];
+    setLocationDraftRowCount((count) => Math.max(count, parseWizardLocationRows(locationsTodayDraft).length, 1));
+    if (!firstLocation) return;
+    const matchedProfile = findWizardLocationProfile(firstLocation.icao || firstLocation.iata || firstLocation.name);
+    setLocationDraft((draft) => ({
+      ...draft,
+      code: firstLocation.icao || matchedProfile?.icao || draft.code,
+      iataCode: firstLocation.iata || matchedProfile?.iata || draft.iataCode,
+      name: firstLocation.name || matchedProfile?.name || draft.name,
+      timezone: matchedProfile?.timezone || draft.timezone
+    }));
+  }, [locationsTodayDraft]);
   reactExports.useEffect(() => {
     setUnitDraft({
       code: String(currentUnit?.code || unitCode || "36SQN"),
@@ -11106,6 +11143,41 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       }
     )
   ] });
+  const wizardDataListField = (label, value, onChange, options, placeholder, listKey) => {
+    const listId = `wizard-${(listKey || label).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: label }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          className: `${wizardInputClass} mt-1`,
+          value,
+          list: listId,
+          placeholder,
+          onKeyDown: stopEditableKeyPropagation,
+          onChange: (event) => onChange(event.target.value)
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: listId, children: Array.from(new Set(options.filter(Boolean))).map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option }, option)) })
+    ] });
+  };
+  const updateWizardLocationRow = (rowIndex, field, value) => {
+    const rows = parseWizardLocationRows(locationsTodayDraft);
+    const nextRows = rows.length > 0 ? [...rows] : [{ icao: "", iata: "", name: "" }];
+    while (nextRows.length <= rowIndex) nextRows.push({ icao: "", iata: "", name: "" });
+    const formattedValue = field === "name" ? value : value.toUpperCase();
+    const matchedProfile = findWizardLocationProfile(formattedValue);
+    nextRows[rowIndex] = {
+      ...nextRows[rowIndex],
+      [field]: formattedValue,
+      ...matchedProfile ? {
+        icao: matchedProfile.icao || nextRows[rowIndex].icao,
+        iata: matchedProfile.iata || nextRows[rowIndex].iata,
+        name: matchedProfile.name || nextRows[rowIndex].name
+      } : {}
+    };
+    setLocationsTodayDraft(formatWizardLocationRows(nextRows));
+  };
   const wizardTextArea = (label, value, onChange, placeholder, autoFocus = false) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -11424,15 +11496,26 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       );
     }
     if (visibleStep.id === "locations-today") {
+      const locationRows = parseWizardLocationRows(locationsTodayDraft);
+      const editableLocationRows = Array.from({ length: Math.max(locationDraftRowCount, locationRows.length, 1) }, (_, index) => locationRows[index] || { icao: "", iata: "", name: "" });
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "List every locality, base, airfield, or operating location you want available. Use one line per locality. Format: ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "ICAO | IATA | Name" }),
-          "."
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add every locality, base, airfield, or operating location you want available. Use ICAO where known, IATA where available, and the plain English location name." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          wizardTextArea("Localities to set up", locationsTodayDraft, setLocationsTodayDraft, "YMES | ESL | East Sale\nYAMB | AMB | Amberley", true),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "ICAO is the four-letter aviation code, for example YMES. IATA is the shorter three-letter code, for example ESL. If a location does not have an IATA code, leave that part blank." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: editableLocationRows.map((row, rowIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(120px,0.4fr)_minmax(100px,0.35fr)_minmax(180px,1fr)]", children: [
+            wizardDataListField("ICAO code", row.icao, (value) => updateWizardLocationRow(rowIndex, "icao", value), wizardLocationIcaoOptions, "YMES", `icao-${rowIndex}`),
+            wizardDataListField("IATA code", row.iata, (value) => updateWizardLocationRow(rowIndex, "iata", value), wizardLocationIataOptions, "ESL", `iata-${rowIndex}`),
+            wizardDataListField("Location name", row.name, (value) => updateWizardLocationRow(rowIndex, "name", value), wizardLocationNameOptions, "East Sale", `location-name-${rowIndex}`)
+          ] }, `wizard-location-row-${rowIndex}`)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: `${wizardSmallButtonClass} mt-3`,
+              onClick: () => setLocationDraftRowCount((count) => count + 1),
+              children: "Add another locality"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "ICAO is the four-letter aviation code, for example YMES. IATA is the shorter three-letter code, for example ESL. Start typing a known code or location name to see matching suggestions." })
         ] })
       );
     }
@@ -11446,9 +11529,18 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Confirm the details for the first locality. You will use the same pattern for every locality listed earlier." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("ICAO code", locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "YMES"),
-          wizardField("IATA code", locationDraft.iataCode, (value) => setLocationDraft((draft) => ({ ...draft, iataCode: value.toUpperCase() })), void 0, "ESL"),
-          wizardField("Location name", locationDraft.name, (value) => setLocationDraft((draft) => ({ ...draft, name: value })), void 0, "Amberley"),
+          wizardDataListField("ICAO code", locationDraft.code, (value) => {
+            const matchedProfile = findWizardLocationProfile(value);
+            setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase(), iataCode: matchedProfile?.iata || draft.iataCode, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone }));
+          }, wizardLocationIcaoOptions, "YMES"),
+          wizardDataListField("IATA code", locationDraft.iataCode, (value) => {
+            const matchedProfile = findWizardLocationProfile(value);
+            setLocationDraft((draft) => ({ ...draft, iataCode: value.toUpperCase(), code: matchedProfile?.icao || draft.code, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone }));
+          }, wizardLocationIataOptions, "ESL"),
+          wizardDataListField("Location name", locationDraft.name, (value) => {
+            const matchedProfile = findWizardLocationProfile(value);
+            setLocationDraft((draft) => ({ ...draft, name: value, code: matchedProfile?.icao || draft.code, iataCode: matchedProfile?.iata || draft.iataCode, timezone: matchedProfile?.timezone || draft.timezone }));
+          }, wizardLocationNameOptions, "Amberley"),
           wizardField("Timezone", locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })), void 0, "Australia/Brisbane"),
           wizardField("Training areas", locationDraft.trainingAreas, (value) => setLocationDraft((draft) => ({ ...draft, trainingAreas: value })), void 0, "Area A, Area B")
         ] })
@@ -13803,7 +13895,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
               onRowLeave: () => setHoveredRowIndex(null),
               showUnits: showUnitHeadings,
               useUnitColors: true,
-              useRoleColors: normaliseOperationalModel$1(operationalModel2) === "air_combat",
+              useRoleColors: normaliseOperationalModel(operationalModel2) === "air_combat",
               crewPositionTerminology,
               instructorLabel
             }
@@ -28217,7 +28309,7 @@ const AddGroundEventFlyout = ({
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("ground");
   const crewLabel = reactExports.useMemo(() => {
-    const model = normaliseOperationalModel$1(operationalModel2);
+    const model = normaliseOperationalModel(operationalModel2);
     return model === "air_combat" || isFixedCrewLikeOperationalModel(model) ? "Crew" : "Trainees";
   }, [operationalModel2]);
   const [flightNumber, setFlightNumber] = reactExports.useState(groundSyllabus[0]?.code || "");
@@ -35828,7 +35920,7 @@ const PeopleTab = ({
   const fieldsetShell = "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
   const legendClass = "px-2 text-lg font-semibold text-white";
   const inputClass = "bg-slate-950 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all";
-  const activeModel = normaliseOperationalModel$1(operationalModel2);
+  const activeModel = normaliseOperationalModel(operationalModel2);
   const isCrewOperationalModel = activeModel === "air_combat" || isFixedCrewLikeOperationalModel(activeModel);
   const activeModelLabel = getOperationalModelLabel(activeModel);
   const activeUnitCodes = reactExports.useMemo(() => {
@@ -36494,7 +36586,7 @@ const CourseMetricsTab = ({
   operationalModel: operationalModel2,
   operationalContext
 }) => {
-  const activeModel = normaliseOperationalModel$1(operationalModel2);
+  const activeModel = normaliseOperationalModel(operationalModel2);
   const isCrewOperationalModel = activeModel === "air_combat" || isFixedCrewLikeOperationalModel(activeModel);
   const activeModelLabel = getOperationalModelLabel(activeModel);
   const percentLabel = (numerator, denominator) => {
@@ -40960,7 +41052,7 @@ const AirCombatIntelligenceTab = ({
   operationalContext,
   operationalModel: operationalModel2
 }) => {
-  const model = normaliseOperationalModel$1(operationalModel2);
+  const model = normaliseOperationalModel(operationalModel2);
   const isFixedCrewLike = isFixedCrewLikeOperationalModel(model);
   const modelLabel = getOperationalModelLabel(model);
   const analysis = reactExports.useMemo(() => {
@@ -42759,7 +42851,7 @@ const ACHistoryIntelligencePanel = ({
   ] });
 };
 const BuildIntelligenceView = (props) => {
-  const activeModel = normaliseOperationalModel$1(props.operationalModel);
+  const activeModel = normaliseOperationalModel(props.operationalModel);
   const isAirCombatModel = activeModel === "air_combat";
   const isCrewOperationalModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeModel);
   const activeModelLabel = getOperationalModelLabel(activeModel);
@@ -43421,7 +43513,7 @@ const InstructorProfileFlyout = ({
     }).sort((a, b) => a.name.localeCompare(b.name));
     return { primaryTrainees: primary, secondaryTrainees: secondary };
   }, [traineesData, instructor.name]);
-  const activeOperationalModel = normaliseOperationalModel$1(operationalModel2);
+  const activeOperationalModel = normaliseOperationalModel(operationalModel2);
   const isAirCombatModel = activeOperationalModel === "air_combat";
   const isStaffTrainingReportModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeOperationalModel);
   const assignedTraining = reactExports.useMemo(
@@ -45713,7 +45805,7 @@ const InstructorListView = ({
       }
     }
   }, [instructorsData]);
-  const activeOperationalModel = normaliseOperationalModel$1(operationalModel2);
+  const activeOperationalModel = normaliseOperationalModel(operationalModel2);
   const isAirCombatModel = activeOperationalModel === "air_combat";
   const isPooledCrewModel = activeOperationalModel === "pooled_crew";
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
@@ -47923,7 +48015,7 @@ const SyllabusView = ({
   const activeCollectionNoun = isTrainingPackagesTab ? "package" : "course";
   const activeCollectionTitle = isTrainingPackagesTab ? "Training Packages" : "Master LMP";
   const activeCollectionSelectLabel = isTrainingPackagesTab ? "Package:" : "Course:";
-  const activeOperationalModel = normaliseOperationalModel$1(operationalModel2);
+  const activeOperationalModel = normaliseOperationalModel(operationalModel2);
   const isAirCombatModel = activeOperationalModel === "air_combat";
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
   const usesPackageTab = activeOperationalModel === "air_combat" || isFixedCrewModel;
@@ -76839,7 +76931,7 @@ const NextDayInstructorScheduleView = ({
             onPersonClick: onSelectInstructor,
             showUnits: showUnitHeadings,
             useUnitColors: true,
-            useRoleColors: normaliseOperationalModel$1(operationalModel2) === "air_combat",
+            useRoleColors: normaliseOperationalModel(operationalModel2) === "air_combat",
             crewPositionTerminology,
             instructorLabel
           }
@@ -78748,7 +78840,7 @@ const DfpSidePanelTimeline = ({
   const [selectedPackageEventCode, setSelectedPackageEventCode] = reactExports.useState("");
   const [selectedCourseName, setSelectedCourseName] = reactExports.useState("");
   const [selectedPackageName, setSelectedPackageName] = reactExports.useState("");
-  const normalisedAssistOperationalModel = normaliseOperationalModel$1(operationalModel2);
+  const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel2);
   const isAirCombatNeoAssist = normalisedAssistOperationalModel === "air_combat";
   const isFixedCrewNeoAssist = isFixedCrewLikeOperationalModel(normalisedAssistOperationalModel);
   const defaultAssistTaskDuration = isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS : 1.2;
@@ -83535,7 +83627,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const ftdResourceLabel = buildResourceDisplayNames.ftd;
   const cptResourceLabel = buildResourceDisplayNames.cpt;
   const timingReport = config.timingReport;
-  const buildOperationalModel = normaliseOperationalModel$1(config.operationalModel || "flight_school");
+  const buildOperationalModel = normaliseOperationalModel(config.operationalModel || "flight_school");
   const buildActiveUnitCode = String(config.activeUnitCode || "").trim().toUpperCase();
   const buildActiveContextUnitCodes = Array.from(new Set(
     (Array.isArray(config.activeContextUnitCodes) && config.activeContextUnitCodes.length > 0 ? config.activeContextUnitCodes : String(config.activeUnitCode || "").split("+")).map((unitCode) => String(unitCode || "").trim().toUpperCase()).filter(Boolean)
@@ -95821,7 +95913,7 @@ const App = () => {
         return [{
           code: sharedUnitCodes.join("+"),
           name: String(group?.name || `${sharedUnitCodes.join("+")} Shared Fleet`),
-          model: sharedModels.size === 1 ? sharedUnits[0].model : normaliseOperationalModel$1("flight_school"),
+          model: sharedModels.size === 1 ? sharedUnits[0].model : normaliseOperationalModel("flight_school"),
           memberUnits: sharedUnitCodes,
           isSharedFleetContext: true
         }];
@@ -95848,7 +95940,7 @@ const App = () => {
     const fallbackUnits = fallbackCodes.map((code) => ({
       code,
       name: code,
-      model: normaliseOperationalModel$1("flight_school")
+      model: normaliseOperationalModel("flight_school")
     }));
     const sharingGroups = Array.isArray(organisationSettings.resourceSharingGroups) && organisationSettings.resourceSharingGroups.length > 0 ? organisationSettings.resourceSharingGroups : (organisationSettings.selectedUnits || []).length > 1 ? [{
       id: "legacy-resource-sharing",
@@ -95868,7 +95960,7 @@ const App = () => {
       return [{
         code: sharedFallbackUnits.join("+"),
         name: String(group?.name || `${sharedFallbackUnits.join("+")} Shared Fleet`),
-        model: normaliseOperationalModel$1("flight_school"),
+        model: normaliseOperationalModel("flight_school"),
         memberUnits: sharedFallbackUnits,
         isSharedFleetContext: true
       }];
@@ -95985,7 +96077,7 @@ const App = () => {
   }, [activeContextUnitCodes, activeUnitCode, platformConfig]);
   const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
   const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
-  const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel$1("flight_school");
+  const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
   const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
   const fixedCrewSharedResourceUnitTabs = reactExports.useMemo(() => isFixedCrewLikeOperationalModel(activeOperationalModel) && organisationSettings.fleetSharingEnabled && activeContextUnitCodes.length > 1 ? activeContextUnitCodes : [], [activeContextUnitCodes, activeOperationalModel, organisationSettings.fleetSharingEnabled]);
   const activeFixedCrewTileColourUnitKey = reactExports.useMemo(() => String(activeContextUnitCodes[0] || activeUnitCode || "DEFAULT").trim().toUpperCase() || "DEFAULT", [activeContextUnitCodes, activeUnitCode]);
@@ -98940,7 +99032,7 @@ ${"=".repeat(60)}`);
             status: "ACTIVE",
             settings: {
               source: "legacy-settings",
-              operationalModel: normaliseOperationalModel$1("flight_school"),
+              operationalModel: normaliseOperationalModel("flight_school"),
               hasTrainees: getDefaultHasTraineesForUnit(code)
             }
           };
@@ -101112,7 +101204,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     );
   };
   const generateAssessmentRequiredDraftTrainingReport = async (sourceEvent, dcoResult) => {
-    const operationalModel2 = normaliseOperationalModel$1(activeOperationalModel);
+    const operationalModel2 = normaliseOperationalModel(activeOperationalModel);
     if (operationalModel2 !== "air_combat" && !isFixedCrewLikeOperationalModel(operationalModel2)) return;
     const staffName = sourceEvent.fixedCrewPic || sourceEvent.pilot || sourceEvent.instructor || sourceEvent.crew || "";
     const eventCode2 = String(sourceEvent.flightNumber || sourceEvent.eventCode || "").trim();
@@ -107697,7 +107789,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           break;
       }
     }
-    const hasAirCombatCrewPair = normaliseOperationalModel$1(activeOperationalModel) === "air_combat" && String(event.pilot || "").trim().length > 0 && String(event.crew || "").trim().length > 0;
+    const hasAirCombatCrewPair = normaliseOperationalModel(activeOperationalModel) === "air_combat" && String(event.pilot || "").trim().length > 0 && String(event.crew || "").trim().length > 0;
     if (event.flightType === "Dual" && !hasAirCombatCrewPair && (!event.instructor || event.instructor.trim() === "" || event.instructor === "TBD")) {
       errors.push("❌ No instructor assigned - Dual flights require an instructor.");
     }
@@ -110799,7 +110891,7 @@ Do you want to replace the existing entry?`,
                   }
                 }
                 const isCurrencyPostFlightEvent = !!eventForPostFlight && (eventForPostFlight.eventCategory === "currency" || !!eventForPostFlight.currencyDraftId || eventForPostFlight.flightNumber === "CURR");
-                const isAirCombatPostFlightEvent = normaliseOperationalModel$1(activeOperationalModel) === "air_combat";
+                const isAirCombatPostFlightEvent = normaliseOperationalModel(activeOperationalModel) === "air_combat";
                 if (!isAirCombatPostFlightEvent && !isCurrencyPostFlightEvent && data.result && ["DCO", "DPCO", "DNCO"].includes(data.result) && eventForPostFlight) {
                   const pfEvtForPt051 = eventForPostFlight;
                   const pt051TraineeName = pfEvtForPt051.student || pfEvtForPt051.pilot || "";
@@ -111485,7 +111577,7 @@ Do you want to replace the existing entry?`,
             logAudit("Flight Detail", "View", `Viewed PT-051 for ${trainee.fullName} - Event: ${selectedEvent.flightNumber} (${selectedEvent.date})`);
             handleNavigation("PT051");
           },
-          onOpenTrainingReport: normaliseOperationalModel$1(activeOperationalModel) === "air_combat" || isFixedCrewLikeOperationalModel(activeOperationalModel) ? handleOpenAirCombatTrainingReportFromFlightDetails : void 0,
+          onOpenTrainingReport: normaliseOperationalModel(activeOperationalModel) === "air_combat" || isFixedCrewLikeOperationalModel(activeOperationalModel) ? handleOpenAirCombatTrainingReportFromFlightDetails : void 0,
           onOpenAuth: (e) => {
             const latestEvent = events.find((ev) => ev.id === e.id) || e;
             setEventForAuth(latestEvent);
