@@ -3621,6 +3621,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           status: 'ACTIVE',
           settings: {
             operationalModel: DEFAULT_OPERATIONAL_MODEL,
+            hasTrainees: false,
             trainingReportTemplate: defaultTrainingReportTemplate,
             trainingReportTerminology: normaliseTrainingReportTerminology({ name: defaultTrainingReportTemplate.displayName }),
             trainingReportPhraseBank: defaultTrainingReportPhraseBank,

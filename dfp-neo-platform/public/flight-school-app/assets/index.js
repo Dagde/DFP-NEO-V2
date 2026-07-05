@@ -61624,6 +61624,7 @@ This permanently removes the organisation record from platform configuration and
           status: "ACTIVE",
           settings: {
             operationalModel: DEFAULT_OPERATIONAL_MODEL,
+            hasTrainees: false,
             trainingReportTemplate: defaultTrainingReportTemplate,
             trainingReportTerminology: normaliseTrainingReportTerminology({ name: defaultTrainingReportTemplate.displayName }),
             trainingReportPhraseBank: defaultTrainingReportPhraseBank
@@ -76614,6 +76615,25 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
 };
 console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
 console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
+const TRAINEE_DEFAULT_ON_UNIT_CODES = /* @__PURE__ */ new Set(["1FTS", "2FTS", "CFS"]);
+const getDefaultHasTraineesForUnit = (unitCode) => TRAINEE_DEFAULT_ON_UNIT_CODES.has(String(unitCode || "").trim().toUpperCase());
+const applyDefaultUnitTraineeAvailability = (config) => {
+  if (!config || !Array.isArray(config.units)) return config;
+  let changed = false;
+  const units = config.units.map((unit) => {
+    const settings = unit?.settings || {};
+    if (Object.prototype.hasOwnProperty.call(settings, "hasTrainees")) return unit;
+    changed = true;
+    return {
+      ...unit,
+      settings: {
+        ...settings,
+        hasTrainees: getDefaultHasTraineesForUnit(unit?.code)
+      }
+    };
+  });
+  return changed ? { ...config, units } : config;
+};
 const formatFixedCrewDisplayGroup = (crew) => {
   const cleaned = String(crew || "").replace(/^CREW\s*/i, "").trim();
   if (!cleaned) return "";
@@ -93811,7 +93831,7 @@ const App = () => {
   reactExports.useEffect(() => {
     let cancelled = false;
     const loadPlatformConfig = async () => {
-      const config = await loadPlatformConfigFromDB();
+      const config = applyDefaultUnitTraineeAvailability(await loadPlatformConfigFromDB());
       if (cancelled) return;
       setPlatformConfig(config);
       setPlatformConfigLoaded(true);
@@ -93830,7 +93850,7 @@ const App = () => {
   }, []);
   reactExports.useEffect(() => {
     const handlePlatformConfigUpdated = (event) => {
-      const nextConfig = event.detail?.config;
+      const nextConfig = applyDefaultUnitTraineeAvailability(event.detail?.config || null);
       if (!nextConfig || !Array.isArray(nextConfig.units)) return;
       setPlatformConfig(nextConfig);
       setPlatformConfigLoaded(true);
@@ -97011,7 +97031,8 @@ ${"=".repeat(60)}`);
             status: "ACTIVE",
             settings: {
               source: "legacy-settings",
-              operationalModel: normaliseOperationalModel("flight_school")
+              operationalModel: normaliseOperationalModel("flight_school"),
+              hasTrainees: getDefaultHasTraineesForUnit(code)
             }
           };
         }).filter((unit) => unit.code && unit.locationCode);

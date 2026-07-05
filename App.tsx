@@ -137,6 +137,30 @@ import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
 
+const TRAINEE_DEFAULT_ON_UNIT_CODES = new Set(['1FTS', '2FTS', 'CFS']);
+
+const getDefaultHasTraineesForUnit = (unitCode: unknown): boolean => (
+    TRAINEE_DEFAULT_ON_UNIT_CODES.has(String(unitCode || '').trim().toUpperCase())
+);
+
+const applyDefaultUnitTraineeAvailability = (config: PlatformConfig | null): PlatformConfig | null => {
+    if (!config || !Array.isArray(config.units)) return config;
+    let changed = false;
+    const units = config.units.map((unit: any) => {
+        const settings = unit?.settings || {};
+        if (Object.prototype.hasOwnProperty.call(settings, 'hasTrainees')) return unit;
+        changed = true;
+        return {
+            ...unit,
+            settings: {
+                ...settings,
+                hasTrainees: getDefaultHasTraineesForUnit(unit?.code),
+            },
+        };
+    });
+    return changed ? { ...config, units } : config;
+};
+
 const formatFixedCrewDisplayGroup = (crew?: string | null): string => {
     const cleaned = String(crew || '').replace(/^CREW\s*/i, '').trim();
     if (!cleaned) return '';
@@ -21239,7 +21263,7 @@ const App: React.FC = () => {
     useEffect(() => {
         let cancelled = false;
         const loadPlatformConfig = async () => {
-            const config = await loadPlatformConfigFromDB();
+            const config = applyDefaultUnitTraineeAvailability(await loadPlatformConfigFromDB());
             if (cancelled) return;
             setPlatformConfig(config);
             setPlatformConfigLoaded(true);
@@ -21257,7 +21281,7 @@ const App: React.FC = () => {
 
     useEffect(() => {
         const handlePlatformConfigUpdated = (event: Event) => {
-            const nextConfig = (event as CustomEvent<{ config?: PlatformConfig }>).detail?.config;
+            const nextConfig = applyDefaultUnitTraineeAvailability((event as CustomEvent<{ config?: PlatformConfig }>).detail?.config || null);
             if (!nextConfig || !Array.isArray(nextConfig.units)) return;
             setPlatformConfig(nextConfig);
             setPlatformConfigLoaded(true);
@@ -25235,6 +25259,7 @@ const App: React.FC = () => {
                             settings: {
                                 source: 'legacy-settings',
                                 operationalModel: normaliseOperationalModel('flight_school'),
+                                hasTrainees: getDefaultHasTraineesForUnit(code),
                             },
                         };
                     })
