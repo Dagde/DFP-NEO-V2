@@ -9540,6 +9540,25 @@ const parseRoleRequirementsText = (value) => String(value || "").split(/\n/).map
   const count = Math.max(1, Math.round(Number(String(countPart || "1").trim()) || 1));
   return { role, count };
 });
+const updateWizardRoleRequirementText = (value, index, field, nextValue) => {
+  const rows = parseRoleRequirementsText(value);
+  while (rows.length <= index) rows.push({ role: "Crew", count: 1 });
+  rows[index] = {
+    ...rows[index],
+    [field]: field === "count" ? Math.max(1, Math.round(Number(nextValue) || 1)) : nextValue
+  };
+  return formatRoleRequirementsText(rows);
+};
+const removeWizardRoleRequirementText = (value, index) => formatRoleRequirementsText(parseRoleRequirementsText(value).filter((_, rowIndex) => rowIndex !== index));
+const parseWizardCrewLabelRows = (value) => parseWizardLineItems(value).map((line) => {
+  const [termPart, labelPart] = line.includes("=") ? line.split("=") : line.split(":");
+  const term = String(termPart || "").trim();
+  return {
+    term,
+    label: String(labelPart || term).trim()
+  };
+}).filter((row) => row.term || row.label);
+const formatWizardCrewLabelRows = (rows) => rows.filter((row) => row.term || row.label).map((row) => `${String(row.term || "").trim()} = ${String(row.label || "").trim()}`).join("\n");
 const getWizardOperationalModelLabel = (value) => OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value);
 const parseWizardLineItems = (value) => String(value || "").split(/\n/).map((item) => item.trim()).filter(Boolean);
 const parseWizardLocationRows = (value) => parseWizardLineItems(value).map((line) => {
@@ -10556,6 +10575,12 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     });
   }, [primaryAircraftType?.code, primaryAircraftType?.name, JSON.stringify(primaryAircraftType?.crewComposition || {}), primaryResourcePool?.name, primaryResourcePool?.unitCode, primaryResourcePool?.locationCode, primaryResourcePool?.aircraftTypeCode, JSON.stringify(primaryResourcePool?.settings || {}), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name]);
   reactExports.useEffect(() => {
+    setCrewDraft((draft) => ({
+      ...draft,
+      aircraftCode: resourceDraft.aircraftCode || draft.aircraftCode
+    }));
+  }, [resourceDraft.aircraftCode]);
+  reactExports.useEffect(() => {
     setAccessDraft({
       userName: String(primaryUserAccess?.userName || primaryUserAccess?.user || "New user"),
       locationCode: String(primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || ""),
@@ -11178,6 +11203,44 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     };
     setLocationsTodayDraft(formatWizardLocationRows(nextRows));
   };
+  const renderCrewCompositionEditor = (title, value, onChange, addLabel = "Add position") => {
+    const rows = parseRoleRequirementsText(value);
+    const editableRows = rows.length > 0 ? rows : [{ role: "Pilot", count: 1 }];
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: title }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onChange(formatRoleRequirementsText([...editableRows, { role: "Crew", count: 1 }])), children: addLabel })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-[minmax(0,1fr)_100px_74px] md:items-end", children: [
+        wizardField("Position", row.role || "", (nextValue) => onChange(updateWizardRoleRequirementText(value, index, "role", nextValue)), void 0, "Pilot"),
+        wizardField("Number", String(row.count ?? 1), (nextValue) => onChange(updateWizardRoleRequirementText(value, index, "count", nextValue)), void 0, "1"),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onChange(removeWizardRoleRequirementText(value, index)), children: "Delete" })
+      ] }, `${title}-${index}`)) })
+    ] });
+  };
+  const renderCrewLabelsEditor = () => {
+    const rows = parseWizardCrewLabelRows(crewLabelsDraft);
+    const editableRows = rows.length > 0 ? rows : [{ term: "Pilot", label: "Pilot" }];
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Crew labels" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setCrewLabelsDraft(formatWizardCrewLabelRows([...editableRows, { term: "Crew", label: "Crew" }])), children: "Add label" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_74px] md:items-end", children: [
+        wizardField("System term", row.term || "", (nextValue) => {
+          const nextRows = [...editableRows];
+          nextRows[index] = { ...nextRows[index], term: nextValue };
+          setCrewLabelsDraft(formatWizardCrewLabelRows(nextRows));
+        }, void 0, "PIC"),
+        wizardField("Display label", row.label || "", (nextValue) => {
+          const nextRows = [...editableRows];
+          nextRows[index] = { ...nextRows[index], label: nextValue };
+          setCrewLabelsDraft(formatWizardCrewLabelRows(nextRows));
+        }, void 0, "Aircraft Captain"),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setCrewLabelsDraft(formatWizardCrewLabelRows(editableRows.filter((_, rowIndex) => rowIndex !== index))), children: "Delete" })
+      ] }, `crew-label-${index}`)) })
+    ] });
+  };
   const wizardTextArea = (label, value, onChange, placeholder, autoFocus = false) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -11561,7 +11624,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "36SQN"),
           wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "36SQN"),
-          wizardField("Home location", unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location) => location.code)),
+          wizardDataListField("Home location", unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, "YAMB"),
           wizardField("Unit type", unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"]),
           wizardField(
             "Operational model",
@@ -11603,28 +11666,26 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     }
     if (visibleStep.id === "resource-counts") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "How many schedule rows should NEO use for ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: resourceDraft.poolName || "this resource pool" }),
-          "?"
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Enter how many rows this unit can use on the schedule. These numbers tell NEO what it can place on the flying program." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-5", children: [
           wizardField("Aircraft", resourceDraft.aircraft, (value) => setResourceDraft((draft) => ({ ...draft, aircraft: value }))),
           wizardField("Sim", resourceDraft.sim, (value) => setResourceDraft((draft) => ({ ...draft, sim: value }))),
           wizardField("Trainer", resourceDraft.trainer, (value) => setResourceDraft((draft) => ({ ...draft, trainer: value }))),
-          wizardField("Standby", resourceDraft.standby, (value) => setResourceDraft((draft) => ({ ...draft, standby: value }))),
-          wizardField("Ground", resourceDraft.ground, (value) => setResourceDraft((draft) => ({ ...draft, ground: value })))
+          wizardField("Standby Lines", resourceDraft.standby, (value) => setResourceDraft((draft) => ({ ...draft, standby: value }))),
+          wizardField("Ground Lines", resourceDraft.ground, (value) => setResourceDraft((draft) => ({ ...draft, ground: value })))
         ] })
       );
     }
     if (visibleStep.id === "crew") {
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Aircraft type", crewDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value })), activeAircraftTypes.map((aircraft) => aircraft.code)),
-          wizardTextArea("Standard crew composition", crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })), "Pilot = 2\nLoadmaster = 1"),
-          wizardTextArea("Crew labels", crewLabelsDraft, setCrewLabelsDraft, "PIC = Aircraft Captain\nPilot = Pilot\nLoadmaster = Loadmaster"),
-          wizardTextArea("Alternate crew patterns", alternateCrewDraft, setAlternateCrewDraft, "Reduced crew = Pilot 1, Loadmaster 1")
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: wizardDataListField("Aircraft type", crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || "C-17A") }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-2", children: [
+            renderCrewCompositionEditor("Standard crew composition", crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value }))),
+            renderCrewCompositionEditor("Alternate crew composition", alternateCrewDraft, setAlternateCrewDraft, "Add alternate position")
+          ] }),
+          renderCrewLabelsEditor()
         ] })
       );
     }

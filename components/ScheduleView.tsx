@@ -837,6 +837,38 @@ const parseRoleRequirementsText = (value: string): any[] => (
         })
 );
 
+const updateWizardRoleRequirementText = (value: string, index: number, field: 'role' | 'count', nextValue: string): string => {
+    const rows = parseRoleRequirementsText(value);
+    while (rows.length <= index) rows.push({ role: 'Crew', count: 1 });
+    rows[index] = {
+        ...rows[index],
+        [field]: field === 'count' ? Math.max(1, Math.round(Number(nextValue) || 1)) : nextValue,
+    };
+    return formatRoleRequirementsText(rows);
+};
+
+const removeWizardRoleRequirementText = (value: string, index: number): string => (
+    formatRoleRequirementsText(parseRoleRequirementsText(value).filter((_, rowIndex) => rowIndex !== index))
+);
+
+const parseWizardCrewLabelRows = (value: string): Array<{ term: string; label: string }> => (
+    parseWizardLineItems(value).map((line) => {
+        const [termPart, labelPart] = line.includes('=') ? line.split('=') : line.split(':');
+        const term = String(termPart || '').trim();
+        return {
+            term,
+            label: String(labelPart || term).trim(),
+        };
+    }).filter((row) => row.term || row.label)
+);
+
+const formatWizardCrewLabelRows = (rows: Array<{ term?: string; label?: string }>): string => (
+    rows
+        .filter((row) => row.term || row.label)
+        .map((row) => `${String(row.term || '').trim()} = ${String(row.label || '').trim()}`)
+        .join('\n')
+);
+
 const getWizardOperationalModelLabel = (value: unknown): string => (
     OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value)
 );
@@ -2275,6 +2307,13 @@ const InitialSetupWizard: React.FC<{
     }, [primaryAircraftType?.code, primaryAircraftType?.name, JSON.stringify(primaryAircraftType?.crewComposition || {}), primaryResourcePool?.name, primaryResourcePool?.unitCode, primaryResourcePool?.locationCode, primaryResourcePool?.aircraftTypeCode, JSON.stringify(primaryResourcePool?.settings || {}), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name]);
 
     useEffect(() => {
+        setCrewDraft((draft) => ({
+            ...draft,
+            aircraftCode: resourceDraft.aircraftCode || draft.aircraftCode,
+        }));
+    }, [resourceDraft.aircraftCode]);
+
+    useEffect(() => {
         setAccessDraft({
             userName: String(primaryUserAccess?.userName || primaryUserAccess?.user || 'New user'),
             locationCode: String(primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || ''),
@@ -2970,6 +3009,69 @@ const InitialSetupWizard: React.FC<{
         };
         setLocationsTodayDraft(formatWizardLocationRows(nextRows));
     };
+    const renderCrewCompositionEditor = (
+        title: string,
+        value: string,
+        onChange: (value: string) => void,
+        addLabel = 'Add position',
+    ) => {
+        const rows = parseRoleRequirementsText(value);
+        const editableRows = rows.length > 0 ? rows : [{ role: 'Pilot', count: 1 }];
+        return (
+            <div className="rounded-lg border border-slate-300 bg-white p-3">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <span className={wizardLabelClass}>{title}</span>
+                    <button type="button" className={wizardSmallButtonClass} onClick={() => onChange(formatRoleRequirementsText([...editableRows, { role: 'Crew', count: 1 }]))}>
+                        {addLabel}
+                    </button>
+                </div>
+                <div className="space-y-2">
+                    {editableRows.map((row, index) => (
+                        <div key={`${title}-${index}`} className="grid gap-2 md:grid-cols-[minmax(0,1fr)_100px_74px] md:items-end">
+                            {wizardField('Position', row.role || '', (nextValue) => onChange(updateWizardRoleRequirementText(value, index, 'role', nextValue)), undefined, 'Pilot')}
+                            {wizardField('Number', String(row.count ?? 1), (nextValue) => onChange(updateWizardRoleRequirementText(value, index, 'count', nextValue)), undefined, '1')}
+                            <button type="button" className={wizardSmallButtonClass} onClick={() => onChange(removeWizardRoleRequirementText(value, index))}>
+                                Delete
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+    const renderCrewLabelsEditor = () => {
+        const rows = parseWizardCrewLabelRows(crewLabelsDraft);
+        const editableRows = rows.length > 0 ? rows : [{ term: 'Pilot', label: 'Pilot' }];
+        return (
+            <div className="rounded-lg border border-slate-300 bg-white p-3">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <span className={wizardLabelClass}>Crew labels</span>
+                    <button type="button" className={wizardSmallButtonClass} onClick={() => setCrewLabelsDraft(formatWizardCrewLabelRows([...editableRows, { term: 'Crew', label: 'Crew' }]))}>
+                        Add label
+                    </button>
+                </div>
+                <div className="space-y-2">
+                    {editableRows.map((row, index) => (
+                        <div key={`crew-label-${index}`} className="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_74px] md:items-end">
+                            {wizardField('System term', row.term || '', (nextValue) => {
+                                const nextRows = [...editableRows];
+                                nextRows[index] = { ...nextRows[index], term: nextValue };
+                                setCrewLabelsDraft(formatWizardCrewLabelRows(nextRows));
+                            }, undefined, 'PIC')}
+                            {wizardField('Display label', row.label || '', (nextValue) => {
+                                const nextRows = [...editableRows];
+                                nextRows[index] = { ...nextRows[index], label: nextValue };
+                                setCrewLabelsDraft(formatWizardCrewLabelRows(nextRows));
+                            }, undefined, 'Aircraft Captain')}
+                            <button type="button" className={wizardSmallButtonClass} onClick={() => setCrewLabelsDraft(formatWizardCrewLabelRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
+                                Delete
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
     const wizardTextArea = (label: string, value: string, onChange: (value: string) => void, placeholder?: string, autoFocus = false) => (
         <label className="block">
             <span className={wizardLabelClass}>{label}</span>
@@ -3390,7 +3492,7 @@ const InitialSetupWizard: React.FC<{
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, '36SQN')}
                     {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, '36SQN')}
-                    {wizardField('Home location', unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
+                    {wizardDataListField('Home location', unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, 'YAMB')}
                     {wizardField('Unit type', unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), ['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational'])}
                     {wizardField(
                         'Operational model',
@@ -3426,24 +3528,28 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'resource-counts') {
             return promptShell(
-                <p>How many schedule rows should NEO use for <strong>{resourceDraft.poolName || 'this resource pool'}</strong>?</p>,
+                <p>Enter how many rows this unit can use on the schedule. These numbers tell NEO what it can place on the flying program.</p>,
                 <div className="grid gap-3 md:grid-cols-5">
                     {wizardField('Aircraft', resourceDraft.aircraft, (value) => setResourceDraft((draft) => ({ ...draft, aircraft: value })))}
                     {wizardField('Sim', resourceDraft.sim, (value) => setResourceDraft((draft) => ({ ...draft, sim: value })))}
                     {wizardField('Trainer', resourceDraft.trainer, (value) => setResourceDraft((draft) => ({ ...draft, trainer: value })))}
-                    {wizardField('Standby', resourceDraft.standby, (value) => setResourceDraft((draft) => ({ ...draft, standby: value })))}
-                    {wizardField('Ground', resourceDraft.ground, (value) => setResourceDraft((draft) => ({ ...draft, ground: value })))}
+                    {wizardField('Standby Lines', resourceDraft.standby, (value) => setResourceDraft((draft) => ({ ...draft, standby: value })))}
+                    {wizardField('Ground Lines', resourceDraft.ground, (value) => setResourceDraft((draft) => ({ ...draft, ground: value })))}
                 </div>,
             );
         }
         if (visibleStep.id === 'crew') {
             return promptShell(
                 <p>Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events.</p>,
-                <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Aircraft type', crewDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value })), activeAircraftTypes.map((aircraft: any) => aircraft.code))}
-                    {wizardTextArea('Standard crew composition', crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })), 'Pilot = 2\nLoadmaster = 1')}
-                    {wizardTextArea('Crew labels', crewLabelsDraft, setCrewLabelsDraft, 'PIC = Aircraft Captain\nPilot = Pilot\nLoadmaster = Loadmaster')}
-                    {wizardTextArea('Alternate crew patterns', alternateCrewDraft, setAlternateCrewDraft, 'Reduced crew = Pilot 1, Loadmaster 1')}
+                <div className="space-y-3">
+                    <div className="grid gap-3 md:grid-cols-2">
+                        {wizardDataListField('Aircraft type', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'C-17A')}
+                    </div>
+                    <div className="grid gap-3 xl:grid-cols-2">
+                        {renderCrewCompositionEditor('Standard crew composition', crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })))}
+                        {renderCrewCompositionEditor('Alternate crew composition', alternateCrewDraft, setAlternateCrewDraft, 'Add alternate position')}
+                    </div>
+                    {renderCrewLabelsEditor()}
                 </div>,
             );
         }
