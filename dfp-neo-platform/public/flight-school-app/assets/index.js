@@ -9571,6 +9571,22 @@ const formatWizardBuildRulesDraft = (draft) => [
   `Maximum flights per day: ${draft.maxFlightsPerDay || "Not set"}`,
   `Minimum gap between events: ${draft.minGapBetweenEventsMinutes || "0"} minutes`
 ].join("\n");
+const parseWizardStaffRows = (value) => parseWizardLineItems(value).map((line) => {
+  const parts = line.split("|").map((part) => part.trim());
+  const namePart = parts[0] || "";
+  const [surnamePart, givenPart] = namePart.includes(",") ? namePart.split(",").map((part) => part.trim()) : ["", namePart];
+  return {
+    surname: surnamePart || "",
+    givenNames: givenPart || "",
+    unit: parts[1] || "",
+    position: parts[2] || "",
+    qualifications: parts[3] || ""
+  };
+}).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications);
+const formatWizardStaffRows = (rows) => rows.filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications).map((row) => {
+  const name = [String(row.surname || "").trim(), String(row.givenNames || "").trim()].filter(Boolean).join(", ");
+  return `${name} | ${String(row.unit || "").trim()} | ${String(row.position || "").trim()} | ${String(row.qualifications || "").trim()}`;
+}).join("\n");
 const getWizardOperationalModelLabel = (value) => OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value);
 const parseWizardLineItems = (value) => String(value || "").split(/\n/).map((item) => item.trim()).filter(Boolean);
 const parseWizardLocationRows = (value) => parseWizardLineItems(value).map((line) => {
@@ -11265,6 +11281,47 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
       ] }, `crew-label-${index}`)) })
     ] });
   };
+  const renderStaffEditor = () => {
+    const rows = parseWizardStaffRows(staffDraft);
+    const editableRows = rows.length > 0 ? rows : [{ surname: "", givenNames: "", unit: unitDraft.code || "", position: "", qualifications: "" }];
+    const updateStaffRow = (index, field, value) => {
+      const nextRows = [...editableRows];
+      nextRows[index] = { ...nextRows[index], [field]: value };
+      setStaffDraft(formatWizardStaffRows(nextRows));
+    };
+    const unitOptions = Array.from(new Set([
+      unitDraft.code,
+      ...parseWizardUnitRows(unitsTodayDraft).map((unit) => unit.code),
+      ...activeUnits.map((unit) => String(unit.code || ""))
+    ].filter(Boolean)));
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: wizardLabelClass, children: [
+            "Staff member ",
+            index + 1
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setStaffDraft(formatWizardStaffRows(editableRows.filter((_, rowIndex) => rowIndex !== index))), children: "Delete" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-5", children: [
+          wizardField("Surname", row.surname || "", (value) => updateStaffRow(index, "surname", value), void 0, "Burns"),
+          wizardField("Given names", row.givenNames || "", (value) => updateStaffRow(index, "givenNames", value), void 0, "Alexander"),
+          wizardDataListField("Unit", row.unit || "", (value) => updateStaffRow(index, "unit", value.toUpperCase()), unitOptions, unitDraft.code || "36SQN", `staff-unit-${index}`),
+          wizardField("Position", row.position || "", (value) => updateStaffRow(index, "position", value), void 0, "Pilot"),
+          wizardField("Qualifications", row.qualifications || "", (value) => updateStaffRow(index, "qualifications", value), void 0, "PIC")
+        ] })
+      ] }, `staff-row-${index}`)),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          className: wizardSmallButtonClass,
+          onClick: () => setStaffDraft(formatWizardStaffRows([...editableRows, { surname: "", givenNames: "", unit: unitDraft.code || "", position: "", qualifications: "" }])),
+          children: "Add staff member"
+        }
+      )
+    ] });
+  };
   const wizardTextArea = (label, value, onChange, placeholder, autoFocus = false) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -11752,8 +11809,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig }
     }
     if (visibleStep.id === "staff") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add the staff this unit needs for scheduling, permissions, and records. Use one line per person." }),
-        wizardTextArea("Staff names and details", staffDraft, setStaffDraft, "Burns, Alexander | 36SQN | Pilot | PIC\nSmith, Alex | 36SQN | Loadmaster | LM", true)
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add the staff this unit needs for scheduling, permissions, and records. Put each person into their own row." }),
+        renderStaffEditor()
       );
     }
     if (visibleStep.id === "trainees") {

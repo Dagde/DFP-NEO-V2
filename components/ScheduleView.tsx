@@ -895,6 +895,33 @@ const formatWizardBuildRulesDraft = (draft: {
     ].join('\n')
 );
 
+const parseWizardStaffRows = (value: string): Array<{ surname: string; givenNames: string; unit: string; position: string; qualifications: string }> => (
+    parseWizardLineItems(value).map((line) => {
+        const parts = line.split('|').map((part) => part.trim());
+        const namePart = parts[0] || '';
+        const [surnamePart, givenPart] = namePart.includes(',')
+            ? namePart.split(',').map((part) => part.trim())
+            : ['', namePart];
+        return {
+            surname: surnamePart || '',
+            givenNames: givenPart || '',
+            unit: parts[1] || '',
+            position: parts[2] || '',
+            qualifications: parts[3] || '',
+        };
+    }).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications)
+);
+
+const formatWizardStaffRows = (rows: Array<{ surname?: string; givenNames?: string; unit?: string; position?: string; qualifications?: string }>): string => (
+    rows
+        .filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications)
+        .map((row) => {
+            const name = [String(row.surname || '').trim(), String(row.givenNames || '').trim()].filter(Boolean).join(', ');
+            return `${name} | ${String(row.unit || '').trim()} | ${String(row.position || '').trim()} | ${String(row.qualifications || '').trim()}`;
+        })
+        .join('\n')
+);
+
 const getWizardOperationalModelLabel = (value: unknown): string => (
     OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value)
 );
@@ -3110,6 +3137,48 @@ const InitialSetupWizard: React.FC<{
             </div>
         );
     };
+    const renderStaffEditor = () => {
+        const rows = parseWizardStaffRows(staffDraft);
+        const editableRows = rows.length > 0 ? rows : [{ surname: '', givenNames: '', unit: unitDraft.code || '', position: '', qualifications: '' }];
+        const updateStaffRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
+            const nextRows = [...editableRows];
+            nextRows[index] = { ...nextRows[index], [field]: value };
+            setStaffDraft(formatWizardStaffRows(nextRows));
+        };
+        const unitOptions = Array.from(new Set([
+            unitDraft.code,
+            ...parseWizardUnitRows(unitsTodayDraft).map((unit) => unit.code),
+            ...activeUnits.map((unit: any) => String(unit.code || '')),
+        ].filter(Boolean)));
+        return (
+            <div className="space-y-3">
+                {editableRows.map((row, index) => (
+                    <div key={`staff-row-${index}`} className="rounded-lg border border-slate-300 bg-white p-3">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <span className={wizardLabelClass}>Staff member {index + 1}</span>
+                            <button type="button" className={wizardSmallButtonClass} onClick={() => setStaffDraft(formatWizardStaffRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
+                                Delete
+                            </button>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                            {wizardField('Surname', row.surname || '', (value) => updateStaffRow(index, 'surname', value), undefined, 'Burns')}
+                            {wizardField('Given names', row.givenNames || '', (value) => updateStaffRow(index, 'givenNames', value), undefined, 'Alexander')}
+                            {wizardDataListField('Unit', row.unit || '', (value) => updateStaffRow(index, 'unit', value.toUpperCase()), unitOptions, unitDraft.code || '36SQN', `staff-unit-${index}`)}
+                            {wizardField('Position', row.position || '', (value) => updateStaffRow(index, 'position', value), undefined, 'Pilot')}
+                            {wizardField('Qualifications', row.qualifications || '', (value) => updateStaffRow(index, 'qualifications', value), undefined, 'PIC')}
+                        </div>
+                    </div>
+                ))}
+                <button
+                    type="button"
+                    className={wizardSmallButtonClass}
+                    onClick={() => setStaffDraft(formatWizardStaffRows([...editableRows, { surname: '', givenNames: '', unit: unitDraft.code || '', position: '', qualifications: '' }]))}
+                >
+                    Add staff member
+                </button>
+            </div>
+        );
+    };
     const wizardTextArea = (label: string, value: string, onChange: (value: string) => void, placeholder?: string, autoFocus = false) => (
         <label className="block">
             <span className={wizardLabelClass}>{label}</span>
@@ -3630,8 +3699,8 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'staff') {
             return promptShell(
-                <p>Add the staff this unit needs for scheduling, permissions, and records. Use one line per person.</p>,
-                wizardTextArea('Staff names and details', staffDraft, setStaffDraft, 'Burns, Alexander | 36SQN | Pilot | PIC\nSmith, Alex | 36SQN | Loadmaster | LM', true),
+                <p>Add the staff this unit needs for scheduling, permissions, and records. Put each person into their own row.</p>,
+                renderStaffEditor(),
             );
         }
         if (visibleStep.id === 'trainees') {
