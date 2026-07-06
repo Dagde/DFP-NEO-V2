@@ -12488,6 +12488,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
           location: person.location,
           role: person.role,
           source: person._dataSource
+        })),
+        traineeSample: setupPersonnel.trainees.slice(0, 8).map((person) => ({
+          name: person.name || person.fullName,
+          unit: person.unit,
+          location: person.location,
+          course: person.course,
+          source: person._dataSource
         }))
       });
       onSaveSetupTestPersonnel?.(setupPersonnel);
@@ -21555,6 +21562,7 @@ const generateNewTraineeTemplate = () => ({
     simulator: { p1: 0, p2: 0, dual: 0, total: 0 }
   }
 });
+const UNALLOCATED_TRAINEE_COURSE = "Unallocated";
 const CourseRosterView = ({
   events,
   traineesData,
@@ -21644,10 +21652,11 @@ const CourseRosterView = ({
   const groupedTrainees = reactExports.useMemo(() => {
     const groups = {};
     traineesData.forEach((trainee) => {
-      if (!groups[trainee.course]) {
-        groups[trainee.course] = [];
+      const courseKey = String(trainee.course || "").trim() || UNALLOCATED_TRAINEE_COURSE;
+      if (!groups[courseKey]) {
+        groups[courseKey] = [];
       }
-      groups[trainee.course].push(trainee);
+      groups[courseKey].push(trainee);
     });
     for (const course in groups) {
       groups[course].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee"));
@@ -21672,7 +21681,11 @@ const CourseRosterView = ({
       }
     }
   }, [traineesData, isCreatingNew]);
-  const activeCourseNumbers = [...new Set(traineesData.map((t) => t.course).filter((c) => c && courseColors[c]))].sort((a, b) => a.localeCompare(b));
+  const activeCourseNumbers = Object.keys(groupedTrainees).sort((a, b) => {
+    if (a === UNALLOCATED_TRAINEE_COURSE) return 1;
+    if (b === UNALLOCATED_TRAINEE_COURSE) return -1;
+    return a.localeCompare(b);
+  });
   const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
   const coursesToDisplay = view2 === "active" ? activeCourseNumbers : archivedCourseNumbers;
   const courseColorMap = view2 === "active" ? courseColors : archivedCourses;

@@ -106,6 +106,8 @@ const generateNewTraineeTemplate = (): Trainee => ({
     }
 });
 
+const UNALLOCATED_TRAINEE_COURSE = 'Unallocated';
+
 const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     events,
     traineesData,
@@ -202,10 +204,11 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         const groups: { [course: string]: Trainee[] } = {};
 
         traineesData.forEach(trainee => {
-            if (!groups[trainee.course]) {
-                groups[trainee.course] = [];
+            const courseKey = String(trainee.course || '').trim() || UNALLOCATED_TRAINEE_COURSE;
+            if (!groups[courseKey]) {
+                groups[courseKey] = [];
             }
-            groups[trainee.course].push(trainee);
+            groups[courseKey].push(trainee);
         });
 
         for (const course in groups) {
@@ -247,11 +250,15 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         }
     }, [traineesData, isCreatingNew]);
 
-    // Filter courses by locality - only show courses that have trainees in traineesData
-    // (which is already filtered by school/location). This prevents courses from other
-    // localities (e.g., ADF304/ADF305 for PEA) from appearing when viewing ESL.
-    const activeCourseNumbers = [...new Set(traineesData.map(t => t.course).filter(c => c && courseColors[c]))]
-        .sort((a, b) => a.localeCompare(b));
+    // Show every active course represented by the scoped trainee data, even when the
+    // course colour has not been created yet. Blank course allocations remain visible
+    // as "Unallocated" so setup wizard imports cannot appear to vanish.
+    const activeCourseNumbers = Object.keys(groupedTrainees)
+        .sort((a, b) => {
+            if (a === UNALLOCATED_TRAINEE_COURSE) return 1;
+            if (b === UNALLOCATED_TRAINEE_COURSE) return -1;
+            return a.localeCompare(b);
+        });
     const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
 
     const coursesToDisplay = view === 'active' ? activeCourseNumbers : archivedCourseNumbers;

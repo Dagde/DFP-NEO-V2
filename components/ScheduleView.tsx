@@ -4536,6 +4536,13 @@ const InitialSetupWizard: React.FC<{
                     role: person.role,
                     source: person._dataSource,
                 })),
+                traineeSample: setupPersonnel.trainees.slice(0, 8).map((person: any) => ({
+                    name: person.name || person.fullName,
+                    unit: person.unit,
+                    location: person.location,
+                    course: person.course,
+                    source: person._dataSource,
+                })),
             });
             onSaveSetupTestPersonnel?.(setupPersonnel);
         }
