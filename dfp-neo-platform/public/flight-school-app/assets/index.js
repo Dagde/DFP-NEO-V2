@@ -11395,7 +11395,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       if (isSetupTestMode2) {
         saveSetupTestWizardDrafts(false, { staffDraft: nextStaffDraft });
       }
-      const message = `Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into the staff list${isSetupTestMode2 ? " and synced them into the local test app" : ""}.`;
+      const message = isSetupTestMode2 ? `Committed ${importedRows.length} uploaded staff profile${importedRows.length === 1 ? "" : "s"} to Staff Profiles in this local test app.` : `Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into the wizard staff list.`;
       setImportConfirmations((current) => ({ ...current, [template.id]: message }));
       setSaveMessage(message);
       return;
@@ -11422,7 +11422,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       if (isSetupTestMode2) {
         saveSetupTestWizardDrafts(false, { traineeDraft: nextTraineeDraft, unitDraft: { ...unitDraft, hasTrainees: true } });
       }
-      const message = `Imported ${importedRows.length} trainee row${importedRows.length === 1 ? "" : "s"} into the master trainee list${isSetupTestMode2 ? " and synced them into the local test app" : ""}.`;
+      const message = isSetupTestMode2 ? `Committed ${importedRows.length} uploaded trainee profile${importedRows.length === 1 ? "" : "s"} to the trainee list in this local test app.` : `Imported ${importedRows.length} trainee row${importedRows.length === 1 ? "" : "s"} into the master trainee list.`;
       setImportConfirmations((current) => ({ ...current, [template.id]: message }));
       setSaveMessage(message);
       return;
@@ -12454,6 +12454,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     })));
     setSaveMessage("Setup saved into Settings.");
   };
+  const commitWizardStaffProfiles = () => {
+    const staffCount = parseWizardStaffRows(staffDraft).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications).length;
+    saveSetupTestWizardDrafts(false, { staffDraft });
+    const message = `Committed ${staffCount} staff profile${staffCount === 1 ? "" : "s"} to Staff Profiles in this local test app.`;
+    setImportConfirmations((current) => ({ ...current, staff: message }));
+    setSaveMessage(message);
+  };
   const renderWizardDataEntry = () => {
     if (visibleStep.id === "analysis") {
       return promptShell(
@@ -12772,8 +12779,22 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     }
     if (visibleStep.id === "staff") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add the staff this unit needs for scheduling, permissions, and records. Put each person into their own row." }),
-        renderStaffEditor()
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add the staff this unit needs for scheduling, permissions, and records. Put each person into their own row, then commit the list to Staff Profiles." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          renderStaffEditor(),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-emerald-900", children: "This writes the staff shown above into the local test app Staff Profiles. It does not touch the real DFP-NEO database." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: `${wizardPrimaryButtonClass} mt-3`,
+                onClick: commitWizardStaffProfiles,
+                children: "Commit to Staff Profiles"
+              }
+            )
+          ] })
+        ] })
       );
     }
     if (visibleStep.id === "trainees") {
@@ -12969,7 +12990,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
                     type: "button",
                     className: `${wizardPrimaryButtonClass} mt-3`,
                     onClick: () => importWizardTemplateRows(template, result),
-                    children: importConfirmation ? "Import again" : `Import into ${template.id === "staff" ? "staff list" : template.id === "trainees" ? "trainee master list" : template.id === "scoring" ? "scoring matrix" : "wizard"}`
+                    children: importConfirmation ? template.id === "staff" ? "Commit uploaded staff again" : "Import again" : template.id === "staff" ? "Commit uploaded staff to Staff Profiles" : `Import into ${template.id === "trainees" ? "trainee master list" : template.id === "scoring" ? "scoring matrix" : "wizard"}`
                   }
                 ),
                 importConfirmation ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-md border border-emerald-300 bg-white px-3 py-2 text-xs font-bold leading-5 text-emerald-800", children: importConfirmation }) : null
@@ -99334,7 +99355,10 @@ const App = () => {
   }, [savePlatformConfigDebounced]);
   const handleSaveSetupTestPersonnel = reactExports.useCallback((payload) => {
     if (!isSetupTestMode()) return;
-    writeSetupTestPersonnel(payload.instructors || [], payload.trainees || []);
+    const instructors = payload.instructors || [];
+    const trainees = payload.trainees || [];
+    writeSetupTestPersonnel(instructors, trainees);
+    setSuccessMessage(`Setup Wizard committed ${instructors.length} staff profile${instructors.length === 1 ? "" : "s"}${trainees.length > 0 ? ` and ${trainees.length} trainee profile${trainees.length === 1 ? "" : "s"}` : ""} to this local test app.`);
   }, []);
   const handleSaveStandardMissionProfileFromPlanner = reactExports.useCallback((profileId, changes) => {
     const targetId = String(profileId || "").trim();

@@ -3240,7 +3240,9 @@ const InitialSetupWizard: React.FC<{
             if (isSetupTestMode) {
                 saveSetupTestWizardDrafts(false, { staffDraft: nextStaffDraft });
             }
-            const message = `Imported ${importedRows.length} staff row${importedRows.length === 1 ? '' : 's'} into the staff list${isSetupTestMode ? ' and synced them into the local test app' : ''}.`;
+            const message = isSetupTestMode
+                ? `Committed ${importedRows.length} uploaded staff profile${importedRows.length === 1 ? '' : 's'} to Staff Profiles in this local test app.`
+                : `Imported ${importedRows.length} staff row${importedRows.length === 1 ? '' : 's'} into the wizard staff list.`;
             setImportConfirmations((current) => ({ ...current, [template.id]: message }));
             setSaveMessage(message);
             return;
@@ -3269,7 +3271,9 @@ const InitialSetupWizard: React.FC<{
             if (isSetupTestMode) {
                 saveSetupTestWizardDrafts(false, { traineeDraft: nextTraineeDraft, unitDraft: { ...unitDraft, hasTrainees: true } });
             }
-            const message = `Imported ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} into the master trainee list${isSetupTestMode ? ' and synced them into the local test app' : ''}.`;
+            const message = isSetupTestMode
+                ? `Committed ${importedRows.length} uploaded trainee profile${importedRows.length === 1 ? '' : 's'} to the trainee list in this local test app.`
+                : `Imported ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} into the master trainee list.`;
             setImportConfirmations((current) => ({ ...current, [template.id]: message }));
             setSaveMessage(message);
             return;
@@ -4487,6 +4491,15 @@ const InitialSetupWizard: React.FC<{
         })));
         setSaveMessage('Setup saved into Settings.');
     };
+    const commitWizardStaffProfiles = () => {
+        const staffCount = parseWizardStaffRows(staffDraft).filter((row) => (
+            row.surname || row.givenNames || row.unit || row.position || row.qualifications
+        )).length;
+        saveSetupTestWizardDrafts(false, { staffDraft });
+        const message = `Committed ${staffCount} staff profile${staffCount === 1 ? '' : 's'} to Staff Profiles in this local test app.`;
+        setImportConfirmations((current) => ({ ...current, staff: message }));
+        setSaveMessage(message);
+    };
     const renderWizardDataEntry = () => {
         if (visibleStep.id === 'analysis') {
             return promptShell(
@@ -4792,8 +4805,22 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'staff') {
             return promptShell(
-                <p>Add the staff this unit needs for scheduling, permissions, and records. Put each person into their own row.</p>,
-                renderStaffEditor(),
+                <p>Add the staff this unit needs for scheduling, permissions, and records. Put each person into their own row, then commit the list to Staff Profiles.</p>,
+                <div>
+                    {renderStaffEditor()}
+                    <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                        <p className="text-xs font-semibold leading-5 text-emerald-900">
+                            This writes the staff shown above into the local test app Staff Profiles. It does not touch the real DFP-NEO database.
+                        </p>
+                        <button
+                            type="button"
+                            className={`${wizardPrimaryButtonClass} mt-3`}
+                            onClick={commitWizardStaffProfiles}
+                        >
+                            Commit to Staff Profiles
+                        </button>
+                    </div>
+                </div>,
             );
         }
         if (visibleStep.id === 'trainees') {
@@ -4999,7 +5026,12 @@ const InitialSetupWizard: React.FC<{
                                                 className={`${wizardPrimaryButtonClass} mt-3`}
                                                 onClick={() => importWizardTemplateRows(template, result)}
                                             >
-                                                {importConfirmation ? 'Import again' : `Import into ${template.id === 'staff' ? 'staff list' : template.id === 'trainees' ? 'trainee master list' : template.id === 'scoring' ? 'scoring matrix' : 'wizard'}`}
+                                                {importConfirmation
+                                                    ? template.id === 'staff' ? 'Commit uploaded staff again' : 'Import again'
+                                                    : template.id === 'staff'
+                                                        ? 'Commit uploaded staff to Staff Profiles'
+                                                        : `Import into ${template.id === 'trainees' ? 'trainee master list' : template.id === 'scoring' ? 'scoring matrix' : 'wizard'}`
+                                                }
                                             </button>
                                             {importConfirmation ? (
                                                 <div className="mt-3 rounded-md border border-emerald-300 bg-white px-3 py-2 text-xs font-bold leading-5 text-emerald-800">

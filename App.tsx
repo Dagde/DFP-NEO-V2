@@ -24271,7 +24271,10 @@ const App: React.FC = () => {
     }, [savePlatformConfigDebounced]);
     const handleSaveSetupTestPersonnel = useCallback((payload: { instructors: any[]; trainees: any[] }) => {
         if (!isSetupTestMode()) return;
-        writeSetupTestPersonnel(payload.instructors || [], payload.trainees || []);
+        const instructors = payload.instructors || [];
+        const trainees = payload.trainees || [];
+        writeSetupTestPersonnel(instructors, trainees);
+        setSuccessMessage(`Setup Wizard committed ${instructors.length} staff profile${instructors.length === 1 ? '' : 's'}${trainees.length > 0 ? ` and ${trainees.length} trainee profile${trainees.length === 1 ? '' : 's'}` : ''} to this local test app.`);
     }, []);
     const handleSaveStandardMissionProfileFromPlanner = useCallback((profileId: string, changes: Partial<StandardMissionProfile>) => {
         const targetId = String(profileId || '').trim();
