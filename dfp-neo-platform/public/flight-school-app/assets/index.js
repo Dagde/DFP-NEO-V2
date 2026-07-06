@@ -11278,7 +11278,28 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       id: "trainees",
       title: "Does this unit have trainees?",
       label: "Trainees",
-      body: "If this unit has trainees, add their details now. If not, switch trainees off and continue.",
+      body: "If this unit has trainees, switch trainees on. The next steps will create courses, upload trainees, then allocate them.",
+      checkIds: ["access"]
+    },
+    {
+      id: "trainee-courses",
+      title: "Create trainee courses",
+      label: "Courses",
+      body: "Create the course numbers or course names trainees can be allocated to. These choices will be used after the trainee upload.",
+      checkIds: ["access"]
+    },
+    {
+      id: "trainee-upload",
+      title: "Upload or add trainees",
+      label: "Upload trainees",
+      body: "Upload the trainee template or add trainees manually. Course allocation happens on the next step.",
+      checkIds: ["access"]
+    },
+    {
+      id: "trainee-allocation",
+      title: "Allocate trainees to courses",
+      label: "Allocate trainees",
+      body: "Select which course each trainee belongs to, then commit the trainees to Trainee Profiles.",
       checkIds: ["access"]
     },
     {
@@ -11361,7 +11382,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     "units-today": ["units"],
     "locations-today": ["locations"],
     "staff": ["staff"],
-    "trainees": unitDraft.hasTrainees ? ["trainees"] : [],
+    "trainee-upload": unitDraft.hasTrainees ? ["trainees"] : [],
     "master-lmp": ["courses"],
     "scoring": ["scoring"]
   };
@@ -11699,7 +11720,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       )
     ] });
   };
-  const renderTraineeEditor = () => {
+  const renderTraineeEditor = (mode2 = "details") => {
     const rows = parseWizardTraineeRows(traineeDraft);
     const editableRows = rows.length > 0 ? rows : [{ surname: "", givenNames: "", unit: unitDraft.code || "", rank: "", pmkeys: "", courseNumber: "", course: "", masterLmp: "", startDate: "" }];
     const updateTraineeRow = (index, field, value) => {
@@ -11733,8 +11754,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       setUploadedTraineeProfileRows((current) => current.length > 0 ? current.map((row) => ({ ...row, course })) : current);
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "First list the active courses for this unit, then allocate every uploaded trainee to one of those courses. DFP-NEO will not commit trainees to Trainee Profiles until every trainee has a course selected." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block rounded-lg border border-slate-300 bg-white p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: mode2 === "courses" ? "Create the course numbers or names first. These become the only choices available when trainees are allocated after upload." : mode2 === "details" ? "Upload the trainee template or add trainees manually here. Course allocation happens on the next step." : "Allocate every trainee to one of the active courses. DFP-NEO will not commit trainees to Trainee Profiles until every trainee has a course selected." }),
+      mode2 === "courses" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block rounded-lg border border-slate-300 bg-white p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Active courses for this unit" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "textarea",
@@ -11751,8 +11772,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs font-semibold leading-5 text-slate-600", children: "Put each active course on its own line. These become the choices beside each trainee below." })
-      ] }),
-      courseOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+      ] }) : null,
+      mode2 === "allocation" && courseOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex flex-wrap items-center justify-between gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Select all trainees" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-semibold text-slate-500", children: [
@@ -11774,9 +11795,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
           },
           `assign-all-${course}`
         )) })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900", children: "Add at least one active course before committing trainees." }),
-      editableRows.some((row) => !String(row.course || "").trim()) ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900", children: "Some trainees still need a course allocation." }) : null,
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-300 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[760px] w-full text-left text-xs", children: [
+      ] }) : mode2 === "allocation" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900", children: "Add at least one active course before committing trainees." }) : null,
+      mode2 === "allocation" && editableRows.some((row) => !String(row.course || "").trim()) ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900", children: "Some trainees still need a course allocation." }) : null,
+      mode2 === "allocation" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-300 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[760px] w-full text-left text-xs", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-100 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Trainee" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Unit" }),
@@ -11800,8 +11821,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
             course
           ] }, `trainee-course-radio-${index}-${course}`)) }) })
         ] }, `trainee-allocation-${index}`)) })
-      ] }) }),
-      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+      ] }) }) : null,
+      mode2 === "details" ? editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: wizardLabelClass, children: [
             "Trainee ",
@@ -11821,12 +11842,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
           wizardField("Rank", row.rank || "", (value) => updateTraineeRow(index, "rank", value), void 0, "PLTOFF"),
           wizardField("PMKeyS", row.pmkeys || "", (value) => updateTraineeRow(index, "pmkeys", value), void 0, "7654321"),
           wizardField("Course number", row.courseNumber || "", (value) => updateTraineeRow(index, "courseNumber", value), void 0, "1"),
-          wizardDataListField("Course allocation", row.course || "", (value) => updateTraineeRow(index, "course", value), courseOptions, "Select later", `trainee-course-${index}`),
           wizardDataListField("Master LMP", row.masterLmp || "", (value) => updateTraineeRow(index, "masterLmp", value), courseOptions, trainingDraft.lmpCode || "BPC+IPC", `trainee-master-lmp-${index}`),
           wizardField("Start date", row.startDate || "", (value) => updateTraineeRow(index, "startDate", value), void 0, "2026-01-15")
         ] })
-      ] }, `trainee-row-${index}`)),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ] }, `trainee-row-${index}`)) : null,
+      mode2 === "details" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           type: "button",
@@ -11839,7 +11859,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
           },
           children: "Add trainee"
         }
-      )
+      ) : null
     ] });
   };
   const renderTrainingRecordsEditor = () => {
@@ -12027,7 +12047,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     )
   ] });
   const goToNextWizardStep = () => {
-    if (visibleStep.id === "trainees" && unitDraft.hasTrainees) {
+    if (visibleStep.id === "trainee-courses" && unitDraft.hasTrainees) {
+      const courseCount = parseWizardLineItems(traineeCourseOptionsDraft).length;
+      if (courseCount === 0) {
+        setSaveMessage("Add at least one trainee course before continuing.");
+        return;
+      }
+    }
+    if (visibleStep.id === "trainee-allocation" && unitDraft.hasTrainees) {
       const traineeRows = parseWizardTraineeRows(traineeDraft);
       const validCourses = new Set(parseWizardLineItems(traineeCourseOptionsDraft).map((course) => course.toUpperCase()));
       const hasTraineesToCommit = traineeRows.some((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.course || row.masterLmp || row.startDate);
@@ -13080,64 +13107,79 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     }
     if (visibleStep.id === "trainees") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: unitDraft.hasTrainees ? "This unit is marked as having trainees. Add trainees to the master list, then allocate each trainee to a course when you are ready." : "This unit is marked as not having trainees. You can leave this blank and continue." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              className: `${wizardInputClass} mb-3 text-left ${unitDraft.hasTrainees ? "bg-emerald-50 text-emerald-900" : "bg-slate-100 text-slate-600"}`,
-              onClick: () => setUnitDraft((draft) => ({ ...draft, hasTrainees: !draft.hasTrainees })),
-              children: unitDraft.hasTrainees ? "Trainees on" : "Trainees off"
-            }
-          ),
-          unitDraft.hasTrainees ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            renderTraineeEditor(),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-emerald-900", children: "This writes the trainees shown above into the local test app trainee list. It does not touch the real DFP-NEO database." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: unitDraft.hasTrainees ? "This unit is marked as having trainees. The next three steps will create courses, upload trainees, then allocate each trainee to a course." : "This unit is marked as not having trainees. You can leave the trainee setup steps blank and continue." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: `${wizardInputClass} mb-3 text-left ${unitDraft.hasTrainees ? "bg-emerald-50 text-emerald-900" : "bg-slate-100 text-slate-600"}`,
+            onClick: () => setUnitDraft((draft) => ({ ...draft, hasTrainees: !draft.hasTrainees })),
+            children: unitDraft.hasTrainees ? "Trainees on" : "Trainees off"
+          }
+        ) })
+      );
+    }
+    if (visibleStep.id === "trainee-courses") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: unitDraft.hasTrainees ? "Add the course numbers or course names that this unit will use for trainees. These are the choices used in the allocation step." : "Trainees are switched off for this unit, so course setup is optional." }),
+        unitDraft.hasTrainees ? renderTraineeEditor("courses") : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600", children: "Trainees are off for this unit." })
+      );
+    }
+    if (visibleStep.id === "trainee-upload") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: unitDraft.hasTrainees ? "Upload the trainee template or add trainees manually. Do not allocate courses here; that is the next step." : "Trainees are switched off for this unit, so upload is optional." }),
+        unitDraft.hasTrainees ? renderTraineeEditor("details") : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600", children: "Trainees are off for this unit." })
+      );
+    }
+    if (visibleStep.id === "trainee-allocation") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: unitDraft.hasTrainees ? "Allocate each trainee to one course. Every trainee must have a course selected before committing to Trainee Profiles." : "Trainees are switched off for this unit, so there is nothing to allocate." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: unitDraft.hasTrainees ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          renderTraineeEditor("allocation"),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-emerald-900", children: "This writes the trainees shown above into the local test app trainee list. It does not touch the real DFP-NEO database." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: `${wizardPrimaryButtonClass} mt-3`,
+                onClick: commitWizardTraineeProfiles,
+                children: "Commit to Trainee Profiles"
+              }
+            )
+          ] }),
+          showMoreTraineesPrompt ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-blue-900", children: "Do you have more trainees to upload for this unit?" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
                   type: "button",
-                  className: `${wizardPrimaryButtonClass} mt-3`,
-                  onClick: commitWizardTraineeProfiles,
-                  children: "Commit to Trainee Profiles"
+                  className: wizardSmallButtonClass,
+                  onClick: () => {
+                    setShowMoreTraineesPrompt(false);
+                    setImportConfirmations((current) => {
+                      const next = { ...current };
+                      delete next.trainees;
+                      return next;
+                    });
+                    setSaveMessage("Upload the next trainee file, then allocate the new trainees before committing again.");
+                  },
+                  children: "Upload more trainees"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: wizardPrimaryButtonClass,
+                  onClick: goToNextWizardStep,
+                  children: "Continue to next step"
                 }
               )
-            ] }),
-            showMoreTraineesPrompt ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-blue-900", children: "Do you have more trainees to upload for this unit?" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    className: wizardSmallButtonClass,
-                    onClick: () => {
-                      setShowMoreTraineesPrompt(false);
-                      setImportConfirmations((current) => {
-                        const next = { ...current };
-                        delete next.trainees;
-                        return next;
-                      });
-                      setSaveMessage("Upload the next trainee file, then allocate the new trainees before committing again.");
-                    },
-                    children: "Upload more trainees"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    className: wizardPrimaryButtonClass,
-                    onClick: goToNextWizardStep,
-                    children: "Continue to next step"
-                  }
-                )
-              ] })
-            ] }) : null
+            ] })
           ] }) : null
-        ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600", children: "Trainees are off for this unit." }) })
       );
     }
     if (visibleStep.id === "master-lmp") {
@@ -13328,7 +13370,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       );
     }) })
   ] });
-  const placeTemplatesBelow = visibleStep.id === "staff" || visibleStep.id === "trainees" || visibleStep.id === "scoring";
+  const placeTemplatesBelow = visibleStep.id === "staff" || visibleStep.id === "trainee-upload" || visibleStep.id === "scoring";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "input",

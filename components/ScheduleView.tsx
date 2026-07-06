@@ -3115,7 +3115,28 @@ const InitialSetupWizard: React.FC<{
             id: 'trainees',
             title: 'Does this unit have trainees?',
             label: 'Trainees',
-            body: 'If this unit has trainees, add their details now. If not, switch trainees off and continue.',
+            body: 'If this unit has trainees, switch trainees on. The next steps will create courses, upload trainees, then allocate them.',
+            checkIds: ['access'],
+        },
+        {
+            id: 'trainee-courses',
+            title: 'Create trainee courses',
+            label: 'Courses',
+            body: 'Create the course numbers or course names trainees can be allocated to. These choices will be used after the trainee upload.',
+            checkIds: ['access'],
+        },
+        {
+            id: 'trainee-upload',
+            title: 'Upload or add trainees',
+            label: 'Upload trainees',
+            body: 'Upload the trainee template or add trainees manually. Course allocation happens on the next step.',
+            checkIds: ['access'],
+        },
+        {
+            id: 'trainee-allocation',
+            title: 'Allocate trainees to courses',
+            label: 'Allocate trainees',
+            body: 'Select which course each trainee belongs to, then commit the trainees to Trainee Profiles.',
             checkIds: ['access'],
         },
         {
@@ -3200,7 +3221,7 @@ const InitialSetupWizard: React.FC<{
         'units-today': ['units'],
         'locations-today': ['locations'],
         'staff': ['staff'],
-        'trainees': unitDraft.hasTrainees ? ['trainees'] : [],
+        'trainee-upload': unitDraft.hasTrainees ? ['trainees'] : [],
         'master-lmp': ['courses'],
         'scoring': ['scoring'],
     };
@@ -3605,7 +3626,7 @@ const InitialSetupWizard: React.FC<{
             </div>
         );
     };
-    const renderTraineeEditor = () => {
+    const renderTraineeEditor = (mode: 'courses' | 'details' | 'allocation' = 'details') => {
         const rows = parseWizardTraineeRows(traineeDraft);
         const editableRows = rows.length > 0 ? rows : [{ surname: '', givenNames: '', unit: unitDraft.code || '', rank: '', pmkeys: '', courseNumber: '', course: '', masterLmp: '', startDate: '' }];
         const updateTraineeRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
@@ -3643,9 +3664,13 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    First list the active courses for this unit, then allocate every uploaded trainee to one of those courses. DFP-NEO will not commit trainees to Trainee Profiles until every trainee has a course selected.
+                    {mode === 'courses'
+                        ? 'Create the course numbers or names first. These become the only choices available when trainees are allocated after upload.'
+                        : mode === 'details'
+                            ? 'Upload the trainee template or add trainees manually here. Course allocation happens on the next step.'
+                            : 'Allocate every trainee to one of the active courses. DFP-NEO will not commit trainees to Trainee Profiles until every trainee has a course selected.'}
                 </div>
-                <label className="block rounded-lg border border-slate-300 bg-white p-3">
+                {mode === 'courses' ? <label className="block rounded-lg border border-slate-300 bg-white p-3">
                     <span className={wizardLabelClass}>Active courses for this unit</span>
                     <textarea
                         className={`${wizardInputClass} mt-1 min-h-[78px] resize-y`}
@@ -3661,8 +3686,8 @@ const InitialSetupWizard: React.FC<{
                     <p className="mt-2 text-xs font-semibold leading-5 text-slate-600">
                         Put each active course on its own line. These become the choices beside each trainee below.
                     </p>
-                </label>
-                {courseOptions.length > 0 ? (
+                </label> : null}
+                {mode === 'allocation' && courseOptions.length > 0 ? (
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
                         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                             <span className={wizardLabelClass}>Select all trainees</span>
@@ -3681,17 +3706,17 @@ const InitialSetupWizard: React.FC<{
                             ))}
                         </div>
                     </div>
-                ) : (
+                ) : mode === 'allocation' ? (
                     <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
                         Add at least one active course before committing trainees.
                     </div>
-                )}
-                {editableRows.some((row) => !String(row.course || '').trim()) ? (
+                ) : null}
+                {mode === 'allocation' && editableRows.some((row) => !String(row.course || '').trim()) ? (
                     <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
                         Some trainees still need a course allocation.
                     </div>
                 ) : null}
-                <div className="overflow-x-auto rounded-lg border border-slate-300 bg-white">
+                {mode === 'allocation' ? <div className="overflow-x-auto rounded-lg border border-slate-300 bg-white">
                     <table className="min-w-[760px] w-full text-left text-xs">
                         <thead className="bg-slate-100 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">
                             <tr>
@@ -3726,8 +3751,8 @@ const InitialSetupWizard: React.FC<{
                             ))}
                         </tbody>
                     </table>
-                </div>
-                {editableRows.map((row, index) => (
+                </div> : null}
+                {mode === 'details' ? editableRows.map((row, index) => (
                     <div key={`trainee-row-${index}`} className="rounded-lg border border-slate-300 bg-white p-3">
                         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                             <span className={wizardLabelClass}>Trainee {index + 1}</span>
@@ -3747,13 +3772,12 @@ const InitialSetupWizard: React.FC<{
                             {wizardField('Rank', row.rank || '', (value) => updateTraineeRow(index, 'rank', value), undefined, 'PLTOFF')}
                             {wizardField('PMKeyS', row.pmkeys || '', (value) => updateTraineeRow(index, 'pmkeys', value), undefined, '7654321')}
                             {wizardField('Course number', row.courseNumber || '', (value) => updateTraineeRow(index, 'courseNumber', value), undefined, '1')}
-                            {wizardDataListField('Course allocation', row.course || '', (value) => updateTraineeRow(index, 'course', value), courseOptions, 'Select later', `trainee-course-${index}`)}
                             {wizardDataListField('Master LMP', row.masterLmp || '', (value) => updateTraineeRow(index, 'masterLmp', value), courseOptions, trainingDraft.lmpCode || 'BPC+IPC', `trainee-master-lmp-${index}`)}
                             {wizardField('Start date', row.startDate || '', (value) => updateTraineeRow(index, 'startDate', value), undefined, '2026-01-15')}
                         </div>
                     </div>
-                ))}
-                <button
+                )) : null}
+                {mode === 'details' ? <button
                     type="button"
                     className={wizardSmallButtonClass}
                     onClick={() => {
@@ -3764,7 +3788,7 @@ const InitialSetupWizard: React.FC<{
                     }}
                 >
                     Add trainee
-                </button>
+                </button> : null}
             </div>
         );
     };
@@ -4012,7 +4036,14 @@ const InitialSetupWizard: React.FC<{
         </label>
     );
     const goToNextWizardStep = () => {
-        if (visibleStep.id === 'trainees' && unitDraft.hasTrainees) {
+        if (visibleStep.id === 'trainee-courses' && unitDraft.hasTrainees) {
+            const courseCount = parseWizardLineItems(traineeCourseOptionsDraft).length;
+            if (courseCount === 0) {
+                setSaveMessage('Add at least one trainee course before continuing.');
+                return;
+            }
+        }
+        if (visibleStep.id === 'trainee-allocation' && unitDraft.hasTrainees) {
             const traineeRows = parseWizardTraineeRows(traineeDraft);
             const validCourses = new Set(parseWizardLineItems(traineeCourseOptionsDraft).map((course) => course.toUpperCase()));
             const hasTraineesToCommit = traineeRows.some((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.course || row.masterLmp || row.startDate);
@@ -5144,7 +5175,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'trainees') {
             return promptShell(
-                <p>{unitDraft.hasTrainees ? 'This unit is marked as having trainees. Add trainees to the master list, then allocate each trainee to a course when you are ready.' : 'This unit is marked as not having trainees. You can leave this blank and continue.'}</p>,
+                <p>{unitDraft.hasTrainees ? 'This unit is marked as having trainees. The next three steps will create courses, upload trainees, then allocate each trainee to a course.' : 'This unit is marked as not having trainees. You can leave the trainee setup steps blank and continue.'}</p>,
                 <div>
                     <button
                         type="button"
@@ -5153,9 +5184,28 @@ const InitialSetupWizard: React.FC<{
                     >
                         {unitDraft.hasTrainees ? 'Trainees on' : 'Trainees off'}
                     </button>
+                </div>,
+            );
+        }
+        if (visibleStep.id === 'trainee-courses') {
+            return promptShell(
+                <p>{unitDraft.hasTrainees ? 'Add the course numbers or course names that this unit will use for trainees. These are the choices used in the allocation step.' : 'Trainees are switched off for this unit, so course setup is optional.'}</p>,
+                unitDraft.hasTrainees ? renderTraineeEditor('courses') : <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">Trainees are off for this unit.</div>,
+            );
+        }
+        if (visibleStep.id === 'trainee-upload') {
+            return promptShell(
+                <p>{unitDraft.hasTrainees ? 'Upload the trainee template or add trainees manually. Do not allocate courses here; that is the next step.' : 'Trainees are switched off for this unit, so upload is optional.'}</p>,
+                unitDraft.hasTrainees ? renderTraineeEditor('details') : <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">Trainees are off for this unit.</div>,
+            );
+        }
+        if (visibleStep.id === 'trainee-allocation') {
+            return promptShell(
+                <p>{unitDraft.hasTrainees ? 'Allocate each trainee to one course. Every trainee must have a course selected before committing to Trainee Profiles.' : 'Trainees are switched off for this unit, so there is nothing to allocate.'}</p>,
+                <div>
                     {unitDraft.hasTrainees ? (
                         <>
-                            {renderTraineeEditor()}
+                            {renderTraineeEditor('allocation')}
                             <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                                 <p className="text-xs font-semibold leading-5 text-emerald-900">
                                     This writes the trainees shown above into the local test app trainee list. It does not touch the real DFP-NEO database.
@@ -5200,7 +5250,7 @@ const InitialSetupWizard: React.FC<{
                                 </div>
                             ) : null}
                         </>
-                    ) : null}
+                    ) : <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">Trainees are off for this unit.</div>}
                 </div>,
             );
         }
@@ -5420,7 +5470,7 @@ const InitialSetupWizard: React.FC<{
             </div>
         </aside>
     );
-    const placeTemplatesBelow = visibleStep.id === 'staff' || visibleStep.id === 'trainees' || visibleStep.id === 'scoring';
+    const placeTemplatesBelow = visibleStep.id === 'staff' || visibleStep.id === 'trainee-upload' || visibleStep.id === 'scoring';
 
     return (
         <div className="space-y-4">
