@@ -23713,9 +23713,19 @@ const App: React.FC = () => {
     }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
 
     useEffect(() => {
+        if (setupTestProfile) {
+            loadingSnapshotDates.current.clear();
+            setDfpSnapshotLoadState(prev => (
+                ['loading', 'retrying', 'cached'].includes(prev.status)
+                    ? { status: 'idle', date: '', message: '' }
+                    : prev
+            ));
+            setShowDfpRetrievalNotice(false);
+            return;
+        }
         if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
         void loadSnapshotForDate(date, { useCache: true });
-    }, [activeUnitCode, date, school, loadSnapshotForDate]);
+    }, [activeUnitCode, date, school, loadSnapshotForDate, setupTestProfile]);
 
        // Show commit alert on app mount - DISABLED
        // useEffect(() => {

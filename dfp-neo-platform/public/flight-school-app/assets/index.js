@@ -98731,9 +98731,15 @@ const App = () => {
     }
   }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
   reactExports.useEffect(() => {
+    if (setupTestProfile) {
+      loadingSnapshotDates.current.clear();
+      setDfpSnapshotLoadState((prev) => ["loading", "retrying", "cached"].includes(prev.status) ? { status: "idle", date: "", message: "" } : prev);
+      setShowDfpRetrievalNotice(false);
+      return;
+    }
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     void loadSnapshotForDate(date, { useCache: true });
-  }, [activeUnitCode, date, school, loadSnapshotForDate]);
+  }, [activeUnitCode, date, school, loadSnapshotForDate, setupTestProfile]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
     const newUser = instructorsData.find((inst) => inst.name === userName);
