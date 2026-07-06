@@ -705,8 +705,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             <div key={`other-${unit}`} className="bg-gray-800 border border-orange-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
                 <div className="p-3 border-b border-orange-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
                     <div>
-                        <h3 className="text-lg font-bold text-orange-400">Other Staff</h3>
-                        <p className="text-xs text-gray-400">{unit}</p>
+                        <h3 className="text-lg font-bold text-orange-400">{unit}</h3>
+                        <p className="text-xs text-gray-400">Other Staff</p>
                     </div>
                     <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{otherStaffByUnit[unit].length}</span>
                 </div>
