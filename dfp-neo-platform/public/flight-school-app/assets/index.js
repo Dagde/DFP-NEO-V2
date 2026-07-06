@@ -96519,6 +96519,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
 const App = () => {
   const zoomLevel = 1;
   const setupTestProfile = getSetupTestProfile();
+  const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = reactExports.useState(false);
   const { theme } = useTheme();
   const { checkAndWarn, freezeState } = useSystemFreeze$1();
   const freezeStateRef = React.useRef(freezeState);
@@ -99896,7 +99897,6 @@ ${"=".repeat(60)}`);
   const [showAircraftAvailability, setShowAircraftAvailability] = reactExports.useState(true);
   const [currentAircraftAvailability, setCurrentAircraftAvailability] = reactExports.useState(availableAircraftCount);
   const [showDfpSidePanel, setShowDfpSidePanel] = reactExports.useState(false);
-  const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = reactExports.useState(false);
   const [showPauseFlightOps, setShowPauseFlightOps] = reactExports.useState(false);
   const [showPausePanel, setShowPausePanel] = reactExports.useState(false);
   const [pausePanelPhase, setPausePanelPhase] = reactExports.useState("configure");

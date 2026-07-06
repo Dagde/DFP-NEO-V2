@@ -20854,6 +20854,7 @@ const App: React.FC = () => {
        // Default zoom level (fixed at 1 since zoom functionality was removed)
        const zoomLevel = 1;
     const setupTestProfile = getSetupTestProfile();
+    const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = useState(false);
 
     // Theme
     const { theme } = useTheme();
@@ -25121,7 +25122,6 @@ const App: React.FC = () => {
     const [showAircraftAvailability, setShowAircraftAvailability] = useState(true);
     const [currentAircraftAvailability, setCurrentAircraftAvailability] = useState<number>(availableAircraftCount);
     const [showDfpSidePanel, setShowDfpSidePanel] = useState(false);
-    const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = useState(false);
     const [showPauseFlightOps, setShowPauseFlightOps] = useState(false);
     // Pause Flight Ops Panel state (sidebar panel on right side of DFP window)
     const [showPausePanel, setShowPausePanel] = useState(false);
