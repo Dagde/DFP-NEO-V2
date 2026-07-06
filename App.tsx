@@ -24227,7 +24227,6 @@ const App: React.FC = () => {
         platformConfigSaveTimerRef.current = setTimeout(() => {
             if (isSetupTestMode()) {
                 writeSetupTestPlatformConfig(nextConfig);
-                window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
                 return;
             }
             const sessionToken = localStorage.getItem('dfp_session_token') || '';
@@ -24250,9 +24249,11 @@ const App: React.FC = () => {
         setPlatformConfig((prev) => {
             if (!prev) return prev;
             const nextConfig = updater(prev);
-            window.setTimeout(() => {
-                window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
-            }, 0);
+            if (!isSetupTestMode()) {
+                window.setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
+                }, 0);
+            }
             savePlatformConfigDebounced(nextConfig);
             return nextConfig;
         });

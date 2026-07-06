@@ -617,6 +617,11 @@ const backupFrequencyOptions = ['Hourly', 'Daily', 'Weekly', 'Manual'];
 const accreditationStatusOptions = ['Not started', 'In preparation', 'Submitted', 'Approved', 'Renewal due'];
 const initialSetupWizardStorageKey = 'dfp-initial-setup-wizard-step';
 const createWizardRecordId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const createSetupTestRecordId = (prefix: string, key = ''): string => {
+    const cleanPrefix = String(prefix || 'record').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'record';
+    const cleanKey = String(key || cleanPrefix).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || cleanPrefix;
+    return `setup-test-${cleanPrefix}-${cleanKey}`;
+};
 
 const initialSetupTemplates: InitialSetupWizardTemplate[] = [
     {
@@ -2221,6 +2226,7 @@ const InitialSetupWizard: React.FC<{
     const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
     const [saveMessage, setSaveMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const lastSetupTestPersonnelSnapshotRef = useRef('');
 
     const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
         String(organisation?.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
@@ -3989,7 +3995,7 @@ const InitialSetupWizard: React.FC<{
         const alternateCrewRows = parseWizardLineItems(alternateCrewDraft).map((line, index) => {
             const [namePart, requirementsPart] = line.split('=').map((part) => part.trim());
             return {
-                id: createWizardRecordId(`alternate-crew-${index + 1}`),
+                id: createSetupTestRecordId('alternate-crew', namePart || index + 1),
                 code: `ALT${index + 1}`,
                 unitCode: cleanUnits[0]?.code || '',
                 aircraftTypeCode: primaryAircraftCode,
@@ -4001,7 +4007,7 @@ const InitialSetupWizard: React.FC<{
             };
         });
         const currencyProfiles = parseWizardCurrencyRows(currencyDraft).map((row, index) => ({
-            id: createWizardRecordId(`currency-profile-${index + 1}`),
+            id: createSetupTestRecordId('currency-profile', row.code || row.name || index + 1),
             unitCode: cleanUnits[0]?.code || '',
             aircraftTypeCode: primaryAircraftCode,
             name: row.name || `Currency ${index + 1}`,
@@ -4013,7 +4019,7 @@ const InitialSetupWizard: React.FC<{
             status: 'ACTIVE',
         }));
         const standardMissionProfiles = parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).map((row, index) => ({
-            id: createWizardRecordId(`standard-mission-${index + 1}`),
+            id: createSetupTestRecordId('standard-mission', row.shortTitle || row.name || index + 1),
             unitCode: cleanUnits[0]?.code || '',
             name: row.name || `Standard event ${index + 1}`,
             shortTitle: row.shortTitle || row.name || `EVT${index + 1}`,
@@ -4053,7 +4059,7 @@ const InitialSetupWizard: React.FC<{
             const nextLocations = cleanLocations.map((row, index) => {
                 const profile = findWizardLocationProfile(row.icao || row.iata || row.name);
                 return {
-                    id: createWizardRecordId(`location-${index + 1}`),
+                    id: createSetupTestRecordId('location', row.icao || row.iata || row.name || index + 1),
                     code: row.icao || row.iata || `LOC${index + 1}`,
                     iataCode: row.iata || profile?.iata || '',
                     name: row.name || profile?.name || row.icao || row.iata || `Location ${index + 1}`,
@@ -4064,7 +4070,7 @@ const InitialSetupWizard: React.FC<{
                 };
             });
             const nextUnits = cleanUnits.map((row, index) => ({
-                id: createWizardRecordId(`unit-${index + 1}`),
+                id: createSetupTestRecordId('unit', row.code || row.name || index + 1),
                 code: row.code || `UNIT${index + 1}`,
                 name: row.name || row.code || `Unit ${index + 1}`,
                 locationCode: index === 0 ? (unitDraft.locationCode || primaryLocationCode) : primaryLocationCode,
@@ -4092,13 +4098,13 @@ const InitialSetupWizard: React.FC<{
             const modules = parseWizardLineItems(unitModulesDraft).map((line, index) => {
                 const [namePart] = line.split('|').map((part) => part.trim());
                 const code = (namePart || `Module ${index + 1}`).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '');
-                return { id: createWizardRecordId(`module-${index + 1}`), code, name: namePart || code, status: 'ACTIVE' };
+                return { id: createSetupTestRecordId('module', code || index + 1), code, name: namePart || code, status: 'ACTIVE' };
             });
             const unitModules = cleanUnits.flatMap((unit) => parseWizardLineItems(unitModulesDraft).map((line, index) => {
                 const [namePart, enabledPart] = line.split('|').map((part) => part.trim());
                 const moduleCode = (namePart || `Module ${index + 1}`).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '');
                 return {
-                    id: createWizardRecordId(`unit-module-${unit.code}-${index + 1}`),
+                    id: createSetupTestRecordId('unit-module', `${unit.code}-${moduleCode || index + 1}`),
                     unitCode: unit.code,
                     moduleCode,
                     isEnabled: !/^off$/i.test(enabledPart || ''),
@@ -4106,21 +4112,21 @@ const InitialSetupWizard: React.FC<{
                 };
             }));
             const organisation = {
-                id: createWizardRecordId('organisation'),
+                id: createSetupTestRecordId('organisation', organisationDraft.code || organisationDraft.name || 'organisation'),
                 code: organisationDraft.code || organisationDraft.name || 'ORG',
                 name: organisationDraft.name || organisationDraft.code || 'Organisation',
                 status: 'ACTIVE',
                 settings: {
                     organisationStructure: structure,
                     masterLmpCatalogue: [{
-                        id: createWizardRecordId('master-lmp-catalogue'),
+                        id: createSetupTestRecordId('master-lmp-catalogue', trainingDraft.lmpCode || trainingDraft.lmpName || 'master-lmp'),
                         code: trainingDraft.lmpCode,
                         name: trainingDraft.lmpName || trainingDraft.lmpCode,
                         description: trainingDraft.description,
                         status: trainingDraft.status || 'ACTIVE',
                     }],
                     masterLmpAccess: [{
-                        id: createWizardRecordId('master-lmp-access'),
+                        id: createSetupTestRecordId('master-lmp-access', `${trainingDraft.lmpCode || 'lmp'}-${trainingDraft.accessUnitCode || cleanUnits[0]?.code || 'unit'}`),
                         lmpCode: trainingDraft.lmpCode,
                         locationCode: trainingDraft.accessLocationCode || primaryLocationCode,
                         unitCode: trainingDraft.accessUnitCode || cleanUnits[0]?.code || '',
@@ -4140,14 +4146,14 @@ const InitialSetupWizard: React.FC<{
                     },
                     fleetSharingEnabled: resourceSharingRows.some((row) => /^on$/i.test(row.enabled)),
                     resourceSharingGroups: resourceSharingRows.map((row, index) => ({
-                        id: createWizardRecordId(`resource-sharing-${index + 1}`),
+                        id: createSetupTestRecordId('resource-sharing', row.units || index + 1),
                         name: row.type || `Resource sharing ${index + 1}`,
                         selectedUnits: row.units.split(',').map((item) => item.trim()).filter(Boolean),
                         status: 'ACTIVE',
                     })),
                     staffSharingEnabled: staffSharingRows.some((row) => /^on$/i.test(row.enabled)),
                     staffSharingGroups: staffSharingRows.map((row, index) => ({
-                        id: createWizardRecordId(`staff-sharing-${index + 1}`),
+                        id: createSetupTestRecordId('staff-sharing', row.units || index + 1),
                         name: row.type || `Staff sharing ${index + 1}`,
                         selectedUnits: row.units.split(',').map((item) => item.trim()).filter(Boolean),
                         status: 'ACTIVE',
@@ -4176,7 +4182,7 @@ const InitialSetupWizard: React.FC<{
                 locations: nextLocations,
                 units: nextUnits,
                 aircraftTypes: [{
-                    id: createWizardRecordId('aircraft-type'),
+                    id: createSetupTestRecordId('aircraft-type', primaryAircraftCode),
                     code: primaryAircraftCode,
                     name: resourceDraft.aircraftName || primaryAircraftCode,
                     category: 'Other',
@@ -4187,7 +4193,7 @@ const InitialSetupWizard: React.FC<{
                     },
                 }],
                 resourcePools: [{
-                    id: createWizardRecordId('resource-pool'),
+                    id: createSetupTestRecordId('resource-pool', `${primaryAircraftCode}-${resourceDraft.poolLocationCode || primaryLocationCode}-${resourceDraft.poolUnitCode || cleanUnits[0]?.code || ''}`),
                     code: 'RESOURCE-POOL-1',
                     name: resourceDraft.poolName || `${primaryAircraftCode} Resource Pool`,
                     organisationCode: organisation.code,
@@ -4208,7 +4214,7 @@ const InitialSetupWizard: React.FC<{
                 unitModules,
                 licenses: [],
                 userAccess: [{
-                    id: createWizardRecordId('user-access'),
+                    id: createSetupTestRecordId('user-access', `${accessDraft.userName || 'setup-admin'}-${accessDraft.unitCode || cleanUnits[0]?.code || 'unit'}`),
                     userName: accessDraft.userName || 'Setup Admin',
                     locationCode: accessDraft.locationCode || primaryLocationCode,
                     unitCode: accessDraft.unitCode || cleanUnits[0]?.code || '',
@@ -4217,13 +4223,13 @@ const InitialSetupWizard: React.FC<{
                     status: 'ACTIVE',
                 }],
                 platformUsers: [{
-                    id: createWizardRecordId('platform-user'),
+                    id: createSetupTestRecordId('platform-user', accessDraft.userName || 'setup-admin'),
                     name: accessDraft.userName || 'Setup Admin',
                     username: 'setup-admin',
                     status: 'ACTIVE',
                 }],
                 schedulingRuleSets: [{
-                    id: createWizardRecordId('scheduling-rule-set'),
+                    id: createSetupTestRecordId('scheduling-rule-set', cleanUnits[0]?.code || 'unit'),
                     name: `${cleanUnits[0]?.code || 'Unit'} build rules`,
                     unitCode: cleanUnits[0]?.code || '',
                     businessRules: buildRulesDraft.businessRules,
@@ -4240,7 +4246,11 @@ const InitialSetupWizard: React.FC<{
                 }],
             };
         });
-        onSaveSetupTestPersonnel?.(setupPersonnel);
+        const setupPersonnelSnapshot = JSON.stringify(setupPersonnel);
+        if (markComplete || setupPersonnelSnapshot !== lastSetupTestPersonnelSnapshotRef.current) {
+            lastSetupTestPersonnelSnapshotRef.current = setupPersonnelSnapshot;
+            onSaveSetupTestPersonnel?.(setupPersonnel);
+        }
         if (markComplete && typeof window !== 'undefined') {
             window.localStorage.setItem(initialSetupWizardStorageKey, String(steps.length - 1));
         }
