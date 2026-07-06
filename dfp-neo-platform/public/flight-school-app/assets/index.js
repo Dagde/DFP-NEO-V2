@@ -10499,6 +10499,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     return Number.isFinite(stored) ? Math.max(0, stored) : 0;
   });
   const [uploadResults, setUploadResults] = reactExports.useState({});
+  const [importConfirmations, setImportConfirmations] = reactExports.useState({});
   const [pendingTemplateId, setPendingTemplateId] = reactExports.useState(null);
   const [saveMessage, setSaveMessage] = reactExports.useState("");
   const fileInputRef = reactExports.useRef(null);
@@ -11339,6 +11340,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     if (!file) return;
     const template = initialSetupTemplates.find((item) => item.id === templateId);
     if (!template) return;
+    setImportConfirmations((current) => {
+      const next = { ...current };
+      delete next[templateId];
+      return next;
+    });
     setUploadResults((current) => ({
       ...current,
       [templateId]: { status: "idle", fileName: file.name, message: `Checking ${file.name}...` }
@@ -11380,7 +11386,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       if (isSetupTestMode2) {
         saveSetupTestWizardDrafts(false, { staffDraft: nextStaffDraft });
       }
-      setSaveMessage(`Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into Step 14 and synced them into the local test app.`);
+      const message = `Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into the staff list${isSetupTestMode2 ? " and synced them into the local test app" : ""}.`;
+      setImportConfirmations((current) => ({ ...current, [template.id]: message }));
+      setSaveMessage(message);
       return;
     }
     if (template.id === "trainees") {
@@ -11405,7 +11413,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       if (isSetupTestMode2) {
         saveSetupTestWizardDrafts(false, { traineeDraft: nextTraineeDraft, unitDraft: { ...unitDraft, hasTrainees: true } });
       }
-      setSaveMessage(`Imported ${importedRows.length} trainee row${importedRows.length === 1 ? "" : "s"} into the master trainee list and synced them into the local test app.`);
+      const message = `Imported ${importedRows.length} trainee row${importedRows.length === 1 ? "" : "s"} into the master trainee list${isSetupTestMode2 ? " and synced them into the local test app" : ""}.`;
+      setImportConfirmations((current) => ({ ...current, [template.id]: message }));
+      setSaveMessage(message);
       return;
     }
     if (template.id === "scoring") {
@@ -11421,7 +11431,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         grade5: getWizardCellByHeader(result.headers || [], row, "Grade 5")
       })).filter((row) => row.dimension || row.passStandard || row.failStandard);
       setScoringDraft(formatWizardScoringRows(importedRows));
-      setSaveMessage(`Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? "" : "s"} into the wizard. Click Next to sync it into the local test app.`);
+      const message = `Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? "" : "s"} into the wizard. Click Next to sync it into the local test app.`;
+      setImportConfirmations((current) => ({ ...current, [template.id]: message }));
+      setSaveMessage(message);
       return;
     }
     setSaveMessage(`${template.label} passed validation. Import for this template step has not been added yet.`);
@@ -12903,6 +12915,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: visibleTemplates.map((template) => {
       const result = uploadResults[template.id];
+      const importConfirmation = importConfirmations[template.id];
       const isValid = result?.status === "valid";
       const isError = result?.status === "error";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -12940,18 +12953,18 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
             result ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 rounded-md px-3 py-2 text-xs leading-5 ${isValid ? "bg-emerald-50 text-emerald-800" : isError ? "bg-red-50 text-red-800" : "bg-slate-100 text-slate-600"}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold", children: result.message }),
               result.issues?.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-1 list-disc space-y-1 pl-4", children: result.issues.map((issue) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: issue }, issue)) }) : null,
-              isValid ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "button",
-                {
-                  type: "button",
-                  className: `${wizardPrimaryButtonClass} mt-3`,
-                  onClick: () => importWizardTemplateRows(template, result),
-                  children: [
-                    "Import into ",
-                    template.id === "staff" ? "staff list" : template.id === "trainees" ? "trainee master list" : template.id === "scoring" ? "scoring matrix" : "wizard"
-                  ]
-                }
-              ) : null
+              isValid ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    className: `${wizardPrimaryButtonClass} mt-3`,
+                    onClick: () => importWizardTemplateRows(template, result),
+                    children: importConfirmation ? "Import again" : `Import into ${template.id === "staff" ? "staff list" : template.id === "trainees" ? "trainee master list" : template.id === "scoring" ? "scoring matrix" : "wizard"}`
+                  }
+                ),
+                importConfirmation ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-md border border-emerald-300 bg-white px-3 py-2 text-xs font-bold leading-5 text-emerald-800", children: importConfirmation }) : null
+              ] }) : null
             ] }) : null
           ]
         },

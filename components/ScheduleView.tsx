@@ -2224,6 +2224,7 @@ const InitialSetupWizard: React.FC<{
         return Number.isFinite(stored) ? Math.max(0, stored) : 0;
     });
     const [uploadResults, setUploadResults] = useState<Record<string, InitialSetupWizardUploadResult>>({});
+    const [importConfirmations, setImportConfirmations] = useState<Record<string, string>>({});
     const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
     const [saveMessage, setSaveMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -3177,6 +3178,11 @@ const InitialSetupWizard: React.FC<{
         if (!file) return;
         const template = initialSetupTemplates.find((item) => item.id === templateId);
         if (!template) return;
+        setImportConfirmations((current) => {
+            const next = { ...current };
+            delete next[templateId];
+            return next;
+        });
         setUploadResults((current) => ({
             ...current,
             [templateId]: { status: 'idle', fileName: file.name, message: `Checking ${file.name}...` },
@@ -3221,7 +3227,9 @@ const InitialSetupWizard: React.FC<{
             if (isSetupTestMode) {
                 saveSetupTestWizardDrafts(false, { staffDraft: nextStaffDraft });
             }
-            setSaveMessage(`Imported ${importedRows.length} staff row${importedRows.length === 1 ? '' : 's'} into Step 14 and synced them into the local test app.`);
+            const message = `Imported ${importedRows.length} staff row${importedRows.length === 1 ? '' : 's'} into the staff list${isSetupTestMode ? ' and synced them into the local test app' : ''}.`;
+            setImportConfirmations((current) => ({ ...current, [template.id]: message }));
+            setSaveMessage(message);
             return;
         }
         if (template.id === 'trainees') {
@@ -3248,7 +3256,9 @@ const InitialSetupWizard: React.FC<{
             if (isSetupTestMode) {
                 saveSetupTestWizardDrafts(false, { traineeDraft: nextTraineeDraft, unitDraft: { ...unitDraft, hasTrainees: true } });
             }
-            setSaveMessage(`Imported ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} into the master trainee list and synced them into the local test app.`);
+            const message = `Imported ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} into the master trainee list${isSetupTestMode ? ' and synced them into the local test app' : ''}.`;
+            setImportConfirmations((current) => ({ ...current, [template.id]: message }));
+            setSaveMessage(message);
             return;
         }
         if (template.id === 'scoring') {
@@ -3264,7 +3274,9 @@ const InitialSetupWizard: React.FC<{
                 grade5: getWizardCellByHeader(result.headers || [], row, 'Grade 5'),
             })).filter((row) => row.dimension || row.passStandard || row.failStandard);
             setScoringDraft(formatWizardScoringRows(importedRows));
-            setSaveMessage(`Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? '' : 's'} into the wizard. Click Next to sync it into the local test app.`);
+            const message = `Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? '' : 's'} into the wizard. Click Next to sync it into the local test app.`;
+            setImportConfirmations((current) => ({ ...current, [template.id]: message }));
+            setSaveMessage(message);
             return;
         }
         setSaveMessage(`${template.label} passed validation. Import for this template step has not been added yet.`);
@@ -4921,6 +4933,7 @@ const InitialSetupWizard: React.FC<{
             <div className="mt-4 space-y-3">
                 {visibleTemplates.map((template) => {
                     const result = uploadResults[template.id];
+                    const importConfirmation = importConfirmations[template.id];
                     const isValid = result?.status === 'valid';
                     const isError = result?.status === 'error';
                     return (
@@ -4967,13 +4980,20 @@ const InitialSetupWizard: React.FC<{
                                         </ul>
                                     ) : null}
                                     {isValid ? (
-                                        <button
-                                            type="button"
-                                            className={`${wizardPrimaryButtonClass} mt-3`}
-                                            onClick={() => importWizardTemplateRows(template, result)}
-                                        >
-                                            Import into {template.id === 'staff' ? 'staff list' : template.id === 'trainees' ? 'trainee master list' : template.id === 'scoring' ? 'scoring matrix' : 'wizard'}
-                                        </button>
+                                        <>
+                                            <button
+                                                type="button"
+                                                className={`${wizardPrimaryButtonClass} mt-3`}
+                                                onClick={() => importWizardTemplateRows(template, result)}
+                                            >
+                                                {importConfirmation ? 'Import again' : `Import into ${template.id === 'staff' ? 'staff list' : template.id === 'trainees' ? 'trainee master list' : template.id === 'scoring' ? 'scoring matrix' : 'wizard'}`}
+                                            </button>
+                                            {importConfirmation ? (
+                                                <div className="mt-3 rounded-md border border-emerald-300 bg-white px-3 py-2 text-xs font-bold leading-5 text-emerald-800">
+                                                    {importConfirmation}
+                                                </div>
+                                            ) : null}
+                                        </>
                                     ) : null}
                                 </div>
                             ) : null}
