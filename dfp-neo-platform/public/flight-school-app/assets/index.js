@@ -10705,6 +10705,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
   const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
   const [staffDraft, setStaffDraft] = reactExports.useState("Burns, Alexander | 36SQN | Pilot | PIC");
   const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = reactExports.useState("Course 1");
+  const [traineeCourseInputRows, setTraineeCourseInputRows] = reactExports.useState(() => ["Course 1"]);
   const [traineeDraft, setTraineeDraft] = reactExports.useState("");
   const [traineeAllocationCommitted, setTraineeAllocationCommitted] = reactExports.useState(false);
   const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = reactExports.useState(false);
@@ -11741,19 +11742,23 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       ...parseWizardUnitRows(unitsTodayDraft).map((unit) => unit.code),
       ...activeUnits.map((unit) => String(unit.code || ""))
     ].filter(Boolean)));
-    const traineeCourseRows = parseWizardLineItems(traineeCourseOptionsDraft);
+    const traineeCourseRows = traineeCourseInputRows.length > 0 ? traineeCourseInputRows : [""];
     const courseOptions = Array.from(new Set(traineeCourseRows.map((item) => String(item || "").trim()).filter(Boolean)));
+    const persistCourseRows = (rows2) => {
+      setTraineeCourseInputRows(rows2.length > 0 ? rows2 : [""]);
+      setTraineeCourseOptionsDraft(rows2.map((course) => String(course || "").trim()).filter(Boolean).join("\n"));
+    };
     const updateCourseOption = (index, value) => {
       const nextCourses = [...traineeCourseRows];
       nextCourses[index] = value;
-      setTraineeCourseOptionsDraft(nextCourses.join("\n"));
+      persistCourseRows(nextCourses);
       setTraineeAllocationCommitted(false);
       setShowMoreTraineesPrompt(false);
     };
     const removeCourseOption = (index) => {
       const removedCourse = traineeCourseRows[index];
       const nextCourses = traineeCourseRows.filter((_, rowIndex) => rowIndex !== index);
-      setTraineeCourseOptionsDraft(nextCourses.join("\n"));
+      persistCourseRows(nextCourses);
       setTraineeAllocationCommitted(false);
       setShowMoreTraineesPrompt(false);
       if (removedCourse) {
@@ -11799,7 +11804,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
             type: "button",
             className: `${wizardSmallButtonClass} mt-3`,
             onClick: () => {
-              setTraineeCourseOptionsDraft([...traineeCourseRows, ""].join("\n"));
+              persistCourseRows([...traineeCourseRows, ""]);
               setTraineeAllocationCommitted(false);
               setShowMoreTraineesPrompt(false);
             },
@@ -13406,7 +13411,28 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     }) })
   ] });
   const placeTemplatesBelow = visibleStep.id === "staff" || visibleStep.id === "trainee-upload" || visibleStep.id === "scoring";
+  const renderTemporaryStepJump = () => isSetupTestMode2 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-slate-900 shadow-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[210px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.18em] text-amber-700", children: "Temporary test control" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-slate-700", children: "Jump to a setup wizard step while testing." })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "select",
+      {
+        className: `${wizardInputClass} max-w-full flex-1 bg-white text-slate-950 md:min-w-[360px]`,
+        value: currentStep,
+        onChange: (event) => setWizardStep(Math.min(steps.length - 1, Math.max(0, Number(event.target.value) || 0))),
+        children: steps.map((step, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: index, children: [
+          "Step ",
+          index + 1,
+          ": ",
+          step.title
+        ] }, `wizard-jump-${step.id}`))
+      }
+    )
+  ] }) }) : null;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+    renderTemporaryStepJump(),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "input",
       {

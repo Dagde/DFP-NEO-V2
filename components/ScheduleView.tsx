@@ -2486,6 +2486,7 @@ const InitialSetupWizard: React.FC<{
     const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
     const [staffDraft, setStaffDraft] = useState('Burns, Alexander | 36SQN | Pilot | PIC');
     const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = useState('Course 1');
+    const [traineeCourseInputRows, setTraineeCourseInputRows] = useState<string[]>(() => ['Course 1']);
     const [traineeDraft, setTraineeDraft] = useState('');
     const [traineeAllocationCommitted, setTraineeAllocationCommitted] = useState(false);
     const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = useState(false);
@@ -3647,19 +3648,23 @@ const InitialSetupWizard: React.FC<{
             ...parseWizardUnitRows(unitsTodayDraft).map((unit) => unit.code),
             ...activeUnits.map((unit: any) => String(unit.code || '')),
         ].filter(Boolean)));
-        const traineeCourseRows = parseWizardLineItems(traineeCourseOptionsDraft);
+        const traineeCourseRows = traineeCourseInputRows.length > 0 ? traineeCourseInputRows : [''];
         const courseOptions = Array.from(new Set(traineeCourseRows.map((item) => String(item || '').trim()).filter(Boolean)));
+        const persistCourseRows = (rows: string[]) => {
+            setTraineeCourseInputRows(rows.length > 0 ? rows : ['']);
+            setTraineeCourseOptionsDraft(rows.map((course) => String(course || '').trim()).filter(Boolean).join('\n'));
+        };
         const updateCourseOption = (index: number, value: string) => {
             const nextCourses = [...traineeCourseRows];
             nextCourses[index] = value;
-            setTraineeCourseOptionsDraft(nextCourses.join('\n'));
+            persistCourseRows(nextCourses);
             setTraineeAllocationCommitted(false);
             setShowMoreTraineesPrompt(false);
         };
         const removeCourseOption = (index: number) => {
             const removedCourse = traineeCourseRows[index];
             const nextCourses = traineeCourseRows.filter((_, rowIndex) => rowIndex !== index);
-            setTraineeCourseOptionsDraft(nextCourses.join('\n'));
+            persistCourseRows(nextCourses);
             setTraineeAllocationCommitted(false);
             setShowMoreTraineesPrompt(false);
             if (removedCourse) {
@@ -3711,7 +3716,7 @@ const InitialSetupWizard: React.FC<{
                             type="button"
                             className={`${wizardSmallButtonClass} mt-3`}
                             onClick={() => {
-                                setTraineeCourseOptionsDraft([...traineeCourseRows, ''].join('\n'));
+                                persistCourseRows([...traineeCourseRows, '']);
                                 setTraineeAllocationCommitted(false);
                                 setShowMoreTraineesPrompt(false);
                             }}
@@ -5507,9 +5512,33 @@ const InitialSetupWizard: React.FC<{
         </aside>
     );
     const placeTemplatesBelow = visibleStep.id === 'staff' || visibleStep.id === 'trainee-upload' || visibleStep.id === 'scoring';
+    const renderTemporaryStepJump = () => (
+        isSetupTestMode ? (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-slate-900 shadow-sm">
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="min-w-[210px]">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">Temporary test control</p>
+                        <p className="text-xs font-semibold text-slate-700">Jump to a setup wizard step while testing.</p>
+                    </div>
+                    <select
+                        className={`${wizardInputClass} max-w-full flex-1 bg-white text-slate-950 md:min-w-[360px]`}
+                        value={currentStep}
+                        onChange={(event) => setWizardStep(Math.min(steps.length - 1, Math.max(0, Number(event.target.value) || 0)))}
+                    >
+                        {steps.map((step, index) => (
+                            <option key={`wizard-jump-${step.id}`} value={index}>
+                                Step {index + 1}: {step.title}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+        ) : null
+    );
 
     return (
         <div className="space-y-4">
+            {renderTemporaryStepJump()}
             <input
                 ref={fileInputRef}
                 type="file"
