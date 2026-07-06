@@ -2364,6 +2364,7 @@ const InitialSetupWizard: React.FC<{
             ? activeUnits.map((unit: any) => `${unit.code}${unit.name && unit.name !== unit.code ? ` | ${unit.name}` : ''}`).join('\n')
             : '36SQN | 36SQN'
     ));
+    const [unitParentDraft, setUnitParentDraft] = useState('');
     const [locationsTodayDraft, setLocationsTodayDraft] = useState(() => (
         activeLocations.length > 0
             ? activeLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
@@ -2440,6 +2441,43 @@ const InitialSetupWizard: React.FC<{
     const [scoringDraft, setScoringDraft] = useState('Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent');
     const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = useState('Annual Instrument Check | INST | Flight | 90 | 90 | 60 | Standard crew | Instrument Currency | ANY | 1');
 
+    const formatWizardOrganisationPath = (path: string[]) => path.map((item) => String(item || '').trim()).filter(Boolean).join(' / ');
+    const parseWizardOrganisationPath = (value: string) => String(value || '').split('/').map((item) => item.trim()).filter(Boolean);
+    const getWizardOrganisationRelationshipPaths = () => {
+        const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
+        const level1Options = fromLines(organisationDraft.level1Options);
+        const level2Options = fromLines(organisationDraft.level2Options);
+        const level3Options = fromLines(organisationDraft.level3Options);
+        const level1Rows = buildWizardParentRowsForChildren(level1Options, organisationDraft.level1Parents, [rootLabel]);
+        const level2Rows = buildWizardParentRowsForChildren(level2Options, organisationDraft.level2Parents, level1Options);
+        const level3Rows = buildWizardParentRowsForChildren(level3Options, organisationDraft.level3Parents, level2Options);
+        return buildWizardRelationshipPaths(rootLabel, level1Rows, level2Rows, level3Rows);
+    };
+    const getWizardUnitParentPathOptions = () => {
+        const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
+        const relationshipPaths = getWizardOrganisationRelationshipPaths();
+        const candidatePaths = relationshipPaths.length > 0 ? relationshipPaths : [[rootLabel]];
+        const deepestLength = Math.max(...candidatePaths.map((path) => path.length));
+        return candidatePaths
+            .filter((path) => path.length === deepestLength)
+            .map((path) => path.filter(Boolean));
+    };
+    const getWizardUnitParentPathMap = () => new Map(
+        parseWizardParentRows(unitParentDraft).map((row) => [
+            normaliseUnitSettingsIdentifier(row.child),
+            parseWizardOrganisationPath(row.parent),
+        ]),
+    );
+    const updateWizardUnitParentPath = (unitCodeValue: string, parentPathValue: string) => {
+        const cleanUnitCode = String(unitCodeValue || '').trim().toUpperCase();
+        if (!cleanUnitCode) return;
+        const rows = parseWizardParentRows(unitParentDraft)
+            .filter((row) => normaliseUnitSettingsIdentifier(row.child) !== normaliseUnitSettingsIdentifier(cleanUnitCode));
+        const cleanParentPath = formatWizardOrganisationPath(parseWizardOrganisationPath(parentPathValue));
+        if (cleanParentPath) rows.push({ child: cleanUnitCode, parent: cleanParentPath });
+        setUnitParentDraft(rows.map((row) => `${row.child} = ${row.parent}`).join('\n'));
+    };
+
     useEffect(() => {
         setOrganisationDraft({
             code: String(activeOrganisation?.code || 'RAAF'),
@@ -2457,6 +2495,33 @@ const InitialSetupWizard: React.FC<{
             level3Parents: parentLinesForLevel(3, '78WG = Air Combat Group\n84WG = Air Mobility Group'),
         });
     }, [activeOrganisation?.code, activeOrganisation?.name, JSON.stringify(organisationStructureLevels)]);
+
+    useEffect(() => {
+        const unitRows = parseWizardUnitRows(unitsTodayDraft).filter((row) => row.code);
+        const parentOptions = getWizardUnitParentPathOptions();
+        if (unitRows.length === 0 || parentOptions.length === 0) return;
+        const existingByUnit = getWizardUnitParentPathMap();
+        const validParentValues = new Set(parentOptions.map(formatWizardOrganisationPath));
+        const rows = unitRows.map((row) => {
+            const existingValue = formatWizardOrganisationPath(existingByUnit.get(normaliseUnitSettingsIdentifier(row.code)) || []);
+            const parentValue = existingValue && validParentValues.has(existingValue)
+                ? existingValue
+                : formatWizardOrganisationPath(parentOptions[0]);
+            return `${row.code} = ${parentValue}`;
+        });
+        const nextDraft = rows.join('\n');
+        if (nextDraft !== unitParentDraft) setUnitParentDraft(nextDraft);
+    }, [
+        unitsTodayDraft,
+        organisationDraft.level0Options,
+        organisationDraft.level1Options,
+        organisationDraft.level1Parents,
+        organisationDraft.level2Options,
+        organisationDraft.level2Parents,
+        organisationDraft.level3Options,
+        organisationDraft.level3Parents,
+        unitParentDraft,
+    ]);
 
     useEffect(() => {
         setLocationDraft({
@@ -3119,6 +3184,9 @@ const InitialSetupWizard: React.FC<{
         try {
             const result = await validateWizardTemplateFile(template, file);
             setUploadResults((current) => ({ ...current, [templateId]: result }));
+            if (result.status === 'valid' && ['staff', 'trainees', 'scoring'].includes(template.id)) {
+                importWizardTemplateRows(template, result);
+            }
         } catch (error: any) {
             setUploadResults((current) => ({
                 ...current,
@@ -3148,8 +3216,12 @@ const InitialSetupWizard: React.FC<{
                     qualifications: getWizardCellByHeader(result.headers || [], row, 'Qualifications'),
                 };
             }).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications);
-            setStaffDraft(formatWizardStaffRows(importedRows));
-            setSaveMessage(`Imported ${importedRows.length} staff row${importedRows.length === 1 ? '' : 's'} into Step 14. Click Next to sync them into the local test app.`);
+            const nextStaffDraft = formatWizardStaffRows(importedRows);
+            setStaffDraft(nextStaffDraft);
+            if (isSetupTestMode) {
+                saveSetupTestWizardDrafts(false, { staffDraft: nextStaffDraft });
+            }
+            setSaveMessage(`Imported ${importedRows.length} staff row${importedRows.length === 1 ? '' : 's'} into Step 14 and synced them into the local test app.`);
             return;
         }
         if (template.id === 'trainees') {
@@ -3170,9 +3242,13 @@ const InitialSetupWizard: React.FC<{
                     startDate: getWizardCellByHeader(result.headers || [], row, 'Start Date'),
                 };
             }).filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.masterLmp || row.startDate);
-            setTraineeDraft(formatWizardTraineeRows(importedRows));
+            const nextTraineeDraft = formatWizardTraineeRows(importedRows);
+            setTraineeDraft(nextTraineeDraft);
             setUnitDraft((draft) => ({ ...draft, hasTrainees: true }));
-            setSaveMessage(`Imported ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} into the master trainee list. Click Next to sync them into the local test app.`);
+            if (isSetupTestMode) {
+                saveSetupTestWizardDrafts(false, { traineeDraft: nextTraineeDraft, unitDraft: { ...unitDraft, hasTrainees: true } });
+            }
+            setSaveMessage(`Imported ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} into the master trainee list and synced them into the local test app.`);
             return;
         }
         if (template.id === 'scoring') {
@@ -3853,15 +3929,37 @@ const InitialSetupWizard: React.FC<{
         const level2Rows = buildWizardParentRowsForChildren(level2Options, organisationDraft.level2Parents, level1Options);
         const level3Rows = buildWizardParentRowsForChildren(level3Options, organisationDraft.level3Parents, level2Options);
         const relationshipPaths = buildWizardRelationshipPaths(rootLabel, level1Rows, level2Rows, level3Rows);
-        const fallbackUnitParentPath = (
-            relationshipPaths.filter((path) => path.length >= 4).slice(-1)[0]
-            || relationshipPaths.filter((path) => path.length >= 3).slice(-1)[0]
-            || relationshipPaths.slice(-1)[0]
-            || [rootLabel]
-        ).filter(Boolean);
-        const fallbackUnitParent = fallbackUnitParentPath[fallbackUnitParentPath.length - 1] || rootLabel;
+        const unitParentOptions = getWizardUnitParentPathOptions();
+        const fallbackUnitParentPath = (unitParentOptions[0] || relationshipPaths[0] || [rootLabel]).filter(Boolean);
+        const unitParentPathByCode = getWizardUnitParentPathMap();
         const unitCodes = unitRows.map((row) => row.code).filter(Boolean);
-        const unitRelationshipPaths = unitCodes.map((code) => [...fallbackUnitParentPath, code]);
+        const unitParentPaths = unitCodes.reduce((map, code) => {
+            const configuredPath = unitParentPathByCode.get(normaliseUnitSettingsIdentifier(code));
+            const parentPath = configuredPath && configuredPath.length > 0 ? configuredPath : fallbackUnitParentPath;
+            return {
+                ...map,
+                [normaliseUnitSettingsIdentifier(code)]: parentPath,
+            };
+        }, {} as Record<string, string[]>);
+        const unitRelationshipPaths = unitCodes.map((code) => [
+            ...(unitParentPaths[normaliseUnitSettingsIdentifier(code)] || fallbackUnitParentPath),
+            code,
+        ]);
+        const unitChildrenByParent = unitCodes.reduce((map, code) => {
+            const parentPath = unitParentPaths[normaliseUnitSettingsIdentifier(code)] || fallbackUnitParentPath;
+            const parent = parentPath[parentPath.length - 1] || rootLabel;
+            return {
+                ...map,
+                [parent]: Array.from(new Set([...(map[parent] || []), code])),
+            };
+        }, {} as Record<string, string[]>);
+        const unitParentByChild = unitCodes.reduce((map, code) => {
+            const parentPath = unitParentPaths[normaliseUnitSettingsIdentifier(code)] || fallbackUnitParentPath;
+            return {
+                ...map,
+                [code]: parentPath[parentPath.length - 1] || rootLabel,
+            };
+        }, {} as Record<string, string>);
         const levels = [
             {
                 ...(levelDraftSource(0) || {}),
@@ -3896,8 +3994,8 @@ const InitialSetupWizard: React.FC<{
                 levelIndex: 4,
                 name: 'Unit',
                 options: unitCodes,
-                childrenByParent: unitCodes.length > 0 ? { [fallbackUnitParent]: unitCodes } : {},
-                parentByChild: unitCodes.reduce((map, code) => ({ ...map, [code]: fallbackUnitParent }), {} as Record<string, string>),
+                childrenByParent: unitChildrenByParent,
+                parentByChild: unitParentByChild,
             },
         ].filter((level) => String(level.name || '').trim() || (Array.isArray(level.options) && level.options.length > 0));
         return {
@@ -3905,12 +4003,19 @@ const InitialSetupWizard: React.FC<{
                 levels,
                 relationshipPaths: [...relationshipPaths, ...unitRelationshipPaths],
             },
-            unitParentPath: fallbackUnitParentPath,
+            unitParentPaths,
+            fallbackUnitParentPath,
         };
     };
 
-    const buildSetupTestPersonnel = (unitRows: ReturnType<typeof parseWizardUnitRows>) => {
-        const firstUnitCode = unitRows[0]?.code || unitDraft.code || unitCode || '';
+    const buildSetupTestPersonnel = (
+        unitRows: ReturnType<typeof parseWizardUnitRows>,
+        overrides: { staffDraft?: string; traineeDraft?: string; unitDraft?: typeof unitDraft } = {},
+    ) => {
+        const effectiveStaffDraft = overrides.staffDraft ?? staffDraft;
+        const effectiveTraineeDraft = overrides.traineeDraft ?? traineeDraft;
+        const effectiveUnitDraft = overrides.unitDraft ?? unitDraft;
+        const firstUnitCode = unitRows[0]?.code || effectiveUnitDraft.code || unitCode || '';
         const firstLocationCode = parseWizardLocationRows(locationsTodayDraft)[0]?.icao || locationDraft.code || '';
         const qualificationsToFlags = (qualifications: string) => {
             const tokens = qualifications
@@ -3925,7 +4030,7 @@ const InitialSetupWizard: React.FC<{
                 isFlyingSupervisor: tokens.includes('FS') || tokens.includes('FLYINGSUPERVISOR') || qualifications.toLowerCase().includes('flying supervisor'),
             };
         };
-        const instructors = parseWizardStaffRows(staffDraft).map((row, index) => {
+        const instructors = parseWizardStaffRows(effectiveStaffDraft).map((row, index) => {
             const fullName = [row.surname, row.givenNames].filter(Boolean).join(', ') || row.givenNames || row.surname || `Staff ${index + 1}`;
             const flags = qualificationsToFlags(row.qualifications);
             return {
@@ -3949,8 +4054,8 @@ const InitialSetupWizard: React.FC<{
                 ...flags,
             };
         });
-        const trainees = unitDraft.hasTrainees
-            ? parseWizardTraineeRows(traineeDraft).map((row, index) => {
+        const trainees = effectiveUnitDraft.hasTrainees
+            ? parseWizardTraineeRows(effectiveTraineeDraft).map((row, index) => {
                 const fullName = [row.surname, row.givenNames].filter(Boolean).join(', ') || row.givenNames || row.surname || `Trainee ${index + 1}`;
                 return {
                     idNumber: Number(row.pmkeys) || 800000 + index + 1,
@@ -3973,23 +4078,27 @@ const InitialSetupWizard: React.FC<{
         return { instructors, trainees };
     };
 
-    const saveSetupTestWizardDrafts = (markComplete = true) => {
+    const saveSetupTestWizardDrafts = (
+        markComplete = true,
+        overrides: { staffDraft?: string; traineeDraft?: string; unitDraft?: typeof unitDraft } = {},
+    ) => {
         if (!onUpdatePlatformConfig) {
             setSaveMessage('This setup test screen is not connected to the platform configuration in this session.');
             return;
         }
         const locationRows = parseWizardLocationRows(locationsTodayDraft);
         const unitRows = parseWizardUnitRows(unitsTodayDraft);
+        const effectiveUnitDraft = overrides.unitDraft ?? unitDraft;
         const cleanLocations = (locationRows.length > 0 ? locationRows : [{
             icao: locationDraft.code,
             iata: locationDraft.iataCode,
             name: locationDraft.name,
         }]).filter((row) => row.icao || row.iata || row.name);
         const cleanUnits = (unitRows.length > 0 ? unitRows : [{
-            code: unitDraft.code || unitCode || 'UNIT',
-            name: unitDraft.name || unitDraft.code || unitCode || 'Unit',
+            code: effectiveUnitDraft.code || unitCode || 'UNIT',
+            name: effectiveUnitDraft.name || effectiveUnitDraft.code || unitCode || 'Unit',
         }]).filter((row) => row.code || row.name);
-        const { structure, unitParentPath } = buildSetupTestOrganisationStructure(cleanUnits);
+        const { structure, unitParentPaths, fallbackUnitParentPath } = buildSetupTestOrganisationStructure(cleanUnits);
         const primaryLocationCode = cleanLocations[0]?.icao || locationDraft.code || '';
         const primaryAircraftCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || 'Aircraft').trim().toUpperCase();
         const crewSeats = parseRoleRequirementsText(crewDraft.standardSeats);
@@ -4054,7 +4163,7 @@ const InitialSetupWizard: React.FC<{
                 5: [row.grade5].filter(Boolean),
             },
         }), {} as Record<string, any>);
-        const setupPersonnel = buildSetupTestPersonnel(cleanUnits);
+        const setupPersonnel = buildSetupTestPersonnel(cleanUnits, overrides);
 
         onUpdatePlatformConfig(() => {
             const nextLocations = cleanLocations.map((row, index) => {
@@ -4074,13 +4183,13 @@ const InitialSetupWizard: React.FC<{
                 id: createSetupTestRecordId('unit', row.code || row.name || index + 1),
                 code: row.code || `UNIT${index + 1}`,
                 name: row.name || row.code || `Unit ${index + 1}`,
-                locationCode: index === 0 ? (unitDraft.locationCode || primaryLocationCode) : primaryLocationCode,
-                unitType: index === 0 ? unitDraft.unitType || 'Operational' : 'Operational',
+                locationCode: index === 0 ? (effectiveUnitDraft.locationCode || primaryLocationCode) : primaryLocationCode,
+                unitType: index === 0 ? effectiveUnitDraft.unitType || 'Operational' : 'Operational',
                 status: 'ACTIVE',
                 settings: {
-                    operationalModel: index === 0 ? unitDraft.operationalModel : unitDraft.operationalModel,
-                    hasTrainees: index === 0 ? unitDraft.hasTrainees : false,
-                    parentOrganisationPath: unitParentPath,
+                    operationalModel: effectiveUnitDraft.operationalModel,
+                    hasTrainees: index === 0 ? effectiveUnitDraft.hasTrainees : false,
+                    parentOrganisationPath: unitParentPaths[normaliseUnitSettingsIdentifier(row.code)] || fallbackUnitParentPath,
                     trainingReportTemplate: trainingReportRow ? {
                         displayName: trainingReportRow.organisationName || trainingReportRow.genericName || 'Training Report',
                         grades: {
@@ -4162,12 +4271,13 @@ const InitialSetupWizard: React.FC<{
                     initialSetupWizardDraft: {
                         unitsToday: cleanUnits,
                         locationsToday: cleanLocations,
+                        unitParents: unitParentDraft,
                         crewLabels: crewLabelsDraft,
                         alternateCrews: alternateCrewDraft,
                         buildRules: buildRulesDraftText,
-                        staff: staffDraft,
-                        traineesEnabled: unitDraft.hasTrainees,
-                        trainees: traineeDraft,
+                        staff: overrides.staffDraft ?? staffDraft,
+                        traineesEnabled: (overrides.unitDraft ?? unitDraft).hasTrainees,
+                        trainees: overrides.traineeDraft ?? traineeDraft,
                         trainingRecords: trainingRecordsDraft,
                         unitModules: unitModulesDraft,
                         ranksAndLabels: rankLabelsDraft,
@@ -4334,6 +4444,7 @@ const InitialSetupWizard: React.FC<{
             initialSetupWizardDraft: {
                 unitsToday: parseWizardUnitRows(unitsTodayDraft),
                 locationsToday: parseWizardLocationRows(locationsTodayDraft),
+                unitParents: unitParentDraft,
                 crewLabels: crewLabelsDraft,
                 alternateCrews: alternateCrewDraft,
                 buildRules: buildRulesDraftText,
@@ -4432,10 +4543,52 @@ const InitialSetupWizard: React.FC<{
             );
         }
         if (visibleStep.id === 'units-today') {
+            const unitRows = parseWizardUnitRows(unitsTodayDraft);
+            const unitParentOptions = getWizardUnitParentPathOptions();
+            const unitParentMap = getWizardUnitParentPathMap();
             return promptShell(
                 <p>List each unit you want to configure in this setup run. Use one line per unit. Format: <strong>Unit code | Unit name</strong>.</p>,
                 <div>
                     {wizardTextArea('Units to set up today', unitsTodayDraft, setUnitsTodayDraft, '36SQN | 36SQN\n12SQN | 12SQN', true)}
+                    <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <p className={wizardLabelClass}>Parent organisation for each unit</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-600">
+                            Choose where each unit sits in the organisation tree. For example, 36SQN might sit under RAAF / Air Command / Air Mobility Group / 84WG.
+                        </p>
+                        {unitRows.length > 0 && unitParentOptions.length > 0 ? (
+                            <div className="mt-3 space-y-2">
+                                {unitRows.map((row) => {
+                                    const currentParentPath = unitParentMap.get(normaliseUnitSettingsIdentifier(row.code)) || unitParentOptions[0];
+                                    const currentParentValue = formatWizardOrganisationPath(currentParentPath);
+                                    return (
+                                        <div key={`unit-parent-${row.code}`} className="grid gap-2 rounded-md border border-slate-200 bg-white p-3 md:grid-cols-[140px_minmax(0,1fr)] md:items-center">
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-900">{row.code}</p>
+                                                <p className="text-xs text-slate-500">{row.name || row.code}</p>
+                                            </div>
+                                            <label className="block">
+                                                <span className={wizardLabelClass}>Parent</span>
+                                                <select
+                                                    className={`${wizardInputClass} mt-1`}
+                                                    value={currentParentValue}
+                                                    onChange={(event) => updateWizardUnitParentPath(row.code, event.target.value)}
+                                                >
+                                                    {unitParentOptions.map((path) => {
+                                                        const value = formatWizardOrganisationPath(path);
+                                                        return <option key={`${row.code}-${value}`} value={value}>{value}</option>;
+                                                    })}
+                                                </select>
+                                            </label>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
+                                Add the organisation levels above first, then return here to choose each unit's parent.
+                            </p>
+                        )}
+                    </div>
                     <p className="mt-3 text-xs leading-5 text-slate-600">
                         The wizard will use the first unit as the detailed example, then the same setup questions apply to every other unit you listed.
                     </p>
