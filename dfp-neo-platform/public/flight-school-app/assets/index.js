@@ -11741,11 +11741,27 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       ...parseWizardUnitRows(unitsTodayDraft).map((unit) => unit.code),
       ...activeUnits.map((unit) => String(unit.code || ""))
     ].filter(Boolean)));
-    const courseOptions = Array.from(new Set([
-      ...parseWizardLineItems(traineeCourseOptionsDraft),
-      ...editableRows.flatMap((row) => [row.course, row.courseNumber]),
-      ...activeMasterLmpCatalogue.flatMap((lmp) => [String(lmp?.name || ""), String(lmp?.code || "")])
-    ].map((item) => String(item || "").trim()).filter(Boolean)));
+    const traineeCourseRows = parseWizardLineItems(traineeCourseOptionsDraft);
+    const courseOptions = Array.from(new Set(traineeCourseRows.map((item) => String(item || "").trim()).filter(Boolean)));
+    const updateCourseOption = (index, value) => {
+      const nextCourses = [...traineeCourseRows];
+      nextCourses[index] = value;
+      setTraineeCourseOptionsDraft(nextCourses.join("\n"));
+      setTraineeAllocationCommitted(false);
+      setShowMoreTraineesPrompt(false);
+    };
+    const removeCourseOption = (index) => {
+      const removedCourse = traineeCourseRows[index];
+      const nextCourses = traineeCourseRows.filter((_, rowIndex) => rowIndex !== index);
+      setTraineeCourseOptionsDraft(nextCourses.join("\n"));
+      setTraineeAllocationCommitted(false);
+      setShowMoreTraineesPrompt(false);
+      if (removedCourse) {
+        const nextRows = editableRows.map((row) => row.course === removedCourse ? { ...row, course: "" } : row);
+        setTraineeDraft(formatWizardTraineeRows(nextRows));
+        setUploadedTraineeProfileRows((current) => current.map((row) => row.course === removedCourse ? { ...row, course: "" } : row));
+      }
+    };
     const assignAllToCourse = (course) => {
       const nextRows = editableRows.map((row) => ({ ...row, course }));
       setTraineeDraft(formatWizardTraineeRows(nextRows));
@@ -11755,23 +11771,42 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: mode2 === "courses" ? "Create the course numbers or names first. These become the only choices available when trainees are allocated after upload." : mode2 === "details" ? "Upload the trainee template or add trainees manually here. Course allocation happens on the next step." : "Allocate every trainee to one of the active courses. DFP-NEO will not commit trainees to Trainee Profiles until every trainee has a course selected." }),
-      mode2 === "courses" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block rounded-lg border border-slate-300 bg-white p-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Active courses for this unit" }),
+      mode2 === "courses" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Active courses for this unit" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-semibold text-slate-500", children: [
+            courseOptions.length,
+            " course",
+            courseOptions.length === 1 ? "" : "s"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: (traineeCourseRows.length > 0 ? traineeCourseRows : [""]).map((course, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-end", children: [
+          wizardField(`Course ${index + 1}`, course, (value) => updateCourseOption(index, value), void 0, index === 0 ? "ADF301" : "ADF302"),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: wizardSmallButtonClass,
+              onClick: () => removeCourseOption(index),
+              disabled: traineeCourseRows.length <= 1,
+              children: "Delete"
+            }
+          )
+        ] }, `trainee-course-option-${index}`)) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "textarea",
+          "button",
           {
-            className: `${wizardInputClass} mt-1 min-h-[78px] resize-y`,
-            value: traineeCourseOptionsDraft,
-            placeholder: "Course 1\nCourse 2\nC-17A Conversion 01",
-            onKeyDown: stopEditableKeyPropagation,
-            onChange: (event) => {
-              setTraineeCourseOptionsDraft(event.target.value);
+            type: "button",
+            className: `${wizardSmallButtonClass} mt-3`,
+            onClick: () => {
+              setTraineeCourseOptionsDraft([...traineeCourseRows, ""].join("\n"));
               setTraineeAllocationCommitted(false);
               setShowMoreTraineesPrompt(false);
-            }
+            },
+            children: "Add course"
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs font-semibold leading-5 text-slate-600", children: "Put each active course on its own line. These become the choices beside each trainee below." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs font-semibold leading-5 text-slate-600", children: "Add one course per data window. Only these courses will appear in the trainee allocation step." })
       ] }) : null,
       mode2 === "allocation" && courseOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex flex-wrap items-center justify-between gap-2", children: [

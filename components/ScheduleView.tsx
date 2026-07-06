@@ -3647,11 +3647,27 @@ const InitialSetupWizard: React.FC<{
             ...parseWizardUnitRows(unitsTodayDraft).map((unit) => unit.code),
             ...activeUnits.map((unit: any) => String(unit.code || '')),
         ].filter(Boolean)));
-        const courseOptions = Array.from(new Set([
-            ...parseWizardLineItems(traineeCourseOptionsDraft),
-            ...editableRows.flatMap((row) => [row.course, row.courseNumber]),
-            ...activeMasterLmpCatalogue.flatMap((lmp: any) => [String(lmp?.name || ''), String(lmp?.code || '')]),
-        ].map((item) => String(item || '').trim()).filter(Boolean)));
+        const traineeCourseRows = parseWizardLineItems(traineeCourseOptionsDraft);
+        const courseOptions = Array.from(new Set(traineeCourseRows.map((item) => String(item || '').trim()).filter(Boolean)));
+        const updateCourseOption = (index: number, value: string) => {
+            const nextCourses = [...traineeCourseRows];
+            nextCourses[index] = value;
+            setTraineeCourseOptionsDraft(nextCourses.join('\n'));
+            setTraineeAllocationCommitted(false);
+            setShowMoreTraineesPrompt(false);
+        };
+        const removeCourseOption = (index: number) => {
+            const removedCourse = traineeCourseRows[index];
+            const nextCourses = traineeCourseRows.filter((_, rowIndex) => rowIndex !== index);
+            setTraineeCourseOptionsDraft(nextCourses.join('\n'));
+            setTraineeAllocationCommitted(false);
+            setShowMoreTraineesPrompt(false);
+            if (removedCourse) {
+                const nextRows = editableRows.map((row) => row.course === removedCourse ? { ...row, course: '' } : row);
+                setTraineeDraft(formatWizardTraineeRows(nextRows));
+                setUploadedTraineeProfileRows((current) => current.map((row) => row.course === removedCourse ? { ...row, course: '' } : row));
+            }
+        };
         const assignAllToCourse = (course: string) => {
             const nextRows = editableRows.map((row) => ({ ...row, course }));
             setTraineeDraft(formatWizardTraineeRows(nextRows));
@@ -3670,23 +3686,43 @@ const InitialSetupWizard: React.FC<{
                             ? 'Upload the trainee template or add trainees manually here. Course allocation happens on the next step.'
                             : 'Allocate every trainee to one of the active courses. DFP-NEO will not commit trainees to Trainee Profiles until every trainee has a course selected.'}
                 </div>
-                {mode === 'courses' ? <label className="block rounded-lg border border-slate-300 bg-white p-3">
-                    <span className={wizardLabelClass}>Active courses for this unit</span>
-                    <textarea
-                        className={`${wizardInputClass} mt-1 min-h-[78px] resize-y`}
-                        value={traineeCourseOptionsDraft}
-                        placeholder={'Course 1\nCourse 2\nC-17A Conversion 01'}
-                        onKeyDown={stopEditableKeyPropagation}
-                        onChange={(event) => {
-                            setTraineeCourseOptionsDraft(event.target.value);
-                            setTraineeAllocationCommitted(false);
-                            setShowMoreTraineesPrompt(false);
-                        }}
-                    />
-                    <p className="mt-2 text-xs font-semibold leading-5 text-slate-600">
-                        Put each active course on its own line. These become the choices beside each trainee below.
-                    </p>
-                </label> : null}
+                {mode === 'courses' ? (
+                    <div className="rounded-lg border border-slate-300 bg-white p-3">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <span className={wizardLabelClass}>Active courses for this unit</span>
+                            <span className="text-xs font-semibold text-slate-500">{courseOptions.length} course{courseOptions.length === 1 ? '' : 's'}</span>
+                        </div>
+                        <div className="space-y-2">
+                            {(traineeCourseRows.length > 0 ? traineeCourseRows : ['']).map((course, index) => (
+                                <div key={`trainee-course-option-${index}`} className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                                    {wizardField(`Course ${index + 1}`, course, (value) => updateCourseOption(index, value), undefined, index === 0 ? 'ADF301' : 'ADF302')}
+                                    <button
+                                        type="button"
+                                        className={wizardSmallButtonClass}
+                                        onClick={() => removeCourseOption(index)}
+                                        disabled={traineeCourseRows.length <= 1}
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <button
+                            type="button"
+                            className={`${wizardSmallButtonClass} mt-3`}
+                            onClick={() => {
+                                setTraineeCourseOptionsDraft([...traineeCourseRows, ''].join('\n'));
+                                setTraineeAllocationCommitted(false);
+                                setShowMoreTraineesPrompt(false);
+                            }}
+                        >
+                            Add course
+                        </button>
+                        <p className="mt-3 text-xs font-semibold leading-5 text-slate-600">
+                            Add one course per data window. Only these courses will appear in the trainee allocation step.
+                        </p>
+                    </div>
+                ) : null}
                 {mode === 'allocation' && courseOptions.length > 0 ? (
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
                         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
