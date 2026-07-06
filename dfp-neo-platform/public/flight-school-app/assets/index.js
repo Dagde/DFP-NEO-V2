@@ -9096,10 +9096,15 @@ const ORGANISATION_LABEL_ALIASES = {
   "air movements group": "Air Mobility Group"
 };
 const getActiveOrganisation = (platformConfig) => (platformConfig?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0] || null;
+const getOrganisationStructureRootLabel = (activeOrganisation, levels) => {
+  const levelZeroOptions = Array.isArray(levels[0]?.options) ? levels[0].options : [];
+  return normaliseOrgChartValue(levelZeroOptions[0]) || normaliseOrgChartValue(activeOrganisation?.name || activeOrganisation?.code) || normaliseOrgChartValue(levels[0]?.name) || "Organisation";
+};
 const getOrganisationRepairMaps = (platformConfig, levels) => {
   const repairMaps = /* @__PURE__ */ new Map();
   const activeOrganisation = getActiveOrganisation(platformConfig);
   const structure = activeOrganisation?.settings?.organisationStructure || {};
+  const rootLabel = getOrganisationStructureRootLabel(activeOrganisation, levels);
   const structuralReferencesByLevel = /* @__PURE__ */ new Map();
   const unitReferencesByLevel = /* @__PURE__ */ new Map();
   const addReference = (target, levelIndex, value) => {
@@ -9112,12 +9117,14 @@ const getOrganisationRepairMaps = (platformConfig, levels) => {
   const relationshipPaths = Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [];
   relationshipPaths.forEach((rawPath) => {
     const path = (Array.isArray(rawPath) ? rawPath : String(rawPath || "").split(">")).map(normaliseOrgChartValue).filter(Boolean);
-    const startsAtRoot = normaliseOrgChartKey(path[0]) === normaliseOrgChartKey(levels[0]?.name || activeOrganisation?.name || activeOrganisation?.code);
+    const startsAtRoot = normaliseOrgChartKey(path[0]) === normaliseOrgChartKey(rootLabel);
     path.forEach((part, pathIndex) => addReference(structuralReferencesByLevel, startsAtRoot ? pathIndex : pathIndex + 1, part));
   });
   (platformConfig?.units || []).forEach((unit) => {
     const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
-    rawPath.forEach((part, pathIndex) => addReference(unitReferencesByLevel, pathIndex + 1, part));
+    const path = rawPath.map(normaliseOrgChartValue).filter(Boolean);
+    const startsAtRoot = normaliseOrgChartKey(path[0]) === normaliseOrgChartKey(rootLabel);
+    path.forEach((part, pathIndex) => addReference(unitReferencesByLevel, startsAtRoot ? pathIndex : pathIndex + 1, part));
   });
   levels.forEach((level, levelIndex) => {
     const options = (Array.isArray(level?.options) ? level.options : []).map(normaliseOrgChartValue).filter(Boolean);
@@ -9188,7 +9195,7 @@ const buildOrganisationChart = (platformConfig) => {
   const structure = activeOrganisation?.settings?.organisationStructure || {};
   const levels = Array.isArray(structure.levels) ? structure.levels : [];
   const levelNames = levels.map((level, index) => normaliseOrgChartValue(level?.name) || `Level ${index}`);
-  const rootLabel = normaliseOrgChartValue(levels[0]?.name) || normaliseOrgChartValue(activeOrganisation.name || activeOrganisation.code) || "Organisation";
+  const rootLabel = getOrganisationStructureRootLabel(activeOrganisation, levels);
   const root2 = {
     id: "org-root",
     label: rootLabel,
@@ -9211,7 +9218,9 @@ const buildOrganisationChart = (platformConfig) => {
     const unitCode = normaliseOrgChartValue(unit?.code || unit?.name);
     if (!unitCode) return;
     const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
-    const parentPath = rawPath.map((part, pathIndex) => getCanonicalOrganisationLabel(levels, repairMaps, pathIndex + 1, part)).filter(Boolean);
+    const path = rawPath.map(normaliseOrgChartValue).filter(Boolean);
+    const startsAtRoot = normaliseOrgChartKey(path[0]) === rootKey;
+    const parentPath = path.map((part, pathIndex) => getCanonicalOrganisationLabel(levels, repairMaps, startsAtRoot ? pathIndex : pathIndex + 1, part)).filter(Boolean);
     const displayPath = parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath;
     addOrganisationChartPath(root2, displayPath, levelNames, unitCode);
   });
