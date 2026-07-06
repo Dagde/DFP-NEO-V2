@@ -78,7 +78,14 @@ import {
 } from './utils/staffQualifications';
 import { getInsertEventTypes } from './utils/insertEventTypes';
 import { getAppApiBase } from './utils/externalDataControls';
-import { getSetupTestProfile, isSetupTestMode, writeSetupTestPlatformConfig } from './utils/setupTestMode';
+import {
+    getSetupTestProfile,
+    isSetupTestMode,
+    readSetupTestPersonnel,
+    SETUP_TEST_PERSONNEL_EVENT,
+    writeSetupTestPersonnel,
+    writeSetupTestPlatformConfig,
+} from './utils/setupTestMode';
 import {
     classifyDayNightBySunTimes,
     getDefaultAirfieldSolarProfile,
@@ -22659,6 +22666,40 @@ const App: React.FC = () => {
 
         const loadInitialData = async () => {
             try {
+                if (setupTestProfile) {
+                    const setupPersonnel = readSetupTestPersonnel();
+                    const normalisedInstructors = (setupPersonnel.instructors || []).map((person: any) => ({
+                        ...normalisePersonnelRecord(person),
+                        _dataSource: 'setup-test' as const,
+                    }));
+                    const normalisedTrainees = (setupPersonnel.trainees || []).map((trainee: any) => ({
+                        ...trainee,
+                        _dataSource: 'setup-test' as const,
+                    }));
+                    setInstructorsData(normalisedInstructors);
+                    setIsStaffLoaded(true);
+                    setTraineesData(normalisedTrainees);
+                    setIsTraineeLoaded(true);
+                    setEvents([]);
+                    setScores(new Map());
+                    const setupCourseNames = Array.from(new Set(
+                        normalisedTrainees.map((trainee: any) => String(trainee.course || '').trim()).filter(Boolean),
+                    ));
+                    setCourses(setupCourseNames.map((name, index) => ({
+                        id: `setup-course-${index + 1}`,
+                        name,
+                        color: ['bg-sky-400/80', 'bg-purple-400/80', 'bg-yellow-400/80', 'bg-pink-400/80'][index % 4],
+                    })));
+                    setCourseColors((prev) => {
+                        const next = { ...prev };
+                        setupCourseNames.forEach((name, index) => {
+                            if (!next[name]) next[name] = ['bg-sky-400/80', 'bg-purple-400/80', 'bg-yellow-400/80', 'bg-pink-400/80'][index % 4];
+                        });
+                        return next;
+                    });
+                    setIsCoursesLoaded(true);
+                    return;
+                }
                 const data = await initializeData();
 
                 const normalisedInstructors = (data.instructors || []).map(normalisePersonnelRecord);
@@ -23094,7 +23135,7 @@ const App: React.FC = () => {
             }
         };
         loadInitialData();
-    }, [platformConfigLoaded]);
+    }, [platformConfigLoaded, setupTestProfile]);
 
     // Re-initialize traineeLMPs whenever syllabusDetails loads (fixes race condition where
     // loadInitialData runs before syllabusDetails is populated, leaving all LMPs empty)
@@ -24216,6 +24257,10 @@ const App: React.FC = () => {
             return nextConfig;
         });
     }, [savePlatformConfigDebounced]);
+    const handleSaveSetupTestPersonnel = useCallback((payload: { instructors: any[]; trainees: any[] }) => {
+        if (!isSetupTestMode()) return;
+        writeSetupTestPersonnel(payload.instructors || [], payload.trainees || []);
+    }, []);
     const handleSaveStandardMissionProfileFromPlanner = useCallback((profileId: string, changes: Partial<StandardMissionProfile>) => {
         const targetId = String(profileId || '').trim();
         if (!targetId) return;
@@ -34868,9 +34913,41 @@ appliedUpdates.forEach(update => {
         setSuccessMessage('Instructors successfully replaced!');
     }, []);
 
+    useEffect(() => {
+        if (!setupTestProfile) return;
+        const applySetupTestPersonnel = () => {
+            const setupPersonnel = readSetupTestPersonnel();
+            setInstructorsData((setupPersonnel.instructors || []).map((person: any) => ({
+                ...normalisePersonnelRecord(person),
+                _dataSource: 'setup-test' as const,
+            })));
+            setTraineesData((setupPersonnel.trainees || []).map((trainee: any) => ({
+                ...trainee,
+                _dataSource: 'setup-test' as const,
+            })));
+            setIsStaffLoaded(true);
+            setIsTraineeLoaded(true);
+        };
+        window.addEventListener(SETUP_TEST_PERSONNEL_EVENT, applySetupTestPersonnel);
+        return () => window.removeEventListener(SETUP_TEST_PERSONNEL_EVENT, applySetupTestPersonnel);
+    }, [setupTestProfile]);
+
     // Refresh database data (personnel and trainees) - called when database is modified
     const handleDatabaseDataChanged = useCallback(async () => {
         console.log('🔄 Refreshing database data after database modification...');
+
+        if (isSetupTestMode()) {
+            const setupPersonnel = readSetupTestPersonnel();
+            setInstructorsData((setupPersonnel.instructors || []).map((person: any) => ({
+                ...normalisePersonnelRecord(person),
+                _dataSource: 'setup-test' as const,
+            })));
+            setTraineesData((setupPersonnel.trainees || []).map((trainee: any) => ({
+                ...trainee,
+                _dataSource: 'setup-test' as const,
+            })));
+            return;
+        }
 
         try {
             // Fetch fresh personnel data
@@ -35091,6 +35168,7 @@ appliedUpdates.forEach(update => {
     }, []);
 
     const syncUnavailabilityFromDatabase = useCallback(async (): Promise<boolean> => {
+        if (isSetupTestMode()) return false;
         try {
             const apiBase = getAppApiBase();
             const [personnelRes, traineesRes] = await Promise.all([
@@ -37257,6 +37335,8 @@ appliedUpdates.forEach(update => {
                            platformConfig={platformConfig}
                            onUpdatePlatformConfig={handleUpdatePlatformConfigFromSchedule}
                            onNavigateToSettingsSection={handleNavigateToSettingsSection}
+                           isSetupTestMode={Boolean(setupTestProfile)}
+                           onSaveSetupTestPersonnel={handleSaveSetupTestPersonnel}
                            isNeoAssistPanelOpen={showDfpSidePanel}
                            onOrganisationSlideoutOpen={() => setShowDfpSidePanel(false)}
                            formationCallsigns={formationCallsigns}

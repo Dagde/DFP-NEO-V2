@@ -2,6 +2,7 @@ export const SETUP_TEST_QUERY_PARAM = 'setupTest';
 export const SETUP_TEST_RESET_QUERY_PARAM = 'resetSetupTest';
 export const AIR_MOVEMENTS_TEST_PROFILE = 'air-movements';
 export const SETUP_TEST_PLATFORM_EVENT = 'dfp-setup-test-platform-config-updated';
+export const SETUP_TEST_PERSONNEL_EVENT = 'dfp-setup-test-personnel-updated';
 const INITIAL_SETUP_WIZARD_STEP_KEY = 'dfp-initial-setup-wizard-step';
 
 const safeWindow = (): Window | null => (typeof window === 'undefined' ? null : window);
@@ -14,7 +15,7 @@ export const getSetupTestProfile = (): string | null => {
   const cleanUrlProfile = String(urlProfile || '').trim();
   if (cleanUrlProfile) {
     if (params.get(SETUP_TEST_RESET_QUERY_PARAM) === '1') {
-      ['platform_config', 'settings', 'currencies'].forEach((kind) => {
+      ['platform_config', 'settings', 'currencies', 'personnel'].forEach((kind) => {
         win.localStorage.removeItem(`dfp_setup_test_${cleanUrlProfile}_${kind}`);
       });
       win.localStorage.removeItem(INITIAL_SETUP_WIZARD_STEP_KEY);
@@ -114,4 +115,31 @@ export const writeSetupTestCurrencies = (masterCurrencies: any[], currencyRequir
     masterCurrencies: Array.isArray(masterCurrencies) ? masterCurrencies : [],
     currencyRequirements: Array.isArray(currencyRequirements) ? currencyRequirements : [],
   }));
+};
+
+export const readSetupTestPersonnel = (): { instructors: any[]; trainees: any[] } => {
+  const win = safeWindow();
+  if (!win) return { instructors: [], trainees: [] };
+  try {
+    const stored = win.localStorage.getItem(getSetupTestStorageKey('personnel'));
+    if (!stored) return { instructors: [], trainees: [] };
+    const parsed = JSON.parse(stored);
+    return {
+      instructors: Array.isArray(parsed?.instructors) ? parsed.instructors : [],
+      trainees: Array.isArray(parsed?.trainees) ? parsed.trainees : [],
+    };
+  } catch {
+    return { instructors: [], trainees: [] };
+  }
+};
+
+export const writeSetupTestPersonnel = (instructors: any[], trainees: any[]): void => {
+  const win = safeWindow();
+  if (!win) return;
+  const nextPersonnel = {
+    instructors: Array.isArray(instructors) ? instructors : [],
+    trainees: Array.isArray(trainees) ? trainees : [],
+  };
+  win.localStorage.setItem(getSetupTestStorageKey('personnel'), JSON.stringify(nextPersonnel));
+  win.dispatchEvent(new CustomEvent(SETUP_TEST_PERSONNEL_EVENT, { detail: nextPersonnel }));
 };

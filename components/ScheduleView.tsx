@@ -102,6 +102,8 @@ interface ScheduleViewProps {
   platformConfig?: any;
   onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
   onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
+  isSetupTestMode?: boolean;
+  onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
   isNeoAssistPanelOpen?: boolean;
   onOrganisationSlideoutOpen?: () => void;
   formationCallsigns?: FormationCallsign[];
@@ -2206,7 +2208,9 @@ const InitialSetupWizard: React.FC<{
     unitCode?: string;
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
-}> = ({ platformConfig, unitCode, onUpdatePlatformConfig }) => {
+    isSetupTestMode?: boolean;
+    onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
+}> = ({ platformConfig, unitCode, onUpdatePlatformConfig, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
     const [mode, setMode] = useState<InitialSetupWizardMode>('detect');
     const [wizardStep, setWizardStep] = useState(() => {
         if (typeof window === 'undefined') return 0;
@@ -3827,7 +3831,421 @@ const InitialSetupWizard: React.FC<{
             {renderOrganisationPreview()}
         </div>
     );
+    const buildSetupTestOrganisationStructure = (unitRows: ReturnType<typeof parseWizardUnitRows>) => {
+        const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
+        const level1Options = fromLines(organisationDraft.level1Options);
+        const level2Options = fromLines(organisationDraft.level2Options);
+        const level3Options = fromLines(organisationDraft.level3Options);
+        const level1Rows = buildWizardParentRowsForChildren(level1Options, organisationDraft.level1Parents, [rootLabel]);
+        const level2Rows = buildWizardParentRowsForChildren(level2Options, organisationDraft.level2Parents, level1Options);
+        const level3Rows = buildWizardParentRowsForChildren(level3Options, organisationDraft.level3Parents, level2Options);
+        const relationshipPaths = buildWizardRelationshipPaths(rootLabel, level1Rows, level2Rows, level3Rows);
+        const fallbackUnitParentPath = (
+            relationshipPaths.filter((path) => path.length >= 4).slice(-1)[0]
+            || relationshipPaths.filter((path) => path.length >= 3).slice(-1)[0]
+            || relationshipPaths.slice(-1)[0]
+            || [rootLabel]
+        ).filter(Boolean);
+        const fallbackUnitParent = fallbackUnitParentPath[fallbackUnitParentPath.length - 1] || rootLabel;
+        const unitCodes = unitRows.map((row) => row.code).filter(Boolean);
+        const unitRelationshipPaths = unitCodes.map((code) => [...fallbackUnitParentPath, code]);
+        const levels = [
+            {
+                ...(levelDraftSource(0) || {}),
+                levelIndex: 0,
+                name: organisationDraft.level0Name,
+                options: [rootLabel],
+                childrenByParent: {},
+                parentByChild: {},
+            },
+            {
+                ...(levelDraftSource(1) || {}),
+                levelIndex: 1,
+                name: organisationDraft.level1Name,
+                options: level1Options,
+                ...buildWizardParentMaps(level1Rows),
+            },
+            {
+                ...(levelDraftSource(2) || {}),
+                levelIndex: 2,
+                name: organisationDraft.level2Name,
+                options: level2Options,
+                ...buildWizardParentMaps(level2Rows),
+            },
+            {
+                ...(levelDraftSource(3) || {}),
+                levelIndex: 3,
+                name: organisationDraft.level3Name,
+                options: level3Options,
+                ...buildWizardParentMaps(level3Rows),
+            },
+            {
+                levelIndex: 4,
+                name: 'Unit',
+                options: unitCodes,
+                childrenByParent: unitCodes.length > 0 ? { [fallbackUnitParent]: unitCodes } : {},
+                parentByChild: unitCodes.reduce((map, code) => ({ ...map, [code]: fallbackUnitParent }), {} as Record<string, string>),
+            },
+        ].filter((level) => String(level.name || '').trim() || (Array.isArray(level.options) && level.options.length > 0));
+        return {
+            structure: {
+                levels,
+                relationshipPaths: [...relationshipPaths, ...unitRelationshipPaths],
+            },
+            unitParentPath: fallbackUnitParentPath,
+        };
+    };
+
+    const buildSetupTestPersonnel = (unitRows: ReturnType<typeof parseWizardUnitRows>) => {
+        const firstUnitCode = unitRows[0]?.code || unitDraft.code || unitCode || '';
+        const firstLocationCode = parseWizardLocationRows(locationsTodayDraft)[0]?.icao || locationDraft.code || '';
+        const qualificationsToFlags = (qualifications: string) => {
+            const tokens = qualifications
+                .split(/[,\s/]+/)
+                .map((token) => token.trim().toUpperCase())
+                .filter(Boolean);
+            return {
+                isQFI: tokens.includes('QFI') || tokens.includes('CFI') || tokens.includes('OFI'),
+                isOFI: tokens.includes('OFI'),
+                isCFI: tokens.includes('CFI'),
+                isIRE: tokens.includes('IRE'),
+                isFlyingSupervisor: tokens.includes('FS') || tokens.includes('FLYINGSUPERVISOR') || qualifications.toLowerCase().includes('flying supervisor'),
+            };
+        };
+        const instructors = parseWizardStaffRows(staffDraft).map((row, index) => {
+            const fullName = [row.surname, row.givenNames].filter(Boolean).join(', ') || row.givenNames || row.surname || `Staff ${index + 1}`;
+            const flags = qualificationsToFlags(row.qualifications);
+            return {
+                id: `setup-staff-${index + 1}`,
+                idNumber: 900000 + index + 1,
+                name: fullName,
+                rank: 'SQNLDR',
+                role: row.position || 'Instructor',
+                category: 'B',
+                callsignNumber: index + 1,
+                isTestingOfficer: false,
+                seatConfig: 'ANY',
+                isExecutive: false,
+                isCommandingOfficer: false,
+                isContractor: false,
+                unavailability: [],
+                unit: row.unit || firstUnitCode,
+                location: firstLocationCode,
+                qualifications: row.qualifications,
+                _dataSource: 'setup-test',
+                ...flags,
+            };
+        });
+        const trainees = unitDraft.hasTrainees
+            ? parseWizardTraineeRows(traineeDraft).map((row, index) => {
+                const fullName = [row.surname, row.givenNames].filter(Boolean).join(', ') || row.givenNames || row.surname || `Trainee ${index + 1}`;
+                return {
+                    idNumber: Number(row.pmkeys) || 800000 + index + 1,
+                    fullName,
+                    name: fullName,
+                    rank: row.rank || 'PLTOFF',
+                    course: row.course || row.courseNumber || '',
+                    courseNumber: row.courseNumber || '',
+                    lmpType: row.masterLmp || trainingDraft.lmpCode || trainingDraft.lmpName || '',
+                    seatConfig: 'ANY',
+                    isPaused: false,
+                    unit: row.unit || firstUnitCode,
+                    location: firstLocationCode,
+                    unavailability: [],
+                    startDate: row.startDate || '',
+                    _dataSource: 'setup-test',
+                };
+            })
+            : [];
+        return { instructors, trainees };
+    };
+
+    const saveSetupTestWizardDrafts = () => {
+        if (!onUpdatePlatformConfig) {
+            setSaveMessage('This setup test screen is not connected to the platform configuration in this session.');
+            return;
+        }
+        const locationRows = parseWizardLocationRows(locationsTodayDraft);
+        const unitRows = parseWizardUnitRows(unitsTodayDraft);
+        const cleanLocations = (locationRows.length > 0 ? locationRows : [{
+            icao: locationDraft.code,
+            iata: locationDraft.iataCode,
+            name: locationDraft.name,
+        }]).filter((row) => row.icao || row.iata || row.name);
+        const cleanUnits = (unitRows.length > 0 ? unitRows : [{
+            code: unitDraft.code || unitCode || 'UNIT',
+            name: unitDraft.name || unitDraft.code || unitCode || 'Unit',
+        }]).filter((row) => row.code || row.name);
+        const { structure, unitParentPath } = buildSetupTestOrganisationStructure(cleanUnits);
+        const primaryLocationCode = cleanLocations[0]?.icao || locationDraft.code || '';
+        const primaryAircraftCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || 'Aircraft').trim().toUpperCase();
+        const crewSeats = parseRoleRequirementsText(crewDraft.standardSeats);
+        const alternateCrewRows = parseWizardLineItems(alternateCrewDraft).map((line, index) => {
+            const [namePart, requirementsPart] = line.split('=').map((part) => part.trim());
+            return {
+                id: createWizardRecordId(`alternate-crew-${index + 1}`),
+                code: `ALT${index + 1}`,
+                unitCode: cleanUnits[0]?.code || '',
+                aircraftTypeCode: primaryAircraftCode,
+                name: namePart || `Alternate crew ${index + 1}`,
+                description: '',
+                operationalModels: ['air_combat', 'fixed_crew', 'pooled_crew'],
+                roleRequirements: parseRoleRequirementsText(requirementsPart || ''),
+                status: 'ACTIVE',
+            };
+        });
+        const currencyProfiles = parseWizardCurrencyRows(currencyDraft).map((row, index) => ({
+            id: createWizardRecordId(`currency-profile-${index + 1}`),
+            unitCode: cleanUnits[0]?.code || '',
+            aircraftTypeCode: primaryAircraftCode,
+            name: row.name || `Currency ${index + 1}`,
+            code: (row.code || row.name || `CUR${index + 1}`).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || `CUR${index + 1}`,
+            crew: row.crew || 'Standard crew',
+            config: row.config || 'ANY',
+            currency: row.currency || row.name || `Currency ${index + 1}`,
+            aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
+            status: 'ACTIVE',
+        }));
+        const standardMissionProfiles = parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).map((row, index) => ({
+            id: createWizardRecordId(`standard-mission-${index + 1}`),
+            unitCode: cleanUnits[0]?.code || '',
+            name: row.name || `Standard event ${index + 1}`,
+            shortTitle: row.shortTitle || row.name || `EVT${index + 1}`,
+            resourceType: row.resourceType || 'Flight',
+            duration: Math.max(0, Number(row.duration) || 0),
+            preFlight: Math.max(0, Number(row.preFlight) || 0),
+            postFlight: Math.max(0, Number(row.postFlight) || 0),
+            crew: row.crew || 'Standard crew',
+            currency: row.currency || '',
+            config: row.config || 'ANY',
+            aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
+            status: 'ACTIVE',
+        }));
+        const rankOrder = parseWizardRankRows(rankLabelsDraft)
+            .sort((a, b) => (Number(a.order) || 999) - (Number(b.order) || 999))
+            .map((row) => row.ranks)
+            .filter(Boolean);
+        const sharingRows = parseWizardSharingRows(resourceSharingDraft);
+        const resourceSharingRows = sharingRows.filter((row) => row.type.toLowerCase().includes('resource'));
+        const staffSharingRows = sharingRows.filter((row) => row.type.toLowerCase().includes('staff'));
+        const trainingReportRow = parseWizardTrainingReportRows(trainingRecordsDraft)[0];
+        const scoringRows = parseWizardScoringRows(scoringDraft);
+        const trainingReportPhraseBank = scoringRows.reduce((bank, row) => ({
+            ...bank,
+            [row.dimension || 'Assessment']: {
+                0: [row.grade0 || row.failStandard].filter(Boolean),
+                1: [row.grade1].filter(Boolean),
+                2: [row.grade2].filter(Boolean),
+                3: [row.grade3 || row.passStandard].filter(Boolean),
+                4: [row.grade4].filter(Boolean),
+                5: [row.grade5].filter(Boolean),
+            },
+        }), {} as Record<string, any>);
+        const setupPersonnel = buildSetupTestPersonnel(cleanUnits);
+
+        onUpdatePlatformConfig(() => {
+            const nextLocations = cleanLocations.map((row, index) => {
+                const profile = findWizardLocationProfile(row.icao || row.iata || row.name);
+                return {
+                    id: createWizardRecordId(`location-${index + 1}`),
+                    code: row.icao || row.iata || `LOC${index + 1}`,
+                    iataCode: row.iata || profile?.iata || '',
+                    name: row.name || profile?.name || row.icao || row.iata || `Location ${index + 1}`,
+                    timezone: profile?.timezone || locationDraft.timezone || 'Australia/Brisbane',
+                    trainingAreas: locationDraft.trainingAreas.split(',').map((item) => item.trim()).filter(Boolean),
+                    status: 'ACTIVE',
+                    settings: { iataCode: row.iata || profile?.iata || '' },
+                };
+            });
+            const nextUnits = cleanUnits.map((row, index) => ({
+                id: createWizardRecordId(`unit-${index + 1}`),
+                code: row.code || `UNIT${index + 1}`,
+                name: row.name || row.code || `Unit ${index + 1}`,
+                locationCode: index === 0 ? (unitDraft.locationCode || primaryLocationCode) : primaryLocationCode,
+                unitType: index === 0 ? unitDraft.unitType || 'Operational' : 'Operational',
+                status: 'ACTIVE',
+                settings: {
+                    operationalModel: index === 0 ? unitDraft.operationalModel : unitDraft.operationalModel,
+                    hasTrainees: index === 0 ? unitDraft.hasTrainees : false,
+                    parentOrganisationPath: unitParentPath,
+                    trainingReportTemplate: trainingReportRow ? {
+                        displayName: trainingReportRow.organisationName || trainingReportRow.genericName || 'Training Report',
+                        grades: {
+                            scaleMin: Number(trainingReportRow.gradeMin) || 0,
+                            scaleMax: Number(trainingReportRow.gradeMax) || 5,
+                            showNumbers: String(trainingReportRow.showNumbers || '').toLowerCase() !== 'no',
+                        },
+                        overallResults: {
+                            passLabel: trainingReportRow.passLabel || 'PASS',
+                            failLabel: trainingReportRow.failLabel || 'FAIL',
+                        },
+                    } : undefined,
+                    trainingReportPhraseBank,
+                },
+            }));
+            const modules = parseWizardLineItems(unitModulesDraft).map((line, index) => {
+                const [namePart] = line.split('|').map((part) => part.trim());
+                const code = (namePart || `Module ${index + 1}`).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+                return { id: createWizardRecordId(`module-${index + 1}`), code, name: namePart || code, status: 'ACTIVE' };
+            });
+            const unitModules = cleanUnits.flatMap((unit) => parseWizardLineItems(unitModulesDraft).map((line, index) => {
+                const [namePart, enabledPart] = line.split('|').map((part) => part.trim());
+                const moduleCode = (namePart || `Module ${index + 1}`).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+                return {
+                    id: createWizardRecordId(`unit-module-${unit.code}-${index + 1}`),
+                    unitCode: unit.code,
+                    moduleCode,
+                    isEnabled: !/^off$/i.test(enabledPart || ''),
+                    status: 'ACTIVE',
+                };
+            }));
+            const organisation = {
+                id: createWizardRecordId('organisation'),
+                code: organisationDraft.code || organisationDraft.name || 'ORG',
+                name: organisationDraft.name || organisationDraft.code || 'Organisation',
+                status: 'ACTIVE',
+                settings: {
+                    organisationStructure: structure,
+                    masterLmpCatalogue: [{
+                        id: createWizardRecordId('master-lmp-catalogue'),
+                        code: trainingDraft.lmpCode,
+                        name: trainingDraft.lmpName || trainingDraft.lmpCode,
+                        description: trainingDraft.description,
+                        status: trainingDraft.status || 'ACTIVE',
+                    }],
+                    masterLmpAccess: [{
+                        id: createWizardRecordId('master-lmp-access'),
+                        lmpCode: trainingDraft.lmpCode,
+                        locationCode: trainingDraft.accessLocationCode || primaryLocationCode,
+                        unitCode: trainingDraft.accessUnitCode || cleanUnits[0]?.code || '',
+                        model: trainingDraft.accessModel || 'Any Model',
+                        access: trainingDraft.accessLevel || 'Manage',
+                        status: 'ACTIVE',
+                    }],
+                    crewCompositionSettings: normaliseCrewCompositionSettings({
+                        alternateCompositions: alternateCrewRows,
+                        currencyProfiles,
+                    }),
+                    standardMissionProfiles: { profiles: standardMissionProfiles },
+                    personnelDisplaySettings: {
+                        staffRankOrder: rankOrder,
+                        traineeRankOrder: rankOrder,
+                        useSeparateTraineeRankOrder: false,
+                    },
+                    fleetSharingEnabled: resourceSharingRows.some((row) => /^on$/i.test(row.enabled)),
+                    resourceSharingGroups: resourceSharingRows.map((row, index) => ({
+                        id: createWizardRecordId(`resource-sharing-${index + 1}`),
+                        name: row.type || `Resource sharing ${index + 1}`,
+                        selectedUnits: row.units.split(',').map((item) => item.trim()).filter(Boolean),
+                        status: 'ACTIVE',
+                    })),
+                    staffSharingEnabled: staffSharingRows.some((row) => /^on$/i.test(row.enabled)),
+                    staffSharingGroups: staffSharingRows.map((row, index) => ({
+                        id: createWizardRecordId(`staff-sharing-${index + 1}`),
+                        name: row.type || `Staff sharing ${index + 1}`,
+                        selectedUnits: row.units.split(',').map((item) => item.trim()).filter(Boolean),
+                        status: 'ACTIVE',
+                    })),
+                    initialSetupWizardDraft: {
+                        unitsToday: cleanUnits,
+                        locationsToday: cleanLocations,
+                        crewLabels: crewLabelsDraft,
+                        alternateCrews: alternateCrewDraft,
+                        buildRules: buildRulesDraftText,
+                        staff: staffDraft,
+                        traineesEnabled: unitDraft.hasTrainees,
+                        trainees: traineeDraft,
+                        trainingRecords: trainingRecordsDraft,
+                        unitModules: unitModulesDraft,
+                        ranksAndLabels: rankLabelsDraft,
+                        resourceSharing: resourceSharingDraft,
+                        currencies: currencyDraft,
+                        scoringMatrix: scoringDraft,
+                        staffCurrencyEvents: staffCurrencyEventsDraft,
+                    },
+                },
+            };
+            return {
+                organisations: [organisation],
+                locations: nextLocations,
+                units: nextUnits,
+                aircraftTypes: [{
+                    id: createWizardRecordId('aircraft-type'),
+                    code: primaryAircraftCode,
+                    name: resourceDraft.aircraftName || primaryAircraftCode,
+                    category: 'Other',
+                    status: 'ACTIVE',
+                    crewComposition: {
+                        ...normaliseAircraftCrewComposition(null),
+                        standardSeats: crewSeats,
+                    },
+                }],
+                resourcePools: [{
+                    id: createWizardRecordId('resource-pool'),
+                    code: 'RESOURCE-POOL-1',
+                    name: resourceDraft.poolName || `${primaryAircraftCode} Resource Pool`,
+                    organisationCode: organisation.code,
+                    locationCode: resourceDraft.poolLocationCode || primaryLocationCode,
+                    unitCode: resourceDraft.poolUnitCode || cleanUnits[0]?.code || '',
+                    aircraftTypeCode: primaryAircraftCode,
+                    poolType: 'Dedicated',
+                    status: 'ACTIVE',
+                    settings: {
+                        aircraft: parseNumberDraft(resourceDraft.aircraft),
+                        ftd: parseNumberDraft(resourceDraft.sim),
+                        cpt: parseNumberDraft(resourceDraft.trainer),
+                        standby: parseNumberDraft(resourceDraft.standby),
+                        ground: parseNumberDraft(resourceDraft.ground),
+                    },
+                }],
+                modules,
+                unitModules,
+                licenses: [],
+                userAccess: [{
+                    id: createWizardRecordId('user-access'),
+                    userName: accessDraft.userName || 'Setup Admin',
+                    locationCode: accessDraft.locationCode || primaryLocationCode,
+                    unitCode: accessDraft.unitCode || cleanUnits[0]?.code || '',
+                    moduleCode: accessDraft.moduleCode || 'DFP',
+                    accessLevel: accessDraft.accessLevel || 'Manage',
+                    status: 'ACTIVE',
+                }],
+                platformUsers: [{
+                    id: createWizardRecordId('platform-user'),
+                    name: accessDraft.userName || 'Setup Admin',
+                    username: 'setup-admin',
+                    status: 'ACTIVE',
+                }],
+                schedulingRuleSets: [{
+                    id: createWizardRecordId('scheduling-rule-set'),
+                    name: `${cleanUnits[0]?.code || 'Unit'} build rules`,
+                    unitCode: cleanUnits[0]?.code || '',
+                    businessRules: buildRulesDraft.businessRules,
+                    maxCrewDutyHours: parseNumberDraft(buildRulesDraft.maxCrewDutyHours, 12),
+                    preferredDutyHours: parseNumberDraft(buildRulesDraft.preferredDutyHours, 10),
+                    aircraftTurnaroundMinutes: parseNumberDraft(buildRulesDraft.aircraftTurnaroundMinutes, 60),
+                    simTurnaroundMinutes: parseNumberDraft(buildRulesDraft.simTurnaroundMinutes, 30),
+                    trainerTurnaroundMinutes: parseNumberDraft(buildRulesDraft.trainerTurnaroundMinutes, 30),
+                    maxDispatchPerHour: parseNumberDraft(buildRulesDraft.maxDispatchPerHour, 2),
+                    maxEventsPerDay: parseNumberDraft(buildRulesDraft.maxEventsPerDay, 0),
+                    maxFlightsPerDay: parseNumberDraft(buildRulesDraft.maxFlightsPerDay, 0),
+                    minGapBetweenEventsMinutes: parseNumberDraft(buildRulesDraft.minGapBetweenEventsMinutes, 0),
+                    status: 'ACTIVE',
+                }],
+            };
+        });
+        onSaveSetupTestPersonnel?.(setupPersonnel);
+        if (typeof window !== 'undefined') {
+            window.localStorage.setItem(initialSetupWizardStorageKey, String(steps.length - 1));
+        }
+        setSaveMessage('Setup saved into this local test app only. The real DFP-NEO app and database were not touched.');
+    };
+
     const saveAllWizardDrafts = () => {
+        if (isSetupTestMode) {
+            saveSetupTestWizardDrafts();
+            return;
+        }
         saveOrganisationDraft();
         const locationRows = parseWizardLocationRows(locationsTodayDraft);
         const unitRows = parseWizardUnitRows(unitsTodayDraft);
@@ -4426,7 +4844,9 @@ const OrganisationSlideoutDiagram: React.FC<{
     buildRuleSettings?: ScheduleViewProps['buildRuleSettings'];
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
-}> = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
+    isSetupTestMode?: boolean;
+    onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
+}> = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [activeView, setActiveView] = useState<OrganisationSlideoutView>('structure');
@@ -4569,6 +4989,8 @@ const OrganisationSlideoutDiagram: React.FC<{
                     unitCode={unitCode}
                     onUpdatePlatformConfig={onUpdatePlatformConfig}
                     onNavigateToSettingsSection={onNavigateToSettingsSection}
+                    isSetupTestMode={isSetupTestMode}
+                    onSaveSetupTestPersonnel={onSaveSetupTestPersonnel}
                 />
             )}
         </div>
@@ -4597,6 +5019,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     platformConfig,
     onUpdatePlatformConfig,
     onNavigateToSettingsSection,
+    isSetupTestMode = false,
+    onSaveSetupTestPersonnel,
     isNeoAssistPanelOpen = false,
     onOrganisationSlideoutOpen,
     formationCallsigns = [],
@@ -5586,7 +6010,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         style={{ width: 'min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))' }}
                     >
                         <div className={`h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-                            <OrganisationSlideoutDiagram platformConfig={platformConfig} unitCode={unitCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} />
+                            <OrganisationSlideoutDiagram platformConfig={platformConfig} unitCode={unitCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} />
                         </div>
                         <button
                             type="button"
