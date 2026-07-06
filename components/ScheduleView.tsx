@@ -746,7 +746,7 @@ const normaliseWizardHeader = (value: unknown): string => (
 );
 
 const wizardRequiredHeaderAliases: Record<string, string[]> = {
-    name: ['fullname', 'nameandsurname', 'namesurnamefirstname', 'namesurnamefirstnames', 'surnamefirstname', 'surnamefirstnames'],
+    name: ['fullname', 'nameandsurname', 'namesurnamefirstname', 'namesurnamefirstnames', 'surnamefirstname', 'surnamefirstnames', 'surname', 'lastname', 'familyname', 'givennames', 'givenname', 'firstname', 'forename'],
     role: ['position', 'crewrole', 'primaryrole'],
     qualifications: ['qualification', 'qualificationsandroles', 'qualificationsroles', 'quals', 'roles'],
     pmkeys: ['pmkeysid', 'pmkey', 'employeeid', 'serviceid'],
@@ -4213,7 +4213,8 @@ const InitialSetupWizard: React.FC<{
                 ...flags,
             };
         });
-        const trainees = effectiveUnitDraft.hasTrainees
+        const traineesEnabled = effectiveUnitDraft.hasTrainees || effectiveTraineeRows.length > 0;
+        const trainees = traineesEnabled
             ? effectiveTraineeRows.map((row, index) => {
                 const fullName = [row.surname, row.givenNames].filter(Boolean).join(', ') || row.givenNames || row.surname || `Trainee ${index + 1}`;
                 return {

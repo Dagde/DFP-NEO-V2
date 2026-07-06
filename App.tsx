@@ -24349,19 +24349,40 @@ const App: React.FC = () => {
         if (!isSetupTestMode()) return;
         const instructors = payload.instructors || [];
         const trainees = payload.trainees || [];
+        const normalisedInstructors = instructors.map((person: any) => ({
+            ...normalisePersonnelRecord(person),
+            _dataSource: 'setup-test' as const,
+        }));
+        const normalisedTrainees = trainees.map((trainee: any) => ({
+            ...trainee,
+            fullName: trainee.fullName || trainee.name || [trainee.surname, trainee.givenNames].filter(Boolean).join(', '),
+            name: trainee.name || trainee.fullName || [trainee.surname, trainee.givenNames].filter(Boolean).join(', '),
+            _dataSource: 'setup-test' as const,
+        }));
         pushSetupTestPersonnelDiag('save:requested', {
-            instructors: instructors.length,
-            trainees: trainees.length,
-            instructorSample: instructors.slice(0, 8).map((person: any) => ({
+            instructors: normalisedInstructors.length,
+            trainees: normalisedTrainees.length,
+            instructorSample: normalisedInstructors.slice(0, 8).map((person: any) => ({
                 name: person.name,
                 unit: person.unit,
                 location: person.location,
                 role: person.role,
                 source: person._dataSource,
             })),
+            traineeSample: normalisedTrainees.slice(0, 8).map((person: any) => ({
+                name: person.name || person.fullName,
+                unit: person.unit,
+                location: person.location,
+                course: person.course,
+                source: person._dataSource,
+            })),
         });
-        writeSetupTestPersonnel(instructors, trainees);
-        setSuccessMessage(`Setup Wizard committed ${instructors.length} staff profile${instructors.length === 1 ? '' : 's'}${trainees.length > 0 ? ` and ${trainees.length} trainee profile${trainees.length === 1 ? '' : 's'}` : ''} to this local test app.`);
+        writeSetupTestPersonnel(normalisedInstructors, normalisedTrainees);
+        setInstructorsData(normalisedInstructors);
+        setTraineesData(normalisedTrainees);
+        setIsStaffLoaded(true);
+        setIsTraineeLoaded(true);
+        setSuccessMessage(`Setup Wizard committed ${normalisedInstructors.length} staff profile${normalisedInstructors.length === 1 ? '' : 's'}${normalisedTrainees.length > 0 ? ` and ${normalisedTrainees.length} trainee profile${normalisedTrainees.length === 1 ? '' : 's'}` : ''} to this local test app.`);
     }, [pushSetupTestPersonnelDiag]);
     const handleSaveStandardMissionProfileFromPlanner = useCallback((profileId: string, changes: Partial<StandardMissionProfile>) => {
         const targetId = String(profileId || '').trim();

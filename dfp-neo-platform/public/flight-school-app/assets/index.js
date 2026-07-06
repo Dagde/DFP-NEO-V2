@@ -9487,7 +9487,7 @@ const getWizardTemplateHeaders = (template) => [
 ];
 const normaliseWizardHeader = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
 const wizardRequiredHeaderAliases = {
-  name: ["fullname", "nameandsurname", "namesurnamefirstname", "namesurnamefirstnames", "surnamefirstname", "surnamefirstnames"],
+  name: ["fullname", "nameandsurname", "namesurnamefirstname", "namesurnamefirstnames", "surnamefirstname", "surnamefirstnames", "surname", "lastname", "familyname", "givennames", "givenname", "firstname", "forename"],
   role: ["position", "crewrole", "primaryrole"],
   qualifications: ["qualification", "qualificationsandroles", "qualificationsroles", "quals", "roles"],
   pmkeys: ["pmkeysid", "pmkey", "employeeid", "serviceid"],
@@ -12176,7 +12176,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         ...flags
       };
     });
-    const trainees = effectiveUnitDraft.hasTrainees ? effectiveTraineeRows.map((row, index) => {
+    const traineesEnabled = effectiveUnitDraft.hasTrainees || effectiveTraineeRows.length > 0;
+    const trainees = traineesEnabled ? effectiveTraineeRows.map((row, index) => {
       const fullName = [row.surname, row.givenNames].filter(Boolean).join(", ") || row.givenNames || row.surname || `Trainee ${index + 1}`;
       return {
         idNumber: Number(row.pmkeys) || 8e5 + index + 1,
@@ -99591,19 +99592,40 @@ const App = () => {
     if (!isSetupTestMode()) return;
     const instructors = payload.instructors || [];
     const trainees = payload.trainees || [];
+    const normalisedInstructors = instructors.map((person) => ({
+      ...normalisePersonnelRecord(person),
+      _dataSource: "setup-test"
+    }));
+    const normalisedTrainees = trainees.map((trainee) => ({
+      ...trainee,
+      fullName: trainee.fullName || trainee.name || [trainee.surname, trainee.givenNames].filter(Boolean).join(", "),
+      name: trainee.name || trainee.fullName || [trainee.surname, trainee.givenNames].filter(Boolean).join(", "),
+      _dataSource: "setup-test"
+    }));
     pushSetupTestPersonnelDiag("save:requested", {
-      instructors: instructors.length,
-      trainees: trainees.length,
-      instructorSample: instructors.slice(0, 8).map((person) => ({
+      instructors: normalisedInstructors.length,
+      trainees: normalisedTrainees.length,
+      instructorSample: normalisedInstructors.slice(0, 8).map((person) => ({
         name: person.name,
         unit: person.unit,
         location: person.location,
         role: person.role,
         source: person._dataSource
+      })),
+      traineeSample: normalisedTrainees.slice(0, 8).map((person) => ({
+        name: person.name || person.fullName,
+        unit: person.unit,
+        location: person.location,
+        course: person.course,
+        source: person._dataSource
       }))
     });
-    writeSetupTestPersonnel(instructors, trainees);
-    setSuccessMessage(`Setup Wizard committed ${instructors.length} staff profile${instructors.length === 1 ? "" : "s"}${trainees.length > 0 ? ` and ${trainees.length} trainee profile${trainees.length === 1 ? "" : "s"}` : ""} to this local test app.`);
+    writeSetupTestPersonnel(normalisedInstructors, normalisedTrainees);
+    setInstructorsData(normalisedInstructors);
+    setTraineesData(normalisedTrainees);
+    setIsStaffLoaded(true);
+    setIsTraineeLoaded(true);
+    setSuccessMessage(`Setup Wizard committed ${normalisedInstructors.length} staff profile${normalisedInstructors.length === 1 ? "" : "s"}${normalisedTrainees.length > 0 ? ` and ${normalisedTrainees.length} trainee profile${normalisedTrainees.length === 1 ? "" : "s"}` : ""} to this local test app.`);
   }, [pushSetupTestPersonnelDiag]);
   const handleSaveStandardMissionProfileFromPlanner = reactExports.useCallback((profileId, changes) => {
     const targetId = String(profileId || "").trim();
