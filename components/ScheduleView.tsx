@@ -2242,6 +2242,24 @@ const InitialSetupWizard: React.FC<{
     const [saveMessage, setSaveMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const lastSetupTestPersonnelSnapshotRef = useRef('');
+    const pushWizardImportDiag = (stage: string, details: Record<string, any> = {}) => {
+        if (!isSetupTestMode || typeof window === 'undefined') return;
+        const entry = {
+            ts: new Date().toISOString(),
+            stage,
+            unitCode,
+            details,
+        };
+        try {
+            console.log(`[SETUP-WIZARD-IMPORT] ${stage}`, entry);
+            const existing = JSON.parse(window.localStorage.getItem('dfp_setup_wizard_import_diag') || '[]');
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-80);
+            window.localStorage.setItem('dfp_setup_wizard_import_diag', JSON.stringify(next));
+            (window as any).neoSetupWizardImportDiag = next;
+        } catch (error) {
+            console.log(`[SETUP-WIZARD-IMPORT] ${stage}`, entry, error);
+        }
+    };
 
     const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
         String(organisation?.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
@@ -3203,10 +3221,23 @@ const InitialSetupWizard: React.FC<{
         try {
             const result = await validateWizardTemplateFile(template, file);
             setUploadResults((current) => ({ ...current, [templateId]: result }));
+            pushWizardImportDiag('template:validated', {
+                templateId,
+                fileName: file.name,
+                status: result.status,
+                headers: result.headers || [],
+                dataRows: result.dataRows?.length || 0,
+                issues: result.issues || [],
+            });
             if (result.status === 'valid' && ['staff', 'trainees', 'scoring'].includes(template.id)) {
                 importWizardTemplateRows(template, result);
             }
         } catch (error: any) {
+            pushWizardImportDiag('template:error', {
+                templateId,
+                fileName: file.name,
+                message: error?.message || 'Unknown upload error',
+            });
             setUploadResults((current) => ({
                 ...current,
                 [templateId]: {
@@ -3237,6 +3268,11 @@ const InitialSetupWizard: React.FC<{
             }).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications);
             const nextStaffDraft = formatWizardStaffRows(importedRows);
             setStaffDraft(nextStaffDraft);
+            pushWizardImportDiag('staff:imported-to-draft', {
+                importedRows: importedRows.length,
+                sample: importedRows.slice(0, 8),
+                draftLength: nextStaffDraft.length,
+            });
             if (isSetupTestMode) {
                 saveSetupTestWizardDrafts(false, { staffDraft: nextStaffDraft });
             }
@@ -4389,6 +4425,18 @@ const InitialSetupWizard: React.FC<{
         const setupPersonnelSnapshot = JSON.stringify(setupPersonnel);
         if (markComplete || setupPersonnelSnapshot !== lastSetupTestPersonnelSnapshotRef.current) {
             lastSetupTestPersonnelSnapshotRef.current = setupPersonnelSnapshot;
+            pushWizardImportDiag('personnel:handoff-to-app', {
+                markComplete,
+                instructors: setupPersonnel.instructors.length,
+                trainees: setupPersonnel.trainees.length,
+                instructorSample: setupPersonnel.instructors.slice(0, 8).map((person: any) => ({
+                    name: person.name,
+                    unit: person.unit,
+                    location: person.location,
+                    role: person.role,
+                    source: person._dataSource,
+                })),
+            });
             onSaveSetupTestPersonnel?.(setupPersonnel);
         }
         if (markComplete && typeof window !== 'undefined') {

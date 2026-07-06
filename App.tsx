@@ -21201,6 +21201,27 @@ const App: React.FC = () => {
     // Data state
     const [school, setSchool] = useState<string>(initialOperationalContext.location);
     const [activeUnitCode, setActiveUnitCode] = useState<string>(initialOperationalContext.unit);
+    const pushSetupTestPersonnelDiag = useCallback((stage: string, details: Record<string, any> = {}) => {
+        if (!setupTestProfile) return;
+        const entry = {
+            ts: new Date().toISOString(),
+            stage,
+            setupTestProfile,
+            school,
+            activeUnitCode,
+            dataSourceSettings,
+            details,
+        };
+        try {
+            console.log(`[SETUP-TEST-PERSONNEL] ${stage}`, entry);
+            const existing = JSON.parse(localStorage.getItem('dfp_setup_test_personnel_diag') || '[]');
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-80);
+            localStorage.setItem('dfp_setup_test_personnel_diag', JSON.stringify(next));
+            (window as any).neoSetupTestPersonnelDiag = next;
+        } catch (error) {
+            console.log(`[SETUP-TEST-PERSONNEL] ${stage}`, entry, error);
+        }
+    }, [activeUnitCode, dataSourceSettings, school, setupTestProfile]);
     const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
     const [platformConfigLoaded, setPlatformConfigLoaded] = useState(false);
     const platformConfigSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -22071,11 +22092,32 @@ const App: React.FC = () => {
             })
             : locationFiltered;
 
+        if (setupTestProfile) {
+            const setupStaff = allInstructorsData.filter((i: any) => (i as any)._dataSource === 'setup-test');
+            const locationMatchedSetupStaff = locationFiltered.filter((i: any) => (i as any)._dataSource === 'setup-test');
+            const contextMatchedSetupStaff = contextFiltered.filter((i: any) => (i as any)._dataSource === 'setup-test');
+            const nextStaff = setupStaff.length > 0 ? setupStaff : contextMatchedSetupStaff;
+            pushSetupTestPersonnelDiag('filter:staff', {
+                allInstructors: allInstructorsData.length,
+                setupStaff: setupStaff.length,
+                locationMatchedSetupStaff: locationMatchedSetupStaff.length,
+                contextMatchedSetupStaff: contextMatchedSetupStaff.length,
+                returnedStaff: nextStaff.length,
+                sample: nextStaff.slice(0, 8).map((person: any) => ({
+                    name: person.name,
+                    unit: person.unit,
+                    location: person.location,
+                    source: person._dataSource,
+                })),
+            });
+            return nextStaff;
+        }
+
         if (!mockOn && !dbOn) return [];
         if (mockOn && dbOn) return contextFiltered;
         if (mockOn && !dbOn) return contextFiltered.filter((i: any) => (i as any)._dataSource !== 'database');
         return contextFiltered.filter((i: any) => (i as any)._dataSource === 'database');
-    }, [activeContextUnitCodeSet, allInstructorsData, dataSourceSettings, personMatchesActiveLocation]);
+    }, [activeContextUnitCodeSet, allInstructorsData, dataSourceSettings, personMatchesActiveLocation, pushSetupTestPersonnelDiag, setupTestProfile]);
 
     const traineesData = useMemo(() => {
         const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
@@ -22088,6 +22130,27 @@ const App: React.FC = () => {
             })
             : locationFilteredTrainees;
 
+        if (setupTestProfile) {
+            const setupTrainees = allTraineesData.filter((t: any) => (t as any)._dataSource === 'setup-test');
+            const locationMatchedSetupTrainees = locationFilteredTrainees.filter((t: any) => (t as any)._dataSource === 'setup-test');
+            const contextMatchedSetupTrainees = contextFilteredTrainees.filter((t: any) => (t as any)._dataSource === 'setup-test');
+            const nextTrainees = setupTrainees.length > 0 ? setupTrainees : contextMatchedSetupTrainees;
+            pushSetupTestPersonnelDiag('filter:trainees', {
+                allTrainees: allTraineesData.length,
+                setupTrainees: setupTrainees.length,
+                locationMatchedSetupTrainees: locationMatchedSetupTrainees.length,
+                contextMatchedSetupTrainees: contextMatchedSetupTrainees.length,
+                returnedTrainees: nextTrainees.length,
+                sample: nextTrainees.slice(0, 8).map((person: any) => ({
+                    name: person.name || person.fullName,
+                    unit: person.unit,
+                    location: person.location,
+                    source: person._dataSource,
+                })),
+            });
+            return nextTrainees;
+        }
+
         if (!mockOn && !dbOn) return [];
         if (mockOn && !dbOn) return contextFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata');
         if (!mockOn && dbOn) return contextFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
@@ -22097,7 +22160,7 @@ const App: React.FC = () => {
         const dbCourses = new Set(dbTrainees.map(t => t.course));
         const mockTrainees = contextFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata' && !dbCourses.has(t.course));
         return [...mockTrainees, ...dbTrainees];
-    }, [activeContextUnitCodeSet, allTraineesData, dataSourceSettings, personMatchesActiveLocation]);
+    }, [activeContextUnitCodeSet, allTraineesData, dataSourceSettings, personMatchesActiveLocation, pushSetupTestPersonnelDiag, setupTestProfile]);
 
     // ============================================================
     // AUTHENTICATION STATE
@@ -22677,6 +22740,19 @@ const App: React.FC = () => {
                         ...trainee,
                         _dataSource: 'setup-test' as const,
                     }));
+                    pushSetupTestPersonnelDiag('load:initial', {
+                        storedInstructors: setupPersonnel.instructors?.length || 0,
+                        storedTrainees: setupPersonnel.trainees?.length || 0,
+                        normalisedInstructors: normalisedInstructors.length,
+                        normalisedTrainees: normalisedTrainees.length,
+                        instructorSample: normalisedInstructors.slice(0, 8).map((person: any) => ({
+                            name: person.name,
+                            unit: person.unit,
+                            location: person.location,
+                            role: person.role,
+                            source: person._dataSource,
+                        })),
+                    });
                     setInstructorsData(normalisedInstructors);
                     setIsStaffLoaded(true);
                     setTraineesData(normalisedTrainees);
@@ -23136,7 +23212,7 @@ const App: React.FC = () => {
             }
         };
         loadInitialData();
-    }, [platformConfigLoaded, setupTestProfile]);
+    }, [platformConfigLoaded, setupTestProfile, pushSetupTestPersonnelDiag]);
 
     // Re-initialize traineeLMPs whenever syllabusDetails loads (fixes race condition where
     // loadInitialData runs before syllabusDetails is populated, leaving all LMPs empty)
@@ -24273,9 +24349,20 @@ const App: React.FC = () => {
         if (!isSetupTestMode()) return;
         const instructors = payload.instructors || [];
         const trainees = payload.trainees || [];
+        pushSetupTestPersonnelDiag('save:requested', {
+            instructors: instructors.length,
+            trainees: trainees.length,
+            instructorSample: instructors.slice(0, 8).map((person: any) => ({
+                name: person.name,
+                unit: person.unit,
+                location: person.location,
+                role: person.role,
+                source: person._dataSource,
+            })),
+        });
         writeSetupTestPersonnel(instructors, trainees);
         setSuccessMessage(`Setup Wizard committed ${instructors.length} staff profile${instructors.length === 1 ? '' : 's'}${trainees.length > 0 ? ` and ${trainees.length} trainee profile${trainees.length === 1 ? '' : 's'}` : ''} to this local test app.`);
-    }, []);
+    }, [pushSetupTestPersonnelDiag]);
     const handleSaveStandardMissionProfileFromPlanner = useCallback((profileId: string, changes: Partial<StandardMissionProfile>) => {
         const targetId = String(profileId || '').trim();
         if (!targetId) return;
@@ -34932,20 +35019,33 @@ appliedUpdates.forEach(update => {
         if (!setupTestProfile) return;
         const applySetupTestPersonnel = () => {
             const setupPersonnel = readSetupTestPersonnel();
-            setInstructorsData((setupPersonnel.instructors || []).map((person: any) => ({
+            const nextInstructors = (setupPersonnel.instructors || []).map((person: any) => ({
                 ...normalisePersonnelRecord(person),
                 _dataSource: 'setup-test' as const,
-            })));
-            setTraineesData((setupPersonnel.trainees || []).map((trainee: any) => ({
+            }));
+            const nextTrainees = (setupPersonnel.trainees || []).map((trainee: any) => ({
                 ...trainee,
                 _dataSource: 'setup-test' as const,
-            })));
+            }));
+            pushSetupTestPersonnelDiag('event:personnel-updated', {
+                instructors: nextInstructors.length,
+                trainees: nextTrainees.length,
+                instructorSample: nextInstructors.slice(0, 8).map((person: any) => ({
+                    name: person.name,
+                    unit: person.unit,
+                    location: person.location,
+                    role: person.role,
+                    source: person._dataSource,
+                })),
+            });
+            setInstructorsData(nextInstructors);
+            setTraineesData(nextTrainees);
             setIsStaffLoaded(true);
             setIsTraineeLoaded(true);
         };
         window.addEventListener(SETUP_TEST_PERSONNEL_EVENT, applySetupTestPersonnel);
         return () => window.removeEventListener(SETUP_TEST_PERSONNEL_EVENT, applySetupTestPersonnel);
-    }, [setupTestProfile]);
+    }, [pushSetupTestPersonnelDiag, setupTestProfile]);
 
     // Refresh database data (personnel and trainees) - called when database is modified
     const handleDatabaseDataChanged = useCallback(async () => {

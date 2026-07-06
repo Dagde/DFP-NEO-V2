@@ -10513,6 +10513,24 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
   const [saveMessage, setSaveMessage] = reactExports.useState("");
   const fileInputRef = reactExports.useRef(null);
   const lastSetupTestPersonnelSnapshotRef = reactExports.useRef("");
+  const pushWizardImportDiag = (stage, details = {}) => {
+    if (!isSetupTestMode2 || typeof window === "undefined") return;
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      stage,
+      unitCode,
+      details
+    };
+    try {
+      console.log(`[SETUP-WIZARD-IMPORT] ${stage}`, entry);
+      const existing = JSON.parse(window.localStorage.getItem("dfp_setup_wizard_import_diag") || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-80);
+      window.localStorage.setItem("dfp_setup_wizard_import_diag", JSON.stringify(next));
+      window.neoSetupWizardImportDiag = next;
+    } catch (error) {
+      console.log(`[SETUP-WIZARD-IMPORT] ${stage}`, entry, error);
+    }
+  };
   const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
   const currentUnit = (platformConfig?.units || []).find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(unitCode)) || (platformConfig?.units || [])[0];
   const currentLocation = (platformConfig?.locations || []).find((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(currentUnit?.locationCode)) || (platformConfig?.locations || [])[0];
@@ -11361,10 +11379,23 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     try {
       const result = await validateWizardTemplateFile(template, file);
       setUploadResults((current) => ({ ...current, [templateId]: result }));
+      pushWizardImportDiag("template:validated", {
+        templateId,
+        fileName: file.name,
+        status: result.status,
+        headers: result.headers || [],
+        dataRows: result.dataRows?.length || 0,
+        issues: result.issues || []
+      });
       if (result.status === "valid" && ["staff", "trainees", "scoring"].includes(template.id)) {
         importWizardTemplateRows(template, result);
       }
     } catch (error) {
+      pushWizardImportDiag("template:error", {
+        templateId,
+        fileName: file.name,
+        message: error?.message || "Unknown upload error"
+      });
       setUploadResults((current) => ({
         ...current,
         [templateId]: {
@@ -11392,6 +11423,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       }).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications);
       const nextStaffDraft = formatWizardStaffRows(importedRows);
       setStaffDraft(nextStaffDraft);
+      pushWizardImportDiag("staff:imported-to-draft", {
+        importedRows: importedRows.length,
+        sample: importedRows.slice(0, 8),
+        draftLength: nextStaffDraft.length
+      });
       if (isSetupTestMode2) {
         saveSetupTestWizardDrafts(false, { staffDraft: nextStaffDraft });
       }
@@ -12354,6 +12390,18 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     const setupPersonnelSnapshot = JSON.stringify(setupPersonnel);
     if (markComplete || setupPersonnelSnapshot !== lastSetupTestPersonnelSnapshotRef.current) {
       lastSetupTestPersonnelSnapshotRef.current = setupPersonnelSnapshot;
+      pushWizardImportDiag("personnel:handoff-to-app", {
+        markComplete,
+        instructors: setupPersonnel.instructors.length,
+        trainees: setupPersonnel.trainees.length,
+        instructorSample: setupPersonnel.instructors.slice(0, 8).map((person) => ({
+          name: person.name,
+          unit: person.unit,
+          location: person.location,
+          role: person.role,
+          source: person._dataSource
+        }))
+      });
       onSaveSetupTestPersonnel?.(setupPersonnel);
     }
     if (markComplete && typeof window !== "undefined") {
@@ -96913,6 +96961,27 @@ const App = () => {
   const initialOperationalContext = reactExports.useMemo(() => getStoredOperationalContext(), []);
   const [school, setSchool] = reactExports.useState(initialOperationalContext.location);
   const [activeUnitCode, setActiveUnitCode] = reactExports.useState(initialOperationalContext.unit);
+  const pushSetupTestPersonnelDiag = reactExports.useCallback((stage, details = {}) => {
+    if (!setupTestProfile) return;
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      stage,
+      setupTestProfile,
+      school,
+      activeUnitCode,
+      dataSourceSettings,
+      details
+    };
+    try {
+      console.log(`[SETUP-TEST-PERSONNEL] ${stage}`, entry);
+      const existing = JSON.parse(localStorage.getItem("dfp_setup_test_personnel_diag") || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-80);
+      localStorage.setItem("dfp_setup_test_personnel_diag", JSON.stringify(next));
+      window.neoSetupTestPersonnelDiag = next;
+    } catch (error) {
+      console.log(`[SETUP-TEST-PERSONNEL] ${stage}`, entry, error);
+    }
+  }, [activeUnitCode, dataSourceSettings, school, setupTestProfile]);
   const [platformConfig, setPlatformConfig] = reactExports.useState(null);
   const [platformConfigLoaded, setPlatformConfigLoaded] = reactExports.useState(false);
   const platformConfigSaveTimerRef = reactExports.useRef(null);
@@ -97591,11 +97660,31 @@ const App = () => {
       const unitCode = normalisePersonnelUnitCode(i.unit);
       return !unitCode || activeContextUnitCodeSet.has(unitCode);
     }) : locationFiltered;
+    if (setupTestProfile) {
+      const setupStaff = allInstructorsData.filter((i) => i._dataSource === "setup-test");
+      const locationMatchedSetupStaff = locationFiltered.filter((i) => i._dataSource === "setup-test");
+      const contextMatchedSetupStaff = contextFiltered.filter((i) => i._dataSource === "setup-test");
+      const nextStaff = setupStaff.length > 0 ? setupStaff : contextMatchedSetupStaff;
+      pushSetupTestPersonnelDiag("filter:staff", {
+        allInstructors: allInstructorsData.length,
+        setupStaff: setupStaff.length,
+        locationMatchedSetupStaff: locationMatchedSetupStaff.length,
+        contextMatchedSetupStaff: contextMatchedSetupStaff.length,
+        returnedStaff: nextStaff.length,
+        sample: nextStaff.slice(0, 8).map((person) => ({
+          name: person.name,
+          unit: person.unit,
+          location: person.location,
+          source: person._dataSource
+        }))
+      });
+      return nextStaff;
+    }
     if (!mockOn && !dbOn) return [];
     if (mockOn && dbOn) return contextFiltered;
     if (mockOn && !dbOn) return contextFiltered.filter((i) => i._dataSource !== "database");
     return contextFiltered.filter((i) => i._dataSource === "database");
-  }, [activeContextUnitCodeSet, allInstructorsData, dataSourceSettings, personMatchesActiveLocation]);
+  }, [activeContextUnitCodeSet, allInstructorsData, dataSourceSettings, personMatchesActiveLocation, pushSetupTestPersonnelDiag, setupTestProfile]);
   const traineesData = reactExports.useMemo(() => {
     const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
     const locationFilteredTrainees = allTraineesData.filter(personMatchesActiveLocation);
@@ -97603,6 +97692,26 @@ const App = () => {
       const unitCode = normalisePersonnelUnitCode(t.unit);
       return !unitCode || activeContextUnitCodeSet.has(unitCode);
     }) : locationFilteredTrainees;
+    if (setupTestProfile) {
+      const setupTrainees = allTraineesData.filter((t) => t._dataSource === "setup-test");
+      const locationMatchedSetupTrainees = locationFilteredTrainees.filter((t) => t._dataSource === "setup-test");
+      const contextMatchedSetupTrainees = contextFilteredTrainees.filter((t) => t._dataSource === "setup-test");
+      const nextTrainees = setupTrainees.length > 0 ? setupTrainees : contextMatchedSetupTrainees;
+      pushSetupTestPersonnelDiag("filter:trainees", {
+        allTrainees: allTraineesData.length,
+        setupTrainees: setupTrainees.length,
+        locationMatchedSetupTrainees: locationMatchedSetupTrainees.length,
+        contextMatchedSetupTrainees: contextMatchedSetupTrainees.length,
+        returnedTrainees: nextTrainees.length,
+        sample: nextTrainees.slice(0, 8).map((person) => ({
+          name: person.name || person.fullName,
+          unit: person.unit,
+          location: person.location,
+          source: person._dataSource
+        }))
+      });
+      return nextTrainees;
+    }
     if (!mockOn && !dbOn) return [];
     if (mockOn && !dbOn) return contextFilteredTrainees.filter((t) => t._dataSource === "mockdata");
     if (!mockOn && dbOn) return contextFilteredTrainees.filter((t) => t._dataSource === "database");
@@ -97610,7 +97719,7 @@ const App = () => {
     const dbCourses = new Set(dbTrainees.map((t) => t.course));
     const mockTrainees = contextFilteredTrainees.filter((t) => t._dataSource === "mockdata" && !dbCourses.has(t.course));
     return [...mockTrainees, ...dbTrainees];
-  }, [activeContextUnitCodeSet, allTraineesData, dataSourceSettings, personMatchesActiveLocation]);
+  }, [activeContextUnitCodeSet, allTraineesData, dataSourceSettings, personMatchesActiveLocation, pushSetupTestPersonnelDiag, setupTestProfile]);
   const [isAuthenticated, setIsAuthenticated] = reactExports.useState(false);
   const [authUser, setAuthUser] = reactExports.useState(null);
   const [authSessionToken, setAuthSessionToken] = reactExports.useState("");
@@ -98047,6 +98156,19 @@ const App = () => {
             ...trainee,
             _dataSource: "setup-test"
           }));
+          pushSetupTestPersonnelDiag("load:initial", {
+            storedInstructors: setupPersonnel.instructors?.length || 0,
+            storedTrainees: setupPersonnel.trainees?.length || 0,
+            normalisedInstructors: normalisedInstructors2.length,
+            normalisedTrainees: normalisedTrainees.length,
+            instructorSample: normalisedInstructors2.slice(0, 8).map((person) => ({
+              name: person.name,
+              unit: person.unit,
+              location: person.location,
+              role: person.role,
+              source: person._dataSource
+            }))
+          });
           setInstructorsData(normalisedInstructors2);
           setIsStaffLoaded(true);
           setTraineesData(normalisedTrainees);
@@ -98423,7 +98545,7 @@ const App = () => {
       }
     };
     loadInitialData();
-  }, [platformConfigLoaded, setupTestProfile]);
+  }, [platformConfigLoaded, setupTestProfile, pushSetupTestPersonnelDiag]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded || !syllabusDetails.length || !allTraineesData.length) return;
     console.log(`[LMP Re-init] syllabusDetails loaded (${syllabusDetails.length} items), re-initializing traineeLMPs for ${allTraineesData.length} trainees`);
@@ -99357,9 +99479,20 @@ const App = () => {
     if (!isSetupTestMode()) return;
     const instructors = payload.instructors || [];
     const trainees = payload.trainees || [];
+    pushSetupTestPersonnelDiag("save:requested", {
+      instructors: instructors.length,
+      trainees: trainees.length,
+      instructorSample: instructors.slice(0, 8).map((person) => ({
+        name: person.name,
+        unit: person.unit,
+        location: person.location,
+        role: person.role,
+        source: person._dataSource
+      }))
+    });
     writeSetupTestPersonnel(instructors, trainees);
     setSuccessMessage(`Setup Wizard committed ${instructors.length} staff profile${instructors.length === 1 ? "" : "s"}${trainees.length > 0 ? ` and ${trainees.length} trainee profile${trainees.length === 1 ? "" : "s"}` : ""} to this local test app.`);
-  }, []);
+  }, [pushSetupTestPersonnelDiag]);
   const handleSaveStandardMissionProfileFromPlanner = reactExports.useCallback((profileId, changes) => {
     const targetId = String(profileId || "").trim();
     if (!targetId) return;
@@ -107936,20 +108069,33 @@ ${conflictLines.join("\n")}${moreText}`,
     if (!setupTestProfile) return;
     const applySetupTestPersonnel = () => {
       const setupPersonnel = readSetupTestPersonnel();
-      setInstructorsData((setupPersonnel.instructors || []).map((person) => ({
+      const nextInstructors = (setupPersonnel.instructors || []).map((person) => ({
         ...normalisePersonnelRecord(person),
         _dataSource: "setup-test"
-      })));
-      setTraineesData((setupPersonnel.trainees || []).map((trainee) => ({
+      }));
+      const nextTrainees = (setupPersonnel.trainees || []).map((trainee) => ({
         ...trainee,
         _dataSource: "setup-test"
-      })));
+      }));
+      pushSetupTestPersonnelDiag("event:personnel-updated", {
+        instructors: nextInstructors.length,
+        trainees: nextTrainees.length,
+        instructorSample: nextInstructors.slice(0, 8).map((person) => ({
+          name: person.name,
+          unit: person.unit,
+          location: person.location,
+          role: person.role,
+          source: person._dataSource
+        }))
+      });
+      setInstructorsData(nextInstructors);
+      setTraineesData(nextTrainees);
       setIsStaffLoaded(true);
       setIsTraineeLoaded(true);
     };
     window.addEventListener(SETUP_TEST_PERSONNEL_EVENT, applySetupTestPersonnel);
     return () => window.removeEventListener(SETUP_TEST_PERSONNEL_EVENT, applySetupTestPersonnel);
-  }, [setupTestProfile]);
+  }, [pushSetupTestPersonnelDiag, setupTestProfile]);
   const handleDatabaseDataChanged = reactExports.useCallback(async () => {
     console.log("🔄 Refreshing database data after database modification...");
     if (isSetupTestMode()) {
