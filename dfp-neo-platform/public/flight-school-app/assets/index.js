@@ -12849,10 +12849,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     ] })
   ] });
 };
-const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel }) => {
+const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
   const [activeView, setActiveView] = reactExports.useState("structure");
+  reactExports.useEffect(() => {
+    onInitialSetupWizardActiveChange?.(Boolean(isOpen && activeView === "setupWizard"));
+    return () => onInitialSetupWizardActiveChange?.(false);
+  }, [activeView, isOpen, onInitialSetupWizardActiveChange]);
   reactExports.useEffect(() => {
     if (selectedNodeId && chart && !findOrganisationChartPath(chart, selectedNodeId)) {
       setSelectedNodeId(null);
@@ -13068,6 +13072,7 @@ const ScheduleView = ({
   onSaveSetupTestPersonnel,
   isNeoAssistPanelOpen = false,
   onOrganisationSlideoutOpen,
+  onInitialSetupWizardActiveChange,
   formationCallsigns = [],
   buildRuleSettings,
   timezoneOffset = 11
@@ -13898,7 +13903,7 @@ const ScheduleView = ({
             className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0" : "-translate-x-full"}`,
             style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, unitCode, formationCallsigns, buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, unitCode, formationCallsigns, buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
@@ -98731,7 +98736,7 @@ const App = () => {
     }
   }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
   reactExports.useEffect(() => {
-    if (setupTestProfile) {
+    if (isInitialSetupWizardActive) {
       loadingSnapshotDates.current.clear();
       setDfpSnapshotLoadState((prev) => ["loading", "retrying", "cached"].includes(prev.status) ? { status: "idle", date: "", message: "" } : prev);
       setShowDfpRetrievalNotice(false);
@@ -98739,7 +98744,7 @@ const App = () => {
     }
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     void loadSnapshotForDate(date, { useCache: true });
-  }, [activeUnitCode, date, school, loadSnapshotForDate, setupTestProfile]);
+  }, [activeUnitCode, date, school, loadSnapshotForDate, isInitialSetupWizardActive]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
     const newUser = instructorsData.find((inst) => inst.name === userName);
@@ -99891,6 +99896,7 @@ ${"=".repeat(60)}`);
   const [showAircraftAvailability, setShowAircraftAvailability] = reactExports.useState(true);
   const [currentAircraftAvailability, setCurrentAircraftAvailability] = reactExports.useState(availableAircraftCount);
   const [showDfpSidePanel, setShowDfpSidePanel] = reactExports.useState(false);
+  const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = reactExports.useState(false);
   const [showPauseFlightOps, setShowPauseFlightOps] = reactExports.useState(false);
   const [showPausePanel, setShowPausePanel] = reactExports.useState(false);
   const [pausePanelPhase, setPausePanelPhase] = reactExports.useState("configure");
@@ -109640,6 +109646,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSaveSetupTestPersonnel: handleSaveSetupTestPersonnel,
             isNeoAssistPanelOpen: showDfpSidePanel,
             onOrganisationSlideoutOpen: () => setShowDfpSidePanel(false),
+            onInitialSetupWizardActiveChange: setIsInitialSetupWizardActive,
             formationCallsigns,
             buildRuleSettings: {
               maxDispatchPerHour,

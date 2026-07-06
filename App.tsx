@@ -23713,7 +23713,7 @@ const App: React.FC = () => {
     }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
 
     useEffect(() => {
-        if (setupTestProfile) {
+        if (isInitialSetupWizardActive) {
             loadingSnapshotDates.current.clear();
             setDfpSnapshotLoadState(prev => (
                 ['loading', 'retrying', 'cached'].includes(prev.status)
@@ -23725,7 +23725,7 @@ const App: React.FC = () => {
         }
         if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
         void loadSnapshotForDate(date, { useCache: true });
-    }, [activeUnitCode, date, school, loadSnapshotForDate, setupTestProfile]);
+    }, [activeUnitCode, date, school, loadSnapshotForDate, isInitialSetupWizardActive]);
 
        // Show commit alert on app mount - DISABLED
        // useEffect(() => {
@@ -25121,6 +25121,7 @@ const App: React.FC = () => {
     const [showAircraftAvailability, setShowAircraftAvailability] = useState(true);
     const [currentAircraftAvailability, setCurrentAircraftAvailability] = useState<number>(availableAircraftCount);
     const [showDfpSidePanel, setShowDfpSidePanel] = useState(false);
+    const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = useState(false);
     const [showPauseFlightOps, setShowPauseFlightOps] = useState(false);
     // Pause Flight Ops Panel state (sidebar panel on right side of DFP window)
     const [showPausePanel, setShowPausePanel] = useState(false);
@@ -37350,6 +37351,7 @@ appliedUpdates.forEach(update => {
                            onSaveSetupTestPersonnel={handleSaveSetupTestPersonnel}
                            isNeoAssistPanelOpen={showDfpSidePanel}
                            onOrganisationSlideoutOpen={() => setShowDfpSidePanel(false)}
+                           onInitialSetupWizardActiveChange={setIsInitialSetupWizardActive}
                            formationCallsigns={formationCallsigns}
                            buildRuleSettings={{
                                maxDispatchPerHour,

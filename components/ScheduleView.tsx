@@ -106,6 +106,7 @@ interface ScheduleViewProps {
   onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
   isNeoAssistPanelOpen?: boolean;
   onOrganisationSlideoutOpen?: () => void;
+  onInitialSetupWizardActiveChange?: (active: boolean) => void;
   formationCallsigns?: FormationCallsign[];
   buildRuleSettings?: {
     maxDispatchPerHour?: number;
@@ -4870,10 +4871,16 @@ const OrganisationSlideoutDiagram: React.FC<{
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
     isSetupTestMode?: boolean;
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
-}> = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
+    isOpen?: boolean;
+    onInitialSetupWizardActiveChange?: (active: boolean) => void;
+}> = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [activeView, setActiveView] = useState<OrganisationSlideoutView>('structure');
+    useEffect(() => {
+        onInitialSetupWizardActiveChange?.(Boolean(isOpen && activeView === 'setupWizard'));
+        return () => onInitialSetupWizardActiveChange?.(false);
+    }, [activeView, isOpen, onInitialSetupWizardActiveChange]);
     useEffect(() => {
         if (selectedNodeId && chart && !findOrganisationChartPath(chart, selectedNodeId)) {
             setSelectedNodeId(null);
@@ -5047,6 +5054,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     onSaveSetupTestPersonnel,
     isNeoAssistPanelOpen = false,
     onOrganisationSlideoutOpen,
+    onInitialSetupWizardActiveChange,
     formationCallsigns = [],
     buildRuleSettings,
     timezoneOffset = 11 // Default to UTC+11
@@ -6034,7 +6042,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         style={{ width: 'min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))' }}
                     >
                         <div className={`h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-                            <OrganisationSlideoutDiagram platformConfig={platformConfig} unitCode={unitCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} />
+                            <OrganisationSlideoutDiagram platformConfig={platformConfig} unitCode={unitCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} />
                         </div>
                         <button
                             type="button"
