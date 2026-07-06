@@ -2485,7 +2485,10 @@ const InitialSetupWizard: React.FC<{
     });
     const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
     const [staffDraft, setStaffDraft] = useState('Burns, Alexander | 36SQN | Pilot | PIC');
+    const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = useState('Course 1');
     const [traineeDraft, setTraineeDraft] = useState('');
+    const [traineeAllocationCommitted, setTraineeAllocationCommitted] = useState(false);
+    const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = useState(false);
     const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('Training Report | PT-051 | 0 | 5 | Yes | No | PASS | FAIL');
     const [unitModulesDraft, setUnitModulesDraft] = useState('DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On');
     const [rankLabelsDraft, setRankLabelsDraft] = useState('1 | AIRCDRE = BRIG = CDRE | Same seniority across services\n2 | GPCAPT = COL = CAPT | Same seniority across services\n3 | WGCDR = LTCOL = CMDR | Same seniority across services\n4 | SQNLDR = MAJ = LCDR | Same seniority across services');
@@ -3341,7 +3344,7 @@ const InitialSetupWizard: React.FC<{
                     rank: getWizardCellByHeader(headers, row, 'Rank'),
                     pmkeys: getWizardCellByHeader(headers, row, 'PMKeyS'),
                     courseNumber: getWizardCellByHeader(headers, row, 'Course Number'),
-                    course: '',
+                    course: getWizardCellByHeader(headers, row, 'Course'),
                     masterLmp: getWizardCellByHeader(headers, row, 'Master LMP'),
                     startDate: getWizardCellByHeader(headers, row, 'Start Date'),
                     email: getWizardCellByHeader(headers, row, 'Email'),
@@ -3352,16 +3355,30 @@ const InitialSetupWizard: React.FC<{
                     seatConfig: getWizardCellByAnyHeader(headers, row, ['Seat Config', 'Seat Configuration', 'Config']),
                 };
             }).filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.masterLmp || row.startDate);
-            const nextTraineeDraft = formatWizardTraineeRows(importedRows);
+            const baseRows = traineeAllocationCommitted
+                ? (uploadedTraineeProfileRows.length > 0 ? uploadedTraineeProfileRows : parseWizardTraineeRows(traineeDraft))
+                : [];
+            const nextImportedRows = [...baseRows, ...importedRows];
+            const nextTraineeDraft = formatWizardTraineeRows(nextImportedRows);
             setTraineeDraft(nextTraineeDraft);
-            setUploadedTraineeProfileRows(importedRows);
-            setUnitDraft((draft) => ({ ...draft, hasTrainees: true }));
-            if (isSetupTestMode) {
-                saveSetupTestWizardDrafts(false, { traineeDraft: nextTraineeDraft, traineeRows: importedRows, unitDraft: { ...unitDraft, hasTrainees: true } });
+            setUploadedTraineeProfileRows(nextImportedRows);
+            const importedCourseOptions = Array.from(new Set(nextImportedRows
+                .flatMap((row) => [row.course, row.courseNumber])
+                .map((value) => String(value || '').trim())
+                .filter(Boolean)));
+            if (importedCourseOptions.length > 0) {
+                setTraineeCourseOptionsDraft((current) => {
+                    const merged = Array.from(new Set([
+                        ...parseWizardLineItems(current),
+                        ...importedCourseOptions,
+                    ].map((item) => String(item || '').trim()).filter(Boolean)));
+                    return merged.join('\n');
+                });
             }
-            const message = isSetupTestMode
-                ? `Committed ${importedRows.length} uploaded trainee profile${importedRows.length === 1 ? '' : 's'} to the trainee list in this local test app.`
-                : `Imported ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} into the master trainee list.`;
+            setTraineeAllocationCommitted(false);
+            setShowMoreTraineesPrompt(false);
+            setUnitDraft((draft) => ({ ...draft, hasTrainees: true }));
+            const message = `Loaded ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} for course allocation. Select a course for every trainee, then commit them to Trainee Profiles.`;
             setImportConfirmations((current) => ({ ...current, [template.id]: message }));
             setSaveMessage(message);
             return;
@@ -3595,6 +3612,8 @@ const InitialSetupWizard: React.FC<{
             const nextRows = [...editableRows];
             nextRows[index] = { ...nextRows[index], [field]: value };
             setTraineeDraft(formatWizardTraineeRows(nextRows));
+            setTraineeAllocationCommitted(false);
+            setShowMoreTraineesPrompt(false);
             setUploadedTraineeProfileRows((current) => {
                 if (!current[index]) return current;
                 const next = [...current];
@@ -3608,14 +3627,105 @@ const InitialSetupWizard: React.FC<{
             ...activeUnits.map((unit: any) => String(unit.code || '')),
         ].filter(Boolean)));
         const courseOptions = Array.from(new Set([
-            trainingDraft.lmpCode,
-            trainingDraft.lmpName,
+            ...parseWizardLineItems(traineeCourseOptionsDraft),
+            ...editableRows.flatMap((row) => [row.course, row.courseNumber]),
             ...activeMasterLmpCatalogue.flatMap((lmp: any) => [String(lmp?.name || ''), String(lmp?.code || '')]),
         ].map((item) => String(item || '').trim()).filter(Boolean)));
+        const assignAllToCourse = (course: string) => {
+            const nextRows = editableRows.map((row) => ({ ...row, course }));
+            setTraineeDraft(formatWizardTraineeRows(nextRows));
+            setTraineeAllocationCommitted(false);
+            setShowMoreTraineesPrompt(false);
+            setUploadedTraineeProfileRows((current) => (
+                current.length > 0 ? current.map((row) => ({ ...row, course })) : current
+            ));
+        };
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    This is the master trainee list for this setup. Leave Course allocation blank until you decide which course each trainee belongs to. Blank means the trainee exists in the app but has not been allocated to a course yet.
+                    First list the active courses for this unit, then allocate every uploaded trainee to one of those courses. DFP-NEO will not commit trainees to Trainee Profiles until every trainee has a course selected.
+                </div>
+                <label className="block rounded-lg border border-slate-300 bg-white p-3">
+                    <span className={wizardLabelClass}>Active courses for this unit</span>
+                    <textarea
+                        className={`${wizardInputClass} mt-1 min-h-[78px] resize-y`}
+                        value={traineeCourseOptionsDraft}
+                        placeholder={'Course 1\nCourse 2\nC-17A Conversion 01'}
+                        onKeyDown={stopEditableKeyPropagation}
+                        onChange={(event) => {
+                            setTraineeCourseOptionsDraft(event.target.value);
+                            setTraineeAllocationCommitted(false);
+                            setShowMoreTraineesPrompt(false);
+                        }}
+                    />
+                    <p className="mt-2 text-xs font-semibold leading-5 text-slate-600">
+                        Put each active course on its own line. These become the choices beside each trainee below.
+                    </p>
+                </label>
+                {courseOptions.length > 0 ? (
+                    <div className="rounded-lg border border-slate-300 bg-white p-3">
+                        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <span className={wizardLabelClass}>Select all trainees</span>
+                            <span className="text-xs font-semibold text-slate-500">{courseOptions.length} course option{courseOptions.length === 1 ? '' : 's'}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {courseOptions.map((course) => (
+                                <button
+                                    key={`assign-all-${course}`}
+                                    type="button"
+                                    className={wizardSmallButtonClass}
+                                    onClick={() => assignAllToCourse(course)}
+                                >
+                                    All to {course}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
+                        Add at least one active course before committing trainees.
+                    </div>
+                )}
+                {editableRows.some((row) => !String(row.course || '').trim()) ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
+                        Some trainees still need a course allocation.
+                    </div>
+                ) : null}
+                <div className="overflow-x-auto rounded-lg border border-slate-300 bg-white">
+                    <table className="min-w-[760px] w-full text-left text-xs">
+                        <thead className="bg-slate-100 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">
+                            <tr>
+                                <th className="px-3 py-2">Trainee</th>
+                                <th className="px-3 py-2">Unit</th>
+                                <th className="px-3 py-2">Rank</th>
+                                <th className="px-3 py-2">Course allocation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {editableRows.map((row, index) => (
+                                <tr key={`trainee-allocation-${index}`} className="border-t border-slate-200">
+                                    <td className="px-3 py-2 font-semibold text-slate-900">{[row.surname, row.givenNames].filter(Boolean).join(', ') || `Trainee ${index + 1}`}</td>
+                                    <td className="px-3 py-2 text-slate-700">{row.unit || unitDraft.code || 'Not set'}</td>
+                                    <td className="px-3 py-2 text-slate-700">{row.rank || 'Not set'}</td>
+                                    <td className="px-3 py-2">
+                                        <div className="flex flex-wrap gap-2">
+                                            {courseOptions.map((course) => (
+                                                <label key={`trainee-course-radio-${index}-${course}`} className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700">
+                                                    <input
+                                                        type="radio"
+                                                        name={`trainee-course-${index}`}
+                                                        checked={row.course === course}
+                                                        onChange={() => updateTraineeRow(index, 'course', course)}
+                                                    />
+                                                    {course}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`trainee-row-${index}`} className="rounded-lg border border-slate-300 bg-white p-3">
@@ -3623,6 +3733,8 @@ const InitialSetupWizard: React.FC<{
                             <span className={wizardLabelClass}>Trainee {index + 1}</span>
                             <button type="button" className={wizardSmallButtonClass} onClick={() => {
                                 setTraineeDraft(formatWizardTraineeRows(editableRows.filter((_, rowIndex) => rowIndex !== index)));
+                                setTraineeAllocationCommitted(false);
+                                setShowMoreTraineesPrompt(false);
                                 setUploadedTraineeProfileRows((current) => current.filter((_, rowIndex) => rowIndex !== index));
                             }}>
                                 Delete
@@ -3646,6 +3758,8 @@ const InitialSetupWizard: React.FC<{
                     className={wizardSmallButtonClass}
                     onClick={() => {
                         setTraineeDraft(formatWizardTraineeRows([...editableRows, { surname: '', givenNames: '', unit: unitDraft.code || '', rank: '', pmkeys: '', courseNumber: '', course: '', masterLmp: '', startDate: '' }]));
+                        setTraineeAllocationCommitted(false);
+                        setShowMoreTraineesPrompt(false);
                         setUploadedTraineeProfileRows((current) => current.length > 0 ? [...current, { unit: unitDraft.code || '' }] : current);
                     }}
                 >
@@ -3898,6 +4012,25 @@ const InitialSetupWizard: React.FC<{
         </label>
     );
     const goToNextWizardStep = () => {
+        if (visibleStep.id === 'trainees' && unitDraft.hasTrainees) {
+            const traineeRows = parseWizardTraineeRows(traineeDraft);
+            const validCourses = new Set(parseWizardLineItems(traineeCourseOptionsDraft).map((course) => course.toUpperCase()));
+            const hasTraineesToCommit = traineeRows.some((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.course || row.masterLmp || row.startDate);
+            const missingCourseCount = traineeRows.filter((row) => (
+                row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.course || row.masterLmp || row.startDate
+            )).filter((row) => {
+                const course = String(row.course || '').trim();
+                return !course || !validCourses.has(course.toUpperCase());
+            }).length;
+            if (hasTraineesToCommit && missingCourseCount > 0) {
+                setSaveMessage(`Select one of the active courses for every trainee before continuing. ${missingCourseCount} trainee${missingCourseCount === 1 ? '' : 's'} still need a valid course.`);
+                return;
+            }
+            if (hasTraineesToCommit && !traineeAllocationCommitted) {
+                setSaveMessage('Commit the allocated trainees to Trainee Profiles before continuing.');
+                return;
+            }
+        }
         if (isSetupTestMode) {
             saveSetupTestWizardDrafts(false);
         }
@@ -4442,6 +4575,7 @@ const InitialSetupWizard: React.FC<{
                         buildRules: buildRulesDraftText,
                         staff: overrides.staffDraft ?? staffDraft,
                         traineesEnabled: (overrides.unitDraft ?? unitDraft).hasTrainees,
+                        traineeCourses: traineeCourseOptionsDraft,
                         trainees: overrides.traineeDraft ?? traineeDraft,
                         trainingRecords: trainingRecordsDraft,
                         unitModules: unitModulesDraft,
@@ -4634,6 +4768,7 @@ const InitialSetupWizard: React.FC<{
                 buildRules: buildRulesDraftText,
                 staff: staffDraft,
                 traineesEnabled: unitDraft.hasTrainees,
+                traineeCourses: traineeCourseOptionsDraft,
                 trainees: traineeDraft,
                 trainingRecords: trainingRecordsDraft,
                 unitModules: unitModulesDraft,
@@ -4658,7 +4793,21 @@ const InitialSetupWizard: React.FC<{
     };
     const commitWizardTraineeProfiles = () => {
         const traineeRows = uploadedTraineeProfileRows.length > 0 ? uploadedTraineeProfileRows : undefined;
-        const traineeCount = (traineeRows || parseWizardTraineeRows(traineeDraft)).filter((row) => (
+        const rowsToCommit = traineeRows || parseWizardTraineeRows(traineeDraft);
+        const validCourses = new Set(parseWizardLineItems(traineeCourseOptionsDraft).map((course) => course.toUpperCase()));
+        const missingCourseCount = rowsToCommit.filter((row) => (
+            row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.course || row.masterLmp || row.startDate
+        )).filter((row) => {
+            const course = String(row.course || '').trim();
+            return !course || !validCourses.has(course.toUpperCase());
+        }).length;
+        if (missingCourseCount > 0) {
+            const message = `Select one of the active courses for every trainee before committing. ${missingCourseCount} trainee${missingCourseCount === 1 ? '' : 's'} still need a valid course.`;
+            setImportConfirmations((current) => ({ ...current, trainees: message }));
+            setSaveMessage(message);
+            return;
+        }
+        const traineeCount = rowsToCommit.filter((row) => (
             row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.course || row.masterLmp || row.startDate
         )).length;
         const nextUnitDraft = { ...unitDraft, hasTrainees: true };
@@ -4666,6 +4815,8 @@ const InitialSetupWizard: React.FC<{
         saveSetupTestWizardDrafts(false, { traineeDraft, traineeRows, unitDraft: nextUnitDraft });
         const message = `Committed ${traineeCount} trainee profile${traineeCount === 1 ? '' : 's'} to the trainee list in this local test app.`;
         setImportConfirmations((current) => ({ ...current, trainees: message }));
+        setTraineeAllocationCommitted(true);
+        setShowMoreTraineesPrompt(true);
         setSaveMessage(message);
     };
     const renderWizardDataEntry = () => {
@@ -5017,6 +5168,37 @@ const InitialSetupWizard: React.FC<{
                                     Commit to Trainee Profiles
                                 </button>
                             </div>
+                            {showMoreTraineesPrompt ? (
+                                <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                    <p className="text-xs font-semibold leading-5 text-blue-900">
+                                        Do you have more trainees to upload for this unit?
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            className={wizardSmallButtonClass}
+                                            onClick={() => {
+                                                setShowMoreTraineesPrompt(false);
+                                                setImportConfirmations((current) => {
+                                                    const next = { ...current };
+                                                    delete next.trainees;
+                                                    return next;
+                                                });
+                                                setSaveMessage('Upload the next trainee file, then allocate the new trainees before committing again.');
+                                            }}
+                                        >
+                                            Upload more trainees
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={wizardPrimaryButtonClass}
+                                            onClick={goToNextWizardStep}
+                                        >
+                                            Continue to next step
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null}
                         </>
                     ) : null}
                 </div>,
@@ -5214,12 +5396,12 @@ const InitialSetupWizard: React.FC<{
                                                     ? template.id === 'staff'
                                                         ? 'Commit uploaded staff again'
                                                         : template.id === 'trainees'
-                                                            ? 'Commit uploaded trainees again'
+                                                            ? 'Load another trainee file'
                                                             : 'Import again'
                                                     : template.id === 'staff'
                                                         ? 'Commit uploaded staff to Staff Profiles'
                                                         : template.id === 'trainees'
-                                                            ? 'Commit uploaded trainees to Trainee Profiles'
+                                                            ? 'Load trainees for allocation'
                                                             : `Import into ${template.id === 'scoring' ? 'scoring matrix' : 'wizard'}`
                                                 }
                                             </button>
