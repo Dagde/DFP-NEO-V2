@@ -11309,7 +11309,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         };
       }).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications);
       setStaffDraft(formatWizardStaffRows(importedRows));
-      setSaveMessage(`Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into Step 14. They will be saved when you press Save setup at the end.`);
+      setSaveMessage(`Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into Step 14. Click Next to sync them into the local test app.`);
       return;
     }
     if (template.id === "trainees") {
@@ -11330,7 +11330,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       }).filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.masterLmp || row.startDate);
       setTraineeDraft(formatWizardTraineeRows(importedRows));
       setUnitDraft((draft) => ({ ...draft, hasTrainees: true }));
-      setSaveMessage(`Imported ${importedRows.length} trainee row${importedRows.length === 1 ? "" : "s"} into the master trainee list. Course allocation is blank until you assign each trainee.`);
+      setSaveMessage(`Imported ${importedRows.length} trainee row${importedRows.length === 1 ? "" : "s"} into the master trainee list. Click Next to sync them into the local test app.`);
       return;
     }
     if (template.id === "scoring") {
@@ -11346,7 +11346,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         grade5: getWizardCellByHeader(result.headers || [], row, "Grade 5")
       })).filter((row) => row.dimension || row.passStandard || row.failStandard);
       setScoringDraft(formatWizardScoringRows(importedRows));
-      setSaveMessage(`Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? "" : "s"} into the wizard. They will be saved when you press Save setup at the end.`);
+      setSaveMessage(`Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? "" : "s"} into the wizard. Click Next to sync it into the local test app.`);
       return;
     }
     setSaveMessage(`${template.label} passed validation. Import for this template step has not been added yet.`);
@@ -11728,6 +11728,12 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       }
     )
   ] });
+  const goToNextWizardStep = () => {
+    if (isSetupTestMode2) {
+      saveSetupTestWizardDrafts(false);
+    }
+    setWizardStep(Math.min(steps.length - 1, currentStep + 1));
+  };
   const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: [
@@ -11742,7 +11748,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-xl border border-slate-300 bg-white/80 p-4 shadow-sm", children: answer }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex flex-wrap items-center justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setWizardStep(Math.max(0, currentStep - 1)), disabled: currentStep === 0, children: "Back" }),
-      saveAction ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: saveAction, children: actionLabel }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: () => setWizardStep(Math.min(steps.length - 1, currentStep + 1)), children: "Next" })
+      saveAction ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: saveAction, children: actionLabel }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: goToNextWizardStep, children: "Next" })
     ] })
   ] }, visibleStep.id);
   const organisationPreviewLevels = [
@@ -11946,7 +11952,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     }) : [];
     return { instructors, trainees };
   };
-  const saveSetupTestWizardDrafts = () => {
+  const saveSetupTestWizardDrafts = (markComplete = true) => {
     if (!onUpdatePlatformConfig) {
       setSaveMessage("This setup test screen is not connected to the platform configuration in this session.");
       return;
@@ -12217,10 +12223,12 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       };
     });
     onSaveSetupTestPersonnel?.(setupPersonnel);
-    if (typeof window !== "undefined") {
+    if (markComplete && typeof window !== "undefined") {
       window.localStorage.setItem(initialSetupWizardStorageKey, String(steps.length - 1));
     }
-    setSaveMessage("Setup saved into this local test app only. The real DFP-NEO app and database were not touched.");
+    setSaveMessage(
+      markComplete ? "Setup saved into this local test app only. The real DFP-NEO app and database were not touched." : "This step has been synced into the local test Settings. The real DFP-NEO app and database were not touched."
+    );
   };
   const saveAllWizardDrafts = () => {
     if (isSetupTestMode2) {
@@ -12684,11 +12692,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       );
     }
     return promptShell(
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: isSetupTestMode2 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        "In this local test app, each step has already synced into Settings as you clicked Next. Press ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Save setup" }),
+        " to mark the wizard complete."
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         "Review the setup below. Nothing from this wizard is written to Settings until you press ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Save setup" }),
         "."
-      ] }),
+      ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 text-sm", children: [
         ["Organisation", `${organisationDraft.name || organisationDraft.code || "Not set"} (${organisationDraft.code || "no code"})`],
         ["Structure", `${fromLines(organisationDraft.level1Options).length} ${organisationDraft.level1Name || "Level 1"}, ${fromLines(organisationDraft.level2Options).length} ${organisationDraft.level2Name || "Level 2"}, ${fromLines(organisationDraft.level3Options).length} ${organisationDraft.level3Name || "Level 3"} / ${organisationPreviewLinks.length} parent links`],
@@ -12726,7 +12738,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         completedMandatory,
         " of ",
         mandatoryChecks.length,
-        " mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. Starting again resets the wizard progress only. Settings are not updated until the final Save setup step."
+        " mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. ",
+        isSetupTestMode2 ? "Each step syncs into the local test Settings when you click Next." : "Settings are not updated until the final Save setup step."
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 grid gap-3 sm:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: resumeWizard, children: [

@@ -3142,7 +3142,7 @@ const InitialSetupWizard: React.FC<{
                 };
             }).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications);
             setStaffDraft(formatWizardStaffRows(importedRows));
-            setSaveMessage(`Imported ${importedRows.length} staff row${importedRows.length === 1 ? '' : 's'} into Step 14. They will be saved when you press Save setup at the end.`);
+            setSaveMessage(`Imported ${importedRows.length} staff row${importedRows.length === 1 ? '' : 's'} into Step 14. Click Next to sync them into the local test app.`);
             return;
         }
         if (template.id === 'trainees') {
@@ -3165,7 +3165,7 @@ const InitialSetupWizard: React.FC<{
             }).filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.masterLmp || row.startDate);
             setTraineeDraft(formatWizardTraineeRows(importedRows));
             setUnitDraft((draft) => ({ ...draft, hasTrainees: true }));
-            setSaveMessage(`Imported ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} into the master trainee list. Course allocation is blank until you assign each trainee.`);
+            setSaveMessage(`Imported ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} into the master trainee list. Click Next to sync them into the local test app.`);
             return;
         }
         if (template.id === 'scoring') {
@@ -3181,7 +3181,7 @@ const InitialSetupWizard: React.FC<{
                 grade5: getWizardCellByHeader(result.headers || [], row, 'Grade 5'),
             })).filter((row) => row.dimension || row.passStandard || row.failStandard);
             setScoringDraft(formatWizardScoringRows(importedRows));
-            setSaveMessage(`Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? '' : 's'} into the wizard. They will be saved when you press Save setup at the end.`);
+            setSaveMessage(`Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? '' : 's'} into the wizard. Click Next to sync it into the local test app.`);
             return;
         }
         setSaveMessage(`${template.label} passed validation. Import for this template step has not been added yet.`);
@@ -3673,6 +3673,12 @@ const InitialSetupWizard: React.FC<{
             />
         </label>
     );
+    const goToNextWizardStep = () => {
+        if (isSetupTestMode) {
+            saveSetupTestWizardDrafts(false);
+        }
+        setWizardStep(Math.min(steps.length - 1, currentStep + 1));
+    };
     const promptShell = (question: React.ReactNode, answer: React.ReactNode, actionLabel = 'Next', saveAction?: () => void) => (
         <div key={visibleStep.id} className="animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm">
             <div className="mb-5">
@@ -3690,7 +3696,7 @@ const InitialSetupWizard: React.FC<{
                         {actionLabel}
                     </button>
                 ) : (
-                    <button type="button" className={wizardPrimaryButtonClass} onClick={() => setWizardStep(Math.min(steps.length - 1, currentStep + 1))}>
+                    <button type="button" className={wizardPrimaryButtonClass} onClick={goToNextWizardStep}>
                         Next
                     </button>
                 )}
@@ -3960,7 +3966,7 @@ const InitialSetupWizard: React.FC<{
         return { instructors, trainees };
     };
 
-    const saveSetupTestWizardDrafts = () => {
+    const saveSetupTestWizardDrafts = (markComplete = true) => {
         if (!onUpdatePlatformConfig) {
             setSaveMessage('This setup test screen is not connected to the platform configuration in this session.');
             return;
@@ -4235,10 +4241,13 @@ const InitialSetupWizard: React.FC<{
             };
         });
         onSaveSetupTestPersonnel?.(setupPersonnel);
-        if (typeof window !== 'undefined') {
+        if (markComplete && typeof window !== 'undefined') {
             window.localStorage.setItem(initialSetupWizardStorageKey, String(steps.length - 1));
         }
-        setSaveMessage('Setup saved into this local test app only. The real DFP-NEO app and database were not touched.');
+        setSaveMessage(markComplete
+            ? 'Setup saved into this local test app only. The real DFP-NEO app and database were not touched.'
+            : 'This step has been synced into the local test Settings. The real DFP-NEO app and database were not touched.'
+        );
     };
 
     const saveAllWizardDrafts = () => {
@@ -4678,7 +4687,12 @@ const InitialSetupWizard: React.FC<{
             );
         }
         return promptShell(
-            <p>Review the setup below. Nothing from this wizard is written to Settings until you press <strong>Save setup</strong>.</p>,
+            <p>
+                {isSetupTestMode
+                    ? <>In this local test app, each step has already synced into Settings as you clicked Next. Press <strong>Save setup</strong> to mark the wizard complete.</>
+                    : <>Review the setup below. Nothing from this wizard is written to Settings until you press <strong>Save setup</strong>.</>
+                }
+            </p>,
             <div className="grid gap-2 text-sm">
                 {[
                     ['Organisation', `${organisationDraft.name || organisationDraft.code || 'Not set'} (${organisationDraft.code || 'no code'})`],
@@ -4718,7 +4732,7 @@ const InitialSetupWizard: React.FC<{
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Initial Setup Wizard</p>
                 <h3 className="mt-1 text-xl font-bold text-slate-950">DFP-NEO is partly configured</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-700">
-                    I found {completedMandatory} of {mandatoryChecks.length} mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. Starting again resets the wizard progress only. Settings are not updated until the final Save setup step.
+                    I found {completedMandatory} of {mandatoryChecks.length} mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. {isSetupTestMode ? 'Each step syncs into the local test Settings when you click Next.' : 'Settings are not updated until the final Save setup step.'}
                 </p>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <button type="button" className={wizardChoiceClass} onClick={resumeWizard}>
