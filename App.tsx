@@ -22723,6 +22723,26 @@ const App: React.FC = () => {
     const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>([]);
     const [syllabusLoading, setSyllabusLoading] = useState<boolean>(false);
     const [syllabusError, setSyllabusError] = useState<string | null>(null);
+    const pushSetupTestLmpDiag = useCallback((stage: string, details: Record<string, any> = {}) => {
+        if (!setupTestProfile) return;
+        const entry = {
+            ts: new Date().toISOString(),
+            stage,
+            setupTestProfile,
+            activeLocation: school,
+            activeUnitCode,
+            details,
+        };
+        try {
+            console.log(`[SETUP-TEST-LMP:APP] ${stage}`, entry);
+            const existing = JSON.parse(localStorage.getItem('dfp_setup_test_lmp_diag') || '[]');
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
+            localStorage.setItem('dfp_setup_test_lmp_diag', JSON.stringify(next));
+            (window as any).neoSetupTestLmpDiag = next;
+        } catch (error) {
+            console.log(`[SETUP-TEST-LMP:APP] ${stage}`, entry, error);
+        }
+    }, [activeUnitCode, school, setupTestProfile]);
     const visibleSyllabusDetails = useMemo(() => {
         const normaliseContextCode = (value?: string | null) => String(value || '').trim().toUpperCase();
         const activeUnit = normaliseContextCode(activeUnitCode);
@@ -22772,6 +22792,39 @@ const App: React.FC = () => {
                 return hasAccess;
             });
     }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded, school]);
+    useEffect(() => {
+        if (!setupTestProfile) return;
+        pushSetupTestLmpDiag('app:visible-syllabus-snapshot', {
+            rawSyllabusItems: syllabusDetails.length,
+            visibleSyllabusItems: visibleSyllabusDetails.length,
+            activeOperationalModel,
+            activeContextUnitCodes,
+            catalogue: accessibleMasterLmpCatalogueForSyllabus.map((entry: any) => ({
+                code: entry.code,
+                name: entry.name,
+                status: entry.status,
+            })),
+            visibleCourses: Array.from(new Set(visibleSyllabusDetails.flatMap((item: any) => item?.courses || []))).filter(Boolean),
+            visibleSample: visibleSyllabusDetails.slice(0, 20).map((item: any) => ({
+                id: item?.id,
+                code: item?.code,
+                title: item?.eventDescription,
+                courses: item?.courses,
+                unit: item?.unit,
+                location: item?.location,
+                lmpType: item?.lmpType,
+                isActive: item?.isActive,
+            })),
+        });
+    }, [
+        accessibleMasterLmpCatalogueForSyllabus,
+        activeContextUnitCodes,
+        activeOperationalModel,
+        pushSetupTestLmpDiag,
+        setupTestProfile,
+        syllabusDetails,
+        visibleSyllabusDetails,
+    ]);
     const trainingPackageTemplatesForActiveModel = useMemo(() => {
         const normaliseContextCode = (value?: string | null) => String(value || '').trim().toUpperCase();
         const activeUnit = normaliseContextCode(activeUnitCode);
@@ -22799,6 +22852,22 @@ const App: React.FC = () => {
             try {
                 if (setupTestProfile) {
                     const setupSyllabus = readSetupTestSyllabus();
+                    pushSetupTestLmpDiag('app:load-setup-syllabus', {
+                        setupSyllabusItems: setupSyllabus.length,
+                        selectedLmpStorage: (() => {
+                            try { return localStorage.getItem('neo_lmp_details_selected_package'); } catch { return null; }
+                        })(),
+                        sample: setupSyllabus.slice(0, 20).map((item: any) => ({
+                            id: item?.id,
+                            code: item?.code,
+                            title: item?.eventDescription,
+                            courses: item?.courses,
+                            unit: item?.unit,
+                            location: item?.location,
+                            lmpType: item?.lmpType,
+                            isActive: item?.isActive,
+                        })),
+                    });
                     setSyllabusDetails(setupSyllabus as SyllabusItemDetail[]);
                     setSyllabusError(null);
                     console.log(`✅ [Syllabus] Loaded ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
@@ -22828,7 +22897,7 @@ const App: React.FC = () => {
             }
         };
         loadSyllabus();
-    }, [setupTestProfile]);
+    }, [pushSetupTestLmpDiag, setupTestProfile]);
 
 // Load data from API on mount — credentials:include sends session cookie automatically
     useEffect(() => {
@@ -35198,6 +35267,22 @@ appliedUpdates.forEach(update => {
         if (!setupTestProfile) return;
         const applySetupTestSyllabus = () => {
             const setupSyllabus = readSetupTestSyllabus();
+            pushSetupTestLmpDiag('app:syllabus-event-received', {
+                setupSyllabusItems: setupSyllabus.length,
+                selectedLmpStorage: (() => {
+                    try { return localStorage.getItem('neo_lmp_details_selected_package'); } catch { return null; }
+                })(),
+                sample: setupSyllabus.slice(0, 20).map((item: any) => ({
+                    id: item?.id,
+                    code: item?.code,
+                    title: item?.eventDescription,
+                    courses: item?.courses,
+                    unit: item?.unit,
+                    location: item?.location,
+                    lmpType: item?.lmpType,
+                    isActive: item?.isActive,
+                })),
+            });
             setSyllabusDetails(setupSyllabus as SyllabusItemDetail[]);
             setSyllabusError(null);
             setSyllabusLoading(false);
@@ -35205,7 +35290,7 @@ appliedUpdates.forEach(update => {
         };
         window.addEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
         return () => window.removeEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
-    }, [setupTestProfile]);
+    }, [pushSetupTestLmpDiag, setupTestProfile]);
 
     // Refresh database data (personnel and trainees) - called when database is modified
     const handleDatabaseDataChanged = useCallback(async () => {

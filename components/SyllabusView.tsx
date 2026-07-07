@@ -1101,6 +1101,30 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const normaliseContextCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
   const activeUnitNormalised = normaliseContextCode(effectiveActiveUnitCode);
   const activeLocationNormalised = normaliseContextCode(activeLocationCode);
+  const pushSetupTestLmpViewDiag = (stage: string, details: Record<string, any> = {}) => {
+      if (typeof window === 'undefined') return;
+      const isSetupTest = new URLSearchParams(window.location.search).has('setupTest');
+      if (!isSetupTest) return;
+      const entry = {
+          ts: new Date().toISOString(),
+          stage,
+          activeLocationCode,
+          activeUnitCode,
+          effectiveActiveUnitCode,
+          activeTab,
+          selectedCourseType,
+          details,
+      };
+      try {
+          console.log(`[SETUP-TEST-LMP:VIEW] ${stage}`, entry);
+          const existing = JSON.parse(window.localStorage.getItem('dfp_setup_test_lmp_diag') || '[]');
+          const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
+          window.localStorage.setItem('dfp_setup_test_lmp_diag', JSON.stringify(next));
+          (window as any).neoSetupTestLmpDiag = next;
+      } catch (error) {
+          console.log(`[SETUP-TEST-LMP:VIEW] ${stage}`, entry, error);
+      }
+  };
   const getPackageSourceKey = (item: SyllabusItemDetail): string => {
       const packageCode = (item.courses || [])[0] || item.code;
       const location = normaliseContextCode(item.location) || 'GLOBAL';
@@ -1222,6 +1246,54 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   }, [activeTab, unitScopedSyllabusDetails, selectedCourseType]);
 
   const selectedCourseEventCount = filteredSyllabusDetails.length;
+  useEffect(() => {
+      pushSetupTestLmpViewDiag('view:lmp-details-snapshot', {
+          rawSyllabusItems: syllabusDetails.length,
+          unitScopedItems: unitScopedSyllabusDetails.length,
+          filteredSyllabusDetails: filteredSyllabusDetails.length,
+          courseLMPs,
+          catalogue: activeMasterLmpCatalogue.map((entry: any) => ({
+              code: entry.code,
+              name: entry.name,
+              status: entry.status,
+          })),
+          courseTitleMap,
+          selectedCourseStorage: (() => {
+              try { return window.localStorage.getItem('neo_lmp_details_selected_package'); } catch { return null; }
+          })(),
+          filteredSample: filteredSyllabusDetails.slice(0, 20).map((item: any) => ({
+              id: item?.id,
+              code: item?.code,
+              title: item?.eventDescription,
+              courses: item?.courses,
+              unit: item?.unit,
+              location: item?.location,
+              lmpType: item?.lmpType,
+              isActive: item?.isActive,
+          })),
+          rawSample: syllabusDetails.slice(0, 20).map((item: any) => ({
+              id: item?.id,
+              code: item?.code,
+              title: item?.eventDescription,
+              courses: item?.courses,
+              unit: item?.unit,
+              location: item?.location,
+              lmpType: item?.lmpType,
+              isActive: item?.isActive,
+          })),
+      });
+  }, [
+      activeMasterLmpCatalogue,
+      activeTab,
+      activeUnitCode,
+      courseLMPs,
+      courseTitleMap,
+      effectiveActiveUnitCode,
+      filteredSyllabusDetails,
+      selectedCourseType,
+      syllabusDetails,
+      unitScopedSyllabusDetails,
+  ]);
   const selectedMasterLmpCatalogueEntry = activeTab === 'master'
     ? activeMasterLmpCatalogue.find(entry => String(entry.code || '').trim().toUpperCase() === String(selectedCourseType || '').trim().toUpperCase()) || null
     : null;

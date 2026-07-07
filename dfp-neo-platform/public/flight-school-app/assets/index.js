@@ -10621,6 +10621,56 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       console.log(`[SETUP-WIZARD-IMPORT] ${stage}`, entry, error);
     }
   };
+  const pushWizardLmpDiag = (stage, details = {}) => {
+    if (!isSetupTestMode$1 || typeof window === "undefined") return;
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      stage,
+      activeUnitCode: unitCode,
+      trainingDraft: {
+        lmpCode: trainingDraft?.lmpCode,
+        lmpName: trainingDraft?.lmpName,
+        accessLocationCode: trainingDraft?.accessLocationCode,
+        accessUnitCode: trainingDraft?.accessUnitCode,
+        accessLevel: trainingDraft?.accessLevel
+      },
+      unitDraft: {
+        code: unitDraft?.code,
+        locationCode: unitDraft?.locationCode,
+        operationalModel: unitDraft?.operationalModel
+      },
+      locationDraft: {
+        code: locationDraft?.code,
+        iataCode: locationDraft?.iataCode,
+        name: locationDraft?.name
+      },
+      stagedCourseLmpItems: uploadedCourseLmpItems.length,
+      details
+    };
+    try {
+      console.log(`[SETUP-TEST-LMP] ${stage}`, entry);
+      const existing = JSON.parse(window.localStorage.getItem("dfp_setup_test_lmp_diag") || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
+      window.localStorage.setItem("dfp_setup_test_lmp_diag", JSON.stringify(next));
+      window.neoSetupTestLmpDiag = next;
+    } catch (error) {
+      console.log(`[SETUP-TEST-LMP] ${stage}`, entry, error);
+    }
+  };
+  reactExports.useEffect(() => {
+    pushWizardLmpDiag("wizard:staged-items-state", {
+      stagedCount: uploadedCourseLmpItems.length,
+      stagedCodes: uploadedCourseLmpItems.slice(0, 20).map((item) => ({
+        id: item.id,
+        code: item.code,
+        title: item.eventDescription,
+        courses: item.courses,
+        unit: item.unit,
+        location: item.location,
+        sortOrder: item.sortOrder
+      }))
+    });
+  }, [uploadedCourseLmpItems]);
   const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
   const currentUnit = (platformConfig?.units || []).find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(unitCode)) || (platformConfig?.units || [])[0];
   const currentLocation = (platformConfig?.locations || []).find((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(currentUnit?.locationCode)) || (platformConfig?.locations || [])[0];
@@ -11502,6 +11552,17 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         dataRows: result.dataRows?.length || 0,
         issues: result.issues || []
       });
+      if (template.id === "courses") {
+        pushWizardLmpDiag("upload:validated", {
+          templateId,
+          fileName: file.name,
+          status: result.status,
+          headers: result.headers || [],
+          dataRows: result.dataRows?.length || 0,
+          issues: result.issues || [],
+          sampleRows: (result.dataRows || []).slice(0, 5)
+        });
+      }
       if (result.status === "valid" && ["staff", "trainees", "courses", "scoring"].includes(template.id)) {
         importWizardTemplateRows(template, result);
       }
@@ -11511,6 +11572,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         fileName: file.name,
         message: error?.message || "Unknown upload error"
       });
+      if (template.id === "courses") {
+        pushWizardLmpDiag("upload:error", {
+          templateId,
+          fileName: file.name,
+          message: error?.message || "Unknown upload error"
+        });
+      }
       setUploadResults((current) => ({
         ...current,
         [templateId]: {
@@ -11680,6 +11748,23 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     }
     if (template.id === "courses") {
       const importedItems = buildWizardCourseUploadItems(result);
+      pushWizardLmpDiag("upload:parsed-items", {
+        headers: result.headers,
+        inputRows: result.dataRows.length,
+        parsedItems: importedItems.length,
+        parsedSample: importedItems.slice(0, 12).map((item) => ({
+          id: item.id,
+          code: item.code,
+          title: item.eventDescription,
+          courses: item.courses,
+          type: item.type,
+          duration: item.duration,
+          unit: item.unit,
+          location: item.location,
+          sortOrder: item.sortOrder
+        })),
+        firstRawRows: result.dataRows.slice(0, 5)
+      });
       if (importedItems.length === 0) {
         const message2 = "The LMP file passed the column check, but I could not find any rows with both an event code and an event title/description.";
         setImportConfirmations((current) => ({ ...current, [template.id]: message2 }));
@@ -11687,6 +11772,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         pushWizardImportDiag("courses:no-importable-events", {
           headers: result.headers,
           dataRows: result.dataRows.length,
+          sampleRows: result.dataRows.slice(0, 5)
+        });
+        pushWizardLmpDiag("upload:no-importable-events", {
+          message: message2,
+          headers: result.headers,
           sampleRows: result.dataRows.slice(0, 5)
         });
         return;
@@ -11708,6 +11798,22 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         importedItems: scopedItems.length,
         lmpCode: cleanLmpCode,
         sample: scopedItems.slice(0, 8).map((item) => ({ code: item.code, title: item.eventDescription, type: item.type, courses: item.courses }))
+      });
+      pushWizardLmpDiag("upload:staged-for-commit", {
+        importedItems: scopedItems.length,
+        cleanLmpCode,
+        cleanLmpName,
+        stagedSample: scopedItems.slice(0, 12).map((item) => ({
+          id: item.id,
+          code: item.code,
+          title: item.eventDescription,
+          courses: item.courses,
+          type: item.type,
+          duration: item.duration,
+          unit: item.unit,
+          location: item.location,
+          sortOrder: item.sortOrder
+        }))
       });
       const message = `Loaded ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} for ${cleanLmpCode}. Click “Commit uploaded LMP events” to add them to the local test app.`;
       setImportConfirmations((current) => ({ ...current, [template.id]: message }));
@@ -12977,13 +13083,25 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     setSaveMessage(message);
   };
   const commitWizardCourseLmpEvents = () => {
+    pushWizardLmpDiag("commit:clicked", {
+      stagedCount: uploadedCourseLmpItems.length,
+      uploadResultStatus: uploadResults.courses?.status,
+      uploadResultRows: uploadResults.courses?.dataRows?.length || 0,
+      uploadResultHeaders: uploadResults.courses?.headers || []
+    });
     if (uploadedCourseLmpItems.length === 0) {
       const result = uploadResults.courses;
       if (result?.status === "valid") {
         importWizardTemplateRows(initialSetupTemplates.find((template) => template.id === "courses"), result);
         setSaveMessage("The uploaded LMP has been loaded. Click Commit uploaded LMP events again to add it to the local test app.");
+        pushWizardLmpDiag("commit:loaded-but-not-committed-yet", {
+          reason: "No staged LMP items existed at commit click; upload rows were loaded into staged state first."
+        });
       } else {
         setSaveMessage("Upload and validate a Courses and LMP events template before committing it.");
+        pushWizardLmpDiag("commit:blocked-no-valid-upload", {
+          uploadResultStatus: result?.status || "missing"
+        });
       }
       return;
     }
@@ -13000,6 +13118,21 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       lmpType: item.lmpType || "Master LMP",
       sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index + 1
     }));
+    pushWizardLmpDiag("commit:prepared-items", {
+      cleanLmpCode,
+      cleanLmpName,
+      scopedItems: scopedItems.length,
+      scopedSample: scopedItems.slice(0, 20).map((item) => ({
+        id: item.id,
+        code: item.code,
+        title: item.eventDescription,
+        courses: item.courses,
+        type: item.type,
+        unit: item.unit,
+        location: item.location,
+        sortOrder: item.sortOrder
+      }))
+    });
     saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} to this local test app.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
       const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
       const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
@@ -13022,6 +13155,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         access: trainingDraft.accessLevel || "Manage",
         status: "ACTIVE"
       };
+      pushWizardLmpDiag("commit:platform-config-updater", {
+        cleanLmpCode,
+        catalogueBefore: catalogue.map((item) => ({ code: item?.code, name: item?.name, status: item?.status })),
+        accessBefore: accessRules.map((rule) => ({ lmpCode: rule?.lmpCode, locationCode: rule?.locationCode, unitCode: rule?.unitCode, access: rule?.access, status: rule?.status })),
+        catalogueExists,
+        accessExists,
+        nextCatalogueEntry,
+        nextAccessRule
+      });
       return {
         ...settings,
         masterLmpCatalogue: catalogueExists ? catalogue.map((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) ? { ...item, ...nextCatalogueEntry } : item) : [...catalogue, nextCatalogueEntry],
@@ -13032,7 +13174,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       const existingItems = readSetupTestSyllabus();
       const nextById = new Map(existingItems.map((item) => [String(item?.id || item?.code || ""), item]));
       scopedItems.forEach((item) => nextById.set(String(item.id || item.code), item));
-      writeSetupTestSyllabus(Array.from(nextById.values()));
+      const nextItems = Array.from(nextById.values());
+      pushWizardLmpDiag("commit:before-write-setup-syllabus", {
+        existingItems: existingItems.length,
+        existingSample: existingItems.slice(0, 20).map((item) => ({ id: item?.id, code: item?.code, courses: item?.courses, unit: item?.unit, location: item?.location })),
+        writingItems: nextItems.length,
+        writingSample: nextItems.slice(0, 20).map((item) => ({ id: item?.id, code: item?.code, courses: item?.courses, unit: item?.unit, location: item?.location }))
+      });
+      writeSetupTestSyllabus(nextItems);
+      const readBackItems = readSetupTestSyllabus();
       try {
         window.localStorage.setItem("neo_lmp_details_active_tab", "master");
         window.localStorage.setItem("neo_lmp_details_selected_package", cleanLmpCode);
@@ -13041,8 +13191,23 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       pushWizardImportDiag("courses:committed-to-setup-syllabus", {
         importedItems: scopedItems.length,
         lmpCode: cleanLmpCode,
-        totalSetupSyllabusItems: Array.from(nextById.values()).length,
+        totalSetupSyllabusItems: nextItems.length,
         sample: scopedItems.slice(0, 8).map((item) => ({ code: item.code, title: item.eventDescription, type: item.type, courses: item.courses }))
+      });
+      pushWizardLmpDiag("commit:after-write-setup-syllabus", {
+        importedItems: scopedItems.length,
+        lmpCode: cleanLmpCode,
+        totalSetupSyllabusItems: nextItems.length,
+        readBackItems: readBackItems.length,
+        readBackMatchingItems: readBackItems.filter((item) => (item?.courses || []).includes(cleanLmpCode)).length,
+        selectedPackageStorage: (() => {
+          try {
+            return window.localStorage.getItem("neo_lmp_details_selected_package");
+          } catch {
+            return null;
+          }
+        })(),
+        readBackSample: readBackItems.slice(0, 20).map((item) => ({ id: item?.id, code: item?.code, courses: item?.courses, unit: item?.unit, location: item?.location }))
       });
     }
     const message = `Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} for ${cleanLmpCode} to this local test app.`;
@@ -49966,6 +50131,30 @@ const SyllabusView = ({
   const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
   const activeUnitNormalised = normaliseContextCode(effectiveActiveUnitCode);
   const activeLocationNormalised = normaliseContextCode(activeLocationCode);
+  const pushSetupTestLmpViewDiag = (stage, details = {}) => {
+    if (typeof window === "undefined") return;
+    const isSetupTest = new URLSearchParams(window.location.search).has("setupTest");
+    if (!isSetupTest) return;
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      stage,
+      activeLocationCode,
+      activeUnitCode,
+      effectiveActiveUnitCode,
+      activeTab,
+      selectedCourseType,
+      details
+    };
+    try {
+      console.log(`[SETUP-TEST-LMP:VIEW] ${stage}`, entry);
+      const existing = JSON.parse(window.localStorage.getItem("dfp_setup_test_lmp_diag") || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
+      window.localStorage.setItem("dfp_setup_test_lmp_diag", JSON.stringify(next));
+      window.neoSetupTestLmpDiag = next;
+    } catch (error) {
+      console.log(`[SETUP-TEST-LMP:VIEW] ${stage}`, entry, error);
+    }
+  };
   const getPackageSourceKey = (item) => {
     const packageCode = (item.courses || [])[0] || item.code;
     const location = normaliseContextCode(item.location) || "GLOBAL";
@@ -50055,6 +50244,58 @@ const SyllabusView = ({
     });
   }, [activeTab, unitScopedSyllabusDetails, selectedCourseType]);
   const selectedCourseEventCount = filteredSyllabusDetails.length;
+  reactExports.useEffect(() => {
+    pushSetupTestLmpViewDiag("view:lmp-details-snapshot", {
+      rawSyllabusItems: syllabusDetails.length,
+      unitScopedItems: unitScopedSyllabusDetails.length,
+      filteredSyllabusDetails: filteredSyllabusDetails.length,
+      courseLMPs,
+      catalogue: activeMasterLmpCatalogue.map((entry) => ({
+        code: entry.code,
+        name: entry.name,
+        status: entry.status
+      })),
+      courseTitleMap,
+      selectedCourseStorage: (() => {
+        try {
+          return window.localStorage.getItem("neo_lmp_details_selected_package");
+        } catch {
+          return null;
+        }
+      })(),
+      filteredSample: filteredSyllabusDetails.slice(0, 20).map((item) => ({
+        id: item?.id,
+        code: item?.code,
+        title: item?.eventDescription,
+        courses: item?.courses,
+        unit: item?.unit,
+        location: item?.location,
+        lmpType: item?.lmpType,
+        isActive: item?.isActive
+      })),
+      rawSample: syllabusDetails.slice(0, 20).map((item) => ({
+        id: item?.id,
+        code: item?.code,
+        title: item?.eventDescription,
+        courses: item?.courses,
+        unit: item?.unit,
+        location: item?.location,
+        lmpType: item?.lmpType,
+        isActive: item?.isActive
+      }))
+    });
+  }, [
+    activeMasterLmpCatalogue,
+    activeTab,
+    activeUnitCode,
+    courseLMPs,
+    courseTitleMap,
+    effectiveActiveUnitCode,
+    filteredSyllabusDetails,
+    selectedCourseType,
+    syllabusDetails,
+    unitScopedSyllabusDetails
+  ]);
   const selectedMasterLmpCatalogueEntry = activeTab === "master" ? activeMasterLmpCatalogue.find((entry) => String(entry.code || "").trim().toUpperCase() === String(selectedCourseType || "").trim().toUpperCase()) || null : null;
   const activeTrainingAssignmentItem = reactExports.useMemo(() => filteredSyllabusDetails[0] || selectedItem || null, [filteredSyllabusDetails, selectedItem]);
   const activeTrainingAssignment = reactExports.useMemo(() => {
@@ -98786,6 +99027,26 @@ const App = () => {
   const [syllabusDetails, setSyllabusDetails] = reactExports.useState([]);
   const [syllabusLoading, setSyllabusLoading] = reactExports.useState(false);
   const [syllabusError, setSyllabusError] = reactExports.useState(null);
+  const pushSetupTestLmpDiag = reactExports.useCallback((stage, details = {}) => {
+    if (!setupTestProfile) return;
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      stage,
+      setupTestProfile,
+      activeLocation: school,
+      activeUnitCode,
+      details
+    };
+    try {
+      console.log(`[SETUP-TEST-LMP:APP] ${stage}`, entry);
+      const existing = JSON.parse(localStorage.getItem("dfp_setup_test_lmp_diag") || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
+      localStorage.setItem("dfp_setup_test_lmp_diag", JSON.stringify(next));
+      window.neoSetupTestLmpDiag = next;
+    } catch (error) {
+      console.log(`[SETUP-TEST-LMP:APP] ${stage}`, entry, error);
+    }
+  }, [activeUnitCode, school, setupTestProfile]);
   const visibleSyllabusDetails = reactExports.useMemo(() => {
     const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
     const activeUnit = normaliseContextCode(activeUnitCode);
@@ -98823,6 +99084,39 @@ const App = () => {
       return hasAccess;
     });
   }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded, school]);
+  reactExports.useEffect(() => {
+    if (!setupTestProfile) return;
+    pushSetupTestLmpDiag("app:visible-syllabus-snapshot", {
+      rawSyllabusItems: syllabusDetails.length,
+      visibleSyllabusItems: visibleSyllabusDetails.length,
+      activeOperationalModel,
+      activeContextUnitCodes,
+      catalogue: accessibleMasterLmpCatalogueForSyllabus.map((entry) => ({
+        code: entry.code,
+        name: entry.name,
+        status: entry.status
+      })),
+      visibleCourses: Array.from(new Set(visibleSyllabusDetails.flatMap((item) => item?.courses || []))).filter(Boolean),
+      visibleSample: visibleSyllabusDetails.slice(0, 20).map((item) => ({
+        id: item?.id,
+        code: item?.code,
+        title: item?.eventDescription,
+        courses: item?.courses,
+        unit: item?.unit,
+        location: item?.location,
+        lmpType: item?.lmpType,
+        isActive: item?.isActive
+      }))
+    });
+  }, [
+    accessibleMasterLmpCatalogueForSyllabus,
+    activeContextUnitCodes,
+    activeOperationalModel,
+    pushSetupTestLmpDiag,
+    setupTestProfile,
+    syllabusDetails,
+    visibleSyllabusDetails
+  ]);
   const trainingPackageTemplatesForActiveModel = reactExports.useMemo(() => {
     const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
     const activeUnit = normaliseContextCode(activeUnitCode);
@@ -98848,6 +99142,26 @@ const App = () => {
       try {
         if (setupTestProfile) {
           const setupSyllabus = readSetupTestSyllabus();
+          pushSetupTestLmpDiag("app:load-setup-syllabus", {
+            setupSyllabusItems: setupSyllabus.length,
+            selectedLmpStorage: (() => {
+              try {
+                return localStorage.getItem("neo_lmp_details_selected_package");
+              } catch {
+                return null;
+              }
+            })(),
+            sample: setupSyllabus.slice(0, 20).map((item) => ({
+              id: item?.id,
+              code: item?.code,
+              title: item?.eventDescription,
+              courses: item?.courses,
+              unit: item?.unit,
+              location: item?.location,
+              lmpType: item?.lmpType,
+              isActive: item?.isActive
+            }))
+          });
           setSyllabusDetails(setupSyllabus);
           setSyllabusError(null);
           console.log(`✅ [Syllabus] Loaded ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
@@ -98877,7 +99191,7 @@ const App = () => {
       }
     };
     loadSyllabus();
-  }, [setupTestProfile]);
+  }, [pushSetupTestLmpDiag, setupTestProfile]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
     try {
@@ -108873,6 +109187,26 @@ ${conflictLines.join("\n")}${moreText}`,
     if (!setupTestProfile) return;
     const applySetupTestSyllabus = () => {
       const setupSyllabus = readSetupTestSyllabus();
+      pushSetupTestLmpDiag("app:syllabus-event-received", {
+        setupSyllabusItems: setupSyllabus.length,
+        selectedLmpStorage: (() => {
+          try {
+            return localStorage.getItem("neo_lmp_details_selected_package");
+          } catch {
+            return null;
+          }
+        })(),
+        sample: setupSyllabus.slice(0, 20).map((item) => ({
+          id: item?.id,
+          code: item?.code,
+          title: item?.eventDescription,
+          courses: item?.courses,
+          unit: item?.unit,
+          location: item?.location,
+          lmpType: item?.lmpType,
+          isActive: item?.isActive
+        }))
+      });
       setSyllabusDetails(setupSyllabus);
       setSyllabusError(null);
       setSyllabusLoading(false);
@@ -108880,7 +109214,7 @@ ${conflictLines.join("\n")}${moreText}`,
     };
     window.addEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
     return () => window.removeEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
-  }, [setupTestProfile]);
+  }, [pushSetupTestLmpDiag, setupTestProfile]);
   const handleDatabaseDataChanged = reactExports.useCallback(async () => {
     console.log("🔄 Refreshing database data after database modification...");
     if (isSetupTestMode()) {
