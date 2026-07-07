@@ -9496,6 +9496,9 @@ const wizardRequiredHeaderAliases = {
   course: ["courseallocation", "allocatedcourse", "courseassigned", "trainingcourse"],
   coursenumber: ["courseno", "coursenum", "courseid", "coursecode"],
   masterlmp: ["masterlmpname", "lmp", "lmpname"],
+  eventcode: ["code", "eventid", "eventnumber"],
+  eventtitle: ["eventdescription", "description", "eventname", "title"],
+  durationminutes: ["duration", "durationmins", "durationmin", "totaldurationminutes", "totaldurationmins"],
   startdate: ["start", "coursestart", "startdt"]
 };
 const wizardHeaderMatchesRequired = (headerKeys, requiredHeader) => {
