@@ -13790,7 +13790,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-3", children: [
               wizardField("Maximum events per day", buildRulesDraft.maxEventsPerDay, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxEventsPerDay: value })), void 0, "Optional"),
               wizardField("Maximum flights per day", buildRulesDraft.maxFlightsPerDay, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxFlightsPerDay: value })), void 0, "Optional"),
-              wizardField("Minimum gap between events minutes", buildRulesDraft.minGapBetweenEventsMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, minGapBetweenEventsMinutes: value })), void 0, "0")
+              wizardField("Min Gap between events minutes", buildRulesDraft.minGapBetweenEventsMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, minGapBetweenEventsMinutes: value })), void 0, "0")
             ] })
           ] })
         ] })

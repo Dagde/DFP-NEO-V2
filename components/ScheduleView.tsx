@@ -5805,7 +5805,7 @@ const InitialSetupWizard: React.FC<{
                         <div className="mt-3 grid gap-3 md:grid-cols-3">
                             {wizardField('Maximum events per day', buildRulesDraft.maxEventsPerDay, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxEventsPerDay: value })), undefined, 'Optional')}
                             {wizardField('Maximum flights per day', buildRulesDraft.maxFlightsPerDay, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxFlightsPerDay: value })), undefined, 'Optional')}
-                            {wizardField('Minimum gap between events minutes', buildRulesDraft.minGapBetweenEventsMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, minGapBetweenEventsMinutes: value })), undefined, '0')}
+                            {wizardField('Min Gap between events minutes', buildRulesDraft.minGapBetweenEventsMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, minGapBetweenEventsMinutes: value })), undefined, '0')}
                         </div>
                     </div>
                 </div>,
