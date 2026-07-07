@@ -3682,6 +3682,7 @@ const InitialSetupWizard: React.FC<{
                     className={`${wizardInputClass} mt-1`}
                     value={value}
                     placeholder={placeholder}
+                    onKeyDownCapture={stopEditableKeyPropagation}
                     onKeyDown={stopEditableKeyPropagation}
                     onChange={(event) => onChange(event.target.value)}
                 />
@@ -3705,6 +3706,7 @@ const InitialSetupWizard: React.FC<{
                     value={value}
                     list={listId}
                     placeholder={placeholder}
+                    onKeyDownCapture={stopEditableKeyPropagation}
                     onKeyDown={stopEditableKeyPropagation}
                     onChange={(event) => onChange(event.target.value)}
                 />
@@ -4292,6 +4294,7 @@ const InitialSetupWizard: React.FC<{
                 value={value}
                 placeholder={placeholder}
                 autoFocus={autoFocus}
+                onKeyDownCapture={stopEditableKeyPropagation}
                 onKeyDown={stopEditableKeyPropagation}
                 onChange={(event) => onChange(event.target.value)}
             />

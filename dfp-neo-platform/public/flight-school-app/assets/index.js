@@ -11903,6 +11903,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         className: `${wizardInputClass} mt-1`,
         value,
         placeholder,
+        onKeyDownCapture: stopEditableKeyPropagation,
         onKeyDown: stopEditableKeyPropagation,
         onChange: (event) => onChange(event.target.value)
       }
@@ -11919,6 +11920,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
           value,
           list: listId,
           placeholder,
+          onKeyDownCapture: stopEditableKeyPropagation,
           onKeyDown: stopEditableKeyPropagation,
           onChange: (event) => onChange(event.target.value)
         }
@@ -12394,6 +12396,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         value,
         placeholder,
         autoFocus,
+        onKeyDownCapture: stopEditableKeyPropagation,
         onKeyDown: stopEditableKeyPropagation,
         onChange: (event) => onChange(event.target.value)
       }
