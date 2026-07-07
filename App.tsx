@@ -23582,6 +23582,21 @@ const App: React.FC = () => {
 
     // Load persisted daily snapshots (last 5 days) + legacy historical data from DB
     useEffect(() => {
+        if (setupTestProfile) {
+            setPublishedSchedules({});
+            setBaselineSchedules({});
+            setSnapshotDates([]);
+            setAlertsDataByDate({});
+            setPt051Assessments(new Map());
+            setPt051PerformanceLoading(false);
+            pushDfpDataDiag('history:setup-test-skipped', {
+                setupTestProfile,
+                reason: 'Setup wizard test mode uses local browser setup records only and must not load real DFP snapshots.',
+                activeLocation: school,
+                activeUnitCode,
+            });
+            return;
+        }
         let cancelled = false;
         const requestedSchool = school;
         const requestedUnit = activeUnitCode;
@@ -23783,10 +23798,18 @@ const App: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [activeUnitCode, school]);
+    }, [activeUnitCode, pushDfpDataDiag, school, setupTestProfile]);
 
     // Load snapshot dates for calendar dropdown
     useEffect(() => {
+        if (setupTestProfile) {
+            setSnapshotDates([]);
+            pushDfpDataDiag('snapshot-dates:setup-test-skipped', {
+                setupTestProfile,
+                reason: 'Setup wizard test mode starts without real DFP snapshot dates.',
+            });
+            return;
+        }
         const loadSnapshotDates = async () => {
             try {
                 const apiBase = getAppApiBase();
@@ -23815,7 +23838,7 @@ const App: React.FC = () => {
             }
         };
         loadSnapshotDates();
-    }, []);
+    }, [pushDfpDataDiag, setupTestProfile]);
 
     const applyDailySnapshot = React.useCallback((
         targetDate: string,
@@ -24110,8 +24133,14 @@ const App: React.FC = () => {
     }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
 
     useEffect(() => {
-        if (isInitialSetupWizardActive) {
+        if (setupTestProfile || isInitialSetupWizardActive) {
             loadingSnapshotDates.current.clear();
+            if (setupTestProfile) {
+                loadedSnapshotDates.current.clear();
+                setPublishedSchedules({});
+                setBaselineSchedules({});
+                setSnapshotDates([]);
+            }
             setDfpSnapshotLoadState(prev => (
                 ['loading', 'retrying', 'cached'].includes(prev.status)
                     ? { status: 'idle', date: '', message: '' }
@@ -24122,7 +24151,7 @@ const App: React.FC = () => {
         }
         if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
         void loadSnapshotForDate(date, { useCache: true });
-    }, [activeUnitCode, date, school, loadSnapshotForDate, isInitialSetupWizardActive]);
+    }, [activeUnitCode, date, school, loadSnapshotForDate, isInitialSetupWizardActive, setupTestProfile]);
 
        // Show commit alert on app mount - DISABLED
        // useEffect(() => {

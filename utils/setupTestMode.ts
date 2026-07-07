@@ -15,13 +15,31 @@ export const resetSetupTestProfile = (profile: string): void => {
   const cleanProfile = String(profile || AIR_MOVEMENTS_TEST_PROFILE).trim() || AIR_MOVEMENTS_TEST_PROFILE;
   const setupPrefix = `dfp_setup_test_${cleanProfile}_`;
   Object.keys(win.localStorage)
-    .filter((key) => key.startsWith(setupPrefix))
+    .filter((key) => (
+      key.startsWith(setupPrefix)
+      || key.startsWith('dfp_snapshot_cache_')
+      || key.startsWith('aircraft-availability-')
+      || key.startsWith('dfp_highest_priority_events_v1')
+    ))
     .forEach((key) => win.localStorage.removeItem(key));
   [
     INITIAL_SETUP_WIZARD_STEP_KEY,
+    'dfp_last_viewed_date',
+    'dfp_build_date',
+    'systemFreezeState',
+    'neoTaskingRequests',
+    'neo_remedial_force_schedule_requests',
+    'lastBuildAnalysis',
+    'neo_build_diag_report',
+    'neo_build_runtime_error_report',
+    'neo_build_timing_report',
+    'neo_tasking_priority_diag',
+    'neo_currency_priority_diag',
     'dfp_setup_test_personnel_diag',
     'dfp_setup_test_lmp_diag',
     'dfp_setup_test_context_diag',
+    'dfp_setup_wizard_import_diag',
+    'neo_dfp_data_diag',
     'neo_lmp_details_active_tab',
     'neo_lmp_details_selected_package',
   ].forEach((key) => win.localStorage.removeItem(key));

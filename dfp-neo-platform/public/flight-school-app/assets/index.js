@@ -1390,12 +1390,25 @@ const resetSetupTestProfile = (profile) => {
   if (!win) return;
   const cleanProfile = String(profile || AIR_MOVEMENTS_TEST_PROFILE).trim() || AIR_MOVEMENTS_TEST_PROFILE;
   const setupPrefix = `dfp_setup_test_${cleanProfile}_`;
-  Object.keys(win.localStorage).filter((key) => key.startsWith(setupPrefix)).forEach((key) => win.localStorage.removeItem(key));
+  Object.keys(win.localStorage).filter((key) => key.startsWith(setupPrefix) || key.startsWith("dfp_snapshot_cache_") || key.startsWith("aircraft-availability-") || key.startsWith("dfp_highest_priority_events_v1")).forEach((key) => win.localStorage.removeItem(key));
   [
     INITIAL_SETUP_WIZARD_STEP_KEY,
+    "dfp_last_viewed_date",
+    "dfp_build_date",
+    "systemFreezeState",
+    "neoTaskingRequests",
+    "neo_remedial_force_schedule_requests",
+    "lastBuildAnalysis",
+    "neo_build_diag_report",
+    "neo_build_runtime_error_report",
+    "neo_build_timing_report",
+    "neo_tasking_priority_diag",
+    "neo_currency_priority_diag",
     "dfp_setup_test_personnel_diag",
     "dfp_setup_test_lmp_diag",
     "dfp_setup_test_context_diag",
+    "dfp_setup_wizard_import_diag",
+    "neo_dfp_data_diag",
     "neo_lmp_details_active_tab",
     "neo_lmp_details_selected_package"
   ].forEach((key) => win.localStorage.removeItem(key));
@@ -99906,6 +99919,21 @@ const App = () => {
     });
   }, [allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, resolveMasterLmpUnitForTrainee, syllabusDetails]);
   reactExports.useEffect(() => {
+    if (setupTestProfile) {
+      setPublishedSchedules({});
+      setBaselineSchedules({});
+      setSnapshotDates([]);
+      setAlertsDataByDate({});
+      setPt051Assessments(/* @__PURE__ */ new Map());
+      setPt051PerformanceLoading(false);
+      pushDfpDataDiag("history:setup-test-skipped", {
+        setupTestProfile,
+        reason: "Setup wizard test mode uses local browser setup records only and must not load real DFP snapshots.",
+        activeLocation: school,
+        activeUnitCode
+      });
+      return;
+    }
     let cancelled = false;
     const requestedSchool = school;
     const requestedUnit = activeUnitCode;
@@ -100076,8 +100104,16 @@ const App = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeUnitCode, school]);
+  }, [activeUnitCode, pushDfpDataDiag, school, setupTestProfile]);
   reactExports.useEffect(() => {
+    if (setupTestProfile) {
+      setSnapshotDates([]);
+      pushDfpDataDiag("snapshot-dates:setup-test-skipped", {
+        setupTestProfile,
+        reason: "Setup wizard test mode starts without real DFP snapshot dates."
+      });
+      return;
+    }
     const loadSnapshotDates = async () => {
       try {
         const apiBase2 = getAppApiBase();
@@ -100103,7 +100139,7 @@ const App = () => {
       }
     };
     loadSnapshotDates();
-  }, []);
+  }, [pushDfpDataDiag, setupTestProfile]);
   const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snapshotUnit, snap2, replace, source) => {
     if (!snap2) return 0;
     const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
@@ -100355,15 +100391,21 @@ const App = () => {
     }
   }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
   reactExports.useEffect(() => {
-    if (isInitialSetupWizardActive) {
+    if (setupTestProfile || isInitialSetupWizardActive) {
       loadingSnapshotDates.current.clear();
+      if (setupTestProfile) {
+        loadedSnapshotDates.current.clear();
+        setPublishedSchedules({});
+        setBaselineSchedules({});
+        setSnapshotDates([]);
+      }
       setDfpSnapshotLoadState((prev) => ["loading", "retrying", "cached"].includes(prev.status) ? { status: "idle", date: "", message: "" } : prev);
       setShowDfpRetrievalNotice(false);
       return;
     }
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     void loadSnapshotForDate(date, { useCache: true });
-  }, [activeUnitCode, date, school, loadSnapshotForDate, isInitialSetupWizardActive]);
+  }, [activeUnitCode, date, school, loadSnapshotForDate, isInitialSetupWizardActive, setupTestProfile]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
     const newUser = instructorsData.find((inst) => inst.name === userName);
