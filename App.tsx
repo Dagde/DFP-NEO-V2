@@ -21661,6 +21661,24 @@ const App: React.FC = () => {
                 });
                 return;
             }
+            if (setupTestProfile && activeUnitCode) {
+                const matchingLocationForActiveUnit = baseSelectableLocationCodes.find((locationCode) => (
+                    String(locationCode || '').trim().toUpperCase() !== String(school || '').trim().toUpperCase()
+                    && getUnitOptionsForLocation(locationCode).some((unit: any) => (
+                        unit.code === activeUnitCode && unit.disabled !== true
+                    ))
+                ));
+                if (matchingLocationForActiveUnit) {
+                    pushContextSelectorDiag('validate:move-location-for-setup-test-unit', {
+                        activeUnitCode,
+                        fromLocation: school,
+                        toLocation: matchingLocationForActiveUnit,
+                        currentOptionCodes: activeLocationUnitOptions.map((unit: any) => unit.code),
+                    });
+                    setSchool(matchingLocationForActiveUnit);
+                    return;
+                }
+            }
             const nextUnitCode = (activeLocationUnitOptions.find(unit => !unit.disabled) || activeLocationUnitOptions[0]).code;
             pushContextSelectorDiag('validate:reset-unit', {
                 fromUnit: activeUnitCode,
@@ -21676,7 +21694,7 @@ const App: React.FC = () => {
                 optionCodes: activeLocationUnitOptions.map((unit: any) => unit.code),
             });
         }
-    }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.fleetSharingEnabled, platformConfigLoaded, pushContextSelectorDiag]);
+    }, [activeLocationUnitOptions, activeUnitCode, baseSelectableLocationCodes, getUnitOptionsForLocation, organisationSettings.fleetSharingEnabled, platformConfigLoaded, pushContextSelectorDiag, school, setupTestProfile]);
 
     useEffect(() => {
         try {

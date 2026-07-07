@@ -5136,13 +5136,20 @@ const InitialSetupWizard: React.FC<{
         }
         const cleanLmpCode = String(trainingDraft.lmpCode || uploadedCourseLmpItems[0]?.courses?.[0] || trainingDraft.lmpName || 'Master LMP').trim();
         const cleanLmpName = String(trainingDraft.lmpName || cleanLmpCode).trim();
+        const cleanAccessUnitCode = String(trainingDraft.accessUnitCode || unitDraft.code || '').trim().toUpperCase();
+        const cleanUnitHomeLocationCode = String(unitDraft.locationCode || '').trim().toUpperCase();
+        const cleanTrainingAccessLocationCode = String(trainingDraft.accessLocationCode || '').trim().toUpperCase();
+        const cleanLocationDraftCode = String(locationDraft.code || '').trim().toUpperCase();
+        const cleanAccessLocationCode = cleanAccessUnitCode && cleanAccessUnitCode === String(unitDraft.code || '').trim().toUpperCase() && cleanUnitHomeLocationCode
+            ? cleanUnitHomeLocationCode
+            : cleanTrainingAccessLocationCode || cleanUnitHomeLocationCode || cleanLocationDraftCode;
         const scopedItems = uploadedCourseLmpItems.map((item, index) => ({
             ...item,
             id: item.id || `setup-lmp-${normaliseUnitSettingsIdentifier(cleanLmpCode).replace(/[^A-Z0-9]+/g, '-')}-${normaliseUnitSettingsIdentifier(item.code).replace(/[^A-Z0-9]+/g, '-')}-${index + 1}`,
             courses: [cleanLmpCode],
             module: item.module || cleanLmpName || cleanLmpCode,
             phase: item.phase || cleanLmpName || cleanLmpCode,
-            location: item.location || locationDraft.code || unitDraft.locationCode || '',
+            location: item.location || cleanAccessLocationCode || '',
             unit: item.unit || unitDraft.code || '',
             lmpType: item.lmpType || 'Master LMP',
             sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index + 1,
@@ -5166,7 +5173,7 @@ const InitialSetupWizard: React.FC<{
             const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
             const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
             const catalogueExists = catalogue.some((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
-            const accessUnitCode = trainingDraft.accessUnitCode || unitDraft.code;
+            const accessUnitCode = cleanAccessUnitCode || unitDraft.code;
             const accessExists = accessRules.some((rule: any) => (
                 normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode)
                 && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(accessUnitCode)
@@ -5181,7 +5188,7 @@ const InitialSetupWizard: React.FC<{
             const nextAccessRule = {
                 id: primaryMasterLmpRule?.id || createWizardRecordId('master-lmp-access'),
                 lmpCode: cleanLmpCode,
-                locationCode: trainingDraft.accessLocationCode || locationDraft.code,
+                locationCode: cleanAccessLocationCode,
                 unitCode: accessUnitCode,
                 operationalModel: trainingDraft.accessModel === 'Any Model' ? null : (trainingDraft.accessModel || null),
                 accessLevel: trainingDraft.accessLevel || 'Manage',
@@ -5217,8 +5224,8 @@ const InitialSetupWizard: React.FC<{
                 const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
                 const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
                 const catalogueExists = catalogue.some((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
-                const accessUnitCode = trainingDraft.accessUnitCode || unitDraft.code;
-                const accessLocationCode = trainingDraft.accessLocationCode || locationDraft.code;
+                const accessUnitCode = cleanAccessUnitCode || unitDraft.code;
+                const accessLocationCode = cleanAccessLocationCode;
                 const accessExists = accessRules.some((rule: any) => (
                     normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode)
                     && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(accessUnitCode)
