@@ -21666,61 +21666,6 @@ const App: React.FC = () => {
         }
     }, [activeUnitCode, platformConfigLoaded, school, settingsLoaded, setupTestProfile]);
 
-    useEffect(() => {
-        if (!setupTestProfile) return;
-        const unitOptionsByLocation = operationalContextOptions.map((option) => ({
-            location: option.location,
-            units: option.units.map((unit: any) => ({
-                code: typeof unit === 'string' ? unit : unit.code,
-                disabled: typeof unit === 'string' ? false : unit.disabled === true,
-                disabledReason: typeof unit === 'string' ? '' : unit.disabledReason || '',
-            })),
-        }));
-        pushSetupTestContextDiag('app:selector-snapshot', {
-            baseSelectableLocationCodes,
-            selectableLocationCodes,
-            operationalContextOptions: unitOptionsByLocation,
-            activeLocationUnitOptions: activeLocationUnitOptions.map((unit: any) => ({
-                code: unit.code,
-                name: unit.name,
-                disabled: unit.disabled === true,
-                disabledReason: unit.disabledReason || '',
-                model: unit.model,
-                memberUnits: unit.memberUnits || [],
-                isSharedFleetContext: unit.isSharedFleetContext === true,
-            })),
-            activeUnitPresent: activeLocationUnitOptions.some((unit: any) => unit.code === activeUnitCode),
-            rawPlatformLocations: (platformConfig?.locations || []).map((location: any) => ({
-                code: location.code,
-                iataCode: location.iataCode,
-                icao: location.icao,
-                name: location.name,
-                status: location.status,
-                aliases: getLocationSelectorAliases(location),
-            })),
-            rawPlatformUnits: (platformConfig?.units || []).map((unit: any) => ({
-                code: unit.code,
-                name: unit.name,
-                locationCode: unit.locationCode,
-                status: unit.status,
-                model: getUnitOperationalModel(unit),
-            })),
-            activeStoredContext: (() => {
-                try { return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY); } catch { return null; }
-            })(),
-        });
-    }, [
-        activeLocationUnitOptions,
-        activeUnitCode,
-        baseSelectableLocationCodes,
-        getLocationSelectorAliases,
-        operationalContextOptions,
-        platformConfig,
-        pushSetupTestContextDiag,
-        selectableLocationCodes,
-        setupTestProfile,
-    ]);
-
     const activeUnitContext = useMemo(
         () => activeLocationUnitOptions.find(unit => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
         [activeLocationUnitOptions, activeUnitCode],
@@ -22530,6 +22475,61 @@ const App: React.FC = () => {
         })).filter(option => option.units.length > 0),
         [getUnitOptionsForLocation, selectableLocationCodes],
     );
+
+    useEffect(() => {
+        if (!setupTestProfile) return;
+        const unitOptionsByLocation = operationalContextOptions.map((option) => ({
+            location: option.location,
+            units: option.units.map((unit: any) => ({
+                code: typeof unit === 'string' ? unit : unit.code,
+                disabled: typeof unit === 'string' ? false : unit.disabled === true,
+                disabledReason: typeof unit === 'string' ? '' : unit.disabledReason || '',
+            })),
+        }));
+        pushSetupTestContextDiag('app:selector-snapshot', {
+            baseSelectableLocationCodes,
+            selectableLocationCodes,
+            operationalContextOptions: unitOptionsByLocation,
+            activeLocationUnitOptions: activeLocationUnitOptions.map((unit: any) => ({
+                code: unit.code,
+                name: unit.name,
+                disabled: unit.disabled === true,
+                disabledReason: unit.disabledReason || '',
+                model: unit.model,
+                memberUnits: unit.memberUnits || [],
+                isSharedFleetContext: unit.isSharedFleetContext === true,
+            })),
+            activeUnitPresent: activeLocationUnitOptions.some((unit: any) => unit.code === activeUnitCode),
+            rawPlatformLocations: (platformConfig?.locations || []).map((location: any) => ({
+                code: location.code,
+                iataCode: location.iataCode,
+                icao: location.icao,
+                name: location.name,
+                status: location.status,
+                aliases: getLocationSelectorAliases(location),
+            })),
+            rawPlatformUnits: (platformConfig?.units || []).map((unit: any) => ({
+                code: unit.code,
+                name: unit.name,
+                locationCode: unit.locationCode,
+                status: unit.status,
+                model: getUnitOperationalModel(unit),
+            })),
+            activeStoredContext: (() => {
+                try { return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY); } catch { return null; }
+            })(),
+        });
+    }, [
+        activeLocationUnitOptions,
+        activeUnitCode,
+        baseSelectableLocationCodes,
+        getLocationSelectorAliases,
+        operationalContextOptions,
+        platformConfig,
+        pushSetupTestContextDiag,
+        selectableLocationCodes,
+        setupTestProfile,
+    ]);
 
     const platformDataScopeQuery = useMemo(() => {
         const scope = hasRuntimePlatformWideAccess
