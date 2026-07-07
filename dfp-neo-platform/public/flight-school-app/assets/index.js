@@ -7174,6 +7174,47 @@ const Header = ({
   const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}`;
   const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
   const hoveredContext = contextOptions.find((option) => option.location === hoveredContextLocation) || contextOptions[0];
+  const pushSetupTestHeaderDiag = (stage, details = {}) => {
+    if (typeof window === "undefined") return;
+    const isSetupTest = new URLSearchParams(window.location.search).has("setupTest");
+    if (!isSetupTest) return;
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      stage,
+      activeLocation,
+      activeUnit,
+      hoveredContextLocation,
+      contextOptions: contextOptions.map((option) => ({
+        location: option.location,
+        units: option.units.map(
+          (unit) => typeof unit === "string" ? { code: unit, disabled: false } : { code: unit.code, disabled: unit.disabled === true, disabledReason: unit.disabledReason || "" }
+        )
+      })),
+      hoveredContext: hoveredContext ? {
+        location: hoveredContext.location,
+        units: hoveredContext.units.map(
+          (unit) => typeof unit === "string" ? { code: unit, disabled: false } : { code: unit.code, disabled: unit.disabled === true, disabledReason: unit.disabledReason || "" }
+        )
+      } : null,
+      details
+    };
+    try {
+      console.log(`[SETUP-TEST-CONTEXT:HEADER] ${stage}`, entry);
+      const existing = JSON.parse(window.localStorage.getItem("dfp_setup_test_context_diag") || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
+      window.localStorage.setItem("dfp_setup_test_context_diag", JSON.stringify(next));
+      window.neoSetupTestContextDiag = next;
+    } catch (error) {
+      console.log(`[SETUP-TEST-CONTEXT:HEADER] ${stage}`, entry, error);
+    }
+  };
+  reactExports.useEffect(() => {
+    pushSetupTestHeaderDiag("header:render-options", {
+      showContextMenu,
+      activeContextLabel,
+      activeContextFontSize
+    });
+  }, [activeContextFontSize, activeContextLabel, activeLocation, activeUnit, contextOptions, hoveredContextLocation, showContextMenu]);
   reactExports.useEffect(() => {
     const handleClickOutside = (event) => {
       if (userButtonRef.current && userButtonRef.current.contains(event.target)) {
@@ -7216,6 +7257,7 @@ const Header = ({
             onClick: () => {
               setHoveredContextLocation(activeLocation);
               setShowContextMenu((prev) => !prev);
+              pushSetupTestHeaderDiag("header:toggle-menu", { nextShowContextMenu: !showContextMenu });
             },
             className: "flex h-8 w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-sm font-semibold text-white shadow-inner hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500",
             title: `${activeContextLabel}${activeModelLabel ? ` | ${activeModelLabel}` : ""}`,
@@ -7241,6 +7283,10 @@ const Header = ({
               type: "button",
               onMouseEnter: () => setHoveredContextLocation(option.location),
               onFocus: () => setHoveredContextLocation(option.location),
+              onClick: () => {
+                setHoveredContextLocation(option.location);
+                pushSetupTestHeaderDiag("header:hover-location-click", { location: option.location });
+              },
               className: `flex h-8 w-full items-center justify-between px-3 text-left text-sm font-semibold ${option.location === hoveredContextLocation ? "bg-sky-700 text-white" : "text-gray-200 hover:bg-gray-700"}`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.location }),
@@ -7262,6 +7308,10 @@ const Header = ({
                 onClick: () => {
                   if (isDisabledUnit) return;
                   if (!hoveredContext?.location) return;
+                  pushSetupTestHeaderDiag("header:select-context", {
+                    selectedLocation: hoveredContext.location,
+                    selectedUnit: unitCode
+                  });
                   onContextChange(hoveredContext.location, unitCode);
                   setShowContextMenu(false);
                 },
@@ -97922,6 +97972,86 @@ const App = () => {
       pushContextSelectorDiag("persist:error", { error: String(error) });
     }
   }, [school, activeUnitCode, pushContextSelectorDiag]);
+  const pushSetupTestContextDiag = reactExports.useCallback((stage, details = {}) => {
+    if (!setupTestProfile) return;
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      stage,
+      setupTestProfile,
+      school,
+      activeUnitCode,
+      platformConfigLoaded,
+      settingsLoaded,
+      details
+    };
+    try {
+      console.log(`[SETUP-TEST-CONTEXT:APP] ${stage}`, entry);
+      const existing = JSON.parse(localStorage.getItem("dfp_setup_test_context_diag") || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
+      localStorage.setItem("dfp_setup_test_context_diag", JSON.stringify(next));
+      window.neoSetupTestContextDiag = next;
+    } catch (error) {
+      console.log(`[SETUP-TEST-CONTEXT:APP] ${stage}`, entry, error);
+    }
+  }, [activeUnitCode, platformConfigLoaded, school, settingsLoaded, setupTestProfile]);
+  reactExports.useEffect(() => {
+    if (!setupTestProfile) return;
+    const unitOptionsByLocation = operationalContextOptions.map((option) => ({
+      location: option.location,
+      units: option.units.map((unit) => ({
+        code: typeof unit === "string" ? unit : unit.code,
+        disabled: typeof unit === "string" ? false : unit.disabled === true,
+        disabledReason: typeof unit === "string" ? "" : unit.disabledReason || ""
+      }))
+    }));
+    pushSetupTestContextDiag("app:selector-snapshot", {
+      baseSelectableLocationCodes,
+      selectableLocationCodes,
+      operationalContextOptions: unitOptionsByLocation,
+      activeLocationUnitOptions: activeLocationUnitOptions.map((unit) => ({
+        code: unit.code,
+        name: unit.name,
+        disabled: unit.disabled === true,
+        disabledReason: unit.disabledReason || "",
+        model: unit.model,
+        memberUnits: unit.memberUnits || [],
+        isSharedFleetContext: unit.isSharedFleetContext === true
+      })),
+      activeUnitPresent: activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode),
+      rawPlatformLocations: (platformConfig?.locations || []).map((location) => ({
+        code: location.code,
+        iataCode: location.iataCode,
+        icao: location.icao,
+        name: location.name,
+        status: location.status,
+        aliases: getLocationSelectorAliases(location)
+      })),
+      rawPlatformUnits: (platformConfig?.units || []).map((unit) => ({
+        code: unit.code,
+        name: unit.name,
+        locationCode: unit.locationCode,
+        status: unit.status,
+        model: getUnitOperationalModel(unit)
+      })),
+      activeStoredContext: (() => {
+        try {
+          return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
+        } catch {
+          return null;
+        }
+      })()
+    });
+  }, [
+    activeLocationUnitOptions,
+    activeUnitCode,
+    baseSelectableLocationCodes,
+    getLocationSelectorAliases,
+    operationalContextOptions,
+    platformConfig,
+    pushSetupTestContextDiag,
+    selectableLocationCodes,
+    setupTestProfile
+  ]);
   const activeUnitContext = reactExports.useMemo(
     () => activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
     [activeLocationUnitOptions, activeUnitCode]

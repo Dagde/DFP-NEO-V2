@@ -21643,6 +21643,84 @@ const App: React.FC = () => {
         }
     }, [school, activeUnitCode, pushContextSelectorDiag]);
 
+    const pushSetupTestContextDiag = useCallback((stage: string, details: Record<string, any> = {}) => {
+        if (!setupTestProfile) return;
+        const entry = {
+            ts: new Date().toISOString(),
+            stage,
+            setupTestProfile,
+            school,
+            activeUnitCode,
+            platformConfigLoaded,
+            settingsLoaded,
+            details,
+        };
+        try {
+            console.log(`[SETUP-TEST-CONTEXT:APP] ${stage}`, entry);
+            const existing = JSON.parse(localStorage.getItem('dfp_setup_test_context_diag') || '[]');
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
+            localStorage.setItem('dfp_setup_test_context_diag', JSON.stringify(next));
+            (window as any).neoSetupTestContextDiag = next;
+        } catch (error) {
+            console.log(`[SETUP-TEST-CONTEXT:APP] ${stage}`, entry, error);
+        }
+    }, [activeUnitCode, platformConfigLoaded, school, settingsLoaded, setupTestProfile]);
+
+    useEffect(() => {
+        if (!setupTestProfile) return;
+        const unitOptionsByLocation = operationalContextOptions.map((option) => ({
+            location: option.location,
+            units: option.units.map((unit: any) => ({
+                code: typeof unit === 'string' ? unit : unit.code,
+                disabled: typeof unit === 'string' ? false : unit.disabled === true,
+                disabledReason: typeof unit === 'string' ? '' : unit.disabledReason || '',
+            })),
+        }));
+        pushSetupTestContextDiag('app:selector-snapshot', {
+            baseSelectableLocationCodes,
+            selectableLocationCodes,
+            operationalContextOptions: unitOptionsByLocation,
+            activeLocationUnitOptions: activeLocationUnitOptions.map((unit: any) => ({
+                code: unit.code,
+                name: unit.name,
+                disabled: unit.disabled === true,
+                disabledReason: unit.disabledReason || '',
+                model: unit.model,
+                memberUnits: unit.memberUnits || [],
+                isSharedFleetContext: unit.isSharedFleetContext === true,
+            })),
+            activeUnitPresent: activeLocationUnitOptions.some((unit: any) => unit.code === activeUnitCode),
+            rawPlatformLocations: (platformConfig?.locations || []).map((location: any) => ({
+                code: location.code,
+                iataCode: location.iataCode,
+                icao: location.icao,
+                name: location.name,
+                status: location.status,
+                aliases: getLocationSelectorAliases(location),
+            })),
+            rawPlatformUnits: (platformConfig?.units || []).map((unit: any) => ({
+                code: unit.code,
+                name: unit.name,
+                locationCode: unit.locationCode,
+                status: unit.status,
+                model: getUnitOperationalModel(unit),
+            })),
+            activeStoredContext: (() => {
+                try { return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY); } catch { return null; }
+            })(),
+        });
+    }, [
+        activeLocationUnitOptions,
+        activeUnitCode,
+        baseSelectableLocationCodes,
+        getLocationSelectorAliases,
+        operationalContextOptions,
+        platformConfig,
+        pushSetupTestContextDiag,
+        selectableLocationCodes,
+        setupTestProfile,
+    ]);
+
     const activeUnitContext = useMemo(
         () => activeLocationUnitOptions.find(unit => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
         [activeLocationUnitOptions, activeUnitCode],
