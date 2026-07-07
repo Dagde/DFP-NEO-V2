@@ -1381,6 +1381,7 @@ const SETUP_TEST_RESET_QUERY_PARAM = "resetSetupTest";
 const AIR_MOVEMENTS_TEST_PROFILE = "air-movements";
 const SETUP_TEST_PLATFORM_EVENT = "dfp-setup-test-platform-config-updated";
 const SETUP_TEST_PERSONNEL_EVENT = "dfp-setup-test-personnel-updated";
+const SETUP_TEST_SYLLABUS_EVENT = "dfp-setup-test-syllabus-updated";
 const INITIAL_SETUP_WIZARD_STEP_KEY = "dfp-initial-setup-wizard-step";
 const safeWindow$1 = () => typeof window === "undefined" ? null : window;
 const getSetupTestProfile = () => {
@@ -1391,7 +1392,7 @@ const getSetupTestProfile = () => {
   const cleanUrlProfile = String(urlProfile || "").trim();
   if (cleanUrlProfile) {
     if (params.get(SETUP_TEST_RESET_QUERY_PARAM) === "1") {
-      ["platform_config", "settings", "currencies", "personnel"].forEach((kind) => {
+      ["platform_config", "settings", "currencies", "personnel", "syllabus"].forEach((kind) => {
         win.localStorage.removeItem(`dfp_setup_test_${cleanUrlProfile}_${kind}`);
       });
       win.localStorage.removeItem(INITIAL_SETUP_WIZARD_STEP_KEY);
@@ -1490,6 +1491,24 @@ const writeSetupTestPersonnel = (instructors, trainees) => {
   };
   win.localStorage.setItem(getSetupTestStorageKey("personnel"), JSON.stringify(nextPersonnel));
   win.dispatchEvent(new CustomEvent(SETUP_TEST_PERSONNEL_EVENT, { detail: nextPersonnel }));
+};
+const readSetupTestSyllabus = () => {
+  const win = safeWindow$1();
+  if (!win) return [];
+  try {
+    const stored = win.localStorage.getItem(getSetupTestStorageKey("syllabus"));
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+const writeSetupTestSyllabus = (syllabus) => {
+  const win = safeWindow$1();
+  if (!win) return;
+  const nextSyllabus = Array.isArray(syllabus) ? syllabus : [];
+  win.localStorage.setItem(getSetupTestStorageKey("syllabus"), JSON.stringify(nextSyllabus));
+  win.dispatchEvent(new CustomEvent(SETUP_TEST_SYLLABUS_EVENT, { detail: { syllabus: nextSyllabus } }));
 };
 const EXTERNAL_DATA_CONTROLS_STORAGE_KEY = "neo_external_data_controls";
 const EXTERNAL_DATA_CONTROLS_EVENT = "neo-external-data-controls-changed";
@@ -10518,7 +10537,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     ] })
   ] });
 };
-const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel }) => {
+const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
   const [mode, setMode] = reactExports.useState("detect");
   const [wizardStep, setWizardStep] = reactExports.useState(() => {
     if (typeof window === "undefined") return 0;
@@ -10534,7 +10553,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
   const fileInputRef = reactExports.useRef(null);
   const lastSetupTestPersonnelSnapshotRef = reactExports.useRef("");
   const pushWizardImportDiag = (stage, details = {}) => {
-    if (!isSetupTestMode2 || typeof window === "undefined") return;
+    if (!isSetupTestMode$1 || typeof window === "undefined") return;
     const entry = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       stage,
@@ -11432,7 +11451,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         dataRows: result.dataRows?.length || 0,
         issues: result.issues || []
       });
-      if (result.status === "valid" && ["staff", "trainees", "scoring"].includes(template.id)) {
+      if (result.status === "valid" && ["staff", "trainees", "courses", "scoring"].includes(template.id)) {
         importWizardTemplateRows(template, result);
       }
     } catch (error) {
@@ -11451,6 +11470,64 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         }
       }));
     }
+  };
+  const parseWizardTemplateList = (value) => String(value || "").split(/[;,]/).map((item) => item.trim()).filter(Boolean);
+  const parseWizardTemplateNumber = (value, fallback = 0) => {
+    const parsed = Number(String(value || "").replace(/[^0-9.-]/g, ""));
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+  const normaliseWizardTemplateEventType = (value) => {
+    const clean = String(value || "").trim().toLowerCase();
+    if (clean.includes("ftd") || clean.includes("sim")) return "FTD";
+    if (clean.includes("academic")) return "Academics";
+    if (clean.includes("ground")) return "Ground School";
+    return "Flight";
+  };
+  const buildWizardCourseUploadItems = (result) => {
+    const headers = result.headers || [];
+    const defaultMasterLmp = String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim();
+    return (result.dataRows || []).map((row, index) => {
+      const code = getWizardCellByHeader(headers, row, "Event Code");
+      const title = getWizardCellByHeader(headers, row, "Event Title") || code;
+      const masterLmp = getWizardCellByHeader(headers, row, "Master LMP") || defaultMasterLmp || "Master LMP";
+      const courses = parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Courses", "Course", "Package"])).filter(Boolean);
+      const itemCourses = courses.length > 0 ? courses : [masterLmp];
+      const eventType = normaliseWizardTemplateEventType(getWizardCellByHeader(headers, row, "Type"));
+      const durationValue = getWizardCellByHeader(headers, row, "Duration Minutes");
+      const duration = parseWizardTemplateNumber(durationValue, 0);
+      return {
+        id: `setup-lmp-${normaliseUnitSettingsIdentifier(masterLmp).replace(/[^A-Z0-9]+/g, "-")}-${normaliseUnitSettingsIdentifier(code).replace(/[^A-Z0-9]+/g, "-")}-${index + 1}`,
+        code,
+        phase: getWizardCellByHeader(headers, row, "Phase") || masterLmp,
+        module: getWizardCellByHeader(headers, row, "Module") || masterLmp,
+        dayNight: getWizardCellByAnyHeader(headers, row, ["Day Night", "Day/Night"]) || "Day",
+        eventDescription: title,
+        prerequisites: parseWizardTemplateList(getWizardCellByHeader(headers, row, "Prerequisites")),
+        prerequisitesGround: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Prerequisites Ground", "Ground Prerequisites"])),
+        prerequisitesFlying: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Prerequisites Flying", "Flying Prerequisites"])),
+        eventDetailsCommon: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Event Details Common", "Common Details"])),
+        eventDetailsSortie: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Event Details Sortie", "Sortie Details", "Event Title"])),
+        totalEventHours: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Total Event Hours", "Total Hours"]), duration),
+        flightOrSimHours: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Flight Or Sim Hours", "Flight/Sim Hours", "Flight Sim Hours"]), eventType === "Flight" || eventType === "FTD" ? duration : 0),
+        duration,
+        preFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Pre Flight Time", "Pre Flight Minutes"]), 0),
+        postFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Post Flight Time", "Post Flight Minutes"]), 0),
+        type: eventType,
+        sortieType: getWizardCellByAnyHeader(headers, row, ["Sortie Type", "Dual/Solo"]) || void 0,
+        twrDiReqd: getWizardCellByAnyHeader(headers, row, ["Twr Di Reqd", "TWR DI Required"]) || "NO",
+        cctOnly: getWizardCellByAnyHeader(headers, row, ["Cct Only", "CCT Only"]) || "NO",
+        methodOfDelivery: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Method Of Delivery", "Delivery Method"])),
+        methodOfAssessment: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Method Of Assessment", "Assessment Method"])),
+        resourcesPhysical: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Resources Physical", "Aircraft Type", "Resource"])),
+        resourcesHuman: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Resources Human", "Crew Required"])),
+        location: getWizardCellByHeader(headers, row, "Location") || locationDraft.code || unitDraft.locationCode || "",
+        unit: getWizardCellByHeader(headers, row, "Unit") || unitDraft.code || "",
+        courses: itemCourses,
+        lmpType: getWizardCellByAnyHeader(headers, row, ["Lmp Type", "LMP Type"]) || "Master LMP",
+        sortOrder: index + 1,
+        notes: getWizardCellByHeader(headers, row, "Notes")
+      };
+    }).filter((item) => item.code && item.eventDescription);
   };
   const importWizardTemplateRows = (template, result) => {
     if (!result || result.status !== "valid" || !result.headers || !result.dataRows) return;
@@ -11492,10 +11569,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         sample: importedRows.slice(0, 8),
         draftLength: nextStaffDraft.length
       });
-      if (isSetupTestMode2) {
+      if (isSetupTestMode$1) {
         saveSetupTestWizardDrafts(false, { staffDraft: nextStaffDraft, staffRows: importedRows });
       }
-      const message = isSetupTestMode2 ? `Committed ${importedRows.length} uploaded staff profile${importedRows.length === 1 ? "" : "s"} to Staff Profiles in this local test app.` : `Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into the wizard staff list.`;
+      const message = isSetupTestMode$1 ? `Committed ${importedRows.length} uploaded staff profile${importedRows.length === 1 ? "" : "s"} to Staff Profiles in this local test app.` : `Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into the wizard staff list.`;
       setImportConfirmations((current) => ({ ...current, [template.id]: message }));
       setSaveMessage(message);
       return;
@@ -11546,6 +11623,63 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       setShowMoreTraineesPrompt(false);
       setUnitDraft((draft) => ({ ...draft, hasTrainees: true }));
       const message = `Loaded ${importedRows.length} trainee row${importedRows.length === 1 ? "" : "s"} for course allocation. Select a course for every trainee, then commit them to Trainee Profiles.`;
+      setImportConfirmations((current) => ({ ...current, [template.id]: message }));
+      setSaveMessage(message);
+      return;
+    }
+    if (template.id === "courses") {
+      const importedItems = buildWizardCourseUploadItems(result);
+      const uploadedMasterLmp = importedItems[0]?.courses?.[0] || trainingDraft.lmpCode || trainingDraft.lmpName || "Master LMP";
+      const cleanLmpCode = String(trainingDraft.lmpCode || uploadedMasterLmp).trim();
+      const cleanLmpName = String(trainingDraft.lmpName || uploadedMasterLmp).trim();
+      const scopedItems = importedItems.map((item) => ({
+        ...item,
+        courses: [cleanLmpCode]
+      }));
+      setTrainingDraft((draft) => ({
+        ...draft,
+        lmpCode: cleanLmpCode,
+        lmpName: cleanLmpName
+      }));
+      saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} to this local test app.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+        const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+        const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+        const catalogueExists = catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
+        const accessExists = accessRules.some((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(trainingDraft.accessUnitCode || unitDraft.code));
+        const nextCatalogueEntry = {
+          id: primaryMasterLmp?.id || createWizardRecordId("master-lmp-catalogue"),
+          code: cleanLmpCode,
+          name: cleanLmpName || cleanLmpCode,
+          description: trainingDraft.description,
+          status: trainingDraft.status || "ACTIVE"
+        };
+        const nextAccessRule = {
+          id: primaryMasterLmpRule?.id || createWizardRecordId("master-lmp-access"),
+          lmpCode: cleanLmpCode,
+          locationCode: trainingDraft.accessLocationCode || locationDraft.code,
+          unitCode: trainingDraft.accessUnitCode || unitDraft.code,
+          model: trainingDraft.accessModel || "Any Model",
+          access: trainingDraft.accessLevel || "Manage",
+          status: "ACTIVE"
+        };
+        return {
+          ...settings,
+          masterLmpCatalogue: catalogueExists ? catalogue.map((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) ? { ...item, ...nextCatalogueEntry } : item) : [...catalogue, nextCatalogueEntry],
+          masterLmpAccess: accessExists ? accessRules.map((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(trainingDraft.accessUnitCode || unitDraft.code) ? { ...rule, ...nextAccessRule } : rule) : [...accessRules, nextAccessRule]
+        };
+      }));
+      if (isSetupTestMode$1 || isSetupTestMode()) {
+        const existingItems = readSetupTestSyllabus();
+        const nextById = new Map(existingItems.map((item) => [String(item?.id || item?.code || ""), item]));
+        scopedItems.forEach((item) => nextById.set(String(item.id || item.code), item));
+        writeSetupTestSyllabus(Array.from(nextById.values()));
+        pushWizardImportDiag("courses:committed-to-setup-syllabus", {
+          importedItems: scopedItems.length,
+          lmpCode: cleanLmpCode,
+          sample: scopedItems.slice(0, 8).map((item) => ({ code: item.code, title: item.eventDescription, type: item.type, courses: item.courses }))
+        });
+      }
+      const message = `Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} to this local test app.`;
       setImportConfirmations((current) => ({ ...current, [template.id]: message }));
       setSaveMessage(message);
       return;
@@ -12114,7 +12248,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         return;
       }
     }
-    if (isSetupTestMode2) {
+    if (isSetupTestMode$1) {
       saveSetupTestWizardDrafts(false);
     }
     setWizardStep(Math.min(steps.length - 1, currentStep + 1));
@@ -12689,7 +12823,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     );
   };
   const saveAllWizardDrafts = () => {
-    if (isSetupTestMode2) {
+    if (isSetupTestMode$1) {
       saveSetupTestWizardDrafts();
       return;
     }
@@ -13229,7 +13363,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose an existing LMP if it exists, or enter the first LMP to build. This does not change the scheduler logic; it only defines the training stream the unit can use." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Master LMP code", trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp) => String(lmp.code || lmp.name || "")).filter(Boolean), "C-17A Conversion"),
+          wizardDataListField("Master LMP code", trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp) => String(lmp.code || lmp.name || "")).filter(Boolean), "C-17A Conversion", "master-lmp-code"),
           wizardField("Master LMP name", trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), void 0, "C-17A Conversion"),
           wizardTextArea("Description", trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), "Initial conversion training stream")
         ] })
@@ -13290,7 +13424,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       );
     }
     return promptShell(
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: isSetupTestMode2 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: isSetupTestMode$1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         "In this local test app, each step has already synced into Settings as you clicked Next. Press ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Save setup" }),
         " to mark the wizard complete."
@@ -13337,7 +13471,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         " of ",
         mandatoryChecks.length,
         " mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. ",
-        isSetupTestMode2 ? "Each step syncs into the local test Settings when you click Next." : "Settings are not updated until the final Save setup step."
+        isSetupTestMode$1 ? "Each step syncs into the local test Settings when you click Next." : "Settings are not updated until the final Save setup step."
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 grid gap-3 sm:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: resumeWizard, children: [
@@ -13414,7 +13548,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     }) })
   ] });
   const placeTemplatesBelow = visibleStep.id === "staff" || visibleStep.id === "trainee-upload" || visibleStep.id === "scoring";
-  const renderTemporaryStepJump = () => isSetupTestMode2 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-slate-900 shadow-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
+  const renderTemporaryStepJump = () => isSetupTestMode$1 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-slate-900 shadow-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[210px]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.18em] text-amber-700", children: "Temporary test control" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-slate-700", children: "Jump to a setup wizard step while testing." })
@@ -98491,6 +98625,13 @@ const App = () => {
       setSyllabusLoading(true);
       setSyllabusError(null);
       try {
+        if (setupTestProfile) {
+          const setupSyllabus = readSetupTestSyllabus();
+          setSyllabusDetails(setupSyllabus);
+          setSyllabusError(null);
+          console.log(`✅ [Syllabus] Loaded ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
+          return;
+        }
         const result = await loadSyllabusFromDB();
         if (result.syllabus.length > 0) {
           setSyllabusDetails(result.syllabus);
@@ -98515,7 +98656,7 @@ const App = () => {
       }
     };
     loadSyllabus();
-  }, []);
+  }, [setupTestProfile]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
     try {
@@ -108507,6 +108648,18 @@ ${conflictLines.join("\n")}${moreText}`,
     window.addEventListener(SETUP_TEST_PERSONNEL_EVENT, applySetupTestPersonnel);
     return () => window.removeEventListener(SETUP_TEST_PERSONNEL_EVENT, applySetupTestPersonnel);
   }, [pushSetupTestPersonnelDiag, setupTestProfile]);
+  reactExports.useEffect(() => {
+    if (!setupTestProfile) return;
+    const applySetupTestSyllabus = () => {
+      const setupSyllabus = readSetupTestSyllabus();
+      setSyllabusDetails(setupSyllabus);
+      setSyllabusError(null);
+      setSyllabusLoading(false);
+      console.log(`✅ [Syllabus] Applied ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
+    };
+    window.addEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
+    return () => window.removeEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
+  }, [setupTestProfile]);
   const handleDatabaseDataChanged = reactExports.useCallback(async () => {
     console.log("🔄 Refreshing database data after database modification...");
     if (isSetupTestMode()) {

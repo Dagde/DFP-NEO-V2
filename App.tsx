@@ -82,7 +82,9 @@ import {
     getSetupTestProfile,
     isSetupTestMode,
     readSetupTestPersonnel,
+    readSetupTestSyllabus,
     SETUP_TEST_PERSONNEL_EVENT,
+    SETUP_TEST_SYLLABUS_EVENT,
     writeSetupTestPersonnel,
     writeSetupTestPlatformConfig,
 } from './utils/setupTestMode';
@@ -22678,6 +22680,13 @@ const App: React.FC = () => {
             setSyllabusLoading(true);
             setSyllabusError(null);
             try {
+                if (setupTestProfile) {
+                    const setupSyllabus = readSetupTestSyllabus();
+                    setSyllabusDetails(setupSyllabus as SyllabusItemDetail[]);
+                    setSyllabusError(null);
+                    console.log(`✅ [Syllabus] Loaded ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
+                    return;
+                }
                 const result = await loadSyllabusFromDB();
                 if (result.syllabus.length > 0) {
                     setSyllabusDetails(result.syllabus);
@@ -22702,7 +22711,7 @@ const App: React.FC = () => {
             }
         };
         loadSyllabus();
-    }, []);
+    }, [setupTestProfile]);
 
 // Load data from API on mount — credentials:include sends session cookie automatically
     useEffect(() => {
@@ -35067,6 +35076,19 @@ appliedUpdates.forEach(update => {
         window.addEventListener(SETUP_TEST_PERSONNEL_EVENT, applySetupTestPersonnel);
         return () => window.removeEventListener(SETUP_TEST_PERSONNEL_EVENT, applySetupTestPersonnel);
     }, [pushSetupTestPersonnelDiag, setupTestProfile]);
+
+    useEffect(() => {
+        if (!setupTestProfile) return;
+        const applySetupTestSyllabus = () => {
+            const setupSyllabus = readSetupTestSyllabus();
+            setSyllabusDetails(setupSyllabus as SyllabusItemDetail[]);
+            setSyllabusError(null);
+            setSyllabusLoading(false);
+            console.log(`✅ [Syllabus] Applied ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
+        };
+        window.addEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
+        return () => window.removeEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
+    }, [setupTestProfile]);
 
     // Refresh database data (personnel and trainees) - called when database is modified
     const handleDatabaseDataChanged = useCallback(async () => {

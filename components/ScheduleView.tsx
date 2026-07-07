@@ -20,6 +20,7 @@ import { normaliseTrainingReportTemplate, normaliseTrainingReportTerminology } f
 import { normaliseUnitCallsignSettings } from '../utils/unitCallsigns';
 import { getEffectiveDispatchStaggerMinutes, type DispatchStaggerSettings } from '../utils/dispatchStagger';
 import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from '../utils/sunTimes';
+import { isSetupTestMode as isSetupTestBrowserMode, readSetupTestSyllabus, writeSetupTestSyllabus } from '../utils/setupTestMode';
    
 declare const XLSX: any;
 
@@ -3278,7 +3279,7 @@ const InitialSetupWizard: React.FC<{
                 dataRows: result.dataRows?.length || 0,
                 issues: result.issues || [],
             });
-            if (result.status === 'valid' && ['staff', 'trainees', 'scoring'].includes(template.id)) {
+            if (result.status === 'valid' && ['staff', 'trainees', 'courses', 'scoring'].includes(template.id)) {
                 importWizardTemplateRows(template, result);
             }
         } catch (error: any) {
@@ -3297,6 +3298,72 @@ const InitialSetupWizard: React.FC<{
                 },
             }));
         }
+    };
+
+    const parseWizardTemplateList = (value: string): string[] => String(value || '')
+        .split(/[;,]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+    const parseWizardTemplateNumber = (value: string, fallback = 0): number => {
+        const parsed = Number(String(value || '').replace(/[^0-9.-]/g, ''));
+        return Number.isFinite(parsed) ? parsed : fallback;
+    };
+
+    const normaliseWizardTemplateEventType = (value: string): SyllabusItemDetail['type'] => {
+        const clean = String(value || '').trim().toLowerCase();
+        if (clean.includes('ftd') || clean.includes('sim')) return 'FTD';
+        if (clean.includes('academic')) return 'Academics';
+        if (clean.includes('ground')) return 'Ground School';
+        return 'Flight';
+    };
+
+    const buildWizardCourseUploadItems = (result: InitialSetupWizardUploadResult): SyllabusItemDetail[] => {
+        const headers = result.headers || [];
+        const defaultMasterLmp = String(trainingDraft.lmpCode || trainingDraft.lmpName || '').trim();
+        return (result.dataRows || []).map((row, index) => {
+            const code = getWizardCellByHeader(headers, row, 'Event Code');
+            const title = getWizardCellByHeader(headers, row, 'Event Title') || code;
+            const masterLmp = getWizardCellByHeader(headers, row, 'Master LMP') || defaultMasterLmp || 'Master LMP';
+            const courses = parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Courses', 'Course', 'Package']))
+                .filter(Boolean);
+            const itemCourses = courses.length > 0 ? courses : [masterLmp];
+            const eventType = normaliseWizardTemplateEventType(getWizardCellByHeader(headers, row, 'Type'));
+            const durationValue = getWizardCellByHeader(headers, row, 'Duration Minutes');
+            const duration = parseWizardTemplateNumber(durationValue, 0);
+            return {
+                id: `setup-lmp-${normaliseUnitSettingsIdentifier(masterLmp).replace(/[^A-Z0-9]+/g, '-')}-${normaliseUnitSettingsIdentifier(code).replace(/[^A-Z0-9]+/g, '-')}-${index + 1}`,
+                code,
+                phase: getWizardCellByHeader(headers, row, 'Phase') || masterLmp,
+                module: getWizardCellByHeader(headers, row, 'Module') || masterLmp,
+                dayNight: (getWizardCellByAnyHeader(headers, row, ['Day Night', 'Day/Night']) || 'Day') as SyllabusItemDetail['dayNight'],
+                eventDescription: title,
+                prerequisites: parseWizardTemplateList(getWizardCellByHeader(headers, row, 'Prerequisites')),
+                prerequisitesGround: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Prerequisites Ground', 'Ground Prerequisites'])),
+                prerequisitesFlying: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Prerequisites Flying', 'Flying Prerequisites'])),
+                eventDetailsCommon: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Event Details Common', 'Common Details'])),
+                eventDetailsSortie: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Event Details Sortie', 'Sortie Details', 'Event Title'])),
+                totalEventHours: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Total Event Hours', 'Total Hours']), duration),
+                flightOrSimHours: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Flight Or Sim Hours', 'Flight/Sim Hours', 'Flight Sim Hours']), eventType === 'Flight' || eventType === 'FTD' ? duration : 0),
+                duration,
+                preFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Pre Flight Time', 'Pre Flight Minutes']), 0),
+                postFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Post Flight Time', 'Post Flight Minutes']), 0),
+                type: eventType,
+                sortieType: (getWizardCellByAnyHeader(headers, row, ['Sortie Type', 'Dual/Solo']) || undefined) as SyllabusItemDetail['sortieType'],
+                twrDiReqd: (getWizardCellByAnyHeader(headers, row, ['Twr Di Reqd', 'TWR DI Required']) || 'NO') as SyllabusItemDetail['twrDiReqd'],
+                cctOnly: (getWizardCellByAnyHeader(headers, row, ['Cct Only', 'CCT Only']) || 'NO') as SyllabusItemDetail['cctOnly'],
+                methodOfDelivery: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Method Of Delivery', 'Delivery Method'])),
+                methodOfAssessment: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Method Of Assessment', 'Assessment Method'])),
+                resourcesPhysical: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Resources Physical', 'Aircraft Type', 'Resource'])),
+                resourcesHuman: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Resources Human', 'Crew Required'])),
+                location: getWizardCellByHeader(headers, row, 'Location') || locationDraft.code || unitDraft.locationCode || '',
+                unit: getWizardCellByHeader(headers, row, 'Unit') || unitDraft.code || '',
+                courses: itemCourses,
+                lmpType: (getWizardCellByAnyHeader(headers, row, ['Lmp Type', 'LMP Type']) || 'Master LMP') as SyllabusItemDetail['lmpType'],
+                sortOrder: index + 1,
+                notes: getWizardCellByHeader(headers, row, 'Notes'),
+            };
+        }).filter((item) => item.code && item.eventDescription);
     };
 
     const importWizardTemplateRows = (template: InitialSetupWizardTemplate, result?: InitialSetupWizardUploadResult) => {
@@ -3404,6 +3471,75 @@ const InitialSetupWizard: React.FC<{
             setShowMoreTraineesPrompt(false);
             setUnitDraft((draft) => ({ ...draft, hasTrainees: true }));
             const message = `Loaded ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} for course allocation. Select a course for every trainee, then commit them to Trainee Profiles.`;
+            setImportConfirmations((current) => ({ ...current, [template.id]: message }));
+            setSaveMessage(message);
+            return;
+        }
+        if (template.id === 'courses') {
+            const importedItems = buildWizardCourseUploadItems(result);
+            const uploadedMasterLmp = importedItems[0]?.courses?.[0] || trainingDraft.lmpCode || trainingDraft.lmpName || 'Master LMP';
+            const cleanLmpCode = String(trainingDraft.lmpCode || uploadedMasterLmp).trim();
+            const cleanLmpName = String(trainingDraft.lmpName || uploadedMasterLmp || cleanLmpCode).trim();
+            const scopedItems = importedItems.map((item) => ({
+                ...item,
+                courses: [cleanLmpCode],
+            }));
+            setTrainingDraft((draft) => ({
+                ...draft,
+                lmpCode: cleanLmpCode,
+                lmpName: cleanLmpName,
+            }));
+            saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} to this local test app.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+                const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+                const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+                const catalogueExists = catalogue.some((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
+                const accessExists = accessRules.some((rule: any) => (
+                    normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode)
+                    && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(trainingDraft.accessUnitCode || unitDraft.code)
+                ));
+                const nextCatalogueEntry = {
+                    id: primaryMasterLmp?.id || createWizardRecordId('master-lmp-catalogue'),
+                    code: cleanLmpCode,
+                    name: cleanLmpName || cleanLmpCode,
+                    description: trainingDraft.description,
+                    status: trainingDraft.status || 'ACTIVE',
+                };
+                const nextAccessRule = {
+                    id: primaryMasterLmpRule?.id || createWizardRecordId('master-lmp-access'),
+                    lmpCode: cleanLmpCode,
+                    locationCode: trainingDraft.accessLocationCode || locationDraft.code,
+                    unitCode: trainingDraft.accessUnitCode || unitDraft.code,
+                    model: trainingDraft.accessModel || 'Any Model',
+                    access: trainingDraft.accessLevel || 'Manage',
+                    status: 'ACTIVE',
+                };
+                return {
+                    ...settings,
+                    masterLmpCatalogue: catalogueExists
+                        ? catalogue.map((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) ? { ...item, ...nextCatalogueEntry } : item)
+                        : [...catalogue, nextCatalogueEntry],
+                    masterLmpAccess: accessExists
+                        ? accessRules.map((rule: any) => (
+                            normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode)
+                            && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(trainingDraft.accessUnitCode || unitDraft.code)
+                                ? { ...rule, ...nextAccessRule }
+                                : rule
+                        ))
+                        : [...accessRules, nextAccessRule],
+                };
+            }));
+            if (isSetupTestMode || isSetupTestBrowserMode()) {
+                const existingItems = readSetupTestSyllabus();
+                const nextById = new Map(existingItems.map((item: any) => [String(item?.id || item?.code || ''), item]));
+                scopedItems.forEach((item) => nextById.set(String(item.id || item.code), item));
+                writeSetupTestSyllabus(Array.from(nextById.values()));
+                pushWizardImportDiag('courses:committed-to-setup-syllabus', {
+                    importedItems: scopedItems.length,
+                    lmpCode: cleanLmpCode,
+                    sample: scopedItems.slice(0, 8).map((item) => ({ code: item.code, title: item.eventDescription, type: item.type, courses: item.courses })),
+                });
+            }
+            const message = `Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} to this local test app.`;
             setImportConfirmations((current) => ({ ...current, [template.id]: message }));
             setSaveMessage(message);
             return;
@@ -5302,7 +5438,7 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Choose an existing LMP if it exists, or enter the first LMP to build. This does not change the scheduler logic; it only defines the training stream the unit can use.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp: any) => String(lmp.code || lmp.name || '')).filter(Boolean), 'C-17A Conversion')}
+                    {wizardDataListField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp: any) => String(lmp.code || lmp.name || '')).filter(Boolean), 'C-17A Conversion', 'master-lmp-code')}
                     {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), undefined, 'C-17A Conversion')}
                     {wizardTextArea('Description', trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), 'Initial conversion training stream')}
                 </div>,

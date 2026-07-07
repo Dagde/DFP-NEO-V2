@@ -3,6 +3,7 @@ export const SETUP_TEST_RESET_QUERY_PARAM = 'resetSetupTest';
 export const AIR_MOVEMENTS_TEST_PROFILE = 'air-movements';
 export const SETUP_TEST_PLATFORM_EVENT = 'dfp-setup-test-platform-config-updated';
 export const SETUP_TEST_PERSONNEL_EVENT = 'dfp-setup-test-personnel-updated';
+export const SETUP_TEST_SYLLABUS_EVENT = 'dfp-setup-test-syllabus-updated';
 const INITIAL_SETUP_WIZARD_STEP_KEY = 'dfp-initial-setup-wizard-step';
 
 const safeWindow = (): Window | null => (typeof window === 'undefined' ? null : window);
@@ -15,7 +16,7 @@ export const getSetupTestProfile = (): string | null => {
   const cleanUrlProfile = String(urlProfile || '').trim();
   if (cleanUrlProfile) {
     if (params.get(SETUP_TEST_RESET_QUERY_PARAM) === '1') {
-      ['platform_config', 'settings', 'currencies', 'personnel'].forEach((kind) => {
+      ['platform_config', 'settings', 'currencies', 'personnel', 'syllabus'].forEach((kind) => {
         win.localStorage.removeItem(`dfp_setup_test_${cleanUrlProfile}_${kind}`);
       });
       win.localStorage.removeItem(INITIAL_SETUP_WIZARD_STEP_KEY);
@@ -142,4 +143,24 @@ export const writeSetupTestPersonnel = (instructors: any[], trainees: any[]): vo
   };
   win.localStorage.setItem(getSetupTestStorageKey('personnel'), JSON.stringify(nextPersonnel));
   win.dispatchEvent(new CustomEvent(SETUP_TEST_PERSONNEL_EVENT, { detail: nextPersonnel }));
+};
+
+export const readSetupTestSyllabus = (): any[] => {
+  const win = safeWindow();
+  if (!win) return [];
+  try {
+    const stored = win.localStorage.getItem(getSetupTestStorageKey('syllabus'));
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+export const writeSetupTestSyllabus = (syllabus: any[]): void => {
+  const win = safeWindow();
+  if (!win) return;
+  const nextSyllabus = Array.isArray(syllabus) ? syllabus : [];
+  win.localStorage.setItem(getSetupTestStorageKey('syllabus'), JSON.stringify(nextSyllabus));
+  win.dispatchEvent(new CustomEvent(SETUP_TEST_SYLLABUS_EVENT, { detail: { syllabus: nextSyllabus } }));
 };
