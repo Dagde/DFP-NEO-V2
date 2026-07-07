@@ -2351,8 +2351,19 @@ const InitialSetupWizard: React.FC<{
     const currentUnit = (platformConfig?.units || []).find((unit: any) => (
         normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(unitCode)
     )) || (platformConfig?.units || [])[0];
+    const currentUnitLocationKey = normaliseUnitSettingsIdentifier(currentUnit?.locationCode);
     const currentLocation = (platformConfig?.locations || []).find((location: any) => (
-        normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(currentUnit?.locationCode)
+        [
+            location?.code,
+            location?.iataCode,
+            location?.icao,
+            location?.icaoCode,
+            location?.settings?.iataCode,
+            location?.settings?.icaoCode,
+            location?.settings?.legacyCode,
+            ...(Array.isArray(location?.aliases) ? location.aliases : []),
+            ...(Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []),
+        ].some((value) => normaliseUnitSettingsIdentifier(value) === currentUnitLocationKey)
     )) || (platformConfig?.locations || [])[0];
     const organisationStructureLevels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels)
         ? activeOrganisation.settings.organisationStructure.levels
@@ -5177,8 +5188,8 @@ const InitialSetupWizard: React.FC<{
             courses: [cleanLmpCode],
             module: item.module || cleanLmpName || cleanLmpCode,
             phase: item.phase || cleanLmpName || cleanLmpCode,
-            location: item.location || cleanAccessLocationCode || '',
-            unit: item.unit || unitDraft.code || '',
+            location: cleanAccessLocationCode || item.location || '',
+            unit: cleanAccessUnitCode || unitDraft.code || item.unit || '',
             lmpType: item.lmpType || 'Master LMP',
             sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index + 1,
         }));

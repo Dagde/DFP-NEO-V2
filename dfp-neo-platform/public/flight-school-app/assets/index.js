@@ -10713,7 +10713,18 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
   }, [uploadedCourseLmpItems]);
   const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
   const currentUnit = (platformConfig?.units || []).find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(unitCode)) || (platformConfig?.units || [])[0];
-  const currentLocation = (platformConfig?.locations || []).find((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(currentUnit?.locationCode)) || (platformConfig?.locations || [])[0];
+  const currentUnitLocationKey = normaliseUnitSettingsIdentifier(currentUnit?.locationCode);
+  const currentLocation = (platformConfig?.locations || []).find((location) => [
+    location?.code,
+    location?.iataCode,
+    location?.icao,
+    location?.icaoCode,
+    location?.settings?.iataCode,
+    location?.settings?.icaoCode,
+    location?.settings?.legacyCode,
+    ...Array.isArray(location?.aliases) ? location.aliases : [],
+    ...Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []
+  ].some((value) => normaliseUnitSettingsIdentifier(value) === currentUnitLocationKey)) || (platformConfig?.locations || [])[0];
   const organisationStructureLevels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
   const activeLocations = (platformConfig?.locations || []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const wizardLocationProfiles = Array.from(new Map([
@@ -13179,8 +13190,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       courses: [cleanLmpCode],
       module: item.module || cleanLmpName || cleanLmpCode,
       phase: item.phase || cleanLmpName || cleanLmpCode,
-      location: item.location || cleanAccessLocationCode || "",
-      unit: item.unit || unitDraft.code || "",
+      location: cleanAccessLocationCode || item.location || "",
+      unit: cleanAccessUnitCode || unitDraft.code || item.unit || "",
       lmpType: item.lmpType || "Master LMP",
       sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index + 1
     }));
