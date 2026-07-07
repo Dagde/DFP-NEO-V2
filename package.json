@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:setup-wizard": "vite --host 127.0.0.1 --port 5173 --open '/?setupTest=air-movements&resetSetupTest=1'",
+    "dev:setup-wizard": "vite --host 127.0.0.1 --port 5173 --open '/?setupTest=air-movements'",
     "dev:setup-wizard:resume": "vite --host 127.0.0.1 --port 5173 --open '/?setupTest=air-movements'",
+    "dev:setup-wizard:reset": "vite --host 127.0.0.1 --port 5173 --open '/?setupTest=air-movements&resetSetupTest=1'",
     "build": "prisma generate && vite build --outDir dfp-neo-platform/public/flight-school-app --emptyOutDir && cp dfp-neo-platform/public/flight-school-app/index.html dfp-neo-platform/public/flight-school-app/index-v2.html && node update_css.js",
     "preview": "vite preview",
     "start": "node server.js",

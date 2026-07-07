@@ -100756,6 +100756,7 @@ const App = () => {
   }, [savePlatformConfigDebounced]);
   const handleSaveSetupTestPersonnel = reactExports.useCallback((payload) => {
     if (!isSetupTestMode()) return;
+    const existingPersonnel = readSetupTestPersonnel();
     const instructors = payload.instructors || [];
     const trainees = payload.trainees || [];
     const normalisedInstructors = instructors.map((person) => ({
@@ -100768,17 +100769,31 @@ const App = () => {
       name: trainee.name || trainee.fullName || [trainee.surname, trainee.givenNames].filter(Boolean).join(", "),
       _dataSource: "setup-test"
     }));
+    const nextInstructors = normalisedInstructors.length > 0 ? normalisedInstructors : (existingPersonnel.instructors || []).map((person) => ({
+      ...normalisePersonnelRecord(person),
+      _dataSource: "setup-test"
+    }));
+    const nextTrainees = normalisedTrainees.length > 0 ? normalisedTrainees : (existingPersonnel.trainees || []).map((trainee) => ({
+      ...trainee,
+      fullName: trainee.fullName || trainee.name || [trainee.surname, trainee.givenNames].filter(Boolean).join(", "),
+      name: trainee.name || trainee.fullName || [trainee.surname, trainee.givenNames].filter(Boolean).join(", "),
+      _dataSource: "setup-test"
+    }));
     pushSetupTestPersonnelDiag("save:requested", {
-      instructors: normalisedInstructors.length,
-      trainees: normalisedTrainees.length,
-      instructorSample: normalisedInstructors.slice(0, 8).map((person) => ({
+      incomingInstructors: normalisedInstructors.length,
+      incomingTrainees: normalisedTrainees.length,
+      preservedExistingInstructors: normalisedInstructors.length === 0 && (existingPersonnel.instructors || []).length > 0,
+      preservedExistingTrainees: normalisedTrainees.length === 0 && (existingPersonnel.trainees || []).length > 0,
+      savedInstructors: nextInstructors.length,
+      savedTrainees: nextTrainees.length,
+      instructorSample: nextInstructors.slice(0, 8).map((person) => ({
         name: person.name,
         unit: person.unit,
         location: person.location,
         role: person.role,
         source: person._dataSource
       })),
-      traineeSample: normalisedTrainees.slice(0, 8).map((person) => ({
+      traineeSample: nextTrainees.slice(0, 8).map((person) => ({
         name: person.name || person.fullName,
         unit: person.unit,
         location: person.location,
@@ -100786,12 +100801,12 @@ const App = () => {
         source: person._dataSource
       }))
     });
-    writeSetupTestPersonnel(normalisedInstructors, normalisedTrainees);
-    setInstructorsData(normalisedInstructors);
-    setTraineesData(normalisedTrainees);
+    writeSetupTestPersonnel(nextInstructors, nextTrainees);
+    setInstructorsData(nextInstructors);
+    setTraineesData(nextTrainees);
     setIsStaffLoaded(true);
     setIsTraineeLoaded(true);
-    setSuccessMessage(`Setup Wizard committed ${normalisedInstructors.length} staff profile${normalisedInstructors.length === 1 ? "" : "s"}${normalisedTrainees.length > 0 ? ` and ${normalisedTrainees.length} trainee profile${normalisedTrainees.length === 1 ? "" : "s"}` : ""} to this local test app.`);
+    setSuccessMessage(`Setup Wizard committed ${nextInstructors.length} staff profile${nextInstructors.length === 1 ? "" : "s"}${nextTrainees.length > 0 ? ` and ${nextTrainees.length} trainee profile${nextTrainees.length === 1 ? "" : "s"}` : ""} to this local test app.`);
   }, [pushSetupTestPersonnelDiag]);
   const handleSaveStandardMissionProfileFromPlanner = reactExports.useCallback((profileId, changes) => {
     const targetId = String(profileId || "").trim();
