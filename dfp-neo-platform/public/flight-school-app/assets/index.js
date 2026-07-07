@@ -97710,13 +97710,47 @@ const App = () => {
       if (allCodes.findIndex((code) => code.toUpperCase() === normalisedUnitLocation) !== index) return false;
       return activeLocations.some((location) => getLocationSelectorAliases(location).includes(normalisedUnitLocation));
     });
-    return configuredLocationsWithUnits.length > 0 ? configuredLocationsWithUnits : getLocationCodesForCurrentRuntime(platformConfig, ["ESL", "PEA"]);
-  }, [getLocationSelectorAliases, platformConfig]);
+    const configuredSelectableLocations = configuredLocationsWithUnits.length > 0 ? configuredLocationsWithUnits : getLocationCodesForCurrentRuntime(platformConfig, ["ESL", "PEA"]);
+    if (!setupTestProfile) return configuredSelectableLocations;
+    return Array.from(new Set([
+      ...configuredSelectableLocations,
+      "ESL",
+      "YMES",
+      "PEA",
+      "YPEA",
+      "YAMB"
+    ].map((code) => String(code || "").trim()).filter(Boolean)));
+  }, [getLocationSelectorAliases, platformConfig, setupTestProfile]);
   const getUnitOptionsForLocation = reactExports.useCallback((locationCode) => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
     const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
     const locationAliases = new Set(activeLocation ? getLocationSelectorAliases(activeLocation) : [normalisedLocationCode]);
     const normaliseUnitCode2 = (value) => String(value || "").trim().toUpperCase();
+    const getSetupTestFallbackUnitsForLocation = () => {
+      if (!setupTestProfile) return [];
+      const locationAliasesForFallback = new Set([
+        normalisedLocationCode,
+        ...Array.from(locationAliases),
+        ...knownDfpLocationAliases(normalisedLocationCode)
+      ].map((alias) => String(alias || "").trim().toUpperCase()).filter(Boolean));
+      if (["ESL", "YMES", "EAST SALE"].some((alias) => locationAliasesForFallback.has(alias))) {
+        return [
+          { code: "1FTS", name: "1FTS", model: normaliseOperationalModel("flight_school") },
+          { code: "CFS", name: "CFS", model: normaliseOperationalModel("flight_school") }
+        ];
+      }
+      if (["PEA", "YPEA", "PEARCE"].some((alias) => locationAliasesForFallback.has(alias))) {
+        return [
+          { code: "2FTS", name: "2FTS", model: normaliseOperationalModel("flight_school") }
+        ];
+      }
+      if (["AMB", "YAMB", "AMBERLEY"].some((alias) => locationAliasesForFallback.has(alias))) {
+        return [
+          { code: "36SQN", name: "36SQN", model: normaliseOperationalModel("pooled_crew") }
+        ];
+      }
+      return [];
+    };
     const configuredUnits = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => locationAliases.has(String(unit.locationCode || "").trim().toUpperCase())).map((unit) => ({
       code: String(unit.code || "").trim(),
       name: String(unit.name || unit.code || "").trim(),
@@ -97763,10 +97797,12 @@ const App = () => {
           disabledReason: `Use ${sharedOption.code} for the shared aircraft/resource DFP context.`
         } : unit;
       });
-      return [...configuredUnitsWithSharedContextLock, ...sharedContextOptions];
+      const configuredCodeSet = new Set(configuredUnitsWithSharedContextLock.map((unit) => normaliseUnitCode2(unit.code)));
+      const setupTestFallbackUnits = getSetupTestFallbackUnitsForLocation().filter((unit) => !configuredCodeSet.has(normaliseUnitCode2(unit.code)));
+      return [...configuredUnitsWithSharedContextLock, ...setupTestFallbackUnits, ...sharedContextOptions];
     }
     const hasConfiguredPlatformUnits = (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE");
-    if (hasConfiguredPlatformUnits) return [];
+    if (hasConfiguredPlatformUnits) return getSetupTestFallbackUnitsForLocation();
     const fallbackCodes = normalisedLocationCode === "PEA" ? ["2FTS"] : ["1FTS", "CFS"];
     const fallbackUnits = fallbackCodes.map((code) => ({
       code,
@@ -97819,7 +97855,9 @@ const App = () => {
     organisationSettings.remainderUnitIndex,
     organisationSettings.resourceSharingGroups,
     organisationSettings.selectedUnits,
-    platformConfig
+    platformConfig,
+    setupTestProfile,
+    knownDfpLocationAliases
   ]);
   const activeLocationUnitOptions = reactExports.useMemo(
     () => getUnitOptionsForLocation(school),
