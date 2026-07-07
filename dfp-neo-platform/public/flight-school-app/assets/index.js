@@ -9178,6 +9178,7 @@ const getLocalDateString = (date = /* @__PURE__ */ new Date()) => {
   return `${year}-${month}-${day}`;
 };
 const getResourceCategory$1 = (res) => {
+  if (!res) return "Other";
   if (res.startsWith("PC-21") || res.startsWith("Deployed")) return "PC-21";
   if (res.startsWith("STBY")) return "STBY";
   if (res === "Duty Sup") return "Duty Sup";
@@ -102109,6 +102110,9 @@ ${"=".repeat(60)}`);
   const onDiscardRef = reactExports.useRef(() => {
   });
   const buildResources = reactExports.useMemo(() => {
+    if (setupTestProfile && !activePlatformResourcePool) {
+      return [];
+    }
     const pc21Count = configuredAirframeCount;
     let deploymentCount = 0;
     console.log("buildResources - Current view:", activeView, "Current date:", date);
@@ -102178,6 +102182,8 @@ ${"=".repeat(60)}`);
     configuredCptCount,
     configuredStandbyCount,
     configuredGroundCount,
+    setupTestProfile,
+    activePlatformResourcePool,
     date,
     activeView,
     publishedSchedules,

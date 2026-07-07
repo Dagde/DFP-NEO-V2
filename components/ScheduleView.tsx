@@ -196,7 +196,8 @@ const getLocalDateString = (date: Date = new Date()): string => {
     return `${year}-${month}-${day}`;
 };
 
-const getResourceCategory = (res: string) => {
+const getResourceCategory = (res?: string) => {
+    if (!res) return 'Other';
     if (res.startsWith('PC-21') || res.startsWith('Deployed')) return 'PC-21';
     if (res.startsWith('STBY')) return 'STBY';
     if (res === 'Duty Sup') return 'Duty Sup';

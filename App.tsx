@@ -26147,6 +26147,9 @@ const App: React.FC = () => {
     const onDiscardRef = useRef<() => void>(() => {});
 
     const buildResources = useMemo(() => {
+        if (setupTestProfile && !activePlatformResourcePool) {
+            return [];
+        }
         // Stage 3: resource rows may come from Platform Configuration only when
         // the selected location pool explicitly opts in. Otherwise V2 behaviour
         // remains unchanged.
@@ -26243,6 +26246,8 @@ const App: React.FC = () => {
         configuredCptCount,
         configuredStandbyCount,
         configuredGroundCount,
+        setupTestProfile,
+        activePlatformResourcePool,
         date,
         activeView,
         publishedSchedules,
