@@ -426,6 +426,15 @@ const normaliseAccessLevel = (value: unknown): MasterLmpAccessLevel => {
   return 'View';
 };
 
+const normaliseOptionalOperationalModel = (value: unknown): string | null => {
+  const token = String(value || '').trim();
+  const comparison = token.toLowerCase().replace(/[\s-]+/g, '_');
+  if (!comparison || comparison === 'any' || comparison === 'any_model' || comparison === 'all' || comparison === 'all_models') {
+    return null;
+  }
+  return token;
+};
+
 const masterLmpAccessWeight = (level: MasterLmpAccessLevel): number => (
   level === 'Manage' ? 3 : level === 'Assign' ? 2 : 1
 );
@@ -443,8 +452,8 @@ export const normaliseMasterLmpAccessRules = (config: PlatformConfig | null): Pl
       organisationCode: rule.organisationCode || 'DEFAULT',
       locationCode: rule.locationCode || null,
       unitCode: rule.unitCode || null,
-      operationalModel: rule.operationalModel || null,
-      accessLevel: normaliseAccessLevel(rule.accessLevel),
+      operationalModel: normaliseOptionalOperationalModel(rule.operationalModel || rule.model),
+      accessLevel: normaliseAccessLevel(rule.accessLevel || rule.access),
       status: String(rule.status || 'ACTIVE').toUpperCase(),
     }))
     .filter((rule) => rule.lmpCode);

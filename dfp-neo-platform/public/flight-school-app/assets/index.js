@@ -2419,6 +2419,14 @@ const normaliseAccessLevel = (value) => {
   if (token === "assign" || token === "write") return "Assign";
   return "View";
 };
+const normaliseOptionalOperationalModel = (value) => {
+  const token = String(value || "").trim();
+  const comparison = token.toLowerCase().replace(/[\s-]+/g, "_");
+  if (!comparison || comparison === "any" || comparison === "any_model" || comparison === "all" || comparison === "all_models") {
+    return null;
+  }
+  return token;
+};
 const masterLmpAccessWeight = (level) => level === "Manage" ? 3 : level === "Assign" ? 2 : 1;
 const normaliseMasterLmpAccessRules = (config) => {
   const configured = config?.organisations?.[0]?.settings?.masterLmpAccess;
@@ -2429,8 +2437,8 @@ const normaliseMasterLmpAccessRules = (config) => {
     organisationCode: rule.organisationCode || "DEFAULT",
     locationCode: rule.locationCode || null,
     unitCode: rule.unitCode || null,
-    operationalModel: rule.operationalModel || null,
-    accessLevel: normaliseAccessLevel(rule.accessLevel),
+    operationalModel: normaliseOptionalOperationalModel(rule.operationalModel || rule.model),
+    accessLevel: normaliseAccessLevel(rule.accessLevel || rule.access),
     status: String(rule.status || "ACTIVE").toUpperCase()
   })).filter((rule) => rule.lmpCode);
 };
@@ -10808,7 +10816,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
     status: String(primaryMasterLmp?.status || "ACTIVE"),
     accessLocationCode: String(primaryMasterLmpRule?.locationCode || currentLocation?.code || ""),
     accessUnitCode: String(primaryMasterLmpRule?.unitCode || currentUnit?.code || ""),
-    accessModel: String(primaryMasterLmpRule?.model || "Any Model"),
+    accessModel: String(primaryMasterLmpRule?.operationalModel || primaryMasterLmpRule?.model || "Any Model"),
     accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || "View")
   });
   const [crewLabelsDraft, setCrewLabelsDraft] = reactExports.useState("Pilot = Pilot\nLoadmaster = Loadmaster");
@@ -10986,10 +10994,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       status: String(primaryMasterLmp?.status || "ACTIVE"),
       accessLocationCode: String(primaryMasterLmpRule?.locationCode || currentLocation?.code || ""),
       accessUnitCode: String(primaryMasterLmpRule?.unitCode || currentUnit?.code || ""),
-      accessModel: String(primaryMasterLmpRule?.model || "Any Model"),
+      accessModel: String(primaryMasterLmpRule?.operationalModel || primaryMasterLmpRule?.model || "Any Model"),
       accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || "View")
     });
-  }, [primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code]);
+  }, [primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.operationalModel, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code]);
   const saveWizardConfig = (message, updater) => {
     if (!onUpdatePlatformConfig) {
       setSaveMessage("This screen is not connected to the platform configuration in this session.");
@@ -11215,8 +11223,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         lmpCode,
         locationCode: trainingDraft.accessLocationCode,
         unitCode: trainingDraft.accessUnitCode,
-        model: trainingDraft.accessModel,
-        access: trainingDraft.accessLevel,
+        operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel,
+        accessLevel: trainingDraft.accessLevel,
         status: "ACTIVE"
       };
       return {
@@ -12809,8 +12817,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
             lmpCode: trainingDraft.lmpCode,
             locationCode: trainingDraft.accessLocationCode || primaryLocationCode,
             unitCode: trainingDraft.accessUnitCode || cleanUnits[0]?.code || "",
-            model: trainingDraft.accessModel || "Any Model",
-            access: trainingDraft.accessLevel || "Manage",
+            operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel,
+            accessLevel: trainingDraft.accessLevel || "Manage",
             status: "ACTIVE"
           }],
           crewCompositionSettings: normaliseCrewCompositionSettings({
@@ -13151,8 +13159,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         lmpCode: cleanLmpCode,
         locationCode: trainingDraft.accessLocationCode || locationDraft.code,
         unitCode: accessUnitCode,
-        model: trainingDraft.accessModel || "Any Model",
-        access: trainingDraft.accessLevel || "Manage",
+        operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel || null,
+        accessLevel: trainingDraft.accessLevel || "Manage",
         status: "ACTIVE"
       };
       pushWizardLmpDiag("commit:platform-config-updater", {
@@ -13171,6 +13179,37 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       };
     }));
     if (isSetupTestMode$1 || isSetupTestMode()) {
+      const currentSetupConfig = readSetupTestPlatformConfig();
+      const nextSetupConfig = updatePrimaryOrganisationWithSettings(currentSetupConfig, (settings) => {
+        const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+        const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+        const catalogueExists = catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
+        const accessUnitCode = trainingDraft.accessUnitCode || unitDraft.code;
+        const accessLocationCode = trainingDraft.accessLocationCode || locationDraft.code;
+        const accessExists = accessRules.some((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(accessUnitCode));
+        const nextCatalogueEntry = {
+          id: primaryMasterLmp?.id || createWizardRecordId("master-lmp-catalogue"),
+          code: cleanLmpCode,
+          name: cleanLmpName || cleanLmpCode,
+          description: trainingDraft.description,
+          status: trainingDraft.status || "ACTIVE"
+        };
+        const nextAccessRule = {
+          id: primaryMasterLmpRule?.id || createWizardRecordId("master-lmp-access"),
+          lmpCode: cleanLmpCode,
+          locationCode: accessLocationCode,
+          unitCode: accessUnitCode,
+          operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel || null,
+          accessLevel: trainingDraft.accessLevel || "Manage",
+          status: "ACTIVE"
+        };
+        return {
+          ...settings,
+          masterLmpCatalogue: catalogueExists ? catalogue.map((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) ? { ...item, ...nextCatalogueEntry } : item) : [...catalogue, nextCatalogueEntry],
+          masterLmpAccess: accessExists ? accessRules.map((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(accessUnitCode) ? { ...rule, ...nextAccessRule } : rule) : [...accessRules, nextAccessRule]
+        };
+      });
+      writeSetupTestPlatformConfig(nextSetupConfig);
       const existingItems = readSetupTestSyllabus();
       const nextById = new Map(existingItems.map((item) => [String(item?.id || item?.code || ""), item]));
       scopedItems.forEach((item) => nextById.set(String(item.id || item.code), item));
