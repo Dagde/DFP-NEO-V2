@@ -1247,11 +1247,41 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   const selectedCourseEventCount = filteredSyllabusDetails.length;
   useEffect(() => {
+      const rawCourseCodes = Array.from(new Set(syllabusDetails.flatMap((item: any) => (
+          Array.isArray(item?.courses) ? item.courses : []
+      )).map((code: any) => String(code || '').trim()).filter(Boolean)));
+      const unitScopedCourseCodes = Array.from(new Set(unitScopedSyllabusDetails.flatMap((item: any) => (
+          Array.isArray(item?.courses) ? item.courses : []
+      )).map((code: any) => String(code || '').trim()).filter(Boolean)));
+      const tabBreakdown = syllabusDetails.slice(0, 60).map((item: any) => ({
+          id: item?.id,
+          code: item?.code,
+          courses: item?.courses,
+          unit: item?.unit,
+          location: item?.location,
+          lmpType: item?.lmpType,
+          isActive: item?.isActive,
+          isShell: isSyllabusCourseShell(item),
+          tab: getItemLmpDetailsTab(item),
+          matchesActiveTab: getItemLmpDetailsTab(item) === activeTab,
+          matchesSelectedCourse: Array.isArray(item?.courses) ? item.courses.includes(selectedCourseType) : false,
+          matchesEffectiveUnit: !isFixedCrewModel || !normaliseContextCode(item?.unit) || normaliseContextCode(item?.unit) === normaliseContextCode(effectiveActiveUnitCode),
+      }));
       pushSetupTestLmpViewDiag('view:lmp-details-snapshot', {
           rawSyllabusItems: syllabusDetails.length,
           unitScopedItems: unitScopedSyllabusDetails.length,
           filteredSyllabusDetails: filteredSyllabusDetails.length,
+          activeLmpType,
+          activeOperationalModel,
+          isFixedCrewModel,
+          rawCourseCodes,
+          unitScopedCourseCodes,
           courseLMPs,
+          incomingCatalogueProp: masterLmpCatalogue.map((entry: any) => ({
+              code: entry.code,
+              name: entry.name,
+              status: entry.status,
+          })),
           catalogue: activeMasterLmpCatalogue.map((entry: any) => ({
               code: entry.code,
               name: entry.name,
@@ -1261,6 +1291,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           selectedCourseStorage: (() => {
               try { return window.localStorage.getItem('neo_lmp_details_selected_package'); } catch { return null; }
           })(),
+          selectedCourseType,
+          selectedCourseInCourseLMPs: courseLMPs.includes(selectedCourseType),
+          tabBreakdown,
           filteredSample: filteredSyllabusDetails.slice(0, 20).map((item: any) => ({
               id: item?.id,
               code: item?.code,
@@ -1284,12 +1317,16 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       });
   }, [
       activeMasterLmpCatalogue,
+      activeLmpType,
+      activeOperationalModel,
       activeTab,
       activeUnitCode,
       courseLMPs,
       courseTitleMap,
       effectiveActiveUnitCode,
       filteredSyllabusDetails,
+      isFixedCrewModel,
+      masterLmpCatalogue,
       selectedCourseType,
       syllabusDetails,
       unitScopedSyllabusDetails,

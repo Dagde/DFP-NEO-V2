@@ -27,6 +27,7 @@ import {
     hasPlatformModuleAccess,
     isFixedCrewLikeOperationalModel,
     loadPlatformConfigFromDB,
+    normaliseMasterLmpAccessRules,
     normaliseMasterLmpCatalogue,
     normaliseOperationalModel,
     PlatformConfig,
@@ -84,6 +85,7 @@ import {
     readSetupTestPersonnel,
     readSetupTestSyllabus,
     SETUP_TEST_PERSONNEL_EVENT,
+    SETUP_TEST_PLATFORM_EVENT,
     SETUP_TEST_SYLLABUS_EVENT,
     writeSetupTestPersonnel,
     writeSetupTestPlatformConfig,
@@ -21318,10 +21320,57 @@ const App: React.FC = () => {
             if (!nextConfig || !Array.isArray(nextConfig.units)) return;
             setPlatformConfig(nextConfig);
             setPlatformConfigLoaded(true);
+            if (setupTestProfile) {
+                const activeOrganisation = (nextConfig.organisations || [])[0] as any;
+                const entry = {
+                    ts: new Date().toISOString(),
+                    stage: 'app:platform-config-event-received',
+                    setupTestProfile,
+                    activeLocation: school,
+                    activeUnitCode,
+                    details: {
+                        eventType: event.type,
+                        organisations: nextConfig.organisations?.length || 0,
+                        units: nextConfig.units?.map((unit: any) => ({ code: unit?.code, locationCode: unit?.locationCode, model: getUnitOperationalModel(unit) })) || [],
+                        catalogue: (activeOrganisation?.settings?.masterLmpCatalogue || []).map((item: any) => ({ code: item?.code, name: item?.name, status: item?.status })),
+                        accessRules: (activeOrganisation?.settings?.masterLmpAccess || []).map((rule: any) => ({
+                            lmpCode: rule?.lmpCode,
+                            locationCode: rule?.locationCode,
+                            unitCode: rule?.unitCode,
+                            operationalModel: rule?.operationalModel,
+                            model: rule?.model,
+                            accessLevel: rule?.accessLevel,
+                            access: rule?.access,
+                            status: rule?.status,
+                        })),
+                        normalisedAccessRules: normaliseMasterLmpAccessRules(nextConfig).map((rule: any) => ({
+                            lmpCode: rule.lmpCode,
+                            locationCode: rule.locationCode,
+                            unitCode: rule.unitCode,
+                            operationalModel: rule.operationalModel,
+                            accessLevel: rule.accessLevel,
+                            status: rule.status,
+                        })),
+                    },
+                };
+                try {
+                    console.log('[SETUP-TEST-LMP:APP] app:platform-config-event-received', entry);
+                    const existing = JSON.parse(localStorage.getItem('dfp_setup_test_lmp_diag') || '[]');
+                    const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-180);
+                    localStorage.setItem('dfp_setup_test_lmp_diag', JSON.stringify(next));
+                    (window as any).neoSetupTestLmpDiag = next;
+                } catch (error) {
+                    console.log('[SETUP-TEST-LMP:APP] app:platform-config-event-received', entry, error);
+                }
+            }
         };
         window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
-        return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
-    }, []);
+        window.addEventListener(SETUP_TEST_PLATFORM_EVENT, handlePlatformConfigUpdated);
+        return () => {
+            window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+            window.removeEventListener(SETUP_TEST_PLATFORM_EVENT, handlePlatformConfigUpdated);
+        };
+    }, [activeUnitCode, school, setupTestProfile]);
 
     const knownDfpLocationAliases = useCallback((identifier: unknown): string[] => {
         const rawIdentifier = String(identifier || '').trim();
@@ -22794,11 +22843,60 @@ const App: React.FC = () => {
     }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded, school]);
     useEffect(() => {
         if (!setupTestProfile) return;
+        const activeOrganisation = (platformConfig?.organisations || [])[0] as any;
+        const rawCatalogue = Array.isArray(activeOrganisation?.settings?.masterLmpCatalogue)
+            ? activeOrganisation.settings.masterLmpCatalogue
+            : [];
+        const rawAccessRules = Array.isArray(activeOrganisation?.settings?.masterLmpAccess)
+            ? activeOrganisation.settings.masterLmpAccess
+            : [];
+        const normalisedCatalogue = normaliseMasterLmpCatalogue(platformConfig);
+        const normalisedAccessRules = normaliseMasterLmpAccessRules(platformConfig);
+        const syllabusCourseCodes = Array.from(new Set(syllabusDetails.flatMap((item: any) => (
+            Array.isArray(item?.courses) ? item.courses : []
+        )).map((code: any) => String(code || '').trim()).filter(Boolean)));
+        const activeContextCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode];
+        const accessChecks = syllabusCourseCodes.slice(0, 30).map((lmpCode) => ({
+            lmpCode,
+            catalogueMatch: normalisedCatalogue.find((entry: any) => String(entry?.code || '').trim().toUpperCase() === lmpCode.toUpperCase()) || null,
+            unitChecks: activeContextCodes.map((unitCode) => ({
+                unitCode,
+                locationCode: school,
+                operationalModel: getOperationalModelForUnitCode(unitCode),
+                hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, {
+                    unitCode,
+                    locationCode: school,
+                    operationalModel: getOperationalModelForUnitCode(unitCode),
+                }, 'View'),
+                matchingRules: normalisedAccessRules.filter((rule: any) => (
+                    String(rule?.lmpCode || '').trim().toUpperCase() === lmpCode.toUpperCase()
+                )),
+            })),
+        }));
         pushSetupTestLmpDiag('app:visible-syllabus-snapshot', {
+            platformConfigLoaded,
             rawSyllabusItems: syllabusDetails.length,
             visibleSyllabusItems: visibleSyllabusDetails.length,
             activeOperationalModel,
             activeContextUnitCodes,
+            activeUnitCode,
+            activeLocation: school,
+            rawOrganisationSettings: {
+                organisationCode: activeOrganisation?.code,
+                organisationName: activeOrganisation?.name,
+                rawCatalogue,
+                rawAccessRules,
+            },
+            normalisedAccessRules: normalisedAccessRules.map((rule: any) => ({
+                lmpCode: rule.lmpCode,
+                locationCode: rule.locationCode,
+                unitCode: rule.unitCode,
+                operationalModel: rule.operationalModel,
+                accessLevel: rule.accessLevel,
+                status: rule.status,
+            })),
+            syllabusCourseCodes,
+            accessChecks,
             catalogue: accessibleMasterLmpCatalogueForSyllabus.map((entry: any) => ({
                 code: entry.code,
                 name: entry.name,
@@ -22820,7 +22918,12 @@ const App: React.FC = () => {
         accessibleMasterLmpCatalogueForSyllabus,
         activeContextUnitCodes,
         activeOperationalModel,
+        activeUnitCode,
+        getOperationalModelForUnitCode,
+        platformConfig,
+        platformConfigLoaded,
         pushSetupTestLmpDiag,
+        school,
         setupTestProfile,
         syllabusDetails,
         visibleSyllabusDetails,

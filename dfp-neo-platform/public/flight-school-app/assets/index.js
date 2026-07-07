@@ -13210,6 +13210,36 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         };
       });
       writeSetupTestPlatformConfig(nextSetupConfig);
+      const readBackConfig = readSetupTestPlatformConfig();
+      const readBackOrganisation = Array.isArray(readBackConfig.organisations) ? readBackConfig.organisations[0] : null;
+      pushWizardLmpDiag("commit:after-write-setup-platform-config", {
+        cleanLmpCode,
+        activeUnitCode: unitDraft.code,
+        activeLocationCode: locationDraft.code,
+        organisations: Array.isArray(readBackConfig.organisations) ? readBackConfig.organisations.length : 0,
+        units: Array.isArray(readBackConfig.units) ? readBackConfig.units.map((unit) => ({
+          code: unit?.code,
+          locationCode: unit?.locationCode,
+          operationalModel: unit?.operationalModel || unit?.settings?.operationalModel
+        })) : [],
+        rawCatalogue: (readBackOrganisation?.settings?.masterLmpCatalogue || []).map((item) => ({
+          id: item?.id,
+          code: item?.code,
+          name: item?.name,
+          status: item?.status
+        })),
+        rawAccessRules: (readBackOrganisation?.settings?.masterLmpAccess || []).map((rule) => ({
+          id: rule?.id,
+          lmpCode: rule?.lmpCode,
+          locationCode: rule?.locationCode,
+          unitCode: rule?.unitCode,
+          operationalModel: rule?.operationalModel,
+          model: rule?.model,
+          accessLevel: rule?.accessLevel,
+          access: rule?.access,
+          status: rule?.status
+        }))
+      });
       const existingItems = readSetupTestSyllabus();
       const nextById = new Map(existingItems.map((item) => [String(item?.id || item?.code || ""), item]));
       scopedItems.forEach((item) => nextById.set(String(item.id || item.code), item));
@@ -50284,11 +50314,37 @@ const SyllabusView = ({
   }, [activeTab, unitScopedSyllabusDetails, selectedCourseType]);
   const selectedCourseEventCount = filteredSyllabusDetails.length;
   reactExports.useEffect(() => {
+    const rawCourseCodes = Array.from(new Set(syllabusDetails.flatMap((item) => Array.isArray(item?.courses) ? item.courses : []).map((code) => String(code || "").trim()).filter(Boolean)));
+    const unitScopedCourseCodes = Array.from(new Set(unitScopedSyllabusDetails.flatMap((item) => Array.isArray(item?.courses) ? item.courses : []).map((code) => String(code || "").trim()).filter(Boolean)));
+    const tabBreakdown = syllabusDetails.slice(0, 60).map((item) => ({
+      id: item?.id,
+      code: item?.code,
+      courses: item?.courses,
+      unit: item?.unit,
+      location: item?.location,
+      lmpType: item?.lmpType,
+      isActive: item?.isActive,
+      isShell: isSyllabusCourseShell(item),
+      tab: getItemLmpDetailsTab(item),
+      matchesActiveTab: getItemLmpDetailsTab(item) === activeTab,
+      matchesSelectedCourse: Array.isArray(item?.courses) ? item.courses.includes(selectedCourseType) : false,
+      matchesEffectiveUnit: !isFixedCrewModel || !normaliseContextCode(item?.unit) || normaliseContextCode(item?.unit) === normaliseContextCode(effectiveActiveUnitCode)
+    }));
     pushSetupTestLmpViewDiag("view:lmp-details-snapshot", {
       rawSyllabusItems: syllabusDetails.length,
       unitScopedItems: unitScopedSyllabusDetails.length,
       filteredSyllabusDetails: filteredSyllabusDetails.length,
+      activeLmpType,
+      activeOperationalModel,
+      isFixedCrewModel,
+      rawCourseCodes,
+      unitScopedCourseCodes,
       courseLMPs,
+      incomingCatalogueProp: masterLmpCatalogue.map((entry) => ({
+        code: entry.code,
+        name: entry.name,
+        status: entry.status
+      })),
       catalogue: activeMasterLmpCatalogue.map((entry) => ({
         code: entry.code,
         name: entry.name,
@@ -50302,6 +50358,9 @@ const SyllabusView = ({
           return null;
         }
       })(),
+      selectedCourseType,
+      selectedCourseInCourseLMPs: courseLMPs.includes(selectedCourseType),
+      tabBreakdown,
       filteredSample: filteredSyllabusDetails.slice(0, 20).map((item) => ({
         id: item?.id,
         code: item?.code,
@@ -50325,12 +50384,16 @@ const SyllabusView = ({
     });
   }, [
     activeMasterLmpCatalogue,
+    activeLmpType,
+    activeOperationalModel,
     activeTab,
     activeUnitCode,
     courseLMPs,
     courseTitleMap,
     effectiveActiveUnitCode,
     filteredSyllabusDetails,
+    isFixedCrewModel,
+    masterLmpCatalogue,
     selectedCourseType,
     syllabusDetails,
     unitScopedSyllabusDetails
@@ -97983,10 +98046,57 @@ const App = () => {
       if (!nextConfig || !Array.isArray(nextConfig.units)) return;
       setPlatformConfig(nextConfig);
       setPlatformConfigLoaded(true);
+      if (setupTestProfile) {
+        const activeOrganisation = (nextConfig.organisations || [])[0];
+        const entry = {
+          ts: (/* @__PURE__ */ new Date()).toISOString(),
+          stage: "app:platform-config-event-received",
+          setupTestProfile,
+          activeLocation: school,
+          activeUnitCode,
+          details: {
+            eventType: event.type,
+            organisations: nextConfig.organisations?.length || 0,
+            units: nextConfig.units?.map((unit) => ({ code: unit?.code, locationCode: unit?.locationCode, model: getUnitOperationalModel(unit) })) || [],
+            catalogue: (activeOrganisation?.settings?.masterLmpCatalogue || []).map((item) => ({ code: item?.code, name: item?.name, status: item?.status })),
+            accessRules: (activeOrganisation?.settings?.masterLmpAccess || []).map((rule) => ({
+              lmpCode: rule?.lmpCode,
+              locationCode: rule?.locationCode,
+              unitCode: rule?.unitCode,
+              operationalModel: rule?.operationalModel,
+              model: rule?.model,
+              accessLevel: rule?.accessLevel,
+              access: rule?.access,
+              status: rule?.status
+            })),
+            normalisedAccessRules: normaliseMasterLmpAccessRules(nextConfig).map((rule) => ({
+              lmpCode: rule.lmpCode,
+              locationCode: rule.locationCode,
+              unitCode: rule.unitCode,
+              operationalModel: rule.operationalModel,
+              accessLevel: rule.accessLevel,
+              status: rule.status
+            }))
+          }
+        };
+        try {
+          console.log("[SETUP-TEST-LMP:APP] app:platform-config-event-received", entry);
+          const existing = JSON.parse(localStorage.getItem("dfp_setup_test_lmp_diag") || "[]");
+          const next = [...Array.isArray(existing) ? existing : [], entry].slice(-180);
+          localStorage.setItem("dfp_setup_test_lmp_diag", JSON.stringify(next));
+          window.neoSetupTestLmpDiag = next;
+        } catch (error) {
+          console.log("[SETUP-TEST-LMP:APP] app:platform-config-event-received", entry, error);
+        }
+      }
     };
     window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
-    return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
-  }, []);
+    window.addEventListener(SETUP_TEST_PLATFORM_EVENT, handlePlatformConfigUpdated);
+    return () => {
+      window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+      window.removeEventListener(SETUP_TEST_PLATFORM_EVENT, handlePlatformConfigUpdated);
+    };
+  }, [activeUnitCode, school, setupTestProfile]);
   const knownDfpLocationAliases = reactExports.useCallback((identifier) => {
     const rawIdentifier = String(identifier || "").trim();
     if (!rawIdentifier) return [];
@@ -99125,11 +99235,52 @@ const App = () => {
   }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded, school]);
   reactExports.useEffect(() => {
     if (!setupTestProfile) return;
+    const activeOrganisation = (platformConfig?.organisations || [])[0];
+    const rawCatalogue = Array.isArray(activeOrganisation?.settings?.masterLmpCatalogue) ? activeOrganisation.settings.masterLmpCatalogue : [];
+    const rawAccessRules = Array.isArray(activeOrganisation?.settings?.masterLmpAccess) ? activeOrganisation.settings.masterLmpAccess : [];
+    const normalisedCatalogue = normaliseMasterLmpCatalogue(platformConfig);
+    const normalisedAccessRules = normaliseMasterLmpAccessRules(platformConfig);
+    const syllabusCourseCodes = Array.from(new Set(syllabusDetails.flatMap((item) => Array.isArray(item?.courses) ? item.courses : []).map((code) => String(code || "").trim()).filter(Boolean)));
+    const activeContextCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode];
+    const accessChecks = syllabusCourseCodes.slice(0, 30).map((lmpCode) => ({
+      lmpCode,
+      catalogueMatch: normalisedCatalogue.find((entry) => String(entry?.code || "").trim().toUpperCase() === lmpCode.toUpperCase()) || null,
+      unitChecks: activeContextCodes.map((unitCode) => ({
+        unitCode,
+        locationCode: school,
+        operationalModel: getOperationalModelForUnitCode(unitCode),
+        hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, {
+          unitCode,
+          locationCode: school,
+          operationalModel: getOperationalModelForUnitCode(unitCode)
+        }, "View"),
+        matchingRules: normalisedAccessRules.filter((rule) => String(rule?.lmpCode || "").trim().toUpperCase() === lmpCode.toUpperCase())
+      }))
+    }));
     pushSetupTestLmpDiag("app:visible-syllabus-snapshot", {
+      platformConfigLoaded,
       rawSyllabusItems: syllabusDetails.length,
       visibleSyllabusItems: visibleSyllabusDetails.length,
       activeOperationalModel,
       activeContextUnitCodes,
+      activeUnitCode,
+      activeLocation: school,
+      rawOrganisationSettings: {
+        organisationCode: activeOrganisation?.code,
+        organisationName: activeOrganisation?.name,
+        rawCatalogue,
+        rawAccessRules
+      },
+      normalisedAccessRules: normalisedAccessRules.map((rule) => ({
+        lmpCode: rule.lmpCode,
+        locationCode: rule.locationCode,
+        unitCode: rule.unitCode,
+        operationalModel: rule.operationalModel,
+        accessLevel: rule.accessLevel,
+        status: rule.status
+      })),
+      syllabusCourseCodes,
+      accessChecks,
       catalogue: accessibleMasterLmpCatalogueForSyllabus.map((entry) => ({
         code: entry.code,
         name: entry.name,
@@ -99151,7 +99302,12 @@ const App = () => {
     accessibleMasterLmpCatalogueForSyllabus,
     activeContextUnitCodes,
     activeOperationalModel,
+    activeUnitCode,
+    getOperationalModelForUnitCode,
+    platformConfig,
+    platformConfigLoaded,
     pushSetupTestLmpDiag,
+    school,
     setupTestProfile,
     syllabusDetails,
     visibleSyllabusDetails

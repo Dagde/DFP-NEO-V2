@@ -5255,6 +5255,36 @@ const InitialSetupWizard: React.FC<{
                 };
             });
             writeSetupTestPlatformConfig(nextSetupConfig);
+            const readBackConfig = readSetupTestPlatformConfig();
+            const readBackOrganisation = Array.isArray(readBackConfig.organisations) ? readBackConfig.organisations[0] : null;
+            pushWizardLmpDiag('commit:after-write-setup-platform-config', {
+                cleanLmpCode,
+                activeUnitCode: unitDraft.code,
+                activeLocationCode: locationDraft.code,
+                organisations: Array.isArray(readBackConfig.organisations) ? readBackConfig.organisations.length : 0,
+                units: Array.isArray(readBackConfig.units) ? readBackConfig.units.map((unit: any) => ({
+                    code: unit?.code,
+                    locationCode: unit?.locationCode,
+                    operationalModel: unit?.operationalModel || unit?.settings?.operationalModel,
+                })) : [],
+                rawCatalogue: (readBackOrganisation?.settings?.masterLmpCatalogue || []).map((item: any) => ({
+                    id: item?.id,
+                    code: item?.code,
+                    name: item?.name,
+                    status: item?.status,
+                })),
+                rawAccessRules: (readBackOrganisation?.settings?.masterLmpAccess || []).map((rule: any) => ({
+                    id: rule?.id,
+                    lmpCode: rule?.lmpCode,
+                    locationCode: rule?.locationCode,
+                    unitCode: rule?.unitCode,
+                    operationalModel: rule?.operationalModel,
+                    model: rule?.model,
+                    accessLevel: rule?.accessLevel,
+                    access: rule?.access,
+                    status: rule?.status,
+                })),
+            });
             const existingItems = readSetupTestSyllabus();
             const nextById = new Map(existingItems.map((item: any) => [String(item?.id || item?.code || ''), item]));
             scopedItems.forEach((item) => nextById.set(String(item.id || item.code), item));
