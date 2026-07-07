@@ -12760,7 +12760,36 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
       }
     }), {});
     const setupPersonnel = buildSetupTestPersonnel(cleanUnits, overrides);
-    onUpdatePlatformConfig(() => {
+    onUpdatePlatformConfig((baseConfig) => {
+      const existingOrganisation = Array.isArray(baseConfig?.organisations) ? baseConfig.organisations[0] : null;
+      const existingOrganisationSettings = existingOrganisation?.settings || {};
+      const existingMasterLmpCatalogue = Array.isArray(existingOrganisationSettings.masterLmpCatalogue) ? existingOrganisationSettings.masterLmpCatalogue : [];
+      const existingMasterLmpAccess = Array.isArray(existingOrganisationSettings.masterLmpAccess) ? existingOrganisationSettings.masterLmpAccess : [];
+      const draftLmpCode = String(trainingDraft.lmpCode || "").trim();
+      const shouldSyncDraftMasterLmp = Boolean(draftLmpCode && !/^new master lmp$/i.test(draftLmpCode));
+      const draftMasterLmpCatalogueEntry = shouldSyncDraftMasterLmp ? {
+        id: createSetupTestRecordId("master-lmp-catalogue", trainingDraft.lmpCode || trainingDraft.lmpName || "master-lmp"),
+        code: trainingDraft.lmpCode,
+        name: trainingDraft.lmpName || trainingDraft.lmpCode,
+        description: trainingDraft.description,
+        status: trainingDraft.status || "ACTIVE"
+      } : null;
+      const draftMasterLmpAccessRule = shouldSyncDraftMasterLmp ? {
+        id: createSetupTestRecordId("master-lmp-access", `${trainingDraft.lmpCode || "lmp"}-${trainingDraft.accessUnitCode || cleanUnits[0]?.code || "unit"}`),
+        lmpCode: trainingDraft.lmpCode,
+        locationCode: trainingDraft.accessLocationCode || primaryLocationCode,
+        unitCode: trainingDraft.accessUnitCode || cleanUnits[0]?.code || "",
+        operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel,
+        accessLevel: trainingDraft.accessLevel || "Manage",
+        status: "ACTIVE"
+      } : null;
+      const mergeByNormalisedCode = (rows, nextRow, codeKey) => {
+        if (!nextRow) return rows;
+        const nextKey = normaliseUnitSettingsIdentifier(nextRow?.[codeKey]);
+        if (!nextKey) return rows;
+        const exists = rows.some((row) => normaliseUnitSettingsIdentifier(row?.[codeKey]) === nextKey);
+        return exists ? rows.map((row) => normaliseUnitSettingsIdentifier(row?.[codeKey]) === nextKey ? { ...row, ...nextRow } : row) : [...rows, nextRow];
+      };
       const nextLocations = cleanLocations.map((row, index) => {
         const profile = findWizardLocationProfile(row.icao || row.iata || row.name);
         return {
@@ -12822,23 +12851,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         name: organisationDraft.name || organisationDraft.code || "Organisation",
         status: "ACTIVE",
         settings: {
+          ...existingOrganisationSettings,
           organisationStructure: structure,
-          masterLmpCatalogue: [{
-            id: createSetupTestRecordId("master-lmp-catalogue", trainingDraft.lmpCode || trainingDraft.lmpName || "master-lmp"),
-            code: trainingDraft.lmpCode,
-            name: trainingDraft.lmpName || trainingDraft.lmpCode,
-            description: trainingDraft.description,
-            status: trainingDraft.status || "ACTIVE"
-          }],
-          masterLmpAccess: [{
-            id: createSetupTestRecordId("master-lmp-access", `${trainingDraft.lmpCode || "lmp"}-${trainingDraft.accessUnitCode || cleanUnits[0]?.code || "unit"}`),
-            lmpCode: trainingDraft.lmpCode,
-            locationCode: trainingDraft.accessLocationCode || primaryLocationCode,
-            unitCode: trainingDraft.accessUnitCode || cleanUnits[0]?.code || "",
-            operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel,
-            accessLevel: trainingDraft.accessLevel || "Manage",
-            status: "ACTIVE"
-          }],
+          masterLmpCatalogue: mergeByNormalisedCode(existingMasterLmpCatalogue, draftMasterLmpCatalogueEntry, "code"),
+          masterLmpAccess: mergeByNormalisedCode(existingMasterLmpAccess, draftMasterLmpAccessRule, "lmpCode"),
           crewCompositionSettings: normaliseCrewCompositionSettings({
             alternateCompositions: alternateCrewRows,
             currencyProfiles
@@ -12953,11 +12969,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, onUpdatePlatformConfig, 
         }]
       };
     });
+    const shouldHandoffPersonnel = Array.isArray(overrides.staffRows) || Array.isArray(overrides.traineeRows);
     const setupPersonnelSnapshot = JSON.stringify(setupPersonnel);
-    if (markComplete || setupPersonnelSnapshot !== lastSetupTestPersonnelSnapshotRef.current) {
+    if (shouldHandoffPersonnel && setupPersonnelSnapshot !== lastSetupTestPersonnelSnapshotRef.current) {
       lastSetupTestPersonnelSnapshotRef.current = setupPersonnelSnapshot;
       pushWizardImportDiag("personnel:handoff-to-app", {
         markComplete,
+        handoffReason: Array.isArray(overrides.staffRows) ? "staff-rows-override" : "trainee-rows-override",
         instructors: setupPersonnel.instructors.length,
         trainees: setupPersonnel.trainees.length,
         instructorSample: setupPersonnel.instructors.slice(0, 8).map((person) => ({
