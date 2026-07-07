@@ -2255,11 +2255,12 @@ const OrganisationMyUnitSettings: React.FC<{
 const InitialSetupWizard: React.FC<{
     platformConfig?: any;
     unitCode?: string;
+    locationCode?: string;
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
     isSetupTestMode?: boolean;
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
-}> = ({ platformConfig, unitCode, onUpdatePlatformConfig, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
+}> = ({ platformConfig, unitCode, locationCode, onUpdatePlatformConfig, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
     const [mode, setMode] = useState<InitialSetupWizardMode>('detect');
     const [wizardStep, setWizardStep] = useState(() => {
         if (typeof window === 'undefined') return 0;
@@ -2351,7 +2352,8 @@ const InitialSetupWizard: React.FC<{
     const currentUnit = (platformConfig?.units || []).find((unit: any) => (
         normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(unitCode)
     )) || (platformConfig?.units || [])[0];
-    const currentUnitLocationKey = normaliseUnitSettingsIdentifier(currentUnit?.locationCode);
+    const activeWizardLocationCode = String(locationCode || currentUnit?.locationCode || '').trim().toUpperCase();
+    const currentUnitLocationKey = normaliseUnitSettingsIdentifier(currentUnit?.locationCode || activeWizardLocationCode);
     const currentLocation = (platformConfig?.locations || []).find((location: any) => (
         [
             location?.code,
@@ -2388,6 +2390,12 @@ const InitialSetupWizard: React.FC<{
             || normaliseUnitSettingsIdentifier(profile.iata) === key
             || normaliseUnitSettingsIdentifier(profile.name) === key
         ));
+    };
+    const activeWizardLocationProfile = findWizardLocationProfile(activeWizardLocationCode);
+    const activeWizardLocationRow = {
+        icao: activeWizardLocationProfile?.icao || activeWizardLocationCode || '',
+        iata: activeWizardLocationProfile?.iata || '',
+        name: activeWizardLocationProfile?.name || activeWizardLocationCode || '',
     };
     const activeUnits = (platformConfig?.units || []).filter((unit: any) => (
         String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
@@ -2480,7 +2488,7 @@ const InitialSetupWizard: React.FC<{
         level3Parents: parentLinesForLevel(3, '78WG = Air Combat Group\n84WG = Air Mobility Group'),
     });
     const [locationDraft, setLocationDraft] = useState({
-        code: String(currentLocation?.code || currentUnit?.locationCode || 'YAMB'),
+        code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || 'YAMB'),
         iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || 'AMB'),
         name: String(currentLocation?.name || 'Amberley'),
         timezone: String(currentLocation?.timezone || 'Australia/Brisbane'),
@@ -2495,17 +2503,17 @@ const InitialSetupWizard: React.FC<{
     const [locationsTodayDraft, setLocationsTodayDraft] = useState(() => (
         activeLocations.length > 0
             ? activeLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
-            : 'YAMB | AMB | Amberley'
+            : formatWizardLocationRows([activeWizardLocationRow]) || 'YAMB | AMB | Amberley'
     ));
     const [locationDraftRowCount, setLocationDraftRowCount] = useState(() => Math.max(1, parseWizardLocationRows(
         activeLocations.length > 0
             ? activeLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
-            : 'YAMB | AMB | Amberley',
+            : formatWizardLocationRows([activeWizardLocationRow]) || 'YAMB | AMB | Amberley',
     ).length));
     const [unitDraft, setUnitDraft] = useState({
         code: String(currentUnit?.code || unitCode || '36SQN'),
         name: String(currentUnit?.name || currentUnit?.code || unitCode || '36SQN'),
-        locationCode: String(currentUnit?.locationCode || currentLocation?.code || ''),
+        locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
         unitType: String(currentUnit?.unitType || 'Operational'),
         operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
         hasTrainees: currentUnit?.settings?.hasTrainees !== false,
@@ -2538,7 +2546,7 @@ const InitialSetupWizard: React.FC<{
         lmpName: String(primaryMasterLmp?.name || primaryMasterLmp?.code || 'New Master LMP'),
         description: String(primaryMasterLmp?.description || ''),
         status: String(primaryMasterLmp?.status || 'ACTIVE'),
-        accessLocationCode: String(primaryMasterLmpRule?.locationCode || currentLocation?.code || ''),
+        accessLocationCode: String(primaryMasterLmpRule?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
         accessUnitCode: String(primaryMasterLmpRule?.unitCode || currentUnit?.code || ''),
         accessModel: String(primaryMasterLmpRule?.operationalModel || primaryMasterLmpRule?.model || 'Any Model'),
         accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || 'View'),
@@ -2656,13 +2664,13 @@ const InitialSetupWizard: React.FC<{
 
     useEffect(() => {
         setLocationDraft({
-            code: String(currentLocation?.code || currentUnit?.locationCode || 'YAMB'),
+            code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || 'YAMB'),
             iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || 'AMB'),
             name: String(currentLocation?.name || 'Amberley'),
             timezone: String(currentLocation?.timezone || 'Australia/Brisbane'),
             trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(', ') : '',
         });
-    }, [currentLocation?.code, currentLocation?.name, currentLocation?.timezone, JSON.stringify(currentLocation?.trainingAreas || [])]);
+    }, [activeWizardLocationCode, currentLocation?.code, currentLocation?.name, currentLocation?.timezone, JSON.stringify(currentLocation?.trainingAreas || [])]);
 
     useEffect(() => {
         const firstLocation = parseWizardLocationRows(locationsTodayDraft)[0];
@@ -2682,12 +2690,12 @@ const InitialSetupWizard: React.FC<{
         setUnitDraft({
             code: String(currentUnit?.code || unitCode || '36SQN'),
             name: String(currentUnit?.name || currentUnit?.code || unitCode || '36SQN'),
-            locationCode: String(currentUnit?.locationCode || currentLocation?.code || ''),
+            locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
             unitType: String(currentUnit?.unitType || 'Operational'),
             operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
             hasTrainees: currentUnit?.settings?.hasTrainees !== false,
         });
-    }, [currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code]);
+    }, [activeWizardLocationCode, currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code]);
 
     useEffect(() => {
         setResourceDraft({
@@ -2731,12 +2739,12 @@ const InitialSetupWizard: React.FC<{
             lmpName: String(primaryMasterLmp?.name || primaryMasterLmp?.code || 'New Master LMP'),
             description: String(primaryMasterLmp?.description || ''),
             status: String(primaryMasterLmp?.status || 'ACTIVE'),
-            accessLocationCode: String(primaryMasterLmpRule?.locationCode || currentLocation?.code || ''),
+            accessLocationCode: String(primaryMasterLmpRule?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
             accessUnitCode: String(primaryMasterLmpRule?.unitCode || currentUnit?.code || ''),
             accessModel: String(primaryMasterLmpRule?.operationalModel || primaryMasterLmpRule?.model || 'Any Model'),
             accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || 'View'),
         });
-    }, [primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.operationalModel, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code]);
+    }, [activeWizardLocationCode, primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.operationalModel, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code]);
 
     const saveWizardConfig = (message: string, updater: (baseConfig: any) => any) => {
         if (!onUpdatePlatformConfig) {
@@ -4691,7 +4699,13 @@ const InitialSetupWizard: React.FC<{
             setSaveMessage('This setup test screen is not connected to the platform configuration in this session.');
             return;
         }
-        const locationRows = parseWizardLocationRows(locationsTodayDraft);
+        const rawLocationRows = parseWizardLocationRows(locationsTodayDraft);
+        const locationRowsAreOldDefault = rawLocationRows.length === 1
+            && normaliseUnitSettingsIdentifier(rawLocationRows[0]?.icao) === 'YAMB'
+            && activeWizardLocationCode
+            && normaliseUnitSettingsIdentifier(activeWizardLocationCode) !== 'YAMB'
+            && activeLocations.length === 0;
+        const locationRows = locationRowsAreOldDefault ? [activeWizardLocationRow] : rawLocationRows;
         const unitRows = parseWizardUnitRows(unitsTodayDraft);
         const effectiveUnitDraft = overrides.unitDraft ?? unitDraft;
         const cleanLocations = (locationRows.length > 0 ? locationRows : [{
@@ -6057,6 +6071,7 @@ const InitialSetupWizard: React.FC<{
 const OrganisationSlideoutDiagram: React.FC<{
     platformConfig?: any;
     unitCode?: string;
+    locationCode?: string;
     formationCallsigns?: FormationCallsign[];
     buildRuleSettings?: ScheduleViewProps['buildRuleSettings'];
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
@@ -6065,7 +6080,7 @@ const OrganisationSlideoutDiagram: React.FC<{
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
     isOpen?: boolean;
     onInitialSetupWizardActiveChange?: (active: boolean) => void;
-}> = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
+}> = ({ platformConfig, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [activeView, setActiveView] = useState<OrganisationSlideoutView>('structure');
@@ -6210,6 +6225,7 @@ const OrganisationSlideoutDiagram: React.FC<{
                 <InitialSetupWizard
                     platformConfig={platformConfig}
                     unitCode={unitCode}
+                    locationCode={locationCode}
                     onUpdatePlatformConfig={onUpdatePlatformConfig}
                     onNavigateToSettingsSection={onNavigateToSettingsSection}
                     isSetupTestMode={isSetupTestMode}
@@ -7234,7 +7250,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         style={{ width: 'min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))' }}
                     >
                         <div className={`h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-                            <OrganisationSlideoutDiagram platformConfig={platformConfig} unitCode={unitCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} />
+                            <OrganisationSlideoutDiagram platformConfig={platformConfig} unitCode={unitCode} locationCode={locationCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} />
                         </div>
                         <button
                             type="button"
