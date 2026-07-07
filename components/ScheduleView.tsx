@@ -2296,10 +2296,14 @@ const InitialSetupWizard: React.FC<{
     };
     const pushWizardLmpDiag = (stage: string, details: Record<string, any> = {}) => {
         if (!isSetupTestMode || typeof window === 'undefined') return;
+        const setupTestKeys = Object.keys(window.localStorage || {})
+            .filter((key) => key.includes('setup_test') || key.includes('neo_lmp_details'))
+            .sort();
         const entry = {
             ts: new Date().toISOString(),
             stage,
             activeUnitCode: unitCode,
+            activeLocationCode: locationCode,
             trainingDraft: {
                 lmpCode: trainingDraft?.lmpCode,
                 lmpName: trainingDraft?.lmpName,
@@ -2318,12 +2322,13 @@ const InitialSetupWizard: React.FC<{
                 name: locationDraft?.name,
             },
             stagedCourseLmpItems: uploadedCourseLmpItems.length,
+            setupTestKeys,
             details,
         };
         try {
             console.log(`[SETUP-TEST-LMP] ${stage}`, entry);
             const existing = JSON.parse(window.localStorage.getItem('dfp_setup_test_lmp_diag') || '[]');
-            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-500);
             window.localStorage.setItem('dfp_setup_test_lmp_diag', JSON.stringify(next));
             (window as any).neoSetupTestLmpDiag = next;
         } catch (error) {
@@ -5165,29 +5170,72 @@ const InitialSetupWizard: React.FC<{
         setSaveMessage(message);
     };
     const commitWizardCourseLmpEvents = () => {
+        const uploadResult = uploadResults.courses;
+        const fallbackItemsFromValidatedUpload = uploadedCourseLmpItems.length === 0 && uploadResult?.status === 'valid'
+            ? buildWizardCourseUploadItems(uploadResult)
+            : [];
+        const itemsForCommit = uploadedCourseLmpItems.length > 0 ? uploadedCourseLmpItems : fallbackItemsFromValidatedUpload;
         pushWizardLmpDiag('commit:clicked', {
             stagedCount: uploadedCourseLmpItems.length,
-            uploadResultStatus: uploadResults.courses?.status,
-            uploadResultRows: uploadResults.courses?.dataRows?.length || 0,
-            uploadResultHeaders: uploadResults.courses?.headers || [],
+            fallbackParsedCount: fallbackItemsFromValidatedUpload.length,
+            effectiveCommitCount: itemsForCommit.length,
+            uploadResultStatus: uploadResult?.status,
+            uploadResultRows: uploadResult?.dataRows?.length || 0,
+            uploadResultHeaders: uploadResult?.headers || [],
+            uploadResultIssues: uploadResult?.issues || [],
+            uploadResultSampleRows: (uploadResult?.dataRows || []).slice(0, 5),
+            stagedSample: uploadedCourseLmpItems.slice(0, 12).map((item) => ({
+                id: item.id,
+                code: item.code,
+                title: item.eventDescription,
+                courses: item.courses,
+                unit: item.unit,
+                location: item.location,
+            })),
+            fallbackSample: fallbackItemsFromValidatedUpload.slice(0, 12).map((item) => ({
+                id: item.id,
+                code: item.code,
+                title: item.eventDescription,
+                courses: item.courses,
+                unit: item.unit,
+                location: item.location,
+            })),
         });
-        if (uploadedCourseLmpItems.length === 0) {
-            const result = uploadResults.courses;
-            if (result?.status === 'valid') {
-                importWizardTemplateRows(initialSetupTemplates.find((template) => template.id === 'courses')!, result);
-                setSaveMessage('The uploaded LMP has been loaded. Click Commit uploaded LMP events again to add it to the local test app.');
-                pushWizardLmpDiag('commit:loaded-but-not-committed-yet', {
-                    reason: 'No staged LMP items existed at commit click; upload rows were loaded into staged state first.',
+        if (itemsForCommit.length === 0) {
+            if (uploadResult?.status === 'valid') {
+                importWizardTemplateRows(initialSetupTemplates.find((template) => template.id === 'courses')!, uploadResult);
+                setSaveMessage('The uploaded LMP was valid, but no importable event rows were available to commit. Check the LMP diagnostics for parsed row details.');
+                pushWizardLmpDiag('commit:blocked-valid-upload-no-items', {
+                    reason: 'Validated upload existed, but neither React-staged items nor synchronous fallback parsing produced commit rows.',
+                    uploadHeaders: uploadResult.headers || [],
+                    uploadRows: uploadResult.dataRows?.length || 0,
+                    sampleRows: (uploadResult.dataRows || []).slice(0, 8),
                 });
             } else {
                 setSaveMessage('Upload and validate a Courses and LMP events template before committing it.');
                 pushWizardLmpDiag('commit:blocked-no-valid-upload', {
-                    uploadResultStatus: result?.status || 'missing',
+                    uploadResultStatus: uploadResult?.status || 'missing',
+                    uploadResultIssues: uploadResult?.issues || [],
                 });
             }
             return;
         }
-        const cleanLmpCode = String(trainingDraft.lmpCode || uploadedCourseLmpItems[0]?.courses?.[0] || trainingDraft.lmpName || 'Master LMP').trim();
+        if (uploadedCourseLmpItems.length === 0 && fallbackItemsFromValidatedUpload.length > 0) {
+            setUploadedCourseLmpItems(fallbackItemsFromValidatedUpload);
+            pushWizardLmpDiag('commit:using-synchronous-upload-fallback', {
+                reason: 'React staged state was empty at commit click, so commit is using rows parsed directly from the validated upload result.',
+                fallbackItems: fallbackItemsFromValidatedUpload.length,
+                fallbackSample: fallbackItemsFromValidatedUpload.slice(0, 12).map((item) => ({
+                    id: item.id,
+                    code: item.code,
+                    title: item.eventDescription,
+                    courses: item.courses,
+                    unit: item.unit,
+                    location: item.location,
+                })),
+            });
+        }
+        const cleanLmpCode = String(trainingDraft.lmpCode || itemsForCommit[0]?.courses?.[0] || trainingDraft.lmpName || 'Master LMP').trim();
         const cleanLmpName = String(trainingDraft.lmpName || cleanLmpCode).trim();
         const cleanAccessUnitCode = String(trainingDraft.accessUnitCode || unitDraft.code || '').trim().toUpperCase();
         const cleanUnitHomeLocationCode = String(unitDraft.locationCode || '').trim().toUpperCase();
@@ -5196,7 +5244,21 @@ const InitialSetupWizard: React.FC<{
         const cleanAccessLocationCode = cleanAccessUnitCode && cleanAccessUnitCode === String(unitDraft.code || '').trim().toUpperCase() && cleanUnitHomeLocationCode
             ? cleanUnitHomeLocationCode
             : cleanTrainingAccessLocationCode || cleanUnitHomeLocationCode || cleanLocationDraftCode;
-        const scopedItems = uploadedCourseLmpItems.map((item, index) => ({
+        pushWizardLmpDiag('commit:resolved-scope', {
+            cleanLmpCode,
+            cleanLmpName,
+            cleanAccessUnitCode,
+            cleanUnitHomeLocationCode,
+            cleanTrainingAccessLocationCode,
+            cleanLocationDraftCode,
+            cleanAccessLocationCode,
+            activeWizardLocationCode,
+            activeWizardLocationRow,
+            unitCodeProp: unitCode,
+            locationCodeProp: locationCode,
+            itemsForCommit: itemsForCommit.length,
+        });
+        const scopedItems = itemsForCommit.map((item, index) => ({
             ...item,
             id: item.id || `setup-lmp-${normaliseUnitSettingsIdentifier(cleanLmpCode).replace(/[^A-Z0-9]+/g, '-')}-${normaliseUnitSettingsIdentifier(item.code).replace(/[^A-Z0-9]+/g, '-')}-${index + 1}`,
             courses: [cleanLmpCode],
@@ -5211,6 +5273,9 @@ const InitialSetupWizard: React.FC<{
             cleanLmpCode,
             cleanLmpName,
             scopedItems: scopedItems.length,
+            uniqueUnits: Array.from(new Set(scopedItems.map((item) => String(item.unit || '').trim()).filter(Boolean))),
+            uniqueLocations: Array.from(new Set(scopedItems.map((item) => String(item.location || '').trim()).filter(Boolean))),
+            uniqueCourses: Array.from(new Set(scopedItems.flatMap((item) => item.courses || []).map((course) => String(course || '').trim()).filter(Boolean))),
             scopedSample: scopedItems.slice(0, 20).map((item) => ({
                 id: item.id,
                 code: item.code,
@@ -5273,6 +5338,30 @@ const InitialSetupWizard: React.FC<{
         }));
         if (isSetupTestMode || isSetupTestBrowserMode()) {
             const currentSetupConfig = readSetupTestPlatformConfig();
+            const beforeOrganisation = Array.isArray(currentSetupConfig.organisations) ? currentSetupConfig.organisations[0] : null;
+            pushWizardLmpDiag('commit:before-write-setup-platform-config', {
+                organisations: Array.isArray(currentSetupConfig.organisations) ? currentSetupConfig.organisations.length : 0,
+                locations: Array.isArray(currentSetupConfig.locations) ? currentSetupConfig.locations.map((location: any) => ({
+                    code: location?.code,
+                    iataCode: location?.iataCode,
+                    name: location?.name,
+                })) : [],
+                units: Array.isArray(currentSetupConfig.units) ? currentSetupConfig.units.map((unit: any) => ({
+                    code: unit?.code,
+                    locationCode: unit?.locationCode,
+                    operationalModel: unit?.operationalModel || unit?.settings?.operationalModel,
+                    hasTrainees: unit?.settings?.hasTrainees,
+                })) : [],
+                catalogue: (beforeOrganisation?.settings?.masterLmpCatalogue || []).map((item: any) => ({ code: item?.code, name: item?.name, status: item?.status })),
+                accessRules: (beforeOrganisation?.settings?.masterLmpAccess || []).map((rule: any) => ({
+                    lmpCode: rule?.lmpCode,
+                    locationCode: rule?.locationCode,
+                    unitCode: rule?.unitCode,
+                    accessLevel: rule?.accessLevel,
+                    access: rule?.access,
+                    status: rule?.status,
+                })),
+            });
             const nextSetupConfig = updatePrimaryOrganisationWithSettings(currentSetupConfig, (settings) => {
                 const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
                 const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
@@ -5317,6 +5406,27 @@ const InitialSetupWizard: React.FC<{
             writeSetupTestPlatformConfig(nextSetupConfig);
             const readBackConfig = readSetupTestPlatformConfig();
             const readBackOrganisation = Array.isArray(readBackConfig.organisations) ? readBackConfig.organisations[0] : null;
+            const readBackNormalisedCatalogue = (readBackOrganisation?.settings?.masterLmpCatalogue || []).map((item: any) => ({
+                id: item?.id,
+                code: item?.code,
+                codeKey: normaliseUnitSettingsIdentifier(item?.code),
+                name: item?.name,
+                status: item?.status,
+            }));
+            const readBackNormalisedAccess = (readBackOrganisation?.settings?.masterLmpAccess || []).map((rule: any) => ({
+                id: rule?.id,
+                lmpCode: rule?.lmpCode,
+                lmpKey: normaliseUnitSettingsIdentifier(rule?.lmpCode),
+                locationCode: rule?.locationCode,
+                locationKey: normaliseUnitSettingsIdentifier(rule?.locationCode),
+                unitCode: rule?.unitCode,
+                unitKey: normaliseUnitSettingsIdentifier(rule?.unitCode),
+                operationalModel: rule?.operationalModel,
+                model: rule?.model,
+                accessLevel: rule?.accessLevel,
+                access: rule?.access,
+                status: rule?.status,
+            }));
             pushWizardLmpDiag('commit:after-write-setup-platform-config', {
                 cleanLmpCode,
                 activeUnitCode: unitDraft.code,
@@ -5327,33 +5437,32 @@ const InitialSetupWizard: React.FC<{
                     locationCode: unit?.locationCode,
                     operationalModel: unit?.operationalModel || unit?.settings?.operationalModel,
                 })) : [],
-                rawCatalogue: (readBackOrganisation?.settings?.masterLmpCatalogue || []).map((item: any) => ({
-                    id: item?.id,
-                    code: item?.code,
-                    name: item?.name,
-                    status: item?.status,
-                })),
-                rawAccessRules: (readBackOrganisation?.settings?.masterLmpAccess || []).map((rule: any) => ({
-                    id: rule?.id,
-                    lmpCode: rule?.lmpCode,
-                    locationCode: rule?.locationCode,
-                    unitCode: rule?.unitCode,
-                    operationalModel: rule?.operationalModel,
-                    model: rule?.model,
-                    accessLevel: rule?.accessLevel,
-                    access: rule?.access,
-                    status: rule?.status,
-                })),
+                rawCatalogue: readBackNormalisedCatalogue,
+                rawAccessRules: readBackNormalisedAccess,
+                matchingCatalogue: readBackNormalisedCatalogue.filter((item: any) => item.codeKey === normaliseUnitSettingsIdentifier(cleanLmpCode)),
+                matchingAccessRules: readBackNormalisedAccess.filter((rule: any) => rule.lmpKey === normaliseUnitSettingsIdentifier(cleanLmpCode)),
             });
             const existingItems = readSetupTestSyllabus();
             const nextById = new Map(existingItems.map((item: any) => [String(item?.id || item?.code || ''), item]));
             scopedItems.forEach((item) => nextById.set(String(item.id || item.code), item));
             const nextItems = Array.from(nextById.values());
+            const matchingExisting = existingItems.filter((item: any) => (item?.courses || []).includes(cleanLmpCode));
             pushWizardLmpDiag('commit:before-write-setup-syllabus', {
                 existingItems: existingItems.length,
+                matchingExistingItems: matchingExisting.length,
                 existingSample: existingItems.slice(0, 20).map((item: any) => ({ id: item?.id, code: item?.code, courses: item?.courses, unit: item?.unit, location: item?.location })),
                 writingItems: nextItems.length,
+                writingMatchingItems: nextItems.filter((item: any) => (item?.courses || []).includes(cleanLmpCode)).length,
                 writingSample: nextItems.slice(0, 20).map((item: any) => ({ id: item?.id, code: item?.code, courses: item?.courses, unit: item?.unit, location: item?.location })),
+                writingMatchingSample: nextItems.filter((item: any) => (item?.courses || []).includes(cleanLmpCode)).slice(0, 20).map((item: any) => ({
+                    id: item?.id,
+                    code: item?.code,
+                    courses: item?.courses,
+                    unit: item?.unit,
+                    location: item?.location,
+                    lmpType: item?.lmpType,
+                    isActive: item?.isActive,
+                })),
             });
             writeSetupTestSyllabus(nextItems);
             const readBackItems = readSetupTestSyllabus();
@@ -5375,10 +5484,24 @@ const InitialSetupWizard: React.FC<{
                 totalSetupSyllabusItems: nextItems.length,
                 readBackItems: readBackItems.length,
                 readBackMatchingItems: readBackItems.filter((item: any) => (item?.courses || []).includes(cleanLmpCode)).length,
+                readBackMatchingByNormalisedCourse: readBackItems.filter((item: any) => (item?.courses || []).some((course: any) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode))).length,
+                readBackUniqueCourses: Array.from(new Set(readBackItems.flatMap((item: any) => item?.courses || []).map((course: any) => String(course || '').trim()).filter(Boolean))),
+                readBackUniqueUnits: Array.from(new Set(readBackItems.map((item: any) => String(item?.unit || '').trim()).filter(Boolean))),
+                readBackUniqueLocations: Array.from(new Set(readBackItems.map((item: any) => String(item?.location || '').trim()).filter(Boolean))),
                 selectedPackageStorage: (() => {
                     try { return window.localStorage.getItem('neo_lmp_details_selected_package'); } catch { return null; }
                 })(),
                 readBackSample: readBackItems.slice(0, 20).map((item: any) => ({ id: item?.id, code: item?.code, courses: item?.courses, unit: item?.unit, location: item?.location })),
+                readBackMatchingSample: readBackItems.filter((item: any) => (item?.courses || []).includes(cleanLmpCode)).slice(0, 20).map((item: any) => ({
+                    id: item?.id,
+                    code: item?.code,
+                    title: item?.eventDescription,
+                    courses: item?.courses,
+                    unit: item?.unit,
+                    location: item?.location,
+                    lmpType: item?.lmpType,
+                    isActive: item?.isActive,
+                })),
             });
         }
         const message = `Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} for ${cleanLmpCode} to this local test app.`;

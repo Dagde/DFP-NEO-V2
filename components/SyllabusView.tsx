@@ -1118,7 +1118,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       try {
           console.log(`[SETUP-TEST-LMP:VIEW] ${stage}`, entry);
           const existing = JSON.parse(window.localStorage.getItem('dfp_setup_test_lmp_diag') || '[]');
-          const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
+          const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-500);
           window.localStorage.setItem('dfp_setup_test_lmp_diag', JSON.stringify(next));
           (window as any).neoSetupTestLmpDiag = next;
       } catch (error) {
@@ -1253,20 +1253,38 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       const unitScopedCourseCodes = Array.from(new Set(unitScopedSyllabusDetails.flatMap((item: any) => (
           Array.isArray(item?.courses) ? item.courses : []
       )).map((code: any) => String(code || '').trim()).filter(Boolean)));
-      const tabBreakdown = syllabusDetails.slice(0, 60).map((item: any) => ({
-          id: item?.id,
-          code: item?.code,
-          courses: item?.courses,
-          unit: item?.unit,
-          location: item?.location,
-          lmpType: item?.lmpType,
-          isActive: item?.isActive,
-          isShell: isSyllabusCourseShell(item),
-          tab: getItemLmpDetailsTab(item),
-          matchesActiveTab: getItemLmpDetailsTab(item) === activeTab,
-          matchesSelectedCourse: Array.isArray(item?.courses) ? item.courses.includes(selectedCourseType) : false,
-          matchesEffectiveUnit: !isFixedCrewModel || !normaliseContextCode(item?.unit) || normaliseContextCode(item?.unit) === normaliseContextCode(effectiveActiveUnitCode),
-      }));
+      const summariseItemForLmpView = (item: any) => {
+          const courses = Array.isArray(item?.courses) ? item.courses.map((course: any) => String(course || '').trim()).filter(Boolean) : [];
+          const tab = getItemLmpDetailsTab(item);
+          const matchesSelectedCourse = courses.some((course: string) => normaliseContextCode(course) === normaliseContextCode(selectedCourseType));
+          const matchesEffectiveUnit = !isFixedCrewModel || !normaliseContextCode(item?.unit) || normaliseContextCode(item?.unit) === normaliseContextCode(effectiveActiveUnitCode);
+          return {
+              id: item?.id,
+              code: item?.code,
+              title: item?.eventDescription,
+              courses,
+              unit: item?.unit,
+              unitKey: normaliseContextCode(item?.unit),
+              location: item?.location,
+              locationKey: normaliseContextCode(item?.location),
+              lmpType: item?.lmpType,
+              type: item?.type,
+              isActive: item?.isActive,
+              isShell: isSyllabusCourseShell(item),
+              tab,
+              matchesActiveTab: tab === activeTab,
+              matchesSelectedCourse,
+              matchesEffectiveUnit,
+              includedInFiltered: filteredSyllabusDetails.some((filtered: any) => String(filtered?.id || filtered?.code || '') === String(item?.id || item?.code || '')),
+          };
+      };
+      const tabBreakdown = syllabusDetails.slice(0, 180).map(summariseItemForLmpView);
+      const selectedCourseRawMatches = syllabusDetails
+          .filter((item: any) => Array.isArray(item?.courses) && item.courses.some((course: any) => normaliseContextCode(course) === normaliseContextCode(selectedCourseType)))
+          .map(summariseItemForLmpView);
+      const selectedCourseUnitScopedMatches = unitScopedSyllabusDetails
+          .filter((item: any) => Array.isArray(item?.courses) && item.courses.some((course: any) => normaliseContextCode(course) === normaliseContextCode(selectedCourseType)))
+          .map(summariseItemForLmpView);
       pushSetupTestLmpViewDiag('view:lmp-details-snapshot', {
           rawSyllabusItems: syllabusDetails.length,
           unitScopedItems: unitScopedSyllabusDetails.length,
@@ -1277,6 +1295,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           rawCourseCodes,
           unitScopedCourseCodes,
           courseLMPs,
+          selectedCourseRawMatchCount: selectedCourseRawMatches.length,
+          selectedCourseUnitScopedMatchCount: selectedCourseUnitScopedMatches.length,
+          selectedCourseFilteredMatchCount: filteredSyllabusDetails.length,
+          selectedCourseRawMatches: selectedCourseRawMatches.slice(0, 40),
+          selectedCourseUnitScopedMatches: selectedCourseUnitScopedMatches.slice(0, 40),
           incomingCatalogueProp: masterLmpCatalogue.map((entry: any) => ({
               code: entry.code,
               name: entry.name,
@@ -1292,7 +1315,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               try { return window.localStorage.getItem('neo_lmp_details_selected_package'); } catch { return null; }
           })(),
           selectedCourseType,
+          selectedCourseKey: normaliseContextCode(selectedCourseType),
           selectedCourseInCourseLMPs: courseLMPs.includes(selectedCourseType),
+          selectedCourseInCourseLMPsByKey: courseLMPs.some((course) => normaliseContextCode(course) === normaliseContextCode(selectedCourseType)),
           tabBreakdown,
           filteredSample: filteredSyllabusDetails.slice(0, 20).map((item: any) => ({
               id: item?.id,

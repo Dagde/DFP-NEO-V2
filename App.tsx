@@ -22807,7 +22807,7 @@ const App: React.FC = () => {
         try {
             console.log(`[SETUP-TEST-LMP:APP] ${stage}`, entry);
             const existing = JSON.parse(localStorage.getItem('dfp_setup_test_lmp_diag') || '[]');
-            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-500);
             localStorage.setItem('dfp_setup_test_lmp_diag', JSON.stringify(next));
             (window as any).neoSetupTestLmpDiag = next;
         } catch (error) {
@@ -22895,6 +22895,48 @@ const App: React.FC = () => {
                 )),
             })),
         }));
+        const rawItemVisibilityChecks = syllabusDetails.slice(0, 120).map((item: any) => {
+            const itemCourses = Array.isArray(item?.courses) ? item.courses.map((course: any) => String(course || '').trim()).filter(Boolean) : [];
+            const itemUnit = String(item?.unit || '').trim().toUpperCase();
+            const itemLocation = String(item?.location || '').trim().toUpperCase();
+            const itemAccessChecks = itemCourses.map((lmpCode) => ({
+                lmpCode,
+                catalogueMatch: normalisedCatalogue.find((entry: any) => String(entry?.code || '').trim().toUpperCase() === lmpCode.toUpperCase()) || null,
+                activeUnitChecks: activeContextCodes.map((unitCode) => ({
+                    unitCode,
+                    locationCode: school,
+                    operationalModel: getOperationalModelForUnitCode(unitCode),
+                    hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, {
+                        unitCode,
+                        locationCode: school,
+                        operationalModel: getOperationalModelForUnitCode(unitCode),
+                    }, 'View'),
+                    matchingRules: normalisedAccessRules.filter((rule: any) => (
+                        String(rule?.lmpCode || '').trim().toUpperCase() === lmpCode.toUpperCase()
+                    )),
+                })),
+            }));
+            return {
+                id: item?.id,
+                code: item?.code,
+                title: item?.eventDescription,
+                courses: itemCourses,
+                unit: itemUnit,
+                location: itemLocation,
+                lmpType: item?.lmpType,
+                type: item?.type,
+                isActive: item?.isActive,
+                includedInVisible: visibleSyllabusDetails.some((visible: any) => (
+                    String(visible?.id || visible?.code || '').trim() === String(item?.id || item?.code || '').trim()
+                )),
+                itemAccessChecks,
+            };
+        });
+        const visibilityCounts = rawItemVisibilityChecks.reduce((counts: Record<string, number>, item: any) => {
+            const key = item.includedInVisible ? 'visible' : 'notVisible';
+            counts[key] = (counts[key] || 0) + 1;
+            return counts;
+        }, {});
         pushSetupTestLmpDiag('app:visible-syllabus-snapshot', {
             platformConfigLoaded,
             rawSyllabusItems: syllabusDetails.length,
@@ -22919,6 +22961,8 @@ const App: React.FC = () => {
             })),
             syllabusCourseCodes,
             accessChecks,
+            visibilityCounts,
+            rawItemVisibilityChecks,
             catalogue: accessibleMasterLmpCatalogueForSyllabus.map((entry: any) => ({
                 code: entry.code,
                 name: entry.name,
