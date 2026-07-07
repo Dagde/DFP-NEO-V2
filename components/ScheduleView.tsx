@@ -733,11 +733,11 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         id: 'scoring',
         label: 'Scoring matrix',
         fileName: 'DFP_NEO_Scoring_Matrix_Template.csv',
-        requiredHeaders: ['Dimension', 'Pass Standard', 'Fail Standard'],
-        optionalHeaders: ['Grade 0', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Notes'],
+        requiredHeaders: ['Dimension'],
+        optionalHeaders: ['Grade 0', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Pass Standard', 'Fail Standard', 'Notes'],
         exampleRows: [
-            ['Preparation', 'Prepared, safe and able to continue training.', 'Unsafe or not prepared for the event.', 'Not safe', 'Needs major help', 'Needs help', 'Meets standard', 'Above standard', 'Excellent', ''],
-            ['Airmanship', 'Maintains safe judgement and prioritises appropriately.', 'Poor judgement or unsafe prioritisation.', 'Unsafe', 'Weak judgement', 'Developing', 'Meets standard', 'Strong', 'Excellent', ''],
+            ['Preparation', 'Not safe', 'Needs major help', 'Needs help', 'Meets standard', 'Above standard', 'Excellent', 'Prepared, safe and able to continue training.', 'Unsafe or not prepared for the event.', ''],
+            ['Airmanship', 'Unsafe', 'Weak judgement', 'Developing', 'Meets standard', 'Strong', 'Excellent', 'Maintains safe judgement and prioritises appropriately.', 'Poor judgement or unsafe prioritisation.', ''],
         ],
         settingsSection: 'platform-training-report-template',
         focusSubsectionId: 'platform-unit-training-report-template',
@@ -4285,13 +4285,13 @@ const InitialSetupWizard: React.FC<{
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`standard-currency-event-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
-                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_110px_120px_90px_90px_90px]">
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(190px,1fr)_120px_140px_90px_90px_90px] xl:items-end">
                             {wizardField('Event name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'Annual Instrument Check')}
                             {wizardField('Short title', row.shortTitle || '', (value) => updateRow(index, 'shortTitle', value.toUpperCase()), undefined, 'INST')}
                             {wizardField('Resource type', row.resourceType || 'Flight', (value) => updateRow(index, 'resourceType', value), ['Flight', 'FTD', 'CPT', 'Ground'])}
-                            {wizardField('Duration min', row.duration || '90', (value) => updateRow(index, 'duration', value), undefined, '90')}
-                            {wizardField('Pre-flight min', row.preFlight || '90', (value) => updateRow(index, 'preFlight', value), undefined, '90')}
-                            {wizardField('Post-flight min', row.postFlight || '60', (value) => updateRow(index, 'postFlight', value), undefined, '60')}
+                            {wizardField('Duration', row.duration || '90', (value) => updateRow(index, 'duration', value), undefined, '90')}
+                            {wizardField('Pre-flight', row.preFlight || '90', (value) => updateRow(index, 'preFlight', value), undefined, '90')}
+                            {wizardField('Post-flight', row.postFlight || '60', (value) => updateRow(index, 'postFlight', value), undefined, '60')}
                         </div>
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_110px_90px_82px] xl:items-end">
                             {wizardField('Crew', row.crew || 'Standard crew', (value) => updateRow(index, 'crew', value), undefined, 'Standard crew')}
@@ -4480,7 +4480,7 @@ const InitialSetupWizard: React.FC<{
                                     {fromLines(levelOptions).map((child) => {
                                         const currentParent = buildWizardParentRowsForChildren([child], parentMappings, parentOptions)[0]?.parent || '';
                                         return (
-                                            <div key={`${levelNumber}-${child}`} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.7fr)] md:items-center">
+                                            <div key={`${levelNumber}-${child}`} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(130px,220px)_minmax(180px,340px)] md:items-center">
                                                 <div>
                                                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Child</p>
                                                     <p className="mt-1 text-sm font-bold text-slate-950">{child}</p>
@@ -5794,7 +5794,7 @@ const InitialSetupWizard: React.FC<{
                     </div>
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
                         <p className={wizardLabelClass}>Turnaround times</p>
-                        <div className="mt-3 grid gap-3 md:grid-cols-3">
+                        <div className="mt-3 grid gap-3 md:grid-cols-3 md:items-end">
                             {wizardField('Aircraft turnaround minutes', buildRulesDraft.aircraftTurnaroundMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, aircraftTurnaroundMinutes: value })), undefined, '60')}
                             {wizardField('Simulator turnaround minutes', buildRulesDraft.simTurnaroundMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, simTurnaroundMinutes: value })), undefined, '30')}
                             {wizardField('Trainer turnaround minutes', buildRulesDraft.trainerTurnaroundMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, trainerTurnaroundMinutes: value })), undefined, '30')}

@@ -9580,11 +9580,11 @@ const initialSetupTemplates = [
     id: "scoring",
     label: "Scoring matrix",
     fileName: "DFP_NEO_Scoring_Matrix_Template.csv",
-    requiredHeaders: ["Dimension", "Pass Standard", "Fail Standard"],
-    optionalHeaders: ["Grade 0", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Notes"],
+    requiredHeaders: ["Dimension"],
+    optionalHeaders: ["Grade 0", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Pass Standard", "Fail Standard", "Notes"],
     exampleRows: [
-      ["Preparation", "Prepared, safe and able to continue training.", "Unsafe or not prepared for the event.", "Not safe", "Needs major help", "Needs help", "Meets standard", "Above standard", "Excellent", ""],
-      ["Airmanship", "Maintains safe judgement and prioritises appropriately.", "Poor judgement or unsafe prioritisation.", "Unsafe", "Weak judgement", "Developing", "Meets standard", "Strong", "Excellent", ""]
+      ["Preparation", "Not safe", "Needs major help", "Needs help", "Meets standard", "Above standard", "Excellent", "Prepared, safe and able to continue training.", "Unsafe or not prepared for the event.", ""],
+      ["Airmanship", "Unsafe", "Weak judgement", "Developing", "Meets standard", "Strong", "Excellent", "Maintains safe judgement and prioritises appropriately.", "Poor judgement or unsafe prioritisation.", ""]
     ],
     settingsSection: "platform-training-report-template",
     focusSubsectionId: "platform-unit-training-report-template"
@@ -12389,13 +12389,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Standard staff currency events are reusable event templates. They save time later by pre-filling duration, resource type, crew, currency and aircraft configuration for common staff currency checks." }),
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_110px_120px_90px_90px_90px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(190px,1fr)_120px_140px_90px_90px_90px] xl:items-end", children: [
           wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "Annual Instrument Check"),
           wizardField("Short title", row.shortTitle || "", (value) => updateRow(index, "shortTitle", value.toUpperCase()), void 0, "INST"),
           wizardField("Resource type", row.resourceType || "Flight", (value) => updateRow(index, "resourceType", value), ["Flight", "FTD", "CPT", "Ground"]),
-          wizardField("Duration min", row.duration || "90", (value) => updateRow(index, "duration", value), void 0, "90"),
-          wizardField("Pre-flight min", row.preFlight || "90", (value) => updateRow(index, "preFlight", value), void 0, "90"),
-          wizardField("Post-flight min", row.postFlight || "60", (value) => updateRow(index, "postFlight", value), void 0, "60")
+          wizardField("Duration", row.duration || "90", (value) => updateRow(index, "duration", value), void 0, "90"),
+          wizardField("Pre-flight", row.preFlight || "90", (value) => updateRow(index, "preFlight", value), void 0, "90"),
+          wizardField("Post-flight", row.postFlight || "60", (value) => updateRow(index, "postFlight", value), void 0, "60")
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_110px_90px_82px] xl:items-end", children: [
           wizardField("Crew", row.crew || "Standard crew", (value) => updateRow(index, "crew", value), void 0, "Standard crew"),
@@ -12530,7 +12530,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Parents for this level" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-hidden rounded-lg border border-slate-300 bg-white", children: fromLines(levelOptions).length > 0 && parentOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-slate-200", children: fromLines(levelOptions).map((child) => {
           const currentParent = buildWizardParentRowsForChildren([child], parentMappings, parentOptions)[0]?.parent || "";
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.7fr)] md:items-center", children: [
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 px-3 py-3 md:grid-cols-[minmax(130px,220px)_minmax(180px,340px)] md:items-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Child" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-bold text-slate-950", children: child })
@@ -13779,7 +13779,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Turnaround times" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-3 md:items-end", children: [
               wizardField("Aircraft turnaround minutes", buildRulesDraft.aircraftTurnaroundMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, aircraftTurnaroundMinutes: value })), void 0, "60"),
               wizardField("Simulator turnaround minutes", buildRulesDraft.simTurnaroundMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, simTurnaroundMinutes: value })), void 0, "30"),
               wizardField("Trainer turnaround minutes", buildRulesDraft.trainerTurnaroundMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, trainerTurnaroundMinutes: value })), void 0, "30")
