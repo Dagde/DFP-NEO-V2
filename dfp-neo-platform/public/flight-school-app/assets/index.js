@@ -1383,7 +1383,28 @@ const SETUP_TEST_PLATFORM_EVENT = "dfp-setup-test-platform-config-updated";
 const SETUP_TEST_PERSONNEL_EVENT = "dfp-setup-test-personnel-updated";
 const SETUP_TEST_SYLLABUS_EVENT = "dfp-setup-test-syllabus-updated";
 const INITIAL_SETUP_WIZARD_STEP_KEY = "dfp-initial-setup-wizard-step";
+const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY$1 = "dfp_active_operational_context";
 const safeWindow$1 = () => typeof window === "undefined" ? null : window;
+const resetSetupTestProfile = (profile) => {
+  const win = safeWindow$1();
+  if (!win) return;
+  const cleanProfile = String(profile || AIR_MOVEMENTS_TEST_PROFILE).trim() || AIR_MOVEMENTS_TEST_PROFILE;
+  const setupPrefix = `dfp_setup_test_${cleanProfile}_`;
+  Object.keys(win.localStorage).filter((key) => key.startsWith(setupPrefix)).forEach((key) => win.localStorage.removeItem(key));
+  [
+    INITIAL_SETUP_WIZARD_STEP_KEY,
+    "dfp_setup_test_personnel_diag",
+    "dfp_setup_test_lmp_diag",
+    "dfp_setup_test_context_diag",
+    "neo_lmp_details_active_tab",
+    "neo_lmp_details_selected_package"
+  ].forEach((key) => win.localStorage.removeItem(key));
+  win.localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY$1, JSON.stringify({
+    location: "ESL",
+    unit: "1FTS"
+  }));
+  win.sessionStorage.removeItem("dfp_setup_test_profile");
+};
 const getSetupTestProfile = () => {
   const win = safeWindow$1();
   if (!win) return null;
@@ -1392,10 +1413,7 @@ const getSetupTestProfile = () => {
   const cleanUrlProfile = String(urlProfile || "").trim();
   if (cleanUrlProfile) {
     if (params.get(SETUP_TEST_RESET_QUERY_PARAM) === "1") {
-      ["platform_config", "settings", "currencies", "personnel", "syllabus"].forEach((kind) => {
-        win.localStorage.removeItem(`dfp_setup_test_${cleanUrlProfile}_${kind}`);
-      });
-      win.localStorage.removeItem(INITIAL_SETUP_WIZARD_STEP_KEY);
+      resetSetupTestProfile(cleanUrlProfile);
       params.delete(SETUP_TEST_RESET_QUERY_PARAM);
       const nextSearch = params.toString();
       win.history.replaceState({}, "", `${win.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${win.location.hash}`);
