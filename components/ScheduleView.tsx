@@ -2265,6 +2265,7 @@ const InitialSetupWizard: React.FC<{
     const [saveMessage, setSaveMessage] = useState('');
     const [uploadedStaffProfileRows, setUploadedStaffProfileRows] = useState<any[]>([]);
     const [uploadedTraineeProfileRows, setUploadedTraineeProfileRows] = useState<any[]>([]);
+    const [uploadedCourseLmpItems, setUploadedCourseLmpItems] = useState<SyllabusItemDetail[]>([]);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const lastSetupTestPersonnelSnapshotRef = useRef('');
     const pushWizardImportDiag = (stage: string, details: Record<string, any> = {}) => {
@@ -3477,6 +3478,17 @@ const InitialSetupWizard: React.FC<{
         }
         if (template.id === 'courses') {
             const importedItems = buildWizardCourseUploadItems(result);
+            if (importedItems.length === 0) {
+                const message = 'The LMP file passed the column check, but I could not find any rows with both an event code and an event title/description.';
+                setImportConfirmations((current) => ({ ...current, [template.id]: message }));
+                setSaveMessage(message);
+                pushWizardImportDiag('courses:no-importable-events', {
+                    headers: result.headers,
+                    dataRows: result.dataRows.length,
+                    sampleRows: result.dataRows.slice(0, 5),
+                });
+                return;
+            }
             const uploadedMasterLmp = importedItems[0]?.courses?.[0] || trainingDraft.lmpCode || trainingDraft.lmpName || 'Master LMP';
             const cleanLmpCode = String(trainingDraft.lmpCode || uploadedMasterLmp).trim();
             const cleanLmpName = String(trainingDraft.lmpName || uploadedMasterLmp || cleanLmpCode).trim();
@@ -3489,57 +3501,13 @@ const InitialSetupWizard: React.FC<{
                 lmpCode: cleanLmpCode,
                 lmpName: cleanLmpName,
             }));
-            saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} to this local test app.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
-                const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
-                const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
-                const catalogueExists = catalogue.some((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
-                const accessExists = accessRules.some((rule: any) => (
-                    normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode)
-                    && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(trainingDraft.accessUnitCode || unitDraft.code)
-                ));
-                const nextCatalogueEntry = {
-                    id: primaryMasterLmp?.id || createWizardRecordId('master-lmp-catalogue'),
-                    code: cleanLmpCode,
-                    name: cleanLmpName || cleanLmpCode,
-                    description: trainingDraft.description,
-                    status: trainingDraft.status || 'ACTIVE',
-                };
-                const nextAccessRule = {
-                    id: primaryMasterLmpRule?.id || createWizardRecordId('master-lmp-access'),
-                    lmpCode: cleanLmpCode,
-                    locationCode: trainingDraft.accessLocationCode || locationDraft.code,
-                    unitCode: trainingDraft.accessUnitCode || unitDraft.code,
-                    model: trainingDraft.accessModel || 'Any Model',
-                    access: trainingDraft.accessLevel || 'Manage',
-                    status: 'ACTIVE',
-                };
-                return {
-                    ...settings,
-                    masterLmpCatalogue: catalogueExists
-                        ? catalogue.map((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) ? { ...item, ...nextCatalogueEntry } : item)
-                        : [...catalogue, nextCatalogueEntry],
-                    masterLmpAccess: accessExists
-                        ? accessRules.map((rule: any) => (
-                            normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode)
-                            && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(trainingDraft.accessUnitCode || unitDraft.code)
-                                ? { ...rule, ...nextAccessRule }
-                                : rule
-                        ))
-                        : [...accessRules, nextAccessRule],
-                };
-            }));
-            if (isSetupTestMode || isSetupTestBrowserMode()) {
-                const existingItems = readSetupTestSyllabus();
-                const nextById = new Map(existingItems.map((item: any) => [String(item?.id || item?.code || ''), item]));
-                scopedItems.forEach((item) => nextById.set(String(item.id || item.code), item));
-                writeSetupTestSyllabus(Array.from(nextById.values()));
-                pushWizardImportDiag('courses:committed-to-setup-syllabus', {
-                    importedItems: scopedItems.length,
-                    lmpCode: cleanLmpCode,
-                    sample: scopedItems.slice(0, 8).map((item) => ({ code: item.code, title: item.eventDescription, type: item.type, courses: item.courses })),
-                });
-            }
-            const message = `Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} to this local test app.`;
+            setUploadedCourseLmpItems(scopedItems);
+            pushWizardImportDiag('courses:loaded-for-commit', {
+                importedItems: scopedItems.length,
+                lmpCode: cleanLmpCode,
+                sample: scopedItems.slice(0, 8).map((item) => ({ code: item.code, title: item.eventDescription, type: item.type, courses: item.courses })),
+            });
+            const message = `Loaded ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} for ${cleanLmpCode}. Click “Commit uploaded LMP events” to add them to the local test app.`;
             setImportConfirmations((current) => ({ ...current, [template.id]: message }));
             setSaveMessage(message);
             return;
@@ -5030,6 +4998,92 @@ const InitialSetupWizard: React.FC<{
         setShowMoreTraineesPrompt(true);
         setSaveMessage(message);
     };
+    const commitWizardCourseLmpEvents = () => {
+        if (uploadedCourseLmpItems.length === 0) {
+            const result = uploadResults.courses;
+            if (result?.status === 'valid') {
+                importWizardTemplateRows(initialSetupTemplates.find((template) => template.id === 'courses')!, result);
+                setSaveMessage('The uploaded LMP has been loaded. Click Commit uploaded LMP events again to add it to the local test app.');
+            } else {
+                setSaveMessage('Upload and validate a Courses and LMP events template before committing it.');
+            }
+            return;
+        }
+        const cleanLmpCode = String(trainingDraft.lmpCode || uploadedCourseLmpItems[0]?.courses?.[0] || trainingDraft.lmpName || 'Master LMP').trim();
+        const cleanLmpName = String(trainingDraft.lmpName || cleanLmpCode).trim();
+        const scopedItems = uploadedCourseLmpItems.map((item, index) => ({
+            ...item,
+            id: item.id || `setup-lmp-${normaliseUnitSettingsIdentifier(cleanLmpCode).replace(/[^A-Z0-9]+/g, '-')}-${normaliseUnitSettingsIdentifier(item.code).replace(/[^A-Z0-9]+/g, '-')}-${index + 1}`,
+            courses: [cleanLmpCode],
+            module: item.module || cleanLmpName || cleanLmpCode,
+            phase: item.phase || cleanLmpName || cleanLmpCode,
+            location: item.location || locationDraft.code || unitDraft.locationCode || '',
+            unit: item.unit || unitDraft.code || '',
+            lmpType: item.lmpType || 'Master LMP',
+            sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index + 1,
+        }));
+        saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} to this local test app.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+            const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+            const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+            const catalogueExists = catalogue.some((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
+            const accessUnitCode = trainingDraft.accessUnitCode || unitDraft.code;
+            const accessExists = accessRules.some((rule: any) => (
+                normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode)
+                && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(accessUnitCode)
+            ));
+            const nextCatalogueEntry = {
+                id: primaryMasterLmp?.id || createWizardRecordId('master-lmp-catalogue'),
+                code: cleanLmpCode,
+                name: cleanLmpName || cleanLmpCode,
+                description: trainingDraft.description,
+                status: trainingDraft.status || 'ACTIVE',
+            };
+            const nextAccessRule = {
+                id: primaryMasterLmpRule?.id || createWizardRecordId('master-lmp-access'),
+                lmpCode: cleanLmpCode,
+                locationCode: trainingDraft.accessLocationCode || locationDraft.code,
+                unitCode: accessUnitCode,
+                model: trainingDraft.accessModel || 'Any Model',
+                access: trainingDraft.accessLevel || 'Manage',
+                status: 'ACTIVE',
+            };
+            return {
+                ...settings,
+                masterLmpCatalogue: catalogueExists
+                    ? catalogue.map((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) ? { ...item, ...nextCatalogueEntry } : item)
+                    : [...catalogue, nextCatalogueEntry],
+                masterLmpAccess: accessExists
+                    ? accessRules.map((rule: any) => (
+                        normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode)
+                        && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(accessUnitCode)
+                            ? { ...rule, ...nextAccessRule }
+                            : rule
+                    ))
+                    : [...accessRules, nextAccessRule],
+            };
+        }));
+        if (isSetupTestMode || isSetupTestBrowserMode()) {
+            const existingItems = readSetupTestSyllabus();
+            const nextById = new Map(existingItems.map((item: any) => [String(item?.id || item?.code || ''), item]));
+            scopedItems.forEach((item) => nextById.set(String(item.id || item.code), item));
+            writeSetupTestSyllabus(Array.from(nextById.values()));
+            try {
+                window.localStorage.setItem('neo_lmp_details_active_tab', 'master');
+                window.localStorage.setItem('neo_lmp_details_selected_package', cleanLmpCode);
+            } catch {
+                // Local selection persistence is helpful only; the commit itself has already succeeded.
+            }
+            pushWizardImportDiag('courses:committed-to-setup-syllabus', {
+                importedItems: scopedItems.length,
+                lmpCode: cleanLmpCode,
+                totalSetupSyllabusItems: Array.from(nextById.values()).length,
+                sample: scopedItems.slice(0, 8).map((item) => ({ code: item.code, title: item.eventDescription, type: item.type, courses: item.courses })),
+            });
+        }
+        const message = `Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} for ${cleanLmpCode} to this local test app.`;
+        setImportConfirmations((current) => ({ ...current, courses: message }));
+        setSaveMessage(message);
+    };
     const renderWizardDataEntry = () => {
         if (visibleStep.id === 'analysis') {
             return promptShell(
@@ -5620,19 +5674,26 @@ const InitialSetupWizard: React.FC<{
                                             <button
                                                 type="button"
                                                 className={`${wizardPrimaryButtonClass} mt-3`}
-                                                onClick={() => importWizardTemplateRows(template, result)}
+                                                onClick={() => template.id === 'courses'
+                                                    ? commitWizardCourseLmpEvents()
+                                                    : importWizardTemplateRows(template, result)
+                                                }
                                             >
                                                 {importConfirmation
                                                     ? template.id === 'staff'
                                                         ? 'Commit uploaded staff again'
                                                         : template.id === 'trainees'
                                                             ? 'Load another trainee file'
-                                                            : 'Import again'
+                                                            : template.id === 'courses'
+                                                                ? 'Commit uploaded LMP events'
+                                                                : 'Import again'
                                                     : template.id === 'staff'
                                                         ? 'Commit uploaded staff to Staff Profiles'
                                                         : template.id === 'trainees'
                                                             ? 'Load trainees for allocation'
-                                                            : `Import into ${template.id === 'scoring' ? 'scoring matrix' : 'wizard'}`
+                                                            : template.id === 'courses'
+                                                                ? 'Commit uploaded LMP events'
+                                                                : `Import into ${template.id === 'scoring' ? 'scoring matrix' : 'wizard'}`
                                                 }
                                             </button>
                                             {importConfirmation ? (
@@ -5650,7 +5711,7 @@ const InitialSetupWizard: React.FC<{
             </div>
         </aside>
     );
-    const placeTemplatesBelow = visibleStep.id === 'staff' || visibleStep.id === 'trainee-upload' || visibleStep.id === 'scoring';
+    const placeTemplatesBelow = visibleStep.id === 'staff' || visibleStep.id === 'trainee-upload' || visibleStep.id === 'master-lmp' || visibleStep.id === 'scoring';
     const renderTemporaryStepJump = () => (
         isSetupTestMode ? (
             <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-slate-900 shadow-sm">
