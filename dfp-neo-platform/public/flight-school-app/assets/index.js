@@ -98046,12 +98046,15 @@ const App = () => {
   reactExports.useEffect(() => {
     let cancelled = false;
     const loadPlatformConfig = async () => {
-      const config = applyDefaultUnitTraineeAvailability(await loadPlatformConfigFromDB());
+      const config = applyDefaultUnitTraineeAvailability(
+        setupTestProfile ? readSetupTestPlatformConfig() : await loadPlatformConfigFromDB()
+      );
       if (cancelled) return;
       setPlatformConfig(config);
       setPlatformConfigLoaded(true);
       if (config) {
         console.log("[PlatformConfig] Loaded stage-two read context:", {
+          setupTestProfile: setupTestProfile || null,
           locations: config.locations.length,
           units: config.units.length,
           resourcePools: config.resourcePools.length
@@ -98062,7 +98065,7 @@ const App = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [setupTestProfile]);
   reactExports.useEffect(() => {
     const handlePlatformConfigUpdated = (event) => {
       const nextConfig = applyDefaultUnitTraineeAvailability(event.detail?.config || null);

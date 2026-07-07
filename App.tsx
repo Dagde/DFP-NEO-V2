@@ -83,6 +83,7 @@ import {
     getSetupTestProfile,
     isSetupTestMode,
     readSetupTestPersonnel,
+    readSetupTestPlatformConfig,
     readSetupTestSyllabus,
     SETUP_TEST_PERSONNEL_EVENT,
     SETUP_TEST_PLATFORM_EVENT,
@@ -21298,12 +21299,15 @@ const App: React.FC = () => {
     useEffect(() => {
         let cancelled = false;
         const loadPlatformConfig = async () => {
-            const config = applyDefaultUnitTraineeAvailability(await loadPlatformConfigFromDB());
+            const config = applyDefaultUnitTraineeAvailability(
+                setupTestProfile ? readSetupTestPlatformConfig() : await loadPlatformConfigFromDB()
+            );
             if (cancelled) return;
             setPlatformConfig(config);
             setPlatformConfigLoaded(true);
             if (config) {
                 console.log('[PlatformConfig] Loaded stage-two read context:', {
+                    setupTestProfile: setupTestProfile || null,
                     locations: config.locations.length,
                     units: config.units.length,
                     resourcePools: config.resourcePools.length,
@@ -21312,7 +21316,7 @@ const App: React.FC = () => {
         };
         loadPlatformConfig();
         return () => { cancelled = true; };
-    }, []);
+    }, [setupTestProfile]);
 
     useEffect(() => {
         const handlePlatformConfigUpdated = (event: Event) => {
