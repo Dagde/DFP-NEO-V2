@@ -3727,7 +3727,6 @@ const InitialSetupWizard: React.FC<{
         onChange: (value: string) => void,
     ) => {
         insertPreventedWizardSpace(event, onChange);
-        stopEditableKeyPropagation(event);
     };
     const wizardField = (
         label: string,

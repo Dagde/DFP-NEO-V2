@@ -18,6 +18,5 @@ export const stopEditableKeyPropagation = (event: React.KeyboardEvent<HTMLElemen
       return;
     }
     event.stopPropagation();
-    event.nativeEvent.stopImmediatePropagation?.();
   }
 };

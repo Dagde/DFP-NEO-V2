@@ -9131,7 +9131,6 @@ const stopEditableKeyPropagation = (event) => {
       return;
     }
     event.stopPropagation();
-    event.nativeEvent.stopImmediatePropagation?.();
   }
 };
 const PIXELS_PER_HOUR$6 = 200;
@@ -11950,7 +11949,6 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const handleWizardTextKeyDownCapture = (event, onChange) => {
     insertPreventedWizardSpace(event, onChange);
-    stopEditableKeyPropagation(event);
   };
   const wizardField = (label, value, onChange, options, placeholder) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: label }),
