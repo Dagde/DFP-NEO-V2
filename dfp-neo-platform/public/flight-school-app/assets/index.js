@@ -12517,6 +12517,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }
     setWizardStep(Math.min(steps.length - 1, currentStep + 1));
   };
+  const goToWizardStep = (nextStep) => {
+    const boundedStep = Math.min(steps.length - 1, Math.max(0, nextStep));
+    if (isSetupTestMode$1) {
+      saveSetupTestWizardDrafts(false);
+    }
+    setWizardStep(boundedStep);
+  };
   const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
@@ -12524,15 +12531,34 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       onKeyDownCapture: stopEditableKeyPropagation,
       onKeyDown: stopEditableKeyPropagation,
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: [
-            "Step ",
-            currentStep + 1,
-            " of ",
-            steps.length
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: [
+              "Step ",
+              currentStep + 1,
+              " of ",
+              steps.length
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-xl font-bold text-slate-950", children: visibleStep.title }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 text-sm leading-6 text-slate-700", children: question })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-xl font-bold text-slate-950", children: visibleStep.title }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 text-sm leading-6 text-slate-700", children: question })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block w-full lg:w-[320px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Go to wizard page" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                className: `${wizardInputClass} mt-1 bg-white text-slate-950`,
+                value: currentStep,
+                onChange: (event) => goToWizardStep(Number(event.target.value)),
+                onKeyDown: stopEditableKeyPropagation,
+                children: steps.map((step, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: index, children: [
+                  index + 1,
+                  ". ",
+                  step.title
+                ] }, `wizard-page-${step.id}`))
+              }
+            )
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",

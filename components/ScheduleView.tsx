@@ -4429,6 +4429,13 @@ const InitialSetupWizard: React.FC<{
         }
         setWizardStep(Math.min(steps.length - 1, currentStep + 1));
     };
+    const goToWizardStep = (nextStep: number) => {
+        const boundedStep = Math.min(steps.length - 1, Math.max(0, nextStep));
+        if (isSetupTestMode) {
+            saveSetupTestWizardDrafts(false);
+        }
+        setWizardStep(boundedStep);
+    };
     const promptShell = (question: React.ReactNode, answer: React.ReactNode, actionLabel = 'Next', saveAction?: () => void) => (
         <div
             key={visibleStep.id}
@@ -4436,10 +4443,27 @@ const InitialSetupWizard: React.FC<{
             onKeyDownCapture={stopEditableKeyPropagation}
             onKeyDown={stopEditableKeyPropagation}
         >
-            <div className="mb-5">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Step {currentStep + 1} of {steps.length}</p>
-                <h4 className="mt-1 text-xl font-bold text-slate-950">{visibleStep.title}</h4>
-                <div className="mt-3 text-sm leading-6 text-slate-700">{question}</div>
+            <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Step {currentStep + 1} of {steps.length}</p>
+                    <h4 className="mt-1 text-xl font-bold text-slate-950">{visibleStep.title}</h4>
+                    <div className="mt-3 text-sm leading-6 text-slate-700">{question}</div>
+                </div>
+                <label className="block w-full lg:w-[320px]">
+                    <span className={wizardLabelClass}>Go to wizard page</span>
+                    <select
+                        className={`${wizardInputClass} mt-1 bg-white text-slate-950`}
+                        value={currentStep}
+                        onChange={(event) => goToWizardStep(Number(event.target.value))}
+                        onKeyDown={stopEditableKeyPropagation}
+                    >
+                        {steps.map((step, index) => (
+                            <option key={`wizard-page-${step.id}`} value={index}>
+                                {index + 1}. {step.title}
+                            </option>
+                        ))}
+                    </select>
+                </label>
             </div>
             <div
                 className="rounded-xl border border-slate-300 bg-white/80 p-4 shadow-sm"
