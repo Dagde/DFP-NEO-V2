@@ -1390,7 +1390,7 @@ const resetSetupTestProfile = (profile) => {
   if (!win) return;
   const cleanProfile = String(profile || AIR_MOVEMENTS_TEST_PROFILE).trim() || AIR_MOVEMENTS_TEST_PROFILE;
   const setupPrefix = `dfp_setup_test_${cleanProfile}_`;
-  Object.keys(win.localStorage).filter((key) => key.startsWith(setupPrefix) || key.startsWith("dfp_snapshot_cache_") || key.startsWith("aircraft-availability-") || key.startsWith("dfp_highest_priority_events_v1")).forEach((key) => win.localStorage.removeItem(key));
+  Object.keys(win.localStorage).filter((key) => key.startsWith(setupPrefix) || key.startsWith("dfp_setup_test_") || key.startsWith("dfp_snapshot_cache_") || key.startsWith("aircraft-availability-") || key.startsWith("dfp_highest_priority_events_v1")).forEach((key) => win.localStorage.removeItem(key));
   [
     INITIAL_SETUP_WIZARD_STEP_KEY,
     "dfp_last_viewed_date",
@@ -1412,11 +1412,20 @@ const resetSetupTestProfile = (profile) => {
     "neo_lmp_details_active_tab",
     "neo_lmp_details_selected_package"
   ].forEach((key) => win.localStorage.removeItem(key));
+  const emptyConfig2 = createEmptySetupTestPlatformConfig();
+  win.localStorage.setItem(`${setupPrefix}platform_config`, JSON.stringify(emptyConfig2));
+  win.localStorage.setItem(`${setupPrefix}personnel`, JSON.stringify({ instructors: [], trainees: [] }));
+  win.localStorage.setItem(`${setupPrefix}syllabus`, JSON.stringify([]));
+  win.localStorage.setItem(`${setupPrefix}settings`, JSON.stringify({}));
+  win.localStorage.setItem(`${setupPrefix}currencies`, JSON.stringify({ masterCurrencies: [], currencyRequirements: [] }));
   win.localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY$1, JSON.stringify({
     location: "ESL",
     unit: "1FTS"
   }));
   win.sessionStorage.removeItem("dfp_setup_test_profile");
+  win.dispatchEvent(new CustomEvent(SETUP_TEST_PLATFORM_EVENT, { detail: { config: emptyConfig2 } }));
+  win.dispatchEvent(new CustomEvent(SETUP_TEST_PERSONNEL_EVENT, { detail: { instructors: [], trainees: [] } }));
+  win.dispatchEvent(new CustomEvent(SETUP_TEST_SYLLABUS_EVENT, { detail: { syllabus: [] } }));
 };
 const getSetupTestProfile = () => {
   const win = safeWindow$1();
@@ -1430,6 +1439,7 @@ const getSetupTestProfile = () => {
       params.delete(SETUP_TEST_RESET_QUERY_PARAM);
       const nextSearch = params.toString();
       win.history.replaceState({}, "", `${win.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${win.location.hash}`);
+      win.location.reload();
     }
     return cleanUrlProfile;
   }

@@ -17,6 +17,7 @@ export const resetSetupTestProfile = (profile: string): void => {
   Object.keys(win.localStorage)
     .filter((key) => (
       key.startsWith(setupPrefix)
+      || key.startsWith('dfp_setup_test_')
       || key.startsWith('dfp_snapshot_cache_')
       || key.startsWith('aircraft-availability-')
       || key.startsWith('dfp_highest_priority_events_v1')
@@ -43,11 +44,20 @@ export const resetSetupTestProfile = (profile: string): void => {
     'neo_lmp_details_active_tab',
     'neo_lmp_details_selected_package',
   ].forEach((key) => win.localStorage.removeItem(key));
+  const emptyConfig = createEmptySetupTestPlatformConfig();
+  win.localStorage.setItem(`${setupPrefix}platform_config`, JSON.stringify(emptyConfig));
+  win.localStorage.setItem(`${setupPrefix}personnel`, JSON.stringify({ instructors: [], trainees: [] }));
+  win.localStorage.setItem(`${setupPrefix}syllabus`, JSON.stringify([]));
+  win.localStorage.setItem(`${setupPrefix}settings`, JSON.stringify({}));
+  win.localStorage.setItem(`${setupPrefix}currencies`, JSON.stringify({ masterCurrencies: [], currencyRequirements: [] }));
   win.localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify({
     location: 'ESL',
     unit: '1FTS',
   }));
   win.sessionStorage.removeItem('dfp_setup_test_profile');
+  win.dispatchEvent(new CustomEvent(SETUP_TEST_PLATFORM_EVENT, { detail: { config: emptyConfig } }));
+  win.dispatchEvent(new CustomEvent(SETUP_TEST_PERSONNEL_EVENT, { detail: { instructors: [], trainees: [] } }));
+  win.dispatchEvent(new CustomEvent(SETUP_TEST_SYLLABUS_EVENT, { detail: { syllabus: [] } }));
 };
 
 export const getSetupTestProfile = (): string | null => {
@@ -62,6 +72,7 @@ export const getSetupTestProfile = (): string | null => {
       params.delete(SETUP_TEST_RESET_QUERY_PARAM);
       const nextSearch = params.toString();
       win.history.replaceState({}, '', `${win.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${win.location.hash}`);
+      win.location.reload();
     }
     return cleanUrlProfile;
   }
