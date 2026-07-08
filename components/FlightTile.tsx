@@ -544,7 +544,11 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     const displayPicName = isShortFlight ? abbreviateName(displayPicNameForRender || '') : displayPicNameForRender;
     const displayStudentName = isShortFlight ? abbreviateName(displayStudentNameForRender || '') : displayStudentNameForRender;
     
-    const isGroundEventFromName = event.flightNumber.includes('CPT') || event.flightNumber.includes('MB') || event.flightNumber.includes('TUT') || event.flightNumber.includes('QUIZ');
+    const isUuidLikeFlightNumber = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-/i.test(String(event.flightNumber || '').trim());
+    const displayFlightNumber = isUuidLikeFlightNumber && (event as any).eventCode
+      ? String((event as any).eventCode)
+      : event.flightNumber;
+    const isGroundEventFromName = displayFlightNumber.includes('CPT') || displayFlightNumber.includes('MB') || displayFlightNumber.includes('TUT') || displayFlightNumber.includes('QUIZ');
     
     if (event.type === 'deployment') {
         // Render deployment tile with subtle styling
@@ -765,7 +769,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                     <div className="overflow-hidden text-center">
                         <div className={picClasses}>{picName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
                         <div className="font-mono text-white/80 truncate">
-                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {isTwrDiEvent ? 'TWR DI' : event.flightNumber}
+                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {isTwrDiEvent ? 'TWR DI' : displayFlightNumber}
                         </div>
                     </div>
                 </div>
@@ -781,7 +785,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                 <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
                     <div>
                         <div className="font-mono text-white/80 text-right whitespace-nowrap">
-                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {isTwrDiEvent ? 'TWR DI' : event.flightNumber}
+                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {isTwrDiEvent ? 'TWR DI' : displayFlightNumber}
                         </div>
                     </div>
                     <div/> 
@@ -801,7 +805,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                 <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
                     <div>
                         <div className="font-mono text-white/80 text-right whitespace-nowrap">
-                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {isTwrDiEvent ? 'TWR DI' : event.flightNumber}
+                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {isTwrDiEvent ? 'TWR DI' : displayFlightNumber}
                         </div>
                     </div>
                 </div>
@@ -929,7 +933,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                     </div>
                     <div className="h-6 w-px bg-gray-600"></div>
                     <div>
-                        <div className="font-mono font-semibold text-sky-400">{event.flightNumber}</div>
+                        <div className="font-mono font-semibold text-sky-400">{displayFlightNumber}</div>
                         <div className="font-mono text-gray-400">{formatTime(effectiveStartTime)}</div>
                     </div>
                     {callsign && <div className="font-mono text-gray-500 text-[10px]">{callsign}</div>}

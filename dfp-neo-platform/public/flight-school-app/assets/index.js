@@ -8102,7 +8102,9 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     };
     const displayPicName = isShortFlight ? abbreviateName(displayPicNameForRender || "") : displayPicNameForRender;
     const displayStudentName = isShortFlight ? abbreviateName(displayStudentNameForRender || "") : displayStudentNameForRender;
-    const isGroundEventFromName = event.flightNumber.includes("CPT") || event.flightNumber.includes("MB") || event.flightNumber.includes("TUT") || event.flightNumber.includes("QUIZ");
+    const isUuidLikeFlightNumber = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-/i.test(String(event.flightNumber || "").trim());
+    const displayFlightNumber2 = isUuidLikeFlightNumber && event.eventCode ? String(event.eventCode) : event.flightNumber;
+    const isGroundEventFromName = displayFlightNumber2.includes("CPT") || displayFlightNumber2.includes("MB") || displayFlightNumber2.includes("TUT") || displayFlightNumber2.includes("QUIZ");
     if (event.type === "deployment") {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full w-full items-center justify-center px-2", style: textStyle, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate whitespace-nowrap text-center text-xs font-semibold text-white/80", children: formatDeploymentLabel(event) }) });
     }
@@ -8313,7 +8315,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
               "]"
             ] }),
             " ",
-            isTwrDiEvent ? "TWR DI" : event.flightNumber
+            isTwrDiEvent ? "TWR DI" : displayFlightNumber2
           ] })
         ] }) });
       }
@@ -8336,7 +8338,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
               "]"
             ] }),
             " ",
-            isTwrDiEvent ? "TWR DI" : event.flightNumber
+            isTwrDiEvent ? "TWR DI" : displayFlightNumber2
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", {})
         ] })
@@ -8361,7 +8363,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
             "]"
           ] }),
           " ",
-          isTwrDiEvent ? "TWR DI" : event.flightNumber
+          isTwrDiEvent ? "TWR DI" : displayFlightNumber2
         ] }) }) })
       ] }),
       aircraftNumberDisplay && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -8454,7 +8456,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-6 w-px bg-gray-600" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono font-semibold text-sky-400", children: event.flightNumber }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono font-semibold text-sky-400", children: displayFlightNumber }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-400", children: formatTime$7(effectiveStartTime) })
       ] }),
       callsign && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-500 text-[10px]", children: callsign })
@@ -24494,11 +24496,11 @@ ${swapNote}` : swapNote
       options = sctEvents;
     } else if (eventCategory === "lmp_event" || eventCategory === "lmp_currency") {
       const lmpSource = selectedIndividualLmp?.length ? selectedIndividualLmp : syllabusDetails.filter((item) => item.lmpType === "Master LMP" || !item.lmpType);
-      options = lmpSource.map((item) => item.id || item.code).filter(Boolean);
+      options = lmpSource.map((item) => item.code || item.id).filter(Boolean);
     } else if (eventCategory === "staff_cat") {
-      options = syllabusDetails.filter((item) => item.lmpType === "Staff CAT").map((item) => item.id);
+      options = syllabusDetails.filter((item) => item.lmpType === "Staff CAT").map((item) => item.code || item.id);
     } else if (eventCategory === "twr_di") {
-      options = syllabusDetails.map((item) => item.id);
+      options = syllabusDetails.map((item) => item.code || item.id);
     } else {
       options = dynamicSyllabusOptions;
     }
@@ -25019,7 +25021,7 @@ ${swapNote}` : swapNote
       if (isOracleContext && oracleContextForModal?.availableTraineesAnalysis) {
         const analysis = oracleContextForModal.availableTraineesAnalysis.find((t) => t.trainee.fullName === selectedTrainee);
         if (analysis && analysis.nextSyllabusEvent) {
-          const nextEventId = analysis.nextSyllabusEvent.id;
+          const nextEventId = analysis.nextSyllabusEvent.code || analysis.nextSyllabusEvent.id;
           setDynamicSyllabusOptions([nextEventId]);
           setFlightNumber(nextEventId);
           setDuration(analysis.nextSyllabusEvent.duration);
@@ -112101,11 +112103,15 @@ ${error instanceof Error ? error.message : String(error)}`,
         return false;
       }
       if (tr.nextSyllabusEvent) {
+        const nextSyllabusEventRefs = new Set([
+          tr.nextSyllabusEvent.code,
+          tr.nextSyllabusEvent.id
+        ].map((ref) => String(ref || "").trim()).filter(Boolean));
         const hasThisEventAlready = personEvents.some(
-          (e) => e.flightNumber === tr.nextSyllabusEvent.id && e.date === analysisDate
+          (e) => nextSyllabusEventRefs.has(String(e.flightNumber || "").trim()) && e.date === analysisDate
         );
         if (hasThisEventAlready) {
-          console.log(`Oracle: Excluding ${tr.trainee.fullName} - already scheduled for event ${tr.nextSyllabusEvent.id} on ${analysisDate}`);
+          console.log(`Oracle: Excluding ${tr.trainee.fullName} - already scheduled for event ${tr.nextSyllabusEvent.code || tr.nextSyllabusEvent.id} on ${analysisDate}`);
           return false;
         }
       }

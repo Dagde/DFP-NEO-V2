@@ -1301,15 +1301,15 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             const lmpSource = selectedIndividualLmp?.length
                 ? selectedIndividualLmp
                 : syllabusDetails.filter(item => item.lmpType === 'Master LMP' || !item.lmpType);
-            options = lmpSource.map(item => item.id || item.code).filter(Boolean);
+            options = lmpSource.map(item => item.code || item.id).filter(Boolean);
         } else if (eventCategory === 'staff_cat') {
             // Filter for Staff CAT LMP events only
             options = syllabusDetails
                 .filter(item => item.lmpType === 'Staff CAT')
-                .map(item => item.id);
+                .map(item => item.code || item.id);
         } else if (eventCategory === 'twr_di') {
             // TWR DI can use any syllabus items (no filtering)
-            options = syllabusDetails.map(item => item.id);
+            options = syllabusDetails.map(item => item.code || item.id);
         } else {
             options = dynamicSyllabusOptions;
         }
@@ -2023,7 +2023,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             if (isOracleContext && oracleContextForModal?.availableTraineesAnalysis) {
                 const analysis = oracleContextForModal.availableTraineesAnalysis.find(t => t.trainee.fullName === selectedTrainee);
                 if (analysis && analysis.nextSyllabusEvent) {
-                    const nextEventId = analysis.nextSyllabusEvent.id;
+                    const nextEventId = analysis.nextSyllabusEvent.code || analysis.nextSyllabusEvent.id;
                     setDynamicSyllabusOptions([nextEventId]);
                     setFlightNumber(nextEventId);
                     setDuration(analysis.nextSyllabusEvent.duration);

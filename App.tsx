@@ -38091,11 +38091,15 @@ appliedUpdates.forEach(update => {
             // CRITICAL FIX 2: Check if trainee is already scheduled for this specific event
             // We'll use the next syllabus event to determine what they would be scheduled for
             if (tr.nextSyllabusEvent) {
+                const nextSyllabusEventRefs = new Set([
+                    tr.nextSyllabusEvent.code,
+                    tr.nextSyllabusEvent.id,
+                ].map(ref => String(ref || '').trim()).filter(Boolean));
                 const hasThisEventAlready = personEvents.some(e =>
-                    e.flightNumber === tr.nextSyllabusEvent.id && e.date === analysisDate
+                    nextSyllabusEventRefs.has(String(e.flightNumber || '').trim()) && e.date === analysisDate
                 );
                 if (hasThisEventAlready) {
-                    console.log(`Oracle: Excluding ${tr.trainee.fullName} - already scheduled for event ${tr.nextSyllabusEvent.id} on ${analysisDate}`);
+                    console.log(`Oracle: Excluding ${tr.trainee.fullName} - already scheduled for event ${tr.nextSyllabusEvent.code || tr.nextSyllabusEvent.id} on ${analysisDate}`);
                     return false;
                 }
             }
