@@ -24085,9 +24085,24 @@ const App: React.FC = () => {
                             canonicalSnapshotKey: snapshotKey,
                             status: candidateRes.status,
                             ok: candidateRes.ok,
+                            contentType: candidateRes.headers.get('content-type') || '',
                         });
                         res = candidateRes;
                         resolvedSnapshotKey = candidateKey;
+                        const contentType = String(candidateRes.headers.get('content-type') || '').toLowerCase();
+                        const isJsonResponse = contentType.includes('application/json') || contentType.includes('+json');
+                        if (candidateRes.ok && !isJsonResponse) {
+                            const responseTypeError = new Error(`Snapshot endpoint returned ${contentType || 'unknown content type'} instead of JSON`);
+                            (responseTypeError as Error & { nonRetryableSnapshotLoad?: boolean }).nonRetryableSnapshotLoad = true;
+                            pushDfpDataDiag('snapshot:non-json-response', {
+                                targetDate,
+                                snapshotKey,
+                                candidateKey,
+                                status: candidateRes.status,
+                                contentType,
+                            });
+                            throw responseTypeError;
+                        }
                         if (candidateRes.ok || candidateRes.status !== 404) {
                             break;
                         }
@@ -24159,6 +24174,9 @@ const App: React.FC = () => {
                     });
                     return;
                 } catch (err) {
+                    if ((err as Error & { nonRetryableSnapshotLoad?: boolean })?.nonRetryableSnapshotLoad) {
+                        throw err;
+                    }
                     lastError = err;
                 }
             }
