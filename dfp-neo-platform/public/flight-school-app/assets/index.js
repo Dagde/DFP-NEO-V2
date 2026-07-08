@@ -11933,10 +11933,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const wizardPrimaryButtonClass = "rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600";
   const wizardInputClass = "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200";
   const wizardLabelClass = "text-[10px] font-black uppercase tracking-[0.14em] text-slate-500";
-  const insertPreventedWizardSpace = (event, onChange) => {
-    if (event.key !== " " || !event.defaultPrevented) return;
+  const insertWizardSpaceAtCursor = (event, onChange) => {
+    if (event.key !== " " && event.code !== "Space" && event.key !== "Spacebar") return false;
+    if (event.metaKey || event.ctrlKey || event.altKey) return false;
     const field = event.currentTarget;
-    if (field.disabled || field.readOnly) return;
+    if (field.disabled || field.readOnly) return false;
+    event.preventDefault();
+    event.stopPropagation();
     const currentValue = field.value || "";
     const selectionStart = field.selectionStart ?? currentValue.length;
     const selectionEnd = field.selectionEnd ?? selectionStart;
@@ -11946,9 +11949,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     window.requestAnimationFrame(() => {
       field.setSelectionRange(nextCursor, nextCursor);
     });
+    return true;
   };
   const handleWizardTextKeyDownCapture = (event, onChange) => {
-    insertPreventedWizardSpace(event, onChange);
+    if (insertWizardSpaceAtCursor(event, onChange)) return;
   };
   const wizardField = (label, value, onChange, options, placeholder) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: label }),
