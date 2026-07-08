@@ -16,7 +16,8 @@ function pushDataServiceDiag(stage: string, details: Record<string, any> = {}): 
     details,
   };
   try {
-    console.log(`[DFP-DIAG] ${stage}`, entry);
+    const logToConsole = localStorage.getItem('neo_dfp_data_diag_console') === 'true';
+    if (logToConsole) console.log(`[DFP-DIAG] ${stage}`, entry);
     const existing = JSON.parse(localStorage.getItem('neo_dfp_data_diag') || '[]');
     const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-300);
     localStorage.setItem('neo_dfp_data_diag', JSON.stringify(next));

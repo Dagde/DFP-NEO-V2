@@ -161,7 +161,8 @@ function pushAuthDiag(stage, details = {}) {
     details
   };
   try {
-    console.log(`[DFP-DIAG] ${stage}`, entry);
+    const logToConsole = localStorage.getItem("neo_dfp_data_diag_console") === "true";
+    if (logToConsole) console.log(`[DFP-DIAG] ${stage}`, entry);
     const existing = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
     const next = [...Array.isArray(existing) ? existing : [], entry].slice(-300);
     localStorage.setItem("neo_dfp_data_diag", JSON.stringify(next));
@@ -80977,7 +80978,8 @@ function pushDataServiceDiag(stage, details = {}) {
     details
   };
   try {
-    console.log(`[DFP-DIAG] ${stage}`, entry);
+    const logToConsole = localStorage.getItem("neo_dfp_data_diag_console") === "true";
+    if (logToConsole) console.log(`[DFP-DIAG] ${stage}`, entry);
     const existing = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
     const next = [...Array.isArray(existing) ? existing : [], entry].slice(-300);
     localStorage.setItem("neo_dfp_data_diag", JSON.stringify(next));
@@ -99685,7 +99687,8 @@ const App = () => {
       details
     };
     try {
-      console.log(`[DFP-DIAG] ${stage}`, entry);
+      const logToConsole = localStorage.getItem("neo_dfp_data_diag_console") === "true";
+      if (logToConsole) console.log(`[DFP-DIAG] ${stage}`, entry);
       const existing = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
       const next = [...Array.isArray(existing) ? existing : [], entry].slice(-300);
       localStorage.setItem("neo_dfp_data_diag", JSON.stringify(next));
@@ -99696,7 +99699,16 @@ const App = () => {
         window.neoDfpDataDiag = [entry];
       } catch {
       }
-      console.log(`[DFP-DIAG] ${stage}`, entry, error);
+      if (localStorage.getItem("neo_dfp_data_diag_console") === "true") {
+        console.log(`[DFP-DIAG] ${stage}`, entry, error);
+      }
+    }
+  }
+  function shouldRecordDfpRenderDiagnostics() {
+    try {
+      return localStorage.getItem("neo_dfp_render_diag") === "true";
+    } catch {
+      return false;
     }
   }
   function readDfpDataDiagEntries() {
@@ -100890,7 +100902,7 @@ const App = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeUnitCode, pushDfpDataDiag, school, setupTestProfile]);
+  }, [activeUnitCode, school, setupTestProfile]);
   reactExports.useEffect(() => {
     if (setupTestProfile) {
       setSnapshotDates([]);
@@ -100938,7 +100950,7 @@ const App = () => {
       }
     };
     loadSnapshotDates();
-  }, [pushDfpDataDiag, setupTestProfile]);
+  }, [setupTestProfile]);
   const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snapshotUnit, snap2, replace, source) => {
     if (!snap2) return 0;
     const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
@@ -103233,24 +103245,26 @@ ${"=".repeat(60)}`);
     console.log("🟡 publishedSchedules keys:", Object.keys(publishedSchedules));
     const events2 = publishedSchedules[date] || [];
     console.log("🟡 eventsForDate count:", events2.length);
-    pushDfpDataDiag("render:events-for-date", {
-      renderedDate: date,
-      eventCount: events2.length,
-      publishedScheduleDateCount: Object.keys(publishedSchedules).length,
-      publishedScheduleKeys: Object.keys(publishedSchedules).slice(0, 80),
-      snapshotDateCount: snapshotDates.length,
-      snapshotDates: snapshotDates.slice(0, 80),
-      sampleEvents: events2.slice(0, 8).map((event) => ({
-        id: event.id,
-        date: event.date,
-        type: event.type,
-        resourceId: event.resourceId,
-        startTime: event.startTime,
-        flightNumber: event.flightNumber,
-        instructor: event.instructor,
-        student: event.student
-      }))
-    });
+    if (shouldRecordDfpRenderDiagnostics()) {
+      pushDfpDataDiag("render:events-for-date", {
+        renderedDate: date,
+        eventCount: events2.length,
+        publishedScheduleDateCount: Object.keys(publishedSchedules).length,
+        publishedScheduleKeys: Object.keys(publishedSchedules).slice(0, 80),
+        snapshotDateCount: snapshotDates.length,
+        snapshotDates: snapshotDates.slice(0, 80),
+        sampleEvents: events2.slice(0, 8).map((event) => ({
+          id: event.id,
+          date: event.date,
+          type: event.type,
+          resourceId: event.resourceId,
+          startTime: event.startTime,
+          flightNumber: event.flightNumber,
+          instructor: event.instructor,
+          student: event.student
+        }))
+      });
+    }
     const sctEvents2 = events2.filter((e) => e.flightNumber === "SCT FORM");
     if (sctEvents2.length > 0) {
       console.log("🟡 SCT FORM events in eventsForDate:", sctEvents2.map((e) => ({
@@ -103635,22 +103649,24 @@ ${"=".repeat(60)}`);
       seenEIds.add(e.id);
       return true;
     });
-    pushDfpDataDiag("render:event-segments-input", {
-      renderedDate: date,
-      rawEventCount: rawEvents.length,
-      validDedupedEventCount: allEvents.length,
-      duplicateOrInvalidCount: rawEvents.length - allEvents.length,
-      sampleEvents: allEvents.slice(0, 8).map((event) => ({
-        id: event.id,
-        date: event.date,
-        type: event.type,
-        resourceId: event.resourceId,
-        startTime: event.startTime,
-        flightNumber: event.flightNumber,
-        instructor: event.instructor,
-        student: event.student
-      }))
-    });
+    if (shouldRecordDfpRenderDiagnostics()) {
+      pushDfpDataDiag("render:event-segments-input", {
+        renderedDate: date,
+        rawEventCount: rawEvents.length,
+        validDedupedEventCount: allEvents.length,
+        duplicateOrInvalidCount: rawEvents.length - allEvents.length,
+        sampleEvents: allEvents.slice(0, 8).map((event) => ({
+          id: event.id,
+          date: event.date,
+          type: event.type,
+          resourceId: event.resourceId,
+          startTime: event.startTime,
+          flightNumber: event.flightNumber,
+          instructor: event.instructor,
+          student: event.student
+        }))
+      });
+    }
     for (const event of allEvents) {
       const eventDateObj = safeParseDate(event.date);
       if (!eventDateObj) {
@@ -103734,24 +103750,26 @@ ${"=".repeat(60)}`);
     const todayEndTime = todayEnd.getTime();
     const buildEventsWithDate = nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate }));
     console.log("🚀 [NEO-Build] buildEventsWithDate.length:", buildEventsWithDate.length);
-    pushDfpDataDiag("render:next-day-build-segments-input", {
-      buildDate: buildDfpDate,
-      isBuildingDfp,
-      nextDayBuildEvents: nextDayBuildEvents.length,
-      sampleEvents: buildEventsWithDate.slice(0, 12).map((event) => ({
-        id: event.id,
-        date: event.date,
-        type: event.type,
-        resourceId: event.resourceId,
-        startTime: event.startTime,
-        duration: event.duration,
-        flightNumber: event.flightNumber,
-        pilot: event.pilot,
-        crew: event.crew,
-        fixedCrewGroup: event.fixedCrewGroup,
-        source: event._source || event.source || null
-      }))
-    });
+    if (shouldRecordDfpRenderDiagnostics()) {
+      pushDfpDataDiag("render:next-day-build-segments-input", {
+        buildDate: buildDfpDate,
+        isBuildingDfp,
+        nextDayBuildEvents: nextDayBuildEvents.length,
+        sampleEvents: buildEventsWithDate.slice(0, 12).map((event) => ({
+          id: event.id,
+          date: event.date,
+          type: event.type,
+          resourceId: event.resourceId,
+          startTime: event.startTime,
+          duration: event.duration,
+          flightNumber: event.flightNumber,
+          pilot: event.pilot,
+          crew: event.crew,
+          fixedCrewGroup: event.fixedCrewGroup,
+          source: event._source || event.source || null
+        }))
+      });
+    }
     const allEvents = buildEventsWithDate;
     for (const event of allEvents) {
       const eventDateObj = safeParseDate(event.date);
@@ -103788,27 +103806,29 @@ ${"=".repeat(60)}`);
       return true;
     });
     console.log("🚀 [NEO-Build] Final segments.length:", segments.length, "→ after dedup:", uniqueSegments.length);
-    pushDfpDataDiag("render:next-day-build-segments-output", {
-      buildDate: buildDfpDate,
-      isBuildingDfp,
-      inputEvents: buildEventsWithDate.length,
-      segments: segments.length,
-      uniqueSegments: uniqueSegments.length,
-      duplicateIds: segments.map((segment) => segment.id).filter((id, index, ids) => ids.indexOf(id) !== index).slice(0, 20),
-      sampleSegments: uniqueSegments.slice(0, 12).map((segment) => ({
-        id: segment.id,
-        type: segment.type,
-        resourceId: segment.resourceId,
-        startTime: segment.startTime,
-        segmentStartTime: segment.segmentStartTime,
-        duration: segment.duration,
-        segmentDuration: segment.segmentDuration,
-        flightNumber: segment.flightNumber,
-        pilot: segment.pilot,
-        crew: segment.crew,
-        fixedCrewGroup: segment.fixedCrewGroup
-      }))
-    });
+    if (shouldRecordDfpRenderDiagnostics()) {
+      pushDfpDataDiag("render:next-day-build-segments-output", {
+        buildDate: buildDfpDate,
+        isBuildingDfp,
+        inputEvents: buildEventsWithDate.length,
+        segments: segments.length,
+        uniqueSegments: uniqueSegments.length,
+        duplicateIds: segments.map((segment) => segment.id).filter((id, index, ids) => ids.indexOf(id) !== index).slice(0, 20),
+        sampleSegments: uniqueSegments.slice(0, 12).map((segment) => ({
+          id: segment.id,
+          type: segment.type,
+          resourceId: segment.resourceId,
+          startTime: segment.startTime,
+          segmentStartTime: segment.segmentStartTime,
+          duration: segment.duration,
+          segmentDuration: segment.segmentDuration,
+          flightNumber: segment.flightNumber,
+          pilot: segment.pilot,
+          crew: segment.crew,
+          fixedCrewGroup: segment.fixedCrewGroup
+        }))
+      });
+    }
     return uniqueSegments;
   }, [buildDfpDate, isBuildingDfp, nextDayBuildEvents]);
   reactExports.useEffect(() => {
