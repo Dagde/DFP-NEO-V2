@@ -189,15 +189,15 @@ async function checkSession(token) {
     });
     if (!res.ok) return null;
     const parseStartedAt = performance.now();
-    const data = await res.json();
+    const data2 = await res.json();
     pushAuthDiag("auth:session-check:json", {
       endpoint: API_SESSION,
       durationMs: Math.round(performance.now() - startedAt),
       parseDurationMs: Math.round(performance.now() - parseStartedAt),
-      hasUser: Boolean(data?.user),
-      userId: data?.user?.userId || data?.user?.id || null
+      hasUser: Boolean(data2?.user),
+      userId: data2?.user?.userId || data2?.user?.id || null
     });
-    return data.user || null;
+    return data2.user || null;
   } catch (error) {
     pushAuthDiag("auth:session-check:error", {
       endpoint: API_SESSION,
@@ -226,18 +226,18 @@ async function loginUser(userId, password) {
     contentType: res.headers.get("content-type") || ""
   });
   const parseStartedAt = performance.now();
-  const data = await res.json();
+  const data2 = await res.json();
   pushAuthDiag("auth:login:json", {
     endpoint: API_LOGIN,
     durationMs: Math.round(performance.now() - startedAt),
     parseDurationMs: Math.round(performance.now() - parseStartedAt),
     ok: res.ok,
-    hasUser: Boolean(data?.user),
-    userId: data?.user?.userId || data?.user?.id || userId,
-    mustChangePassword: Boolean(data?.mustChangePassword)
+    hasUser: Boolean(data2?.user),
+    userId: data2?.user?.userId || data2?.user?.id || userId,
+    mustChangePassword: Boolean(data2?.mustChangePassword)
   });
-  if (!res.ok) throw new Error(data.message || "Login failed");
-  return data;
+  if (!res.ok) throw new Error(data2.message || "Login failed");
+  return data2;
 }
 async function logoutUser(token) {
   try {
@@ -282,8 +282,8 @@ const LoginModal = ({ onLoginSuccess }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: forgotUserId.trim() })
       });
-      const data = await res.json();
-      setForgotMessage(data.message || "If the account exists, a reset email has been sent.");
+      const data2 = await res.json();
+      setForgotMessage(data2.message || "If the account exists, a reset email has been sent.");
     } catch {
       setForgotMessage("An error occurred. Please try again.");
     } finally {
@@ -462,8 +462,8 @@ const ChangePasswordModal = ({
         },
         body: JSON.stringify({ currentPassword, newPassword })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to change password");
+      const data2 = await res.json();
+      if (!res.ok) throw new Error(data2.message || "Failed to change password");
       setSuccess(true);
       setTimeout(() => {
         onSuccess();
@@ -615,8 +615,8 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
         headers: { "Authorization": `Bearer ${sessionToken}` }
       });
       if (!res.ok) throw new Error("Failed to fetch users");
-      const data = await res.json();
-      setUsers(data.users || []);
+      const data2 = await res.json();
+      setUsers(data2.users || []);
     } catch (err) {
       setError(err.message || "Failed to load users");
     } finally {
@@ -641,8 +641,8 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
           mustChangePassword: resetMustChange
         })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Reset failed");
+      const data2 = await res.json();
+      if (!res.ok) throw new Error(data2.message || "Reset failed");
       setResetMessage(`✅ Password reset for ${resetTarget}`);
       setResetPassword("");
       setTimeout(() => {
@@ -677,8 +677,8 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
           mustChangePassword: newMustChange
         })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Create failed");
+      const data2 = await res.json();
+      if (!res.ok) throw new Error(data2.message || "Create failed");
       setCreateMessage(`✅ User ${newUserId} created successfully`);
       setNewUserId("");
       setNewPassword("");
@@ -960,14 +960,14 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
                     credentials: "include",
                     body: JSON.stringify({ confirmToken: "CONFIRM_DELETE_BURNS_DUPLICATES" })
                   });
-                  const data = await res.json();
-                  if (res.ok && data.success) {
+                  const data2 = await res.json();
+                  if (res.ok && data2.success) {
                     setCleanupResult(`✅ Step 1 complete:
-${data.actions.join("\n")}
+${data2.actions.join("\n")}
 
-Remaining Personnel: ${JSON.stringify(data.remainingPersonnel, null, 2)}`);
+Remaining Personnel: ${JSON.stringify(data2.remainingPersonnel, null, 2)}`);
                   } else {
-                    setCleanupError(`Step 1 failed: ${data.error || JSON.stringify(data)}`);
+                    setCleanupError(`Step 1 failed: ${data2.error || JSON.stringify(data2)}`);
                   }
                 } catch (e) {
                   setCleanupError(`Network error: ${e.message}`);
@@ -1002,14 +1002,14 @@ Remaining Personnel: ${JSON.stringify(data.remainingPersonnel, null, 2)}`);
                     credentials: "include",
                     body: JSON.stringify({ confirmToken: "CONFIRM_MERGE_BURNS_ACCOUNTS" })
                   });
-                  const data = await res.json();
-                  if (res.ok && data.success) {
+                  const data2 = await res.json();
+                  if (res.ok && data2.success) {
                     setCleanupResult(`✅ Step 2 complete:
-${data.actions.join("\n")}
+${data2.actions.join("\n")}
 
-Primary User: ${JSON.stringify(data.primaryUser, null, 2)}`);
+Primary User: ${JSON.stringify(data2.primaryUser, null, 2)}`);
                   } else {
-                    setCleanupError(`Step 2 failed: ${data.error || JSON.stringify(data)}`);
+                    setCleanupError(`Step 2 failed: ${data2.error || JSON.stringify(data2)}`);
                   }
                 } catch (e) {
                   setCleanupError(`Network error: ${e.message}`);
@@ -2503,8 +2503,8 @@ const loadPlatformConfigFromDB = async () => {
       console.warn("[PlatformConfig] Failed to load:", res.status);
       return null;
     }
-    const data = await res.json();
-    return { ...emptyPlatformConfig, ...data };
+    const data2 = await res.json();
+    return { ...emptyPlatformConfig, ...data2 };
   } catch (error) {
     console.error("[PlatformConfig] Error loading platform configuration:", error);
     return null;
@@ -5264,9 +5264,9 @@ const AuditFlyout = ({
           headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0
         });
         if (!res.ok) return;
-        const data = await res.json();
+        const data2 = await res.json();
         if (cancelled) return;
-        const databaseLogs = (data.auditEntries || []).map(mapDatabaseAuditLog);
+        const databaseLogs = (data2.auditEntries || []).map(mapDatabaseAuditLog);
         setLogs([...databaseLogs, ...pageLogs]);
       } catch (error) {
         console.warn("Failed to load database audit logs:", error);
@@ -6802,8 +6802,8 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
   const [showPinModal, setShowPinModal] = reactExports.useState(false);
   const [enteredPin, setEnteredPin] = reactExports.useState("");
   const [pinError, setPinError] = reactExports.useState("");
-  const handleSaveCourse = (data) => {
-    onAddCourse(data);
+  const handleSaveCourse = (data2) => {
+    onAddCourse(data2);
     setShowAddCourseFlyout(false);
   };
   const handleArchiveCourse = (courseNumber) => {
@@ -7357,8 +7357,8 @@ const Header = ({
   }, [showContextMenu]);
   const [activeCommit, setActiveCommit] = reactExports.useState("...");
   reactExports.useEffect(() => {
-    fetch("/api/version").then((r) => r.json()).then((data) => {
-      if (data.commit) setActiveCommit(data.commit);
+    fetch("/api/version").then((r) => r.json()).then((data2) => {
+      if (data2.commit) setActiveCommit(data2.commit);
     }).catch(() => setActiveCommit("err"));
   }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -8765,9 +8765,9 @@ const AircraftAvailabilityOverlay = ({
     const stored = localStorage.getItem(`aircraft-availability-${contextKey}`);
     if (stored) {
       try {
-        const data = JSON.parse(stored);
+        const data2 = JSON.parse(stored);
         const loaded = sortSnapshots(
-          data.snapshots.map((s) => ({ ...s, timestamp: new Date(s.timestamp) }))
+          data2.snapshots.map((s) => ({ ...s, timestamp: new Date(s.timestamp) }))
         );
         if (!cancelled && loaded.length > 0) {
           const lastAvailable = loaded[loaded.length - 1]?.available ?? initialAvailability;
@@ -8788,9 +8788,9 @@ const AircraftAvailabilityOverlay = ({
           const query = params.toString();
           const res = await fetch(`${apiBase2}/aircraft-availability-current${query ? `?${query}` : ""}`, { credentials: "include" });
           if (res.ok) {
-            const data = await res.json();
-            if (data.success && !data.isDefault && typeof data.availableCount === "number") {
-              seed = data.availableCount;
+            const data2 = await res.json();
+            if (data2.success && !data2.isDefault && typeof data2.availableCount === "number") {
+              seed = data2.availableCount;
             }
           }
         } catch {
@@ -9767,8 +9767,8 @@ const readWizardTemplateRows = async (file) => {
   const extension = file.name.split(".").pop()?.toLowerCase();
   if (["xlsx", "xls"].includes(extension || "")) {
     if (typeof XLSX === "undefined") throw new Error("Excel support is not available in this browser session.");
-    const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data, { type: "array" });
+    const data2 = await file.arrayBuffer();
+    const workbook = XLSX.read(data2, { type: "array" });
     const firstSheet = workbook.SheetNames[0];
     if (!firstSheet) return [];
     return XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { header: 1, defval: "" });
@@ -17703,8 +17703,8 @@ const CurrencyPanel = ({
     const endpoint = personType === "instructor" ? `/api/personnel/${resolvedId}/currencies` : `/api/trainees/${resolvedId}/currencies`;
     console.log(`[CurrencyPanel] Fetching currencies from: ${endpoint} (resolvedId=${resolvedId})`);
     setIsLoading(true);
-    fetch(endpoint, { credentials: "include" }).then((r) => r.ok ? r.json() : Promise.reject(r.statusText)).then((data) => {
-      const status = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
+    fetch(endpoint, { credentials: "include" }).then((r) => r.ok ? r.json() : Promise.reject(r.statusText)).then((data2) => {
+      const status = Array.isArray(data2.currencyStatus) ? data2.currencyStatus : [];
       console.log(`[CurrencyPanel] Fetched ${status.length} currency record(s):`, JSON.stringify(status));
       setCurrencyStatus(status);
     }).catch((err) => {
@@ -18050,8 +18050,8 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
   reactExports.useEffect(() => {
     if (!personId) return;
     setIsLoading(true);
-    fetch(`/api/audit/currency/${personId}`, { credentials: "include" }).then((r) => r.ok ? r.json() : Promise.reject(r.statusText)).then((data) => {
-      setEntries(data.auditEntries || []);
+    fetch(`/api/audit/currency/${personId}`, { credentials: "include" }).then((r) => r.ok ? r.json() : Promise.reject(r.statusText)).then((data2) => {
+      setEntries(data2.auditEntries || []);
     }).catch((err) => setError(String(err))).finally(() => setIsLoading(false));
   }, [personId]);
   function formatDateTime(dateStr) {
@@ -23598,7 +23598,7 @@ const trendColor$1 = (dir) => {
   return "text-gray-400";
 };
 const TraineeGradeSparkLine = ({
-  data,
+  data: data2,
   labels,
   width = 100,
   height = 32,
@@ -23607,14 +23607,14 @@ const TraineeGradeSparkLine = ({
 }) => {
   const [tooltip, setTooltip] = React.useState(null);
   const svgRef = React.useRef(null);
-  if (!data || data.length < 2) return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-xs", children: "\\u2014" });
+  if (!data2 || data2.length < 2) return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-xs", children: "\\u2014" });
   const YMIN = 0, YMAX = 5;
   const PAD_TOP = 8, PAD_BOT = 8;
   const usableH = height - PAD_TOP - PAD_BOT;
-  const getX = (i) => data.length === 1 ? width / 2 : i / (data.length - 1) * width;
+  const getX = (i) => data2.length === 1 ? width / 2 : i / (data2.length - 1) * width;
   const getY = (v) => PAD_TOP + usableH * (1 - Math.max(0, Math.min(1, (v - YMIN) / (YMAX - YMIN))));
-  const pts = data.map((v, i) => `${getX(i)},${getY(v)}`).join(" ");
-  const hoveredVal = tooltip !== null ? data[tooltip.i] : null;
+  const pts = data2.map((v, i) => `${getX(i)},${getY(v)}`).join(" ");
+  const hoveredVal = tooltip !== null ? data2[tooltip.i] : null;
   const gc = (v) => v >= 4.5 ? "#34d399" : v >= 3.5 ? "#4ade80" : v >= 3 ? "#facc15" : v >= 2.5 ? "#fb923c" : "#f87171";
   const gridLines = interactive ? [0, 1, 2, 3, 4, 5] : [];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", style: { display: "inline-block", overflow: "visible" }, children: [
@@ -23647,12 +23647,12 @@ const TraineeGradeSparkLine = ({
           interactive && /* @__PURE__ */ jsxRuntimeExports.jsx(
             "polygon",
             {
-              points: `0,${getY(data[0])} ${pts} ${getX(data.length - 1)},${height} 0,${height}`,
+              points: `0,${getY(data2[0])} ${pts} ${getX(data2.length - 1)},${height} 0,${height}`,
               fill: color,
               fillOpacity: 0.07
             }
           ),
-          data.map((v, i) => {
+          data2.map((v, i) => {
             const x = getX(i);
             const y = getY(v);
             const isHov = tooltip?.i === i;
@@ -31024,25 +31024,25 @@ const AddGroundEventFlyout = ({
                     persistedAcademicLmp,
                     onUpdatePersistedAcademicLmp,
                     instructors,
-                    onSave: (data) => {
+                    onSave: (data2) => {
                       console.log("🎓 [AddGroundEventFlyout] AcademicsTab onSave triggered");
                       console.log("🎓 [AddGroundEventFlyout] onSaveAcademic prop exists?", typeof onSaveAcademic);
                       console.log("🎓 [AddGroundEventFlyout] data passed up:", {
-                        course: data.course,
-                        date: data.date,
-                        workStart: data.workStart,
-                        workEnd: data.workEnd,
-                        resourceId: data.resourceId,
-                        selectedTrainees: data.selectedTrainees,
-                        tilesCount: data.timeline?.length,
-                        lessonsCount: data.lessons?.length
+                        course: data2.course,
+                        date: data2.date,
+                        workStart: data2.workStart,
+                        workEnd: data2.workEnd,
+                        resourceId: data2.resourceId,
+                        selectedTrainees: data2.selectedTrainees,
+                        tilesCount: data2.timeline?.length,
+                        lessonsCount: data2.lessons?.length
                       });
                       if (onSaveAcademic) {
                         console.log("🎓 [AddGroundEventFlyout] → calling onSaveAcademic");
-                        onSaveAcademic(data);
+                        onSaveAcademic(data2);
                       } else {
                         console.warn("🎓 [AddGroundEventFlyout] ⚠️ onSaveAcademic not provided, falling back to onSave");
-                        onSave(data);
+                        onSave(data2);
                       }
                     },
                     onClose
@@ -31129,15 +31129,15 @@ const TafWeatherWidget = ({ onClose }) => {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      const data = await response.json();
-      const warning = data.meta?.warning;
-      const cacheTimestamp = data.meta?.["cache-timestamp"];
+      const data2 = await response.json();
+      const warning = data2.meta?.warning;
+      const cacheTimestamp = data2.meta?.["cache-timestamp"];
       const isCached = !!warning;
       setTafData((prev) => {
         const newMap = new Map(prev);
         newMap.set(icao, {
           station: icao.toUpperCase(),
-          raw: data.raw || "No TAF available",
+          raw: data2.raw || "No TAF available",
           time: (/* @__PURE__ */ new Date()).toLocaleTimeString(),
           error: void 0,
           isCached,
@@ -31297,15 +31297,15 @@ const TafWeatherWidget = ({ onClose }) => {
         )
       ] }, index))
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 max-h-96 overflow-y-auto", children: locations.map((location) => {
-      const data = tafData.get(location);
+      const data2 = tafData.get(location);
       const isLoading = loading.has(location);
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start mb-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-300", children: location.toUpperCase() }),
-            data && !data.error && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-400", children: [
+            data2 && !data2.error && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-400", children: [
               "Retrieved at ",
-              data.time
+              data2.time
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -31328,12 +31328,12 @@ const TafWeatherWidget = ({ onClose }) => {
             }
           )
         ] }),
-        isLoading && !data && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-400 text-sm", children: "Loading..." }),
-        data && !data.error && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-900 rounded p-3 mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { className: "text-xs text-green-400 font-mono whitespace-pre-wrap break-words", children: highlightTafText(data.raw) }) }),
-          data.isCached && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-xs text-yellow-500/70 italic", children: [
+        isLoading && !data2 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-400 text-sm", children: "Loading..." }),
+        data2 && !data2.error && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-900 rounded p-3 mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { className: "text-xs text-green-400 font-mono whitespace-pre-wrap break-words", children: highlightTafText(data2.raw) }) }),
+          data2.isCached && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-xs text-yellow-500/70 italic", children: [
             "⚠️ Old cached data - provided for display purposes only",
-            data.cacheTimestamp && ` (Cached: ${new Date(data.cacheTimestamp).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })})`
+            data2.cacheTimestamp && ` (Cached: ${new Date(data2.cacheTimestamp).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })})`
           ] })
         ] })
       ] }, location);
@@ -35048,9 +35048,9 @@ const PrioritiesView = ({
       try {
         const res = await fetch(getTaskingAirfieldCatalogueUrl(), { cache: "force-cache" });
         if (!res.ok) throw new Error(`Airfield catalogue load failed (${res.status})`);
-        const data = await res.json();
-        if (!Array.isArray(data)) return;
-        const entries = data.filter((entry) => entry && typeof entry.n === "string" && Number.isFinite(Number(entry.a)) && Number.isFinite(Number(entry.o)) && typeof entry.t === "string").map((entry) => ({
+        const data2 = await res.json();
+        if (!Array.isArray(data2)) return;
+        const entries = data2.filter((entry) => entry && typeof entry.n === "string" && Number.isFinite(Number(entry.a)) && Number.isFinite(Number(entry.o)) && typeof entry.t === "string").map((entry) => ({
           ...entry,
           a: Number(entry.a),
           o: Number(entry.o)
@@ -38968,8 +38968,8 @@ const CourseDistributionTable = ({
     ] }) })
   ] });
 };
-const PieChart = ({ data, title }) => {
-  const total = data.reduce((sum, item) => sum + item.value, 0);
+const PieChart = ({ data: data2, title }) => {
+  const total = data2.reduce((sum, item) => sum + item.value, 0);
   if (total === 0) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: title }) }),
@@ -38977,7 +38977,7 @@ const PieChart = ({ data, title }) => {
     ] });
   }
   let currentAngle = -90;
-  const segments = data.map((item) => {
+  const segments = data2.map((item) => {
     const percentage = item.value / total * 100;
     const angle = item.value / total * 360;
     const segment = {
@@ -39947,18 +39947,18 @@ const SparkBar = ({ value, max = 5, colorClass }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xs font-mono w-8 text-right ${gradeColor(value)}`, children: safe(value, 1) })
   ] });
 };
-const SparkLine = ({ data, labels, width = 100, height = 32, color = "#60a5fa", interactive = false, yMin = 0, yMax = 5, showYAxisLabels = false }) => {
+const SparkLine = ({ data: data2, labels, width = 100, height = 32, color = "#60a5fa", interactive = false, yMin = 0, yMax = 5, showYAxisLabels = false }) => {
   const [tooltip, setTooltip] = React.useState(null);
   const svgRef = React.useRef(null);
-  if (!data || data.length < 2) return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-xs", children: "—" });
+  if (!data2 || data2.length < 2) return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-xs", children: "—" });
   const YMIN = yMin;
   const YMAX = Math.max(yMin + 0.1, yMax);
   const PAD_TOP = 8, PAD_BOT = 8;
   const usableH = height - PAD_TOP - PAD_BOT;
-  const getX = (i) => data.length === 1 ? width / 2 : i / (data.length - 1) * width;
+  const getX = (i) => data2.length === 1 ? width / 2 : i / (data2.length - 1) * width;
   const getY = (v) => PAD_TOP + usableH * (1 - Math.max(0, Math.min(1, (v - YMIN) / (YMAX - YMIN))));
-  const pts = data.map((v, i) => `${getX(i)},${getY(v)}`).join(" ");
-  const hoveredVal = tooltip !== null ? data[tooltip.i] : null;
+  const pts = data2.map((v, i) => `${getX(i)},${getY(v)}`).join(" ");
+  const hoveredVal = tooltip !== null ? data2[tooltip.i] : null;
   const gc = (v) => v >= 4.5 ? "#34d399" : v >= 3.5 ? "#4ade80" : v >= 3 ? "#facc15" : v >= 2.5 ? "#fb923c" : "#f87171";
   const gridSpan = YMAX - YMIN;
   const gridStep = gridSpan <= 1 ? 0.2 : gridSpan <= 2 ? 0.5 : 1;
@@ -39999,12 +39999,12 @@ const SparkLine = ({ data, labels, width = 100, height = 32, color = "#60a5fa", 
           interactive && /* @__PURE__ */ jsxRuntimeExports.jsx(
             "polygon",
             {
-              points: `0,${getY(data[0])} ${pts} ${getX(data.length - 1)},${height} 0,${height}`,
+              points: `0,${getY(data2[0])} ${pts} ${getX(data2.length - 1)},${height} 0,${height}`,
               fill: color,
               fillOpacity: 0.07
             }
           ),
-          data.map((v, i) => {
+          data2.map((v, i) => {
             const x = getX(i);
             const y = getY(v);
             const isHov = tooltip?.i === i;
@@ -40072,9 +40072,9 @@ const SparkLine = ({ data, labels, width = 100, height = 32, color = "#60a5fa", 
     })()
   ] });
 };
-const HBarChart = ({ data, max = 5 }) => {
-  if (!data || data.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No data" });
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: data.map((item) => {
+const HBarChart = ({ data: data2, max = 5 }) => {
+  if (!data2 || data2.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No data" });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: data2.map((item) => {
     const pct = Math.min(100, safeN(item.value) / max * 100);
     const c = item.color || (item.value >= 4 ? "bg-emerald-500" : item.value >= 3 ? "bg-yellow-500" : "bg-red-500");
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -40133,8 +40133,8 @@ const DonutChart = ({ segments, size = 140 }) => {
     ] }, seg.label)) })
   ] });
 };
-const RadarChart = ({ data, size = 180 }) => {
-  const entries = Object.entries(data).filter(([, v]) => safeN(v) > 0);
+const RadarChart = ({ data: data2, size = 180 }) => {
+  const entries = Object.entries(data2).filter(([, v]) => safeN(v) > 0);
   if (entries.length < 3) return /* @__PURE__ */ jsxRuntimeExports.jsx(HBarChart, { data: entries.map(([l, v]) => ({ label: l, value: v })) });
   const cx = size / 2, cy = size / 2, r = size / 2 - 22, n = entries.length, max = 5;
   const angle = (i) => -Math.PI / 2 + i * (2 * Math.PI / n);
@@ -40171,21 +40171,21 @@ const RadarChart = ({ data, size = 180 }) => {
   ] });
 };
 const ColChart = ({
-  data,
+  data: data2,
   max = 5,
   height = 120
 }) => {
-  if (!data || data.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No data" });
-  const bw = Math.max(10, Math.min(30, 220 / data.length));
+  if (!data2 || data2.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No data" });
+  const bw = Math.max(10, Math.min(30, 220 / data2.length));
   const gap = Math.max(3, bw * 0.35);
-  const tw = data.length * (bw + gap) + gap;
+  const tw = data2.length * (bw + gap) + gap;
   const tp = 10, bp = 26, ch = height - tp - bp;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: tw, height, className: "overflow-visible", style: { maxWidth: "100%" }, children: [
     [0, 0.5, 1].map((pct) => {
       const y = tp + ch * (1 - pct);
       return /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: 0, y1: y, x2: tw, y2: y, stroke: "#374151", strokeWidth: "0.5", strokeDasharray: "3,3" }, pct);
     }),
-    data.map((item, i) => {
+    data2.map((item, i) => {
       const pct = Math.min(1, safeN(item.value) / max);
       const bh = Math.max(2, pct * ch);
       const x = gap + i * (bw + gap);
@@ -40235,20 +40235,20 @@ const Tag = ({ text, type = "gray" }) => {
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `border text-xs px-2 py-0.5 rounded ${m[type]}`, children: text });
 };
-const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) => {
+const ProgressionModal = ({ data: data2, labels: propLabels, name, trend, onClose }) => {
   const [timelineZoom, setTimelineZoom] = React.useState(0);
   const [scoreZoom, setScoreZoom] = React.useState(0);
   const color = trend === "improving" ? "#10b981" : trend === "worsening" ? "#ef4444" : "#60a5fa";
-  const avgVal = data.reduce((s, v) => s + v, 0) / data.length;
-  const minVal = Math.min(...data);
-  const maxVal = Math.max(...data);
-  const labels = propLabels && propLabels.length === data.length ? propLabels : data.map((_, i) => `#${i + 1}`);
+  const avgVal = data2.reduce((s, v) => s + v, 0) / data2.length;
+  const minVal = Math.min(...data2);
+  const maxVal = Math.max(...data2);
+  const labels = propLabels && propLabels.length === data2.length ? propLabels : data2.map((_, i) => `#${i + 1}`);
   const focusPad = Math.max(0.25, (maxVal - minVal) * 0.2);
   const focusMin = Math.max(0, minVal - focusPad);
   const focusMax = Math.min(5, maxVal + focusPad);
   const chartYMin = scoreZoom > 0 ? focusMin : 0;
   const chartYMax = scoreZoom > 0 ? focusMax : 5;
-  const chartWidth = timelineZoom === 0 ? 760 : Math.max(760, data.length * (24 + timelineZoom * 12));
+  const chartWidth = timelineZoom === 0 ? 760 : Math.max(760, data2.length * (24 + timelineZoom * 12));
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl w-full mx-4", style: { maxWidth: "860px" }, onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -40257,7 +40257,7 @@ const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) =>
           " — Grade Progression"
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm mt-0.5", children: [
-          data.length,
+          data2.length,
           " assessments across the course to date · hover over a point to see details"
         ] })
       ] }),
@@ -40277,7 +40277,7 @@ const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) =>
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "ml-5 flex-1 overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         SparkLine,
         {
-          data,
+          data: data2,
           labels,
           width: chartWidth,
           height: 220,
@@ -40292,7 +40292,7 @@ const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) =>
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Assessment 1" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
           "Assessment ",
-          data.length
+          data2.length
         ] })
       ] })
     ] }),
@@ -40318,18 +40318,18 @@ const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) =>
   ] }) });
 };
 const ColChartExpanded = ({
-  data,
+  data: data2,
   max = 5,
   height = 240,
   zoomY = false
 }) => {
-  if (!data || data.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No data" });
-  const bw = Math.max(20, Math.min(52, 800 / data.length));
+  if (!data2 || data2.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No data" });
+  const bw = Math.max(20, Math.min(52, 800 / data2.length));
   const gap = Math.max(5, bw * 0.4);
   const leftPad = 36;
-  const tw = leftPad + data.length * (bw + gap) + gap;
+  const tw = leftPad + data2.length * (bw + gap) + gap;
   const tp = 16, bp = 80, ch = height - tp - bp;
-  const vals = data.map((d) => safeN(d.value)).filter((v) => v > 0);
+  const vals = data2.map((d) => safeN(d.value)).filter((v) => v > 0);
   const dataMin = vals.length > 0 ? Math.min(...vals) : 0;
   const dataMax = vals.length > 0 ? Math.max(...vals) : max;
   const yPad = Math.max(0.2, (dataMax - dataMin) * 0.15);
@@ -40350,7 +40350,7 @@ const ColChartExpanded = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: leftPad - 5, y: y + 3, textAnchor: "end", fontSize: "9", fill: "#6b7280", children: v.toFixed(1) })
       ] }, v);
     }),
-    data.map((item, i) => {
+    data2.map((item, i) => {
       const barTop = getBarY(safeN(item.value));
       const barBot = getBarY(yMin);
       const bh = Math.max(3, barBot - barTop);
@@ -40377,16 +40377,16 @@ const ColChartExpanded = ({
     })
   ] });
 };
-const ColChartModal = ({ data, max = 100, height = 380, zoomY = false }) => {
-  if (!data || data.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No data" });
-  const bw = Math.max(18, Math.min(48, 900 / data.length));
+const ColChartModal = ({ data: data2, max = 100, height = 380, zoomY = false }) => {
+  if (!data2 || data2.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No data" });
+  const bw = Math.max(18, Math.min(48, 900 / data2.length));
   const gap = Math.max(6, bw * 0.45);
   const leftPad = 48;
   const bp = 90;
   const tp = 24;
-  const tw = leftPad + data.length * (bw + gap) + gap;
+  const tw = leftPad + data2.length * (bw + gap) + gap;
   const ch = height - tp - bp;
-  const vals = data.map((d) => d.value).filter((v) => isFinite(v));
+  const vals = data2.map((d) => d.value).filter((v) => isFinite(v));
   const dataMin = vals.length > 0 ? Math.min(...vals) : 0;
   const dataMax = vals.length > 0 ? Math.max(...vals) : max;
   let yMin, yMax;
@@ -40415,7 +40415,7 @@ const ColChartModal = ({ data, max = 100, height = 380, zoomY = false }) => {
       ] }, v);
     }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: leftPad, y1: tp, x2: leftPad, y2: tp + ch, stroke: "#4b5563", strokeWidth: "1" }),
-    data.map((item, i) => {
+    data2.map((item, i) => {
       const clampedVal = Math.max(yMin, Math.min(yMax, item.value));
       const barTop = getBarY(clampedVal);
       const barBot = getBarY(yMin);
@@ -41630,12 +41630,12 @@ const EventsTab = ({ events }) => {
               onClick: () => {
                 setChartTimelineZoom(0);
                 setChartScoreZoom(0);
-                const data = [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
+                const data2 = [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
                   label: ev.eventCode,
                   value: getPassRate(ev),
                   color: getPassRate(ev) >= 80 ? "#10b981" : getPassRate(ev) >= 60 ? "#eab308" : "#ef4444"
                 }));
-                setChartModal({ title: "Pass Rate by Event (%)", data, max: 100 });
+                setChartModal({ title: "Pass Rate by Event (%)", data: data2, max: 100 });
               },
               children: /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
                 "Pass Rate by Event (%)",
@@ -41662,13 +41662,13 @@ const EventsTab = ({ events }) => {
               onClick: () => {
                 setChartTimelineZoom(0);
                 setChartScoreZoom(0);
-                const data = [...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
+                const data2 = [...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
                   label: ev.eventCode,
                   value: safeN(ev.gradeVariance),
                   color: safeN(ev.gradeVariance) > 1.5 ? "#ef4444" : safeN(ev.gradeVariance) > 0.8 ? "#eab308" : "#3b82f6"
                 }));
                 const maxVal = Math.max(1, ...events.map((e) => safeN(e.gradeVariance)));
-                setChartModal({ title: "Grade Variance by Event (spread indicator)", data, max: maxVal });
+                setChartModal({ title: "Grade Variance by Event (spread indicator)", data: data2, max: maxVal });
               },
               children: /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
                 "Grade Variance by Event (spread indicator)",
@@ -41793,14 +41793,14 @@ const TrainingIntelligenceTab = () => {
   const fetchThresholds = async () => {
     try {
       const r = await fetch("/api/tie/settings");
-      const data = await r.json();
+      const data2 = await r.json();
       const map = {};
-      if (Array.isArray(data)) {
-        data.forEach((s) => {
+      if (Array.isArray(data2)) {
+        data2.forEach((s) => {
           map[s.key] = s.value;
         });
-      } else if (data && typeof data === "object") {
-        Object.assign(map, data);
+      } else if (data2 && typeof data2 === "object") {
+        Object.assign(map, data2);
       }
       if (Object.keys(map).length > 0) {
         setThresholds({
@@ -41831,10 +41831,10 @@ const TrainingIntelligenceTab = () => {
   const fetchCourses2 = async () => {
     try {
       const r = await fetch("/api/tie/courses");
-      const data = await r.json();
-      setCourses(Array.isArray(data) ? data : []);
-      if (Array.isArray(data) && data.length > 0 && !selectedCourse) {
-        setSelectedCourse(data[0].name);
+      const data2 = await r.json();
+      setCourses(Array.isArray(data2) ? data2 : []);
+      if (Array.isArray(data2) && data2.length > 0 && !selectedCourse) {
+        setSelectedCourse(data2[0].name);
       }
     } catch {
       setError("Failed to load courses");
@@ -41843,8 +41843,8 @@ const TrainingIntelligenceTab = () => {
   const fetchRecentRuns = async () => {
     try {
       const r = await fetch("/api/tie/runs?limit=5");
-      const data = await r.json();
-      setRecentRuns(Array.isArray(data) ? data : []);
+      const data2 = await r.json();
+      setRecentRuns(Array.isArray(data2) ? data2 : []);
     } catch {
     }
   };
@@ -41874,9 +41874,9 @@ const TrainingIntelligenceTab = () => {
     pollRef.current = setInterval(async () => {
       try {
         const r = await fetch(`/api/tie/status${selectedCourse ? `?course=${encodeURIComponent(selectedCourse)}` : ""}`);
-        const data = await r.json();
-        if (data.status === "complete") {
-          setRunProgress(`Complete — ${data.recordsProcessed ?? "?"} records processed`);
+        const data2 = await r.json();
+        if (data2.status === "complete") {
+          setRunProgress(`Complete — ${data2.recordsProcessed ?? "?"} records processed`);
           clearInterval(pollRef.current);
           pollRef.current = null;
           setTimeout(() => {
@@ -41886,13 +41886,13 @@ const TrainingIntelligenceTab = () => {
             fetchCourses2();
             if (selectedCourse) loadCourseData(selectedCourse);
           }, 2500);
-        } else if (data.status === "failed") {
-          setError(`Run failed: ${data.errorMessage || "unknown error"}`);
+        } else if (data2.status === "failed") {
+          setError(`Run failed: ${data2.errorMessage || "unknown error"}`);
           setRunProgress("");
           setIsRunning(false);
           clearInterval(pollRef.current);
           pollRef.current = null;
-        } else if (data.status === "running") {
+        } else if (data2.status === "running") {
           setRunProgress("Processing PT-051 records…");
         }
       } catch {
@@ -42280,8 +42280,8 @@ const verifyCurrentUserPassword = async (password) => {
     },
     body: JSON.stringify({ password })
   });
-  const data = await response.json().catch(() => ({}));
-  return response.ok && data.valid === true;
+  const data2 = await response.json().catch(() => ({}));
+  return response.ok && data2.valid === true;
 };
 const isStaffMetricKey = (key) => key === "staffFlight" || key === "staffSimulator" || key === "staffTotal";
 const isUnitScopedMetricKey = (key) => key === "availability" || key === "flight" || key === "flightHours" || key === "simulator" || key === "simulatorHours" || key === "total";
@@ -43130,8 +43130,8 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchBliMetrics(range.startDate, range.endDate, controller.signal, requestContext).then((data) => {
-      setModalMetrics(data);
+    fetchBliMetrics(range.startDate, range.endDate, controller.signal, requestContext).then((data2) => {
+      setModalMetrics(data2);
     }).catch((fetchError) => {
       if (fetchError.name === "AbortError") return;
       console.error("Failed to load expanded BLI metrics:", fetchError);
@@ -43333,8 +43333,8 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchBliMetrics(previewRange.startDate, previewRange.endDate, controller.signal, requestContext).then((data) => {
-      setMetrics(data);
+    fetchBliMetrics(previewRange.startDate, previewRange.endDate, controller.signal, requestContext).then((data2) => {
+      setMetrics(data2);
     }).catch((fetchError) => {
       if (fetchError.name === "AbortError") return;
       console.error("Failed to load BLI metrics:", fetchError);
@@ -43948,27 +43948,27 @@ const ACHistoryAnalytics = ({
     ] })
   ] });
 };
-const AvailabilityChart = ({ data, totalAircraft }) => {
+const AvailabilityChart = ({ data: data2, totalAircraft }) => {
   const W = 900;
   const H = 220;
   const PAD = { top: 20, right: 24, bottom: 48, left: 52 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
   const [hovered, setHovered] = reactExports.useState(null);
-  if (data.length === 0) {
+  if (data2.length === 0) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-48 text-gray-500 text-sm", children: "No data available for the selected period" });
   }
-  const values = data.map((d) => d.value);
+  const values = data2.map((d) => d.value);
   const minVal = Math.max(0, Math.floor(Math.min(...values) - 1));
   const maxVal = Math.ceil(Math.max(...values) + 1);
   const range = maxVal - minVal || 1;
-  const xScale = (i) => PAD.left + i / Math.max(data.length - 1, 1) * chartW;
+  const xScale = (i) => PAD.left + i / Math.max(data2.length - 1, 1) * chartW;
   const yScale = (v) => PAD.top + chartH - (v - minVal) / range * chartH;
-  const points = data.map((d, i) => `${xScale(i)},${yScale(d.value)}`).join(" ");
-  const areaPath = `M ${xScale(0)},${yScale(data[0].value)} ` + data.slice(1).map((d, i) => `L ${xScale(i + 1)},${yScale(d.value)}`).join(" ") + ` L ${xScale(data.length - 1)},${PAD.top + chartH} L ${xScale(0)},${PAD.top + chartH} Z`;
+  const points = data2.map((d, i) => `${xScale(i)},${yScale(d.value)}`).join(" ");
+  const areaPath = `M ${xScale(0)},${yScale(data2[0].value)} ` + data2.slice(1).map((d, i) => `L ${xScale(i + 1)},${yScale(d.value)}`).join(" ") + ` L ${xScale(data2.length - 1)},${PAD.top + chartH} L ${xScale(0)},${PAD.top + chartH} Z`;
   const yTicks = Array.from({ length: 5 }, (_, i) => minVal + range / 4 * i);
-  const xLabelStep = Math.max(1, Math.ceil(data.length / 10));
-  const xLabels = data.filter((_, i) => i % xLabelStep === 0 || i === data.length - 1);
+  const xLabelStep = Math.max(1, Math.ceil(data2.length / 10));
+  const xLabels = data2.filter((_, i) => i % xLabelStep === 0 || i === data2.length - 1);
   const avg = values.reduce((a, b) => a + b, 0) / values.length;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full overflow-x-auto", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -44050,7 +44050,7 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
               strokeLinecap: "round"
             }
           ),
-          data.map((d, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+          data2.map((d, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "circle",
               {
@@ -44077,7 +44077,7 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
             )
           ] }, i)),
           hovered !== null && (() => {
-            const d = data[hovered];
+            const d = data2[hovered];
             const cx = xScale(hovered);
             const cy = yScale(d.value);
             const tipW = 130;
@@ -44127,7 +44127,7 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
             ] });
           })(),
           xLabels.map((d, _) => {
-            const i = data.indexOf(d);
+            const i = data2.indexOf(d);
             return /* @__PURE__ */ jsxRuntimeExports.jsx(
               "text",
               {
@@ -44218,9 +44218,9 @@ const ACHistoryAircraftAvailability = ({
       try {
         const res = await fetch("/api/system-config/fleet_size", { credentials: "include" });
         if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.value) {
-            const size = parseInt(data.value, 10);
+          const data2 = await res.json();
+          if (data2.success && data2.value) {
+            const size = parseInt(data2.value, 10);
             setConfiguredFleetSize(size);
             setNewFleetSize(size.toString());
           }
@@ -44257,8 +44257,8 @@ const ACHistoryAircraftAvailability = ({
         setConfiguredFleetSize(size);
         setShowFleetSizeEditor(false);
       } else {
-        const data = await res.json();
-        setFleetSizeError(data.error || "Failed to save");
+        const data2 = await res.json();
+        setFleetSizeError(data2.error || "Failed to save");
       }
     } catch (err) {
       setFleetSizeError("Failed to save fleet size");
@@ -44480,8 +44480,8 @@ const ACHistoryAircraftAvailability = ({
       });
       const res = await fetch(`/api/aircraft-availability-history?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setRecords(data.records || []);
+      const data2 = await res.json();
+      setRecords(data2.records || []);
     } catch (err) {
       setError("Failed to load aircraft availability history.");
       console.error("ACHistoryAircraftAvailability fetch error:", err);
@@ -44496,8 +44496,8 @@ const ACHistoryAircraftAvailability = ({
     try {
       const stored = localStorage.getItem(`aircraft-availability-${today}`);
       if (!stored) return null;
-      const data = JSON.parse(stored);
-      const snaps = data.snapshots || [];
+      const data2 = JSON.parse(stored);
+      const snaps = data2.snapshots || [];
       if (snaps.length === 0) return null;
       const parseWindowTime = (time, fallbackHour) => {
         const clean = (time || "").replace(":", "");
@@ -44618,9 +44618,9 @@ const ACHistoryAircraftAvailability = ({
             clientTimezoneOffsetHours: timezoneOffset
           })
         });
-        const data = await res.json();
-        if (data.summary) {
-          setTodaysAverageWithMetadata({ ...data.summary, date: today });
+        const data2 = await res.json();
+        if (data2.summary) {
+          setTodaysAverageWithMetadata({ ...data2.summary, date: today });
           await fetchRecords();
           return;
         }
@@ -45254,9 +45254,9 @@ const ACHistoryIntelligencePanel = ({
     try {
       const res = await fetch("/api/cancellation-codes", { credentials: "include" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.codes)) {
-        setCancellationCodes(data.codes);
+      const data2 = await res.json();
+      if (data2.success && Array.isArray(data2.codes)) {
+        setCancellationCodes(data2.codes);
       } else {
         throw new Error("Invalid response from server");
       }
@@ -47846,18 +47846,18 @@ const BulkUpdateFlyout = ({
     setStatusMessage(selectedLocalFile ? "Reading selected file..." : "Reading file from repository...");
     let completedSuccessfully = false;
     try {
-      let data;
+      let data2;
       if (selectedLocalFile) {
-        data = await selectedLocalFile.arrayBuffer();
+        data2 = await selectedLocalFile.arrayBuffer();
       } else {
         const fileRecord = await getFile(selectedFileId);
         if (!fileRecord) {
           throw new Error("File not found in the repository.");
         }
-        data = await fileRecord.content.arrayBuffer();
+        data2 = await fileRecord.content.arrayBuffer();
       }
       setStatusMessage("Parsing spreadsheet...");
-      const workbook = XLSX.read(data, { type: "buffer" });
+      const workbook = XLSX.read(data2, { type: "buffer" });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const json = XLSX.utils.sheet_to_json(worksheet);
@@ -49487,10 +49487,10 @@ function getCachedSyllabus() {
       localStorage.removeItem(CACHE_VERSION_KEY);
       return null;
     }
-    const data = normaliseSyllabusRuntimeTimings(JSON.parse(raw));
+    const data2 = normaliseSyllabusRuntimeTimings(JSON.parse(raw));
     const age = Date.now() - parseInt(timestamp, 10);
     const expired = age > CACHE_TTL_MS;
-    return { data, expired };
+    return { data: data2, expired };
   } catch {
     return null;
   }
@@ -49565,8 +49565,8 @@ async function loadSyllabusFromDB() {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    const data = await response.json();
-    const rawItems = data.syllabus || data.syllabusItems || [];
+    const data2 = await response.json();
+    const rawItems = data2.syllabus || data2.syllabusItems || [];
     if (rawItems.length === 0) {
       throw new Error("No syllabus items returned from database");
     }
@@ -49604,9 +49604,9 @@ async function createSyllabusItem$1(item, changeReason) {
     const err = await response.json();
     throw new Error(err.error || "Failed to create syllabus item");
   }
-  const data = await response.json();
+  const data2 = await response.json();
   clearSyllabusCache();
-  return data.syllabusItem;
+  return data2.syllabusItem;
 }
 async function updateSyllabusItem(id, updates, changeReason) {
   const response = await fetch(`${API_BASE$1}/syllabus/${id}`, {
@@ -49619,9 +49619,9 @@ async function updateSyllabusItem(id, updates, changeReason) {
     const err = await response.json();
     throw new Error(err.error || "Failed to update syllabus item");
   }
-  const data = await response.json();
+  const data2 = await response.json();
   clearSyllabusCache();
-  return data.syllabusItem;
+  return data2.syllabusItem;
 }
 async function deleteSyllabusItem(id, changeReason) {
   const response = await fetch(`${API_BASE$1}/syllabus/${id}`, {
@@ -51129,20 +51129,20 @@ const SyllabusView = ({
         body: formData
       });
       const responseText = await resp.text();
-      let data = {};
+      let data2 = {};
       try {
-        data = responseText ? JSON.parse(responseText) : {};
+        data2 = responseText ? JSON.parse(responseText) : {};
       } catch (_parseError) {
         const preview = responseText.replace(/\s+/g, " ").trim().slice(0, 180);
         throw new Error(`Upload endpoint returned a non-JSON response (${resp.status} ${resp.statusText})${preview ? `: ${preview}` : ""}`);
       }
-      if (!resp.ok && Array.isArray(data.errors)) {
-        setUploadResult(data);
+      if (!resp.ok && Array.isArray(data2.errors)) {
+        setUploadResult(data2);
         return;
       }
-      if (!resp.ok) throw new Error(data.error || data.message || `Upload failed (${resp.status} ${resp.statusText})`);
-      setUploadResult(data);
-      if ((data.created || 0) > 0 || (data.updated || 0) > 0) {
+      if (!resp.ok) throw new Error(data2.error || data2.message || `Upload failed (${resp.status} ${resp.statusText})`);
+      setUploadResult(data2);
+      if ((data2.created || 0) > 0 || (data2.updated || 0) > 0) {
         clearSyllabusCache();
         localStorage.setItem("neo_lmp_details_active_tab", activeTab);
         localStorage.setItem("neo_lmp_details_selected_package", destinationCode);
@@ -52535,9 +52535,9 @@ const CurrencyStatusPage = ({
     setIsEditing(false);
     setEditedDates({});
     setEditedInactive({});
-    fetch(currencyEndpoint, { credentials: "include" }).then((r) => r.json()).then((data) => {
+    fetch(currencyEndpoint, { credentials: "include" }).then((r) => r.json()).then((data2) => {
       if (cancelled) return;
-      const loaded = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
+      const loaded = Array.isArray(data2.currencyStatus) ? data2.currencyStatus : [];
       setCurrencyStatus(loaded);
       setIsLoading(false);
       console.log(`✅ CurrencyStatusPage loaded ${loaded.length} entries for ${personType} ${dbId}`);
@@ -52701,11 +52701,11 @@ const CurrencyStatusPage = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currencyStatus: newStatus })
       });
-      const data = await response.json();
+      const data2 = await response.json();
       if (!response.ok) {
-        console.error("❌ CurrencyStatusPage save failed:", data);
+        console.error("❌ CurrencyStatusPage save failed:", data2);
         setSaveState("error");
-        setSaveMessage(`Save failed: ${data.error || response.statusText}`);
+        setSaveMessage(`Save failed: ${data2.error || response.statusText}`);
       } else {
         console.log(`✅ CurrencyStatusPage saved ${newStatus.length} entries to DB via ${currencyEndpoint}`);
         setSaveState("saved");
@@ -55435,9 +55435,9 @@ const ACHistoryPage = ({
     try {
       const res = await fetch("/api/cancellation-codes", { credentials: "include" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.codes)) {
-        setCancellationCodes(data.codes);
+      const data2 = await res.json();
+      if (data2.success && Array.isArray(data2.codes)) {
+        setCancellationCodes(data2.codes);
       } else {
         throw new Error("Invalid response from server");
       }
@@ -55478,8 +55478,8 @@ const ACHistoryPage = ({
         alert(`Failed to save code: ${err.error || "Unknown error"}`);
         return;
       }
-      const data = await res.json();
-      if (data.success) {
+      const data2 = await res.json();
+      if (data2.success) {
         await loadCodesFromDB();
       }
     } catch (err) {
@@ -57424,8 +57424,8 @@ const SettingsView = ({
     try {
       const fileRecord = await getFile(fileToProcess.id);
       if (!fileRecord) return;
-      const data = await fileRecord.content.arrayBuffer();
-      const workbook = XLSX.read(data, { type: "buffer" });
+      const data2 = await fileRecord.content.arrayBuffer();
+      const workbook = XLSX.read(data2, { type: "buffer" });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const jsonRows = XLSX.utils.sheet_to_json(worksheet);
@@ -57455,8 +57455,8 @@ const SettingsView = ({
     try {
       const fileRecord = await getFile(fileToProcess.id);
       if (!fileRecord) throw new Error("File not found");
-      const data = await fileRecord.content.arrayBuffer();
-      const workbook = XLSX.read(data, { type: "buffer" });
+      const data2 = await fileRecord.content.arrayBuffer();
+      const workbook = XLSX.read(data2, { type: "buffer" });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const jsonRows = XLSX.utils.sheet_to_json(worksheet);
@@ -58898,8 +58898,8 @@ const UserListSection = ({
       if (!response.ok) {
         throw new Error("Failed to fetch users");
       }
-      const data = await response.json();
-      const sortedUsers = data.sort(
+      const data2 = await response.json();
+      const sortedUsers = data2.sort(
         (a, b) => a.name.localeCompare(b.name)
       );
       setUsers(sortedUsers);
@@ -59120,8 +59120,8 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
           if (userId) {
             const personnelRes = await fetch("/api/personnel", { credentials: "include" });
             if (personnelRes.ok) {
-              const data = await personnelRes.json();
-              const linked = (data.personnel || []).find((p) => p.userId === userId);
+              const data2 = await personnelRes.json();
+              const linked = (data2.personnel || []).find((p) => p.userId === userId);
               if (linked) setMyPersonnelId(linked.id);
             }
           }
@@ -59171,19 +59171,19 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
       if (!response.ok) {
         throw new Error(`HTTP ${response.status} ${response.statusText} — ${rawText.substring(0, 100)}`);
       }
-      let data;
+      let data2;
       try {
-        data = JSON.parse(rawText);
-        addDebug(`JSON OK. Keys: ${Object.keys(data).join(", ")}`);
+        data2 = JSON.parse(rawText);
+        addDebug(`JSON OK. Keys: ${Object.keys(data2).join(", ")}`);
       } catch (parseErr) {
         throw new Error(`JSON parse failed: ${parseErr}. Raw: ${rawText.substring(0, 150)}`);
       }
-      if (data.personnel && Array.isArray(data.personnel)) {
-        addDebug(`Total personnel: ${data.personnel.length}`);
-        setStaffData(data.personnel);
-        addDebug(`Showing all ${data.personnel.length} database staff`);
+      if (data2.personnel && Array.isArray(data2.personnel)) {
+        addDebug(`Total personnel: ${data2.personnel.length}`);
+        setStaffData(data2.personnel);
+        addDebug(`Showing all ${data2.personnel.length} database staff`);
       } else {
-        throw new Error(`Invalid format. Keys: ${Object.keys(data).join(", ")}`);
+        throw new Error(`Invalid format. Keys: ${Object.keys(data2).join(", ")}`);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -59654,18 +59654,18 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
       if (!response.ok) {
         throw new Error(`HTTP ${response.status} ${response.statusText} — ${rawText.substring(0, 100)}`);
       }
-      let data;
+      let data2;
       try {
-        data = JSON.parse(rawText);
-        addDebug(`JSON OK. Keys: ${Object.keys(data).join(", ")}`);
+        data2 = JSON.parse(rawText);
+        addDebug(`JSON OK. Keys: ${Object.keys(data2).join(", ")}`);
       } catch (parseErr) {
         throw new Error(`JSON parse failed: ${parseErr}. Raw: ${rawText.substring(0, 150)}`);
       }
-      if (data.trainees && Array.isArray(data.trainees)) {
-        addDebug(`Total trainees: ${data.trainees.length}`);
-        setTraineeData(data.trainees);
+      if (data2.trainees && Array.isArray(data2.trainees)) {
+        addDebug(`Total trainees: ${data2.trainees.length}`);
+        setTraineeData(data2.trainees);
       } else {
-        throw new Error(`Invalid format. Keys: ${Object.keys(data).join(", ")}`);
+        throw new Error(`Invalid format. Keys: ${Object.keys(data2).join(", ")}`);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -60002,9 +60002,9 @@ async function fetchAPI(endpoint, options) {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    const data = await response.json();
-    console.log("✅ API Response:", url, data);
-    return { success: true, data };
+    const data2 = await response.json();
+    console.log("✅ API Response:", url, data2);
+    return { success: true, data: data2 };
   } catch (error) {
     console.error("❌ API Error:", endpoint, error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
@@ -64699,10 +64699,10 @@ const PlatformConfigurationSettings = ({
           fetch(`${getApiBase()}/platform-license/status`)
         ]);
         if (!res.ok) throw new Error(`Load failed (${res.status})`);
-        const data = await res.json();
+        const data2 = await res.json();
         const nextLicenseStatus = licenseRes.ok ? await licenseRes.json() : null;
         if (!cancelled) {
-          const nextConfig = applyDefaultUnitTraineeAvailability$1({ ...emptyConfig, ...data });
+          const nextConfig = applyDefaultUnitTraineeAvailability$1({ ...emptyConfig, ...data2 });
           setConfig(nextConfig);
           loadedConfigRef.current = nextConfig;
           if (nextLicenseStatus) setLicenseStatus(nextLicenseStatus);
@@ -64737,9 +64737,9 @@ const PlatformConfigurationSettings = ({
       try {
         const res = await fetch(getAirfieldCatalogueUrl(), { cache: "force-cache" });
         if (!res.ok) throw new Error(`Airfield catalogue load failed (${res.status})`);
-        const data = await res.json();
-        if (!Array.isArray(data)) throw new Error("Airfield catalogue format was not recognised.");
-        const entries = data.filter((entry) => entry && typeof entry.n === "string" && Number.isFinite(Number(entry.a)) && Number.isFinite(Number(entry.o)) && typeof entry.t === "string").map((entry) => ({
+        const data2 = await res.json();
+        if (!Array.isArray(data2)) throw new Error("Airfield catalogue format was not recognised.");
+        const entries = data2.filter((entry) => entry && typeof entry.n === "string" && Number.isFinite(Number(entry.a)) && Number.isFinite(Number(entry.o)) && typeof entry.t === "string").map((entry) => ({
           ...entry,
           a: Number(entry.a),
           o: Number(entry.o)
@@ -65248,8 +65248,8 @@ const PlatformConfigurationSettings = ({
     setOrganisationStructureImportError("");
     try {
       if (typeof XLSX === "undefined") throw new Error("Excel import library is not available.");
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: "array" });
+      const data2 = await file.arrayBuffer();
+      const workbook = XLSX.read(data2, { type: "array" });
       const levelNames = getOrganisationLevelNamesFromWorkbook(workbook);
       const ladderSheetName = workbook.SheetNames.find((name) => String(name || "").trim().toLowerCase() === "ladder view");
       if (ladderSheetName) {
@@ -66851,9 +66851,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   const refreshLicenseStatus = async () => {
     const res = await fetch(`${getApiBase()}/platform-license/status`);
     if (!res.ok) throw new Error(`Licence status failed (${res.status})`);
-    const data = await res.json();
-    setLicenseStatus(data);
-    return data;
+    const data2 = await res.json();
+    setLicenseStatus(data2);
+    return data2;
   };
   const reloadPlatformConfig = async () => {
     if (isSetupTestMode()) {
@@ -66864,8 +66864,8 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     }
     const res = await fetch(`${getApiBase()}/platform-config`);
     if (!res.ok) throw new Error(`Configuration reload failed (${res.status})`);
-    const data = await res.json();
-    const nextConfig = { ...emptyConfig, ...data };
+    const data2 = await res.json();
+    const nextConfig = { ...emptyConfig, ...data2 };
     setConfig(nextConfig);
     loadedConfigRef.current = nextConfig;
   };
@@ -71017,8 +71017,8 @@ const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
     try {
       const res = await fetch(`${apiBase()}/historical-data`);
       if (res.ok) {
-        const data = await res.json();
-        setMetadata(data.seedingMetadata || null);
+        const data2 = await res.json();
+        setMetadata(data2.seedingMetadata || null);
       }
     } catch (e) {
       console.warn("Could not load historical data status");
@@ -71036,18 +71036,18 @@ const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ force })
       });
-      const data = await res.json();
-      if (data.alreadySeeded && !force) {
-        setMetadata(data);
+      const data2 = await res.json();
+      if (data2.alreadySeeded && !force) {
+        setMetadata(data2);
         setStatus("idle");
-        setError(`Data already seeded on ${new Date(data.seededAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}. Use "Force Reseed" to regenerate.`);
+        setError(`Data already seeded on ${new Date(data2.seededAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}. Use "Force Reseed" to regenerate.`);
         return;
       }
-      if (!data.success) {
-        throw new Error(data.error || data.message || "Seeding failed");
+      if (!data2.success) {
+        throw new Error(data2.error || data2.message || "Seeding failed");
       }
-      setResult(data);
-      setMetadata(data);
+      setResult(data2);
+      setMetadata(data2);
       setStatus("done");
       if (onDataSeeded) {
         setTimeout(() => window.location.reload(), 2e3);
@@ -71067,11 +71067,11 @@ const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
         method: "POST",
         headers: { "Content-Type": "application/json" }
       });
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.error || "Refresh failed");
+      const data2 = await res.json();
+      if (!data2.success) {
+        throw new Error(data2.error || "Refresh failed");
       }
-      setResult(data);
+      setResult(data2);
       setStatus("done");
       setTimeout(() => window.location.reload(), 2e3);
     } catch (e) {
@@ -71085,10 +71085,10 @@ const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
     setError(null);
     try {
       const res = await fetch(`${apiBase()}/historical-data`, { method: "DELETE" });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || "Clear failed");
+      const data2 = await res.json();
+      if (!data2.success) throw new Error(data2.error || "Clear failed");
       setMetadata(null);
-      setResult({ cleared: true, scoresDeleted: data.scoresDeleted });
+      setResult({ cleared: true, scoresDeleted: data2.scoresDeleted });
       setStatus("done");
       setTimeout(() => window.location.reload(), 2e3);
     } catch (e) {
@@ -75075,9 +75075,9 @@ const FullPageProgressGraph = ({
         metric,
         color: courseColors[course.name]
       };
-    }).filter((data) => data.totalEvents > 0 && data.metric.trainees.length > 0);
+    }).filter((data2) => data2.totalEvents > 0 && data2.metric.trainees.length > 0);
   }, [courses, allTrainees, traineeLMPs, pt051Assessments, riskThresholds, courseColors]);
-  const displayData = selectedCourse ? courseGraphData.filter((data) => data.course.name === selectedCourse) : courseGraphData;
+  const displayData = selectedCourse ? courseGraphData.filter((data2) => data2.course.name === selectedCourse) : courseGraphData;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-progress-graph-header": "true", className: "bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
@@ -75101,17 +75101,17 @@ const FullPageProgressGraph = ({
             className: "bg-gray-700 text-white rounded-md px-3 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500",
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All Courses" }),
-              courseGraphData.map((data) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: data.course.name, children: data.course.name }, data.course.name))
+              courseGraphData.map((data2) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: data2.course.name, children: data2.course.name }, data2.course.name))
             ]
           }
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-8 max-w-7xl mx-auto", children: displayData.map((data) => /* @__PURE__ */ jsxRuntimeExports.jsx(CourseGraph, { data }, data.course.name)) }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-8 max-w-7xl mx-auto", children: displayData.map((data2) => /* @__PURE__ */ jsxRuntimeExports.jsx(CourseGraph, { data: data2 }, data2.course.name)) }) })
   ] });
 };
-const CourseGraph = ({ data }) => {
-  const { course, startDate, endDate, totalEvents, weeklyProgress, color, metric } = data;
+const CourseGraph = ({ data: data2 }) => {
+  const { course, startDate, endDate, totalEvents, weeklyProgress, color, metric } = data2;
   const SVG_WIDTH = 800;
   const SVG_HEIGHT = 450;
   const PADDING = { top: 50, right: 50, bottom: 70, left: 70 };
@@ -76488,12 +76488,12 @@ const CoursesManagementView = ({
     setCourseToEdit(course);
     setShowEditFlyout(true);
   };
-  const handleUpdateCourse = (data) => {
+  const handleUpdateCourse = (data2) => {
     if (courseToEdit) {
       if (onUpdateCourse) {
-        onUpdateCourse(courseToEdit.name, data);
+        onUpdateCourse(courseToEdit.name, data2);
       } else {
-        onUpdateCourseDates(courseToEdit.name, data.startDate, data.gradDate);
+        onUpdateCourseDates(courseToEdit.name, data2.startDate, data2.gradDate);
       }
     }
   };
@@ -76679,8 +76679,8 @@ const CoursesManagementView = ({
       AddCourseFlyout,
       {
         onClose: () => setShowAddCourseFlyout(false),
-        onSave: (data) => {
-          onAddCourse(data);
+        onSave: (data2) => {
+          onAddCourse(data2);
           setShowAddCourseFlyout(false);
         },
         existingCourses: courseColors,
@@ -90644,8 +90644,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       timeSlots: Object.fromEntries(
         postFirstTwo.map((t) => {
           const key = Math.round(t * 12) / 12;
-          const data = _fbTimeSlotsAttempted.get(key);
-          return [_fmtT(t), data ? { attempts: data.attempts, reasons: data.reasons } : { attempts: 0, reasons: [] }];
+          const data2 = _fbTimeSlotsAttempted.get(key);
+          return [_fmtT(t), data2 ? { attempts: data2.attempts, reasons: data2.reasons } : { attempts: 0, reasons: [] }];
         })
       ),
       conclusion: {
@@ -90672,8 +90672,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log("D. TIME SLOTS AFTER 0805:");
     postFirstTwo.forEach((t) => {
       const key = Math.round(t * 12) / 12;
-      const data = _fbTimeSlotsAttempted.get(key);
-      if (data) console.log("   " + _fmtT(t) + ": " + data.attempts + " attempts | " + data.reasons.join(", "));
+      const data2 = _fbTimeSlotsAttempted.get(key);
+      if (data2) console.log("   " + _fmtT(t) + ": " + data2.attempts + " attempts | " + data2.reasons.join(", "));
       else console.log("   " + _fmtT(t) + ": 0 attempts");
     });
     console.log("E. CONCLUSION:");
@@ -99345,8 +99345,8 @@ const App = () => {
           contentType: res.headers.get("content-type") || ""
         });
         if (res.ok) {
-          const data = await res.json();
-          const matched = (data.personnel || []).find((p) => {
+          const data2 = await res.json();
+          const matched = (data2.personnel || []).find((p) => {
             const pName = (p.name || "").toLowerCase();
             const fnLower = (firstName || "").toLowerCase();
             const lnLower = (lastName || "").toLowerCase();
@@ -100209,18 +100209,18 @@ const App = () => {
           return;
         }
         const initializeStartedAt = performance.now();
-        const data = await initializeData();
+        const data2 = await initializeData();
         pushDfpDataDiag("startup:initial-data:initializeData-end", {
           durationMs: Math.round(performance.now() - initializeStartedAt),
-          instructors: data.instructors?.length || 0,
-          trainees: data.trainees?.length || 0,
-          events: data.events?.length || 0,
-          scores: Object.keys(data.scores || {}).length,
-          courses: data.courses?.length || 0
+          instructors: data2.instructors?.length || 0,
+          trainees: data2.trainees?.length || 0,
+          events: data2.events?.length || 0,
+          scores: Object.keys(data2.scores || {}).length,
+          courses: data2.courses?.length || 0
         });
         const stateSeedStartedAt = performance.now();
-        const normalisedInstructors = (data.instructors || []).map(normalisePersonnelRecord);
-        const legacyFixedCrewRoles = (data.instructors || []).filter((person) => person?._dataSource === "database" && person?.id && isFixedCrewLegacyAeaRole(person?.role, person?.unit));
+        const normalisedInstructors = (data2.instructors || []).map(normalisePersonnelRecord);
+        const legacyFixedCrewRoles = (data2.instructors || []).filter((person) => person?._dataSource === "database" && person?.id && isFixedCrewLegacyAeaRole(person?.role, person?.unit));
         if (legacyFixedCrewRoles.length > 0) {
           Promise.allSettled(legacyFixedCrewRoles.map((person) => fetch(scopedApiPath(`/api/personnel/${person.id}`), {
             method: "PATCH",
@@ -100243,15 +100243,15 @@ const App = () => {
         }
         setInstructorsData(normalisedInstructors);
         setIsStaffLoaded(true);
-        setTraineesData(data.trainees);
+        setTraineesData(data2.trainees);
         setIsTraineeLoaded(true);
-        setEvents(data.events);
-        setScores(new Map(Object.entries(data.scores || {})));
-        if (data.courses && data.courses.length > 0) {
-          console.log("🎓 Loading", data.courses.length, "courses from DB");
-          setCourses(data.courses);
+        setEvents(data2.events);
+        setScores(new Map(Object.entries(data2.scores || {})));
+        if (data2.courses && data2.courses.length > 0) {
+          console.log("🎓 Loading", data2.courses.length, "courses from DB");
+          setCourses(data2.courses);
           const colors = {};
-          data.courses.forEach((c) => {
+          data2.courses.forEach((c) => {
             if (c.name && c.color) colors[c.name] = c.color;
           });
           setCourseColors((prev) => ({ ...prev, ...colors }));
@@ -100263,13 +100263,26 @@ const App = () => {
         pushDfpDataDiag("startup:initial-data:state-seeded", {
           durationMs: Math.round(performance.now() - stateSeedStartedAt),
           normalisedInstructors: normalisedInstructors.length,
-          trainees: data.trainees?.length || 0,
-          events: data.events?.length || 0,
-          courses: data.courses?.length || 0,
+          trainees: data2.trainees?.length || 0,
+          events: data2.events?.length || 0,
+          courses: data2.courses?.length || 0,
           legacyRoleMigrationsQueued: legacyFixedCrewRoles.length
         });
-        {
-          console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads TraineePerformance from DB)...`);
+        const shouldRunStartupLmpSync = (() => {
+          try {
+            return localStorage.getItem("neo_run_startup_lmp_sync") === "true";
+          } catch {
+            return false;
+          }
+        })();
+        if (!shouldRunStartupLmpSync) {
+          pushDfpDataDiag("startup:lmp-sync:skipped", {
+            reason: "Automatic startup LMP POST sync is disabled for startup performance. Scores are loaded directly from the database.",
+            syllabusItems: syllabusDetails.length,
+            trainees: data2.trainees?.length || 0
+          });
+        } else {
+          console.log(`[LMP Sync] Starting optional startup Individual LMP sync...`);
           const lmpSyncStartedAt = performance.now();
           try {
             const assignableSyncSyllabus = getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "Assign");
@@ -100290,7 +100303,7 @@ const App = () => {
               assignableSyllabusItems: assignableSyncSyllabus.length,
               bpcIpcItems: bpcIpcSyllabus.length,
               ficItems: ficSyllabus.length,
-              trainees: data.trainees?.length || 0
+              trainees: data2.trainees?.length || 0
             });
             const syncRes = await fetch(`${apiBase2}/trainees/lmp-sync`, {
               method: "POST",
@@ -100352,7 +100365,7 @@ const App = () => {
                   setTraineeLMPs((prev) => {
                     const newLMPs = new Map(prev);
                     lmps.forEach((lmp) => {
-                      const traineeForLmp = data.trainees.find((candidate) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
+                      const traineeForLmp = data2.trainees.find((candidate) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
                       const traineeUnitCode = resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "Assign");
                       if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
                         newLMPs.delete(lmp.traineeFullName);
@@ -100389,7 +100402,7 @@ const App = () => {
               });
               setScores((prev) => {
                 const merged = new Map(prev);
-                Object.entries(data.scores).forEach(([traineeName, traineeScores]) => {
+                Object.entries(data2.scores).forEach(([traineeName, traineeScores]) => {
                   const ts = traineeScores;
                   const eventIds = ts.map((s) => (s.event || "").replace("*", ""));
                   const extra = [];
@@ -100412,7 +100425,7 @@ const App = () => {
             });
             setScores((prev) => {
               const merged = new Map(prev);
-              Object.entries(data.scores).forEach(([traineeName, traineeScores]) => {
+              Object.entries(data2.scores).forEach(([traineeName, traineeScores]) => {
                 const ts = traineeScores;
                 const eventIds = ts.map((s) => (s.event || "").replace("*", ""));
                 const extra = [];
@@ -100431,14 +100444,14 @@ const App = () => {
             durationMs: Math.round(performance.now() - lmpSyncStartedAt)
           });
         }
-        const dbTrainees = data.trainees.filter((t) => t._dataSource === "database");
+        const dbTrainees = data2.trainees.filter((t) => t._dataSource === "database");
         if (dbTrainees.length > 0) {
           setTraineeLMPs((prev) => {
             const newLMPs = new Map(prev);
             dbTrainees.forEach((trainee) => {
               let lmpType = trainee.lmpType || "";
               if (!lmpType || lmpType === "BPC+IPC") {
-                const courseObj = data.courses?.find((c) => c.name === trainee.course);
+                const courseObj = data2.courses?.find((c) => c.name === trainee.course);
                 if (courseObj?.lmpType && courseObj.lmpType !== "BPC+IPC") {
                   lmpType = courseObj.lmpType;
                   console.log(`[LMP Init] Using course lmpType "${lmpType}" for ${trainee.fullName} (${trainee.course})`);
@@ -100478,7 +100491,7 @@ const App = () => {
             return newLMPs;
           });
         }
-        const ficDbTrainees = data.trainees.filter(
+        const ficDbTrainees = data2.trainees.filter(
           (t) => t._dataSource === "database" && t.course && t.course.toUpperCase().startsWith("FIC") && (!t.lmpType || t.lmpType === "BPC+IPC")
         );
         if (ficDbTrainees.length > 0) {
@@ -100501,9 +100514,9 @@ const App = () => {
           "bg-red-400/80",
           "bg-cyan-400/80"
         ];
-        const dbTraineesFromLoad = data.trainees.filter((t) => t._dataSource === "database");
+        const dbTraineesFromLoad = data2.trainees.filter((t) => t._dataSource === "database");
         const dbCourseNamesFromLoad = [...new Set(dbTraineesFromLoad.map((t) => normaliseCourseName(t.course)).filter(Boolean))];
-        const existingCourseNamesFromLoad = new Set((data.courses || []).map((course) => normaliseCourseName(course.name || course.code)).filter(Boolean));
+        const existingCourseNamesFromLoad = new Set((data2.courses || []).map((course) => normaliseCourseName(course.name || course.code)).filter(Boolean));
         const existingCompactCourseNamesFromLoad = new Set(
           Array.from(existingCourseNamesFromLoad).map((courseName) => courseName.toUpperCase().replace(/\s+/g, "")).filter(Boolean)
         );
@@ -100617,10 +100630,10 @@ const App = () => {
         pushDfpDataDiag("startup:initial-data:end", {
           durationMs: Math.round(performance.now() - startedAt),
           source: "database",
-          instructors: data.instructors?.length || 0,
-          trainees: data.trainees?.length || 0,
-          events: data.events?.length || 0,
-          courses: data.courses?.length || 0,
+          instructors: data2.instructors?.length || 0,
+          trainees: data2.trainees?.length || 0,
+          events: data2.events?.length || 0,
+          courses: data2.courses?.length || 0,
           syllabusItems: syllabusDetails.length
         });
       } catch (error) {
@@ -100674,7 +100687,9 @@ const App = () => {
       return newLMPs;
     });
   }, [allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, resolveMasterLmpUnitForTrainee, syllabusDetails]);
+  const historicalLoadAbortRef = React.useRef(null);
   reactExports.useEffect(() => {
+    historicalLoadAbortRef.current?.abort();
     if (setupTestProfile) {
       setPublishedSchedules({});
       setBaselineSchedules({});
@@ -100691,6 +100706,8 @@ const App = () => {
       return;
     }
     let cancelled = false;
+    const abortController = new AbortController();
+    historicalLoadAbortRef.current = abortController;
     const requestedSchool = school;
     const requestedUnit = activeUnitCode;
     const loadHistoricalData = async () => {
@@ -100704,130 +100721,90 @@ const App = () => {
           platformDataScopeQuery,
           existingPublishedDates: Object.keys(publishedSchedulesRef.current || {})
         });
-        try {
-          const dailySnapshotUrl = `${apiBase2}/daily-snapshot?school=${requestedSchool}&unit=${encodeURIComponent(requestedUnit)}`;
-          const dailySnapshotStartedAt = performance.now();
-          const snapRes = await fetch(dailySnapshotUrl);
-          if (cancelled) return;
-          pushDfpDataDiag("history:daily-snapshot-response", {
-            url: dailySnapshotUrl,
-            durationMs: Math.round(performance.now() - dailySnapshotStartedAt),
-            status: snapRes.status,
-            ok: snapRes.ok,
-            contentType: snapRes.headers.get("content-type") || ""
-          });
-          if (snapRes.ok) {
-            const parseStartedAt = performance.now();
-            const snapData = await snapRes.json();
+        if (localStorage.getItem("neo_preload_recent_snapshots") === "true") {
+          try {
+            const dailySnapshotUrl = `${apiBase2}/daily-snapshot?school=${requestedSchool}&unit=${encodeURIComponent(requestedUnit)}`;
+            const dailySnapshotStartedAt = performance.now();
+            const snapRes = await fetch(dailySnapshotUrl, { signal: abortController.signal });
             if (cancelled) return;
-            const snapshots = snapData.snapshots || [];
-            pushDfpDataDiag("history:daily-snapshot-json", {
-              parseDurationMs: Math.round(performance.now() - parseStartedAt),
-              snapshotCount: snapshots.length,
-              snapshots: snapshots.slice(0, 20).map((snap2) => ({
-                key: snap2.date,
-                parsedDate: getDailySnapshotDate(snap2.date),
-                eventCount: Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents.length : 0,
-                baselineCount: Array.isArray(snap2.baselineEvents) ? snap2.baselineEvents.length : 0,
-                snapshotSchool: snap2.snapshotSchool,
-                snapshotUnit: snap2.snapshotUnit
-              }))
+            pushDfpDataDiag("history:daily-snapshot-response", {
+              url: dailySnapshotUrl,
+              durationMs: Math.round(performance.now() - dailySnapshotStartedAt),
+              status: snapRes.status,
+              ok: snapRes.ok,
+              contentType: snapRes.headers.get("content-type") || ""
             });
-            if (snapshots.length > 0) {
-              console.log(`[Snapshot] ✅ Loaded ${snapshots.length} daily snapshots`);
-              setPublishedSchedules((prev) => {
-                if (cancelled) return prev;
-                const merged = { ...prev };
-                snapshots.forEach((snap2) => {
-                  const dateKey = getDailySnapshotDate(snap2.date);
-                  const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
-                  const existingNonSeed = (merged[dateKey] || []).filter((e) => !e.isHistoricalSeed);
-                  if (existingNonSeed.length === 0 && events2.length > 0) {
-                    merged[dateKey] = events2;
-                  }
-                });
-                return merged;
+            if (snapRes.ok) {
+              const parseStartedAt = performance.now();
+              const snapData = await snapRes.json();
+              if (cancelled) return;
+              const snapshots = snapData.snapshots || [];
+              pushDfpDataDiag("history:daily-snapshot-json", {
+                parseDurationMs: Math.round(performance.now() - parseStartedAt),
+                snapshotCount: snapshots.length,
+                snapshots: snapshots.slice(0, 20).map((snap2) => ({
+                  key: snap2.date,
+                  parsedDate: getDailySnapshotDate(snap2.date),
+                  eventCount: Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents.length : 0,
+                  baselineCount: Array.isArray(snap2.baselineEvents) ? snap2.baselineEvents.length : 0,
+                  snapshotSchool: snap2.snapshotSchool,
+                  snapshotUnit: snap2.snapshotUnit
+                }))
               });
-              setBaselineSchedules((prev) => {
-                if (cancelled) return prev;
-                const merged = { ...prev };
-                snapshots.forEach((snap2) => {
-                  const dateKey = getDailySnapshotDate(snap2.date);
-                  const baselineKey = `${requestedSchool}:${dateKey}`;
-                  const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
-                  if (baselineEvts.length > 0 && !merged[baselineKey]) {
-                    merged[baselineKey] = JSON.parse(JSON.stringify(baselineEvts));
-                  }
-                });
-                return merged;
-              });
-              const mostRecent = snapshots[0];
-              if (mostRecent && mostRecent.pt051Assessments && Object.keys(mostRecent.pt051Assessments).length > 0) {
-                console.log(`[Snapshot] Ignored ${Object.keys(mostRecent.pt051Assessments).length} PT-051 snapshot records; TraineePerformance is authoritative`);
-              }
-              setAlertsDataByDate((prev) => {
-                if (cancelled) return prev;
-                const merged = { ...prev };
-                snapshots.forEach((snap2) => {
-                  if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
-                    merged[getDailySnapshotDate(snap2.date)] = snap2.alertsData;
-                  }
-                });
-                return merged;
+            }
+          } catch (snapErr) {
+            if (!abortController.signal.aborted) {
+              console.warn("[Snapshot] Could not load daily snapshots:", snapErr);
+              pushDfpDataDiag("history:daily-snapshot-error", {
+                durationMs: Math.round(performance.now() - startedAt),
+                error: String(snapErr)
               });
             }
           }
-        } catch (snapErr) {
-          console.warn("[Snapshot] Could not load daily snapshots:", snapErr);
-          pushDfpDataDiag("history:daily-snapshot-error", {
-            durationMs: Math.round(performance.now() - startedAt),
-            error: String(snapErr)
+        } else {
+          pushDfpDataDiag("history:daily-snapshot-skipped", {
+            reason: "Recent DFP snapshots load on demand; bulk preload is disabled for startup performance."
           });
         }
-        const historicalUrl = `${apiBase2}/historical-data`;
-        const historicalStartedAt = performance.now();
-        const res = await fetch(historicalUrl);
-        if (cancelled) return;
-        pushDfpDataDiag("history:legacy-response", {
-          url: historicalUrl,
-          durationMs: Math.round(performance.now() - historicalStartedAt),
-          status: res.status,
-          ok: res.ok,
-          contentType: res.headers.get("content-type") || ""
-        });
-        if (!res.ok) return;
-        const historicalParseStartedAt = performance.now();
-        const data = await res.json();
-        if (cancelled) return;
-        if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
-          const seedSchedules = data.publishedSchedules;
-          const eventCount = Object.values(seedSchedules).flat().length;
-          pushDfpDataDiag("history:legacy-json", {
-            parseDurationMs: Math.round(performance.now() - historicalParseStartedAt),
-            dateCount: Object.keys(seedSchedules).length,
-            eventCount,
-            dates: Object.entries(seedSchedules).slice(0, 60).map(([dateKey, seedEvents]) => ({
-              date: dateKey,
-              eventCount: Array.isArray(seedEvents) ? seedEvents.length : 0
-            })),
-            seedingMetadata: data.seedingMetadata || null
+        if (localStorage.getItem("neo_load_legacy_historical_seed") === "true") {
+          const historicalUrl = `${apiBase2}/historical-data`;
+          const historicalStartedAt = performance.now();
+          const res = await fetch(historicalUrl, { signal: abortController.signal });
+          if (cancelled) return;
+          pushDfpDataDiag("history:legacy-response", {
+            url: historicalUrl,
+            durationMs: Math.round(performance.now() - historicalStartedAt),
+            status: res.status,
+            ok: res.ok,
+            contentType: res.headers.get("content-type") || ""
           });
-          console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(seedSchedules).length} dates (legacy/seed)`);
-          setSnapshotDates((prev) => [.../* @__PURE__ */ new Set([...prev, ...Object.keys(seedSchedules)])].sort((a, b) => b.localeCompare(a)));
-          setPublishedSchedules((prev) => {
-            if (cancelled) return prev;
-            const merged = { ...prev };
-            Object.entries(seedSchedules).forEach(([dateKey, seedEvents]) => {
-              const existingNonSeed = (merged[dateKey] || []).filter((e) => !e.isHistoricalSeed);
-              if (existingNonSeed.length === 0) {
-                merged[dateKey] = seedEvents;
-              }
+          if (!res.ok) return;
+          const historicalParseStartedAt = performance.now();
+          const data2 = await res.json();
+          if (cancelled) return;
+          if (data2.publishedSchedules && Object.keys(data2.publishedSchedules).length > 0) {
+            const seedSchedules = data2.publishedSchedules;
+            const eventCount = Object.values(seedSchedules).flat().length;
+            pushDfpDataDiag("history:legacy-json", {
+              parseDurationMs: Math.round(performance.now() - historicalParseStartedAt),
+              dateCount: Object.keys(seedSchedules).length,
+              eventCount,
+              dates: Object.entries(seedSchedules).slice(0, 60).map(([dateKey, seedEvents]) => ({
+                date: dateKey,
+                eventCount: Array.isArray(seedEvents) ? seedEvents.length : 0
+              })),
+              seedingMetadata: data2.seedingMetadata || null
             });
-            return merged;
+            console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(seedSchedules).length} dates (legacy/seed)`);
+            setSnapshotDates((prev) => [.../* @__PURE__ */ new Set([...prev, ...Object.keys(seedSchedules)])].sort((a, b) => b.localeCompare(a)));
+          }
+          if (data2.pt051Assessments && Object.keys(data2.pt051Assessments).length > 0) {
+            console.log(`[Historical] Ignored ${Object.keys(data2.pt051Assessments).length} legacy PT-051 records; TraineePerformance is authoritative`);
+          }
+        } else {
+          pushDfpDataDiag("history:legacy-skipped", {
+            reason: "Legacy seed archive is not loaded during startup unless explicitly enabled."
           });
-        }
-        if (data.pt051Assessments && Object.keys(data.pt051Assessments).length > 0) {
-          console.log(`[Historical] Ignored ${Object.keys(data.pt051Assessments).length} legacy PT-051 records; TraineePerformance is authoritative`);
         }
         try {
           if (!cancelled) setPt051PerformanceLoading(true);
@@ -100838,7 +100815,7 @@ const App = () => {
           while (!cancelled) {
             const pageStartedAt = performance.now();
             const performanceUrl = `${apiBase2}/trainee-performance?limit=${pageSize}&offset=${offset}`;
-            const perfRes = await fetch(performanceUrl);
+            const perfRes = await fetch(performanceUrl, { signal: abortController.signal });
             pushDfpDataDiag("history:trainee-performance-response", {
               url: performanceUrl,
               offset,
@@ -100890,6 +100867,12 @@ const App = () => {
           durationMs: Math.round(performance.now() - startedAt)
         });
       } catch (error) {
+        if (abortController.signal.aborted) {
+          pushDfpDataDiag("history:load-aborted", {
+            durationMs: Math.round(performance.now() - startedAt)
+          });
+          return;
+        }
         console.warn("[Historical] Could not load historical data:", error);
         pushDfpDataDiag("history:load-error", {
           durationMs: Math.round(performance.now() - startedAt),
@@ -100901,6 +100884,7 @@ const App = () => {
     loadHistoricalData();
     return () => {
       cancelled = true;
+      abortController.abort();
     };
   }, [activeUnitCode, school, setupTestProfile]);
   reactExports.useEffect(() => {
@@ -100930,14 +100914,14 @@ const App = () => {
         });
         if (!res.ok) return;
         const parseStartedAt = performance.now();
-        const data = await res.json();
-        const dates = [...new Set((data.dates || []).map((d) => d.date))];
+        const data2 = await res.json();
+        const dates = [...new Set((data2.dates || []).map((d) => d.date))];
         pushDfpDataDiag("snapshot-dates:json", {
           durationMs: Math.round(performance.now() - startedAt),
           parseDurationMs: Math.round(performance.now() - parseStartedAt),
           count: dates.length,
           dates: dates.slice(0, 80),
-          rawRows: (data.dates || []).slice(0, 30)
+          rawRows: (data2.dates || []).slice(0, 30)
         });
         console.log(`[Snapshot] ✅ Loaded ${dates.length} snapshot dates for calendar`);
         setSnapshotDates((prev) => [.../* @__PURE__ */ new Set([...prev, ...dates])].sort((a, b) => b.localeCompare(a)));
@@ -101185,9 +101169,9 @@ const App = () => {
             progress: 88
           });
           const parseStartedAt = performance.now();
-          const data = await res.json();
+          const data2 = await res.json();
           const jsonParsedAt = performance.now();
-          const snap2 = data.snapshot;
+          const snap2 = data2.snapshot;
           pushDfpDataDiag("snapshot:network-json", {
             targetDate,
             snapshotKey,
@@ -102035,10 +102019,10 @@ const App = () => {
       try {
         const res = await fetch(`${getApiBase2()}/settings/course-settings`);
         if (res.ok) {
-          const data = await res.json();
-          setNeoBuildCourse(data.neoBuildCourse || "");
-          setPersistedAcademicLmp(data.selectedAcademicLmp || "");
-          setExcludedCourses(data.excludedCourses || []);
+          const data2 = await res.json();
+          setNeoBuildCourse(data2.neoBuildCourse || "");
+          setPersistedAcademicLmp(data2.selectedAcademicLmp || "");
+          setExcludedCourses(data2.excludedCourses || []);
         }
       } catch (error) {
         console.error("[CourseSettings] Failed to load:", error);
@@ -102173,9 +102157,9 @@ const App = () => {
           console.error("[SCT] Failed to load from DB:", res.status, errData);
           return;
         }
-        const data = await res.json();
-        console.log("[SCT] Loaded", data.length, "SCT requests from DB");
-        setSctFlights(data.filter((r) => r.requestType === "flight").map((r) => ({
+        const data2 = await res.json();
+        console.log("[SCT] Loaded", data2.length, "SCT requests from DB");
+        setSctFlights(data2.filter((r) => r.requestType === "flight").map((r) => ({
           id: r.id,
           name: r.name,
           event: r.event,
@@ -102198,7 +102182,7 @@ const App = () => {
           crewIndividual: r.crewIndividual || "",
           aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1))
         })));
-        setSctFtds(data.filter((r) => r.requestType === "ftd").map((r) => ({
+        setSctFtds(data2.filter((r) => r.requestType === "ftd").map((r) => ({
           id: r.id,
           name: r.name,
           event: r.event,
@@ -102286,16 +102270,16 @@ ${"=".repeat(60)}`);
       console.log(`[AV] 📥 Response status: ${res.status} ${res.statusText}`);
       console.log(`[AV] 📥 Response headers:`, Object.fromEntries(res.headers.entries()));
       if (res.ok) {
-        const data = await res.json();
-        console.log(`[AV] ✅ Response data:`, data);
-        if (data.skipped) {
-          console.log(`[AV] ⏭️ Event skipped: ${data.reason}`);
+        const data2 = await res.json();
+        console.log(`[AV] ✅ Response data:`, data2);
+        if (data2.skipped) {
+          console.log(`[AV] ⏭️ Event skipped: ${data2.reason}`);
         } else {
           console.log(`[AV] ✅ Event recorded successfully!`);
         }
         console.log(`${"=".repeat(60)}
 `);
-        return { success: true, data };
+        return { success: true, data: data2 };
       } else {
         const errText = await res.text();
         console.error(`[AV] ❌ Request failed: ${res.status} ${errText}`);
@@ -102338,9 +102322,9 @@ ${"=".repeat(60)}`);
         console.log("🧪 Response headers:", Object.fromEntries(res.headers.entries()));
         const text = await res.text();
         console.log("🧪 Response text (first 500 chars):", text.substring(0, 500));
-        let data;
+        let data2;
         try {
-          data = JSON.parse(text);
+          data2 = JSON.parse(text);
         } catch (parseErr) {
           console.error("🧪 JSON parse failed - response is not JSON!");
           console.error("🧪 Full response text:", text);
@@ -102353,8 +102337,8 @@ ${"=".repeat(60)}`);
             url
           };
         }
-        console.log("🧪 Debug result:", data);
-        return data;
+        console.log("🧪 Debug result:", data2);
+        return data2;
       } catch (e) {
         console.error("🧪 Debug failed:", e);
         return { error: String(e), url };
@@ -102374,14 +102358,14 @@ ${"=".repeat(60)}`);
         });
         const text = await res.text();
         console.log("🧪 Response text:", text.substring(0, 500));
-        let data;
+        let data2;
         try {
-          data = JSON.parse(text);
+          data2 = JSON.parse(text);
         } catch (parseErr) {
           return { error: "Not JSON", responseText: text.substring(0, 2e3), url };
         }
-        console.log("🧪 Force insert result:", data);
-        return data;
+        console.log("🧪 Force insert result:", data2);
+        return data2;
       } catch (e) {
         console.error("🧪 Force insert failed:", e);
         return { error: String(e), url };
@@ -102410,16 +102394,16 @@ ${"=".repeat(60)}`);
           credentials: "include"
         });
         if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.availableCount !== void 0) {
-            if (!data.isDefault) {
-              console.log(`[AV] 🔄 Restored availability from database for ${school} - ${activeUnitCode}: ${data.availableCount} aircraft (from ${data.date || "unknown date"})`);
-              setAvailableAircraftCount(data.availableCount);
-              loadedAvailabilityRef.current = data.availableCount;
+          const data2 = await res.json();
+          if (data2.success && data2.availableCount !== void 0) {
+            if (!data2.isDefault) {
+              console.log(`[AV] 🔄 Restored availability from database for ${school} - ${activeUnitCode}: ${data2.availableCount} aircraft (from ${data2.date || "unknown date"})`);
+              setAvailableAircraftCount(data2.availableCount);
+              loadedAvailabilityRef.current = data2.availableCount;
               availabilityLoadedFromEventsRef.current = true;
             } else {
               console.log(`[AV] ℹ️ No saved availability found, using default: 15`);
-              setAvailableAircraftCount(data.availableCount ?? 15);
+              setAvailableAircraftCount(data2.availableCount ?? 15);
               loadedAvailabilityRef.current = 15;
               availabilityLoadedFromEventsRef.current = false;
             }
@@ -103847,7 +103831,7 @@ ${"=".repeat(60)}`);
     [allInstructorsData, personnelDisplaySettings]
   );
   const personnelData = reactExports.useMemo(() => {
-    const data = /* @__PURE__ */ new Map();
+    const data2 = /* @__PURE__ */ new Map();
     allInstructorsData.forEach((instructor) => {
       if (!instructor.name) return;
       const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
@@ -103856,14 +103840,14 @@ ${"=".repeat(60)}`);
       const callsignPrefix = assigned?.callsignPrefix || callsign.match(/^[A-Za-z]+/)?.[0] || (school === "ESL" ? "ROLR" : "VIPR");
       const callsignNumber = assigned?.callsignNumber || instructor.callsignNumber || 0;
       if (callsign || callsignNumber > 0) {
-        data.set(instructor.name, {
+        data2.set(instructor.name, {
           callsignPrefix,
           callsignNumber,
           callsign
         });
       }
     });
-    return data;
+    return data2;
   }, [allInstructorsData, school, staffCallsignAssignments]);
   const staffCallsignSyncHashRef = reactExports.useRef("");
   reactExports.useEffect(() => {
@@ -103902,18 +103886,18 @@ ${"=".repeat(60)}`);
     };
   }, [allInstructorsData, staffCallsignAssignments]);
   const seatConfigs = reactExports.useMemo(() => {
-    const data = /* @__PURE__ */ new Map();
+    const data2 = /* @__PURE__ */ new Map();
     instructorsData.forEach((instructor) => {
       if (instructor.name && instructor.seatConfig) {
-        data.set(instructor.name, instructor.seatConfig);
+        data2.set(instructor.name, instructor.seatConfig);
       }
     });
     allTraineesData.forEach((trainee) => {
       if (trainee.name && trainee.seatConfig) {
-        data.set(trainee.name, trainee.seatConfig);
+        data2.set(trainee.name, trainee.seatConfig);
       }
     });
-    return data;
+    return data2;
   }, [allInstructorsData, allTraineesData]);
   const getScheduleEventDayNightClassification = reactExports.useCallback((event) => {
     if (typeof event.startTime === "number") {
@@ -104626,10 +104610,10 @@ ${"=".repeat(60)}`);
         console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, await response.text());
         return null;
       }
-      const data = await response.json();
-      const persistedLmp = data?.lmp?.events;
+      const data2 = await response.json();
+      const persistedLmp = data2?.lmp?.events;
       if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return null;
-      const persistedLmpType = data?.lmp?.lmpType || trainee.lmpType || "BPC+IPC";
+      const persistedLmpType = data2?.lmp?.lmpType || trainee.lmpType || "BPC+IPC";
       const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode;
       if (!hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, "Assign")) {
         setTraineeLMPs((prev) => {
@@ -105200,19 +105184,19 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     setSuccessMessage("New Trainee Added!");
   }, [activeUnitCode, courses, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, syllabusDetails]);
-  const handleUpdateTrainee = reactExports.useCallback(async (data) => {
+  const handleUpdateTrainee = reactExports.useCallback(async (data2) => {
     console.log("📝 [APP] handleUpdateTrainee called");
     console.log("📝 [APP] Trainee data received:", {
-      id: data.id,
-      idNumber: data.idNumber,
-      name: data.name,
-      _dataSource: data._dataSource,
-      unavailability: data.unavailability,
-      unavailabilityLength: data.unavailability?.length || 0
+      id: data2.id,
+      idNumber: data2.idNumber,
+      name: data2.name,
+      _dataSource: data2._dataSource,
+      unavailability: data2.unavailability,
+      unavailabilityLength: data2.unavailability?.length || 0
     });
-    const traineeUnitCode = data.unit || activeUnitCode;
-    const requestedLmpType = data.lmpType || "";
-    const requestedAcademicLmpType = data.academicLmpType || "";
+    const traineeUnitCode = data2.unit || activeUnitCode;
+    const requestedLmpType = data2.lmpType || "";
+    const requestedAcademicLmpType = data2.academicLmpType || "";
     const lmpAccessContext = {
       unitCode: traineeUnitCode,
       operationalModel: activeOperationalModel
@@ -105225,32 +105209,32 @@ ${error instanceof Error ? error.message : String(error)}`,
       setErrorMessage(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
-    setTraineesData((prev) => prev.map((t) => t.idNumber === data.idNumber ? data : t));
-    const dbId = data.id;
+    setTraineesData((prev) => prev.map((t) => t.idNumber === data2.idNumber ? data2 : t));
+    const dbId = data2.id;
     console.log("📝 [APP] DB ID:", dbId);
-    console.log("📝 [APP] Is DB trainee?", dbId && data._dataSource === "database");
-    if (dbId && data._dataSource === "database") {
+    console.log("📝 [APP] Is DB trainee?", dbId && data2._dataSource === "database");
+    if (dbId && data2._dataSource === "database") {
       try {
         const patchBody = {
-          name: data.name,
-          fullName: data.fullName,
-          rank: data.rank,
-          course: data.course,
-          lmpType: data.lmpType,
-          academicLmpType: data.academicLmpType || "",
-          unit: data.unit,
-          flight: data.flight,
-          location: data.location,
-          service: data.service,
-          seatConfig: data.seatConfig,
-          isPaused: data.isPaused,
-          traineeCallsign: data.traineeCallsign,
-          primaryInstructor: data.primaryInstructor,
-          secondaryInstructor: data.secondaryInstructor,
-          phoneNumber: data.phoneNumber,
-          email: data.email,
-          permissions: data.permissions || [],
-          unavailability: data.unavailability || []
+          name: data2.name,
+          fullName: data2.fullName,
+          rank: data2.rank,
+          course: data2.course,
+          lmpType: data2.lmpType,
+          academicLmpType: data2.academicLmpType || "",
+          unit: data2.unit,
+          flight: data2.flight,
+          location: data2.location,
+          service: data2.service,
+          seatConfig: data2.seatConfig,
+          isPaused: data2.isPaused,
+          traineeCallsign: data2.traineeCallsign,
+          primaryInstructor: data2.primaryInstructor,
+          secondaryInstructor: data2.secondaryInstructor,
+          phoneNumber: data2.phoneNumber,
+          email: data2.email,
+          permissions: data2.permissions || [],
+          unavailability: data2.unavailability || []
         };
         console.log("📝 [APP] PATCH body to send:", patchBody);
         console.log("📝 [APP] PATCH unavailability field:", patchBody.unavailability);
@@ -105259,40 +105243,40 @@ ${error instanceof Error ? error.message : String(error)}`,
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
-            name: data.name,
-            fullName: data.fullName,
-            rank: data.rank,
-            course: data.course,
-            lmpType: data.lmpType,
-            academicLmpType: data.academicLmpType || "",
-            unit: data.unit,
-            flight: data.flight,
-            location: data.location,
-            service: data.service,
-            seatConfig: data.seatConfig,
-            isPaused: data.isPaused,
-            traineeCallsign: data.traineeCallsign,
-            primaryInstructor: data.primaryInstructor,
-            secondaryInstructor: data.secondaryInstructor,
-            phoneNumber: data.phoneNumber,
-            email: data.email,
-            permissions: data.permissions || [],
-            unavailability: data.unavailability || []
+            name: data2.name,
+            fullName: data2.fullName,
+            rank: data2.rank,
+            course: data2.course,
+            lmpType: data2.lmpType,
+            academicLmpType: data2.academicLmpType || "",
+            unit: data2.unit,
+            flight: data2.flight,
+            location: data2.location,
+            service: data2.service,
+            seatConfig: data2.seatConfig,
+            isPaused: data2.isPaused,
+            traineeCallsign: data2.traineeCallsign,
+            primaryInstructor: data2.primaryInstructor,
+            secondaryInstructor: data2.secondaryInstructor,
+            phoneNumber: data2.phoneNumber,
+            email: data2.email,
+            permissions: data2.permissions || [],
+            unavailability: data2.unavailability || []
           })
         });
         console.log("📝 [APP] PATCH response status:", response.status);
         console.log("📝 [APP] PATCH response ok:", response.ok);
         if (response.ok) {
-          console.log(`✅ DB trainee updated: ${data.name}`);
+          console.log(`✅ DB trainee updated: ${data2.name}`);
           const responseData = await response.json();
           console.log("📝 [APP] Response data:", responseData);
         } else {
           const err = await response.text();
-          console.error(`❌ Failed to update DB trainee ${data.name}:`, err);
+          console.error(`❌ Failed to update DB trainee ${data2.name}:`, err);
           console.error("❌ Response status:", response.status);
         }
       } catch (err) {
-        console.error(`❌ Error updating DB trainee ${data.name}:`, err);
+        console.error(`❌ Error updating DB trainee ${data2.name}:`, err);
       }
     } else {
       console.log("⚠️ [APP] Skipping DB update - not a DB trainee or no ID");
@@ -105818,33 +105802,33 @@ ${error instanceof Error ? error.message : String(error)}`,
     setPublishedSchedules({});
     void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: newUnit });
   };
-  const handleAddCourseFromTrainingRecords = async (data) => {
-    setCourseColors((prev) => ({ ...prev, [data.number]: data.color }));
+  const handleAddCourseFromTrainingRecords = async (data2) => {
+    setCourseColors((prev) => ({ ...prev, [data2.number]: data2.color }));
     const newCourse = {
-      name: data.number,
-      color: data.color,
-      startDate: data.startDate,
-      gradDate: data.gradDate,
-      raafStart: data.raafStart,
-      navyStart: data.navyStart,
-      armyStart: data.armyStart,
-      location: data.location || "",
-      unit: data.unit || "",
-      lmpType: data.lmpType || "BPC+IPC"
+      name: data2.number,
+      color: data2.color,
+      startDate: data2.startDate,
+      gradDate: data2.gradDate,
+      raafStart: data2.raafStart,
+      navyStart: data2.navyStart,
+      armyStart: data2.armyStart,
+      location: data2.location || "",
+      unit: data2.unit || "",
+      lmpType: data2.lmpType || "BPC+IPC"
     };
     setCourses((prev) => [...prev, newCourse]);
     try {
       const result = await saveCourse({
-        name: data.number,
-        color: data.color,
-        startDate: data.startDate,
-        gradDate: data.gradDate,
-        raafStart: data.raafStart,
-        navyStart: data.navyStart,
-        armyStart: data.armyStart,
+        name: data2.number,
+        color: data2.color,
+        startDate: data2.startDate,
+        gradDate: data2.gradDate,
+        raafStart: data2.raafStart,
+        navyStart: data2.navyStart,
+        armyStart: data2.armyStart,
         status: "ACTIVE",
-        location: data.location || (school === "ESL" ? "East Sale" : "Pearce"),
-        unit: data.unit || ""
+        location: data2.location || (school === "ESL" ? "East Sale" : "Pearce"),
+        unit: data2.unit || ""
       });
       if (!result.success) {
         console.error("Failed to save course to DB:", result.error);
@@ -105852,7 +105836,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     } catch (error) {
       console.error("Error saving course to DB:", error);
     }
-    setSuccessMessage(`Course ${data.number} added successfully!`);
+    setSuccessMessage(`Course ${data2.number} added successfully!`);
   };
   const handleDeleteCourseFromTrainingRecords = async (courseName, archive) => {
     const color = courseColors[courseName];
@@ -105928,23 +105912,23 @@ ${error instanceof Error ? error.message : String(error)}`,
       setErrorMessage("Failed to save changes to database");
     }
   };
-  const handleUpdateCourseFromTrainingRecords = async (courseName, data) => {
-    const courseUnitCode = data.unit || activeUnitCode;
+  const handleUpdateCourseFromTrainingRecords = async (courseName, data2) => {
+    const courseUnitCode = data2.unit || activeUnitCode;
     const lmpAccessContext = {
       unitCode: courseUnitCode,
       operationalModel: activeOperationalModel
     };
-    if (data.lmpType && !hasMasterLmpAccess(platformConfig, data.lmpType, lmpAccessContext, "Assign")) {
-      setErrorMessage(`Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
+    if (data2.lmpType && !hasMasterLmpAccess(platformConfig, data2.lmpType, lmpAccessContext, "Assign")) {
+      setErrorMessage(`Cannot assign Master LMP "${data2.lmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
-    if (data.academicLmpType && !hasMasterLmpAccess(platformConfig, data.academicLmpType, lmpAccessContext, "Assign")) {
-      setErrorMessage(`Cannot assign Academic LMP "${data.academicLmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
+    if (data2.academicLmpType && !hasMasterLmpAccess(platformConfig, data2.academicLmpType, lmpAccessContext, "Assign")) {
+      setErrorMessage(`Cannot assign Academic LMP "${data2.academicLmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
     setCourses(
       (prevCourses) => prevCourses.map(
-        (course) => course.name === courseName ? { ...course, startDate: data.startDate, gradDate: data.gradDate, location: data.location, unit: data.unit, lmpType: data.lmpType, academicLmpType: data.academicLmpType } : course
+        (course) => course.name === courseName ? { ...course, startDate: data2.startDate, gradDate: data2.gradDate, location: data2.location, unit: data2.unit, lmpType: data2.lmpType, academicLmpType: data2.academicLmpType } : course
       )
     );
     try {
@@ -105956,19 +105940,19 @@ ${error instanceof Error ? error.message : String(error)}`,
       const result = await saveCourse({
         name: course.name,
         color: course.color,
-        startDate: data.startDate,
-        gradDate: data.gradDate,
+        startDate: data2.startDate,
+        gradDate: data2.gradDate,
         raafStart: course.raafStart,
         navyStart: course.navyStart,
         armyStart: course.armyStart,
-        location: data.location,
-        unit: data.unit,
-        lmpType: data.lmpType,
-        academicLmpType: data.academicLmpType,
+        location: data2.location,
+        unit: data2.unit,
+        lmpType: data2.lmpType,
+        academicLmpType: data2.academicLmpType,
         status: course.status
       });
       if (result.success) {
-        console.log(`[EditCourse] ✅ Course "${courseName}" updated:`, data);
+        console.log(`[EditCourse] ✅ Course "${courseName}" updated:`, data2);
         setSuccessMessage(`Course ${courseName} updated successfully!`);
       } else {
         console.error("[EditCourse] Failed to update course in DB:", result.error);
@@ -106941,15 +106925,15 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       console.log("🔔 [Alert] Response status:", res.status);
       console.log("🔔 [Alert] Response body:", responseText);
       if (res.ok) {
-        const data = JSON.parse(responseText);
+        const data2 = JSON.parse(responseText);
         setAlertsDataByDate((prev) => ({
           ...prev,
           [date]: {
             ...prev[date] || {},
-            [eventId]: data.alertEntry || data
+            [eventId]: data2.alertEntry || data2
           }
         }));
-        console.log("🔔 [Alert] Alert sent successfully! alertId:", data.alertId);
+        console.log("🔔 [Alert] Alert sent successfully! alertId:", data2.alertId);
         return true;
       } else {
         console.warn("🔔 [Alert] Failed to send alert. Status:", res.status, "Body:", responseText);
@@ -110364,11 +110348,11 @@ ${conflictLines.join("\n")}${moreText}`,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      const data = await response.json().catch(() => ({}));
+      const data2 = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.error || data.details || `Failed to save staff ${importedInstructor.name || importedInstructor.idNumber}`);
+        throw new Error(data2.error || data2.details || `Failed to save staff ${importedInstructor.name || importedInstructor.idNumber}`);
       }
-      const savedPersonnel = data.personnel || data.updatedPersonnel || data.newPersonnel;
+      const savedPersonnel = data2.personnel || data2.updatedPersonnel || data2.newPersonnel;
       if (savedPersonnel) {
         persistedInstructors.push({
           ...normalisePersonnelRecord(savedPersonnel),
@@ -110731,8 +110715,8 @@ ${conflictLines.join("\n")}${moreText}`,
       const apiBase2 = getAppApiBase();
       const res = await fetch(`${apiBase2}/daily-snapshot/${encodeURIComponent(getDailySnapshotKey(date))}`);
       if (!res.ok) return;
-      const data = await res.json();
-      const snap2 = data.snapshot;
+      const data2 = await res.json();
+      const snap2 = data2.snapshot;
       if (!snap2) return;
       if (snap2.alertsData) {
         setAlertsDataByDate((prev) => ({
@@ -110958,57 +110942,57 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
     return groups;
   }, [allTraineesData]);
-  const handleSaveGroundEvent = (data) => {
-    const syllabusItem = syllabusDetails.find((s) => s.code === data.flightNumber);
+  const handleSaveGroundEvent = (data2) => {
+    const syllabusItem = syllabusDetails.find((s) => s.code === data2.flightNumber);
     if (!syllabusItem) return;
     const newEvent = {
       id: v4(),
       type: "ground",
-      flightNumber: data.flightNumber,
-      startTime: data.startTime,
+      flightNumber: data2.flightNumber,
+      startTime: data2.startTime,
       duration: syllabusItem.duration,
-      instructor: data.instructor,
-      attendees: data.attendees,
-      resourceId: data.resourceId,
+      instructor: data2.instructor,
+      attendees: data2.attendees,
+      resourceId: data2.resourceId,
       color: "bg-teal-400/80",
       flightType: "Dual",
       locationType: "Local",
       origin: school,
       destination: school,
-      authNotes: data.location
+      authNotes: data2.location
       // Using notes field as location for CPTs
     };
     setNextDayBuildEvents((prev) => [...prev, newEvent]);
     setShowAddGroundEvent(false);
     setSuccessMessage("Ground event added to the build.");
   };
-  const handleSaveAcademicEvent = (data) => {
+  const handleSaveAcademicEvent = (data2) => {
     console.log("🎓 [AcademicPublish] ===== handleSaveAcademicEvent CALLED =====");
     console.log("🎓 [AcademicPublish] data received:", {
-      course: data.course,
-      date: data.date,
-      workStart: data.workStart,
-      workEnd: data.workEnd,
-      resourceId: data.resourceId,
-      selectedTrainees: data.selectedTrainees,
-      selectedTraineesCount: data.selectedTrainees?.length,
-      tilesCount: data.timeline?.length,
-      lessonsCount: data.lessons?.length,
-      timeline: data.timeline,
-      isAcademic: data.isAcademic
+      course: data2.course,
+      date: data2.date,
+      workStart: data2.workStart,
+      workEnd: data2.workEnd,
+      resourceId: data2.resourceId,
+      selectedTrainees: data2.selectedTrainees,
+      selectedTraineesCount: data2.selectedTrainees?.length,
+      tilesCount: data2.timeline?.length,
+      lessonsCount: data2.lessons?.length,
+      timeline: data2.timeline,
+      isAcademic: data2.isAcademic
     });
-    if (!data.selectedTrainees || data.selectedTrainees.length === 0) {
+    if (!data2.selectedTrainees || data2.selectedTrainees.length === 0) {
       console.error("🎓 [AcademicPublish] ❌ BLOCKED: no selectedTrainees — returning early");
       return;
     }
-    if (!data.timeline || data.timeline.length === 0) {
+    if (!data2.timeline || data2.timeline.length === 0) {
       console.error("🎓 [AcademicPublish] ❌ BLOCKED: no timeline tiles — returning early");
       return;
     }
-    const lessonCodes = data.lessons.map((l) => l.code).join(", ");
-    const sessionDuration = data.workEnd - data.workStart;
+    const lessonCodes = data2.lessons.map((l) => l.code).join(", ");
+    const sessionDuration = data2.workEnd - data2.workStart;
     console.log("🎓 [AcademicPublish] lessonCodes:", lessonCodes);
-    console.log("🎓 [AcademicPublish] sessionDuration:", sessionDuration, "(workStart:", data.workStart, "→ workEnd:", data.workEnd, ")");
+    console.log("🎓 [AcademicPublish] sessionDuration:", sessionDuration, "(workStart:", data2.workStart, "→ workEnd:", data2.workEnd, ")");
     if (sessionDuration <= 0) {
       console.error("🎓 [AcademicPublish] ❌ BLOCKED: sessionDuration is", sessionDuration, "— workStart/workEnd invalid");
       return;
@@ -111017,15 +111001,15 @@ ${error instanceof Error ? error.message : String(error)}`,
     console.log("🎓 [AcademicPublish] Generated event ID:", eventId);
     const academicDayEvent = {
       id: eventId,
-      date: data.date,
+      date: data2.date,
       type: "ground",
       flightNumber: "ACAD",
-      startTime: data.workStart,
+      startTime: data2.workStart,
       duration: sessionDuration,
-      attendees: data.selectedTrainees,
-      student: data.selectedTrainees[0] || "",
-      instructor: data.instructor || "",
-      resourceId: data.resourceId || "Ground 1",
+      attendees: data2.selectedTrainees,
+      student: data2.selectedTrainees[0] || "",
+      instructor: data2.instructor || "",
+      resourceId: data2.resourceId || "Ground 1",
       color: "bg-blue-800/90",
       flightType: "Dual",
       locationType: "Local",
@@ -111034,7 +111018,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       isAcademic: true,
       isTimeFixed: true,
       notes: `Academic session: ${lessonCodes}`,
-      academicTiles: data.timeline.map((t) => ({
+      academicTiles: data2.timeline.map((t) => ({
         lessonCode: t.lessonCode,
         label: t.label,
         startTime: t.startTime,
@@ -111055,7 +111039,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       attendees: academicDayEvent.attendees,
       academicTilesCount: academicDayEvent.academicTiles?.length
     });
-    const eventDate = data.date;
+    const eventDate = data2.date;
     console.log("🎓 [AcademicPublish] Adding to publishedSchedules for date:", eventDate);
     console.log("🎓 [AcademicPublish] Current publishedSchedules keys:", Object.keys(publishedSchedules));
     console.log("🎓 [AcademicPublish] Current events for this date:", (publishedSchedules[eventDate] || []).length);
@@ -111073,7 +111057,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     console.log("🎓 [AcademicPublish] Persisting", updatedEventsForDate.length, "events for date", eventDate, "to DB snapshot...");
     persistScheduleForDate(eventDate, updatedEventsForDate);
     setShowAddGroundEvent(false);
-    const successMsg = `Academic session published for ${data.date}: ${lessonCodes || "ACAD-SESSION"}`;
+    const successMsg = `Academic session published for ${data2.date}: ${lessonCodes || "ACAD-SESSION"}`;
     console.log("🎓 [AcademicPublish] ✅ Success:", successMsg);
     setSuccessMessage(successMsg);
     console.log("🎓 [AcademicPublish] ===== handleSaveAcademicEvent COMPLETE =====");
@@ -113558,26 +113542,26 @@ ${error instanceof Error ? error.message : String(error)}`,
             onAddTrainingReport: handleAddTrainingReportForStaff,
             school,
             personnelData,
-            onUpdateInstructor: async (data) => {
+            onUpdateInstructor: async (data2) => {
               console.log("📝 [APP] handleUpdateInstructor called");
               console.log("📝 [APP] Instructor data received:", {
-                id: data.id,
-                name: data.name,
-                unavailability: data.unavailability,
-                unavailabilityLength: data.unavailability?.length || 0
+                id: data2.id,
+                name: data2.name,
+                unavailability: data2.unavailability,
+                unavailabilityLength: data2.unavailability?.length || 0
               });
-              const dbId = data.id;
+              const dbId = data2.id;
               try {
                 if (dbId) {
                   const response = await fetch(`/api/personnel/${dbId}`, {
                     method: "PATCH",
                     credentials: "include",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(data2)
                   });
                   console.log("📝 [APP] PATCHing existing instructor to /api/personnel/" + dbId);
-                  console.log("📝 [APP] PATCH body:", JSON.stringify(data));
-                  console.log("📝 [APP] PATCH body unavailability field:", data.unavailability);
+                  console.log("📝 [APP] PATCH body:", JSON.stringify(data2));
+                  console.log("📝 [APP] PATCH body unavailability field:", data2.unavailability);
                   console.log("📝 [APP] PATCH response status:", response.status);
                   console.log("📝 [APP] PATCH response ok:", response.ok);
                   if (response.ok) {
@@ -113593,7 +113577,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                     method: "POST",
                     credentials: "include",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(data2)
                   });
                   if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
@@ -113607,15 +113591,15 @@ ${error instanceof Error ? error.message : String(error)}`,
                 if (dbId) {
                   const exists = prev.some((i) => i.id === dbId);
                   if (exists) {
-                    return prev.map((i) => i.id === dbId ? data : i);
+                    return prev.map((i) => i.id === dbId ? data2 : i);
                   }
-                  return [...prev, data];
+                  return [...prev, data2];
                 } else {
-                  const exists = prev.some((i) => i.name === data.name);
+                  const exists = prev.some((i) => i.name === data2.name);
                   if (exists) {
-                    return prev.map((i) => i.name === data.name ? data : i);
+                    return prev.map((i) => i.name === data2.name ? data2 : i);
                   }
-                  return [...prev, data];
+                  return [...prev, data2];
                 }
               });
             },
@@ -113677,26 +113661,26 @@ ${error instanceof Error ? error.message : String(error)}`,
             onAddTrainingReport: handleAddTrainingReportForStaff,
             school,
             personnelData,
-            onUpdateInstructor: async (data) => {
+            onUpdateInstructor: async (data2) => {
               console.log("📝 [APP] handleUpdateInstructor called (Instance 2)");
               console.log("📝 [APP] Instructor data received:", {
-                id: data.id,
-                name: data.name,
-                unavailability: data.unavailability,
-                unavailabilityLength: data.unavailability?.length || 0
+                id: data2.id,
+                name: data2.name,
+                unavailability: data2.unavailability,
+                unavailabilityLength: data2.unavailability?.length || 0
               });
-              const dbId = data.id;
+              const dbId = data2.id;
               try {
                 if (dbId) {
                   const response = await fetch(`/api/personnel/${dbId}`, {
                     method: "PATCH",
                     credentials: "include",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(data2)
                   });
                   console.log("📝 [APP] PATCHing existing instructor to /api/personnel/" + dbId);
-                  console.log("📝 [APP] PATCH body:", JSON.stringify(data));
-                  console.log("📝 [APP] PATCH body unavailability field:", data.unavailability);
+                  console.log("📝 [APP] PATCH body:", JSON.stringify(data2));
+                  console.log("📝 [APP] PATCH body unavailability field:", data2.unavailability);
                   console.log("📝 [APP] PATCH response status:", response.status);
                   console.log("📝 [APP] PATCH response ok:", response.ok);
                   if (response.ok) {
@@ -113712,7 +113696,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                     method: "POST",
                     credentials: "include",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(data2)
                   });
                   if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
@@ -113726,15 +113710,15 @@ ${error instanceof Error ? error.message : String(error)}`,
                 if (dbId) {
                   const exists = prev.some((i) => i.id === dbId);
                   if (exists) {
-                    return prev.map((i) => i.id === dbId ? data : i);
+                    return prev.map((i) => i.id === dbId ? data2 : i);
                   }
-                  return [...prev, data];
+                  return [...prev, data2];
                 } else {
-                  const exists = prev.some((i) => i.name === data.name);
+                  const exists = prev.some((i) => i.name === data2.name);
                   if (exists) {
-                    return prev.map((i) => i.name === data.name ? data : i);
+                    return prev.map((i) => i.name === data2.name ? data2 : i);
                   }
-                  return [...prev, data];
+                  return [...prev, data2];
                 }
               });
             },
@@ -113847,9 +113831,9 @@ ${error instanceof Error ? error.message : String(error)}`,
               }
               handleNavigation("Settings");
             },
-            onUpdateInstructor: async (data) => {
-              const normalisedData = normalisePersonnelRecord(data);
-              const dbId = data.id;
+            onUpdateInstructor: async (data2) => {
+              const normalisedData = normalisePersonnelRecord(data2);
+              const dbId = data2.id;
               try {
                 const response = await fetch(dbId ? `/api/personnel/${dbId}` : "/api/personnel", {
                   method: dbId ? "PATCH" : "POST",
@@ -113859,11 +113843,11 @@ ${error instanceof Error ? error.message : String(error)}`,
                 });
                 if (!response.ok) {
                   const errorData = await response.json().catch(() => ({}));
-                  throw new Error(errorData.error || errorData.details || `Failed to save staff ${data.name}`);
+                  throw new Error(errorData.error || errorData.details || `Failed to save staff ${data2.name}`);
                 }
                 const responseData = await response.json().catch(() => ({}));
-                const saved = responseData.personnel || data;
-                setInstructorsData((prev) => prev.map((instructor) => instructor.idNumber === data.idNumber ? { ...normalisedData, ...normalisePersonnelRecord(saved), preferences: saved.preferences || normalisedData.preferences } : instructor));
+                const saved = responseData.personnel || data2;
+                setInstructorsData((prev) => prev.map((instructor) => instructor.idNumber === data2.idNumber ? { ...normalisedData, ...normalisePersonnelRecord(saved), preferences: saved.preferences || normalisedData.preferences } : instructor));
               } catch (error) {
                 console.error("❌ Error saving Air Combat training assignment:", error);
                 throw error;
@@ -114175,8 +114159,8 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
                         instructor: assessment.instructorName || assessment.dcoResult || "DCO",
                         notes: assessment.overallComments || ""
                       })
-                    }).then((res) => res.json()).then((data) => {
-                      if (data.success) {
+                    }).then((res) => res.json()).then((data2) => {
+                      if (data2.success) {
                         console.log(`[PT051->Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
                         setScores((prev) => {
                           const existing = prev.get(assessment.traineeFullName) || [];
@@ -114196,7 +114180,7 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
                           return updated;
                         });
                       } else {
-                        console.warn(`[PT051->Score] Failed to persist score:`, data);
+                        console.warn(`[PT051->Score] Failed to persist score:`, data2);
                       }
                     }).catch((err) => console.warn(`[PT051->Score] Error persisting score:`, err));
                   }
@@ -114249,15 +114233,15 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
                 setEventForPostFlight(null);
                 handleNavigation("Program Schedule");
               },
-              onSave: async (data) => {
+              onSave: async (data2) => {
                 console.group("%c[PostFlight] onSave fired", "color:#00bfff;font-weight:bold");
-                console.log("[PostFlight] Full data:", JSON.stringify(data, null, 2));
-                console.log("[PostFlight] Guard — eventForPostFlight:", !!eventForPostFlight, "| totalTime:", data.totalTime, "| takeoffTime:", data.takeoffTime);
-                console.log("[PostFlight] result=%s | aircraft=%s | from=%s | to=%s | isSolo=%s | isDual=%s", data.result, data.aircraftNumber, data.from, data.to, data.isSolo, data.isDual);
-                console.log("[PostFlight] Times: total=%s | capt=%s | instr=%s | night=%s | ifAct=%s | ifSim=%s | ineff=%s", data.totalTime, data.captainTime, data.instructorTime, data.nightTime, data.ifActualTime, data.ifSimTime, data.ineffectiveTime);
-                console.log("[PostFlight] Approaches:", data.approaches);
+                console.log("[PostFlight] Full data:", JSON.stringify(data2, null, 2));
+                console.log("[PostFlight] Guard — eventForPostFlight:", !!eventForPostFlight, "| totalTime:", data2.totalTime, "| takeoffTime:", data2.takeoffTime);
+                console.log("[PostFlight] result=%s | aircraft=%s | from=%s | to=%s | isSolo=%s | isDual=%s", data2.result, data2.aircraftNumber, data2.from, data2.to, data2.isSolo, data2.isDual);
+                console.log("[PostFlight] Times: total=%s | capt=%s | instr=%s | night=%s | ifAct=%s | ifSim=%s | ineff=%s", data2.totalTime, data2.captainTime, data2.instructorTime, data2.nightTime, data2.ifActualTime, data2.ifSimTime, data2.ineffectiveTime);
+                console.log("[PostFlight] Approaches:", data2.approaches);
                 console.groupEnd();
-                console.log("Post flight data saved:", data);
+                console.log("Post flight data saved:", data2);
                 if (eventForPostFlight) {
                   try {
                     const duplicateRes = await fetch(`/api/flight-log?scheduleEventId=${encodeURIComponent(eventForPostFlight.id)}`, {
@@ -114292,14 +114276,14 @@ Do you want to replace the existing entry?`,
                     console.warn("[PostFlight] Duplicate logbook check failed:", duplicateErr);
                   }
                 }
-                if (data.result && ["DCO", "DPCO", "DNCO"].includes(data.result) && eventForPostFlight) {
+                if (data2.result && ["DCO", "DPCO", "DNCO"].includes(data2.result) && eventForPostFlight) {
                   const pfEvent = eventForPostFlight;
                   try {
                     const pfTrainee = pfEvent.student ? traineesData.find((t) => t.name === pfEvent.student || t.fullName === pfEvent.student) : null;
                     let totalFlightTime;
-                    if (data.takeoffTime && data.landTime) {
-                      const toHm = data.takeoffTime.split(":").map(Number);
-                      const laHm = data.landTime.split(":").map(Number);
+                    if (data2.takeoffTime && data2.landTime) {
+                      const toHm = data2.takeoffTime.split(":").map(Number);
+                      const laHm = data2.landTime.split(":").map(Number);
                       const toDecimal = toHm[0] + (toHm[1] || 0) / 60;
                       const laDecimal = laHm[0] + (laHm[1] || 0) / 60;
                       const diff = laDecimal - toDecimal;
@@ -114315,13 +114299,13 @@ Do you want to replace the existing entry?`,
                       traineeId: pfTrainee?.id ?? void 0,
                       traineeFullName: pfEvent.student ?? pfEvent.pilot ?? "Unknown",
                       instructorName: pfEvent.instructor ?? void 0,
-                      dcoResult: data.result,
-                      aircraftNumber: data.aircraftNumber || void 0,
-                      takeoffTime: data.takeoffTime ?? void 0,
-                      landTime: data.landTime ?? void 0,
+                      dcoResult: data2.result,
+                      aircraftNumber: data2.aircraftNumber || void 0,
+                      takeoffTime: data2.takeoffTime ?? void 0,
+                      landTime: data2.landTime ?? void 0,
                       totalFlightTime,
-                      isSolo: !!data.isSolo,
-                      isDual: !!data.isDual,
+                      isSolo: !!data2.isSolo,
+                      isDual: !!data2.isDual,
                       source: "post_flight"
                     };
                     const ecRes = await fetch("/api/event-completions", {
@@ -114333,7 +114317,7 @@ Do you want to replace the existing entry?`,
                     if (ecRes.ok) {
                       const ecData = await ecRes.json();
                       console.log(
-                        `[PostFlight] EventCompletion ${ecData.created ? "created" : "updated"} for ${completionPayload.traineeFullName} — ${completionPayload.eventCode} -> ${data.result}`
+                        `[PostFlight] EventCompletion ${ecData.created ? "created" : "updated"} for ${completionPayload.traineeFullName} — ${completionPayload.eventCode} -> ${data2.result}`
                       );
                     } else {
                       const errBody = await ecRes.text();
@@ -114343,17 +114327,17 @@ Do you want to replace the existing entry?`,
                     console.warn("[PostFlight] EventCompletion fetch threw:", ecErr);
                   }
                 }
-                if (eventForPostFlight && data.result === "DCO") {
+                if (eventForPostFlight && data2.result === "DCO") {
                   try {
                     await generateAssessmentRequiredDraftTrainingReport(
                       eventForPostFlight,
-                      data.result
+                      data2.result
                     );
                   } catch (airCombatReportErr) {
                     console.warn("[PostFlight] Assessment-required draft training report generation failed:", airCombatReportErr);
                   }
                 }
-                if (data.currencyUpdates && Object.keys(data.currencyUpdates).length > 0) {
+                if (data2.currencyUpdates && Object.keys(data2.currencyUpdates).length > 0) {
                   const event = eventForPostFlight;
                   const targetPersons = [];
                   if (event?.student) {
@@ -114383,7 +114367,7 @@ Do you want to replace the existing entry?`,
                     }
                     const allCurrencyDefs = [...masterCurrencies, ...currencyRequirements];
                     const updatedStatus = [...existingStatus];
-                    for (const [currencyId, value] of Object.entries(data.currencyUpdates)) {
+                    for (const [currencyId, value] of Object.entries(data2.currencyUpdates)) {
                       if (!value || value === "false") continue;
                       const baseCurrencyId = currencyId.includes("__") ? currencyId.split("__")[0] : currencyId;
                       const def = allCurrencyDefs.find((c) => c.id === baseCurrencyId);
@@ -114430,7 +114414,7 @@ Do you want to replace the existing entry?`,
                       savedCurrencyCache.delete(dbId);
                       console.log(`[PostFlight] ✅ Currency updated for ${person.name}, cache invalidated for ${dbId}`);
                       const auditChangeParts = [];
-                      for (const [currencyId, value] of Object.entries(data.currencyUpdates)) {
+                      for (const [currencyId, value] of Object.entries(data2.currencyUpdates)) {
                         if (!value || value === "false") continue;
                         const baseCId = currencyId.includes("__") ? currencyId.split("__")[0] : currencyId;
                         const allCDefs2 = [...masterCurrencies, ...currencyRequirements];
@@ -114453,11 +114437,11 @@ Do you want to replace the existing entry?`,
                     }
                   }
                 }
-                console.log("[PostFlight] FlightLogEntry guard: eventForPostFlight=", !!eventForPostFlight, "| data.totalTime=", JSON.stringify(data.totalTime), "| data.takeoffTime=", JSON.stringify(data.takeoffTime), "| guard passes:", !!(eventForPostFlight && (data.totalTime || data.takeoffTime)));
-                if (eventForPostFlight && (data.totalTime || data.takeoffTime)) {
+                console.log("[PostFlight] FlightLogEntry guard: eventForPostFlight=", !!eventForPostFlight, "| data.totalTime=", JSON.stringify(data2.totalTime), "| data.takeoffTime=", JSON.stringify(data2.takeoffTime), "| guard passes:", !!(eventForPostFlight && (data2.totalTime || data2.takeoffTime)));
+                if (eventForPostFlight && (data2.totalTime || data2.takeoffTime)) {
                   const pfEvt = eventForPostFlight;
-                  const isSoloFlight = !!data.isSolo;
-                  const isDualFlight = !!data.isDual;
+                  const isSoloFlight = !!data2.isSolo;
+                  const isDualFlight = !!data2.isDual;
                   const saveFlightLogEntry = async (payload, label) => {
                     const response = await fetch("/api/flight-log", {
                       method: "POST",
@@ -114473,20 +114457,20 @@ Do you want to replace the existing entry?`,
                     console.log(`[PostFlight] ✅ FlightLogEntry saved for ${label}:`, saved.entry?.personName || payload.personName);
                     return saved;
                   };
-                  const parsedTotal = parseFloat(data.totalTime || "") || void 0;
-                  const parsedNight = parseFloat(data.nightTime || "") || void 0;
-                  const parsedIfAct = parseFloat(data.ifActualTime || "") || void 0;
-                  const parsedIfSim = parseFloat(data.ifSimTime || "") || void 0;
-                  const parsedIneff = parseFloat(data.ineffectiveTime || "") || void 0;
-                  const parsedCapt = parseFloat(data.captainTime || "") || void 0;
-                  const parsedInst = parseFloat(data.instructorTime || "") || void 0;
+                  const parsedTotal = parseFloat(data2.totalTime || "") || void 0;
+                  const parsedNight = parseFloat(data2.nightTime || "") || void 0;
+                  const parsedIfAct = parseFloat(data2.ifActualTime || "") || void 0;
+                  const parsedIfSim = parseFloat(data2.ifSimTime || "") || void 0;
+                  const parsedIneff = parseFloat(data2.ineffectiveTime || "") || void 0;
+                  const parsedCapt = parseFloat(data2.captainTime || "") || void 0;
+                  const parsedInst = parseFloat(data2.instructorTime || "") || void 0;
                   const normaliseLogbookName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
-                  const approachAssignments = data.approachAssignments && typeof data.approachAssignments === "object" ? data.approachAssignments : {};
+                  const approachAssignments = data2.approachAssignments && typeof data2.approachAssignments === "object" ? data2.approachAssignments : {};
                   const getApproachAssignedPilot = (kind, fallbackName) => normaliseLogbookName(approachAssignments[kind]) || normaliseLogbookName(fallbackName);
                   const getAssignedApproachCount = (kind, personName, fallbackName) => {
                     const personKey2 = normaliseLogbookName(personName);
                     if (!personKey2) return 0;
-                    return getApproachAssignedPilot(kind, fallbackName) === personKey2 ? Number(data.approaches?.[kind] || 0) : 0;
+                    return getApproachAssignedPilot(kind, fallbackName) === personKey2 ? Number(data2.approaches?.[kind] || 0) : 0;
                   };
                   const formatLogbookHours = (value) => value > 0 ? value.toFixed(1) : "";
                   const getFixedCrewGroupDetails = (value, fallbackUnit) => {
@@ -114528,12 +114512,12 @@ Do you want to replace the existing entry?`,
                   const splitDayNightHours = () => {
                     const total = parsedTotal || 0;
                     if (total <= 0) return { day: 0, night: 0 };
-                    const takeoff = timeStringToHours(data.takeoffTime || "");
-                    const landingRaw = timeStringToHours(data.landTime || "");
+                    const takeoff = timeStringToHours(data2.takeoffTime || "");
+                    const landingRaw = timeStringToHours(data2.landTime || "");
                     let start = Number.isFinite(Number(takeoff)) ? Number(takeoff) : Number(pfEvt.startTime || 0);
                     let end = Number.isFinite(Number(landingRaw)) ? Number(landingRaw) : start + total;
                     if (end <= start) end += 24;
-                    const sunTimes = getSunTimesForAirfieldDate(pfEvt.date, data.from || pfEvt.origin || school);
+                    const sunTimes = getSunTimesForAirfieldDate(pfEvt.date, data2.from || pfEvt.origin || school);
                     const firstLight = Number(sunTimes?.firstLightDecimal);
                     const lastLight = Number(sunTimes?.lastLightDecimal);
                     if (!Number.isFinite(firstLight) || !Number.isFinite(lastLight)) {
@@ -114560,25 +114544,25 @@ Do you want to replace the existing entry?`,
                     eventCode: pfEvt.flightNumber || pfEvt.id,
                     eventDate: pfEvt.date,
                     eventType: pfEvt.type,
-                    aircraftNumber: data.aircraftNumber || void 0,
-                    fromIcao: data.from || void 0,
-                    toIcao: data.to || void 0,
-                    duty: data.duty || void 0,
+                    aircraftNumber: data2.aircraftNumber || void 0,
+                    fromIcao: data2.from || void 0,
+                    toIcao: data2.to || void 0,
+                    duty: data2.duty || void 0,
                     isSolo: isSoloFlight,
                     isDual: isDualFlight,
-                    isFlightLog: !!data.isFlightLog,
-                    isFtdLog: !!data.isFtdLog,
-                    takeoffTime: data.takeoffTime || void 0,
-                    landTime: data.landTime || void 0,
+                    isFlightLog: !!data2.isFlightLog,
+                    isFtdLog: !!data2.isFtdLog,
+                    takeoffTime: data2.takeoffTime || void 0,
+                    landTime: data2.landTime || void 0,
                     totalTime: parsedTotal,
                     nightTime: parsedNight,
                     ifActualTime: parsedIfAct,
                     ifSimTime: parsedIfSim,
                     ineffectiveTime: parsedIneff,
-                    ilsCount: data.approaches?.ils || 0,
-                    rnpCount: data.approaches?.rnp || 0,
-                    tacanCount: data.approaches?.tacan || 0,
-                    vorCount: data.approaches?.vor || 0
+                    ilsCount: data2.approaches?.ils || 0,
+                    rnpCount: data2.approaches?.rnp || 0,
+                    tacanCount: data2.approaches?.tacan || 0,
+                    vorCount: data2.approaches?.vor || 0
                   };
                   const fixedCrewRoster = getFixedCrewRosterForEvent();
                   const isFixedCrewPostFlight = isFixedCrewLikeOperationalModel(activeOperationalModel) && fixedCrewRoster.length > 0;
@@ -114591,11 +114575,11 @@ Do you want to replace the existing entry?`,
                     const baseSnapshot = {
                       year: Number.isFinite(dateObj.getTime()) ? dateObj.getFullYear().toString() : "",
                       date: Number.isFinite(dateObj.getTime()) ? dateObj.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "",
-                      type: data.isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft,
-                      tail: data.aircraftNumber || "",
+                      type: data2.isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft,
+                      tail: data2.aircraftNumber || "",
                       captain: captainDisplay,
                       crew: coPilotDisplay,
-                      duty: data.duty || "",
+                      duty: data2.duty || "",
                       total: parsedTotal ? parsedTotal.toFixed(1) : "",
                       simIf: "",
                       simActual: "",
@@ -114666,8 +114650,8 @@ Do you want to replace the existing entry?`,
                         tacanCount: getAssignedApproachCount("tacan", pfEvt.student, pfEvt.instructor || pfEvt.pilot),
                         vorCount: getAssignedApproachCount("vor", pfEvt.student, pfEvt.instructor || pfEvt.pilot),
                         // Full logbook row snapshots (auto-filled + any manual overrides)
-                        captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : void 0,
-                        crewLogSnapshot: data.crewLog && Object.keys(data.crewLog).length > 0 ? data.crewLog : void 0
+                        captainLogSnapshot: data2.captainLog && Object.keys(data2.captainLog).length > 0 ? data2.captainLog : void 0,
+                        crewLogSnapshot: data2.crewLog && Object.keys(data2.crewLog).length > 0 ? data2.crewLog : void 0
                       };
                       console.log("[PostFlight] Trainee FlightLog payload:", JSON.stringify(traineeLogPayload, null, 2));
                       await saveFlightLogEntry(traineeLogPayload, "trainee");
@@ -114686,8 +114670,8 @@ Do you want to replace the existing entry?`,
                         tacanCount: getAssignedApproachCount("tacan", pfEvt.instructor, pfEvt.instructor || pfEvt.pilot),
                         vorCount: getAssignedApproachCount("vor", pfEvt.instructor, pfEvt.instructor || pfEvt.pilot),
                         // Full logbook row snapshots (auto-filled + any manual overrides)
-                        captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : void 0,
-                        crewLogSnapshot: data.crewLog && Object.keys(data.crewLog).length > 0 ? data.crewLog : void 0
+                        captainLogSnapshot: data2.captainLog && Object.keys(data2.captainLog).length > 0 ? data2.captainLog : void 0,
+                        crewLogSnapshot: data2.crewLog && Object.keys(data2.crewLog).length > 0 ? data2.crewLog : void 0
                       };
                       console.log("[PostFlight] Instructor FlightLog payload:", JSON.stringify(instrLogPayload, null, 2));
                       await saveFlightLogEntry(instrLogPayload, "instructor");
@@ -114696,7 +114680,7 @@ Do you want to replace the existing entry?`,
                 }
                 const isCurrencyPostFlightEvent = !!eventForPostFlight && (eventForPostFlight.eventCategory === "currency" || !!eventForPostFlight.currencyDraftId || eventForPostFlight.flightNumber === "CURR");
                 const isAirCombatPostFlightEvent = normaliseOperationalModel(activeOperationalModel) === "air_combat";
-                if (!isAirCombatPostFlightEvent && !isCurrencyPostFlightEvent && data.result && ["DCO", "DPCO", "DNCO"].includes(data.result) && eventForPostFlight) {
+                if (!isAirCombatPostFlightEvent && !isCurrencyPostFlightEvent && data2.result && ["DCO", "DPCO", "DNCO"].includes(data2.result) && eventForPostFlight) {
                   const pfEvtForPt051 = eventForPostFlight;
                   const pt051TraineeName = pfEvtForPt051.student || pfEvtForPt051.pilot || "";
                   const pt051FlightNumber = pfEvtForPt051.flightNumber || "";
@@ -114707,7 +114691,7 @@ Do you want to replace the existing entry?`,
                     if (matchingPt051) {
                       const updatedAssessment = {
                         ...matchingPt051,
-                        dcoResult: data.result,
+                        dcoResult: data2.result,
                         date: pfEvtForPt051.date || matchingPt051.date,
                         instructor: pfEvtForPt051.instructor || matchingPt051.instructor
                       };
@@ -114716,13 +114700,13 @@ Do you want to replace the existing entry?`,
                         next.set(matchingPt051.id, updatedAssessment);
                         return next;
                       });
-                      console.log(`[PostFlight] ✅ PT-051 updated with ${data.result} for ${pt051TraineeName} — ${pt051FlightNumber}`);
+                      console.log(`[PostFlight] ✅ PT-051 updated with ${data2.result} for ${pt051TraineeName} — ${pt051FlightNumber}`);
                     } else {
                       console.log(`[PostFlight] ℹ️ No unassessed PT-051 found for ${pt051TraineeName} — ${pt051FlightNumber}`);
                     }
                   }
                 }
-                if (data.result && ["DCO", "DPCO", "DNCO"].includes(data.result) && isCurrencyPostFlightEvent && eventForPostFlight) {
+                if (data2.result && ["DCO", "DPCO", "DNCO"].includes(data2.result) && isCurrencyPostFlightEvent && eventForPostFlight) {
                   try {
                     const currencyDraftStorageKey = "neoCurrencyDraftEvents";
                     const storedDrafts = localStorage.getItem(currencyDraftStorageKey);
@@ -114733,23 +114717,23 @@ Do you want to replace the existing entry?`,
                         (draft) => draft.personName === currencyPersonName && draft.eventType === eventForPostFlight.type
                       );
                       const completedCurrencyDraftId = eventForPostFlight.currencyDraftId || matchingDraft?.id;
-                      if (data.result === "DCO" && completedCurrencyDraftId) {
+                      if (data2.result === "DCO" && completedCurrencyDraftId) {
                         setHighestPriorityEvents(
                           (prev) => prev.filter((event) => event.currencyDraftId !== completedCurrencyDraftId)
                         );
                       }
-                      const nextDrafts = data.result === "DCO" ? drafts.filter((draft) => draft.id !== completedCurrencyDraftId) : drafts.map(
+                      const nextDrafts = data2.result === "DCO" ? drafts.filter((draft) => draft.id !== completedCurrencyDraftId) : drafts.map(
                         (draft) => draft.id === completedCurrencyDraftId ? { ...draft, pushed: false, selected: true } : draft
                       );
                       localStorage.setItem(currencyDraftStorageKey, JSON.stringify(nextDrafts));
-                      console.log(`[PostFlight] Currency draft ${data.result === "DCO" ? "cleared from draft and priority queues" : "reset for rescheduling"}:`, completedCurrencyDraftId);
+                      console.log(`[PostFlight] Currency draft ${data2.result === "DCO" ? "cleared from draft and priority queues" : "reset for rescheduling"}:`, completedCurrencyDraftId);
                     }
                   } catch (currencyDraftErr) {
                     console.warn("[PostFlight] Currency draft update failed:", currencyDraftErr);
                   }
                 }
                 const isTaskingPostFlightEvent = !!eventForPostFlight && (eventForPostFlight.isTaskingRequest === true || !!eventForPostFlight.taskingRequestId || String(eventForPostFlight.id || "").startsWith("tasking-"));
-                if (isTaskingPostFlightEvent && eventForPostFlight && (data.result === "DCO" || data.result === "DPCO")) {
+                if (isTaskingPostFlightEvent && eventForPostFlight && (data2.result === "DCO" || data2.result === "DPCO")) {
                   const completedTaskingRequestId = String(eventForPostFlight.taskingRequestId || "").trim();
                   if (completedTaskingRequestId) {
                     try {
@@ -114760,7 +114744,7 @@ Do you want to replace the existing entry?`,
                         if (nextTaskingRequests.length !== taskingRequests.length) {
                           localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(nextTaskingRequests));
                           window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
-                          console.log(`[PostFlight] Tasking request cleared after ${data.result}:`, completedTaskingRequestId);
+                          console.log(`[PostFlight] Tasking request cleared after ${data2.result}:`, completedTaskingRequestId);
                         }
                       }
                       setHighestPriorityEvents(
@@ -114870,7 +114854,7 @@ Do you want to replace the existing entry?`,
           activeView,
           onNavigate: handleNavigation,
           courseColors: scopedCourseColors,
-          onAddCourse: (data) => setCourseColors((prev) => ({ ...prev, [data.number]: data.color })),
+          onAddCourse: (data2) => setCourseColors((prev) => ({ ...prev, [data2.number]: data2.color })),
           onArchiveCourse: (courseNumber) => {
             const color = courseColors[courseNumber];
             if (color) {

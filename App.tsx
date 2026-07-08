@@ -23442,14 +23442,23 @@ const App: React.FC = () => {
                 });
 
                 // --- Individual LMP Sync ---
-                // For each trainee, read authoritative TraineePerformance PT-051
-                // records from DB, mark those events as complete in their
-                // Individual LMP, then load the composed LMP back into state.
-                //
-                // This runs on every app load to keep LMPs in sync with PT-051 records.
-                // Always run sync unconditionally — server reads TraineePerformance directly from DB.
-                {
-                    console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads TraineePerformance from DB)...`);
+                // This maintenance sync is expensive and must not block normal app startup.
+                // Normal startup uses database scores already loaded by initializeData().
+                const shouldRunStartupLmpSync = (() => {
+                    try {
+                        return localStorage.getItem('neo_run_startup_lmp_sync') === 'true';
+                    } catch {
+                        return false;
+                    }
+                })();
+                if (!shouldRunStartupLmpSync) {
+                    pushDfpDataDiag('startup:lmp-sync:skipped', {
+                        reason: 'Automatic startup LMP POST sync is disabled for startup performance. Scores are loaded directly from the database.',
+                        syllabusItems: syllabusDetails.length,
+                        trainees: data.trainees?.length || 0,
+                    });
+                } else {
+                    console.log(`[LMP Sync] Starting optional startup Individual LMP sync...`);
                     const lmpSyncStartedAt = performance.now();
                     try {
                         // Build syllabusData payload — master syllabus split by lmpType
@@ -23926,8 +23935,11 @@ const App: React.FC = () => {
         });
     }, [allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, resolveMasterLmpUnitForTrainee, syllabusDetails]);
 
-    // Load persisted daily snapshots (last 5 days) + legacy historical data from DB
+    const historicalLoadAbortRef = React.useRef<AbortController | null>(null);
+
+    // Load persisted history metadata and PT-051 data. Current-day DFP is loaded by loadSnapshotForDate.
     useEffect(() => {
+        historicalLoadAbortRef.current?.abort();
         if (setupTestProfile) {
             setPublishedSchedules({});
             setBaselineSchedules({});
@@ -23944,6 +23956,8 @@ const App: React.FC = () => {
             return;
         }
         let cancelled = false;
+        const abortController = new AbortController();
+        historicalLoadAbortRef.current = abortController;
         const requestedSchool = school;
         const requestedUnit = activeUnitCode;
         const loadHistoricalData = async () => {
@@ -23958,154 +23972,97 @@ const App: React.FC = () => {
                     existingPublishedDates: Object.keys(publishedSchedulesRef.current || {}),
                 });
 
-                // ── PRIMARY: Load last 5 days of real DailySnapshots ──────────────
-                try {
-                    const dailySnapshotUrl = `${apiBase}/daily-snapshot?school=${requestedSchool}&unit=${encodeURIComponent(requestedUnit)}`;
-                    const dailySnapshotStartedAt = performance.now();
-                    const snapRes = await fetch(dailySnapshotUrl);
-                    if (cancelled) return;
-                    pushDfpDataDiag('history:daily-snapshot-response', {
-                        url: dailySnapshotUrl,
-                        durationMs: Math.round(performance.now() - dailySnapshotStartedAt),
-                        status: snapRes.status,
-                        ok: snapRes.ok,
-                        contentType: snapRes.headers.get('content-type') || '',
-                    });
-                    if (snapRes.ok) {
-                        const parseStartedAt = performance.now();
-                        const snapData = await snapRes.json();
+                if (localStorage.getItem('neo_preload_recent_snapshots') === 'true') {
+                    // Optional diagnostic/legacy mode only. The active date is loaded separately on demand.
+                    try {
+                        const dailySnapshotUrl = `${apiBase}/daily-snapshot?school=${requestedSchool}&unit=${encodeURIComponent(requestedUnit)}`;
+                        const dailySnapshotStartedAt = performance.now();
+                        const snapRes = await fetch(dailySnapshotUrl, { signal: abortController.signal });
                         if (cancelled) return;
-                        const snapshots: any[] = snapData.snapshots || [];
-                        pushDfpDataDiag('history:daily-snapshot-json', {
-                            parseDurationMs: Math.round(performance.now() - parseStartedAt),
-                            snapshotCount: snapshots.length,
-                            snapshots: snapshots.slice(0, 20).map((snap) => ({
-                                key: snap.date,
-                                parsedDate: getDailySnapshotDate(snap.date),
-                                eventCount: Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents.length : 0,
-                                baselineCount: Array.isArray(snap.baselineEvents) ? snap.baselineEvents.length : 0,
-                                snapshotSchool: snap.snapshotSchool,
-                                snapshotUnit: snap.snapshotUnit,
-                            })),
+                        pushDfpDataDiag('history:daily-snapshot-response', {
+                            url: dailySnapshotUrl,
+                            durationMs: Math.round(performance.now() - dailySnapshotStartedAt),
+                            status: snapRes.status,
+                            ok: snapRes.ok,
+                            contentType: snapRes.headers.get('content-type') || '',
                         });
-                        if (snapshots.length > 0) {
-                            console.log(`[Snapshot] ✅ Loaded ${snapshots.length} daily snapshots`);
-                            setPublishedSchedules(prev => {
-                                if (cancelled) return prev;
-                                const merged = { ...prev };
-                                snapshots.forEach(snap => {
-                                    const dateKey = getDailySnapshotDate(snap.date);
-                                    const events: ScheduleEvent[] = Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : [];
-                                    // Only use snapshot events if there are no existing non-seed events for this date
-                                    const existingNonSeed = (merged[dateKey] || []).filter(e => !(e as any).isHistoricalSeed);
-                                    if (existingNonSeed.length === 0 && events.length > 0) {
-                                        merged[dateKey] = events;
-                                    }
-                                });
-                                return merged;
+                        if (snapRes.ok) {
+                            const parseStartedAt = performance.now();
+                            const snapData = await snapRes.json();
+                            if (cancelled) return;
+                            const snapshots: any[] = snapData.snapshots || [];
+                            pushDfpDataDiag('history:daily-snapshot-json', {
+                                parseDurationMs: Math.round(performance.now() - parseStartedAt),
+                                snapshotCount: snapshots.length,
+                                snapshots: snapshots.slice(0, 20).map((snap) => ({
+                                    key: snap.date,
+                                    parsedDate: getDailySnapshotDate(snap.date),
+                                    eventCount: Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents.length : 0,
+                                    baselineCount: Array.isArray(snap.baselineEvents) ? snap.baselineEvents.length : 0,
+                                    snapshotSchool: snap.snapshotSchool,
+                                    snapshotUnit: snap.snapshotUnit,
+                                })),
                             });
-
-                            // Restore baselineSchedules from snapshots (enables change bar after page reload)
-                            setBaselineSchedules(prev => {
-                                if (cancelled) return prev;
-                                const merged = { ...prev };
-                                snapshots.forEach(snap => {
-                                    const dateKey = getDailySnapshotDate(snap.date);
-                                    const baselineKey = `${requestedSchool}:${dateKey}`;
-                                    // Use stored baselineEvents if available, otherwise fall back to scheduleEvents
-                                    const baselineEvts: ScheduleEvent[] = Array.isArray(snap.baselineEvents) && snap.baselineEvents.length > 0
-                                        ? snap.baselineEvents
-                                        : (Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : []);
-                                    if (baselineEvts.length > 0 && !merged[baselineKey]) {
-                                        merged[baselineKey] = JSON.parse(JSON.stringify(baselineEvts));
-                                    }
-                                });
-                                return merged;
-                            });
-
-                            // PT-051 active state is loaded from TraineePerformance only.
-                            // Snapshot payloads may exist from older builds, but they are stale
-                            // backups and must not seed or override live PT-051 results.
-                            const mostRecent = snapshots[0];
-                            if (mostRecent && mostRecent.pt051Assessments && Object.keys(mostRecent.pt051Assessments).length > 0) {
-                                console.log(`[Snapshot] Ignored ${Object.keys(mostRecent.pt051Assessments).length} PT-051 snapshot records; TraineePerformance is authoritative`);
-                            }
-                            // Load alertsData from all snapshots
-                            setAlertsDataByDate(prev => {
-                                if (cancelled) return prev;
-                                const merged = { ...prev };
-                                snapshots.forEach(snap => {
-                                    if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
-                                        merged[getDailySnapshotDate(snap.date)] = snap.alertsData;
-                                    }
-                                });
-                                return merged;
+                        }
+                    } catch (snapErr) {
+                        if (!abortController.signal.aborted) {
+                            console.warn('[Snapshot] Could not load daily snapshots:', snapErr);
+                            pushDfpDataDiag('history:daily-snapshot-error', {
+                                durationMs: Math.round(performance.now() - startedAt),
+                                error: String(snapErr),
                             });
                         }
                     }
-                } catch (snapErr) {
-                    console.warn('[Snapshot] Could not load daily snapshots:', snapErr);
-                    pushDfpDataDiag('history:daily-snapshot-error', {
-                        durationMs: Math.round(performance.now() - startedAt),
-                        error: String(snapErr),
+                } else {
+                    pushDfpDataDiag('history:daily-snapshot-skipped', {
+                        reason: 'Recent DFP snapshots load on demand; bulk preload is disabled for startup performance.',
                     });
                 }
 
-                // ── SECONDARY: Legacy DataBackup historical-data (seed data, fallback) ──
-                const historicalUrl = `${apiBase}/historical-data`;
-                const historicalStartedAt = performance.now();
-                const res = await fetch(historicalUrl);
-                if (cancelled) return;
-                pushDfpDataDiag('history:legacy-response', {
-                    url: historicalUrl,
-                    durationMs: Math.round(performance.now() - historicalStartedAt),
-                    status: res.status,
-                    ok: res.ok,
-                    contentType: res.headers.get('content-type') || '',
-                });
-                if (!res.ok) return;
-                const historicalParseStartedAt = performance.now();
-                const data = await res.json();
-                if (cancelled) return;
-
-                if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
-                    const seedSchedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
-                    const eventCount = Object.values(seedSchedules).flat().length;
-                    pushDfpDataDiag('history:legacy-json', {
-                        parseDurationMs: Math.round(performance.now() - historicalParseStartedAt),
-                        dateCount: Object.keys(seedSchedules).length,
-                        eventCount,
-                        dates: Object.entries(seedSchedules).slice(0, 60).map(([dateKey, seedEvents]) => ({
-                            date: dateKey,
-                            eventCount: Array.isArray(seedEvents) ? seedEvents.length : 0,
-                        })),
-                        seedingMetadata: data.seedingMetadata || null,
+                if (localStorage.getItem('neo_load_legacy_historical_seed') === 'true') {
+                    const historicalUrl = `${apiBase}/historical-data`;
+                    const historicalStartedAt = performance.now();
+                    const res = await fetch(historicalUrl, { signal: abortController.signal });
+                    if (cancelled) return;
+                    pushDfpDataDiag('history:legacy-response', {
+                        url: historicalUrl,
+                        durationMs: Math.round(performance.now() - historicalStartedAt),
+                        status: res.status,
+                        ok: res.ok,
+                        contentType: res.headers.get('content-type') || '',
                     });
-                    console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(seedSchedules).length} dates (legacy/seed)`);
-                    setSnapshotDates(prev => (
-                        [...new Set([...prev, ...Object.keys(seedSchedules)])]
-                            .sort((a, b) => b.localeCompare(a))
-                    ));
-                    setPublishedSchedules(prev => {
-                        if (cancelled) return prev;
-                        // FIX: Use prev as the base (not seed schedules) so real snapshots already
-                        // loaded in the PRIMARY pass above are never overwritten by seed data.
-                        // Seed data fills in dates that have NO real snapshot events yet.
-                        const merged = { ...prev };
-                        Object.entries(seedSchedules).forEach(([dateKey, seedEvents]) => {
-                            const existingNonSeed = (merged[dateKey] || []).filter(e => !(e as any).isHistoricalSeed);
-                            if (existingNonSeed.length === 0) {
-                                // No real snapshot for this date — use seed data
-                                merged[dateKey] = seedEvents;
-                            }
-                            // If real snapshot data already exists for this date, do NOT overwrite it
+                    if (!res.ok) return;
+                    const historicalParseStartedAt = performance.now();
+                    const data = await res.json();
+                    if (cancelled) return;
+
+                    if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
+                        const seedSchedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
+                        const eventCount = Object.values(seedSchedules).flat().length;
+                        pushDfpDataDiag('history:legacy-json', {
+                            parseDurationMs: Math.round(performance.now() - historicalParseStartedAt),
+                            dateCount: Object.keys(seedSchedules).length,
+                            eventCount,
+                            dates: Object.entries(seedSchedules).slice(0, 60).map(([dateKey, seedEvents]) => ({
+                                date: dateKey,
+                                eventCount: Array.isArray(seedEvents) ? seedEvents.length : 0,
+                            })),
+                            seedingMetadata: data.seedingMetadata || null,
                         });
-                        return merged;
-                    });
-                }
+                        console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(seedSchedules).length} dates (legacy/seed)`);
+                        setSnapshotDates(prev => (
+                            [...new Set([...prev, ...Object.keys(seedSchedules)])]
+                                .sort((a, b) => b.localeCompare(a))
+                        ));
+                    }
 
-                if (data.pt051Assessments && Object.keys(data.pt051Assessments).length > 0) {
-                    console.log(`[Historical] Ignored ${Object.keys(data.pt051Assessments).length} legacy PT-051 records; TraineePerformance is authoritative`);
+                    if (data.pt051Assessments && Object.keys(data.pt051Assessments).length > 0) {
+                        console.log(`[Historical] Ignored ${Object.keys(data.pt051Assessments).length} legacy PT-051 records; TraineePerformance is authoritative`);
+                    }
+                } else {
+                    pushDfpDataDiag('history:legacy-skipped', {
+                        reason: 'Legacy seed archive is not loaded during startup unless explicitly enabled.',
+                    });
                 }
 
                 try {
@@ -24118,7 +24075,7 @@ const App: React.FC = () => {
                     while (!cancelled) {
                         const pageStartedAt = performance.now();
                         const performanceUrl = `${apiBase}/trainee-performance?limit=${pageSize}&offset=${offset}`;
-                        const perfRes = await fetch(performanceUrl);
+                        const perfRes = await fetch(performanceUrl, { signal: abortController.signal });
                         pushDfpDataDiag('history:trainee-performance-response', {
                             url: performanceUrl,
                             offset,
@@ -24174,6 +24131,12 @@ const App: React.FC = () => {
                     durationMs: Math.round(performance.now() - startedAt),
                 });
             } catch (error) {
+                if (abortController.signal.aborted) {
+                    pushDfpDataDiag('history:load-aborted', {
+                        durationMs: Math.round(performance.now() - startedAt),
+                    });
+                    return;
+                }
                 console.warn('[Historical] Could not load historical data:', error);
                 pushDfpDataDiag('history:load-error', {
                     durationMs: Math.round(performance.now() - startedAt),
@@ -24185,6 +24148,7 @@ const App: React.FC = () => {
         loadHistoricalData();
         return () => {
             cancelled = true;
+            abortController.abort();
         };
     }, [activeUnitCode, school, setupTestProfile]);
 
