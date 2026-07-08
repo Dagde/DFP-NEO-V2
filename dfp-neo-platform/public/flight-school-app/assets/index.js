@@ -11928,7 +11928,17 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const wizardLabelClass = "text-[10px] font-black uppercase tracking-[0.14em] text-slate-500";
   const wizardField = (label, value, onChange, options, placeholder) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: label }),
-    options ? /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: `${wizardInputClass} mt-1`, value, onChange: (event) => onChange(event.target.value), children: Array.from(new Set([value, ...options].filter(Boolean))).map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+    options ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "select",
+      {
+        className: `${wizardInputClass} mt-1`,
+        value,
+        onKeyDownCapture: stopEditableKeyPropagation,
+        onKeyDown: stopEditableKeyPropagation,
+        onChange: (event) => onChange(event.target.value),
+        children: Array.from(new Set([value, ...options].filter(Boolean))).map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+      }
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
       "input",
       {
         className: `${wizardInputClass} mt-1`,
@@ -12463,23 +12473,40 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }
     setWizardStep(Math.min(steps.length - 1, currentStep + 1));
   };
-  const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: [
-        "Step ",
-        currentStep + 1,
-        " of ",
-        steps.length
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-xl font-bold text-slate-950", children: visibleStep.title }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 text-sm leading-6 text-slate-700", children: question })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-xl border border-slate-300 bg-white/80 p-4 shadow-sm", children: answer }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex flex-wrap items-center justify-between gap-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setWizardStep(Math.max(0, currentStep - 1)), disabled: currentStep === 0, children: "Back" }),
-      saveAction ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: saveAction, children: actionLabel }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: goToNextWizardStep, children: "Next" })
-    ] })
-  ] }, visibleStep.id);
+  const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      className: "animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm",
+      onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDown: stopEditableKeyPropagation,
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: [
+            "Step ",
+            currentStep + 1,
+            " of ",
+            steps.length
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-xl font-bold text-slate-950", children: visibleStep.title }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 text-sm leading-6 text-slate-700", children: question })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: "rounded-xl border border-slate-300 bg-white/80 p-4 shadow-sm",
+            onKeyDownCapture: stopEditableKeyPropagation,
+            onKeyDown: stopEditableKeyPropagation,
+            children: answer
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex flex-wrap items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setWizardStep(Math.max(0, currentStep - 1)), disabled: currentStep === 0, children: "Back" }),
+          saveAction ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: saveAction, children: actionLabel }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardPrimaryButtonClass, onClick: goToNextWizardStep, children: "Next" })
+        ] })
+      ]
+    },
+    visibleStep.id
+  );
   const organisationPreviewLevels = [
     { name: organisationDraft.level0Name || "Organisation", options: fromLines(organisationDraft.level0Options || organisationDraft.name || organisationDraft.code) },
     { name: organisationDraft.level1Name || "Level 1", options: fromLines(organisationDraft.level1Options) },

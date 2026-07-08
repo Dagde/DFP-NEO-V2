@@ -3698,7 +3698,13 @@ const InitialSetupWizard: React.FC<{
         <label className="block">
             <span className={wizardLabelClass}>{label}</span>
             {options ? (
-                <select className={`${wizardInputClass} mt-1`} value={value} onChange={(event) => onChange(event.target.value)}>
+                <select
+                    className={`${wizardInputClass} mt-1`}
+                    value={value}
+                    onKeyDownCapture={stopEditableKeyPropagation}
+                    onKeyDown={stopEditableKeyPropagation}
+                    onChange={(event) => onChange(event.target.value)}
+                >
                     {Array.from(new Set([value, ...options].filter(Boolean))).map((option) => <option key={option} value={option}>{option}</option>)}
                 </select>
             ) : (
@@ -4357,13 +4363,24 @@ const InitialSetupWizard: React.FC<{
         setWizardStep(Math.min(steps.length - 1, currentStep + 1));
     };
     const promptShell = (question: React.ReactNode, answer: React.ReactNode, actionLabel = 'Next', saveAction?: () => void) => (
-        <div key={visibleStep.id} className="animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm">
+        <div
+            key={visibleStep.id}
+            className="animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm"
+            onKeyDownCapture={stopEditableKeyPropagation}
+            onKeyDown={stopEditableKeyPropagation}
+        >
             <div className="mb-5">
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Step {currentStep + 1} of {steps.length}</p>
                 <h4 className="mt-1 text-xl font-bold text-slate-950">{visibleStep.title}</h4>
                 <div className="mt-3 text-sm leading-6 text-slate-700">{question}</div>
             </div>
-            <div className="rounded-xl border border-slate-300 bg-white/80 p-4 shadow-sm">{answer}</div>
+            <div
+                className="rounded-xl border border-slate-300 bg-white/80 p-4 shadow-sm"
+                onKeyDownCapture={stopEditableKeyPropagation}
+                onKeyDown={stopEditableKeyPropagation}
+            >
+                {answer}
+            </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <button type="button" className={wizardSmallButtonClass} onClick={() => setWizardStep(Math.max(0, currentStep - 1))} disabled={currentStep === 0}>
                     Back
