@@ -81102,6 +81102,7 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
 };
 console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
 console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
+const SETUP_WIZARD_RUNTIME_MARKER = "wizard-runtime-2026-07-08-01";
 const TRAINEE_DEFAULT_ON_UNIT_CODES = /* @__PURE__ */ new Set(["1FTS", "2FTS", "CFS"]);
 const getDefaultHasTraineesForUnit = (unitCode) => TRAINEE_DEFAULT_ON_UNIT_CODES.has(String(unitCode || "").trim().toUpperCase());
 const applyDefaultUnitTraineeAvailability = (config) => {
@@ -98034,6 +98035,12 @@ const App = () => {
   const zoomLevel = 1;
   const setupTestProfile = getSetupTestProfile();
   const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.__DFP_SETUP_WIZARD_MARKER__ = SETUP_WIZARD_RUNTIME_MARKER;
+      window.__DFP_COMMIT_HASH__ = "3918737";
+    }
+  }, []);
   const { theme } = useTheme();
   const { checkAndWarn, freezeState } = useSystemFreeze$1();
   const freezeStateRef = React.useRef(freezeState);
@@ -114248,7 +114255,11 @@ Do you want to replace the existing entry?`,
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     setupTestProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed left-1/2 top-2 z-[500] -translate-x-1/2 rounded-md border border-amber-300/70 bg-amber-100 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-2xl shadow-black/30", children: [
       "Setup Wizard Test Mode - Local Browser Data Only - ",
-      setupTestProfile
+      setupTestProfile,
+      " - ",
+      SETUP_WIZARD_RUNTIME_MARKER,
+      " - ",
+      "3918737"
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(SystemFreezeBanner, {}),
     /* @__PURE__ */ jsxRuntimeExports.jsx(

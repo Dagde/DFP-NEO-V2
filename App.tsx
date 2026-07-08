@@ -91,6 +91,9 @@ import {
     writeSetupTestPersonnel,
     writeSetupTestPlatformConfig,
 } from './utils/setupTestMode';
+
+const SETUP_WIZARD_RUNTIME_MARKER = 'wizard-runtime-2026-07-08-01';
+
 import {
     classifyDayNightBySunTimes,
     getDefaultAirfieldSolarProfile,
@@ -20861,6 +20864,13 @@ const App: React.FC = () => {
     const setupTestProfile = getSetupTestProfile();
     const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = useState(false);
 
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            (window as any).__DFP_SETUP_WIZARD_MARKER__ = SETUP_WIZARD_RUNTIME_MARKER;
+            (window as any).__DFP_COMMIT_HASH__ = __COMMIT_HASH__;
+        }
+    }, []);
+
     // Theme
     const { theme } = useTheme();
     const { checkAndWarn, freezeState } = useSystemFreeze();
@@ -40705,7 +40715,7 @@ appliedUpdates.forEach(update => {
     <>
         {setupTestProfile && (
             <div className="fixed left-1/2 top-2 z-[500] -translate-x-1/2 rounded-md border border-amber-300/70 bg-amber-100 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-2xl shadow-black/30">
-                Setup Wizard Test Mode - Local Browser Data Only - {setupTestProfile}
+                Setup Wizard Test Mode - Local Browser Data Only - {setupTestProfile} - {SETUP_WIZARD_RUNTIME_MARKER} - {__COMMIT_HASH__}
             </div>
         )}
         <SystemFreezeBanner />
