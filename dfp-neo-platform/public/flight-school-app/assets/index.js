@@ -99699,6 +99699,85 @@ const App = () => {
       console.log(`[DFP-DIAG] ${stage}`, entry, error);
     }
   }
+  function readDfpDataDiagEntries() {
+    try {
+      const stored = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
+      return Array.isArray(stored) ? stored : [];
+    } catch {
+      return [];
+    }
+  }
+  function buildDfpDataDiagReport() {
+    const entries = readDfpDataDiagEntries();
+    const enrichedEntries = entries.map((entry, index) => {
+      const previous = index > 0 ? entries[index - 1] : null;
+      const entryPerfMs = typeof entry?.perfMs === "number" ? entry.perfMs : null;
+      const previousPerfMs = typeof previous?.perfMs === "number" ? previous.perfMs : null;
+      return {
+        index,
+        sincePreviousMs: entryPerfMs !== null && previousPerfMs !== null ? entryPerfMs - previousPerfMs : null,
+        ...entry
+      };
+    });
+    const slowestGaps = enrichedEntries.filter((entry) => typeof entry.sincePreviousMs === "number").sort((left, right) => (right.sincePreviousMs || 0) - (left.sincePreviousMs || 0)).slice(0, 20).map((entry) => ({
+      index: entry.index,
+      stage: entry.stage,
+      sincePreviousMs: entry.sincePreviousMs,
+      perfMs: entry.perfMs,
+      ts: entry.ts,
+      date: entry.date,
+      school: entry.school,
+      unit: entry.unit,
+      details: entry.details
+    }));
+    const stages = enrichedEntries.reduce((acc, entry) => {
+      const stage = String(entry.stage || "unknown");
+      acc[stage] = (acc[stage] || 0) + 1;
+      return acc;
+    }, {});
+    return {
+      reportType: "DFP-NEO startup/load diagnostics",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      activeContext: {
+        date,
+        school,
+        unit: activeUnitCode,
+        activeView,
+        setupTestProfile: setupTestProfile || null,
+        isInitialSetupWizardActive,
+        isAuthenticated
+      },
+      summary: {
+        entryCount: enrichedEntries.length,
+        firstEntry: enrichedEntries[0] || null,
+        lastEntry: enrichedEntries[enrichedEntries.length - 1] || null,
+        slowestGaps,
+        stages
+      },
+      entries: enrichedEntries
+    };
+  }
+  function downloadDfpDataDiagReport() {
+    const report = buildDfpDataDiagReport();
+    const generatedStamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+    const contextStamp = [school, activeUnitCode, date].map((value) => String(value || "").replace(/[^a-z0-9-]+/gi, "-")).filter(Boolean).join("_");
+    const filename = `dfp-neo-load-diagnostics_${contextStamp || "app"}_${generatedStamp}.json`;
+    try {
+      const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("[DFP-DIAG] Could not download diagnostic report:", error, report);
+    }
+  }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
       platformLocations: (platformConfig?.locations || []).map((location) => ({
@@ -115869,6 +115948,16 @@ Do you want to replace the existing entry?`,
           className: "rounded border border-gray-600/50 px-1.5 py-0.5 text-gray-300 transition-colors hover:border-gray-500 hover:text-white disabled:cursor-wait disabled:opacity-60",
           title: "Manually refresh mobile unavailability and alert responses",
           children: isManualSyncing ? "Syncing" : "Sync Now"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: downloadDfpDataDiagReport,
+          className: "rounded border border-cyan-500/30 px-1.5 py-0.5 text-cyan-200 transition-colors hover:border-cyan-400/60 hover:text-cyan-100",
+          title: "Download startup/load diagnostic JSON report",
+          children: "Diag"
         }
       )
     ] })
