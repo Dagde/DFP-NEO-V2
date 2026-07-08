@@ -946,12 +946,12 @@ const removeWizardRoleRequirementText = (value: string, index: number): string =
 );
 
 const parseWizardCrewLabelRows = (value: string): Array<{ term: string; label: string }> => (
-    parseWizardLineItems(value).map((line) => {
+    String(value || '').split(/\n/).map((line) => {
         const [termPart, labelPart] = line.includes('=') ? line.split('=') : line.split(':');
-        const term = String(termPart || '').trim();
+        const term = String(termPart || '').replace(/\s$/, '');
         return {
             term,
-            label: String(labelPart || term).trim(),
+            label: String(labelPart || term).replace(/^\s/, ''),
         };
     }).filter((row) => row.term || row.label)
 );
@@ -959,7 +959,7 @@ const parseWizardCrewLabelRows = (value: string): Array<{ term: string; label: s
 const formatWizardCrewLabelRows = (rows: Array<{ term?: string; label?: string }>): string => (
     rows
         .filter((row) => row.term || row.label)
-        .map((row) => `${String(row.term || '').trim()} = ${String(row.label || '').trim()}`)
+        .map((row) => `${String(row.term || '')}=${String(row.label || '')}`)
         .join('\n')
 );
 
@@ -990,11 +990,11 @@ const formatWizardBuildRulesDraft = (draft: {
 );
 
 const parseWizardStaffRows = (value: string): Array<{ surname: string; givenNames: string; unit: string; position: string; qualifications: string }> => (
-    parseWizardLineItems(value).map((line) => {
-        const parts = line.split('|').map((part) => part.trim());
+    String(value || '').split(/\n/).map((line) => {
+        const parts = line.split('|').map((part, index) => (index === 0 ? part : part.replace(/^\s/, '')));
         const namePart = parts[0] || '';
         const [surnamePart, givenPart] = namePart.includes(',')
-            ? namePart.split(',').map((part) => part.trim())
+            ? namePart.split(',').map((part, index) => (index === 0 ? part : part.replace(/^\s/, '')))
             : ['', namePart];
         return {
             surname: surnamePart || '',
@@ -1010,18 +1010,20 @@ const formatWizardStaffRows = (rows: Array<{ surname?: string; givenNames?: stri
     rows
         .filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications)
         .map((row) => {
-            const name = [String(row.surname || '').trim(), String(row.givenNames || '').trim()].filter(Boolean).join(', ');
-            return `${name} | ${String(row.unit || '').trim()} | ${String(row.position || '').trim()} | ${String(row.qualifications || '').trim()}`;
+            const surname = String(row.surname || '');
+            const givenNames = String(row.givenNames || '');
+            const name = surname && givenNames ? `${surname}, ${givenNames}` : surname || givenNames;
+            return [name, String(row.unit || ''), String(row.position || ''), String(row.qualifications || '')].join('|');
         })
         .join('\n')
 );
 
 const parseWizardTraineeRows = (value: string): Array<{ surname: string; givenNames: string; unit: string; rank: string; pmkeys: string; courseNumber: string; course: string; masterLmp: string; startDate: string }> => (
-    parseWizardLineItems(value).map((line) => {
-        const parts = line.split('|').map((part) => part.trim());
+    String(value || '').split(/\n/).map((line) => {
+        const parts = line.split('|').map((part, index) => (index === 0 ? part : part.replace(/^\s/, '')));
         const namePart = parts[0] || '';
         const [surnamePart, givenPart] = namePart.includes(',')
-            ? namePart.split(',').map((part) => part.trim())
+            ? namePart.split(',').map((part, index) => (index === 0 ? part : part.replace(/^\s/, '')))
             : ['', namePart];
         return {
             surname: surnamePart || '',
@@ -1041,24 +1043,26 @@ const formatWizardTraineeRows = (rows: Array<{ surname?: string; givenNames?: st
     rows
         .filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.course || row.masterLmp || row.startDate)
         .map((row) => {
-            const name = [String(row.surname || '').trim(), String(row.givenNames || '').trim()].filter(Boolean).join(', ');
+            const surname = String(row.surname || '');
+            const givenNames = String(row.givenNames || '');
+            const name = surname && givenNames ? `${surname}, ${givenNames}` : surname || givenNames;
             return [
                 name,
-                String(row.unit || '').trim(),
-                String(row.rank || '').trim(),
-                String(row.pmkeys || '').trim(),
-                String(row.courseNumber || '').trim(),
-                String(row.course || '').trim(),
-                String(row.masterLmp || '').trim(),
-                String(row.startDate || '').trim(),
-            ].join(' | ');
+                String(row.unit || ''),
+                String(row.rank || ''),
+                String(row.pmkeys || ''),
+                String(row.courseNumber || ''),
+                String(row.course || ''),
+                String(row.masterLmp || ''),
+                String(row.startDate || ''),
+            ].join('|');
         })
         .join('\n')
 );
 
 const parseWizardPipeRows = <T extends Record<string, string>>(value: string, keys: Array<keyof T>): T[] => (
-    parseWizardLineItems(value).map((line) => {
-        const parts = line.split('|').map((part) => part.trim());
+    String(value || '').split(/\n/).map((line) => {
+        const parts = line.split('|').map((part, index) => (index === 0 ? part : part.replace(/^\s/, '')));
         return keys.reduce((row, key, index) => ({
             ...row,
             [key]: parts[index] || '',
@@ -1069,7 +1073,7 @@ const parseWizardPipeRows = <T extends Record<string, string>>(value: string, ke
 const formatWizardPipeRows = <T extends Record<string, string>>(rows: T[], keys: Array<keyof T>): string => (
     rows
         .filter((row) => keys.some((key) => String(row[key] || '').trim()))
-        .map((row) => keys.map((key) => String(row[key] || '').trim()).join(' | '))
+        .map((row) => keys.map((key) => String(row[key] || '')).join('|'))
         .join('\n')
 );
 
@@ -1132,11 +1136,11 @@ const parseWizardLineItems = (value: string): string[] => (
 );
 
 const parseWizardLocationRows = (value: string): Array<{ icao: string; iata: string; name: string }> => (
-    parseWizardLineItems(value).map((line) => {
-        const parts = line.split(/[|,]/).map((part) => part.trim());
+    String(value || '').split(/\n/).map((line) => {
+        const parts = line.split(/[|,]/).map((part, index) => (index === 0 ? part : part.replace(/^\s/, '')));
         return {
-            icao: String(parts[0] || '').toUpperCase(),
-            iata: String(parts[1] || '').toUpperCase(),
+            icao: String(parts[0] || '').trim().toUpperCase(),
+            iata: String(parts[1] || '').trim().toUpperCase(),
             name: parts[2] || parts[0] || '',
         };
     }).filter((row) => row.icao || row.iata || row.name)
@@ -1145,7 +1149,7 @@ const parseWizardLocationRows = (value: string): Array<{ icao: string; iata: str
 const formatWizardLocationRows = (rows: Array<{ icao?: string; iata?: string; name?: string }>): string => (
     rows
         .filter((row) => row.icao || row.iata || row.name)
-        .map((row) => `${String(row.icao || '').trim().toUpperCase()} | ${String(row.iata || '').trim().toUpperCase()} | ${String(row.name || '').trim()}`)
+        .map((row) => [String(row.icao || '').trim().toUpperCase(), String(row.iata || '').trim().toUpperCase(), String(row.name || '')].join('|'))
         .join('\n')
 );
 
@@ -1157,10 +1161,10 @@ const normaliseWizardLocationProfile = (location: any) => ({
 });
 
 const parseWizardUnitRows = (value: string): Array<{ code: string; name: string }> => (
-    parseWizardLineItems(value).map((line) => {
-        const parts = line.split(/[|,]/).map((part) => part.trim());
+    String(value || '').split(/\n/).map((line) => {
+        const parts = line.split(/[|,]/).map((part, index) => (index === 0 ? part : part.replace(/^\s/, '')));
         return {
-            code: String(parts[0] || '').toUpperCase(),
+            code: String(parts[0] || '').trim().toUpperCase(),
             name: parts[1] || parts[0] || '',
         };
     }).filter((row) => row.code || row.name)

@@ -92,7 +92,7 @@ import {
     writeSetupTestPlatformConfig,
 } from './utils/setupTestMode';
 
-const SETUP_WIZARD_RUNTIME_MARKER = 'wizard-runtime-2026-07-08-01';
+const SETUP_WIZARD_RUNTIME_MARKER = 'wizard-runtime-2026-07-08-02';
 
 import {
     classifyDayNightBySunTimes,

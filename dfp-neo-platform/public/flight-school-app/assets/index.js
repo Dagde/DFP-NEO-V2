@@ -9764,15 +9764,15 @@ const updateWizardRoleRequirementText = (value, index, field, nextValue) => {
   return formatRoleRequirementsText(rows);
 };
 const removeWizardRoleRequirementText = (value, index) => formatRoleRequirementsText(parseRoleRequirementsText(value).filter((_, rowIndex) => rowIndex !== index));
-const parseWizardCrewLabelRows = (value) => parseWizardLineItems(value).map((line) => {
+const parseWizardCrewLabelRows = (value) => String(value || "").split(/\n/).map((line) => {
   const [termPart, labelPart] = line.includes("=") ? line.split("=") : line.split(":");
-  const term = String(termPart || "").trim();
+  const term = String(termPart || "").replace(/\s$/, "");
   return {
     term,
-    label: String(labelPart || term).trim()
+    label: String(labelPart || term).replace(/^\s/, "")
   };
 }).filter((row) => row.term || row.label);
-const formatWizardCrewLabelRows = (rows) => rows.filter((row) => row.term || row.label).map((row) => `${String(row.term || "").trim()} = ${String(row.label || "").trim()}`).join("\n");
+const formatWizardCrewLabelRows = (rows) => rows.filter((row) => row.term || row.label).map((row) => `${String(row.term || "")}=${String(row.label || "")}`).join("\n");
 const formatWizardBuildRulesDraft = (draft) => [
   `Business rules: ${draft.businessRules || "Use default"}`,
   `Maximum crew duty: ${draft.maxCrewDutyHours || "12"} hours`,
@@ -9785,10 +9785,10 @@ const formatWizardBuildRulesDraft = (draft) => [
   `Maximum flights per day: ${draft.maxFlightsPerDay || "Not set"}`,
   `Minimum gap between events: ${draft.minGapBetweenEventsMinutes || "0"} minutes`
 ].join("\n");
-const parseWizardStaffRows = (value) => parseWizardLineItems(value).map((line) => {
-  const parts = line.split("|").map((part) => part.trim());
+const parseWizardStaffRows = (value) => String(value || "").split(/\n/).map((line) => {
+  const parts = line.split("|").map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
   const namePart = parts[0] || "";
-  const [surnamePart, givenPart] = namePart.includes(",") ? namePart.split(",").map((part) => part.trim()) : ["", namePart];
+  const [surnamePart, givenPart] = namePart.includes(",") ? namePart.split(",").map((part, index) => index === 0 ? part : part.replace(/^\s/, "")) : ["", namePart];
   return {
     surname: surnamePart || "",
     givenNames: givenPart || "",
@@ -9798,13 +9798,15 @@ const parseWizardStaffRows = (value) => parseWizardLineItems(value).map((line) =
   };
 }).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications);
 const formatWizardStaffRows = (rows) => rows.filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications).map((row) => {
-  const name = [String(row.surname || "").trim(), String(row.givenNames || "").trim()].filter(Boolean).join(", ");
-  return `${name} | ${String(row.unit || "").trim()} | ${String(row.position || "").trim()} | ${String(row.qualifications || "").trim()}`;
+  const surname = String(row.surname || "");
+  const givenNames = String(row.givenNames || "");
+  const name = surname && givenNames ? `${surname}, ${givenNames}` : surname || givenNames;
+  return [name, String(row.unit || ""), String(row.position || ""), String(row.qualifications || "")].join("|");
 }).join("\n");
-const parseWizardTraineeRows = (value) => parseWizardLineItems(value).map((line) => {
-  const parts = line.split("|").map((part) => part.trim());
+const parseWizardTraineeRows = (value) => String(value || "").split(/\n/).map((line) => {
+  const parts = line.split("|").map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
   const namePart = parts[0] || "";
-  const [surnamePart, givenPart] = namePart.includes(",") ? namePart.split(",").map((part) => part.trim()) : ["", namePart];
+  const [surnamePart, givenPart] = namePart.includes(",") ? namePart.split(",").map((part, index) => index === 0 ? part : part.replace(/^\s/, "")) : ["", namePart];
   return {
     surname: surnamePart || "",
     givenNames: givenPart || "",
@@ -9818,26 +9820,28 @@ const parseWizardTraineeRows = (value) => parseWizardLineItems(value).map((line)
   };
 }).filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.course || row.masterLmp || row.startDate);
 const formatWizardTraineeRows = (rows) => rows.filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.pmkeys || row.courseNumber || row.course || row.masterLmp || row.startDate).map((row) => {
-  const name = [String(row.surname || "").trim(), String(row.givenNames || "").trim()].filter(Boolean).join(", ");
+  const surname = String(row.surname || "");
+  const givenNames = String(row.givenNames || "");
+  const name = surname && givenNames ? `${surname}, ${givenNames}` : surname || givenNames;
   return [
     name,
-    String(row.unit || "").trim(),
-    String(row.rank || "").trim(),
-    String(row.pmkeys || "").trim(),
-    String(row.courseNumber || "").trim(),
-    String(row.course || "").trim(),
-    String(row.masterLmp || "").trim(),
-    String(row.startDate || "").trim()
-  ].join(" | ");
+    String(row.unit || ""),
+    String(row.rank || ""),
+    String(row.pmkeys || ""),
+    String(row.courseNumber || ""),
+    String(row.course || ""),
+    String(row.masterLmp || ""),
+    String(row.startDate || "")
+  ].join("|");
 }).join("\n");
-const parseWizardPipeRows = (value, keys) => parseWizardLineItems(value).map((line) => {
-  const parts = line.split("|").map((part) => part.trim());
+const parseWizardPipeRows = (value, keys) => String(value || "").split(/\n/).map((line) => {
+  const parts = line.split("|").map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
   return keys.reduce((row, key, index) => ({
     ...row,
     [key]: parts[index] || ""
   }), {});
 }).filter((row) => Object.values(row).some((entry) => String(entry || "").trim()));
-const formatWizardPipeRows = (rows, keys) => rows.filter((row) => keys.some((key) => String(row[key] || "").trim())).map((row) => keys.map((key) => String(row[key] || "").trim()).join(" | ")).join("\n");
+const formatWizardPipeRows = (rows, keys) => rows.filter((row) => keys.some((key) => String(row[key] || "").trim())).map((row) => keys.map((key) => String(row[key] || "")).join("|")).join("\n");
 const parseWizardEditablePipeRows = (value, keys) => String(value || "").split(/\n/).map((line) => {
   const parts = line.split("|").map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
   return keys.reduce((row, key, index) => {
@@ -9860,25 +9864,25 @@ const parseWizardStandardCurrencyEventRows = (value) => parseWizardEditablePipeR
 const formatWizardStandardCurrencyEventRows = (rows) => formatWizardEditablePipeRows(rows, ["name", "shortTitle", "resourceType", "duration", "preFlight", "postFlight", "crew", "currency", "config", "aircraftCount"]);
 const getWizardOperationalModelLabel = (value) => OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value);
 const parseWizardLineItems = (value) => String(value || "").split(/\n/).map((item) => item.trim()).filter(Boolean);
-const parseWizardLocationRows = (value) => parseWizardLineItems(value).map((line) => {
-  const parts = line.split(/[|,]/).map((part) => part.trim());
+const parseWizardLocationRows = (value) => String(value || "").split(/\n/).map((line) => {
+  const parts = line.split(/[|,]/).map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
   return {
-    icao: String(parts[0] || "").toUpperCase(),
-    iata: String(parts[1] || "").toUpperCase(),
+    icao: String(parts[0] || "").trim().toUpperCase(),
+    iata: String(parts[1] || "").trim().toUpperCase(),
     name: parts[2] || parts[0] || ""
   };
 }).filter((row) => row.icao || row.iata || row.name);
-const formatWizardLocationRows = (rows) => rows.filter((row) => row.icao || row.iata || row.name).map((row) => `${String(row.icao || "").trim().toUpperCase()} | ${String(row.iata || "").trim().toUpperCase()} | ${String(row.name || "").trim()}`).join("\n");
+const formatWizardLocationRows = (rows) => rows.filter((row) => row.icao || row.iata || row.name).map((row) => [String(row.icao || "").trim().toUpperCase(), String(row.iata || "").trim().toUpperCase(), String(row.name || "")].join("|")).join("\n");
 const normaliseWizardLocationProfile = (location) => ({
   icao: String(location?.icao || location?.code || "").trim().toUpperCase(),
   iata: String(location?.iataCode || location?.settings?.iataCode || location?.iata || "").trim().toUpperCase(),
   name: String(location?.name || location?.label || location?.code || "").trim(),
   timezone: String(location?.timezone || "Australia/Brisbane").trim()
 });
-const parseWizardUnitRows = (value) => parseWizardLineItems(value).map((line) => {
-  const parts = line.split(/[|,]/).map((part) => part.trim());
+const parseWizardUnitRows = (value) => String(value || "").split(/\n/).map((line) => {
+  const parts = line.split(/[|,]/).map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
   return {
-    code: String(parts[0] || "").toUpperCase(),
+    code: String(parts[0] || "").trim().toUpperCase(),
     name: parts[1] || parts[0] || ""
   };
 }).filter((row) => row.code || row.name);
@@ -81102,7 +81106,7 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
 };
 console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
 console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
-const SETUP_WIZARD_RUNTIME_MARKER = "wizard-runtime-2026-07-08-01";
+const SETUP_WIZARD_RUNTIME_MARKER = "wizard-runtime-2026-07-08-02";
 const TRAINEE_DEFAULT_ON_UNIT_CODES = /* @__PURE__ */ new Set(["1FTS", "2FTS", "CFS"]);
 const getDefaultHasTraineesForUnit = (unitCode) => TRAINEE_DEFAULT_ON_UNIT_CODES.has(String(unitCode || "").trim().toUpperCase());
 const applyDefaultUnitTraineeAvailability = (config) => {
@@ -98038,7 +98042,7 @@ const App = () => {
   reactExports.useEffect(() => {
     if (typeof window !== "undefined") {
       window.__DFP_SETUP_WIZARD_MARKER__ = SETUP_WIZARD_RUNTIME_MARKER;
-      window.__DFP_COMMIT_HASH__ = "3918737";
+      window.__DFP_COMMIT_HASH__ = "fd9664b";
     }
   }, []);
   const { theme } = useTheme();
@@ -114259,7 +114263,7 @@ Do you want to replace the existing entry?`,
       " - ",
       SETUP_WIZARD_RUNTIME_MARKER,
       " - ",
-      "3918737"
+      "fd9664b"
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(SystemFreezeBanner, {}),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
