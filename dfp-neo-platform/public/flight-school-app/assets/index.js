@@ -7281,7 +7281,7 @@ const Header = ({
   const dropdownMenuRef = reactExports.useRef(null);
   const contextSelectorRef = reactExports.useRef(null);
   const isSuperAdmin = authUser?.role === "SUPER_ADMIN" || authUser?.role === "ADMIN";
-  const disabledActionClass = "opacity-45 cursor-not-allowed grayscale";
+  const disabledActionClass = "cursor-not-allowed";
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeModelLabel);
   const headerButtonClass = "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md";
   const unavailableActionClass = isFixedCrewModel ? "" : disabledActionClass;
