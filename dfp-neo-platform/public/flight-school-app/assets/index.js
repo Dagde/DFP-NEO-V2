@@ -9839,6 +9839,14 @@ const parseWizardPipeRows = (value, keys) => parseWizardLineItems(value).map((li
   }), {});
 }).filter((row) => Object.values(row).some((entry) => String(entry || "").trim()));
 const formatWizardPipeRows = (rows, keys) => rows.filter((row) => keys.some((key) => String(row[key] || "").trim())).map((row) => keys.map((key) => String(row[key] || "").trim()).join(" | ")).join("\n");
+const parseWizardEditablePipeRows = (value, keys) => String(value || "").split(/\n/).map((line) => {
+  const parts = line.split("|").map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
+  return keys.reduce((row, key, index) => {
+    row[key] = parts[index] || "";
+    return row;
+  }, {});
+}).filter((row) => Object.values(row).some((entry) => String(entry || "").trim()));
+const formatWizardEditablePipeRows = (rows, keys) => rows.filter((row) => keys.some((key) => String(row[key] || "").trim())).map((row) => keys.map((key) => String(row[key] || "")).join("|")).join("\n");
 const parseWizardTrainingReportRows = (value) => parseWizardPipeRows(value, ["genericName", "organisationName", "gradeMin", "gradeMax", "showNumbers", "demoGrade", "passLabel", "failLabel"]);
 const formatWizardTrainingReportRows = (rows) => formatWizardPipeRows(rows, ["genericName", "organisationName", "gradeMin", "gradeMax", "showNumbers", "demoGrade", "passLabel", "failLabel"]);
 const parseWizardRankRows = (value) => parseWizardPipeRows(value, ["order", "ranks", "notes"]);
@@ -9849,8 +9857,8 @@ const parseWizardCurrencyRows = (value) => parseWizardPipeRows(value, ["name", "
 const formatWizardCurrencyRows = (rows) => formatWizardPipeRows(rows, ["name", "code", "crew", "config", "currency", "aircraftCount"]);
 const parseWizardScoringRows = (value) => parseWizardPipeRows(value, ["dimension", "passStandard", "failStandard", "grade0", "grade1", "grade2", "grade3", "grade4", "grade5"]);
 const formatWizardScoringRows = (rows) => formatWizardPipeRows(rows, ["dimension", "passStandard", "failStandard", "grade0", "grade1", "grade2", "grade3", "grade4", "grade5"]);
-const parseWizardStandardCurrencyEventRows = (value) => parseWizardPipeRows(value, ["name", "shortTitle", "resourceType", "duration", "preFlight", "postFlight", "crew", "currency", "config", "aircraftCount"]);
-const formatWizardStandardCurrencyEventRows = (rows) => formatWizardPipeRows(rows, ["name", "shortTitle", "resourceType", "duration", "preFlight", "postFlight", "crew", "currency", "config", "aircraftCount"]);
+const parseWizardStandardCurrencyEventRows = (value) => parseWizardEditablePipeRows(value, ["name", "shortTitle", "resourceType", "duration", "preFlight", "postFlight", "crew", "currency", "config", "aircraftCount"]);
+const formatWizardStandardCurrencyEventRows = (rows) => formatWizardEditablePipeRows(rows, ["name", "shortTitle", "resourceType", "duration", "preFlight", "postFlight", "crew", "currency", "config", "aircraftCount"]);
 const getWizardOperationalModelLabel = (value) => OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value);
 const parseWizardLineItems = (value) => String(value || "").split(/\n/).map((item) => item.trim()).filter(Boolean);
 const parseWizardLocationRows = (value) => parseWizardLineItems(value).map((line) => {

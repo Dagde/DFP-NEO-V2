@@ -1073,6 +1073,23 @@ const formatWizardPipeRows = <T extends Record<string, string>>(rows: T[], keys:
         .join('\n')
 );
 
+const parseWizardEditablePipeRows = <T extends Record<string, string>>(value: string, keys: Array<keyof T>): T[] => (
+    String(value || '').split(/\n/).map((line) => {
+        const parts = line.split('|').map((part, index) => (index === 0 ? part : part.replace(/^\s/, '')));
+        return keys.reduce((row, key, index) => {
+            row[key] = (parts[index] || '') as T[keyof T];
+            return row;
+        }, {} as T);
+    }).filter((row) => Object.values(row).some((entry) => String(entry || '').trim()))
+);
+
+const formatWizardEditablePipeRows = <T extends Record<string, string>>(rows: T[], keys: Array<keyof T>): string => (
+    rows
+        .filter((row) => keys.some((key) => String(row[key] || '').trim()))
+        .map((row) => keys.map((key) => String(row[key] || '')).join('|'))
+        .join('\n')
+);
+
 const parseWizardTrainingReportRows = (value: string) => parseWizardPipeRows<{
     genericName: string;
     organisationName: string;
@@ -1100,8 +1117,8 @@ const formatWizardCurrencyRows = (rows: ReturnType<typeof parseWizardCurrencyRow
 const parseWizardScoringRows = (value: string) => parseWizardPipeRows<{ dimension: string; passStandard: string; failStandard: string; grade0: string; grade1: string; grade2: string; grade3: string; grade4: string; grade5: string }>(value, ['dimension', 'passStandard', 'failStandard', 'grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5']);
 const formatWizardScoringRows = (rows: ReturnType<typeof parseWizardScoringRows>) => formatWizardPipeRows(rows, ['dimension', 'passStandard', 'failStandard', 'grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5']);
 
-const parseWizardStandardCurrencyEventRows = (value: string) => parseWizardPipeRows<{ name: string; shortTitle: string; resourceType: string; duration: string; preFlight: string; postFlight: string; crew: string; currency: string; config: string; aircraftCount: string }>(value, ['name', 'shortTitle', 'resourceType', 'duration', 'preFlight', 'postFlight', 'crew', 'currency', 'config', 'aircraftCount']);
-const formatWizardStandardCurrencyEventRows = (rows: ReturnType<typeof parseWizardStandardCurrencyEventRows>) => formatWizardPipeRows(rows, ['name', 'shortTitle', 'resourceType', 'duration', 'preFlight', 'postFlight', 'crew', 'currency', 'config', 'aircraftCount']);
+const parseWizardStandardCurrencyEventRows = (value: string) => parseWizardEditablePipeRows<{ name: string; shortTitle: string; resourceType: string; duration: string; preFlight: string; postFlight: string; crew: string; currency: string; config: string; aircraftCount: string }>(value, ['name', 'shortTitle', 'resourceType', 'duration', 'preFlight', 'postFlight', 'crew', 'currency', 'config', 'aircraftCount']);
+const formatWizardStandardCurrencyEventRows = (rows: ReturnType<typeof parseWizardStandardCurrencyEventRows>) => formatWizardEditablePipeRows(rows, ['name', 'shortTitle', 'resourceType', 'duration', 'preFlight', 'postFlight', 'crew', 'currency', 'config', 'aircraftCount']);
 
 const getWizardOperationalModelLabel = (value: unknown): string => (
     OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value)
