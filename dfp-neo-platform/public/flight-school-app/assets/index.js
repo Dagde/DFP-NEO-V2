@@ -31379,23 +31379,43 @@ const MyDashboard = ({
     ] });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-900 overflow-y-auto p-6 space-y-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "My Dashboard" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap items-center gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg text-gray-400", children: "Welcome," }),
-        groupedStaffOptions.length > 0 && onSelectStaffName ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "select",
-          {
-            value: dashboardSelectedName,
-            onChange: (event) => onSelectStaffName(event.target.value),
-            className: "min-w-[280px] rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-lg font-semibold text-white shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30",
-            children: groupedStaffOptions.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.staff.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatDashboardStaffName(staff) }, `${staff.unit || "unit"}-${staff.idNumber}-${staff.name}`)) }, group.unit))
-          }
-        ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-lg text-gray-400", children: [
-          userRank,
-          " ",
-          userName
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "My Dashboard" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap items-center gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg text-gray-400", children: "Welcome," }),
+          groupedStaffOptions.length > 0 && onSelectStaffName ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "select",
+            {
+              value: dashboardSelectedName,
+              onChange: (event) => onSelectStaffName(event.target.value),
+              className: "min-w-[280px] rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-lg font-semibold text-white shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30",
+              children: groupedStaffOptions.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.staff.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatDashboardStaffName(staff) }, `${staff.unit || "unit"}-${staff.idNumber}-${staff.name}`)) }, group.unit))
+            }
+          ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-lg text-gray-400", children: [
+            userRank,
+            " ",
+            userName
+          ] })
         ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "rounded-md border border-sky-500/40 bg-gray-800 px-4 py-2 text-sm font-semibold text-sky-100 shadow-sm transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-500/40",
+            children: "Change Password"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "rounded-md border border-rose-500/40 bg-gray-800 px-4 py-2 text-sm font-semibold text-rose-100 shadow-sm transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-500/40",
+            children: "Sign Out"
+          }
+        )
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [

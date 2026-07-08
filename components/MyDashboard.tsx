@@ -160,29 +160,45 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
 
     return (
         <div className="flex flex-col bg-gray-900 overflow-y-auto p-6 space-y-6">
-            <header>
-                <h1 className="text-3xl font-bold text-white">My Dashboard</h1>
-                <div className="mt-2 flex flex-wrap items-center gap-3">
-                    <span className="text-lg text-gray-400">Welcome,</span>
-                    {groupedStaffOptions.length > 0 && onSelectStaffName ? (
-                        <select
-                            value={dashboardSelectedName}
-                            onChange={(event) => onSelectStaffName(event.target.value)}
-                            className="min-w-[280px] rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-lg font-semibold text-white shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
-                        >
-                            {groupedStaffOptions.map(group => (
-                                <optgroup key={group.unit} label={group.unit}>
-                                    {group.staff.map(staff => (
-                                        <option key={`${staff.unit || 'unit'}-${staff.idNumber}-${staff.name}`} value={staff.name}>
-                                            {formatDashboardStaffName(staff)}
-                                        </option>
-                                    ))}
-                                </optgroup>
-                            ))}
-                        </select>
-                    ) : (
-                        <span className="text-lg text-gray-400">{userRank} {userName}</span>
-                    )}
+            <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0">
+                    <h1 className="text-3xl font-bold text-white">My Dashboard</h1>
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                        <span className="text-lg text-gray-400">Welcome,</span>
+                        {groupedStaffOptions.length > 0 && onSelectStaffName ? (
+                            <select
+                                value={dashboardSelectedName}
+                                onChange={(event) => onSelectStaffName(event.target.value)}
+                                className="min-w-[280px] rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-lg font-semibold text-white shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                            >
+                                {groupedStaffOptions.map(group => (
+                                    <optgroup key={group.unit} label={group.unit}>
+                                        {group.staff.map(staff => (
+                                            <option key={`${staff.unit || 'unit'}-${staff.idNumber}-${staff.name}`} value={staff.name}>
+                                                {formatDashboardStaffName(staff)}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                ))}
+                            </select>
+                        ) : (
+                            <span className="text-lg text-gray-400">{userRank} {userName}</span>
+                        )}
+                    </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                    <button
+                        type="button"
+                        className="rounded-md border border-sky-500/40 bg-gray-800 px-4 py-2 text-sm font-semibold text-sky-100 shadow-sm transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+                    >
+                        Change Password
+                    </button>
+                    <button
+                        type="button"
+                        className="rounded-md border border-rose-500/40 bg-gray-800 px-4 py-2 text-sm font-semibold text-rose-100 shadow-sm transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+                    >
+                        Sign Out
+                    </button>
                 </div>
             </header>
 
