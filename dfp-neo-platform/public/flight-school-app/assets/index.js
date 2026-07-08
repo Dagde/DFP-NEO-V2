@@ -152,25 +152,89 @@ const API_LOGIN = "/api/auth/direct-login";
 const API_LOGOUT = "/api/auth/direct-logout";
 const API_SESSION = "/api/auth/direct-session";
 const API_FORGOT_PASSWORD = "/api/auth/forgot-password";
+function pushAuthDiag(stage, details = {}) {
+  const perfMs = typeof performance !== "undefined" && typeof performance.now === "function" ? Math.round(performance.now()) : null;
+  const entry = {
+    ts: (/* @__PURE__ */ new Date()).toISOString(),
+    perfMs,
+    stage,
+    details
+  };
+  try {
+    console.log(`[DFP-DIAG] ${stage}`, entry);
+    const existing = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
+    const next = [...Array.isArray(existing) ? existing : [], entry].slice(-300);
+    localStorage.setItem("neo_dfp_data_diag", JSON.stringify(next));
+    window.neoDfpDataDiag = next;
+  } catch {
+  }
+}
 async function checkSession(token) {
+  const startedAt = performance.now();
+  pushAuthDiag("auth:session-check:start", {
+    endpoint: API_SESSION,
+    hasToken: Boolean(token)
+  });
   try {
     const res = await fetch(`${AUTH_SERVER$2}${API_SESSION}`, {
       headers: { "Authorization": `Bearer ${token}` }
     });
+    pushAuthDiag("auth:session-check:response", {
+      endpoint: API_SESSION,
+      durationMs: Math.round(performance.now() - startedAt),
+      status: res.status,
+      ok: res.ok,
+      contentType: res.headers.get("content-type") || ""
+    });
     if (!res.ok) return null;
+    const parseStartedAt = performance.now();
     const data = await res.json();
+    pushAuthDiag("auth:session-check:json", {
+      endpoint: API_SESSION,
+      durationMs: Math.round(performance.now() - startedAt),
+      parseDurationMs: Math.round(performance.now() - parseStartedAt),
+      hasUser: Boolean(data?.user),
+      userId: data?.user?.userId || data?.user?.id || null
+    });
     return data.user || null;
-  } catch {
+  } catch (error) {
+    pushAuthDiag("auth:session-check:error", {
+      endpoint: API_SESSION,
+      durationMs: Math.round(performance.now() - startedAt),
+      error: String(error)
+    });
     return null;
   }
 }
 async function loginUser(userId, password) {
+  const startedAt = performance.now();
+  pushAuthDiag("auth:login:start", {
+    endpoint: API_LOGIN,
+    userId
+  });
   const res = await fetch(`${AUTH_SERVER$2}${API_LOGIN}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ userId, password })
   });
+  pushAuthDiag("auth:login:response", {
+    endpoint: API_LOGIN,
+    durationMs: Math.round(performance.now() - startedAt),
+    status: res.status,
+    ok: res.ok,
+    contentType: res.headers.get("content-type") || ""
+  });
+  const parseStartedAt = performance.now();
   const data = await res.json();
+  pushAuthDiag("auth:login:json", {
+    endpoint: API_LOGIN,
+    durationMs: Math.round(performance.now() - startedAt),
+    parseDurationMs: Math.round(performance.now() - parseStartedAt),
+    ok: res.ok,
+    hasUser: Boolean(data?.user),
+    userId: data?.user?.userId || data?.user?.id || userId,
+    mustChangePassword: Boolean(data?.mustChangePassword)
+  });
   if (!res.ok) throw new Error(data.message || "Login failed");
   return data;
 }
@@ -80904,8 +80968,27 @@ function assignTraineesToInstructors(trainees, instructors) {
     summary
   };
 }
+function pushDataServiceDiag(stage, details = {}) {
+  const perfMs = typeof performance !== "undefined" && typeof performance.now === "function" ? Math.round(performance.now()) : null;
+  const entry = {
+    ts: (/* @__PURE__ */ new Date()).toISOString(),
+    perfMs,
+    stage,
+    details
+  };
+  try {
+    console.log(`[DFP-DIAG] ${stage}`, entry);
+    const existing = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
+    const next = [...Array.isArray(existing) ? existing : [], entry].slice(-300);
+    localStorage.setItem("neo_dfp_data_diag", JSON.stringify(next));
+    window.neoDfpDataDiag = next;
+  } catch {
+  }
+}
 async function initializeData() {
   console.log("🔧 initializeData() v3.0 - Starting data initialization (DB-only, no mock data)");
+  const initializeStartedAt = performance.now();
+  pushDataServiceDiag("startup:data-service:start");
   let instructors = [];
   let trainees = [];
   let aircraft = [];
@@ -80914,7 +80997,12 @@ async function initializeData() {
   try {
     console.log("🌐 Initializing data from API...");
     console.log("👨‍🏫 Fetching instructors from API...");
+    const instructorsStartedAt = performance.now();
     const allPersonnel = await fetchInstructors();
+    pushDataServiceDiag("startup:data-service:instructors", {
+      durationMs: Math.round(performance.now() - instructorsStartedAt),
+      count: Array.isArray(allPersonnel) ? allPersonnel.length : 0
+    });
     instructors = allPersonnel;
     console.log("✅ Staff DB loaded:", instructors.length, "personnel records");
     allPersonnel.forEach((inst) => {
@@ -80924,14 +81012,26 @@ async function initializeData() {
     instructors = instructors.map((i) => ({ ...i, _dataSource: "database" }));
     console.log("🔄 Loaded staff from DB only:", instructors.length, "records (mock data excluded at load time)");
     console.log("👨‍🎓 Fetching trainees from API...");
+    const traineesStartedAt = performance.now();
     trainees = await fetchTrainees();
+    pushDataServiceDiag("startup:data-service:trainees", {
+      durationMs: Math.round(performance.now() - traineesStartedAt),
+      count: Array.isArray(trainees) ? trainees.length : 0
+    });
     console.log("✅ Trainee DB loaded:", trainees.length);
     trainees = trainees.map((t) => ({ ...t, _dataSource: "database" }));
     console.log("🔄 Loaded trainees from DB only:", trainees.length, "records (mock data excluded at load time)");
     try {
       console.log("🔧 Applying trainee assignment logic...");
+      const assignmentStartedAt = performance.now();
       const assignmentResult = assignTraineesToInstructors(trainees, instructors);
       trainees = assignmentResult.trainees;
+      pushDataServiceDiag("startup:data-service:trainee-assignment", {
+        durationMs: Math.round(performance.now() - assignmentStartedAt),
+        traineeCount: trainees.length,
+        instructorCount: instructors.length,
+        summary: assignmentResult.summary
+      });
       console.log("✅ Trainee assignment complete");
       console.log("📊 Assignment Summary:", assignmentResult.summary);
     } catch (error) {
@@ -80939,16 +81039,36 @@ async function initializeData() {
       console.warn("\\u26a0️ Continuing without trainee assignment - trainees will have no instructors assigned");
     }
     console.log("✈️ Fetching aircraft from API...");
+    const aircraftStartedAt = performance.now();
     aircraft = await fetchAircraft();
+    pushDataServiceDiag("startup:data-service:aircraft", {
+      durationMs: Math.round(performance.now() - aircraftStartedAt),
+      count: Array.isArray(aircraft) ? aircraft.length : 0
+    });
     console.log("✅ Aircraft loaded:", aircraft.length);
     console.log("📊 Fetching scores from API...");
+    const scoresStartedAt = performance.now();
     scores = await fetchScores();
+    pushDataServiceDiag("startup:data-service:scores", {
+      durationMs: Math.round(performance.now() - scoresStartedAt),
+      traineeCount: scores ? Object.keys(scores).length : 0
+    });
     console.log("✅ Scores loaded:", Object.keys(scores).length, "trainees with scores");
     console.log("📅 Fetching schedule from API...");
+    const scheduleStartedAt = performance.now();
     events = await fetchSchedule();
+    pushDataServiceDiag("startup:data-service:schedule", {
+      durationMs: Math.round(performance.now() - scheduleStartedAt),
+      count: Array.isArray(events) ? events.length : 0
+    });
     console.log("✅ Schedule loaded:", events.length);
     console.log("🎓 Fetching courses from API...");
+    const coursesStartedAt = performance.now();
     const courses = await fetchCourses();
+    pushDataServiceDiag("startup:data-service:courses", {
+      durationMs: Math.round(performance.now() - coursesStartedAt),
+      count: Array.isArray(courses) ? courses.length : 0
+    });
     console.log("✅ Courses loaded:", courses.length);
     if (instructors.length === 0) {
       console.log("⚠️ No instructors from API - returning empty list (no mock data fallback)");
@@ -80968,6 +81088,15 @@ async function initializeData() {
       events: events.length,
       courses: courses.length
     });
+    pushDataServiceDiag("startup:data-service:end", {
+      durationMs: Math.round(performance.now() - initializeStartedAt),
+      instructors: instructors.length,
+      trainees: trainees.length,
+      aircraft: aircraft.length,
+      scores: Object.keys(scores).length,
+      events: events.length,
+      courses: courses.length
+    });
     return {
       instructors,
       trainees,
@@ -80979,6 +81108,10 @@ async function initializeData() {
   } catch (error) {
     console.error("❌ Failed to load data from API:", error);
     console.log("⚠️ API error - returning empty data (no mock data fallback)");
+    pushDataServiceDiag("startup:data-service:error", {
+      durationMs: Math.round(performance.now() - initializeStartedAt),
+      error: String(error)
+    });
     return {
       instructors: [],
       trainees: [],
@@ -98370,19 +98503,41 @@ const App = () => {
   reactExports.useEffect(() => {
     let cancelled = false;
     const loadPlatformConfig = async () => {
-      const config = applyDefaultUnitTraineeAvailability(
-        setupTestProfile ? readSetupTestPlatformConfig() : await loadPlatformConfigFromDB()
-      );
-      if (cancelled) return;
-      setPlatformConfig(config);
-      setPlatformConfigLoaded(true);
-      if (config) {
-        console.log("[PlatformConfig] Loaded stage-two read context:", {
-          setupTestProfile: setupTestProfile || null,
-          locations: config.locations.length,
-          units: config.units.length,
-          resourcePools: config.resourcePools.length
+      const startedAt = performance.now();
+      pushDfpDataDiag("startup:platform-config:start", {
+        setupTestProfile: setupTestProfile || null
+      });
+      try {
+        const config = applyDefaultUnitTraineeAvailability(
+          setupTestProfile ? readSetupTestPlatformConfig() : await loadPlatformConfigFromDB()
+        );
+        if (cancelled) return;
+        setPlatformConfig(config);
+        setPlatformConfigLoaded(true);
+        pushDfpDataDiag("startup:platform-config:end", {
+          durationMs: Math.round(performance.now() - startedAt),
+          foundConfig: Boolean(config),
+          locations: config?.locations?.length || 0,
+          units: config?.units?.length || 0,
+          resourcePools: config?.resourcePools?.length || 0,
+          aircraftTypes: config?.aircraftTypes?.length || 0
         });
+        if (config) {
+          console.log("[PlatformConfig] Loaded stage-two read context:", {
+            setupTestProfile: setupTestProfile || null,
+            locations: config.locations.length,
+            units: config.units.length,
+            resourcePools: config.resourcePools.length
+          });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          pushDfpDataDiag("startup:platform-config:error", {
+            durationMs: Math.round(performance.now() - startedAt),
+            error: String(error)
+          });
+          setPlatformConfigLoaded(true);
+        }
       }
     };
     loadPlatformConfig();
@@ -99167,13 +99322,25 @@ const App = () => {
   const [showChangePassword, setShowChangePassword] = reactExports.useState(false);
   const [showAdminPanel, setShowAdminPanel] = reactExports.useState(false);
   const fetchAndSetAuditUser = async (firstName, lastName, displayName) => {
+    const startedAt = performance.now();
     const formattedName = lastName && firstName ? `${lastName}, ${firstName}` : displayName || lastName || firstName || "Unknown User";
     let rank = "";
     try {
       const searchName = lastName || firstName || "";
+      pushDfpDataDiag("startup:audit-user-rank:start", {
+        formattedName,
+        searchName
+      });
       if (searchName) {
+        const fetchStartedAt = performance.now();
         const res = await fetch(`/api/personnel?search=${encodeURIComponent(searchName)}`, {
           credentials: "include"
+        });
+        pushDfpDataDiag("startup:audit-user-rank:response", {
+          durationMs: Math.round(performance.now() - fetchStartedAt),
+          status: res.status,
+          ok: res.ok,
+          contentType: res.headers.get("content-type") || ""
         });
         if (res.ok) {
           const data = await res.json();
@@ -99190,10 +99357,20 @@ const App = () => {
       }
     } catch (e) {
       console.warn("[AUDIT] Could not fetch rank from Personnel:", e);
+      pushDfpDataDiag("startup:audit-user-rank:error", {
+        durationMs: Math.round(performance.now() - startedAt),
+        error: String(e)
+      });
     }
     const auditUserString = rank ? `${rank} ${formattedName}` : formattedName;
     setCurrentUser(auditUserString);
     console.log("[AUDIT] setCurrentUser ->", auditUserString);
+    pushDfpDataDiag("startup:audit-user-rank:end", {
+      durationMs: Math.round(performance.now() - startedAt),
+      formattedName,
+      rank: rank || null,
+      auditUserString
+    });
     if (rank) {
       setSessionUser((prev) => prev ? { ...prev, militaryRank: rank } : prev);
       console.log("[RANK] Updated sessionUser.militaryRank ->", rank);
@@ -99201,6 +99378,14 @@ const App = () => {
   };
   reactExports.useEffect(() => {
     const checkExistingSession = async () => {
+      const startedAt = performance.now();
+      pushDfpDataDiag("startup:auth-session:start", {
+        setupTestProfile: setupTestProfile || null,
+        hasSsoUser: Boolean(localStorage.getItem("dfp_sso_user")),
+        hasStoredToken: Boolean(localStorage.getItem("dfp_session_token"))
+      });
+      let authenticatedFromStoredSession = false;
+      let authSource = "none";
       if (setupTestProfile) {
         const setupUser = {
           userId: `setup-test-${setupTestProfile}`,
@@ -99227,6 +99412,11 @@ const App = () => {
           username: setupUser.username
         });
         setAuthLoading(false);
+        pushDfpDataDiag("startup:auth-session:end", {
+          durationMs: Math.round(performance.now() - startedAt),
+          source: "setup-test",
+          authenticated: true
+        });
         return;
       }
       const ssoUserData = localStorage.getItem("dfp_sso_user");
@@ -99249,6 +99439,8 @@ const App = () => {
             });
             setAuthSessionToken(localStorage.getItem("dfp_session_token") || "");
             setIsAuthenticated(true);
+            authenticatedFromStoredSession = true;
+            authSource = "sso-local-storage";
             setAuthLoading(false);
             if (ssoUser.lastName && ssoUser.firstName) {
               setCurrentUserName(`${ssoUser.lastName}, ${ssoUser.firstName}`);
@@ -99266,16 +99458,34 @@ const App = () => {
               username: ssoUser.username
             });
             fetchAndSetAuditUser(ssoUser.firstName || null, ssoUser.lastName || null, ssoUser.displayName);
+            pushDfpDataDiag("startup:auth-session:end", {
+              durationMs: Math.round(performance.now() - startedAt),
+              source: "sso-local-storage",
+              authenticated: true,
+              userId: ssoUser.userId
+            });
             return;
           }
         } catch (e) {
           console.error("[SSO] Failed to parse SSO user data:", e);
+          pushDfpDataDiag("startup:auth-session:sso-parse-error", {
+            durationMs: Math.round(performance.now() - startedAt),
+            error: String(e)
+          });
         }
       }
       const storedToken = localStorage.getItem("dfp_session_token");
       if (storedToken) {
+        authSource = "stored-token";
+        const checkStartedAt = performance.now();
         const user = await checkSession(storedToken);
+        pushDfpDataDiag("startup:auth-session:token-check-response", {
+          durationMs: Math.round(performance.now() - checkStartedAt),
+          authenticated: Boolean(user),
+          userId: user?.userId || null
+        });
         if (user) {
+          authenticatedFromStoredSession = true;
           setAuthUser(user);
           setAuthSessionToken(storedToken);
           setIsAuthenticated(true);
@@ -99302,10 +99512,20 @@ const App = () => {
         }
       }
       setAuthLoading(false);
+      pushDfpDataDiag("startup:auth-session:end", {
+        durationMs: Math.round(performance.now() - startedAt),
+        source: authSource,
+        authenticated: authenticatedFromStoredSession
+      });
     };
     checkExistingSession();
   }, [setupTestProfile]);
   const handleLoginSuccess = (user, token) => {
+    pushDfpDataDiag("startup:login-success-handler:start", {
+      userId: user.userId,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword
+    });
     setAuthUser(user);
     setAuthSessionToken(token);
     setIsAuthenticated(true);
@@ -99326,6 +99546,9 @@ const App = () => {
     if (user.mustChangePassword) {
       setShowChangePassword(true);
     }
+    pushDfpDataDiag("startup:login-success-handler:end", {
+      userId: user.userId
+    });
   };
   const handleLogout = async () => {
     if (authSessionToken) {
@@ -99450,8 +99673,10 @@ const App = () => {
     return query ? `${path}${joiner}${query}` : path;
   }, [platformDataScopeQuery]);
   function pushDfpDataDiag(stage, details = {}) {
+    const perfNow = typeof performance !== "undefined" && typeof performance.now === "function" ? Math.round(performance.now()) : null;
     const entry = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
+      perfMs: perfNow,
       stage,
       date,
       school,
@@ -99462,7 +99687,7 @@ const App = () => {
     try {
       console.log(`[DFP-DIAG] ${stage}`, entry);
       const existing = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
-      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-50);
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-300);
       localStorage.setItem("neo_dfp_data_diag", JSON.stringify(next));
       window.neoDfpDataDiag = next;
     } catch (error) {
@@ -99735,8 +99960,12 @@ const App = () => {
   }, [activeOperationalModel, activeUnitCode, getOperationalModelForUnitCode, syllabusDetails]);
   reactExports.useEffect(() => {
     const loadSyllabus = async () => {
+      const startedAt = performance.now();
       setSyllabusLoading(true);
       setSyllabusError(null);
+      pushDfpDataDiag("startup:syllabus:start", {
+        setupTestProfile: setupTestProfile || null
+      });
       try {
         if (setupTestProfile) {
           const setupSyllabus = readSetupTestSyllabus();
@@ -99763,6 +99992,11 @@ const App = () => {
           setSyllabusDetails(setupSyllabus);
           setSyllabusError(null);
           console.log(`✅ [Syllabus] Loaded ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
+          pushDfpDataDiag("startup:syllabus:end", {
+            durationMs: Math.round(performance.now() - startedAt),
+            source: "setup-test",
+            count: setupSyllabus.length
+          });
           return;
         }
         const result = await loadSyllabusFromDB();
@@ -99779,11 +100013,21 @@ const App = () => {
           setSyllabusDetails([]);
           setSyllabusError(result.error || "No syllabus items in database");
         }
+        pushDfpDataDiag("startup:syllabus:end", {
+          durationMs: Math.round(performance.now() - startedAt),
+          source: result.source,
+          count: result.syllabus.length,
+          error: result.error || null
+        });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";
         console.error("❌ [Syllabus] Failed to load syllabus:", msg);
         setSyllabusDetails([]);
         setSyllabusError(msg);
+        pushDfpDataDiag("startup:syllabus:error", {
+          durationMs: Math.round(performance.now() - startedAt),
+          error: msg
+        });
       } finally {
         setSyllabusLoading(false);
       }
@@ -99809,6 +100053,15 @@ const App = () => {
       console.warn("Could not migrate dataSourceSettings");
     }
     const loadInitialData = async () => {
+      const startedAt = performance.now();
+      pushDfpDataDiag("startup:initial-data:start", {
+        setupTestProfile: setupTestProfile || null,
+        platformConfigLoaded,
+        activeOperationalModel,
+        activeUnitCode,
+        school,
+        syllabusItemsAtStart: syllabusDetails.length
+      });
       try {
         if (setupTestProfile) {
           const setupPersonnel = readSetupTestPersonnel();
@@ -99855,9 +100108,26 @@ const App = () => {
             return next;
           });
           setIsCoursesLoaded(true);
+          pushDfpDataDiag("startup:initial-data:end", {
+            durationMs: Math.round(performance.now() - startedAt),
+            source: "setup-test",
+            instructors: normalisedInstructors2.length,
+            trainees: normalisedTrainees.length,
+            courses: setupCourseNames.length
+          });
           return;
         }
+        const initializeStartedAt = performance.now();
         const data = await initializeData();
+        pushDfpDataDiag("startup:initial-data:initializeData-end", {
+          durationMs: Math.round(performance.now() - initializeStartedAt),
+          instructors: data.instructors?.length || 0,
+          trainees: data.trainees?.length || 0,
+          events: data.events?.length || 0,
+          scores: Object.keys(data.scores || {}).length,
+          courses: data.courses?.length || 0
+        });
+        const stateSeedStartedAt = performance.now();
         const normalisedInstructors = (data.instructors || []).map(normalisePersonnelRecord);
         const legacyFixedCrewRoles = (data.instructors || []).filter((person) => person?._dataSource === "database" && person?.id && isFixedCrewLegacyAeaRole(person?.role, person?.unit));
         if (legacyFixedCrewRoles.length > 0) {
@@ -99899,8 +100169,17 @@ const App = () => {
           setIsCoursesLoaded(true);
           console.log("🎓 No courses in DB yet - keeping existing course state");
         }
+        pushDfpDataDiag("startup:initial-data:state-seeded", {
+          durationMs: Math.round(performance.now() - stateSeedStartedAt),
+          normalisedInstructors: normalisedInstructors.length,
+          trainees: data.trainees?.length || 0,
+          events: data.events?.length || 0,
+          courses: data.courses?.length || 0,
+          legacyRoleMigrationsQueued: legacyFixedCrewRoles.length
+        });
         {
           console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads TraineePerformance from DB)...`);
+          const lmpSyncStartedAt = performance.now();
           try {
             const assignableSyncSyllabus = getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "Assign");
             const bpcIpcSyllabus = assignableSyncSyllabus.filter(
@@ -99914,18 +100193,47 @@ const App = () => {
               "FIC": ficSyllabus
             };
             const apiBase2 = getAppApiBase();
+            pushDfpDataDiag("startup:lmp-sync:start", {
+              apiBase: apiBase2,
+              syllabusItems: syllabusDetails.length,
+              assignableSyllabusItems: assignableSyncSyllabus.length,
+              bpcIpcItems: bpcIpcSyllabus.length,
+              ficItems: ficSyllabus.length,
+              trainees: data.trainees?.length || 0
+            });
             const syncRes = await fetch(`${apiBase2}/trainees/lmp-sync`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ syllabusData })
             });
+            pushDfpDataDiag("startup:lmp-sync:post-response", {
+              durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+              status: syncRes.status,
+              ok: syncRes.ok,
+              contentType: syncRes.headers.get("content-type") || ""
+            });
             if (syncRes.ok) {
               const syncData = await syncRes.json();
               console.log(`[LMP Sync] ✅ Backend sync complete:`, syncData.summary);
+              pushDfpDataDiag("startup:lmp-sync:post-json", {
+                durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+                summary: syncData.summary || null
+              });
               const lmpRes = await fetch(`${apiBase2}/trainees/lmp-sync?includeEvents=true`);
+              pushDfpDataDiag("startup:lmp-sync:get-response", {
+                durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+                status: lmpRes.status,
+                ok: lmpRes.ok,
+                contentType: lmpRes.headers.get("content-type") || ""
+              });
               if (lmpRes.ok) {
                 const lmpData = await lmpRes.json();
                 const lmps = lmpData.lmps;
+                pushDfpDataDiag("startup:lmp-sync:get-json", {
+                  durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+                  lmpCount: lmps?.length || 0,
+                  completedEventTotal: (lmps || []).reduce((total, lmp) => total + (lmp.completedEventIds?.length || 0), 0)
+                });
                 if (lmps && lmps.length > 0) {
                   setScores((prev) => {
                     const merged = new Map(prev);
@@ -99984,6 +100292,10 @@ const App = () => {
               }
             } else {
               console.warn("[LMP Sync] Backend sync failed, falling back to direct DB scores...");
+              pushDfpDataDiag("startup:lmp-sync:post-failed", {
+                durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+                status: syncRes.status
+              });
               setScores((prev) => {
                 const merged = new Map(prev);
                 Object.entries(data.scores).forEach(([traineeName, traineeScores]) => {
@@ -100003,6 +100315,10 @@ const App = () => {
             }
           } catch (syncErr) {
             console.warn("[LMP Sync] Sync error, falling back to direct DB scores:", syncErr);
+            pushDfpDataDiag("startup:lmp-sync:error", {
+              durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+              error: String(syncErr)
+            });
             setScores((prev) => {
               const merged = new Map(prev);
               Object.entries(data.scores).forEach(([traineeName, traineeScores]) => {
@@ -100020,6 +100336,9 @@ const App = () => {
               return merged;
             });
           }
+          pushDfpDataDiag("startup:lmp-sync:end", {
+            durationMs: Math.round(performance.now() - lmpSyncStartedAt)
+          });
         }
         const dbTrainees = data.trainees.filter((t) => t._dataSource === "database");
         if (dbTrainees.length > 0) {
@@ -100204,8 +100523,21 @@ const App = () => {
           });
         }
         console.log("✅ State updated successfully");
+        pushDfpDataDiag("startup:initial-data:end", {
+          durationMs: Math.round(performance.now() - startedAt),
+          source: "database",
+          instructors: data.instructors?.length || 0,
+          trainees: data.trainees?.length || 0,
+          events: data.events?.length || 0,
+          courses: data.courses?.length || 0,
+          syllabusItems: syllabusDetails.length
+        });
       } catch (error) {
         console.error("❌ Failed to load initial data:", error);
+        pushDfpDataDiag("startup:initial-data:error", {
+          durationMs: Math.round(performance.now() - startedAt),
+          error: String(error)
+        });
       }
     };
     loadInitialData();
@@ -100271,6 +100603,7 @@ const App = () => {
     const requestedSchool = school;
     const requestedUnit = activeUnitCode;
     const loadHistoricalData = async () => {
+      const startedAt = performance.now();
       try {
         const apiBase2 = getAppApiBase();
         pushDfpDataDiag("history:load-start", {
@@ -100282,18 +100615,23 @@ const App = () => {
         });
         try {
           const dailySnapshotUrl = `${apiBase2}/daily-snapshot?school=${requestedSchool}&unit=${encodeURIComponent(requestedUnit)}`;
+          const dailySnapshotStartedAt = performance.now();
           const snapRes = await fetch(dailySnapshotUrl);
           if (cancelled) return;
           pushDfpDataDiag("history:daily-snapshot-response", {
             url: dailySnapshotUrl,
+            durationMs: Math.round(performance.now() - dailySnapshotStartedAt),
             status: snapRes.status,
-            ok: snapRes.ok
+            ok: snapRes.ok,
+            contentType: snapRes.headers.get("content-type") || ""
           });
           if (snapRes.ok) {
+            const parseStartedAt = performance.now();
             const snapData = await snapRes.json();
             if (cancelled) return;
             const snapshots = snapData.snapshots || [];
             pushDfpDataDiag("history:daily-snapshot-json", {
+              parseDurationMs: Math.round(performance.now() - parseStartedAt),
               snapshotCount: snapshots.length,
               snapshots: snapshots.slice(0, 20).map((snap2) => ({
                 key: snap2.date,
@@ -100350,22 +100688,31 @@ const App = () => {
           }
         } catch (snapErr) {
           console.warn("[Snapshot] Could not load daily snapshots:", snapErr);
+          pushDfpDataDiag("history:daily-snapshot-error", {
+            durationMs: Math.round(performance.now() - startedAt),
+            error: String(snapErr)
+          });
         }
         const historicalUrl = `${apiBase2}/historical-data`;
+        const historicalStartedAt = performance.now();
         const res = await fetch(historicalUrl);
         if (cancelled) return;
         pushDfpDataDiag("history:legacy-response", {
           url: historicalUrl,
+          durationMs: Math.round(performance.now() - historicalStartedAt),
           status: res.status,
-          ok: res.ok
+          ok: res.ok,
+          contentType: res.headers.get("content-type") || ""
         });
         if (!res.ok) return;
+        const historicalParseStartedAt = performance.now();
         const data = await res.json();
         if (cancelled) return;
         if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
           const seedSchedules = data.publishedSchedules;
           const eventCount = Object.values(seedSchedules).flat().length;
           pushDfpDataDiag("history:legacy-json", {
+            parseDurationMs: Math.round(performance.now() - historicalParseStartedAt),
             dateCount: Object.keys(seedSchedules).length,
             eventCount,
             dates: Object.entries(seedSchedules).slice(0, 60).map(([dateKey, seedEvents]) => ({
@@ -100396,8 +100743,19 @@ const App = () => {
           const persistedAssessments = [];
           const pageSize = 2e3;
           let offset = 0;
+          const performanceStartedAt = performance.now();
           while (!cancelled) {
-            const perfRes = await fetch(`${apiBase2}/trainee-performance?limit=${pageSize}&offset=${offset}`);
+            const pageStartedAt = performance.now();
+            const performanceUrl = `${apiBase2}/trainee-performance?limit=${pageSize}&offset=${offset}`;
+            const perfRes = await fetch(performanceUrl);
+            pushDfpDataDiag("history:trainee-performance-response", {
+              url: performanceUrl,
+              offset,
+              durationMs: Math.round(performance.now() - pageStartedAt),
+              status: perfRes.status,
+              ok: perfRes.ok,
+              contentType: perfRes.headers.get("content-type") || ""
+            });
             if (!perfRes.ok) {
               console.warn("[PT051] Could not load persisted trainee performance records:", await perfRes.text());
               break;
@@ -100408,6 +100766,11 @@ const App = () => {
             if (page.length < pageSize) break;
             offset += pageSize;
           }
+          pushDfpDataDiag("history:trainee-performance:end", {
+            durationMs: Math.round(performance.now() - performanceStartedAt),
+            persistedAssessments: persistedAssessments.length,
+            pages: Math.floor(offset / pageSize) + 1
+          });
           if (!cancelled && persistedAssessments.length > 0) {
             console.log(`[PT051] ✅ Loaded ${persistedAssessments.length} persisted trainee performance records`);
             setPt051Assessments((prev) => {
@@ -100422,14 +100785,25 @@ const App = () => {
           }
         } catch (perfErr) {
           console.warn("[PT051] Could not load persisted trainee performance records:", perfErr);
+          pushDfpDataDiag("history:trainee-performance:error", {
+            durationMs: Math.round(performance.now() - startedAt),
+            error: String(perfErr)
+          });
         } finally {
           if (!cancelled) setPt051PerformanceLoading(false);
         }
         if (data.seedingMetadata) {
           console.log(`[Historical] Seeded at: ${data.seedingMetadata.seededAt}, courses: ${(data.seedingMetadata.coursesSeeded || []).join(", ")}`);
         }
+        pushDfpDataDiag("history:load-end", {
+          durationMs: Math.round(performance.now() - startedAt)
+        });
       } catch (error) {
         console.warn("[Historical] Could not load historical data:", error);
+        pushDfpDataDiag("history:load-error", {
+          durationMs: Math.round(performance.now() - startedAt),
+          error: String(error)
+        });
         if (!cancelled) setPt051PerformanceLoading(false);
       }
     };
@@ -100448,19 +100822,28 @@ const App = () => {
       return;
     }
     const loadSnapshotDates = async () => {
+      const startedAt = performance.now();
       try {
         const apiBase2 = getAppApiBase();
         const snapshotDatesUrl = `${apiBase2}/daily-snapshot/dates`;
+        pushDfpDataDiag("snapshot-dates:start", {
+          url: snapshotDatesUrl
+        });
         const res = await fetch(snapshotDatesUrl);
         pushDfpDataDiag("snapshot-dates:response", {
           url: snapshotDatesUrl,
+          durationMs: Math.round(performance.now() - startedAt),
           status: res.status,
-          ok: res.ok
+          ok: res.ok,
+          contentType: res.headers.get("content-type") || ""
         });
         if (!res.ok) return;
+        const parseStartedAt = performance.now();
         const data = await res.json();
         const dates = [...new Set((data.dates || []).map((d) => d.date))];
         pushDfpDataDiag("snapshot-dates:json", {
+          durationMs: Math.round(performance.now() - startedAt),
+          parseDurationMs: Math.round(performance.now() - parseStartedAt),
           count: dates.length,
           dates: dates.slice(0, 80),
           rawRows: (data.dates || []).slice(0, 30)
@@ -100469,6 +100852,10 @@ const App = () => {
         setSnapshotDates((prev) => [.../* @__PURE__ */ new Set([...prev, ...dates])].sort((a, b) => b.localeCompare(a)));
       } catch (err) {
         console.warn("[Snapshot] Could not load snapshot dates:", err);
+        pushDfpDataDiag("snapshot-dates:error", {
+          durationMs: Math.round(performance.now() - startedAt),
+          error: String(err)
+        });
       }
     };
     loadSnapshotDates();
@@ -100533,6 +100920,7 @@ const App = () => {
     ].map((alias) => String(alias || "").trim().toUpperCase()).filter((alias, index, aliases) => Boolean(alias) && aliases.indexOf(alias) === index);
   }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
+    const loadStartedAt = performance.now();
     const { force = false, replace = false, schoolOverride, unitOverride, useCache = true } = options;
     const snapshotSchool = schoolOverride ?? school;
     const snapshotUnit = unitOverride ?? activeUnitCode;
@@ -100595,6 +100983,7 @@ const App = () => {
       const apiBase2 = getAppApiBase();
       let lastError = null;
       for (let attempt = 0; attempt < retryDelays.length; attempt++) {
+        const attemptStartedAt = performance.now();
         const delay = retryDelays[attempt];
         if (delay > 0) {
           setDfpSnapshotLoadState({
@@ -100620,6 +101009,15 @@ const App = () => {
           ].filter((key, index, keys) => Boolean(key) && keys.indexOf(key) === index);
           let res = null;
           let resolvedSnapshotKey = snapshotKey;
+          pushDfpDataDiag("snapshot:attempt-start", {
+            targetDate,
+            snapshotKey,
+            attempt: attempt + 1,
+            retryDelayMs: delay,
+            candidateCount: candidateKeys.length,
+            candidateKeys,
+            elapsedMs: Math.round(performance.now() - loadStartedAt)
+          });
           for (const [candidateIndex, candidateKey] of candidateKeys.entries()) {
             const progress = Math.min(82, 18 + Math.round(candidateIndex / Math.max(candidateKeys.length, 1) * 56));
             setDfpSnapshotLoadState({
@@ -100629,12 +101027,17 @@ const App = () => {
               progress
             });
             const candidateUrl = `${apiBase2}/daily-snapshot/${encodeURIComponent(candidateKey)}`;
+            const candidateStartedAt = performance.now();
             const candidateRes = await fetch(candidateUrl);
             pushDfpDataDiag("snapshot:fetch-response", {
               kind: candidateKey === targetDate ? "legacy-date" : candidateKey.includes(`__${snapshotUnit}`) ? "unit-scoped-or-alias" : "location-scoped-or-alias",
               url: candidateUrl,
               candidateKey,
               canonicalSnapshotKey: snapshotKey,
+              attempt: attempt + 1,
+              candidateIndex: candidateIndex + 1,
+              durationMs: Math.round(performance.now() - candidateStartedAt),
+              elapsedMs: Math.round(performance.now() - loadStartedAt),
               status: candidateRes.status,
               ok: candidateRes.ok,
               contentType: candidateRes.headers.get("content-type") || ""
@@ -100669,7 +101072,8 @@ const App = () => {
               targetDate,
               snapshotKey,
               candidateKeys,
-              replace
+              replace,
+              durationMs: Math.round(performance.now() - loadStartedAt)
             });
             setDfpSnapshotLoadState({
               status: "empty",
@@ -100689,12 +101093,16 @@ const App = () => {
             message: "Reading DFP data",
             progress: 88
           });
+          const parseStartedAt = performance.now();
           const data = await res.json();
+          const jsonParsedAt = performance.now();
           const snap2 = data.snapshot;
           pushDfpDataDiag("snapshot:network-json", {
             targetDate,
             snapshotKey,
             resolvedSnapshotKey,
+            parseDurationMs: Math.round(jsonParsedAt - parseStartedAt),
+            elapsedMs: Math.round(performance.now() - loadStartedAt),
             snapKey: snap2?.date,
             eventCount: Array.isArray(snap2?.scheduleEvents) ? snap2.scheduleEvents.length : 0,
             baselineCount: Array.isArray(snap2?.baselineEvents) ? snap2.baselineEvents.length : 0
@@ -100711,9 +101119,18 @@ const App = () => {
             message: "Applying DFP data",
             progress: 94
           });
+          const applyStartedAt = performance.now();
           const eventCount = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, snap2, replace || shouldReplaceCachedEvents, "network");
           cacheDailySnapshot(snapshotKey, snap2, targetDate);
           loadedSnapshotDates.current.add(snapshotKey);
+          pushDfpDataDiag("snapshot:load-success", {
+            targetDate,
+            snapshotKey,
+            resolvedSnapshotKey,
+            applyDurationMs: Math.round(performance.now() - applyStartedAt),
+            durationMs: Math.round(performance.now() - loadStartedAt),
+            eventCount
+          });
           setDfpSnapshotLoadState({
             status: "loaded",
             date: targetDate,
@@ -100725,6 +101142,14 @@ const App = () => {
           if (err?.nonRetryableSnapshotLoad) {
             throw err;
           }
+          pushDfpDataDiag("snapshot:attempt-error", {
+            targetDate,
+            snapshotKey,
+            attempt: attempt + 1,
+            attemptDurationMs: Math.round(performance.now() - attemptStartedAt),
+            elapsedMs: Math.round(performance.now() - loadStartedAt),
+            error: String(err)
+          });
           lastError = err;
         }
       }
@@ -100735,6 +101160,12 @@ const App = () => {
         date: targetDate,
         message: "DFP did not load. Check connection or retry.",
         progress: 100
+      });
+      pushDfpDataDiag("snapshot:load-error", {
+        targetDate,
+        snapshotKey,
+        durationMs: Math.round(performance.now() - loadStartedAt),
+        error: String(err)
       });
       console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
     } finally {
@@ -102142,9 +102573,18 @@ ${"=".repeat(60)}`);
   const neoAssistStaffListNames = reactExports.useMemo(() => [...instructorsData].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((instructor) => instructor.name).filter(Boolean), [instructorsData, personnelDisplaySettings]);
   reactExports.useEffect(() => {
     const loadSettings = async () => {
+      const startedAt = performance.now();
+      pushDfpDataDiag("startup:settings:start", {
+        activeUnitCode,
+        school
+      });
       try {
         const saved = await loadSettingsFromDB();
         if (!saved) {
+          pushDfpDataDiag("startup:settings:end", {
+            durationMs: Math.round(performance.now() - startedAt),
+            foundSettings: false
+          });
           setSettingsLoaded(true);
           return;
         }
@@ -102358,12 +102798,30 @@ ${"=".repeat(60)}`);
           pushContextSelectorDiag("settings:organisation-missing");
         }
         console.log("[Settings] ✅ All settings restored from DB");
+        pushDfpDataDiag("startup:settings:end", {
+          durationMs: Math.round(performance.now() - startedAt),
+          foundSettings: true,
+          locations: saved.locations?.length || 0,
+          units: saved.units?.length || 0,
+          coursePriorities: saved.coursePriorities?.length || 0,
+          formationCallsigns: saved.formationCallsigns?.length || 0,
+          cancellationCodes: saved.cancellationCodes?.length || 0,
+          masterCurrencies: saved.masterCurrencies?.length || 0,
+          currencyRequirements: saved.currencyRequirements?.length || 0
+        });
       } catch (error) {
         console.error("[Settings] ❌ Failed to load settings from DB:", error);
         pushContextSelectorDiag("settings:load-error", { error: String(error) });
+        pushDfpDataDiag("startup:settings:error", {
+          durationMs: Math.round(performance.now() - startedAt),
+          error: String(error)
+        });
       } finally {
         console.log("[App] 🏁 Setting settingsLoaded = true");
         pushContextSelectorDiag("settings:loaded-flag-true");
+        pushDfpDataDiag("startup:settings:loaded-flag-true", {
+          durationMs: Math.round(performance.now() - startedAt)
+        });
         setSettingsLoaded(true);
       }
     };

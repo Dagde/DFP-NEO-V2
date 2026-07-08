@@ -10,6 +10,27 @@ const API_LOGOUT = '/api/auth/direct-logout';
 const API_SESSION = '/api/auth/direct-session';
 const API_FORGOT_PASSWORD = '/api/auth/forgot-password';
 
+function pushAuthDiag(stage: string, details: Record<string, any> = {}): void {
+  const perfMs = typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? Math.round(performance.now())
+    : null;
+  const entry = {
+    ts: new Date().toISOString(),
+    perfMs,
+    stage,
+    details,
+  };
+  try {
+    console.log(`[DFP-DIAG] ${stage}`, entry);
+    const existing = JSON.parse(localStorage.getItem('neo_dfp_data_diag') || '[]');
+    const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-300);
+    localStorage.setItem('neo_dfp_data_diag', JSON.stringify(next));
+    (window as any).neoDfpDataDiag = next;
+  } catch {
+    // Diagnostics must never block login.
+  }
+}
+
 interface LoginModalProps {
   onLoginSuccess: (user: AuthUser, sessionToken: string) => void;
 }
@@ -28,25 +49,72 @@ export interface AuthUser {
 }
 
 export async function checkSession(token: string): Promise<AuthUser | null> {
+  const startedAt = performance.now();
+  pushAuthDiag('auth:session-check:start', {
+    endpoint: API_SESSION,
+    hasToken: Boolean(token),
+  });
   try {
     const res = await fetch(`${AUTH_SERVER}${API_SESSION}`, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
+    pushAuthDiag('auth:session-check:response', {
+      endpoint: API_SESSION,
+      durationMs: Math.round(performance.now() - startedAt),
+      status: res.status,
+      ok: res.ok,
+      contentType: res.headers.get('content-type') || '',
+    });
     if (!res.ok) return null;
+    const parseStartedAt = performance.now();
     const data = await res.json();
+    pushAuthDiag('auth:session-check:json', {
+      endpoint: API_SESSION,
+      durationMs: Math.round(performance.now() - startedAt),
+      parseDurationMs: Math.round(performance.now() - parseStartedAt),
+      hasUser: Boolean(data?.user),
+      userId: data?.user?.userId || data?.user?.id || null,
+    });
     return data.user || null;
-  } catch {
+  } catch (error) {
+    pushAuthDiag('auth:session-check:error', {
+      endpoint: API_SESSION,
+      durationMs: Math.round(performance.now() - startedAt),
+      error: String(error),
+    });
     return null;
   }
 }
 
 export async function loginUser(userId: string, password: string): Promise<{ user: AuthUser; sessionToken: string; mustChangePassword: boolean }> {
+  const startedAt = performance.now();
+  pushAuthDiag('auth:login:start', {
+    endpoint: API_LOGIN,
+    userId,
+  });
   const res = await fetch(`${AUTH_SERVER}${API_LOGIN}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, password }),
   });
+  pushAuthDiag('auth:login:response', {
+    endpoint: API_LOGIN,
+    durationMs: Math.round(performance.now() - startedAt),
+    status: res.status,
+    ok: res.ok,
+    contentType: res.headers.get('content-type') || '',
+  });
+  const parseStartedAt = performance.now();
   const data = await res.json();
+  pushAuthDiag('auth:login:json', {
+    endpoint: API_LOGIN,
+    durationMs: Math.round(performance.now() - startedAt),
+    parseDurationMs: Math.round(performance.now() - parseStartedAt),
+    ok: res.ok,
+    hasUser: Boolean(data?.user),
+    userId: data?.user?.userId || data?.user?.id || userId,
+    mustChangePassword: Boolean(data?.mustChangePassword),
+  });
   if (!res.ok) throw new Error(data.message || 'Login failed');
   return data;
 }

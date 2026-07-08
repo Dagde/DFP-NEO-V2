@@ -21300,19 +21300,41 @@ const App: React.FC = () => {
     useEffect(() => {
         let cancelled = false;
         const loadPlatformConfig = async () => {
-            const config = applyDefaultUnitTraineeAvailability(
-                setupTestProfile ? readSetupTestPlatformConfig() : await loadPlatformConfigFromDB()
-            );
-            if (cancelled) return;
-            setPlatformConfig(config);
-            setPlatformConfigLoaded(true);
-            if (config) {
-                console.log('[PlatformConfig] Loaded stage-two read context:', {
-                    setupTestProfile: setupTestProfile || null,
-                    locations: config.locations.length,
-                    units: config.units.length,
-                    resourcePools: config.resourcePools.length,
+            const startedAt = performance.now();
+            pushDfpDataDiag('startup:platform-config:start', {
+                setupTestProfile: setupTestProfile || null,
+            });
+            try {
+                const config = applyDefaultUnitTraineeAvailability(
+                    setupTestProfile ? readSetupTestPlatformConfig() : await loadPlatformConfigFromDB()
+                );
+                if (cancelled) return;
+                setPlatformConfig(config);
+                setPlatformConfigLoaded(true);
+                pushDfpDataDiag('startup:platform-config:end', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                    foundConfig: Boolean(config),
+                    locations: config?.locations?.length || 0,
+                    units: config?.units?.length || 0,
+                    resourcePools: config?.resourcePools?.length || 0,
+                    aircraftTypes: config?.aircraftTypes?.length || 0,
                 });
+                if (config) {
+                    console.log('[PlatformConfig] Loaded stage-two read context:', {
+                        setupTestProfile: setupTestProfile || null,
+                        locations: config.locations.length,
+                        units: config.units.length,
+                        resourcePools: config.resourcePools.length,
+                    });
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    pushDfpDataDiag('startup:platform-config:error', {
+                        durationMs: Math.round(performance.now() - startedAt),
+                        error: String(error),
+                    });
+                    setPlatformConfigLoaded(true);
+                }
             }
         };
         loadPlatformConfig();
@@ -22310,6 +22332,7 @@ const App: React.FC = () => {
 
     // Fetch the logged-in user's military rank from Personnel table and update audit logger
     const fetchAndSetAuditUser = async (firstName: string | null, lastName: string | null, displayName?: string) => {
+        const startedAt = performance.now();
         const formattedName = lastName && firstName
             ? `${lastName}, ${firstName}`
             : displayName || lastName || firstName || 'Unknown User';
@@ -22317,9 +22340,20 @@ const App: React.FC = () => {
         let rank = '';
         try {
             const searchName = lastName || firstName || '';
+            pushDfpDataDiag('startup:audit-user-rank:start', {
+                formattedName,
+                searchName,
+            });
             if (searchName) {
+                const fetchStartedAt = performance.now();
                 const res = await fetch(`/api/personnel?search=${encodeURIComponent(searchName)}`, {
                     credentials: 'include',
+                });
+                pushDfpDataDiag('startup:audit-user-rank:response', {
+                    durationMs: Math.round(performance.now() - fetchStartedAt),
+                    status: res.status,
+                    ok: res.ok,
+                    contentType: res.headers.get('content-type') || '',
                 });
                 if (res.ok) {
                     const data = await res.json();
@@ -22336,11 +22370,21 @@ const App: React.FC = () => {
             }
         } catch (e) {
             console.warn('[AUDIT] Could not fetch rank from Personnel:', e);
+            pushDfpDataDiag('startup:audit-user-rank:error', {
+                durationMs: Math.round(performance.now() - startedAt),
+                error: String(e),
+            });
         }
 
         const auditUserString = rank ? `${rank} ${formattedName}` : formattedName;
         setCurrentUser(auditUserString);
         console.log('[AUDIT] setCurrentUser ->', auditUserString);
+        pushDfpDataDiag('startup:audit-user-rank:end', {
+            durationMs: Math.round(performance.now() - startedAt),
+            formattedName,
+            rank: rank || null,
+            auditUserString,
+        });
 
         // Feed the real rank back into sessionUser so the bottom-right display shows correct rank
         if (rank) {
@@ -22352,6 +22396,14 @@ const App: React.FC = () => {
     // Check for existing session on app load
     useEffect(() => {
         const checkExistingSession = async () => {
+            const startedAt = performance.now();
+            pushDfpDataDiag('startup:auth-session:start', {
+                setupTestProfile: setupTestProfile || null,
+                hasSsoUser: Boolean(localStorage.getItem('dfp_sso_user')),
+                hasStoredToken: Boolean(localStorage.getItem('dfp_session_token')),
+            });
+            let authenticatedFromStoredSession = false;
+            let authSource = 'none';
             if (setupTestProfile) {
                 const setupUser: AuthUser = {
                     userId: `setup-test-${setupTestProfile}`,
@@ -22378,6 +22430,11 @@ const App: React.FC = () => {
                     username: setupUser.username,
                 });
                 setAuthLoading(false);
+                pushDfpDataDiag('startup:auth-session:end', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                    source: 'setup-test',
+                    authenticated: true,
+                });
                 return;
             }
 
@@ -22403,6 +22460,8 @@ const App: React.FC = () => {
                         });
                         setAuthSessionToken(localStorage.getItem('dfp_session_token') || '');
                         setIsAuthenticated(true);
+                        authenticatedFromStoredSession = true;
+                        authSource = 'sso-local-storage';
                         setAuthLoading(false);
                         // Update currentUserName from SSO user
                         if (ssoUser.lastName && ssoUser.firstName) {
@@ -22423,18 +22482,36 @@ const App: React.FC = () => {
                         });
                         // Set correct user for audit logging
                         fetchAndSetAuditUser(ssoUser.firstName || null, ssoUser.lastName || null, ssoUser.displayName);
+                        pushDfpDataDiag('startup:auth-session:end', {
+                            durationMs: Math.round(performance.now() - startedAt),
+                            source: 'sso-local-storage',
+                            authenticated: true,
+                            userId: ssoUser.userId,
+                        });
                         return; // Exit early - SSO user authenticated
                     }
                 } catch (e) {
                     console.error('[SSO] Failed to parse SSO user data:', e);
+                    pushDfpDataDiag('startup:auth-session:sso-parse-error', {
+                        durationMs: Math.round(performance.now() - startedAt),
+                        error: String(e),
+                    });
                 }
             }
 
             // SECOND: Check for regular session token
             const storedToken = localStorage.getItem('dfp_session_token');
             if (storedToken) {
+                authSource = 'stored-token';
+                const checkStartedAt = performance.now();
                 const user = await checkSession(storedToken);
+                pushDfpDataDiag('startup:auth-session:token-check-response', {
+                    durationMs: Math.round(performance.now() - checkStartedAt),
+                    authenticated: Boolean(user),
+                    userId: user?.userId || null,
+                });
                 if (user) {
+                    authenticatedFromStoredSession = true;
                     setAuthUser(user);
                     setAuthSessionToken(storedToken);
                     setIsAuthenticated(true);
@@ -22464,11 +22541,21 @@ const App: React.FC = () => {
                 }
             }
             setAuthLoading(false);
+            pushDfpDataDiag('startup:auth-session:end', {
+                durationMs: Math.round(performance.now() - startedAt),
+                source: authSource,
+                authenticated: authenticatedFromStoredSession,
+            });
         };
         checkExistingSession();
     }, [setupTestProfile]);
 
     const handleLoginSuccess = (user: AuthUser, token: string) => {
+        pushDfpDataDiag('startup:login-success-handler:start', {
+            userId: user.userId,
+            role: user.role,
+            mustChangePassword: user.mustChangePassword,
+        });
         setAuthUser(user);
         setAuthSessionToken(token);
         setIsAuthenticated(true);
@@ -22492,6 +22579,9 @@ const App: React.FC = () => {
         if (user.mustChangePassword) {
             setShowChangePassword(true);
         }
+        pushDfpDataDiag('startup:login-success-handler:end', {
+            userId: user.userId,
+        });
     };
 
     const handleLogout = async () => {
@@ -22636,8 +22726,12 @@ const App: React.FC = () => {
     }, [platformDataScopeQuery]);
 
     function pushDfpDataDiag(stage: string, details: Record<string, any> = {}): void {
+        const perfNow = typeof performance !== 'undefined' && typeof performance.now === 'function'
+            ? Math.round(performance.now())
+            : null;
         const entry = {
             ts: new Date().toISOString(),
+            perfMs: perfNow,
             stage,
             date,
             school,
@@ -22648,7 +22742,7 @@ const App: React.FC = () => {
         try {
             console.log(`[DFP-DIAG] ${stage}`, entry);
             const existing = JSON.parse(localStorage.getItem('neo_dfp_data_diag') || '[]');
-            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-50);
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-300);
             localStorage.setItem('neo_dfp_data_diag', JSON.stringify(next));
             (window as any).neoDfpDataDiag = next;
         } catch (error) {
@@ -23017,8 +23111,12 @@ const App: React.FC = () => {
 // Load syllabus from DB on mount — DB only, no mock data fallback
     useEffect(() => {
         const loadSyllabus = async () => {
+            const startedAt = performance.now();
             setSyllabusLoading(true);
             setSyllabusError(null);
+            pushDfpDataDiag('startup:syllabus:start', {
+                setupTestProfile: setupTestProfile || null,
+            });
             try {
                 if (setupTestProfile) {
                     const setupSyllabus = readSetupTestSyllabus();
@@ -23041,6 +23139,11 @@ const App: React.FC = () => {
                     setSyllabusDetails(setupSyllabus as SyllabusItemDetail[]);
                     setSyllabusError(null);
                     console.log(`✅ [Syllabus] Loaded ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
+                    pushDfpDataDiag('startup:syllabus:end', {
+                        durationMs: Math.round(performance.now() - startedAt),
+                        source: 'setup-test',
+                        count: setupSyllabus.length,
+                    });
                     return;
                 }
                 const result = await loadSyllabusFromDB();
@@ -23057,11 +23160,21 @@ const App: React.FC = () => {
                     setSyllabusDetails([]);
                     setSyllabusError(result.error || 'No syllabus items in database');
                 }
+                pushDfpDataDiag('startup:syllabus:end', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                    source: result.source,
+                    count: result.syllabus.length,
+                    error: result.error || null,
+                });
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Unknown error';
                 console.error('❌ [Syllabus] Failed to load syllabus:', msg);
                 setSyllabusDetails([]);
                 setSyllabusError(msg);
+                pushDfpDataDiag('startup:syllabus:error', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                    error: msg,
+                });
             } finally {
                 setSyllabusLoading(false);
             }
@@ -23094,6 +23207,15 @@ const App: React.FC = () => {
         }
 
         const loadInitialData = async () => {
+            const startedAt = performance.now();
+            pushDfpDataDiag('startup:initial-data:start', {
+                setupTestProfile: setupTestProfile || null,
+                platformConfigLoaded,
+                activeOperationalModel,
+                activeUnitCode,
+                school,
+                syllabusItemsAtStart: syllabusDetails.length,
+            });
             try {
                 if (setupTestProfile) {
                     const setupPersonnel = readSetupTestPersonnel();
@@ -23140,10 +23262,27 @@ const App: React.FC = () => {
                         return next;
                     });
                     setIsCoursesLoaded(true);
+                    pushDfpDataDiag('startup:initial-data:end', {
+                        durationMs: Math.round(performance.now() - startedAt),
+                        source: 'setup-test',
+                        instructors: normalisedInstructors.length,
+                        trainees: normalisedTrainees.length,
+                        courses: setupCourseNames.length,
+                    });
                     return;
                 }
+                const initializeStartedAt = performance.now();
                 const data = await initializeData();
+                pushDfpDataDiag('startup:initial-data:initializeData-end', {
+                    durationMs: Math.round(performance.now() - initializeStartedAt),
+                    instructors: data.instructors?.length || 0,
+                    trainees: data.trainees?.length || 0,
+                    events: data.events?.length || 0,
+                    scores: Object.keys(data.scores || {}).length,
+                    courses: data.courses?.length || 0,
+                });
 
+                const stateSeedStartedAt = performance.now();
                 const normalisedInstructors = (data.instructors || []).map(normalisePersonnelRecord);
                 const legacyFixedCrewRoles = (data.instructors || []).filter((person: any) => (
                     (person as any)?._dataSource === 'database'
@@ -23193,6 +23332,14 @@ const App: React.FC = () => {
                     setIsCoursesLoaded(true);
                     console.log('🎓 No courses in DB yet - keeping existing course state');
                 }
+                pushDfpDataDiag('startup:initial-data:state-seeded', {
+                    durationMs: Math.round(performance.now() - stateSeedStartedAt),
+                    normalisedInstructors: normalisedInstructors.length,
+                    trainees: data.trainees?.length || 0,
+                    events: data.events?.length || 0,
+                    courses: data.courses?.length || 0,
+                    legacyRoleMigrationsQueued: legacyFixedCrewRoles.length,
+                });
 
                 // --- Individual LMP Sync ---
                 // For each trainee, read authoritative TraineePerformance PT-051
@@ -23203,6 +23350,7 @@ const App: React.FC = () => {
                 // Always run sync unconditionally — server reads TraineePerformance directly from DB.
                 {
                     console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads TraineePerformance from DB)...`);
+                    const lmpSyncStartedAt = performance.now();
                     try {
                         // Build syllabusData payload — master syllabus split by lmpType
                         // The backend has no knowledge of syllabus structure, so we send it from the frontend.
@@ -23219,20 +23367,44 @@ const App: React.FC = () => {
                         };
 
                         const apiBase = getAppApiBase();
+                        pushDfpDataDiag('startup:lmp-sync:start', {
+                            apiBase,
+                            syllabusItems: syllabusDetails.length,
+                            assignableSyllabusItems: assignableSyncSyllabus.length,
+                            bpcIpcItems: bpcIpcSyllabus.length,
+                            ficItems: ficSyllabus.length,
+                            trainees: data.trainees?.length || 0,
+                        });
 
                         const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ syllabusData }),
                         });
+                        pushDfpDataDiag('startup:lmp-sync:post-response', {
+                            durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+                            status: syncRes.status,
+                            ok: syncRes.ok,
+                            contentType: syncRes.headers.get('content-type') || '',
+                        });
 
                         if (syncRes.ok) {
                             const syncData = await syncRes.json();
                             console.log(`[LMP Sync] ✅ Backend sync complete:`, syncData.summary);
+                            pushDfpDataDiag('startup:lmp-sync:post-json', {
+                                durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+                                summary: syncData.summary || null,
+                            });
 
                             // Now load back completed event IDs from DB LMPs into scores state
                             // so computeNextEventsForTrainee knows which events are done
                             const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync?includeEvents=true`);
+                            pushDfpDataDiag('startup:lmp-sync:get-response', {
+                                durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+                                status: lmpRes.status,
+                                ok: lmpRes.ok,
+                                contentType: lmpRes.headers.get('content-type') || '',
+                            });
                             if (lmpRes.ok) {
                                 const lmpData = await lmpRes.json();
                                 const lmps = lmpData.lmps as Array<{
@@ -23241,6 +23413,11 @@ const App: React.FC = () => {
                                     events?: SyllabusItemDetail[];
                                     completedEventIds: string[];
                                 }>;
+                                pushDfpDataDiag('startup:lmp-sync:get-json', {
+                                    durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+                                    lmpCount: lmps?.length || 0,
+                                    completedEventTotal: (lmps || []).reduce((total, lmp) => total + (lmp.completedEventIds?.length || 0), 0),
+                                });
 
                                 if (lmps && lmps.length > 0) {
                                     // Update both scores state and traineeLMPs state with completion status
@@ -23321,6 +23498,10 @@ const App: React.FC = () => {
                             }
                         } else {
                             console.warn('[LMP Sync] Backend sync failed, falling back to direct DB scores...');
+                            pushDfpDataDiag('startup:lmp-sync:post-failed', {
+                                durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+                                status: syncRes.status,
+                            });
                             // Fallback: directly apply DB PT-051 scores to state
                             // Apply BIF FTD dependency rules so BIF FTD1/BIF FTD3 show as complete
                             setScores(prev => {
@@ -23344,6 +23525,10 @@ const App: React.FC = () => {
                         }
                     } catch (syncErr) {
                         console.warn('[LMP Sync] Sync error, falling back to direct DB scores:', syncErr);
+                        pushDfpDataDiag('startup:lmp-sync:error', {
+                            durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+                            error: String(syncErr),
+                        });
                         // Fallback: directly apply DB PT-051 scores to state
                         // Apply BIF FTD dependency rules so BIF FTD1/BIF FTD3 show as complete
                         setScores(prev => {
@@ -23365,6 +23550,9 @@ const App: React.FC = () => {
                             return merged;
                         });
                     }
+                    pushDfpDataDiag('startup:lmp-sync:end', {
+                        durationMs: Math.round(performance.now() - lmpSyncStartedAt),
+                    });
                 }
 
                 // Initialize Individual LMPs for all DB trainees on load
@@ -23572,8 +23760,21 @@ const App: React.FC = () => {
                 }
 
                 console.log('✅ State updated successfully');
+                pushDfpDataDiag('startup:initial-data:end', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                    source: 'database',
+                    instructors: data.instructors?.length || 0,
+                    trainees: data.trainees?.length || 0,
+                    events: data.events?.length || 0,
+                    courses: data.courses?.length || 0,
+                    syllabusItems: syllabusDetails.length,
+                });
             } catch (error) {
                 console.error('❌ Failed to load initial data:', error);
+                pushDfpDataDiag('startup:initial-data:error', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                    error: String(error),
+                });
             }
         };
         loadInitialData();
@@ -23646,6 +23847,7 @@ const App: React.FC = () => {
         const requestedSchool = school;
         const requestedUnit = activeUnitCode;
         const loadHistoricalData = async () => {
+            const startedAt = performance.now();
             try {
                 const apiBase = getAppApiBase();
                 pushDfpDataDiag('history:load-start', {
@@ -23659,18 +23861,23 @@ const App: React.FC = () => {
                 // ── PRIMARY: Load last 5 days of real DailySnapshots ──────────────
                 try {
                     const dailySnapshotUrl = `${apiBase}/daily-snapshot?school=${requestedSchool}&unit=${encodeURIComponent(requestedUnit)}`;
+                    const dailySnapshotStartedAt = performance.now();
                     const snapRes = await fetch(dailySnapshotUrl);
                     if (cancelled) return;
                     pushDfpDataDiag('history:daily-snapshot-response', {
                         url: dailySnapshotUrl,
+                        durationMs: Math.round(performance.now() - dailySnapshotStartedAt),
                         status: snapRes.status,
                         ok: snapRes.ok,
+                        contentType: snapRes.headers.get('content-type') || '',
                     });
                     if (snapRes.ok) {
+                        const parseStartedAt = performance.now();
                         const snapData = await snapRes.json();
                         if (cancelled) return;
                         const snapshots: any[] = snapData.snapshots || [];
                         pushDfpDataDiag('history:daily-snapshot-json', {
+                            parseDurationMs: Math.round(performance.now() - parseStartedAt),
                             snapshotCount: snapshots.length,
                             snapshots: snapshots.slice(0, 20).map((snap) => ({
                                 key: snap.date,
@@ -23738,18 +23945,26 @@ const App: React.FC = () => {
                     }
                 } catch (snapErr) {
                     console.warn('[Snapshot] Could not load daily snapshots:', snapErr);
+                    pushDfpDataDiag('history:daily-snapshot-error', {
+                        durationMs: Math.round(performance.now() - startedAt),
+                        error: String(snapErr),
+                    });
                 }
 
                 // ── SECONDARY: Legacy DataBackup historical-data (seed data, fallback) ──
                 const historicalUrl = `${apiBase}/historical-data`;
+                const historicalStartedAt = performance.now();
                 const res = await fetch(historicalUrl);
                 if (cancelled) return;
                 pushDfpDataDiag('history:legacy-response', {
                     url: historicalUrl,
+                    durationMs: Math.round(performance.now() - historicalStartedAt),
                     status: res.status,
                     ok: res.ok,
+                    contentType: res.headers.get('content-type') || '',
                 });
                 if (!res.ok) return;
+                const historicalParseStartedAt = performance.now();
                 const data = await res.json();
                 if (cancelled) return;
 
@@ -23757,6 +23972,7 @@ const App: React.FC = () => {
                     const seedSchedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
                     const eventCount = Object.values(seedSchedules).flat().length;
                     pushDfpDataDiag('history:legacy-json', {
+                        parseDurationMs: Math.round(performance.now() - historicalParseStartedAt),
                         dateCount: Object.keys(seedSchedules).length,
                         eventCount,
                         dates: Object.entries(seedSchedules).slice(0, 60).map(([dateKey, seedEvents]) => ({
@@ -23797,9 +24013,20 @@ const App: React.FC = () => {
                     const persistedAssessments: Pt051Assessment[] = [];
                     const pageSize = 2000;
                     let offset = 0;
+                    const performanceStartedAt = performance.now();
 
                     while (!cancelled) {
-                        const perfRes = await fetch(`${apiBase}/trainee-performance?limit=${pageSize}&offset=${offset}`);
+                        const pageStartedAt = performance.now();
+                        const performanceUrl = `${apiBase}/trainee-performance?limit=${pageSize}&offset=${offset}`;
+                        const perfRes = await fetch(performanceUrl);
+                        pushDfpDataDiag('history:trainee-performance-response', {
+                            url: performanceUrl,
+                            offset,
+                            durationMs: Math.round(performance.now() - pageStartedAt),
+                            status: perfRes.status,
+                            ok: perfRes.ok,
+                            contentType: perfRes.headers.get('content-type') || '',
+                        });
                         if (!perfRes.ok) {
                             console.warn('[PT051] Could not load persisted trainee performance records:', await perfRes.text());
                             break;
@@ -23812,6 +24039,11 @@ const App: React.FC = () => {
                         if (page.length < pageSize) break;
                         offset += pageSize;
                     }
+                    pushDfpDataDiag('history:trainee-performance:end', {
+                        durationMs: Math.round(performance.now() - performanceStartedAt),
+                        persistedAssessments: persistedAssessments.length,
+                        pages: Math.floor(offset / pageSize) + 1,
+                    });
 
                     if (!cancelled && persistedAssessments.length > 0) {
                         console.log(`[PT051] ✅ Loaded ${persistedAssessments.length} persisted trainee performance records`);
@@ -23827,6 +24059,10 @@ const App: React.FC = () => {
                     }
                 } catch (perfErr) {
                     console.warn('[PT051] Could not load persisted trainee performance records:', perfErr);
+                    pushDfpDataDiag('history:trainee-performance:error', {
+                        durationMs: Math.round(performance.now() - startedAt),
+                        error: String(perfErr),
+                    });
                 } finally {
                     if (!cancelled) setPt051PerformanceLoading(false);
                 }
@@ -23834,8 +24070,15 @@ const App: React.FC = () => {
                 if (data.seedingMetadata) {
                     console.log(`[Historical] Seeded at: ${data.seedingMetadata.seededAt}, courses: ${(data.seedingMetadata.coursesSeeded || []).join(', ')}`);
                 }
+                pushDfpDataDiag('history:load-end', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                });
             } catch (error) {
                 console.warn('[Historical] Could not load historical data:', error);
+                pushDfpDataDiag('history:load-error', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                    error: String(error),
+                });
                 if (!cancelled) setPt051PerformanceLoading(false);
             }
         };
@@ -23856,19 +24099,28 @@ const App: React.FC = () => {
             return;
         }
         const loadSnapshotDates = async () => {
+            const startedAt = performance.now();
             try {
                 const apiBase = getAppApiBase();
                 const snapshotDatesUrl = `${apiBase}/daily-snapshot/dates`;
+                pushDfpDataDiag('snapshot-dates:start', {
+                    url: snapshotDatesUrl,
+                });
                 const res = await fetch(snapshotDatesUrl);
                 pushDfpDataDiag('snapshot-dates:response', {
                     url: snapshotDatesUrl,
+                    durationMs: Math.round(performance.now() - startedAt),
                     status: res.status,
                     ok: res.ok,
+                    contentType: res.headers.get('content-type') || '',
                 });
                 if (!res.ok) return;
+                const parseStartedAt = performance.now();
                 const data = await res.json();
                 const dates: string[] = [...new Set((data.dates || []).map((d: any) => d.date))] as string[];
                 pushDfpDataDiag('snapshot-dates:json', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                    parseDurationMs: Math.round(performance.now() - parseStartedAt),
                     count: dates.length,
                     dates: dates.slice(0, 80),
                     rawRows: (data.dates || []).slice(0, 30),
@@ -23880,6 +24132,10 @@ const App: React.FC = () => {
                 ));
             } catch (err) {
                 console.warn('[Snapshot] Could not load snapshot dates:', err);
+                pushDfpDataDiag('snapshot-dates:error', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                    error: String(err),
+                });
             }
         };
         loadSnapshotDates();
@@ -23970,6 +24226,7 @@ const App: React.FC = () => {
         targetDate: string,
         options: { force?: boolean; replace?: boolean; schoolOverride?: string; unitOverride?: string; useCache?: boolean } = {}
     ) => {
+        const loadStartedAt = performance.now();
         const { force = false, replace = false, schoolOverride, unitOverride, useCache = true } = options;
         const snapshotSchool = schoolOverride ?? school;
         const snapshotUnit = unitOverride ?? activeUnitCode;
@@ -24037,6 +24294,7 @@ const App: React.FC = () => {
             let lastError: unknown = null;
 
             for (let attempt = 0; attempt < retryDelays.length; attempt++) {
+                const attemptStartedAt = performance.now();
                 const delay = retryDelays[attempt];
                 if (delay > 0) {
                     setDfpSnapshotLoadState({
@@ -24064,6 +24322,15 @@ const App: React.FC = () => {
 
                     let res: Response | null = null;
                     let resolvedSnapshotKey = snapshotKey;
+                    pushDfpDataDiag('snapshot:attempt-start', {
+                        targetDate,
+                        snapshotKey,
+                        attempt: attempt + 1,
+                        retryDelayMs: delay,
+                        candidateCount: candidateKeys.length,
+                        candidateKeys,
+                        elapsedMs: Math.round(performance.now() - loadStartedAt),
+                    });
                     for (const [candidateIndex, candidateKey] of candidateKeys.entries()) {
                         const progress = Math.min(82, 18 + Math.round((candidateIndex / Math.max(candidateKeys.length, 1)) * 56));
                         setDfpSnapshotLoadState({
@@ -24073,6 +24340,7 @@ const App: React.FC = () => {
                             progress
                         });
                         const candidateUrl = `${apiBase}/daily-snapshot/${encodeURIComponent(candidateKey)}`;
+                        const candidateStartedAt = performance.now();
                         const candidateRes = await fetch(candidateUrl);
                         pushDfpDataDiag('snapshot:fetch-response', {
                             kind: candidateKey === targetDate
@@ -24083,6 +24351,10 @@ const App: React.FC = () => {
                             url: candidateUrl,
                             candidateKey,
                             canonicalSnapshotKey: snapshotKey,
+                            attempt: attempt + 1,
+                            candidateIndex: candidateIndex + 1,
+                            durationMs: Math.round(performance.now() - candidateStartedAt),
+                            elapsedMs: Math.round(performance.now() - loadStartedAt),
                             status: candidateRes.status,
                             ok: candidateRes.ok,
                             contentType: candidateRes.headers.get('content-type') || '',
@@ -24119,6 +24391,7 @@ const App: React.FC = () => {
                             snapshotKey,
                             candidateKeys,
                             replace,
+                            durationMs: Math.round(performance.now() - loadStartedAt),
                         });
                         setDfpSnapshotLoadState({
                             status: 'empty',
@@ -24140,12 +24413,16 @@ const App: React.FC = () => {
                         message: 'Reading DFP data',
                         progress: 88
                     });
+                    const parseStartedAt = performance.now();
                     const data = await res.json();
+                    const jsonParsedAt = performance.now();
                     const snap = data.snapshot;
                     pushDfpDataDiag('snapshot:network-json', {
                         targetDate,
                         snapshotKey,
                         resolvedSnapshotKey,
+                        parseDurationMs: Math.round(jsonParsedAt - parseStartedAt),
+                        elapsedMs: Math.round(performance.now() - loadStartedAt),
                         snapKey: snap?.date,
                         eventCount: Array.isArray(snap?.scheduleEvents) ? snap.scheduleEvents.length : 0,
                         baselineCount: Array.isArray(snap?.baselineEvents) ? snap.baselineEvents.length : 0,
@@ -24163,9 +24440,18 @@ const App: React.FC = () => {
                         message: 'Applying DFP data',
                         progress: 94
                     });
+                    const applyStartedAt = performance.now();
                     const eventCount = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, snap, replace || shouldReplaceCachedEvents, 'network');
                     cacheDailySnapshot(snapshotKey, snap, targetDate);
                     loadedSnapshotDates.current.add(snapshotKey);
+                    pushDfpDataDiag('snapshot:load-success', {
+                        targetDate,
+                        snapshotKey,
+                        resolvedSnapshotKey,
+                        applyDurationMs: Math.round(performance.now() - applyStartedAt),
+                        durationMs: Math.round(performance.now() - loadStartedAt),
+                        eventCount,
+                    });
                     setDfpSnapshotLoadState({
                         status: 'loaded',
                         date: targetDate,
@@ -24177,6 +24463,14 @@ const App: React.FC = () => {
                     if ((err as Error & { nonRetryableSnapshotLoad?: boolean })?.nonRetryableSnapshotLoad) {
                         throw err;
                     }
+                    pushDfpDataDiag('snapshot:attempt-error', {
+                        targetDate,
+                        snapshotKey,
+                        attempt: attempt + 1,
+                        attemptDurationMs: Math.round(performance.now() - attemptStartedAt),
+                        elapsedMs: Math.round(performance.now() - loadStartedAt),
+                        error: String(err),
+                    });
                     lastError = err;
                 }
             }
@@ -24188,6 +24482,12 @@ const App: React.FC = () => {
                 date: targetDate,
                 message: 'DFP did not load. Check connection or retry.',
                 progress: 100
+            });
+            pushDfpDataDiag('snapshot:load-error', {
+                targetDate,
+                snapshotKey,
+                durationMs: Math.round(performance.now() - loadStartedAt),
+                error: String(err),
             });
             console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
         } finally {
@@ -25878,9 +26178,18 @@ const App: React.FC = () => {
 
     useEffect(() => {
         const loadSettings = async () => {
+            const startedAt = performance.now();
+            pushDfpDataDiag('startup:settings:start', {
+                activeUnitCode,
+                school,
+            });
             try {
                 const saved = await loadSettingsFromDB();
                 if (!saved) {
+                    pushDfpDataDiag('startup:settings:end', {
+                        durationMs: Math.round(performance.now() - startedAt),
+                        foundSettings: false,
+                    });
                     setSettingsLoaded(true);
                     return;
                 }
@@ -26126,12 +26435,30 @@ const App: React.FC = () => {
                 }
 
                 console.log('[Settings] ✅ All settings restored from DB');
+                pushDfpDataDiag('startup:settings:end', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                    foundSettings: true,
+                    locations: saved.locations?.length || 0,
+                    units: saved.units?.length || 0,
+                    coursePriorities: saved.coursePriorities?.length || 0,
+                    formationCallsigns: saved.formationCallsigns?.length || 0,
+                    cancellationCodes: saved.cancellationCodes?.length || 0,
+                    masterCurrencies: saved.masterCurrencies?.length || 0,
+                    currencyRequirements: saved.currencyRequirements?.length || 0,
+                });
             } catch (error) {
                 console.error('[Settings] ❌ Failed to load settings from DB:', error);
                 pushContextSelectorDiag('settings:load-error', { error: String(error) });
+                pushDfpDataDiag('startup:settings:error', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                    error: String(error),
+                });
             } finally {
                 console.log('[App] 🏁 Setting settingsLoaded = true');
                 pushContextSelectorDiag('settings:loaded-flag-true');
+                pushDfpDataDiag('startup:settings:loaded-flag-true', {
+                    durationMs: Math.round(performance.now() - startedAt),
+                });
                 setSettingsLoaded(true);
             }
         };

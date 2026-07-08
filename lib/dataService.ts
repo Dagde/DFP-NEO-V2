@@ -5,6 +5,26 @@ import { fetchInstructors, fetchTrainees, fetchAircraft, fetchScores, fetchSched
 import { ESL_DATA, PEA_DATA } from '../mockData';
 import { assignTraineesToInstructors } from './traineeAssignmentService';
 
+function pushDataServiceDiag(stage: string, details: Record<string, any> = {}): void {
+  const perfMs = typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? Math.round(performance.now())
+    : null;
+  const entry = {
+    ts: new Date().toISOString(),
+    perfMs,
+    stage,
+    details,
+  };
+  try {
+    console.log(`[DFP-DIAG] ${stage}`, entry);
+    const existing = JSON.parse(localStorage.getItem('neo_dfp_data_diag') || '[]');
+    const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-300);
+    localStorage.setItem('neo_dfp_data_diag', JSON.stringify(next));
+    (window as any).neoDfpDataDiag = next;
+  } catch {
+    // Diagnostics must never interrupt app startup.
+  }
+}
 
 // Merge database instructors with mock data, deduplicating by idNumber
 // Adds _dataSource field to track origin ('database' or 'mockdata')
@@ -209,6 +229,8 @@ function mergeTraineeData(dbTrainees: any[], mockTrainees: any[], includeMockDat
 
 export async function initializeData() {
   console.log('🔧 initializeData() v3.0 - Starting data initialization (DB-only, no mock data)');
+  const initializeStartedAt = performance.now();
+  pushDataServiceDiag('startup:data-service:start');
   
     // PERMANENT FIX: Mock data is NEVER loaded at startup regardless of localStorage settings.
     // The UI DataSourcesSettings toggles only affect the instructorsData/traineesData useMemo
@@ -230,7 +252,12 @@ export async function initializeData() {
          // Filtering is handled in App.tsx UI layer, not here at load time
          // This ensures toggling ON after app load shows data correctly
          console.log('👨‍🏫 Fetching instructors from API...');
+         const instructorsStartedAt = performance.now();
          const allPersonnel = await fetchInstructors();
+         pushDataServiceDiag('startup:data-service:instructors', {
+           durationMs: Math.round(performance.now() - instructorsStartedAt),
+           count: Array.isArray(allPersonnel) ? allPersonnel.length : 0,
+         });
          instructors = allPersonnel;
          console.log('✅ Staff DB loaded:', instructors.length, 'personnel records');
          allPersonnel.forEach((inst: any) => {
@@ -247,7 +274,12 @@ export async function initializeData() {
          // Fetch trainees - ALWAYS load all data regardless of toggle settings
          // Filtering is handled in App.tsx UI layer, not here at load time
          console.log('👨‍🎓 Fetching trainees from API...');
+         const traineesStartedAt = performance.now();
          trainees = await fetchTrainees();
+         pushDataServiceDiag('startup:data-service:trainees', {
+           durationMs: Math.round(performance.now() - traineesStartedAt),
+           count: Array.isArray(trainees) ? trainees.length : 0,
+         });
          console.log('✅ Trainee DB loaded:', trainees.length);
 
          // DB-only: tag all trainees with _dataSource: 'database'
@@ -259,8 +291,15 @@ export async function initializeData() {
        // This ensures all instructors have minimum 2 primary and 2 secondary trainees
        try {
        console.log('\ud83d\udd27 Applying trainee assignment logic...');
+       const assignmentStartedAt = performance.now();
        const assignmentResult = assignTraineesToInstructors(trainees, instructors);
        trainees = assignmentResult.trainees;
+       pushDataServiceDiag('startup:data-service:trainee-assignment', {
+         durationMs: Math.round(performance.now() - assignmentStartedAt),
+         traineeCount: trainees.length,
+         instructorCount: instructors.length,
+         summary: assignmentResult.summary,
+       });
        console.log('\u2705 Trainee assignment complete');
        console.log('\ud83d\udcca Assignment Summary:', assignmentResult.summary);
        } catch (error) {
@@ -271,22 +310,42 @@ export async function initializeData() {
    
     // Fetch aircraft
     console.log('✈️ Fetching aircraft from API...');
+    const aircraftStartedAt = performance.now();
     aircraft = await fetchAircraft();
+    pushDataServiceDiag('startup:data-service:aircraft', {
+      durationMs: Math.round(performance.now() - aircraftStartedAt),
+      count: Array.isArray(aircraft) ? aircraft.length : 0,
+    });
     console.log('✅ Aircraft loaded:', aircraft.length);
     
     // Fetch scores
     console.log('📊 Fetching scores from API...');
+    const scoresStartedAt = performance.now();
     scores = await fetchScores();
+    pushDataServiceDiag('startup:data-service:scores', {
+      durationMs: Math.round(performance.now() - scoresStartedAt),
+      traineeCount: scores ? Object.keys(scores).length : 0,
+    });
     console.log('✅ Scores loaded:', Object.keys(scores).length, 'trainees with scores');
     
     // Fetch schedule
     console.log('📅 Fetching schedule from API...');
+    const scheduleStartedAt = performance.now();
     events = await fetchSchedule();
+    pushDataServiceDiag('startup:data-service:schedule', {
+      durationMs: Math.round(performance.now() - scheduleStartedAt),
+      count: Array.isArray(events) ? events.length : 0,
+    });
     console.log('✅ Schedule loaded:', events.length);
 
     // Fetch courses
     console.log('🎓 Fetching courses from API...');
+    const coursesStartedAt = performance.now();
     const courses = await fetchCourses();
+    pushDataServiceDiag('startup:data-service:courses', {
+      durationMs: Math.round(performance.now() - coursesStartedAt),
+      count: Array.isArray(courses) ? courses.length : 0,
+    });
     console.log('✅ Courses loaded:', courses.length);
     
     // PERMANENT: Never fall back to mock data - if API returns nothing, use empty arrays.
@@ -312,6 +371,15 @@ export async function initializeData() {
       events: events.length,
       courses: courses.length,
     });
+    pushDataServiceDiag('startup:data-service:end', {
+      durationMs: Math.round(performance.now() - initializeStartedAt),
+      instructors: instructors.length,
+      trainees: trainees.length,
+      aircraft: aircraft.length,
+      scores: Object.keys(scores).length,
+      events: events.length,
+      courses: courses.length,
+    });
     
     return {
       instructors,
@@ -325,6 +393,10 @@ export async function initializeData() {
   } catch (error) {
     console.error('❌ Failed to load data from API:', error);
     console.log('⚠️ API error - returning empty data (no mock data fallback)');
+    pushDataServiceDiag('startup:data-service:error', {
+      durationMs: Math.round(performance.now() - initializeStartedAt),
+      error: String(error),
+    });
     
     // PERMANENT: Never fall back to mock data on API error.
     // Return empty arrays - the app will show no staff/trainees until DB connection is restored.
