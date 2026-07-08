@@ -101062,6 +101062,54 @@ const App = () => {
       return nextConfig;
     });
   }, [savePlatformConfigDebounced]);
+  const registerSetupTestCoursesFromTrainees = reactExports.useCallback((trainees) => {
+    const defaultColors = [
+      "bg-sky-400/80",
+      "bg-purple-400/80",
+      "bg-yellow-400/80",
+      "bg-pink-400/80",
+      "bg-orange-400/80",
+      "bg-teal-400/80",
+      "bg-indigo-400/80",
+      "bg-green-400/80",
+      "bg-red-400/80",
+      "bg-cyan-400/80"
+    ];
+    const courseNames = Array.from(new Set(
+      (trainees || []).map((trainee) => String(trainee?.course || "").trim()).filter(Boolean)
+    ));
+    if (courseNames.length === 0) return;
+    setCourseColors((prev) => {
+      const next = { ...prev };
+      courseNames.forEach((courseName, index) => {
+        if (!next[courseName]) next[courseName] = defaultColors[(Object.keys(next).length + index) % defaultColors.length];
+      });
+      return next;
+    });
+    setCourses((prevCourses) => {
+      const seen = new Set(prevCourses.map((course) => normaliseCourseName(course.name || course.code)).filter(Boolean));
+      const nextCourses = [...prevCourses];
+      courseNames.forEach((courseName, index) => {
+        const normalisedName = normaliseCourseName(courseName);
+        if (!normalisedName || seen.has(normalisedName)) return;
+        nextCourses.push({
+          id: `setup-course-${normalisedName.replace(/[^A-Z0-9]+/gi, "-")}`,
+          name: courseName,
+          color: defaultColors[(nextCourses.length + index) % defaultColors.length],
+          startDate: "",
+          gradDate: "",
+          raafStart: 0,
+          navyStart: 0,
+          armyStart: 0,
+          location: school,
+          unit: activeUnitCode,
+          status: "ACTIVE"
+        });
+        seen.add(normalisedName);
+      });
+      return nextCourses;
+    });
+  }, [activeUnitCode, normaliseCourseName, school]);
   const handleSaveSetupTestPersonnel = reactExports.useCallback((payload) => {
     if (!isSetupTestMode()) return;
     const existingPersonnel = readSetupTestPersonnel();
@@ -101112,10 +101160,11 @@ const App = () => {
     writeSetupTestPersonnel(nextInstructors, nextTrainees);
     setInstructorsData(nextInstructors);
     setTraineesData(nextTrainees);
+    registerSetupTestCoursesFromTrainees(nextTrainees);
     setIsStaffLoaded(true);
     setIsTraineeLoaded(true);
     setSuccessMessage(`Setup Wizard committed ${nextInstructors.length} staff profile${nextInstructors.length === 1 ? "" : "s"}${nextTrainees.length > 0 ? ` and ${nextTrainees.length} trainee profile${nextTrainees.length === 1 ? "" : "s"}` : ""} to this local test app.`);
-  }, [pushSetupTestPersonnelDiag]);
+  }, [pushSetupTestPersonnelDiag, registerSetupTestCoursesFromTrainees]);
   const handleSaveStandardMissionProfileFromPlanner = reactExports.useCallback((profileId, changes) => {
     const targetId = String(profileId || "").trim();
     if (!targetId) return;
@@ -109718,12 +109767,13 @@ ${conflictLines.join("\n")}${moreText}`,
       });
       setInstructorsData(nextInstructors);
       setTraineesData(nextTrainees);
+      registerSetupTestCoursesFromTrainees(nextTrainees);
       setIsStaffLoaded(true);
       setIsTraineeLoaded(true);
     };
     window.addEventListener(SETUP_TEST_PERSONNEL_EVENT, applySetupTestPersonnel);
     return () => window.removeEventListener(SETUP_TEST_PERSONNEL_EVENT, applySetupTestPersonnel);
-  }, [pushSetupTestPersonnelDiag, setupTestProfile]);
+  }, [pushSetupTestPersonnelDiag, registerSetupTestCoursesFromTrainees, setupTestProfile]);
   reactExports.useEffect(() => {
     if (!setupTestProfile) return;
     const applySetupTestSyllabus = () => {
