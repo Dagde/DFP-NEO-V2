@@ -14521,6 +14521,8 @@ const ScheduleView = ({
   const scrollContainerRef = reactExports.useRef(null);
   const [showDatePicker, setShowDatePicker] = reactExports.useState(false);
   const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = reactExports.useState(false);
+  const [flightLineDraggedAircraftNumber, setFlightLineDraggedAircraftNumber] = reactExports.useState(null);
+  const [isFlightLineUnavailableDropActive, setIsFlightLineUnavailableDropActive] = reactExports.useState(false);
   reactExports.useEffect(() => {
     if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
   }, [isNeoAssistPanelOpen]);
@@ -14541,11 +14543,18 @@ const ScheduleView = ({
     const prefix = numberSettings.usePrefix ? String(numberSettings.defaultPrefix || numberSettings.prefixes[0] || "").trim() : "";
     const configuredNumbers = Array.isArray(settings.aircraftInventoryNumbers) ? settings.aircraftInventoryNumbers.map((value) => String(value ?? "").trim()) : [];
     const numbers = Array.from({ length: aircraftCount }, (_, index) => configuredNumbers[index] || String(index + 1).padStart(3, "0"));
+    const sortedAircraftNumbers = (values) => [...values].sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
+    const numberSet = new Set(numbers);
+    const unavailableNumbers = sortedAircraftNumbers(Array.from(new Set((Array.isArray(settings.flightLineUnavailableAircraftNumbers) ? settings.flightLineUnavailableAircraftNumbers.map((value) => String(value ?? "").trim()) : []).filter((value) => value && numberSet.has(value)))));
+    const unavailableNumberSet = new Set(unavailableNumbers);
+    const availableNumbers = numbers.filter((number) => !unavailableNumberSet.has(number));
     return {
       poolIndex,
       aircraftCount,
       prefix,
-      numbers
+      numbers,
+      availableNumbers,
+      unavailableNumbers
     };
   }, [airframeCount, locationCode, platformConfig, unitCode]);
   const updateFlightLineAircraftNumber = reactExports.useCallback((aircraftIndex, value) => {
@@ -14570,14 +14579,39 @@ const ScheduleView = ({
       })
     }));
   }, [flightLinePoolContext.aircraftCount, flightLinePoolContext.poolIndex, onUpdatePlatformConfig]);
+  const addFlightLineUnavailableAircraft = reactExports.useCallback((aircraftNumber) => {
+    const cleanNumber2 = aircraftNumber.trim();
+    if (!cleanNumber2 || !onUpdatePlatformConfig || flightLinePoolContext.poolIndex < 0) return;
+    onUpdatePlatformConfig((current) => ({
+      ...current,
+      resourcePools: (current?.resourcePools || []).map((pool, poolIndex) => {
+        if (poolIndex !== flightLinePoolContext.poolIndex) return pool;
+        const settings = pool?.settings || {};
+        const currentUnavailable = Array.isArray(settings.flightLineUnavailableAircraftNumbers) ? settings.flightLineUnavailableAircraftNumbers.map((entry) => String(entry ?? "").trim()).filter(Boolean) : [];
+        const nextUnavailable = Array.from(/* @__PURE__ */ new Set([...currentUnavailable, cleanNumber2])).filter((number) => flightLinePoolContext.numbers.includes(number)).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
+        return {
+          ...pool,
+          settings: {
+            ...settings,
+            flightLineUnavailableAircraftNumbers: nextUnavailable
+          }
+        };
+      })
+    }));
+  }, [flightLinePoolContext.numbers, flightLinePoolContext.poolIndex, onUpdatePlatformConfig]);
   const flightLinePanelHeight = reactExports.useMemo(() => {
     const panelWidth = resourceSlideoutFrame?.width || 0;
     const reservedWidth = 200 + 200 + 40 + 32;
     const tileAreaWidth = Math.max(50, panelWidth - reservedWidth);
     const tileColumns = Math.max(1, Math.floor(tileAreaWidth / 58));
-    const tileRows = Math.max(1, Math.ceil((flightLinePoolContext.numbers.length || 1) / tileColumns));
+    const unavailableColumns = 3;
+    const tileRows = Math.max(
+      1,
+      Math.ceil((flightLinePoolContext.availableNumbers.length || 1) / tileColumns),
+      Math.ceil((flightLinePoolContext.unavailableNumbers.length || 1) / unavailableColumns)
+    );
     return Math.max(200, 68 + tileRows * 40 + (tileRows - 1) * 8);
-  }, [flightLinePoolContext.numbers.length, resourceSlideoutFrame?.width]);
+  }, [flightLinePoolContext.availableNumbers.length, flightLinePoolContext.unavailableNumbers.length, resourceSlideoutFrame?.width]);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
     const now = /* @__PURE__ */ new Date();
     const offsetMs = timezoneOffset * 60 * 60 * 1e3;
@@ -15517,12 +15551,23 @@ const ScheduleView = ({
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-0 flex-1 items-stretch", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-slate-400", children: "Aircraft Tiles" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex flex-wrap gap-2 pb-1", children: flightLinePoolContext.numbers.map((number, index) => {
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex flex-wrap gap-2 pb-1", children: flightLinePoolContext.availableNumbers.map((number, index) => {
                     const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(" ");
+                    const isDragging = flightLineDraggedAircraftNumber === number;
                     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "div",
                       {
-                        className: "flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border border-slate-500/45 bg-[#4f5357] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]",
+                        draggable: true,
+                        onDragStart: (event) => {
+                          setFlightLineDraggedAircraftNumber(number);
+                          event.dataTransfer.effectAllowed = "move";
+                          event.dataTransfer.setData("text/plain", number);
+                        },
+                        onDragEnd: () => {
+                          setFlightLineDraggedAircraftNumber(null);
+                          setIsFlightLineUnavailableDropActive(false);
+                        },
+                        className: `flex h-[40px] w-[50px] cursor-grab flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out active:cursor-grabbing ${isDragging ? "border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]" : "border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"}`,
                         title: tailNumber,
                         children: [
                           flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85", children: flightLinePoolContext.prefix }) : null,
@@ -15533,10 +15578,47 @@ const ScheduleView = ({
                     );
                   }) })
                 ] }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex w-[200px] max-w-[200px] shrink-0 flex-col border-l border-slate-700/70 pl-4", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-slate-400", children: "Unavailable" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-md border border-slate-700/80 bg-slate-950/55 px-3 py-2 text-[10px] font-semibold leading-4 text-slate-500", children: "No aircraft marked unavailable." })
-                ] })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "flex w-[200px] max-w-[200px] shrink-0 flex-col border-l border-slate-700/70 pl-4",
+                    onDragOver: (event) => {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "move";
+                      setIsFlightLineUnavailableDropActive(true);
+                    },
+                    onDragLeave: (event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget)) {
+                        setIsFlightLineUnavailableDropActive(false);
+                      }
+                    },
+                    onDrop: (event) => {
+                      event.preventDefault();
+                      const aircraftNumber = event.dataTransfer.getData("text/plain") || flightLineDraggedAircraftNumber || "";
+                      addFlightLineUnavailableAircraft(aircraftNumber);
+                      setFlightLineDraggedAircraftNumber(null);
+                      setIsFlightLineUnavailableDropActive(false);
+                    },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-slate-400", children: "Unavailable" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-3 min-h-[88px] rounded-md border px-2 py-2 transition-all duration-300 ease-out ${isFlightLineUnavailableDropActive ? "border-cyan-300/70 bg-cyan-500/10" : "border-slate-700/80 bg-slate-950/55"}`, children: flightLinePoolContext.unavailableNumbers.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: flightLinePoolContext.unavailableNumbers.map((number, index) => {
+                        const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(" ");
+                        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                          "div",
+                          {
+                            className: "flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border border-slate-500/45 bg-[#4f5357] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out",
+                            title: tailNumber,
+                            children: [
+                              flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85", children: flightLinePoolContext.prefix }) : null,
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-full truncate text-[12px] font-black leading-none text-white", children: number })
+                            ]
+                          },
+                          `flight-line-unavailable-aircraft-tile-${number}-${index}`
+                        );
+                      }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-1 py-1 text-[10px] font-semibold leading-4 text-slate-500", children: "Drag aircraft here." }) })
+                    ]
+                  }
+                )
               ] }) })
             ]
           }

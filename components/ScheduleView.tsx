@@ -6481,6 +6481,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = useState(false);
+    const [flightLineDraggedAircraftNumber, setFlightLineDraggedAircraftNumber] = useState<string | null>(null);
+    const [isFlightLineUnavailableDropActive, setIsFlightLineUnavailableDropActive] = useState(false);
     useEffect(() => {
         if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
     }, [isNeoAssistPanelOpen]);
@@ -6507,11 +6509,20 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const numbers = Array.from({ length: aircraftCount }, (_, index) => (
             configuredNumbers[index] || String(index + 1).padStart(3, '0')
         ));
+        const sortedAircraftNumbers = (values: string[]) => [...values].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+        const numberSet = new Set(numbers);
+        const unavailableNumbers = sortedAircraftNumbers(Array.from(new Set((Array.isArray(settings.flightLineUnavailableAircraftNumbers)
+            ? settings.flightLineUnavailableAircraftNumbers.map((value: any) => String(value ?? '').trim())
+            : []).filter((value: string) => value && numberSet.has(value)))));
+        const unavailableNumberSet = new Set(unavailableNumbers);
+        const availableNumbers = numbers.filter((number) => !unavailableNumberSet.has(number));
         return {
             poolIndex,
             aircraftCount,
             prefix,
             numbers,
+            availableNumbers,
+            unavailableNumbers,
         };
     }, [airframeCount, locationCode, platformConfig, unitCode]);
     const updateFlightLineAircraftNumber = useCallback((aircraftIndex: number, value: string) => {
@@ -6538,14 +6549,43 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             }),
         }));
     }, [flightLinePoolContext.aircraftCount, flightLinePoolContext.poolIndex, onUpdatePlatformConfig]);
+    const addFlightLineUnavailableAircraft = useCallback((aircraftNumber: string) => {
+        const cleanNumber = aircraftNumber.trim();
+        if (!cleanNumber || !onUpdatePlatformConfig || flightLinePoolContext.poolIndex < 0) return;
+        onUpdatePlatformConfig((current: any) => ({
+            ...current,
+            resourcePools: (current?.resourcePools || []).map((pool: any, poolIndex: number) => {
+                if (poolIndex !== flightLinePoolContext.poolIndex) return pool;
+                const settings = pool?.settings || {};
+                const currentUnavailable = Array.isArray(settings.flightLineUnavailableAircraftNumbers)
+                    ? settings.flightLineUnavailableAircraftNumbers.map((entry: any) => String(entry ?? '').trim()).filter(Boolean)
+                    : [];
+                const nextUnavailable = Array.from(new Set([...currentUnavailable, cleanNumber]))
+                    .filter((number) => flightLinePoolContext.numbers.includes(number))
+                    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+                return {
+                    ...pool,
+                    settings: {
+                        ...settings,
+                        flightLineUnavailableAircraftNumbers: nextUnavailable,
+                    },
+                };
+            }),
+        }));
+    }, [flightLinePoolContext.numbers, flightLinePoolContext.poolIndex, onUpdatePlatformConfig]);
     const flightLinePanelHeight = useMemo(() => {
         const panelWidth = resourceSlideoutFrame?.width || 0;
         const reservedWidth = 200 + 200 + 40 + 32;
         const tileAreaWidth = Math.max(50, panelWidth - reservedWidth);
         const tileColumns = Math.max(1, Math.floor(tileAreaWidth / 58));
-        const tileRows = Math.max(1, Math.ceil((flightLinePoolContext.numbers.length || 1) / tileColumns));
+        const unavailableColumns = 3;
+        const tileRows = Math.max(
+            1,
+            Math.ceil((flightLinePoolContext.availableNumbers.length || 1) / tileColumns),
+            Math.ceil((flightLinePoolContext.unavailableNumbers.length || 1) / unavailableColumns),
+        );
         return Math.max(200, 68 + (tileRows * 40) + ((tileRows - 1) * 8));
-    }, [flightLinePoolContext.numbers.length, resourceSlideoutFrame?.width]);
+    }, [flightLinePoolContext.availableNumbers.length, flightLinePoolContext.unavailableNumbers.length, resourceSlideoutFrame?.width]);
     // Initialize with timezone-adjusted time
     const [currentTime, setCurrentTime] = useState(() => {
         const now = new Date();
@@ -7624,12 +7664,23 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                     <div className="min-w-0 flex-1">
                                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Aircraft Tiles</p>
                                         <div className="mt-3 flex flex-wrap gap-2 pb-1">
-                                            {flightLinePoolContext.numbers.map((number, index) => {
+                                            {flightLinePoolContext.availableNumbers.map((number, index) => {
                                                 const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(' ');
+                                                const isDragging = flightLineDraggedAircraftNumber === number;
                                                 return (
                                                     <div
                                                         key={`flight-line-aircraft-tile-${index}`}
-                                                        className="flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border border-slate-500/45 bg-[#4f5357] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"
+                                                        draggable
+                                                        onDragStart={(event) => {
+                                                            setFlightLineDraggedAircraftNumber(number);
+                                                            event.dataTransfer.effectAllowed = 'move';
+                                                            event.dataTransfer.setData('text/plain', number);
+                                                        }}
+                                                        onDragEnd={() => {
+                                                            setFlightLineDraggedAircraftNumber(null);
+                                                            setIsFlightLineUnavailableDropActive(false);
+                                                        }}
+                                                        className={`flex h-[40px] w-[50px] cursor-grab flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out active:cursor-grabbing ${isDragging ? 'border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]' : 'border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]'}`}
                                                         title={tailNumber}
                                                     >
                                                         {flightLinePoolContext.prefix ? (
@@ -7642,10 +7693,51 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex w-[200px] max-w-[200px] shrink-0 flex-col border-l border-slate-700/70 pl-4">
+                                <div
+                                    className="flex w-[200px] max-w-[200px] shrink-0 flex-col border-l border-slate-700/70 pl-4"
+                                    onDragOver={(event) => {
+                                        event.preventDefault();
+                                        event.dataTransfer.dropEffect = 'move';
+                                        setIsFlightLineUnavailableDropActive(true);
+                                    }}
+                                    onDragLeave={(event) => {
+                                        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                                            setIsFlightLineUnavailableDropActive(false);
+                                        }
+                                    }}
+                                    onDrop={(event) => {
+                                        event.preventDefault();
+                                        const aircraftNumber = event.dataTransfer.getData('text/plain') || flightLineDraggedAircraftNumber || '';
+                                        addFlightLineUnavailableAircraft(aircraftNumber);
+                                        setFlightLineDraggedAircraftNumber(null);
+                                        setIsFlightLineUnavailableDropActive(false);
+                                    }}
+                                >
                                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Unavailable</p>
-                                    <div className="mt-3 rounded-md border border-slate-700/80 bg-slate-950/55 px-3 py-2 text-[10px] font-semibold leading-4 text-slate-500">
-                                        No aircraft marked unavailable.
+                                    <div className={`mt-3 min-h-[88px] rounded-md border px-2 py-2 transition-all duration-300 ease-out ${isFlightLineUnavailableDropActive ? 'border-cyan-300/70 bg-cyan-500/10' : 'border-slate-700/80 bg-slate-950/55'}`}>
+                                        {flightLinePoolContext.unavailableNumbers.length > 0 ? (
+                                            <div className="flex flex-wrap gap-2">
+                                                {flightLinePoolContext.unavailableNumbers.map((number, index) => {
+                                                    const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(' ');
+                                                    return (
+                                                        <div
+                                                            key={`flight-line-unavailable-aircraft-tile-${number}-${index}`}
+                                                            className="flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border border-slate-500/45 bg-[#4f5357] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out"
+                                                            title={tailNumber}
+                                                        >
+                                                            {flightLinePoolContext.prefix ? (
+                                                                <span className="mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85">{flightLinePoolContext.prefix}</span>
+                                                            ) : null}
+                                                            <span className="max-w-full truncate text-[12px] font-black leading-none text-white">{number}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="px-1 py-1 text-[10px] font-semibold leading-4 text-slate-500">
+                                                Drag aircraft here.
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
