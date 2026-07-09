@@ -39556,6 +39556,7 @@ appliedUpdates.forEach(update => {
                             staffOptions={allInstructorsData}
                             messageContactStaffOptions={instructorsData}
                             messageContactTraineeOptions={traineesData}
+                            messageContactUnitCodes={activeContextUnitCodes}
                             selectedStaffName={dashboardUserName}
                             onSelectStaffName={setDashboardTestUserName}
                             onUnreadMessageCountChange={setDashboardUnreadMessageCount}

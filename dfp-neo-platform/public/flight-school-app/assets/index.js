@@ -31554,6 +31554,7 @@ const MyDashboard = ({
   staffOptions = [],
   messageContactStaffOptions = staffOptions,
   messageContactTraineeOptions = [],
+  messageContactUnitCodes = [],
   selectedStaffName,
   onSelectStaffName,
   onUnreadMessageCountChange
@@ -31593,10 +31594,12 @@ const MyDashboard = ({
   const dashboardUserKey = normaliseDashboardContactName(dashboardSelectedName);
   const dashboardUserStaff = reactExports.useMemo(() => messageContactStaffOptions.find((staff) => normaliseDashboardContactName(staff.name) === dashboardUserKey), [dashboardUserKey, messageContactStaffOptions]);
   const dashboardUserUnitCodes = reactExports.useMemo(() => {
+    const scopedUnits = messageContactUnitCodes.flatMap((unitCode) => String(unitCode || "").split(/[+/]/)).map((unitCode) => unitCode.trim().toUpperCase()).filter(Boolean);
+    if (scopedUnits.length > 0) return Array.from(new Set(scopedUnits));
     const unit = String(dashboardUserStaff?.unit || "").trim().toUpperCase();
     if (unit) return unit.split(/[+/]/).map((code) => code.trim()).filter(Boolean);
     return [];
-  }, [dashboardUserStaff?.unit]);
+  }, [dashboardUserStaff?.unit, messageContactUnitCodes]);
   const dashboardUserUnitSet = reactExports.useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join("|")]);
   const messageContacts = reactExports.useMemo(() => {
     const staffContacts = messageContactStaffOptions.filter((staff) => staff?.name).filter((staff) => {
@@ -114106,6 +114109,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             staffOptions: allInstructorsData,
             messageContactStaffOptions: instructorsData,
             messageContactTraineeOptions: traineesData,
+            messageContactUnitCodes: activeContextUnitCodes,
             selectedStaffName: dashboardUserName,
             onSelectStaffName: setDashboardTestUserName,
             onUnreadMessageCountChange: setDashboardUnreadMessageCount,
