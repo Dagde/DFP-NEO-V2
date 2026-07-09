@@ -7597,14 +7597,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         <div className="h-full overflow-hidden border-t border-white/5 bg-gradient-to-r from-slate-900/85 via-slate-950/95 to-slate-900/85 px-5 py-4">
                             <div className="flex h-full min-w-0 items-stretch gap-4">
                                 <div className="flex w-[200px] max-w-[200px] shrink-0 flex-col border-r border-slate-700/70 pr-4">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">Aircraft Inventory</p>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">Aircraft Inventory</p>
+                                        <span className="rounded border border-slate-600/70 bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-slate-300">{flightLinePoolContext.aircraftCount}</span>
+                                    </div>
                                     <p className="mt-1 text-sm font-semibold text-slate-100">{locationCode} - {unitCode}</p>
                                     <div className="mt-3 flex min-h-0 flex-1 flex-col">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Tail numbers</p>
-                                            <span className="rounded border border-slate-600/70 bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-slate-300">{flightLinePoolContext.aircraftCount}</span>
-                                        </div>
-                                        <div className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+                                        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
                                             {flightLinePoolContext.numbers.length > 0 ? flightLinePoolContext.numbers.map((number, index) => (
                                                 <label key={`flight-line-aircraft-inventory-${index}`} className="grid grid-cols-[34px_minmax(0,1fr)] items-center gap-1">
                                                     <span className="text-[9px] font-bold uppercase tracking-wide text-slate-500">{flightLinePoolContext.prefix || 'No.'}</span>
