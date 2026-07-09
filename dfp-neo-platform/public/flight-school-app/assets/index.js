@@ -3032,7 +3032,7 @@ const DEFAULT_AIRCRAFT_NUMBER_SETTINGS = {
 };
 const cleanToken = (value) => typeof value === "string" ? value.trim() : "";
 const uniqueNonEmpty = (values) => Array.from(new Set(values.map(cleanToken).filter(Boolean)));
-const normaliseAircraftNumberSettings$1 = (settings) => {
+const normaliseAircraftNumberSettings = (settings) => {
   const prefixes = uniqueNonEmpty(Array.isArray(settings?.aircraftNumberPrefixes) ? settings?.aircraftNumberPrefixes : DEFAULT_AIRCRAFT_NUMBER_SETTINGS.prefixes);
   const defaultPrefix = cleanToken(settings?.aircraftNumberDefaultPrefix) || prefixes[0] || DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
   const nextPrefixes = prefixes.includes(defaultPrefix) ? prefixes : [defaultPrefix, ...prefixes];
@@ -67332,7 +67332,7 @@ This permanently removes the organisation record from platform configuration and
     });
   };
   const updateAircraftNumberPrefix = (poolIndex, prefixIndex, value) => {
-    const settings = normaliseAircraftNumberSettings$1(config.resourcePools[poolIndex]?.settings || {});
+    const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
     const prefixes = settings.prefixes.map((prefix, index) => index === prefixIndex ? value.toUpperCase().trim() : prefix).filter(Boolean);
     const uniquePrefixes = Array.from(new Set(prefixes));
     updateResourcePoolSettings(poolIndex, {
@@ -67341,7 +67341,7 @@ This permanently removes the organisation record from platform configuration and
     });
   };
   const addAircraftNumberPrefix = (poolIndex) => {
-    const settings = normaliseAircraftNumberSettings$1(config.resourcePools[poolIndex]?.settings || {});
+    const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
     const nextPrefix = `PREFIX-${settings.prefixes.length + 1}`;
     updateResourcePoolSettings(poolIndex, {
       aircraftNumberPrefixes: [...settings.prefixes, nextPrefix],
@@ -67349,7 +67349,7 @@ This permanently removes the organisation record from platform configuration and
     });
   };
   const removeAircraftNumberPrefix = (poolIndex, prefixIndex) => {
-    const settings = normaliseAircraftNumberSettings$1(config.resourcePools[poolIndex]?.settings || {});
+    const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
     const prefixes = settings.prefixes.filter((_, index) => index !== prefixIndex);
     updateResourcePoolSettings(poolIndex, {
       aircraftNumberPrefixes: prefixes,
@@ -69510,7 +69510,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ] })
           ] }),
           config.resourcePools.map((pool, index) => {
-            const aircraftNumberSettings = normaliseAircraftNumberSettings$1(pool.settings || {});
+            const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
             const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
             const runtimeEnabled = pool.settings?.applyToV2Runtime === true;
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -102497,7 +102497,7 @@ const App = () => {
     return `${locationKey}__${unitKey}`;
   }, [activeUnitCode, school]);
   const aircraftNumberSettings = reactExports.useMemo(
-    () => normaliseAircraftNumberSettings$1(activePlatformResourcePool?.settings || {}),
+    () => normaliseAircraftNumberSettings(activePlatformResourcePool?.settings || {}),
     [activePlatformResourcePool]
   );
   const aircraftConfigurations = reactExports.useMemo(() => {

@@ -7,7 +7,7 @@ import AirframeColumn from './AirframeColumn';
 import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
 import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
-import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
+import { AircraftNumberSettings, normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { DEFAULT_PLATFORM_PERMISSION_PROFILES, getOperationalModelLabel, getUnitOperationalModel, normaliseOperationalModel, OPERATIONAL_MODEL_OPTIONS } from '../utils/platformConfigService';
 import { getTaskProfilesForModel } from '../utils/taskProfiles';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
