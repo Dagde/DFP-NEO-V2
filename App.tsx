@@ -22605,6 +22605,9 @@ const App: React.FC = () => {
 
     // Session user info (populated from auth)
     const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string, username?: string} | null>(null);
+    useEffect(() => {
+        setDashboardTestUserName('');
+    }, [authUser?.userId, sessionUser?.userId]);
     const platformAccessContext = useMemo(() => getPlatformAccessContext(platformConfig, [
         authUser?.id,
         authUser?.userId,
@@ -39443,8 +39446,25 @@ appliedUpdates.forEach(update => {
                     .toLowerCase()
                     .replace(/\s+/g, ' ');
                 const sessionDashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
+                const sessionDashboardNameKeys = [
+                    sessionDashboardUserName,
+                    authUser?.displayName,
+                    authUser?.firstName && authUser.lastName ? `${authUser.lastName}, ${authUser.firstName}` : '',
+                    authUser?.firstName && authUser.lastName ? `${authUser.firstName} ${authUser.lastName}` : '',
+                    currentUserName,
+                ].map(normaliseDashboardName).filter(Boolean);
+                const sessionDashboardIdKeys = [
+                    sessionUser?.userId,
+                    authUser?.userId,
+                    authUser?.id,
+                ].map(value => String(value || '').trim().toLowerCase()).filter(Boolean);
+                const sessionDashboardStaff = allInstructorsData.find(staff => {
+                    const staffName = normaliseDashboardName(staff.name);
+                    const staffId = String((staff as any).idNumber || (staff as any).id || '').trim().toLowerCase();
+                    return sessionDashboardNameKeys.includes(staffName) || (staffId && sessionDashboardIdKeys.includes(staffId));
+                });
                 const defaultDashboardStaff = allInstructorsData.find(staff => normaliseDashboardName(staff.name) === 'burns, alexander');
-                const dashboardUserName = dashboardTestUserName || defaultDashboardStaff?.name || sessionDashboardUserName;
+                const dashboardUserName = dashboardTestUserName || sessionDashboardStaff?.name || sessionDashboardUserName || defaultDashboardStaff?.name;
                 const dashboardStaff = allInstructorsData.find(staff => (
                     normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName)
                 ));

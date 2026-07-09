@@ -31441,6 +31441,7 @@ const readDashboardMessages = () => {
 const writeDashboardMessages = (messages) => {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(DASHBOARD_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
+  window.dispatchEvent(new Event("dfp-dashboard-messages-updated"));
 };
 const MyDashboard = ({
   userName,
@@ -31497,8 +31498,8 @@ const MyDashboard = ({
   const dashboardUserUnitCodes = reactExports.useMemo(() => {
     const unit = String(dashboardUserStaff?.unit || "").trim().toUpperCase();
     if (unit) return unit.split(/[+/]/).map((code) => code.trim()).filter(Boolean);
-    return String(selectedStaffName || "").split(/[+/]/).map((code) => code.trim().toUpperCase()).filter(Boolean);
-  }, [dashboardUserStaff?.unit, selectedStaffName]);
+    return [];
+  }, [dashboardUserStaff?.unit]);
   const dashboardUserUnitSet = reactExports.useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join("|")]);
   const messageContacts = reactExports.useMemo(() => {
     const staffContacts = messageContactStaffOptions.filter((staff) => staff?.name).filter((staff) => {
@@ -31564,6 +31565,23 @@ const MyDashboard = ({
       return next;
     });
   };
+  reactExports.useEffect(() => {
+    const refreshMessages = () => setDashboardMessages(readDashboardMessages());
+    const handleStorage = (event) => {
+      if (event.key === DASHBOARD_MESSAGES_STORAGE_KEY) {
+        refreshMessages();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("dfp-dashboard-messages-updated", refreshMessages);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("dfp-dashboard-messages-updated", refreshMessages);
+    };
+  }, []);
+  reactExports.useEffect(() => {
+    setDashboardMessages(readDashboardMessages());
+  }, [dashboardUserKey]);
   const selectMessageContact = (contact) => {
     setSelectedMessageContact(contact);
     setMessageToText(contact.displayName);
@@ -99895,6 +99913,9 @@ const App = () => {
   const [dashboardTestUserName, setDashboardTestUserName] = reactExports.useState("");
   const currentUser2 = instructorsData.find((inst) => inst.name === currentUserName) || instructorsData[0];
   const [sessionUser, setSessionUser] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    setDashboardTestUserName("");
+  }, [authUser?.userId, sessionUser?.userId]);
   const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig, [
     authUser?.id,
     authUser?.userId,
@@ -113694,8 +113715,25 @@ ${error instanceof Error ? error.message : String(error)}`,
         });
         const normaliseDashboardName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
         const sessionDashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
+        const sessionDashboardNameKeys = [
+          sessionDashboardUserName,
+          authUser?.displayName,
+          authUser?.firstName && authUser.lastName ? `${authUser.lastName}, ${authUser.firstName}` : "",
+          authUser?.firstName && authUser.lastName ? `${authUser.firstName} ${authUser.lastName}` : "",
+          currentUserName
+        ].map(normaliseDashboardName).filter(Boolean);
+        const sessionDashboardIdKeys = [
+          sessionUser?.userId,
+          authUser?.userId,
+          authUser?.id
+        ].map((value) => String(value || "").trim().toLowerCase()).filter(Boolean);
+        const sessionDashboardStaff = allInstructorsData.find((staff) => {
+          const staffName = normaliseDashboardName(staff.name);
+          const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
+          return sessionDashboardNameKeys.includes(staffName) || staffId && sessionDashboardIdKeys.includes(staffId);
+        });
         const defaultDashboardStaff = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === "burns, alexander");
-        const dashboardUserName = dashboardTestUserName || defaultDashboardStaff?.name || sessionDashboardUserName;
+        const dashboardUserName = dashboardTestUserName || sessionDashboardStaff?.name || sessionDashboardUserName || defaultDashboardStaff?.name;
         const dashboardStaff = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName));
         const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && normaliseDashboardName(report.dashboardAssigneeName || report.instructorName || report.staffName) === normaliseDashboardName(dashboardUserName)).map((report) => ({ report, staff })));
         return /* @__PURE__ */ jsxRuntimeExports.jsx(

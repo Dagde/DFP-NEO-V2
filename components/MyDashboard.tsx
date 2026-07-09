@@ -179,6 +179,7 @@ const readDashboardMessages = (): DashboardMessage[] => {
 const writeDashboardMessages = (messages: DashboardMessage[]) => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(DASHBOARD_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
+    window.dispatchEvent(new Event('dfp-dashboard-messages-updated'));
 };
 
 const MyDashboard: React.FC<MyDashboardProps> = ({ 
@@ -246,8 +247,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const dashboardUserUnitCodes = useMemo(() => {
         const unit = String(dashboardUserStaff?.unit || '').trim().toUpperCase();
         if (unit) return unit.split(/[+/]/).map(code => code.trim()).filter(Boolean);
-        return String(selectedStaffName || '').split(/[+/]/).map(code => code.trim().toUpperCase()).filter(Boolean);
-    }, [dashboardUserStaff?.unit, selectedStaffName]);
+        return [];
+    }, [dashboardUserStaff?.unit]);
     const dashboardUserUnitSet = useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join('|')]);
     const messageContacts = useMemo<DashboardMessageContact[]>(() => {
         const staffContacts = messageContactStaffOptions
@@ -341,6 +342,23 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             return next;
         });
     };
+    useEffect(() => {
+        const refreshMessages = () => setDashboardMessages(readDashboardMessages());
+        const handleStorage = (event: StorageEvent) => {
+            if (event.key === DASHBOARD_MESSAGES_STORAGE_KEY) {
+                refreshMessages();
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+        window.addEventListener('dfp-dashboard-messages-updated', refreshMessages);
+        return () => {
+            window.removeEventListener('storage', handleStorage);
+            window.removeEventListener('dfp-dashboard-messages-updated', refreshMessages);
+        };
+    }, []);
+    useEffect(() => {
+        setDashboardMessages(readDashboardMessages());
+    }, [dashboardUserKey]);
     const selectMessageContact = (contact: DashboardMessageContact) => {
         setSelectedMessageContact(contact);
         setMessageToText(contact.displayName);
