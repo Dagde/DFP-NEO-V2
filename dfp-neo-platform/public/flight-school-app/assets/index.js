@@ -31467,7 +31467,15 @@ const MyDashboard = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-px", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: dashboardActionButtonClass,
+            children: "Messages"
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
@@ -31484,7 +31492,7 @@ const MyDashboard = ({
           "button",
           {
             type: "button",
-            className: dashboardActionButtonClass,
+            className: `${dashboardActionButtonClass} text-red-500`,
             children: [
               "Sign",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),

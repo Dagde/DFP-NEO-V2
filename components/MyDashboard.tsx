@@ -187,7 +187,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                         )}
                     </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-px">
+                    <button
+                        type="button"
+                        className={dashboardActionButtonClass}
+                    >
+                        Messages
+                    </button>
                     <button
                         type="button"
                         className={dashboardActionButtonClass}
@@ -196,7 +202,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     </button>
                     <button
                         type="button"
-                        className={dashboardActionButtonClass}
+                        className={`${dashboardActionButtonClass} text-red-500`}
                     >
                         Sign<br />Out
                     </button>
