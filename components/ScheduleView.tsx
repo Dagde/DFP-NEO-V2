@@ -7617,7 +7617,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         <div className="absolute left-[14px] top-0 h-[2.5px] w-[14px] bg-[#4f5357]" />
                         <div className="absolute left-[14px] bottom-0 h-[2.5px] w-[14px] bg-[#4f5357]" />
                         <div className="absolute left-0 top-0 bottom-0 flex w-[18px] items-center justify-center">
-                            <span className="block -rotate-90 font-mono text-[10px] font-black leading-none text-slate-300">{aircraftNumber}</span>
+                            <span className="block -rotate-90 font-mono text-[8px] font-black leading-none text-slate-400">{aircraftNumber}</span>
                         </div>
                     </div>
                 );
