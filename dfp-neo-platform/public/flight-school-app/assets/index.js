@@ -3032,7 +3032,7 @@ const DEFAULT_AIRCRAFT_NUMBER_SETTINGS = {
 };
 const cleanToken = (value) => typeof value === "string" ? value.trim() : "";
 const uniqueNonEmpty = (values) => Array.from(new Set(values.map(cleanToken).filter(Boolean)));
-const normaliseAircraftNumberSettings = (settings) => {
+const normaliseAircraftNumberSettings$1 = (settings) => {
   const prefixes = uniqueNonEmpty(Array.isArray(settings?.aircraftNumberPrefixes) ? settings?.aircraftNumberPrefixes : DEFAULT_AIRCRAFT_NUMBER_SETTINGS.prefixes);
   const defaultPrefix = cleanToken(settings?.aircraftNumberDefaultPrefix) || prefixes[0] || DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
   const nextPrefixes = prefixes.includes(defaultPrefix) ? prefixes : [defaultPrefix, ...prefixes];
@@ -14526,6 +14526,50 @@ const ScheduleView = ({
   }, [isNeoAssistPanelOpen]);
   const [resourceSlideoutFrame, setResourceSlideoutFrame] = reactExports.useState(null);
   const scheduleGridRef = reactExports.useRef(null);
+  const flightLinePoolContext = reactExports.useMemo(() => {
+    const cleanUnitCode = normaliseUnitSettingsIdentifier(unitCode);
+    const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
+    const activeUnit = units.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode);
+    const unitForPool = activeUnit || { code: unitCode, locationCode };
+    const pools = getRelevantResourcePoolsForUnit(platformConfig, unitForPool);
+    const pool = pools.find((candidate) => candidate?.settings?.applyToV2Runtime === true) || pools[0] || null;
+    const poolIndex = Array.isArray(platformConfig?.resourcePools) && pool ? platformConfig.resourcePools.findIndex((candidate) => candidate === pool || String(candidate?.id || candidate?.code || "") === String(pool?.id || pool?.code || "")) : -1;
+    const settings = pool?.settings || {};
+    const rawAircraftCount = Number(settings.aircraft ?? airframeCount ?? 5);
+    const aircraftCount = Number.isFinite(rawAircraftCount) ? Math.max(0, Math.floor(rawAircraftCount)) : 5;
+    const numberSettings = normaliseAircraftNumberSettings(settings);
+    const prefix = numberSettings.usePrefix ? String(numberSettings.defaultPrefix || numberSettings.prefixes[0] || "").trim() : "";
+    const configuredNumbers = Array.isArray(settings.aircraftInventoryNumbers) ? settings.aircraftInventoryNumbers.map((value) => String(value ?? "").trim()) : [];
+    const numbers = Array.from({ length: aircraftCount }, (_, index) => configuredNumbers[index] || String(index + 1).padStart(3, "0"));
+    return {
+      poolIndex,
+      aircraftCount,
+      prefix,
+      numbers
+    };
+  }, [airframeCount, locationCode, platformConfig, unitCode]);
+  const updateFlightLineAircraftNumber = reactExports.useCallback((aircraftIndex, value) => {
+    if (!onUpdatePlatformConfig || flightLinePoolContext.poolIndex < 0) return;
+    onUpdatePlatformConfig((current) => ({
+      ...current,
+      resourcePools: (current?.resourcePools || []).map((pool, poolIndex) => {
+        if (poolIndex !== flightLinePoolContext.poolIndex) return pool;
+        const settings = pool?.settings || {};
+        const rawCount = Number(settings.aircraft ?? flightLinePoolContext.aircraftCount ?? 5);
+        const count = Number.isFinite(rawCount) ? Math.max(0, Math.floor(rawCount)) : 5;
+        const existingNumbers = Array.isArray(settings.aircraftInventoryNumbers) ? settings.aircraftInventoryNumbers.map((entry) => String(entry ?? "").trim()) : Array.from({ length: count }, (_, index) => String(index + 1).padStart(3, "0"));
+        const nextNumbers = Array.from({ length: count }, (_, index) => existingNumbers[index] || String(index + 1).padStart(3, "0"));
+        nextNumbers[aircraftIndex] = value.trim();
+        return {
+          ...pool,
+          settings: {
+            ...settings,
+            aircraftInventoryNumbers: nextNumbers
+          }
+        };
+      })
+    }));
+  }, [flightLinePoolContext.aircraftCount, flightLinePoolContext.poolIndex, onUpdatePlatformConfig]);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
     const now = /* @__PURE__ */ new Date();
     const offsetMs = timezoneOffset * 60 * 60 * 1e3;
@@ -15435,31 +15479,66 @@ const ScheduleView = ({
                   ]
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-hidden border-t border-white/5 bg-gradient-to-r from-slate-900/85 via-slate-950/95 to-slate-900/85 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full items-center gap-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[160px] border-r border-slate-700/70 pr-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-hidden border-t border-white/5 bg-gradient-to-r from-slate-900/85 via-slate-950/95 to-slate-900/85 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full min-w-0 items-stretch gap-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex w-[200px] max-w-[200px] shrink-0 flex-col border-r border-slate-700/70 pr-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300", children: "Flight Line" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm font-semibold text-slate-100", children: [
                     locationCode,
                     " - ",
                     unitCode
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex min-h-0 flex-1 flex-col", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] font-black uppercase tracking-[0.15em] text-slate-400", children: "Aircraft Inventory" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-slate-600/70 bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-slate-300", children: flightLinePoolContext.aircraftCount })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1", children: flightLinePoolContext.numbers.length > 0 ? flightLinePoolContext.numbers.map((number, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "grid grid-cols-[34px_minmax(0,1fr)] items-center gap-1", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-bold uppercase tracking-wide text-slate-500", children: flightLinePoolContext.prefix || "No." }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "text",
+                          value: number,
+                          onChange: (event) => updateFlightLineAircraftNumber(index, event.target.value),
+                          className: "h-7 min-w-0 rounded border border-slate-600/80 bg-slate-950/80 px-2 text-xs font-bold text-slate-100 outline-none transition focus:border-cyan-300"
+                        }
+                      )
+                    ] }, `flight-line-aircraft-inventory-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700/80 bg-slate-950/60 px-2 py-2 text-[10px] font-semibold text-slate-500", children: "No aircraft rows configured." }) })
                   ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid h-full flex-1 grid-cols-4 gap-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400", children: "Aircraft" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xl font-black text-white", children: airframeCount })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 flex-1 items-stretch gap-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-[1.2] overflow-x-auto border-r border-slate-700/70 pr-4", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-slate-400", children: "Aircraft Tiles" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid auto-cols-[88px] grid-flow-col grid-rows-2 gap-2 pb-1", children: flightLinePoolContext.numbers.map((number, index) => {
+                      const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(" ");
+                      return /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "div",
+                        {
+                          className: "flex h-[52px] w-[88px] items-center justify-center rounded-md border border-slate-500/45 bg-[#686b6f] px-2 text-center text-sm font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]",
+                          title: tailNumber,
+                          children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: tailNumber })
+                        },
+                        `flight-line-aircraft-tile-${index}`
+                      );
+                    }) })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400", children: "Standby" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xl font-black text-white", children: standbyCount })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400", children: "Sim" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xl font-black text-white", children: ftdCount })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400", children: "Trainer" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xl font-black text-white", children: cptCount })
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid h-full min-w-[360px] flex-1 grid-cols-4 gap-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400", children: "Aircraft" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xl font-black text-white", children: airframeCount })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400", children: "Standby" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xl font-black text-white", children: standbyCount })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400", children: "Sim" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xl font-black text-white", children: ftdCount })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400", children: "Trainer" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xl font-black text-white", children: cptCount })
+                    ] })
                   ] })
                 ] })
               ] }) })
@@ -67253,7 +67332,7 @@ This permanently removes the organisation record from platform configuration and
     });
   };
   const updateAircraftNumberPrefix = (poolIndex, prefixIndex, value) => {
-    const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
+    const settings = normaliseAircraftNumberSettings$1(config.resourcePools[poolIndex]?.settings || {});
     const prefixes = settings.prefixes.map((prefix, index) => index === prefixIndex ? value.toUpperCase().trim() : prefix).filter(Boolean);
     const uniquePrefixes = Array.from(new Set(prefixes));
     updateResourcePoolSettings(poolIndex, {
@@ -67262,7 +67341,7 @@ This permanently removes the organisation record from platform configuration and
     });
   };
   const addAircraftNumberPrefix = (poolIndex) => {
-    const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
+    const settings = normaliseAircraftNumberSettings$1(config.resourcePools[poolIndex]?.settings || {});
     const nextPrefix = `PREFIX-${settings.prefixes.length + 1}`;
     updateResourcePoolSettings(poolIndex, {
       aircraftNumberPrefixes: [...settings.prefixes, nextPrefix],
@@ -67270,7 +67349,7 @@ This permanently removes the organisation record from platform configuration and
     });
   };
   const removeAircraftNumberPrefix = (poolIndex, prefixIndex) => {
-    const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
+    const settings = normaliseAircraftNumberSettings$1(config.resourcePools[poolIndex]?.settings || {});
     const prefixes = settings.prefixes.filter((_, index) => index !== prefixIndex);
     updateResourcePoolSettings(poolIndex, {
       aircraftNumberPrefixes: prefixes,
@@ -69431,7 +69510,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ] })
           ] }),
           config.resourcePools.map((pool, index) => {
-            const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
+            const aircraftNumberSettings = normaliseAircraftNumberSettings$1(pool.settings || {});
             const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
             const runtimeEnabled = pool.settings?.applyToV2Runtime === true;
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -102418,7 +102497,7 @@ const App = () => {
     return `${locationKey}__${unitKey}`;
   }, [activeUnitCode, school]);
   const aircraftNumberSettings = reactExports.useMemo(
-    () => normaliseAircraftNumberSettings(activePlatformResourcePool?.settings || {}),
+    () => normaliseAircraftNumberSettings$1(activePlatformResourcePool?.settings || {}),
     [activePlatformResourcePool]
   );
   const aircraftConfigurations = reactExports.useMemo(() => {

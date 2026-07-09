@@ -6486,6 +6486,58 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }, [isNeoAssistPanelOpen]);
     const [resourceSlideoutFrame, setResourceSlideoutFrame] = useState<{ left: number; top: number; height: number; width: number; bottom: number } | null>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
+    const flightLinePoolContext = useMemo(() => {
+        const cleanUnitCode = normaliseUnitSettingsIdentifier(unitCode);
+        const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
+        const activeUnit = units.find((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode);
+        const unitForPool = activeUnit || { code: unitCode, locationCode };
+        const pools = getRelevantResourcePoolsForUnit(platformConfig, unitForPool);
+        const pool = pools.find((candidate: any) => candidate?.settings?.applyToV2Runtime === true) || pools[0] || null;
+        const poolIndex = Array.isArray(platformConfig?.resourcePools) && pool
+            ? platformConfig.resourcePools.findIndex((candidate: any) => candidate === pool || String(candidate?.id || candidate?.code || '') === String(pool?.id || pool?.code || ''))
+            : -1;
+        const settings = pool?.settings || {};
+        const rawAircraftCount = Number(settings.aircraft ?? airframeCount ?? 5);
+        const aircraftCount = Number.isFinite(rawAircraftCount) ? Math.max(0, Math.floor(rawAircraftCount)) : 5;
+        const numberSettings = normaliseAircraftNumberSettings(settings);
+        const prefix = numberSettings.usePrefix ? String(numberSettings.defaultPrefix || numberSettings.prefixes[0] || '').trim() : '';
+        const configuredNumbers = Array.isArray(settings.aircraftInventoryNumbers)
+            ? settings.aircraftInventoryNumbers.map((value: any) => String(value ?? '').trim())
+            : [];
+        const numbers = Array.from({ length: aircraftCount }, (_, index) => (
+            configuredNumbers[index] || String(index + 1).padStart(3, '0')
+        ));
+        return {
+            poolIndex,
+            aircraftCount,
+            prefix,
+            numbers,
+        };
+    }, [airframeCount, locationCode, platformConfig, unitCode]);
+    const updateFlightLineAircraftNumber = useCallback((aircraftIndex: number, value: string) => {
+        if (!onUpdatePlatformConfig || flightLinePoolContext.poolIndex < 0) return;
+        onUpdatePlatformConfig((current: any) => ({
+            ...current,
+            resourcePools: (current?.resourcePools || []).map((pool: any, poolIndex: number) => {
+                if (poolIndex !== flightLinePoolContext.poolIndex) return pool;
+                const settings = pool?.settings || {};
+                const rawCount = Number(settings.aircraft ?? flightLinePoolContext.aircraftCount ?? 5);
+                const count = Number.isFinite(rawCount) ? Math.max(0, Math.floor(rawCount)) : 5;
+                const existingNumbers = Array.isArray(settings.aircraftInventoryNumbers)
+                    ? settings.aircraftInventoryNumbers.map((entry: any) => String(entry ?? '').trim())
+                    : Array.from({ length: count }, (_, index) => String(index + 1).padStart(3, '0'));
+                const nextNumbers = Array.from({ length: count }, (_, index) => existingNumbers[index] || String(index + 1).padStart(3, '0'));
+                nextNumbers[aircraftIndex] = value.trim();
+                return {
+                    ...pool,
+                    settings: {
+                        ...settings,
+                        aircraftInventoryNumbers: nextNumbers,
+                    },
+                };
+            }),
+        }));
+    }, [flightLinePoolContext.aircraftCount, flightLinePoolContext.poolIndex, onUpdatePlatformConfig]);
     // Initialize with timezone-adjusted time
     const [currentTime, setCurrentTime] = useState(() => {
         const now = new Date();
@@ -7531,27 +7583,67 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             />
                         </button>
                         <div className="h-full overflow-hidden border-t border-white/5 bg-gradient-to-r from-slate-900/85 via-slate-950/95 to-slate-900/85 px-5 py-4">
-                            <div className="flex h-full items-center gap-4">
-                                <div className="min-w-[160px] border-r border-slate-700/70 pr-4">
+                            <div className="flex h-full min-w-0 items-stretch gap-4">
+                                <div className="flex w-[200px] max-w-[200px] shrink-0 flex-col border-r border-slate-700/70 pr-4">
                                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">Flight Line</p>
                                     <p className="mt-1 text-sm font-semibold text-slate-100">{locationCode} - {unitCode}</p>
+                                    <div className="mt-3 flex min-h-0 flex-1 flex-col">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Aircraft Inventory</p>
+                                            <span className="rounded border border-slate-600/70 bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-slate-300">{flightLinePoolContext.aircraftCount}</span>
+                                        </div>
+                                        <div className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+                                            {flightLinePoolContext.numbers.length > 0 ? flightLinePoolContext.numbers.map((number, index) => (
+                                                <label key={`flight-line-aircraft-inventory-${index}`} className="grid grid-cols-[34px_minmax(0,1fr)] items-center gap-1">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wide text-slate-500">{flightLinePoolContext.prefix || 'No.'}</span>
+                                                    <input
+                                                        type="text"
+                                                        value={number}
+                                                        onChange={(event) => updateFlightLineAircraftNumber(index, event.target.value)}
+                                                        className="h-7 min-w-0 rounded border border-slate-600/80 bg-slate-950/80 px-2 text-xs font-bold text-slate-100 outline-none transition focus:border-cyan-300"
+                                                    />
+                                                </label>
+                                            )) : (
+                                                <div className="rounded border border-slate-700/80 bg-slate-950/60 px-2 py-2 text-[10px] font-semibold text-slate-500">No aircraft rows configured.</div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="grid h-full flex-1 grid-cols-4 gap-3">
-                                    <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
+                                <div className="flex min-w-0 flex-1 items-stretch gap-4">
+                                    <div className="min-w-0 flex-[1.2] overflow-x-auto border-r border-slate-700/70 pr-4">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Aircraft Tiles</p>
+                                        <div className="mt-3 grid auto-cols-[88px] grid-flow-col grid-rows-2 gap-2 pb-1">
+                                            {flightLinePoolContext.numbers.map((number, index) => {
+                                                const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(' ');
+                                                return (
+                                                    <div
+                                                        key={`flight-line-aircraft-tile-${index}`}
+                                                        className="flex h-[52px] w-[88px] items-center justify-center rounded-md border border-slate-500/45 bg-[#686b6f] px-2 text-center text-sm font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"
+                                                        title={tailNumber}
+                                                    >
+                                                        <span className="truncate">{tailNumber}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    <div className="grid h-full min-w-[360px] flex-1 grid-cols-4 gap-3">
+                                        <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
                                         <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Aircraft</p>
                                         <p className="mt-2 text-xl font-black text-white">{airframeCount}</p>
-                                    </div>
-                                    <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Standby</p>
-                                        <p className="mt-2 text-xl font-black text-white">{standbyCount}</p>
-                                    </div>
-                                    <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Sim</p>
-                                        <p className="mt-2 text-xl font-black text-white">{ftdCount}</p>
-                                    </div>
-                                    <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Trainer</p>
-                                        <p className="mt-2 text-xl font-black text-white">{cptCount}</p>
+                                        </div>
+                                        <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Standby</p>
+                                            <p className="mt-2 text-xl font-black text-white">{standbyCount}</p>
+                                        </div>
+                                        <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Sim</p>
+                                            <p className="mt-2 text-xl font-black text-white">{ftdCount}</p>
+                                        </div>
+                                        <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Trainer</p>
+                                            <p className="mt-2 text-xl font-black text-white">{cptCount}</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
