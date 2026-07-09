@@ -31344,6 +31344,27 @@ const TafWeatherWidget = ({ onClose }) => {
   ] });
 };
 const DASHBOARD_MESSAGES_STORAGE_KEY = "dfp_dashboard_messages_v1";
+const DashboardIconX = ({ className = "h-5 w-5", strokeWidth = 2 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M18 6 6 18" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "m6 6 12 12" })
+] });
+const DashboardIconPlus = ({ className = "h-5 w-5", strokeWidth = 2 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 5v14" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M5 12h14" })
+] });
+const DashboardIconArrowLeft = ({ className = "h-5 w-5", strokeWidth = 2 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "m12 19-7-7 7-7" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M19 12H5" })
+] });
+const DashboardIconChevronRight = ({ className = "h-5 w-5", strokeWidth = 2 }) => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "m9 18 6-6-6-6" }) });
+const DashboardIconSearch = ({ className = "h-5 w-5", strokeWidth = 2 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "11", cy: "11", r: "8" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "m21 21-4.35-4.35" })
+] });
+const DashboardIconSquarePen = ({ className = "h-5 w-5", strokeWidth = 2 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M18.4 2.6a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z" })
+] });
 const formatTime$2 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
@@ -31381,6 +31402,22 @@ const toDashboardContactDisplayName = (name, rank) => {
 const getDashboardContactNameParts = (name) => {
   const [surname, firstNames2] = String(name || "").split(",").map((part) => part.trim());
   return { surname: surname || name || "", firstNames: firstNames2 || "" };
+};
+const formatDashboardConversationDate = (dateString) => {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "";
+  const now = /* @__PURE__ */ new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const messageDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const dayDiff = Math.round((today - messageDay) / 864e5);
+  if (dayDiff === 0) {
+    return `${String(date.getHours()).padStart(2, "0")}${String(date.getMinutes()).padStart(2, "0")}`;
+  }
+  if (dayDiff === 1) return "Yesterday";
+  if (dayDiff > 1 && dayDiff < 7) {
+    return date.toLocaleDateString("en-AU", { weekday: "long" });
+  }
+  return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getFullYear()).slice(-2)}`;
 };
 const sortDashboardContacts = (contacts) => [...contacts].sort((a, b) => getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.displayName.localeCompare(b.displayName));
 const groupDashboardMessageContacts = (contacts) => {
@@ -31483,6 +31520,8 @@ const MyDashboard = ({
   const [selectedMessageContact, setSelectedMessageContact] = reactExports.useState(null);
   const [messageDraft, setMessageDraft] = reactExports.useState("");
   const [dashboardMessages, setDashboardMessages] = reactExports.useState(() => readDashboardMessages());
+  const [messageView, setMessageView] = reactExports.useState("inbox");
+  const [messageSearchText, setMessageSearchText] = reactExports.useState("");
   const [incomingToast, setIncomingToast] = reactExports.useState(null);
   const shownIncomingToastIds = reactExports.useRef(/* @__PURE__ */ new Set());
   const roleTone = (role) => {
@@ -31546,6 +31585,45 @@ const MyDashboard = ({
     if (!query) return [];
     return messageContacts.filter((contact) => normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query)).slice(0, 6);
   }, [messageContacts, messageToText]);
+  const getMessageContactForName = (name) => {
+    const contact = messageContacts.find((candidate) => normaliseDashboardContactName(candidate.name) === normaliseDashboardContactName(name));
+    if (contact) return contact;
+    const nameParts = getDashboardContactNameParts(name);
+    return {
+      id: `stored-${normaliseDashboardContactName(name)}`,
+      name,
+      displayName: toDashboardContactDisplayName(name),
+      unit: "Stored Message",
+      role: "Message contact",
+      rank: "",
+      surname: nameParts.surname,
+      firstNames: nameParts.firstNames,
+      type: "Staff"
+    };
+  };
+  const messageConversations = reactExports.useMemo(() => {
+    const conversations = /* @__PURE__ */ new Map();
+    dashboardMessages.forEach((message) => {
+      const fromKey = normaliseDashboardContactName(message.from);
+      const toKey = normaliseDashboardContactName(message.to);
+      if (fromKey !== dashboardUserKey && toKey !== dashboardUserKey) return;
+      const otherName = fromKey === dashboardUserKey ? message.to : message.from;
+      const otherKey = normaliseDashboardContactName(otherName);
+      const existing = conversations.get(otherKey);
+      const isNewer = !existing || new Date(message.sentAt).getTime() >= new Date(existing.lastMessage.sentAt).getTime();
+      conversations.set(otherKey, {
+        contact: existing?.contact || getMessageContactForName(otherName),
+        lastMessage: isNewer ? message : existing.lastMessage,
+        unreadCount: (existing?.unreadCount || 0) + (toKey === dashboardUserKey && !message.readAt ? 1 : 0)
+      });
+    });
+    return Array.from(conversations.values()).sort((a, b) => new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime());
+  }, [dashboardMessages, dashboardUserKey, messageContacts]);
+  const filteredMessageConversations = reactExports.useMemo(() => {
+    const query = normaliseDashboardContactName(messageSearchText);
+    if (!query) return messageConversations;
+    return messageConversations.filter((conversation) => normaliseDashboardContactName(conversation.contact.displayName).includes(query) || normaliseDashboardContactName(conversation.contact.name).includes(query) || normaliseDashboardContactName(conversation.lastMessage.body).includes(query));
+  }, [messageConversations, messageSearchText]);
   const messageSuggestionGroups = reactExports.useMemo(() => groupDashboardMessageContacts(messageSuggestions), [messageSuggestions]);
   const messageContactGroups = reactExports.useMemo(() => groupDashboardMessageContacts(messageContacts), [messageContacts]);
   const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => normaliseDashboardContactName(message.to) === dashboardUserKey && !message.readAt), [dashboardMessages, dashboardUserKey]);
@@ -31586,6 +31664,7 @@ const MyDashboard = ({
     setSelectedMessageContact(contact);
     setMessageToText(contact.displayName);
     setIsContactPickerOpen(false);
+    setMessageView("compose");
   };
   const sendDashboardMessage = () => {
     if (!selectedMessageContact || !messageDraft.trim()) return;
@@ -31600,10 +31679,11 @@ const MyDashboard = ({
     setMessageDraft("");
   };
   reactExports.useEffect(() => {
-    if (!isMessagesOpen || unreadMessages.length === 0) return;
+    if (!isMessagesOpen || messageView !== "compose" || !selectedMessageContact || unreadMessages.length === 0) return;
+    const selectedKey = normaliseDashboardContactName(selectedMessageContact.name);
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    persistDashboardMessages((messages) => messages.map((message) => normaliseDashboardContactName(message.to) === dashboardUserKey && !message.readAt ? { ...message, readAt: now } : message));
-  }, [dashboardUserKey, isMessagesOpen, unreadMessages.length]);
+    persistDashboardMessages((messages) => messages.map((message) => normaliseDashboardContactName(message.to) === dashboardUserKey && normaliseDashboardContactName(message.from) === selectedKey && !message.readAt ? { ...message, readAt: now } : message));
+  }, [dashboardUserKey, isMessagesOpen, messageView, selectedMessageContact?.name, unreadMessages.length]);
   const newestUnreadMessage = unreadMessages[unreadMessages.length - 1] || null;
   reactExports.useEffect(() => {
     if (!newestUnreadMessage) {
@@ -31678,7 +31758,10 @@ const MyDashboard = ({
           "button",
           {
             type: "button",
-            onClick: () => setIsMessagesOpen(true),
+            onClick: () => {
+              setMessageView("inbox");
+              setIsMessagesOpen(true);
+            },
             className: dashboardActionButtonClass,
             children: [
               unreadMessages.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -left-2 -bottom-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-[13px] font-bold text-white shadow-lg", children: Math.min(unreadMessages.length, 9) }),
@@ -31722,7 +31805,20 @@ const MyDashboard = ({
     isMessagesOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed inset-0 z-[95] flex items-center justify-center bg-black/55 p-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-[78vh] w-full max-w-[520px] flex-col overflow-hidden rounded-[28px] bg-[#f7f7f8] text-gray-950 shadow-2xl ring-1 ring-black/10", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative px-5 pb-3 pt-5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-center text-2xl font-bold tracking-tight", children: "New Message" }),
+          messageView === "compose" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                setMessageView("inbox");
+                setIsContactPickerOpen(false);
+              },
+              className: "absolute left-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300",
+              "aria-label": "Back to messages",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconArrowLeft, { className: "h-6 w-6", strokeWidth: 2.4 })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-center text-2xl font-bold tracking-tight", children: messageView === "inbox" ? "Messages" : "New Message" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -31730,93 +31826,146 @@ const MyDashboard = ({
               onClick: () => {
                 setIsMessagesOpen(false);
                 setIsContactPickerOpen(false);
+                setMessageSearchText("");
               },
               className: "absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300",
               "aria-label": "Close messages",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-x-px translate-y-[-5px] text-[34px] font-light leading-none", children: "x" })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconX, { className: "h-7 w-7 translate-x-px -translate-y-0.5", strokeWidth: 2.1 })
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mx-3 rounded-full border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-14 items-center gap-2 px-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xl text-gray-500", children: "To:" }),
+        messageView === "inbox" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-5 pb-24 pt-2", children: filteredMessageConversations.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-gray-200", children: filteredMessageConversations.map((conversation) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => selectMessageContact(conversation.contact),
+              className: "relative flex w-full items-start gap-3 py-4 text-left hover:bg-white/50",
+              children: [
+                conversation.unreadCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500", "aria-label": "Unread message" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 flex-1 ${conversation.unreadCount > 0 ? "" : "pl-5"}`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-baseline gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "min-w-0 flex-1 truncate text-[22px] font-bold leading-tight text-black", children: conversation.contact.displayName }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-lg text-gray-500", children: formatDashboardConversationDate(conversation.lastMessage.sentAt) })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 line-clamp-2 text-[20px] leading-snug text-gray-500", children: conversation.lastMessage.body })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconChevronRight, { className: "mt-2 h-7 w-7 shrink-0 text-gray-500", strokeWidth: 2.6 })
+              ]
+            },
+            conversation.contact.id
+          )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: messageSearchText ? "No messages match your search." : "No messages yet." }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-4 left-4 right-4 flex items-center gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-14 min-w-0 flex-1 items-center rounded-full bg-white/90 px-4 shadow-[0_10px_28px_rgba(15,23,42,0.14)] ring-1 ring-black/5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconSearch, { className: "mr-3 h-7 w-7 shrink-0 text-black", strokeWidth: 2.8 }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  value: messageSearchText,
+                  onChange: (event) => setMessageSearchText(event.target.value),
+                  placeholder: "Search",
+                  className: "min-w-0 flex-1 bg-transparent text-[22px] font-semibold text-gray-700 outline-none placeholder:text-gray-500"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  setMessageView("compose");
+                  setSelectedMessageContact(null);
+                  setMessageToText("");
+                  setMessageDraft("");
+                },
+                className: "grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white text-black shadow-[0_10px_28px_rgba(15,23,42,0.16)] ring-1 ring-black/5 hover:bg-gray-100",
+                "aria-label": "New message",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconSquarePen, { className: "h-8 w-8", strokeWidth: 2.4 })
+              }
+            )
+          ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mx-3 rounded-full border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-14 items-center gap-2 px-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xl text-gray-500", children: "To:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  value: messageToText,
+                  onChange: (event) => {
+                    setMessageToText(event.target.value);
+                    setSelectedMessageContact(null);
+                  },
+                  className: "min-w-0 flex-1 bg-transparent text-xl text-gray-950 outline-none",
+                  autoComplete: "off"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setIsContactPickerOpen(true),
+                  className: "grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-200 text-gray-950 hover:bg-gray-300",
+                  "aria-label": "Open contacts",
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconPlus, { className: "h-7 w-7 translate-x-px -translate-y-0.5", strokeWidth: 2 })
+                }
+              )
+            ] }),
+            !selectedMessageContact && messageSuggestionGroups.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-8 right-14 top-[58px] z-10 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl", children: messageSuggestionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-50 px-4 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400", children: group.title }),
+              group.contacts.map((contact) => renderDashboardMessageContactButton(contact, selectMessageContact, true))
+            ] }, group.title)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-4 py-5", children: selectedMessageContact ? activeConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeConversationMessages.map((message) => {
+            const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
+            const sentDate = new Date(message.sentAt);
+            const timeLabel2 = `${String(sentDate.getHours()).padStart(2, "0")}${String(sentDate.getMinutes()).padStart(2, "0")}`;
+            const dateLabel2 = `${String(sentDate.getDate()).padStart(2, "0")}/${String(sentDate.getMonth() + 1).padStart(2, "0")}/${String(sentDate.getFullYear()).slice(-2)}`;
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${mine ? "justify-end" : "justify-start"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-2xl px-4 py-2 shadow-sm ${mine ? "bg-sky-500 text-white" : "bg-white text-gray-950"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: message.body }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  timeLabel2,
+                  " ",
+                  dateLabel2
+                ] }),
+                mine && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: message.readAt ? "Read" : "Sent" })
+              ] })
+            ] }) }, message.id);
+          }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "No messages yet." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "Choose someone to message." }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 border-t border-gray-200 bg-white/70 px-3 py-3 shadow-[0_-8px_22px_rgba(15,23,42,0.08)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
-                value: messageToText,
-                onChange: (event) => {
-                  setMessageToText(event.target.value);
-                  setSelectedMessageContact(null);
+                value: messageDraft,
+                onChange: (event) => setMessageDraft(event.target.value),
+                onKeyDown: (event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    sendDashboardMessage();
+                  }
                 },
-                className: "min-w-0 flex-1 bg-transparent text-xl text-gray-950 outline-none",
-                autoComplete: "off"
+                placeholder: "Message",
+                className: "h-12 min-w-0 flex-1 rounded-full border border-white bg-white px-4 text-base text-gray-950 shadow-inner outline-none focus:ring-2 focus:ring-sky-400"
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
-                onClick: () => setIsContactPickerOpen(true),
-                className: "grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-200 text-gray-950 hover:bg-gray-300",
-                "aria-label": "Open contacts",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-x-px translate-y-[-3px] text-[32px] font-medium leading-none", children: "+" })
+                onClick: sendDashboardMessage,
+                disabled: !selectedMessageContact || !messageDraft.trim(),
+                className: "flex h-12 w-14 items-center justify-center rounded-md bg-white text-sm font-bold text-sky-600 shadow disabled:cursor-not-allowed disabled:text-gray-300",
+                children: "Send"
               }
             )
-          ] }),
-          !selectedMessageContact && messageSuggestionGroups.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-8 right-14 top-[58px] z-10 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl", children: messageSuggestionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-50 px-4 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400", children: group.title }),
-            group.contacts.map((contact) => renderDashboardMessageContactButton(contact, selectMessageContact, true))
-          ] }, group.title)) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-4 py-5", children: selectedMessageContact ? activeConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeConversationMessages.map((message) => {
-          const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
-          const sentDate = new Date(message.sentAt);
-          const timeLabel2 = `${String(sentDate.getHours()).padStart(2, "0")}${String(sentDate.getMinutes()).padStart(2, "0")}`;
-          const dateLabel2 = `${String(sentDate.getDate()).padStart(2, "0")}/${String(sentDate.getMonth() + 1).padStart(2, "0")}/${String(sentDate.getFullYear()).slice(-2)}`;
-          return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${mine ? "justify-end" : "justify-start"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-2xl px-4 py-2 shadow-sm ${mine ? "bg-sky-500 text-white" : "bg-white text-gray-950"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: message.body }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                timeLabel2,
-                " ",
-                dateLabel2
-              ] }),
-              mine && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: message.readAt ? "Read" : "Sent" })
-            ] })
-          ] }) }, message.id);
-        }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "No messages yet." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "Choose someone to message." }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 border-t border-gray-200 bg-white/70 px-3 py-3 shadow-[0_-8px_22px_rgba(15,23,42,0.08)]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              value: messageDraft,
-              onChange: (event) => setMessageDraft(event.target.value),
-              onKeyDown: (event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  sendDashboardMessage();
-                }
-              },
-              placeholder: "Message",
-              className: "h-12 min-w-0 flex-1 rounded-full border border-white bg-white px-4 text-base text-gray-950 shadow-inner outline-none focus:ring-2 focus:ring-sky-400"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: sendDashboardMessage,
-              disabled: !selectedMessageContact || !messageDraft.trim(),
-              className: "flex h-12 w-14 items-center justify-center rounded-md bg-white text-sm font-bold text-sky-600 shadow disabled:cursor-not-allowed disabled:text-gray-300",
-              children: "Send"
-            }
-          )
+          ] })
         ] })
       ] }),
-      isContactPickerOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-[105] flex items-center justify-center bg-black/45 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-md rounded-2xl bg-white p-4 text-gray-950 shadow-2xl", children: [
+      messageView === "compose" && isContactPickerOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-[105] flex items-center justify-center bg-black/45 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-md rounded-2xl bg-white p-4 text-gray-950 shadow-2xl", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold", children: "Select Contact" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsContactPickerOpen(false), className: "grid h-9 w-9 place-items-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-950", "aria-label": "Close contacts", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-x-px translate-y-[-5px] text-[24px] font-light leading-none", children: "x" }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsContactPickerOpen(false), className: "grid h-9 w-9 place-items-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-950", "aria-label": "Close contacts", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconX, { className: "h-5 w-5 translate-x-px -translate-y-0.5", strokeWidth: 2 }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-[52vh] space-y-3 overflow-y-auto", children: [
           messageContactGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [

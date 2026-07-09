@@ -51,7 +51,59 @@ type DashboardMessageContactGroup = {
     contacts: DashboardMessageContact[];
 };
 
+type DashboardConversation = {
+    contact: DashboardMessageContact;
+    lastMessage: DashboardMessage;
+    unreadCount: number;
+};
+
 const DASHBOARD_MESSAGES_STORAGE_KEY = 'dfp_dashboard_messages_v1';
+
+type DashboardIconProps = {
+    className?: string;
+    strokeWidth?: number;
+};
+
+const DashboardIconX: React.FC<DashboardIconProps> = ({ className = 'h-5 w-5', strokeWidth = 2 }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M18 6 6 18" />
+        <path d="m6 6 12 12" />
+    </svg>
+);
+
+const DashboardIconPlus: React.FC<DashboardIconProps> = ({ className = 'h-5 w-5', strokeWidth = 2 }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 5v14" />
+        <path d="M5 12h14" />
+    </svg>
+);
+
+const DashboardIconArrowLeft: React.FC<DashboardIconProps> = ({ className = 'h-5 w-5', strokeWidth = 2 }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="m12 19-7-7 7-7" />
+        <path d="M19 12H5" />
+    </svg>
+);
+
+const DashboardIconChevronRight: React.FC<DashboardIconProps> = ({ className = 'h-5 w-5', strokeWidth = 2 }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="m9 18 6-6-6-6" />
+    </svg>
+);
+
+const DashboardIconSearch: React.FC<DashboardIconProps> = ({ className = 'h-5 w-5', strokeWidth = 2 }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
+    </svg>
+);
+
+const DashboardIconSquarePen: React.FC<DashboardIconProps> = ({ className = 'h-5 w-5', strokeWidth = 2 }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+        <path d="M18.4 2.6a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z" />
+    </svg>
+);
 
 const formatTime = (time: number) => {
     const hours = Math.floor(time);
@@ -99,6 +151,23 @@ const toDashboardContactDisplayName = (name: string, rank?: string): string => {
 const getDashboardContactNameParts = (name: string): { surname: string; firstNames: string } => {
     const [surname, firstNames] = String(name || '').split(',').map(part => part.trim());
     return { surname: surname || name || '', firstNames: firstNames || '' };
+};
+
+const formatDashboardConversationDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const messageDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    const dayDiff = Math.round((today - messageDay) / 86400000);
+    if (dayDiff === 0) {
+        return `${String(date.getHours()).padStart(2, '0')}${String(date.getMinutes()).padStart(2, '0')}`;
+    }
+    if (dayDiff === 1) return 'Yesterday';
+    if (dayDiff > 1 && dayDiff < 7) {
+        return date.toLocaleDateString('en-AU', { weekday: 'long' });
+    }
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getFullYear()).slice(-2)}`;
 };
 
 const sortDashboardContacts = (contacts: DashboardMessageContact[]): DashboardMessageContact[] => (
@@ -228,6 +297,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const [selectedMessageContact, setSelectedMessageContact] = useState<DashboardMessageContact | null>(null);
     const [messageDraft, setMessageDraft] = useState('');
     const [dashboardMessages, setDashboardMessages] = useState<DashboardMessage[]>(() => readDashboardMessages());
+    const [messageView, setMessageView] = useState<'inbox' | 'compose'>('inbox');
+    const [messageSearchText, setMessageSearchText] = useState('');
     const [incomingToast, setIncomingToast] = useState<DashboardMessage | null>(null);
     const shownIncomingToastIds = useRef<Set<string>>(new Set());
     const roleTone = (role?: string) => {
@@ -312,6 +383,50 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .filter(contact => normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query))
             .slice(0, 6);
     }, [messageContacts, messageToText]);
+    const getMessageContactForName = (name: string): DashboardMessageContact => {
+        const contact = messageContacts.find(candidate => normaliseDashboardContactName(candidate.name) === normaliseDashboardContactName(name));
+        if (contact) return contact;
+        const nameParts = getDashboardContactNameParts(name);
+        return {
+            id: `stored-${normaliseDashboardContactName(name)}`,
+            name,
+            displayName: toDashboardContactDisplayName(name),
+            unit: 'Stored Message',
+            role: 'Message contact',
+            rank: '',
+            surname: nameParts.surname,
+            firstNames: nameParts.firstNames,
+            type: 'Staff',
+        };
+    };
+    const messageConversations = useMemo<DashboardConversation[]>(() => {
+        const conversations = new Map<string, DashboardConversation>();
+        dashboardMessages.forEach(message => {
+            const fromKey = normaliseDashboardContactName(message.from);
+            const toKey = normaliseDashboardContactName(message.to);
+            if (fromKey !== dashboardUserKey && toKey !== dashboardUserKey) return;
+            const otherName = fromKey === dashboardUserKey ? message.to : message.from;
+            const otherKey = normaliseDashboardContactName(otherName);
+            const existing = conversations.get(otherKey);
+            const isNewer = !existing || new Date(message.sentAt).getTime() >= new Date(existing.lastMessage.sentAt).getTime();
+            conversations.set(otherKey, {
+                contact: existing?.contact || getMessageContactForName(otherName),
+                lastMessage: isNewer ? message : existing.lastMessage,
+                unreadCount: (existing?.unreadCount || 0) + (toKey === dashboardUserKey && !message.readAt ? 1 : 0),
+            });
+        });
+        return Array.from(conversations.values())
+            .sort((a, b) => new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime());
+    }, [dashboardMessages, dashboardUserKey, messageContacts]);
+    const filteredMessageConversations = useMemo(() => {
+        const query = normaliseDashboardContactName(messageSearchText);
+        if (!query) return messageConversations;
+        return messageConversations.filter(conversation => (
+            normaliseDashboardContactName(conversation.contact.displayName).includes(query) ||
+            normaliseDashboardContactName(conversation.contact.name).includes(query) ||
+            normaliseDashboardContactName(conversation.lastMessage.body).includes(query)
+        ));
+    }, [messageConversations, messageSearchText]);
     const messageSuggestionGroups = useMemo(() => (
         groupDashboardMessageContacts(messageSuggestions)
     ), [messageSuggestions]);
@@ -363,6 +478,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         setSelectedMessageContact(contact);
         setMessageToText(contact.displayName);
         setIsContactPickerOpen(false);
+        setMessageView('compose');
     };
     const sendDashboardMessage = () => {
         if (!selectedMessageContact || !messageDraft.trim()) return;
@@ -377,14 +493,17 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         setMessageDraft('');
     };
     useEffect(() => {
-        if (!isMessagesOpen || unreadMessages.length === 0) return;
+        if (!isMessagesOpen || messageView !== 'compose' || !selectedMessageContact || unreadMessages.length === 0) return;
+        const selectedKey = normaliseDashboardContactName(selectedMessageContact.name);
         const now = new Date().toISOString();
         persistDashboardMessages(messages => messages.map(message => (
-            normaliseDashboardContactName(message.to) === dashboardUserKey && !message.readAt
+            normaliseDashboardContactName(message.to) === dashboardUserKey &&
+            normaliseDashboardContactName(message.from) === selectedKey &&
+            !message.readAt
                 ? { ...message, readAt: now }
                 : message
         )));
-    }, [dashboardUserKey, isMessagesOpen, unreadMessages.length]);
+    }, [dashboardUserKey, isMessagesOpen, messageView, selectedMessageContact?.name, unreadMessages.length]);
     const newestUnreadMessage = unreadMessages[unreadMessages.length - 1] || null;
     useEffect(() => {
         if (!newestUnreadMessage) {
@@ -484,7 +603,10 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 <div className="flex flex-wrap items-center gap-px">
                     <button
                         type="button"
-                        onClick={() => setIsMessagesOpen(true)}
+                        onClick={() => {
+                            setMessageView('inbox');
+                            setIsMessagesOpen(true);
+                        }}
                         className={dashboardActionButtonClass}
                     >
                         {unreadMessages.length > 0 && (
@@ -520,112 +642,193 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 p-4">
                     <div className="relative flex h-[78vh] w-full max-w-[520px] flex-col overflow-hidden rounded-[28px] bg-[#f7f7f8] text-gray-950 shadow-2xl ring-1 ring-black/10">
                         <div className="relative px-5 pb-3 pt-5">
-                            <h2 className="text-center text-2xl font-bold tracking-tight">New Message</h2>
+                            {messageView === 'compose' && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setMessageView('inbox');
+                                        setIsContactPickerOpen(false);
+                                    }}
+                                    className="absolute left-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300"
+                                    aria-label="Back to messages"
+                                >
+                                    <DashboardIconArrowLeft className="h-6 w-6" strokeWidth={2.4} />
+                                </button>
+                            )}
+                            <h2 className="text-center text-2xl font-bold tracking-tight">{messageView === 'inbox' ? 'Messages' : 'New Message'}</h2>
                             <button
                                 type="button"
                                 onClick={() => {
                                     setIsMessagesOpen(false);
                                     setIsContactPickerOpen(false);
+                                    setMessageSearchText('');
                                 }}
                                 className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300"
                                 aria-label="Close messages"
                             >
-                                <span className="block translate-x-px translate-y-[-5px] text-[34px] font-light leading-none">x</span>
+                                <DashboardIconX className="h-7 w-7 translate-x-px -translate-y-0.5" strokeWidth={2.1} />
                             </button>
                         </div>
-                        <div className="relative mx-3 rounded-full border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]">
-                            <div className="flex h-14 items-center gap-2 px-4">
-                                <span className="text-xl text-gray-500">To:</span>
-                                <input
-                                    value={messageToText}
-                                    onChange={(event) => {
-                                        setMessageToText(event.target.value);
-                                        setSelectedMessageContact(null);
-                                    }}
-                                    className="min-w-0 flex-1 bg-transparent text-xl text-gray-950 outline-none"
-                                    autoComplete="off"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setIsContactPickerOpen(true)}
-                                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-200 text-gray-950 hover:bg-gray-300"
-                                    aria-label="Open contacts"
-                                >
-                                    <span className="block translate-x-px translate-y-[-3px] text-[32px] font-medium leading-none">+</span>
-                                </button>
-                            </div>
-                            {!selectedMessageContact && messageSuggestionGroups.length > 0 && (
-                                <div className="absolute left-8 right-14 top-[58px] z-10 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
-                                    {messageSuggestionGroups.map(group => (
-                                        <div key={group.title}>
-                                            <div className="bg-gray-50 px-4 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">{group.title}</div>
-                                            {group.contacts.map(contact => renderDashboardMessageContactButton(contact, selectMessageContact, true))}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex-1 overflow-y-auto px-4 py-5">
-                            {selectedMessageContact ? (
-                                activeConversationMessages.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {activeConversationMessages.map(message => {
-                                            const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
-                                            const sentDate = new Date(message.sentAt);
-                                            const timeLabel = `${String(sentDate.getHours()).padStart(2, '0')}${String(sentDate.getMinutes()).padStart(2, '0')}`;
-                                            const dateLabel = `${String(sentDate.getDate()).padStart(2, '0')}/${String(sentDate.getMonth() + 1).padStart(2, '0')}/${String(sentDate.getFullYear()).slice(-2)}`;
-                                            return (
-                                                <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                                                    <div className={`flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
-                                                        <div className={`rounded-2xl px-4 py-2 shadow-sm ${mine ? 'bg-sky-500 text-white' : 'bg-white text-gray-950'}`}>
-                                                            <p className="whitespace-pre-wrap text-sm">{message.body}</p>
+                        {messageView === 'inbox' ? (
+                            <>
+                                <div className="flex-1 overflow-y-auto px-5 pb-24 pt-2">
+                                    {filteredMessageConversations.length > 0 ? (
+                                        <div className="divide-y divide-gray-200">
+                                            {filteredMessageConversations.map(conversation => (
+                                                <button
+                                                    key={conversation.contact.id}
+                                                    type="button"
+                                                    onClick={() => selectMessageContact(conversation.contact)}
+                                                    className="relative flex w-full items-start gap-3 py-4 text-left hover:bg-white/50"
+                                                >
+                                                    {conversation.unreadCount > 0 && (
+                                                        <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500" aria-label="Unread message" />
+                                                    )}
+                                                    <div className={`min-w-0 flex-1 ${conversation.unreadCount > 0 ? '' : 'pl-5'}`}>
+                                                        <div className="flex items-baseline gap-2">
+                                                            <p className="min-w-0 flex-1 truncate text-[22px] font-bold leading-tight text-black">
+                                                                {conversation.contact.displayName}
+                                                            </p>
+                                                            <span className="shrink-0 text-lg text-gray-500">
+                                                                {formatDashboardConversationDate(conversation.lastMessage.sentAt)}
+                                                            </span>
                                                         </div>
-                                                        <div className="mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500">
-                                                            <span>{timeLabel} {dateLabel}</span>
-                                                            {mine && <span>{message.readAt ? 'Read' : 'Sent'}</span>}
-                                                        </div>
+                                                        <p className="mt-1 line-clamp-2 text-[20px] leading-snug text-gray-500">
+                                                            {conversation.lastMessage.body}
+                                                        </p>
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
+                                                    <DashboardIconChevronRight className="mt-2 h-7 w-7 shrink-0 text-gray-500" strokeWidth={2.6} />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="pt-20 text-center text-sm text-gray-400">
+                                            {messageSearchText ? 'No messages match your search.' : 'No messages yet.'}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="absolute bottom-4 left-4 right-4 flex items-center gap-3">
+                                    <div className="flex h-14 min-w-0 flex-1 items-center rounded-full bg-white/90 px-4 shadow-[0_10px_28px_rgba(15,23,42,0.14)] ring-1 ring-black/5">
+                                        <DashboardIconSearch className="mr-3 h-7 w-7 shrink-0 text-black" strokeWidth={2.8} />
+                                        <input
+                                            value={messageSearchText}
+                                            onChange={(event) => setMessageSearchText(event.target.value)}
+                                            placeholder="Search"
+                                            className="min-w-0 flex-1 bg-transparent text-[22px] font-semibold text-gray-700 outline-none placeholder:text-gray-500"
+                                        />
                                     </div>
-                                ) : (
-                                    <p className="pt-20 text-center text-sm text-gray-400">No messages yet.</p>
-                                )
-                            ) : (
-                                <p className="pt-20 text-center text-sm text-gray-400">Choose someone to message.</p>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2 border-t border-gray-200 bg-white/70 px-3 py-3 shadow-[0_-8px_22px_rgba(15,23,42,0.08)]">
-                            <input
-                                value={messageDraft}
-                                onChange={(event) => setMessageDraft(event.target.value)}
-                                onKeyDown={(event) => {
-                                    if (event.key === 'Enter' && !event.shiftKey) {
-                                        event.preventDefault();
-                                        sendDashboardMessage();
-                                    }
-                                }}
-                                placeholder="Message"
-                                className="h-12 min-w-0 flex-1 rounded-full border border-white bg-white px-4 text-base text-gray-950 shadow-inner outline-none focus:ring-2 focus:ring-sky-400"
-                            />
-                            <button
-                                type="button"
-                                onClick={sendDashboardMessage}
-                                disabled={!selectedMessageContact || !messageDraft.trim()}
-                                className="flex h-12 w-14 items-center justify-center rounded-md bg-white text-sm font-bold text-sky-600 shadow disabled:cursor-not-allowed disabled:text-gray-300"
-                            >
-                                Send
-                            </button>
-                        </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMessageView('compose');
+                                            setSelectedMessageContact(null);
+                                            setMessageToText('');
+                                            setMessageDraft('');
+                                        }}
+                                        className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white text-black shadow-[0_10px_28px_rgba(15,23,42,0.16)] ring-1 ring-black/5 hover:bg-gray-100"
+                                        aria-label="New message"
+                                    >
+                                        <DashboardIconSquarePen className="h-8 w-8" strokeWidth={2.4} />
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="relative mx-3 rounded-full border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]">
+                                    <div className="flex h-14 items-center gap-2 px-4">
+                                        <span className="text-xl text-gray-500">To:</span>
+                                        <input
+                                            value={messageToText}
+                                            onChange={(event) => {
+                                                setMessageToText(event.target.value);
+                                                setSelectedMessageContact(null);
+                                            }}
+                                            className="min-w-0 flex-1 bg-transparent text-xl text-gray-950 outline-none"
+                                            autoComplete="off"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsContactPickerOpen(true)}
+                                            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-200 text-gray-950 hover:bg-gray-300"
+                                            aria-label="Open contacts"
+                                        >
+                                            <DashboardIconPlus className="h-7 w-7 translate-x-px -translate-y-0.5" strokeWidth={2} />
+                                        </button>
+                                    </div>
+                                    {!selectedMessageContact && messageSuggestionGroups.length > 0 && (
+                                        <div className="absolute left-8 right-14 top-[58px] z-10 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
+                                            {messageSuggestionGroups.map(group => (
+                                                <div key={group.title}>
+                                                    <div className="bg-gray-50 px-4 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">{group.title}</div>
+                                                    {group.contacts.map(contact => renderDashboardMessageContactButton(contact, selectMessageContact, true))}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1 overflow-y-auto px-4 py-5">
+                                    {selectedMessageContact ? (
+                                        activeConversationMessages.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {activeConversationMessages.map(message => {
+                                                    const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
+                                                    const sentDate = new Date(message.sentAt);
+                                                    const timeLabel = `${String(sentDate.getHours()).padStart(2, '0')}${String(sentDate.getMinutes()).padStart(2, '0')}`;
+                                                    const dateLabel = `${String(sentDate.getDate()).padStart(2, '0')}/${String(sentDate.getMonth() + 1).padStart(2, '0')}/${String(sentDate.getFullYear()).slice(-2)}`;
+                                                    return (
+                                                        <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                                                            <div className={`flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
+                                                                <div className={`rounded-2xl px-4 py-2 shadow-sm ${mine ? 'bg-sky-500 text-white' : 'bg-white text-gray-950'}`}>
+                                                                    <p className="whitespace-pre-wrap text-sm">{message.body}</p>
+                                                                </div>
+                                                                <div className="mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500">
+                                                                    <span>{timeLabel} {dateLabel}</span>
+                                                                    {mine && <span>{message.readAt ? 'Read' : 'Sent'}</span>}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <p className="pt-20 text-center text-sm text-gray-400">No messages yet.</p>
+                                        )
+                                    ) : (
+                                        <p className="pt-20 text-center text-sm text-gray-400">Choose someone to message.</p>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2 border-t border-gray-200 bg-white/70 px-3 py-3 shadow-[0_-8px_22px_rgba(15,23,42,0.08)]">
+                                    <input
+                                        value={messageDraft}
+                                        onChange={(event) => setMessageDraft(event.target.value)}
+                                        onKeyDown={(event) => {
+                                            if (event.key === 'Enter' && !event.shiftKey) {
+                                                event.preventDefault();
+                                                sendDashboardMessage();
+                                            }
+                                        }}
+                                        placeholder="Message"
+                                        className="h-12 min-w-0 flex-1 rounded-full border border-white bg-white px-4 text-base text-gray-950 shadow-inner outline-none focus:ring-2 focus:ring-sky-400"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={sendDashboardMessage}
+                                        disabled={!selectedMessageContact || !messageDraft.trim()}
+                                        className="flex h-12 w-14 items-center justify-center rounded-md bg-white text-sm font-bold text-sky-600 shadow disabled:cursor-not-allowed disabled:text-gray-300"
+                                    >
+                                        Send
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
-                    {isContactPickerOpen && (
+                    {messageView === 'compose' && isContactPickerOpen && (
                         <div className="absolute inset-0 z-[105] flex items-center justify-center bg-black/45 p-4">
                             <div className="w-full max-w-md rounded-2xl bg-white p-4 text-gray-950 shadow-2xl">
                                 <div className="mb-3 flex items-center justify-between">
                                     <h3 className="text-lg font-bold">Select Contact</h3>
                                     <button type="button" onClick={() => setIsContactPickerOpen(false)} className="grid h-9 w-9 place-items-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-950" aria-label="Close contacts">
-                                        <span className="block translate-x-px translate-y-[-5px] text-[24px] font-light leading-none">x</span>
+                                        <DashboardIconX className="h-5 w-5 translate-x-px -translate-y-0.5" strokeWidth={2} />
                                     </button>
                                 </div>
                                 <div className="max-h-[52vh] space-y-3 overflow-y-auto">
