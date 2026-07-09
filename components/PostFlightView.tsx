@@ -82,11 +82,15 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         if (c.type === 'composite') return ['checkbox'];
         return (c as CurrencyRequirement).expiryRule === 'ROLLING_WINDOW' ? ['count'] : ['date'];
     };
+    const scheduledAircraftNumber = useMemo(
+        () => parseAircraftNumber(event.aircraftNumber || '001', aircraftNumberSettings),
+        [aircraftNumberSettings, event.aircraftNumber],
+    );
 
     // State
     const [result, setResult] = useState<'DCO' | 'DPCO' | 'DNCO' | ''>('');
-    const [aircraftNumber, setAircraftNumber] = useState('001');
-    const [aircraftNumberPrefix, setAircraftNumberPrefix] = useState(aircraftNumberSettings.defaultPrefix);
+    const [aircraftNumber, setAircraftNumber] = useState(scheduledAircraftNumber.number || '001');
+    const [aircraftNumberPrefix, setAircraftNumberPrefix] = useState(scheduledAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
     const [from, setFrom] = useState<string>(school);
     const [to, setTo] = useState<string>(school);
 
@@ -352,13 +356,16 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         const landM = String(Math.round((land % 1) * 60)).padStart(2, '0');
         const initialLand = `${landH}:${landM}`;
         setLandTime(initialLand);
+        const parsedScheduledAircraftNumber = parseAircraftNumber(event.aircraftNumber || '001', aircraftNumberSettings);
+        setAircraftNumber(parsedScheduledAircraftNumber.number || '001');
+        setAircraftNumberPrefix(parsedScheduledAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
 
         // Store the initial state once on mount
         if (!initialFormState.current) {
             initialFormState.current = {
                 result: '',
-                aircraftNumber: '001',
-                aircraftNumberPrefix: aircraftNumberSettings.defaultPrefix,
+                aircraftNumber: parsedScheduledAircraftNumber.number || '001',
+                aircraftNumberPrefix: parsedScheduledAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix,
                 from: school,
                 to: school,
                 isFlightLog: event.type === 'flight',
@@ -386,7 +393,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 currencyValues: {},
             };
         }
-    }, [event, school]);
+    }, [aircraftNumberSettings, event, school]);
 
     useEffect(() => {
         const storageKey = getPostFlightFormStorageKey(event?.id);

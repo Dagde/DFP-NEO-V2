@@ -41764,7 +41764,8 @@ appliedUpdates.forEach(update => {
                         setShowAuthFlyout(true);
                     }}
                     onOpenPostFlight={(e) => {
-                        setEventForPostFlight(e);
+                        const latestEvent = events.find(ev => ev.id === e.id) || e;
+                        setEventForPostFlight(latestEvent);
                         handleNavigation('PostFlight');
                         setSelectedEvent(null);
                     }}

@@ -74172,9 +74172,13 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     if (c.type === "composite") return ["checkbox"];
     return c.expiryRule === "ROLLING_WINDOW" ? ["count"] : ["date"];
   };
+  const scheduledAircraftNumber = reactExports.useMemo(
+    () => parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings),
+    [aircraftNumberSettings, event.aircraftNumber]
+  );
   const [result, setResult] = reactExports.useState("");
-  const [aircraftNumber, setAircraftNumber] = reactExports.useState("001");
-  const [aircraftNumberPrefix, setAircraftNumberPrefix] = reactExports.useState(aircraftNumberSettings.defaultPrefix);
+  const [aircraftNumber, setAircraftNumber] = reactExports.useState(scheduledAircraftNumber.number || "001");
+  const [aircraftNumberPrefix, setAircraftNumberPrefix] = reactExports.useState(scheduledAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
   const [from, setFrom] = reactExports.useState(school);
   const [to, setTo] = reactExports.useState(school);
   reactExports.useEffect(() => {
@@ -74378,11 +74382,14 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     const landM = String(Math.round(land % 1 * 60)).padStart(2, "0");
     const initialLand = `${landH}:${landM}`;
     setLandTime(initialLand);
+    const parsedScheduledAircraftNumber = parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings);
+    setAircraftNumber(parsedScheduledAircraftNumber.number || "001");
+    setAircraftNumberPrefix(parsedScheduledAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
     if (!initialFormState.current) {
       initialFormState.current = {
         result: "",
-        aircraftNumber: "001",
-        aircraftNumberPrefix: aircraftNumberSettings.defaultPrefix,
+        aircraftNumber: parsedScheduledAircraftNumber.number || "001",
+        aircraftNumberPrefix: parsedScheduledAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix,
         from: school,
         to: school,
         isFlightLog: event.type === "flight",
@@ -74410,7 +74417,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         currencyValues: {}
       };
     }
-  }, [event, school]);
+  }, [aircraftNumberSettings, event, school]);
   reactExports.useEffect(() => {
     const storageKey = getPostFlightFormStorageKey(event?.id);
     if (!storageKey) return;
@@ -116633,7 +116640,8 @@ Do you want to replace the existing entry?`,
             setShowAuthFlyout(true);
           },
           onOpenPostFlight: (e) => {
-            setEventForPostFlight(e);
+            const latestEvent = events.find((ev) => ev.id === e.id) || e;
+            setEventForPostFlight(latestEvent);
             handleNavigation("PostFlight");
             setSelectedEvent(null);
           },
