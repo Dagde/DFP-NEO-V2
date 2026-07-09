@@ -7618,15 +7618,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                 return (
                                                     <div
                                                         key={`flight-line-aircraft-tile-${index}`}
-                                                        className="flex h-[52px] w-[62px] items-center justify-center rounded-md border border-slate-500/45 bg-[#686b6f] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"
+                                                        className="flex h-[52px] w-[62px] flex-col items-center justify-center rounded-md border border-slate-500/45 bg-[#686b6f] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"
                                                         title={tailNumber}
                                                     >
-                                                        <span className="flex max-w-full items-center justify-center gap-0.5 truncate">
-                                                            {flightLinePoolContext.prefix ? (
-                                                                <span className="-ml-0.5 text-[8px] font-black uppercase tracking-normal text-slate-200/80">{flightLinePoolContext.prefix}</span>
-                                                            ) : null}
-                                                            <span className="truncate text-sm font-black leading-none text-white">{number}</span>
-                                                        </span>
+                                                        {flightLinePoolContext.prefix ? (
+                                                            <span className="mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85">{flightLinePoolContext.prefix}</span>
+                                                        ) : null}
+                                                        <span className="max-w-full truncate text-base font-black leading-none text-white">{number}</span>
                                                     </div>
                                                 );
                                             })}
