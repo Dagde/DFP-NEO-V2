@@ -36400,7 +36400,22 @@ appliedUpdates.forEach(update => {
 
     // New handler for single item updates
     const handleUpdateSyllabusItem = (updatedItem: SyllabusItemDetail) => {
-        setSyllabusDetails(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+        const itemMatchesUpdate = (item: SyllabusItemDetail) => {
+            const candidates = [
+                item.id,
+                item.code,
+                item.masterEventId,
+            ].map(value => String(value || '').trim()).filter(Boolean);
+            const updatedCandidates = [
+                updatedItem.id,
+                updatedItem.code,
+                updatedItem.masterEventId,
+            ].map(value => String(value || '').trim()).filter(Boolean);
+
+            return candidates.some(candidate => updatedCandidates.includes(candidate));
+        };
+
+        setSyllabusDetails(prev => prev.map(item => itemMatchesUpdate(item) ? updatedItem : item));
     };
 
     const handleAddSyllabusItem = (newItem: SyllabusItemDetail) => {

@@ -112038,7 +112038,20 @@ ${conflictLines.join("\n")}${moreText}`,
     });
   }, []);
   const handleUpdateSyllabusItem = (updatedItem) => {
-    setSyllabusDetails((prev) => prev.map((item) => item.id === updatedItem.id ? updatedItem : item));
+    const itemMatchesUpdate = (item) => {
+      const candidates = [
+        item.id,
+        item.code,
+        item.masterEventId
+      ].map((value) => String(value || "").trim()).filter(Boolean);
+      const updatedCandidates = [
+        updatedItem.id,
+        updatedItem.code,
+        updatedItem.masterEventId
+      ].map((value) => String(value || "").trim()).filter(Boolean);
+      return candidates.some((candidate) => updatedCandidates.includes(candidate));
+    };
+    setSyllabusDetails((prev) => prev.map((item) => itemMatchesUpdate(item) ? updatedItem : item));
   };
   const handleAddSyllabusItem = (newItem) => {
     setSyllabusDetails((prev) => {
