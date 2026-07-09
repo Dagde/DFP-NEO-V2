@@ -7609,8 +7609,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex min-w-0 flex-1 items-stretch gap-4">
-                                    <div className="min-w-0 flex-[1.2] overflow-x-auto border-r border-slate-700/70 pr-4">
+                                <div className="flex min-w-0 flex-1 items-stretch">
+                                    <div className="min-w-0 flex-1 overflow-x-auto">
                                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Aircraft Tiles</p>
                                         <div className="mt-3 grid auto-cols-[88px] grid-flow-col grid-rows-2 gap-2 pb-1">
                                             {flightLinePoolContext.numbers.map((number, index) => {
@@ -7621,28 +7621,15 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                         className="flex h-[52px] w-[88px] items-center justify-center rounded-md border border-slate-500/45 bg-[#686b6f] px-2 text-center text-sm font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"
                                                         title={tailNumber}
                                                     >
-                                                        <span className="truncate">{tailNumber}</span>
+                                                        <span className="flex max-w-full items-baseline justify-center gap-1 truncate">
+                                                            {flightLinePoolContext.prefix ? (
+                                                                <span className="text-[7px] font-black uppercase tracking-wide text-slate-200/80">{flightLinePoolContext.prefix}</span>
+                                                            ) : null}
+                                                            <span className="truncate text-base font-black leading-none text-white">{number}</span>
+                                                        </span>
                                                     </div>
                                                 );
                                             })}
-                                        </div>
-                                    </div>
-                                    <div className="grid h-full min-w-[360px] flex-1 grid-cols-4 gap-3">
-                                        <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Aircraft</p>
-                                        <p className="mt-2 text-xl font-black text-white">{airframeCount}</p>
-                                        </div>
-                                        <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
-                                            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Standby</p>
-                                            <p className="mt-2 text-xl font-black text-white">{standbyCount}</p>
-                                        </div>
-                                        <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
-                                            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Sim</p>
-                                            <p className="mt-2 text-xl font-black text-white">{ftdCount}</p>
-                                        </div>
-                                        <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
-                                            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Trainer</p>
-                                            <p className="mt-2 text-xl font-black text-white">{cptCount}</p>
                                         </div>
                                     </div>
                                 </div>
