@@ -6482,6 +6482,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = useState(false);
     const [flightLineDraggedAircraftNumber, setFlightLineDraggedAircraftNumber] = useState<string | null>(null);
+    const [flightLineOptimisticUnavailableNumbers, setFlightLineOptimisticUnavailableNumbers] = useState<string[]>([]);
     const [isFlightLineUnavailableDropActive, setIsFlightLineUnavailableDropActive] = useState(false);
     useEffect(() => {
         if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
@@ -6525,6 +6526,36 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             unavailableNumbers,
         };
     }, [airframeCount, locationCode, platformConfig, unitCode]);
+    const sortFlightLineAircraftNumbers = useCallback((values: string[]) => (
+        [...values].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+    ), []);
+    const flightLineEffectiveUnavailableNumbers = useMemo(() => {
+        const validNumbers = new Set(flightLinePoolContext.numbers);
+        return sortFlightLineAircraftNumbers(Array.from(new Set([
+            ...flightLinePoolContext.unavailableNumbers,
+            ...flightLineOptimisticUnavailableNumbers,
+        ])).filter((number) => validNumbers.has(number)));
+    }, [flightLineOptimisticUnavailableNumbers, flightLinePoolContext.numbers, flightLinePoolContext.unavailableNumbers, sortFlightLineAircraftNumbers]);
+    const flightLineEffectiveUnavailableSet = useMemo(
+        () => new Set(flightLineEffectiveUnavailableNumbers),
+        [flightLineEffectiveUnavailableNumbers],
+    );
+    const flightLineEffectiveAvailableNumbers = useMemo(() => (
+        flightLinePoolContext.numbers.filter((number) => !flightLineEffectiveUnavailableSet.has(number))
+    ), [flightLineEffectiveUnavailableSet, flightLinePoolContext.numbers]);
+    const flightLineStoredUnavailableKey = flightLinePoolContext.unavailableNumbers.join('|');
+    const flightLineConfiguredNumbersKey = flightLinePoolContext.numbers.join('|');
+    useEffect(() => {
+        if (flightLineOptimisticUnavailableNumbers.length === 0) return;
+        const storedUnavailableNumbers = new Set(flightLinePoolContext.unavailableNumbers);
+        const configuredNumbers = new Set(flightLinePoolContext.numbers);
+        const stillPending = flightLineOptimisticUnavailableNumbers.filter((number) => (
+            configuredNumbers.has(number) && !storedUnavailableNumbers.has(number)
+        ));
+        if (stillPending.length !== flightLineOptimisticUnavailableNumbers.length) {
+            setFlightLineOptimisticUnavailableNumbers(stillPending);
+        }
+    }, [flightLineConfiguredNumbersKey, flightLineOptimisticUnavailableNumbers, flightLineStoredUnavailableKey, flightLinePoolContext.numbers, flightLinePoolContext.unavailableNumbers]);
     const updateFlightLineAircraftNumber = useCallback((aircraftIndex: number, value: string) => {
         if (!onUpdatePlatformConfig || flightLinePoolContext.poolIndex < 0) return;
         onUpdatePlatformConfig((current: any) => ({
@@ -6551,7 +6582,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }, [flightLinePoolContext.aircraftCount, flightLinePoolContext.poolIndex, onUpdatePlatformConfig]);
     const addFlightLineUnavailableAircraft = useCallback((aircraftNumber: string) => {
         const cleanNumber = aircraftNumber.trim();
-        if (!cleanNumber || !onUpdatePlatformConfig || flightLinePoolContext.poolIndex < 0) return;
+        setFlightLineDraggedAircraftNumber(null);
+        setIsFlightLineUnavailableDropActive(false);
+        if (!cleanNumber || !flightLinePoolContext.numbers.includes(cleanNumber)) return;
+        setFlightLineOptimisticUnavailableNumbers((current) => (
+            sortFlightLineAircraftNumbers(Array.from(new Set([...current, cleanNumber])))
+        ));
+        if (!onUpdatePlatformConfig || flightLinePoolContext.poolIndex < 0) return;
         onUpdatePlatformConfig((current: any) => ({
             ...current,
             resourcePools: (current?.resourcePools || []).map((pool: any, poolIndex: number) => {
@@ -6572,7 +6609,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 };
             }),
         }));
-    }, [flightLinePoolContext.numbers, flightLinePoolContext.poolIndex, onUpdatePlatformConfig]);
+    }, [flightLinePoolContext.numbers, flightLinePoolContext.poolIndex, onUpdatePlatformConfig, sortFlightLineAircraftNumbers]);
     const flightLinePanelHeight = useMemo(() => {
         const panelWidth = resourceSlideoutFrame?.width || 0;
         const reservedWidth = 200 + 200 + 40 + 32;
@@ -6581,11 +6618,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const unavailableColumns = 3;
         const tileRows = Math.max(
             1,
-            Math.ceil((flightLinePoolContext.availableNumbers.length || 1) / tileColumns),
-            Math.ceil((flightLinePoolContext.unavailableNumbers.length || 1) / unavailableColumns),
+            Math.ceil((flightLineEffectiveAvailableNumbers.length || 1) / tileColumns),
+            Math.ceil((flightLineEffectiveUnavailableNumbers.length || 1) / unavailableColumns),
         );
         return Math.max(200, 68 + (tileRows * 40) + ((tileRows - 1) * 8));
-    }, [flightLinePoolContext.availableNumbers.length, flightLinePoolContext.unavailableNumbers.length, resourceSlideoutFrame?.width]);
+    }, [flightLineEffectiveAvailableNumbers.length, flightLineEffectiveUnavailableNumbers.length, resourceSlideoutFrame?.width]);
     // Initialize with timezone-adjusted time
     const [currentTime, setCurrentTime] = useState(() => {
         const now = new Date();
@@ -7664,12 +7701,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                     <div className="min-w-0 flex-1">
                                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Aircraft Tiles</p>
                                         <div className="mt-3 flex flex-wrap gap-2 pb-1">
-                                            {flightLinePoolContext.availableNumbers.map((number, index) => {
+                                            {flightLineEffectiveAvailableNumbers.map((number) => {
                                                 const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(' ');
                                                 const isDragging = flightLineDraggedAircraftNumber === number;
                                                 return (
                                                     <div
-                                                        key={`flight-line-aircraft-tile-${index}`}
+                                                        key={`flight-line-aircraft-tile-${number}`}
                                                         draggable
                                                         onDragStart={(event) => {
                                                             setFlightLineDraggedAircraftNumber(number);
@@ -7715,13 +7752,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 >
                                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Unavailable</p>
                                     <div className={`mt-3 min-h-[88px] rounded-md border px-2 py-2 transition-all duration-300 ease-out ${isFlightLineUnavailableDropActive ? 'border-cyan-300/70 bg-cyan-500/10' : 'border-slate-700/80 bg-slate-950/55'}`}>
-                                        {flightLinePoolContext.unavailableNumbers.length > 0 ? (
+                                        {flightLineEffectiveUnavailableNumbers.length > 0 ? (
                                             <div className="flex flex-wrap gap-2">
-                                                {flightLinePoolContext.unavailableNumbers.map((number, index) => {
+                                                {flightLineEffectiveUnavailableNumbers.map((number) => {
                                                     const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(' ');
                                                     return (
                                                         <div
-                                                            key={`flight-line-unavailable-aircraft-tile-${number}-${index}`}
+                                                            key={`flight-line-unavailable-aircraft-tile-${number}`}
                                                             className="flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border border-slate-500/45 bg-[#4f5357] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out"
                                                             title={tailNumber}
                                                         >
