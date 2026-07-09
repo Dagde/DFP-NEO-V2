@@ -7587,7 +7587,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             {flightLineAircraftMarkerEntries.map(({ aircraftNumber, event, isPreview }: any) => {
                 const rowIndex = resources.indexOf(event.resourceId);
                 if (rowIndex < 0) return null;
-                const markerWidth = 38;
+                const markerWidth = 28;
                 const markerLeft = ((event.startTime - START_HOUR) * PIXELS_PER_HOUR * zoomLevel) - markerWidth;
                 const markerTop = rowIndex * ROW_HEIGHT + 2;
                 const markerHeight = ROW_HEIGHT - 4;
@@ -7613,11 +7613,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         }}
                         title={`Aircraft ${aircraftNumber}`}
                     >
-                        <div className="absolute left-0 top-0 bottom-0 w-[18px] rounded-l-md bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]" />
-                        <div className="absolute left-[14px] top-0 h-[5px] w-[24px] bg-[#4f5357]" />
-                        <div className="absolute left-[14px] bottom-0 h-[5px] w-[24px] bg-[#4f5357]" />
+                        <div className="absolute left-0 top-0 bottom-0 w-[18px] rounded-l-md bg-[#4f5357] shadow-[0_8px_18px_rgba(0,0,0,0.28)]" />
+                        <div className="absolute left-[14px] top-0 h-[5px] w-[14px] bg-[#4f5357]" />
+                        <div className="absolute left-[14px] bottom-0 h-[5px] w-[14px] bg-[#4f5357]" />
                         <div className="absolute left-0 top-0 bottom-0 flex w-[18px] items-center justify-center">
-                            <span className="block rotate-90 font-mono text-[12px] font-black leading-none text-white">{aircraftNumber}</span>
+                            <span className="block -rotate-90 font-mono text-[12px] font-black leading-none text-white">{aircraftNumber}</span>
                         </div>
                     </div>
                 );

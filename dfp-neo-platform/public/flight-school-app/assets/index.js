@@ -15465,7 +15465,7 @@ const ScheduleView = ({
   const renderFlightLineAircraftMarkers = () => /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: flightLineAircraftMarkerEntries.map(({ aircraftNumber, event, isPreview }) => {
     const rowIndex = resources.indexOf(event.resourceId);
     if (rowIndex < 0) return null;
-    const markerWidth = 38;
+    const markerWidth = 28;
     const markerLeft = (event.startTime - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel - markerWidth;
     const markerTop = rowIndex * ROW_HEIGHT$6 + 2;
     const markerHeight = ROW_HEIGHT$6 - 4;
@@ -15491,10 +15491,10 @@ const ScheduleView = ({
         },
         title: `Aircraft ${aircraftNumber}`,
         children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-0 bottom-0 w-[18px] rounded-l-md bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-[14px] top-0 h-[5px] w-[24px] bg-[#4f5357]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-[14px] bottom-0 h-[5px] w-[24px] bg-[#4f5357]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-0 bottom-0 flex w-[18px] items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block rotate-90 font-mono text-[12px] font-black leading-none text-white", children: aircraftNumber }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-0 bottom-0 w-[18px] rounded-l-md bg-[#4f5357] shadow-[0_8px_18px_rgba(0,0,0,0.28)]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-[14px] top-0 h-[5px] w-[14px] bg-[#4f5357]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-[14px] bottom-0 h-[5px] w-[14px] bg-[#4f5357]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-0 bottom-0 flex w-[18px] items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block -rotate-90 font-mono text-[12px] font-black leading-none text-white", children: aircraftNumber }) })
         ]
       },
       `flight-line-aircraft-marker-${aircraftNumber}-${event.id}`
