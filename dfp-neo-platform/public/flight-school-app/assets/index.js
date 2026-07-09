@@ -14569,7 +14569,6 @@ const ScheduleView = ({
     () => new Set(flightLineEffectiveUnavailableNumbers),
     [flightLineEffectiveUnavailableNumbers]
   );
-  const flightLineEffectiveAvailableNumbers = reactExports.useMemo(() => flightLinePoolContext.numbers.filter((number) => !flightLineEffectiveUnavailableSet.has(number)), [flightLineEffectiveUnavailableSet, flightLinePoolContext.numbers]);
   const flightLineStoredUnavailableKey = flightLinePoolContext.unavailableNumbers.join("|");
   const flightLineConfiguredNumbersKey = flightLinePoolContext.numbers.join("|");
   reactExports.useEffect(() => {
@@ -14652,11 +14651,11 @@ const ScheduleView = ({
     const unavailableColumns = 3;
     const tileRows = Math.max(
       1,
-      Math.ceil((flightLineEffectiveAvailableNumbers.length || 1) / tileColumns),
+      Math.ceil((flightLinePoolContext.numbers.length || 1) / tileColumns),
       Math.ceil((flightLineEffectiveUnavailableNumbers.length || 1) / unavailableColumns)
     );
     return Math.max(200, 68 + tileRows * 40 + (tileRows - 1) * 8);
-  }, [flightLineEffectiveAvailableNumbers.length, flightLineEffectiveUnavailableNumbers.length, resourceSlideoutFrame?.width]);
+  }, [flightLineEffectiveUnavailableNumbers.length, flightLinePoolContext.numbers.length, resourceSlideoutFrame?.width]);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
     const now = /* @__PURE__ */ new Date();
     const offsetMs = timezoneOffset * 60 * 60 * 1e3;
@@ -15615,9 +15614,24 @@ const ScheduleView = ({
                         const aircraftNumber = event.dataTransfer.getData("text/plain") || flightLineDraggedAircraftNumber || "";
                         moveFlightLineAircraftToAvailable(aircraftNumber);
                       },
-                      children: flightLineEffectiveAvailableNumbers.map((number) => {
+                      children: flightLinePoolContext.numbers.map((number) => {
                         const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(" ");
                         const isDragging = flightLineDraggedAircraftNumber === number;
+                        const isUnavailable = flightLineEffectiveUnavailableSet.has(number);
+                        if (isUnavailable) {
+                          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                            "div",
+                            {
+                              className: "flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border border-dashed border-slate-500/45 bg-[#4f5357]/25 px-1 text-center font-black text-slate-300/70 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.18)] transition-all duration-300 ease-out",
+                              title: `${tailNumber} unavailable`,
+                              children: [
+                                flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-300/55", children: flightLinePoolContext.prefix }) : null,
+                                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-full truncate text-[12px] font-black leading-none text-slate-200/70", children: number })
+                              ]
+                            },
+                            `flight-line-aircraft-shadow-${number}`
+                          );
+                        }
                         return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                           "div",
                           {

@@ -6539,9 +6539,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         () => new Set(flightLineEffectiveUnavailableNumbers),
         [flightLineEffectiveUnavailableNumbers],
     );
-    const flightLineEffectiveAvailableNumbers = useMemo(() => (
-        flightLinePoolContext.numbers.filter((number) => !flightLineEffectiveUnavailableSet.has(number))
-    ), [flightLineEffectiveUnavailableSet, flightLinePoolContext.numbers]);
     const flightLineStoredUnavailableKey = flightLinePoolContext.unavailableNumbers.join('|');
     const flightLineConfiguredNumbersKey = flightLinePoolContext.numbers.join('|');
     useEffect(() => {
@@ -6626,11 +6623,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const unavailableColumns = 3;
         const tileRows = Math.max(
             1,
-            Math.ceil((flightLineEffectiveAvailableNumbers.length || 1) / tileColumns),
+            Math.ceil((flightLinePoolContext.numbers.length || 1) / tileColumns),
             Math.ceil((flightLineEffectiveUnavailableNumbers.length || 1) / unavailableColumns),
         );
         return Math.max(200, 68 + (tileRows * 40) + ((tileRows - 1) * 8));
-    }, [flightLineEffectiveAvailableNumbers.length, flightLineEffectiveUnavailableNumbers.length, resourceSlideoutFrame?.width]);
+    }, [flightLineEffectiveUnavailableNumbers.length, flightLinePoolContext.numbers.length, resourceSlideoutFrame?.width]);
     // Initialize with timezone-adjusted time
     const [currentTime, setCurrentTime] = useState(() => {
         const now = new Date();
@@ -7726,9 +7723,24 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                 moveFlightLineAircraftToAvailable(aircraftNumber);
                                             }}
                                         >
-                                            {flightLineEffectiveAvailableNumbers.map((number) => {
+                                            {flightLinePoolContext.numbers.map((number) => {
                                                 const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(' ');
                                                 const isDragging = flightLineDraggedAircraftNumber === number;
+                                                const isUnavailable = flightLineEffectiveUnavailableSet.has(number);
+                                                if (isUnavailable) {
+                                                    return (
+                                                        <div
+                                                            key={`flight-line-aircraft-shadow-${number}`}
+                                                            className="flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border border-dashed border-slate-500/45 bg-[#4f5357]/25 px-1 text-center font-black text-slate-300/70 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.18)] transition-all duration-300 ease-out"
+                                                            title={`${tailNumber} unavailable`}
+                                                        >
+                                                            {flightLinePoolContext.prefix ? (
+                                                                <span className="mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-300/55">{flightLinePoolContext.prefix}</span>
+                                                            ) : null}
+                                                            <span className="max-w-full truncate text-[12px] font-black leading-none text-slate-200/70">{number}</span>
+                                                        </div>
+                                                    );
+                                                }
                                                 return (
                                                     <div
                                                         key={`flight-line-aircraft-tile-${number}`}
