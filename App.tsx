@@ -39,7 +39,7 @@ import {
     getResourceDisplayNames,
     type ResourceDisplayNames,
 } from './utils/resourceDisplayNames';
-import { formatAircraftNumber, normaliseAircraftNumberSettings, parseAircraftNumber } from './utils/aircraftNumberFormat';
+import { normaliseAircraftNumberSettings, parseAircraftNumber } from './utils/aircraftNumberFormat';
 import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions, type AircraftConfigurationDefinition } from './utils/aircraftConfigurationSettings';
 import { getAircraftCrewCompositionForEvent, getAircraftSeatEligibleRoles, getAircraftTypeCrewComposition, normaliseAircraftCrewComposition, type AircraftCrewComposition } from './utils/aircraftCrewComposition';
 import { getCrewRequirementCount, getCrewRequirementRoleOptions, getCrewRequirementRoles } from './utils/crewRequirements';
@@ -37186,11 +37186,6 @@ appliedUpdates.forEach(update => {
             return [];
         }
 
-        const displayAircraftNumber = formatAircraftNumber(
-            aircraftNumber,
-            aircraftNumberSettings.usePrefix ? aircraftNumberSettings.defaultPrefix || aircraftNumberSettings.prefixes[0] || '' : '',
-            aircraftNumberSettings,
-        );
         const turnaroundHours = Math.max(0, Number(flightTurnaround) || 0);
         const requiredTurnaroundHoursText = turnaroundHours.toFixed(1);
         const eventProtectedEnd = event.startTime + event.duration + turnaroundHours;
@@ -37217,7 +37212,7 @@ appliedUpdates.forEach(update => {
                 const gapText = gapMinutes < 0
                     ? `the flights overlap by ${Math.abs(gapMinutes)} min`
                     : `actual turnaround time ${actualTurnaroundText} hours`;
-                return `❌ Aircraft turnaround conflict - ${displayAircraftNumber}; minimum ${requiredTurnaroundHoursText} hrs, ${gapText} after ${earlier.flightNumber}.`;
+                return `❌ Aircraft turnaround conflict - minimum ${requiredTurnaroundHoursText} hrs, ${gapText} after ${earlier.flightNumber}.`;
             });
     }, [activePlatformResourcePool?.settings, aircraftNumberSettings, configuredAirframeCount, flightTurnaround, getFlightLineAircraftNumberForNeo]);
 

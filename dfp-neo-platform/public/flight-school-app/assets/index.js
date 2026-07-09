@@ -112657,11 +112657,6 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (!aircraftNumber || validAircraftNumbers.length > 0 && !validAircraftNumbers.includes(aircraftNumber)) {
       return [];
     }
-    const displayAircraftNumber = formatAircraftNumber(
-      aircraftNumber,
-      aircraftNumberSettings.usePrefix ? aircraftNumberSettings.defaultPrefix || aircraftNumberSettings.prefixes[0] || "" : "",
-      aircraftNumberSettings
-    );
     const turnaroundHours = Math.max(0, Number(flightTurnaround) || 0);
     const requiredTurnaroundHoursText = turnaroundHours.toFixed(1);
     const eventProtectedEnd = event.startTime + event.duration + turnaroundHours;
@@ -112679,7 +112674,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       const actualTurnaroundHours = Math.max(0, gapMinutes / 60);
       const actualTurnaroundText = actualTurnaroundHours.toFixed(1);
       const gapText = gapMinutes < 0 ? `the flights overlap by ${Math.abs(gapMinutes)} min` : `actual turnaround time ${actualTurnaroundText} hours`;
-      return `❌ Aircraft turnaround conflict - ${displayAircraftNumber}; minimum ${requiredTurnaroundHoursText} hrs, ${gapText} after ${earlier.flightNumber}.`;
+      return `❌ Aircraft turnaround conflict - minimum ${requiredTurnaroundHoursText} hrs, ${gapText} after ${earlier.flightNumber}.`;
     });
   }, [activePlatformResourcePool?.settings, aircraftNumberSettings, configuredAirframeCount, flightTurnaround, getFlightLineAircraftNumberForNeo]);
   const handleNeoClick = (event) => {
