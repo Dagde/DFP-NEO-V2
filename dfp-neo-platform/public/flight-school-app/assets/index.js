@@ -31375,8 +31375,12 @@ const formatDashboardStaffName = (staff) => {
 const normaliseDashboardContactName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 const toDashboardContactDisplayName = (name, rank) => {
   const [lastName, firstName] = String(name || "").split(",").map((part) => part.trim());
-  const displayName = firstName ? `${firstName} ${lastName}` : name;
+  const displayName = firstName ? `${lastName}, ${firstName}` : name;
   return `${rank || ""} ${displayName}`.trim();
+};
+const getDashboardContactNameParts = (name) => {
+  const [surname, firstNames2] = String(name || "").split(",").map((part) => part.trim());
+  return { surname: surname || name || "", firstNames: firstNames2 || "" };
 };
 const readDashboardMessages = () => {
   if (typeof window === "undefined") return [];
@@ -31452,29 +31456,42 @@ const MyDashboard = ({
     const staffContacts = messageContactStaffOptions.filter((staff) => staff?.name).filter((staff) => {
       const unit = String(staff.unit || "").trim().toUpperCase();
       return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
-    }).map((staff) => ({
-      id: `staff-${staff.idNumber}-${staff.name}`,
-      name: staff.name,
-      displayName: toDashboardContactDisplayName(staff.name, staff.rank),
-      unit: staff.unit || "No Unit",
-      role: formatStaffRole(staff),
-      type: "Staff"
-    }));
+    }).map((staff) => {
+      const nameParts = getDashboardContactNameParts(staff.name);
+      return {
+        id: `staff-${staff.idNumber}-${staff.name}`,
+        name: staff.name,
+        displayName: toDashboardContactDisplayName(staff.name, staff.rank),
+        unit: staff.unit || "No Unit",
+        role: formatStaffRole(staff),
+        rank: staff.rank || "",
+        surname: nameParts.surname,
+        firstNames: nameParts.firstNames,
+        type: "Staff"
+      };
+    });
     const traineeContacts = messageContactTraineeOptions.filter((trainee) => trainee?.fullName || trainee?.name).filter((trainee) => {
       const unit = String(trainee.unit || "").trim().toUpperCase();
       return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
-    }).map((trainee) => ({
-      id: `trainee-${trainee.idNumber}-${trainee.fullName || trainee.name}`,
-      name: trainee.fullName || trainee.name,
-      displayName: toDashboardContactDisplayName(trainee.fullName || trainee.name, trainee.rank),
-      unit: trainee.unit || "No Unit",
-      role: trainee.course || "Trainee",
-      type: "Trainee"
-    }));
+    }).map((trainee) => {
+      const name = trainee.fullName || trainee.name;
+      const nameParts = getDashboardContactNameParts(name);
+      return {
+        id: `trainee-${trainee.idNumber}-${name}`,
+        name,
+        displayName: toDashboardContactDisplayName(name, trainee.rank),
+        unit: trainee.unit || "No Unit",
+        role: trainee.course || "Trainee",
+        rank: trainee.rank || "",
+        surname: nameParts.surname,
+        firstNames: nameParts.firstNames,
+        type: "Trainee"
+      };
+    });
     const unique = /* @__PURE__ */ new Map();
-    [...staffContacts, ...traineeContacts].filter((contact) => normaliseDashboardContactName(contact.name) !== dashboardUserKey).forEach((contact) => unique.set(normaliseDashboardContactName(contact.name), contact));
-    return Array.from(unique.values()).sort((a, b) => a.unit.localeCompare(b.unit) || a.type.localeCompare(b.type) || a.displayName.localeCompare(b.displayName));
-  }, [dashboardUserKey, dashboardUserUnitSet, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions]);
+    [...staffContacts, ...traineeContacts].forEach((contact) => unique.set(normaliseDashboardContactName(contact.name), contact));
+    return Array.from(unique.values()).sort((a, b) => getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.unit.localeCompare(b.unit) || a.type.localeCompare(b.type));
+  }, [dashboardUserUnitSet, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions]);
   const messageSuggestions = reactExports.useMemo(() => {
     const query = normaliseDashboardContactName(messageToText);
     if (!query) return [];
@@ -31640,9 +31657,9 @@ const MyDashboard = ({
                 setIsMessagesOpen(false);
                 setIsContactPickerOpen(false);
               },
-              className: "absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-gray-200 text-4xl font-light leading-none text-gray-950 shadow-inner hover:bg-gray-300",
+              className: "absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300",
               "aria-label": "Close messages",
-              children: "x"
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-y-[-1px] text-[34px] font-light leading-none", children: "x" })
             }
           )
         ] }),
@@ -31666,9 +31683,9 @@ const MyDashboard = ({
               {
                 type: "button",
                 onClick: () => setIsContactPickerOpen(true),
-                className: "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200 text-3xl font-bold leading-none text-gray-950 hover:bg-gray-300",
+                className: "grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-200 text-gray-950 hover:bg-gray-300",
                 "aria-label": "Open contacts",
-                children: "+"
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-y-[-1px] text-[32px] font-bold leading-none", children: "+" })
               }
             )
           ] }),
@@ -31736,7 +31753,7 @@ const MyDashboard = ({
       isContactPickerOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-[105] flex items-center justify-center bg-black/45 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-md rounded-2xl bg-white p-4 text-gray-950 shadow-2xl", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold", children: "Select Contact" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsContactPickerOpen(false), className: "text-2xl leading-none text-gray-500 hover:text-gray-950", children: "x" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsContactPickerOpen(false), className: "grid h-9 w-9 place-items-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-950", "aria-label": "Close contacts", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-y-[-1px] text-[24px] font-light leading-none", children: "x" }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-[52vh] space-y-1 overflow-y-auto", children: [
           messageContacts.map((contact) => /* @__PURE__ */ jsxRuntimeExports.jsxs(

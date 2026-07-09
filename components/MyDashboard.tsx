@@ -31,6 +31,9 @@ type DashboardMessageContact = {
     displayName: string;
     unit: string;
     role: string;
+    rank: string;
+    surname: string;
+    firstNames: string;
     type: 'Staff' | 'Trainee';
 };
 
@@ -84,8 +87,13 @@ const normaliseDashboardContactName = (value?: string | null): string => (
 
 const toDashboardContactDisplayName = (name: string, rank?: string): string => {
     const [lastName, firstName] = String(name || '').split(',').map(part => part.trim());
-    const displayName = firstName ? `${firstName} ${lastName}` : name;
+    const displayName = firstName ? `${lastName}, ${firstName}` : name;
     return `${rank || ''} ${displayName}`.trim();
+};
+
+const getDashboardContactNameParts = (name: string): { surname: string; firstNames: string } => {
+    const [surname, firstNames] = String(name || '').split(',').map(part => part.trim());
+    return { surname: surname || name || '', firstNames: firstNames || '' };
 };
 
 const readDashboardMessages = (): DashboardMessage[] => {
@@ -177,38 +185,52 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 const unit = String(staff.unit || '').trim().toUpperCase();
                 return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
             })
-            .map(staff => ({
-                id: `staff-${staff.idNumber}-${staff.name}`,
-                name: staff.name,
-                displayName: toDashboardContactDisplayName(staff.name, staff.rank),
-                unit: staff.unit || 'No Unit',
-                role: formatStaffRole(staff),
-                type: 'Staff' as const,
-            }));
+            .map(staff => {
+                const nameParts = getDashboardContactNameParts(staff.name);
+                return {
+                    id: `staff-${staff.idNumber}-${staff.name}`,
+                    name: staff.name,
+                    displayName: toDashboardContactDisplayName(staff.name, staff.rank),
+                    unit: staff.unit || 'No Unit',
+                    role: formatStaffRole(staff),
+                    rank: staff.rank || '',
+                    surname: nameParts.surname,
+                    firstNames: nameParts.firstNames,
+                    type: 'Staff' as const,
+                };
+            });
         const traineeContacts = messageContactTraineeOptions
             .filter(trainee => trainee?.fullName || trainee?.name)
             .filter(trainee => {
                 const unit = String(trainee.unit || '').trim().toUpperCase();
                 return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
             })
-            .map(trainee => ({
-                id: `trainee-${trainee.idNumber}-${trainee.fullName || trainee.name}`,
-                name: trainee.fullName || trainee.name,
-                displayName: toDashboardContactDisplayName(trainee.fullName || trainee.name, trainee.rank),
-                unit: trainee.unit || 'No Unit',
-                role: trainee.course || 'Trainee',
-                type: 'Trainee' as const,
-            }));
+            .map(trainee => {
+                const name = trainee.fullName || trainee.name;
+                const nameParts = getDashboardContactNameParts(name);
+                return {
+                    id: `trainee-${trainee.idNumber}-${name}`,
+                    name,
+                    displayName: toDashboardContactDisplayName(name, trainee.rank),
+                    unit: trainee.unit || 'No Unit',
+                    role: trainee.course || 'Trainee',
+                    rank: trainee.rank || '',
+                    surname: nameParts.surname,
+                    firstNames: nameParts.firstNames,
+                    type: 'Trainee' as const,
+                };
+            });
         const unique = new Map<string, DashboardMessageContact>();
         [...staffContacts, ...traineeContacts]
-            .filter(contact => normaliseDashboardContactName(contact.name) !== dashboardUserKey)
             .forEach(contact => unique.set(normaliseDashboardContactName(contact.name), contact));
         return Array.from(unique.values()).sort((a, b) => (
+            getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) ||
+            a.surname.localeCompare(b.surname) ||
+            a.firstNames.localeCompare(b.firstNames) ||
             a.unit.localeCompare(b.unit) ||
-            a.type.localeCompare(b.type) ||
-            a.displayName.localeCompare(b.displayName)
+            a.type.localeCompare(b.type)
         ));
-    }, [dashboardUserKey, dashboardUserUnitSet, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions]);
+    }, [dashboardUserUnitSet, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions]);
     const messageSuggestions = useMemo(() => {
         const query = normaliseDashboardContactName(messageToText);
         if (!query) return [];
@@ -402,10 +424,10 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     setIsMessagesOpen(false);
                                     setIsContactPickerOpen(false);
                                 }}
-                                className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-gray-200 text-4xl font-light leading-none text-gray-950 shadow-inner hover:bg-gray-300"
+                                className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300"
                                 aria-label="Close messages"
                             >
-                                x
+                                <span className="block translate-y-[-1px] text-[34px] font-light leading-none">x</span>
                             </button>
                         </div>
                         <div className="relative mx-3 rounded-full border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]">
@@ -423,10 +445,10 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                 <button
                                     type="button"
                                     onClick={() => setIsContactPickerOpen(true)}
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200 text-3xl font-bold leading-none text-gray-950 hover:bg-gray-300"
+                                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-200 text-gray-950 hover:bg-gray-300"
                                     aria-label="Open contacts"
                                 >
-                                    +
+                                    <span className="block translate-y-[-1px] text-[32px] font-bold leading-none">+</span>
                                 </button>
                             </div>
                             {!selectedMessageContact && messageSuggestions.length > 0 && (
@@ -504,7 +526,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                             <div className="w-full max-w-md rounded-2xl bg-white p-4 text-gray-950 shadow-2xl">
                                 <div className="mb-3 flex items-center justify-between">
                                     <h3 className="text-lg font-bold">Select Contact</h3>
-                                    <button type="button" onClick={() => setIsContactPickerOpen(false)} className="text-2xl leading-none text-gray-500 hover:text-gray-950">x</button>
+                                    <button type="button" onClick={() => setIsContactPickerOpen(false)} className="grid h-9 w-9 place-items-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-950" aria-label="Close contacts">
+                                        <span className="block translate-y-[-1px] text-[24px] font-light leading-none">x</span>
+                                    </button>
                                 </div>
                                 <div className="max-h-[52vh] space-y-1 overflow-y-auto">
                                     {messageContacts.map(contact => (
