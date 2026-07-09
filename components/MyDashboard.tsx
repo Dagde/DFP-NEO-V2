@@ -533,7 +533,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-200 text-gray-950 hover:bg-gray-300"
                                     aria-label="Open contacts"
                                 >
-                                    <span className="block translate-x-px translate-y-[-3px] text-[32px] font-semibold leading-none">+</span>
+                                    <span className="block translate-x-px translate-y-[-3px] text-[32px] font-medium leading-none">+</span>
                                 </button>
                             </div>
                             {!selectedMessageContact && messageSuggestionGroups.length > 0 && (
