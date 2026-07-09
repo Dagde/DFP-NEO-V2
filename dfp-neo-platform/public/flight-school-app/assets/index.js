@@ -7274,7 +7274,9 @@ const Header = ({
   onLogout,
   onShowAdminPanel,
   onShowChangePassword,
-  onStartStaffAvailabilityDiagnose
+  onStartStaffAvailabilityDiagnose,
+  isFlightLinePanelOpen = false,
+  onToggleFlightLinePanel
 }) => {
   const [showAuditFlyout, setShowAuditFlyout] = reactExports.useState(false);
   const [showUserMenu, setShowUserMenu] = reactExports.useState(false);
@@ -7595,19 +7597,20 @@ const Header = ({
             ] }) : "NEO - Tile" })
           }
         ),
-        authUser && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: userButtonRef, className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => setShowUserMenu(!showUserMenu),
-            className: "w-[75px] h-[55px] flex flex-col items-center justify-center text-[9px] font-semibold btn-aluminium-brushed rounded-md",
-            title: `Logged in as ${authUser.displayName} | Active commit: ${activeCommit}`,
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 mb-0.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight truncate w-full px-1", children: authUser.lastName || authUser.displayName || authUser.userId }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight text-[7px] text-gray-400 font-mono", children: activeCommit })
-            ]
+            type: "button",
+            onClick: onToggleFlightLinePanel,
+            className: `${headerButtonClass} ${isFlightLinePanelOpen ? "active" : ""}`,
+            title: "Open Flight Line",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
+              "Flight",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Line"
+            ] })
           }
-        ) })
+        )
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", style: { width: "140px" } })
     ] }),
@@ -14506,6 +14509,7 @@ const ScheduleView = ({
   isSetupTestMode: isSetupTestMode2 = false,
   onSaveSetupTestPersonnel,
   isNeoAssistPanelOpen = false,
+  isFlightLinePanelOpen = false,
   onOrganisationSlideoutOpen,
   onInitialSetupWizardActiveChange,
   formationCallsigns = [],
@@ -14548,7 +14552,9 @@ const ScheduleView = ({
     setResourceSlideoutFrame({
       left: Math.round(resourceRect.right),
       top: Math.round(surfaceRect.top),
-      height: Math.round(surfaceRect.height)
+      height: Math.round(surfaceRect.height),
+      width: Math.max(0, Math.round(surfaceRect.right - resourceRect.right)),
+      bottom: Math.max(0, Math.round(window.innerHeight - surfaceRect.bottom))
     });
   }, []);
   reactExports.useEffect(() => {
@@ -15375,6 +15381,78 @@ const ScheduleView = ({
                   ]
                 }
               )
+            ]
+          }
+        )
+      }
+    ),
+    resourceSlideoutFrame && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        className: "fixed z-[36] pointer-events-none",
+        style: {
+          left: `${resourceSlideoutFrame.left}px`,
+          bottom: `${resourceSlideoutFrame.bottom}px`,
+          width: `${resourceSlideoutFrame.width}px`,
+          height: "158px"
+        },
+        "aria-hidden": !isFlightLinePanelOpen,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "aside",
+          {
+            className: `absolute bottom-0 left-0 h-[130px] w-full pointer-events-auto border-t border-cyan-400/25 bg-slate-950/96 shadow-[0_-18px_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${isFlightLinePanelOpen ? "translate-y-0" : "translate-y-[130px]"}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-1/2 top-[-28px] z-[1] flex h-7 w-[96px] -translate-x-1/2 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    className: "h-4 w-7 opacity-80",
+                    style: {
+                      backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                      backgroundSize: "8px 8px"
+                    }
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: isFlightLinePanelOpen ? "v" : "^" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    className: "h-4 w-7 opacity-80",
+                    style: {
+                      backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                      backgroundSize: "8px 8px"
+                    }
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-hidden border-t border-white/5 bg-gradient-to-r from-slate-900/85 via-slate-950/95 to-slate-900/85 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full items-center gap-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[160px] border-r border-slate-700/70 pr-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300", children: "Flight Line" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm font-semibold text-slate-100", children: [
+                    locationCode,
+                    " - ",
+                    unitCode
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid h-full flex-1 grid-cols-4 gap-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400", children: "Aircraft" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xl font-black text-white", children: airframeCount })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400", children: "Standby" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xl font-black text-white", children: standbyCount })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400", children: "Sim" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xl font-black text-white", children: ftdCount })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400", children: "Trainer" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xl font-black text-white", children: cptCount })
+                  ] })
+                ] })
+              ] }) })
             ]
           }
         )
@@ -103216,6 +103294,7 @@ ${"=".repeat(60)}`);
   const [showAircraftAvailability, setShowAircraftAvailability] = reactExports.useState(true);
   const [currentAircraftAvailability, setCurrentAircraftAvailability] = reactExports.useState(availableAircraftCount);
   const [showDfpSidePanel, setShowDfpSidePanel] = reactExports.useState(false);
+  const [showFlightLinePanel, setShowFlightLinePanel] = reactExports.useState(false);
   const [showPauseFlightOps, setShowPauseFlightOps] = reactExports.useState(false);
   const [showPausePanel, setShowPausePanel] = reactExports.useState(false);
   const [pausePanelPhase, setPausePanelPhase] = reactExports.useState("configure");
@@ -113054,7 +113133,11 @@ ${error instanceof Error ? error.message : String(error)}`,
             isSetupTestMode: Boolean(setupTestProfile),
             onSaveSetupTestPersonnel: handleSaveSetupTestPersonnel,
             isNeoAssistPanelOpen: showDfpSidePanel,
-            onOrganisationSlideoutOpen: () => setShowDfpSidePanel(false),
+            isFlightLinePanelOpen: showFlightLinePanel,
+            onOrganisationSlideoutOpen: () => {
+              setShowDfpSidePanel(false);
+              setShowFlightLinePanel(false);
+            },
             onInitialSetupWizardActiveChange: setIsInitialSetupWizardActive,
             formationCallsigns,
             buildRuleSettings: {
@@ -115699,6 +115782,14 @@ Do you want to replace the existing entry?`,
             onLogout: handleLogout,
             onShowAdminPanel: () => setShowAdminPanel(true),
             onShowChangePassword: () => setShowChangePassword(true),
+            isFlightLinePanelOpen: showFlightLinePanel,
+            onToggleFlightLinePanel: () => {
+              if (activeView !== "Program Schedule") {
+                handleNavigation("Program Schedule");
+              }
+              setShowDfpSidePanel(false);
+              setShowFlightLinePanel((value) => !value);
+            },
             onStartStaffAvailabilityDiagnose: () => {
               setStaffAvailabilityPointer((pointer) => ({
                 ...pointer,

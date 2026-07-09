@@ -112,6 +112,7 @@ interface ScheduleViewProps {
   isSetupTestMode?: boolean;
   onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
   isNeoAssistPanelOpen?: boolean;
+  isFlightLinePanelOpen?: boolean;
   onOrganisationSlideoutOpen?: () => void;
   onInitialSetupWizardActiveChange?: (active: boolean) => void;
   formationCallsigns?: FormationCallsign[];
@@ -6468,6 +6469,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isSetupTestMode = false,
     onSaveSetupTestPersonnel,
     isNeoAssistPanelOpen = false,
+    isFlightLinePanelOpen = false,
     onOrganisationSlideoutOpen,
     onInitialSetupWizardActiveChange,
     formationCallsigns = [],
@@ -6480,7 +6482,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     useEffect(() => {
         if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
     }, [isNeoAssistPanelOpen]);
-    const [resourceSlideoutFrame, setResourceSlideoutFrame] = useState<{ left: number; top: number; height: number } | null>(null);
+    const [resourceSlideoutFrame, setResourceSlideoutFrame] = useState<{ left: number; top: number; height: number; width: number; bottom: number } | null>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
     // Initialize with timezone-adjusted time
     const [currentTime, setCurrentTime] = useState(() => {
@@ -6520,6 +6522,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             left: Math.round(resourceRect.right),
             top: Math.round(surfaceRect.top),
             height: Math.round(surfaceRect.height),
+            width: Math.max(0, Math.round(surfaceRect.right - resourceRect.right)),
+            bottom: Math.max(0, Math.round(window.innerHeight - surfaceRect.bottom)),
         });
     }, []);
 
@@ -7485,6 +7489,66 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 }}
                             />
                         </button>
+                    </aside>
+                </div>
+            )}
+            {resourceSlideoutFrame && (
+                <div
+                    className="fixed z-[36] pointer-events-none"
+                    style={{
+                        left: `${resourceSlideoutFrame.left}px`,
+                        bottom: `${resourceSlideoutFrame.bottom}px`,
+                        width: `${resourceSlideoutFrame.width}px`,
+                        height: '158px',
+                    }}
+                    aria-hidden={!isFlightLinePanelOpen}
+                >
+                    <aside
+                        className={`absolute bottom-0 left-0 h-[130px] w-full pointer-events-auto border-t border-cyan-400/25 bg-slate-950/96 shadow-[0_-18px_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${isFlightLinePanelOpen ? 'translate-y-0' : 'translate-y-[130px]'}`}
+                    >
+                        <div className="absolute left-1/2 top-[-28px] z-[1] flex h-7 w-[96px] -translate-x-1/2 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur">
+                            <span
+                                className="h-4 w-7 opacity-80"
+                                style={{
+                                    backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
+                                    backgroundSize: '8px 8px',
+                                }}
+                            />
+                            <span className="text-sm font-semibold leading-none">{isFlightLinePanelOpen ? 'v' : '^'}</span>
+                            <span
+                                className="h-4 w-7 opacity-80"
+                                style={{
+                                    backgroundImage: 'radial-gradient(circle, currentColor 1.5px, transparent 1.7px)',
+                                    backgroundSize: '8px 8px',
+                                }}
+                            />
+                        </div>
+                        <div className="h-full overflow-hidden border-t border-white/5 bg-gradient-to-r from-slate-900/85 via-slate-950/95 to-slate-900/85 px-5 py-4">
+                            <div className="flex h-full items-center gap-4">
+                                <div className="min-w-[160px] border-r border-slate-700/70 pr-4">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">Flight Line</p>
+                                    <p className="mt-1 text-sm font-semibold text-slate-100">{locationCode} - {unitCode}</p>
+                                </div>
+                                <div className="grid h-full flex-1 grid-cols-4 gap-3">
+                                    <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Aircraft</p>
+                                        <p className="mt-2 text-xl font-black text-white">{airframeCount}</p>
+                                    </div>
+                                    <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Standby</p>
+                                        <p className="mt-2 text-xl font-black text-white">{standbyCount}</p>
+                                    </div>
+                                    <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Sim</p>
+                                        <p className="mt-2 text-xl font-black text-white">{ftdCount}</p>
+                                    </div>
+                                    <div className="rounded-md border border-slate-700/80 bg-slate-900/75 px-3 py-2">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Trainer</p>
+                                        <p className="mt-2 text-xl font-black text-white">{cptCount}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </aside>
                 </div>
             )}

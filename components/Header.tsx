@@ -41,6 +41,8 @@ interface HeaderProps {
     onShowAdminPanel?: () => void;
     onShowChangePassword?: () => void;
     onStartStaffAvailabilityDiagnose?: () => void;
+    isFlightLinePanelOpen?: boolean;
+    onToggleFlightLinePanel?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -73,6 +75,8 @@ const Header: React.FC<HeaderProps> = ({
     onShowAdminPanel,
     onShowChangePassword,
     onStartStaffAvailabilityDiagnose,
+    isFlightLinePanelOpen = false,
+    onToggleFlightLinePanel,
 }) => {
     const [showAuditFlyout, setShowAuditFlyout] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
@@ -410,26 +414,15 @@ const Header: React.FC<HeaderProps> = ({
                             </span>
                         </button>
 
-                        {/* 10. Logged In As / User Button - shows active commit fetched from server */}
-                        {authUser && (
-                            <div ref={userButtonRef} className="relative">
-                                <button
-                                    onClick={() => setShowUserMenu(!showUserMenu)}
-                                    className="w-[75px] h-[55px] flex flex-col items-center justify-center text-[9px] font-semibold btn-aluminium-brushed rounded-md"
-                                    title={`Logged in as ${authUser.displayName} | Active commit: ${activeCommit}`}
-                                >
-                                    <svg className="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                    <span className="text-center leading-tight truncate w-full px-1">
-                                        {authUser.lastName || authUser.displayName || authUser.userId}
-                                    </span>
-                                    <span className="text-center leading-tight text-[7px] text-gray-400 font-mono">
-                                        {activeCommit}
-                                    </span>
-                                </button>
-                            </div>
-                        )}
+                        {/* 10. Flight Line Button */}
+                        <button
+                            type="button"
+                            onClick={onToggleFlightLinePanel}
+                            className={`${headerButtonClass} ${isFlightLinePanelOpen ? 'active' : ''}`}
+                            title="Open Flight Line"
+                        >
+                            <span className="text-center leading-tight">Flight<br />Line</span>
+                        </button>
 
                     </div>
                 </div>

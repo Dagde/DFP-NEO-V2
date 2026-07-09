@@ -26135,6 +26135,7 @@ const App: React.FC = () => {
     const [showAircraftAvailability, setShowAircraftAvailability] = useState(true);
     const [currentAircraftAvailability, setCurrentAircraftAvailability] = useState<number>(availableAircraftCount);
     const [showDfpSidePanel, setShowDfpSidePanel] = useState(false);
+    const [showFlightLinePanel, setShowFlightLinePanel] = useState(false);
     const [showPauseFlightOps, setShowPauseFlightOps] = useState(false);
     // Pause Flight Ops Panel state (sidebar panel on right side of DFP window)
     const [showPausePanel, setShowPausePanel] = useState(false);
@@ -38450,7 +38451,11 @@ appliedUpdates.forEach(update => {
                            isSetupTestMode={Boolean(setupTestProfile)}
                            onSaveSetupTestPersonnel={handleSaveSetupTestPersonnel}
                            isNeoAssistPanelOpen={showDfpSidePanel}
-                           onOrganisationSlideoutOpen={() => setShowDfpSidePanel(false)}
+                           isFlightLinePanelOpen={showFlightLinePanel}
+                           onOrganisationSlideoutOpen={() => {
+                               setShowDfpSidePanel(false);
+                               setShowFlightLinePanel(false);
+                           }}
                            onInitialSetupWizardActiveChange={setIsInitialSetupWizardActive}
                            formationCallsigns={formationCallsigns}
                            buildRuleSettings={{
@@ -41344,6 +41349,14 @@ appliedUpdates.forEach(update => {
                        onLogout={handleLogout}
                        onShowAdminPanel={() => setShowAdminPanel(true)}
                        onShowChangePassword={() => setShowChangePassword(true)}
+                       isFlightLinePanelOpen={showFlightLinePanel}
+                       onToggleFlightLinePanel={() => {
+                           if (activeView !== 'Program Schedule') {
+                               handleNavigation('Program Schedule');
+                           }
+                           setShowDfpSidePanel(false);
+                           setShowFlightLinePanel(value => !value);
+                       }}
                        onStartStaffAvailabilityDiagnose={() => {
                            setStaffAvailabilityPointer(pointer => ({
                                ...pointer,
