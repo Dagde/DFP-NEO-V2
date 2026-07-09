@@ -164,6 +164,10 @@ const getDashboardContactNameParts = (name: string): { surname: string; firstNam
     return { surname: surname || name || '', firstNames: firstNames || '' };
 };
 
+const formatDashboardMessageTime = (date: Date): string => (
+    `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+);
+
 const formatDashboardConversationDate = (dateString: string): string => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '';
@@ -172,7 +176,7 @@ const formatDashboardConversationDate = (dateString: string): string => {
     const messageDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
     const dayDiff = Math.round((today - messageDay) / 86400000);
     if (dayDiff === 0) {
-        return `${String(date.getHours()).padStart(2, '0')}${String(date.getMinutes()).padStart(2, '0')}`;
+        return formatDashboardMessageTime(date);
     }
     if (dayDiff === 1) return 'Yesterday';
     if (dayDiff > 1 && dayDiff < 7) {
@@ -923,7 +927,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                 {activeConversationMessages.map(message => {
                                                     const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
                                                     const sentDate = new Date(message.sentAt);
-                                                    const timeLabel = `${String(sentDate.getHours()).padStart(2, '0')}${String(sentDate.getMinutes()).padStart(2, '0')}`;
+                                                    const timeLabel = formatDashboardMessageTime(sentDate);
                                                     const dateLabel = `${String(sentDate.getDate()).padStart(2, '0')}/${String(sentDate.getMonth() + 1).padStart(2, '0')}/${String(sentDate.getFullYear()).slice(-2)}`;
                                                     return (
                                                         <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>

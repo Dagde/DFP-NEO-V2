@@ -31413,6 +31413,7 @@ const getDashboardContactNameParts = (name) => {
   const [surname, firstNames2] = String(name || "").split(",").map((part) => part.trim());
   return { surname: surname || name || "", firstNames: firstNames2 || "" };
 };
+const formatDashboardMessageTime = (date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 const formatDashboardConversationDate = (dateString) => {
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return "";
@@ -31421,7 +31422,7 @@ const formatDashboardConversationDate = (dateString) => {
   const messageDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   const dayDiff = Math.round((today - messageDay) / 864e5);
   if (dayDiff === 0) {
-    return `${String(date.getHours()).padStart(2, "0")}${String(date.getMinutes()).padStart(2, "0")}`;
+    return formatDashboardMessageTime(date);
   }
   if (dayDiff === 1) return "Yesterday";
   if (dayDiff > 1 && dayDiff < 7) {
@@ -32058,7 +32059,7 @@ const MyDashboard = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-4 py-5", children: selectedMessageContact ? activeConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeConversationMessages.map((message) => {
             const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
             const sentDate = new Date(message.sentAt);
-            const timeLabel2 = `${String(sentDate.getHours()).padStart(2, "0")}${String(sentDate.getMinutes()).padStart(2, "0")}`;
+            const timeLabel2 = formatDashboardMessageTime(sentDate);
             const dateLabel2 = `${String(sentDate.getDate()).padStart(2, "0")}/${String(sentDate.getMonth() + 1).padStart(2, "0")}/${String(sentDate.getFullYear()).slice(-2)}`;
             return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${mine ? "justify-end" : "justify-start"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-2xl px-4 py-2 shadow-sm ${mine ? "bg-sky-500 text-white" : "bg-white text-gray-950"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: message.body }) }),
