@@ -46,6 +46,11 @@ type DashboardMessage = {
     readAt?: string;
 };
 
+type DashboardMessageContactGroup = {
+    title: string;
+    contacts: DashboardMessageContact[];
+};
+
 const DASHBOARD_MESSAGES_STORAGE_KEY = 'dfp_dashboard_messages_v1';
 
 const formatTime = (time: number) => {
@@ -95,6 +100,71 @@ const getDashboardContactNameParts = (name: string): { surname: string; firstNam
     const [surname, firstNames] = String(name || '').split(',').map(part => part.trim());
     return { surname: surname || name || '', firstNames: firstNames || '' };
 };
+
+const sortDashboardContacts = (contacts: DashboardMessageContact[]): DashboardMessageContact[] => (
+    [...contacts].sort((a, b) => (
+        getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) ||
+        a.surname.localeCompare(b.surname) ||
+        a.firstNames.localeCompare(b.firstNames) ||
+        a.displayName.localeCompare(b.displayName)
+    ))
+);
+
+const groupDashboardMessageContacts = (contacts: DashboardMessageContact[]): DashboardMessageContactGroup[] => {
+    const byUnit = new Map<string, DashboardMessageContact[]>();
+    contacts.forEach(contact => {
+        const unit = contact.unit || 'No Unit';
+        byUnit.set(unit, [...(byUnit.get(unit) || []), contact]);
+    });
+
+    return Array.from(byUnit.entries())
+        .sort(([unitA], [unitB]) => unitA.localeCompare(unitB))
+        .flatMap(([unit, unitContacts]) => {
+            const groups: DashboardMessageContactGroup[] = [];
+            const staff = sortDashboardContacts(unitContacts.filter(contact => contact.type === 'Staff'));
+            if (staff.length > 0) {
+                groups.push({ title: `${unit} Staff`, contacts: staff });
+            }
+
+            const traineeCourses = new Map<string, DashboardMessageContact[]>();
+            unitContacts
+                .filter(contact => contact.type === 'Trainee')
+                .forEach(contact => {
+                    const course = contact.role || 'Unallocated Trainees';
+                    traineeCourses.set(course, [...(traineeCourses.get(course) || []), contact]);
+                });
+
+            Array.from(traineeCourses.entries())
+                .sort(([courseA], [courseB]) => courseA.localeCompare(courseB))
+                .forEach(([course, traineeContacts]) => {
+                    groups.push({
+                        title: `${unit} Trainees - ${course}`,
+                        contacts: sortDashboardContacts(traineeContacts),
+                    });
+                });
+
+            return groups;
+        });
+};
+
+const renderDashboardMessageContactButton = (
+    contact: DashboardMessageContact,
+    onSelect: (contact: DashboardMessageContact) => void,
+    compact = false,
+) => (
+    <button
+        key={contact.id}
+        type="button"
+        onClick={() => onSelect(contact)}
+        className={`flex w-full items-center justify-between gap-3 text-left hover:bg-gray-100 ${compact ? 'px-4 py-2' : 'rounded-lg px-3 py-2'}`}
+    >
+        <span>
+            <span className="block text-sm font-semibold text-gray-950">{contact.displayName}</span>
+            <span className="block text-xs text-gray-500">{contact.unit} - {contact.role}</span>
+        </span>
+        <span className={`${compact ? 'text-gray-400' : 'rounded-full bg-gray-100 px-2 py-1 text-gray-500'} text-[10px] font-bold uppercase`}>{contact.type}</span>
+    </button>
+);
 
 const readDashboardMessages = (): DashboardMessage[] => {
     if (typeof window === 'undefined') return [];
@@ -224,11 +294,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         [...staffContacts, ...traineeContacts]
             .forEach(contact => unique.set(normaliseDashboardContactName(contact.name), contact));
         return Array.from(unique.values()).sort((a, b) => (
+            a.unit.localeCompare(b.unit) ||
+            (a.type === b.type ? 0 : a.type === 'Staff' ? -1 : 1) ||
+            (a.type === 'Trainee' ? a.role.localeCompare(b.role) : 0) ||
             getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) ||
             a.surname.localeCompare(b.surname) ||
             a.firstNames.localeCompare(b.firstNames) ||
-            a.unit.localeCompare(b.unit) ||
-            a.type.localeCompare(b.type)
+            a.displayName.localeCompare(b.displayName)
         ));
     }, [dashboardUserUnitSet, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions]);
     const messageSuggestions = useMemo(() => {
@@ -238,6 +310,12 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .filter(contact => normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query))
             .slice(0, 6);
     }, [messageContacts, messageToText]);
+    const messageSuggestionGroups = useMemo(() => (
+        groupDashboardMessageContacts(messageSuggestions)
+    ), [messageSuggestions]);
+    const messageContactGroups = useMemo(() => (
+        groupDashboardMessageContacts(messageContacts)
+    ), [messageContacts]);
     const unreadMessages = useMemo(() => (
         dashboardMessages.filter(message => (
             normaliseDashboardContactName(message.to) === dashboardUserKey &&
@@ -427,7 +505,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                 className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300"
                                 aria-label="Close messages"
                             >
-                                <span className="block translate-y-[-1px] text-[34px] font-light leading-none">x</span>
+                                <span className="block translate-x-px translate-y-[-3px] text-[34px] font-light leading-none">x</span>
                             </button>
                         </div>
                         <div className="relative mx-3 rounded-full border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]">
@@ -448,24 +526,16 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-200 text-gray-950 hover:bg-gray-300"
                                     aria-label="Open contacts"
                                 >
-                                    <span className="block translate-y-[-1px] text-[32px] font-bold leading-none">+</span>
+                                    <span className="block translate-x-px translate-y-[-3px] text-[32px] font-bold leading-none">+</span>
                                 </button>
                             </div>
-                            {!selectedMessageContact && messageSuggestions.length > 0 && (
+                            {!selectedMessageContact && messageSuggestionGroups.length > 0 && (
                                 <div className="absolute left-8 right-14 top-[58px] z-10 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
-                                    {messageSuggestions.map(contact => (
-                                        <button
-                                            key={contact.id}
-                                            type="button"
-                                            onClick={() => selectMessageContact(contact)}
-                                            className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-gray-100"
-                                        >
-                                            <span>
-                                                <span className="block text-sm font-semibold text-gray-950">{contact.displayName}</span>
-                                                <span className="block text-xs text-gray-500">{contact.unit} - {contact.role}</span>
-                                            </span>
-                                            <span className="text-[10px] font-bold uppercase text-gray-400">{contact.type}</span>
-                                        </button>
+                                    {messageSuggestionGroups.map(group => (
+                                        <div key={group.title}>
+                                            <div className="bg-gray-50 px-4 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">{group.title}</div>
+                                            {group.contacts.map(contact => renderDashboardMessageContactButton(contact, selectMessageContact, true))}
+                                        </div>
                                     ))}
                                 </div>
                             )}
@@ -527,25 +597,19 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                 <div className="mb-3 flex items-center justify-between">
                                     <h3 className="text-lg font-bold">Select Contact</h3>
                                     <button type="button" onClick={() => setIsContactPickerOpen(false)} className="grid h-9 w-9 place-items-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-950" aria-label="Close contacts">
-                                        <span className="block translate-y-[-1px] text-[24px] font-light leading-none">x</span>
+                                        <span className="block translate-x-px translate-y-[-3px] text-[24px] font-light leading-none">x</span>
                                     </button>
                                 </div>
-                                <div className="max-h-[52vh] space-y-1 overflow-y-auto">
-                                    {messageContacts.map(contact => (
-                                        <button
-                                            key={contact.id}
-                                            type="button"
-                                            onClick={() => selectMessageContact(contact)}
-                                            className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-gray-100"
-                                        >
-                                            <span>
-                                                <span className="block text-sm font-semibold">{contact.displayName}</span>
-                                                <span className="block text-xs text-gray-500">{contact.unit} - {contact.role}</span>
-                                            </span>
-                                            <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-500">{contact.type}</span>
-                                        </button>
+                                <div className="max-h-[52vh] space-y-3 overflow-y-auto">
+                                    {messageContactGroups.map(group => (
+                                        <div key={group.title}>
+                                            <div className="mb-1 rounded bg-gray-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">{group.title}</div>
+                                            <div className="space-y-1">
+                                                {group.contacts.map(contact => renderDashboardMessageContactButton(contact, selectMessageContact))}
+                                            </div>
+                                        </div>
                                     ))}
-                                    {messageContacts.length === 0 && (
+                                    {messageContactGroups.length === 0 && (
                                         <p className="py-8 text-center text-sm text-gray-500">No contacts found for this unit.</p>
                                     )}
                                 </div>

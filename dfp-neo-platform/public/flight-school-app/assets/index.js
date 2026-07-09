@@ -31382,6 +31382,53 @@ const getDashboardContactNameParts = (name) => {
   const [surname, firstNames2] = String(name || "").split(",").map((part) => part.trim());
   return { surname: surname || name || "", firstNames: firstNames2 || "" };
 };
+const sortDashboardContacts = (contacts) => [...contacts].sort((a, b) => getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.displayName.localeCompare(b.displayName));
+const groupDashboardMessageContacts = (contacts) => {
+  const byUnit = /* @__PURE__ */ new Map();
+  contacts.forEach((contact) => {
+    const unit = contact.unit || "No Unit";
+    byUnit.set(unit, [...byUnit.get(unit) || [], contact]);
+  });
+  return Array.from(byUnit.entries()).sort(([unitA], [unitB]) => unitA.localeCompare(unitB)).flatMap(([unit, unitContacts]) => {
+    const groups = [];
+    const staff = sortDashboardContacts(unitContacts.filter((contact) => contact.type === "Staff"));
+    if (staff.length > 0) {
+      groups.push({ title: `${unit} Staff`, contacts: staff });
+    }
+    const traineeCourses = /* @__PURE__ */ new Map();
+    unitContacts.filter((contact) => contact.type === "Trainee").forEach((contact) => {
+      const course = contact.role || "Unallocated Trainees";
+      traineeCourses.set(course, [...traineeCourses.get(course) || [], contact]);
+    });
+    Array.from(traineeCourses.entries()).sort(([courseA], [courseB]) => courseA.localeCompare(courseB)).forEach(([course, traineeContacts]) => {
+      groups.push({
+        title: `${unit} Trainees - ${course}`,
+        contacts: sortDashboardContacts(traineeContacts)
+      });
+    });
+    return groups;
+  });
+};
+const renderDashboardMessageContactButton = (contact, onSelect, compact = false) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+  "button",
+  {
+    type: "button",
+    onClick: () => onSelect(contact),
+    className: `flex w-full items-center justify-between gap-3 text-left hover:bg-gray-100 ${compact ? "px-4 py-2" : "rounded-lg px-3 py-2"}`,
+    children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-950", children: contact.displayName }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-xs text-gray-500", children: [
+          contact.unit,
+          " - ",
+          contact.role
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${compact ? "text-gray-400" : "rounded-full bg-gray-100 px-2 py-1 text-gray-500"} text-[10px] font-bold uppercase`, children: contact.type })
+    ]
+  },
+  contact.id
+);
 const readDashboardMessages = () => {
   if (typeof window === "undefined") return [];
   try {
@@ -31490,13 +31537,15 @@ const MyDashboard = ({
     });
     const unique = /* @__PURE__ */ new Map();
     [...staffContacts, ...traineeContacts].forEach((contact) => unique.set(normaliseDashboardContactName(contact.name), contact));
-    return Array.from(unique.values()).sort((a, b) => getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.unit.localeCompare(b.unit) || a.type.localeCompare(b.type));
+    return Array.from(unique.values()).sort((a, b) => a.unit.localeCompare(b.unit) || (a.type === b.type ? 0 : a.type === "Staff" ? -1 : 1) || (a.type === "Trainee" ? a.role.localeCompare(b.role) : 0) || getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.displayName.localeCompare(b.displayName));
   }, [dashboardUserUnitSet, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions]);
   const messageSuggestions = reactExports.useMemo(() => {
     const query = normaliseDashboardContactName(messageToText);
     if (!query) return [];
     return messageContacts.filter((contact) => normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query)).slice(0, 6);
   }, [messageContacts, messageToText]);
+  const messageSuggestionGroups = reactExports.useMemo(() => groupDashboardMessageContacts(messageSuggestions), [messageSuggestions]);
+  const messageContactGroups = reactExports.useMemo(() => groupDashboardMessageContacts(messageContacts), [messageContacts]);
   const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => normaliseDashboardContactName(message.to) === dashboardUserKey && !message.readAt), [dashboardMessages, dashboardUserKey]);
   const activeConversationMessages = reactExports.useMemo(() => {
     if (!selectedMessageContact) return [];
@@ -31659,7 +31708,7 @@ const MyDashboard = ({
               },
               className: "absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300",
               "aria-label": "Close messages",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-y-[-1px] text-[34px] font-light leading-none", children: "x" })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-x-px translate-y-[-3px] text-[34px] font-light leading-none", children: "x" })
             }
           )
         ] }),
@@ -31685,30 +31734,14 @@ const MyDashboard = ({
                 onClick: () => setIsContactPickerOpen(true),
                 className: "grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-200 text-gray-950 hover:bg-gray-300",
                 "aria-label": "Open contacts",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-y-[-1px] text-[32px] font-bold leading-none", children: "+" })
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-x-px translate-y-[-3px] text-[32px] font-bold leading-none", children: "+" })
               }
             )
           ] }),
-          !selectedMessageContact && messageSuggestions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-8 right-14 top-[58px] z-10 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl", children: messageSuggestions.map((contact) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              onClick: () => selectMessageContact(contact),
-              className: "flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-gray-100",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-950", children: contact.displayName }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-xs text-gray-500", children: [
-                    contact.unit,
-                    " - ",
-                    contact.role
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold uppercase text-gray-400", children: contact.type })
-              ]
-            },
-            contact.id
-          )) })
+          !selectedMessageContact && messageSuggestionGroups.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-8 right-14 top-[58px] z-10 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl", children: messageSuggestionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-50 px-4 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400", children: group.title }),
+            group.contacts.map((contact) => renderDashboardMessageContactButton(contact, selectMessageContact, true))
+          ] }, group.title)) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-4 py-5", children: selectedMessageContact ? activeConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeConversationMessages.map((message) => {
           const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
@@ -31753,30 +31786,14 @@ const MyDashboard = ({
       isContactPickerOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-[105] flex items-center justify-center bg-black/45 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-md rounded-2xl bg-white p-4 text-gray-950 shadow-2xl", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold", children: "Select Contact" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsContactPickerOpen(false), className: "grid h-9 w-9 place-items-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-950", "aria-label": "Close contacts", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-y-[-1px] text-[24px] font-light leading-none", children: "x" }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsContactPickerOpen(false), className: "grid h-9 w-9 place-items-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-950", "aria-label": "Close contacts", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-x-px translate-y-[-3px] text-[24px] font-light leading-none", children: "x" }) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-[52vh] space-y-1 overflow-y-auto", children: [
-          messageContacts.map((contact) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              onClick: () => selectMessageContact(contact),
-              className: "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-gray-100",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold", children: contact.displayName }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-xs text-gray-500", children: [
-                    contact.unit,
-                    " - ",
-                    contact.role
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-full bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-500", children: contact.type })
-              ]
-            },
-            contact.id
-          )),
-          messageContacts.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-8 text-center text-sm text-gray-500", children: "No contacts found for this unit." })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-[52vh] space-y-3 overflow-y-auto", children: [
+          messageContactGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 rounded bg-gray-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400", children: group.title }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: group.contacts.map((contact) => renderDashboardMessageContactButton(contact, selectMessageContact)) })
+          ] }, group.title)),
+          messageContactGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-8 text-center text-sm text-gray-500", children: "No contacts found for this unit." })
         ] })
       ] }) })
     ] }),
