@@ -368,6 +368,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const [messageSearchText, setMessageSearchText] = useState('');
     const [incomingToast, setIncomingToast] = useState<DashboardMessage | null>(null);
     const shownIncomingToastIds = useRef<Set<string>>(new Set());
+    const activeConversationEndRef = useRef<HTMLDivElement | null>(null);
     const roleTone = (role?: string) => {
         const value = String(role || '').toLowerCase();
         if (value.includes('pilot')) return 'text-sky-300 border-sky-500/30';
@@ -520,6 +521,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             })
             .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
     }, [dashboardMessages, dashboardUserKey, selectedMessageContact]);
+    const latestConversationMessageId = activeConversationMessages[activeConversationMessages.length - 1]?.id || '';
+    useEffect(() => {
+        if (!isMessagesOpen || messageView !== 'compose' || !selectedMessageContact || !activeConversationEndRef.current) return;
+        const frame = window.requestAnimationFrame(() => {
+            activeConversationEndRef.current?.scrollIntoView({ block: 'end' });
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, [isMessagesOpen, latestConversationMessageId, messageView, selectedMessageContact?.id]);
     const persistDashboardMessages = (updater: (messages: DashboardMessage[]) => DashboardMessage[]) => {
         setDashboardMessages(prev => {
             const next = updater(prev);
@@ -943,6 +952,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                         </div>
                                                     );
                                                 })}
+                                                <div ref={activeConversationEndRef} />
                                             </div>
                                         ) : (
                                             <p className="pt-20 text-center text-sm text-gray-400">No messages yet.</p>

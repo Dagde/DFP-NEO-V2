@@ -6885,7 +6885,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
           onClick: () => navigateIfAllowed("MyDashboard"),
           className: `relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "MyDashboard" ? "active" : ""}`,
           children: [
-            unreadMessageCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -right-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-px", children: Math.min(unreadMessageCount, 9) }) }),
+            unreadMessageCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -right-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "translate-x-px", children: Math.min(unreadMessageCount, 9) }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
               "My",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -31581,6 +31581,7 @@ const MyDashboard = ({
   const [messageSearchText, setMessageSearchText] = reactExports.useState("");
   const [incomingToast, setIncomingToast] = reactExports.useState(null);
   const shownIncomingToastIds = reactExports.useRef(/* @__PURE__ */ new Set());
+  const activeConversationEndRef = reactExports.useRef(null);
   const roleTone = (role) => {
     const value = String(role).toLowerCase();
     if (value.includes("pilot")) return "text-sky-300 border-sky-500/30";
@@ -31696,6 +31697,14 @@ const MyDashboard = ({
       return from === dashboardUserKey && to === contactKey || from === contactKey && to === dashboardUserKey;
     }).sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
   }, [dashboardMessages, dashboardUserKey, selectedMessageContact]);
+  const latestConversationMessageId = activeConversationMessages[activeConversationMessages.length - 1]?.id || "";
+  reactExports.useEffect(() => {
+    if (!isMessagesOpen || messageView !== "compose" || !selectedMessageContact || !activeConversationEndRef.current) return;
+    const frame = window.requestAnimationFrame(() => {
+      activeConversationEndRef.current?.scrollIntoView({ block: "end" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isMessagesOpen, latestConversationMessageId, messageView, selectedMessageContact?.id]);
   const persistDashboardMessages = (updater) => {
     setDashboardMessages((prev) => {
       const next = updater(prev);
@@ -32056,23 +32065,26 @@ const MyDashboard = ({
               group.contacts.map((contact) => renderDashboardMessageContactButton(contact, selectMessageContact, true))
             ] }, group.title)) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-4 py-5", children: selectedMessageContact ? activeConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeConversationMessages.map((message) => {
-            const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
-            const sentDate = new Date(message.sentAt);
-            const timeLabel2 = formatDashboardMessageTime(sentDate);
-            const dateLabel2 = `${String(sentDate.getDate()).padStart(2, "0")}/${String(sentDate.getMonth() + 1).padStart(2, "0")}/${String(sentDate.getFullYear()).slice(-2)}`;
-            return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${mine ? "justify-end" : "justify-start"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-2xl px-4 py-2 shadow-sm ${mine ? "bg-sky-500 text-white" : "bg-white text-gray-950"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: message.body }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                  timeLabel2,
-                  " ",
-                  dateLabel2
-                ] }),
-                mine && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: message.readAt ? "Read" : "Sent" })
-              ] })
-            ] }) }, message.id);
-          }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "No messages yet." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "Choose someone to message." }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-4 py-5", children: selectedMessageContact ? activeConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+            activeConversationMessages.map((message) => {
+              const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
+              const sentDate = new Date(message.sentAt);
+              const timeLabel2 = formatDashboardMessageTime(sentDate);
+              const dateLabel2 = `${String(sentDate.getDate()).padStart(2, "0")}/${String(sentDate.getMonth() + 1).padStart(2, "0")}/${String(sentDate.getFullYear()).slice(-2)}`;
+              return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${mine ? "justify-end" : "justify-start"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-2xl px-4 py-2 shadow-sm ${mine ? "bg-sky-500 text-white" : "bg-white text-gray-950"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: message.body }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                    timeLabel2,
+                    " ",
+                    dateLabel2
+                  ] }),
+                  mine && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: message.readAt ? "Read" : "Sent" })
+                ] })
+              ] }) }, message.id);
+            }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: activeConversationEndRef })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "No messages yet." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "Choose someone to message." }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 border-t border-gray-200 bg-white/70 px-3 py-3 shadow-[0_-8px_22px_rgba(15,23,42,0.08)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
