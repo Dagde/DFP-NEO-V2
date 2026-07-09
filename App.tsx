@@ -37217,7 +37217,7 @@ appliedUpdates.forEach(update => {
                 const gapText = gapMinutes < 0
                     ? `the flights overlap by ${Math.abs(gapMinutes)} min`
                     : `actual turnaround time ${actualTurnaroundText} hours`;
-                return `❌ Aircraft tail number minimum turnaround conflict - ${displayAircraftNumber} is assigned to both ${event.flightNumber} (${formatDecimalHourToString(event.startTime)}-${formatDecimalHourToString(event.startTime + event.duration)}) and ${conflictingEvent.flightNumber} (${formatDecimalHourToString(conflictingEvent.startTime)}-${formatDecimalHourToString(conflictingEvent.startTime + conflictingEvent.duration)}); minimum turnaround time ${requiredTurnaroundHoursText} hours, ${gapText}.`;
+                return `❌ Aircraft turnaround conflict - ${displayAircraftNumber}; minimum ${requiredTurnaroundHoursText} hrs, ${gapText} after ${earlier.flightNumber}.`;
             });
     }, [activePlatformResourcePool?.settings, aircraftNumberSettings, configuredAirframeCount, flightTurnaround, getFlightLineAircraftNumberForNeo]);
 
@@ -42024,7 +42024,7 @@ appliedUpdates.forEach(update => {
                                     <span className="text-gray-400 text-sm">Conflict Cause:</span>
                                     <span className="text-amber-400 text-sm font-medium text-right">
                                         {(() => {
-                                            const aircraftTailConflict = neoProblemTileForFlyout.errors.find(e => e.toLowerCase().includes('aircraft tail number minimum turnaround conflict'));
+                                            const aircraftTailConflict = neoProblemTileForFlyout.errors.find(e => e.toLowerCase().includes('aircraft turnaround conflict'));
                                             if (aircraftTailConflict) return aircraftTailConflict.replace(/^❌\s*/, '');
                                             if (neoProblemTileForFlyout.errors.some(e => e.toLowerCase().includes('previous'))) return "Prior event turnaround";
                                             if (neoProblemTileForFlyout.errors.some(e => e.toLowerCase().includes('next'))) return "Next event turnaround";
