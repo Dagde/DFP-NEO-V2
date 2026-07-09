@@ -31753,11 +31753,16 @@ const MyDashboard = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-4 py-5", children: selectedMessageContact ? activeConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeConversationMessages.map((message) => {
           const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
           const sentDate = new Date(message.sentAt);
-          const timeLabel2 = sentDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-          return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${mine ? "justify-end" : "justify-start"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `max-w-[78%] rounded-2xl px-4 py-2 shadow-sm ${mine ? "bg-sky-500 text-white" : "bg-white text-gray-950"}`, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: message.body }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-1 flex items-center justify-end gap-2 text-[10px] ${mine ? "text-sky-50/80" : "text-gray-500"}`, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: timeLabel2 }),
+          const timeLabel2 = `${String(sentDate.getHours()).padStart(2, "0")}${String(sentDate.getMinutes()).padStart(2, "0")}`;
+          const dateLabel2 = `${String(sentDate.getDate()).padStart(2, "0")}/${String(sentDate.getMonth() + 1).padStart(2, "0")}/${String(sentDate.getFullYear()).slice(-2)}`;
+          return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${mine ? "justify-end" : "justify-start"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-2xl px-4 py-2 shadow-sm ${mine ? "bg-sky-500 text-white" : "bg-white text-gray-950"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: message.body }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                timeLabel2,
+                " ",
+                dateLabel2
+              ] }),
               mine && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: message.readAt ? "Read" : "Sent" })
             ] })
           ] }) }, message.id);

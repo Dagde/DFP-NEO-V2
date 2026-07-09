@@ -554,13 +554,16 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         {activeConversationMessages.map(message => {
                                             const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
                                             const sentDate = new Date(message.sentAt);
-                                            const timeLabel = sentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                            const timeLabel = `${String(sentDate.getHours()).padStart(2, '0')}${String(sentDate.getMinutes()).padStart(2, '0')}`;
+                                            const dateLabel = `${String(sentDate.getDate()).padStart(2, '0')}/${String(sentDate.getMonth() + 1).padStart(2, '0')}/${String(sentDate.getFullYear()).slice(-2)}`;
                                             return (
                                                 <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                                                    <div className={`max-w-[78%] rounded-2xl px-4 py-2 shadow-sm ${mine ? 'bg-sky-500 text-white' : 'bg-white text-gray-950'}`}>
-                                                        <p className="whitespace-pre-wrap text-sm">{message.body}</p>
-                                                        <div className={`mt-1 flex items-center justify-end gap-2 text-[10px] ${mine ? 'text-sky-50/80' : 'text-gray-500'}`}>
-                                                            <span>{timeLabel}</span>
+                                                    <div className={`flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
+                                                        <div className={`rounded-2xl px-4 py-2 shadow-sm ${mine ? 'bg-sky-500 text-white' : 'bg-white text-gray-950'}`}>
+                                                            <p className="whitespace-pre-wrap text-sm">{message.body}</p>
+                                                        </div>
+                                                        <div className="mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500">
+                                                            <span>{timeLabel} {dateLabel}</span>
                                                             {mine && <span>{message.readAt ? 'Read' : 'Sent'}</span>}
                                                         </div>
                                                     </div>
