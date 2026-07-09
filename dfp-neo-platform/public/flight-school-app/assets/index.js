@@ -14523,6 +14523,9 @@ const ScheduleView = ({
   const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = reactExports.useState(false);
   const [flightLineDraggedAircraftNumber, setFlightLineDraggedAircraftNumber] = reactExports.useState(null);
   const [flightLineLocalUnavailableNumbers, setFlightLineLocalUnavailableNumbers] = reactExports.useState(null);
+  const [flightLineAircraftAssignments, setFlightLineAircraftAssignments] = reactExports.useState({});
+  const [flightLineAircraftAssignmentsHydratedKey, setFlightLineAircraftAssignmentsHydratedKey] = reactExports.useState("");
+  const [flightLineScheduleDropPreview, setFlightLineScheduleDropPreview] = reactExports.useState(null);
   const [isFlightLineAvailableDropActive, setIsFlightLineAvailableDropActive] = reactExports.useState(false);
   const [isFlightLineUnavailableDropActive, setIsFlightLineUnavailableDropActive] = reactExports.useState(false);
   reactExports.useEffect(() => {
@@ -14569,6 +14572,30 @@ const ScheduleView = ({
     () => new Set(flightLineEffectiveUnavailableNumbers),
     [flightLineEffectiveUnavailableNumbers]
   );
+  const flightLineAircraftAssignmentStorageKey = reactExports.useMemo(
+    () => `dfp-flight-line-aircraft-assignments:${date}:${locationCode}:${unitCode}`,
+    [date, locationCode, unitCode]
+  );
+  reactExports.useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(flightLineAircraftAssignmentStorageKey);
+      setFlightLineAircraftAssignments(stored ? JSON.parse(stored) : {});
+    } catch (error) {
+      setFlightLineAircraftAssignments({});
+    }
+    setFlightLineAircraftAssignmentsHydratedKey(flightLineAircraftAssignmentStorageKey);
+  }, [flightLineAircraftAssignmentStorageKey]);
+  reactExports.useEffect(() => {
+    if (flightLineAircraftAssignmentsHydratedKey !== flightLineAircraftAssignmentStorageKey) return;
+    try {
+      window.localStorage.setItem(flightLineAircraftAssignmentStorageKey, JSON.stringify(flightLineAircraftAssignments));
+    } catch (error) {
+    }
+  }, [flightLineAircraftAssignmentStorageKey, flightLineAircraftAssignments, flightLineAircraftAssignmentsHydratedKey]);
+  const flightLineAssignedAircraftSet = reactExports.useMemo(
+    () => new Set(Object.keys(flightLineAircraftAssignments)),
+    [flightLineAircraftAssignments]
+  );
   const flightLineStoredUnavailableKey = flightLinePoolContext.unavailableNumbers.join("|");
   const flightLineConfiguredNumbersKey = flightLinePoolContext.numbers.join("|");
   reactExports.useEffect(() => {
@@ -14608,6 +14635,7 @@ const ScheduleView = ({
   }, [flightLinePoolContext.aircraftCount, flightLinePoolContext.poolIndex, onUpdatePlatformConfig]);
   const clearFlightLineDragState = reactExports.useCallback(() => {
     setFlightLineDraggedAircraftNumber(null);
+    setFlightLineScheduleDropPreview(null);
     setIsFlightLineAvailableDropActive(false);
     setIsFlightLineUnavailableDropActive(false);
   }, []);
@@ -14633,16 +14661,56 @@ const ScheduleView = ({
   }, [flightLinePoolContext.numbers, flightLinePoolContext.poolIndex, onUpdatePlatformConfig, sortFlightLineAircraftNumbers]);
   const moveFlightLineAircraftToUnavailable = reactExports.useCallback((aircraftNumber) => {
     const cleanNumber2 = aircraftNumber.trim();
+    setFlightLineAircraftAssignments((current) => {
+      const next = { ...current };
+      delete next[cleanNumber2];
+      return next;
+    });
     clearFlightLineDragState();
     if (!cleanNumber2 || !flightLinePoolContext.numbers.includes(cleanNumber2)) return;
     saveFlightLineUnavailableAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber2]);
   }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, saveFlightLineUnavailableAircraftNumbers]);
   const moveFlightLineAircraftToAvailable = reactExports.useCallback((aircraftNumber) => {
     const cleanNumber2 = aircraftNumber.trim();
+    setFlightLineAircraftAssignments((current) => {
+      const next = { ...current };
+      delete next[cleanNumber2];
+      return next;
+    });
     clearFlightLineDragState();
     if (!cleanNumber2 || !flightLinePoolContext.numbers.includes(cleanNumber2)) return;
     saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber2));
   }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, saveFlightLineUnavailableAircraftNumbers]);
+  const assignFlightLineAircraftToEvent = reactExports.useCallback((aircraftNumber, eventId) => {
+    const cleanNumber2 = aircraftNumber.trim();
+    if (!cleanNumber2 || !eventId || !flightLinePoolContext.numbers.includes(cleanNumber2)) return;
+    setFlightLineAircraftAssignments((current) => {
+      const next = {};
+      Object.entries(current).forEach(([number, assignedEventId]) => {
+        if (number !== cleanNumber2 && assignedEventId !== eventId) {
+          next[number] = assignedEventId;
+        }
+      });
+      next[cleanNumber2] = eventId;
+      return next;
+    });
+    saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber2));
+    clearFlightLineDragState();
+  }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, saveFlightLineUnavailableAircraftNumbers]);
+  const flightLineAircraftMarkerEntries = reactExports.useMemo(() => {
+    const eventById = new Map(events.map((event) => [event.id, event]));
+    const entries = Object.entries(flightLineAircraftAssignments).map(([aircraftNumber, eventId]) => ({ aircraftNumber, eventId, event: eventById.get(eventId) })).filter((entry) => !!entry.event);
+    if (flightLineScheduleDropPreview) {
+      const previewEvent = eventById.get(flightLineScheduleDropPreview.eventId);
+      if (previewEvent) {
+        return [
+          ...entries.filter((entry) => entry.aircraftNumber !== flightLineScheduleDropPreview.aircraftNumber && entry.eventId !== flightLineScheduleDropPreview.eventId),
+          { aircraftNumber: flightLineScheduleDropPreview.aircraftNumber, eventId: flightLineScheduleDropPreview.eventId, event: previewEvent, isPreview: true }
+        ];
+      }
+    }
+    return entries;
+  }, [events, flightLineAircraftAssignments, flightLineScheduleDropPreview]);
   const flightLinePanelHeight = reactExports.useMemo(() => {
     const panelWidth = resourceSlideoutFrame?.width || 0;
     const reservedWidth = 200 + 200 + 40 + 32;
@@ -14750,14 +14818,50 @@ const ScheduleView = ({
     if (!resourceId) return null;
     return { startTime, resourceId };
   };
+  const getNearestFlightLineEventForDrop = (event) => {
+    if (!scheduleGridRef.current) return null;
+    const gridRect = scheduleGridRef.current.getBoundingClientRect();
+    const relativeX = event.clientX - gridRect.left;
+    const relativeY = event.clientY - gridRect.top;
+    const pointerTime = START_HOUR$6 + relativeX / (PIXELS_PER_HOUR$6 * zoomLevel);
+    const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT$6)));
+    const resourceId = resources[rowIndex];
+    if (!resourceId) return null;
+    const rowFlightEvents = events.filter((candidate) => candidate.resourceId === resourceId && candidate.type === "flight").sort((a, b) => Math.abs(a.startTime - pointerTime) - Math.abs(b.startTime - pointerTime));
+    return rowFlightEvents[0] || null;
+  };
   const handleExternalDragOver = (event) => {
-    if (!onExternalEventDrop || isReadOnly) return;
-    if (!Array.from(event.dataTransfer.types).includes("application/neo-assist-event")) return;
+    if (isReadOnly) return;
+    const dragTypes = Array.from(event.dataTransfer.types);
+    if (dragTypes.includes("application/flight-line-aircraft")) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      const aircraftNumber = event.dataTransfer.getData("application/flight-line-aircraft") || flightLineDraggedAircraftNumber || "";
+      const nearestEvent = getNearestFlightLineEventForDrop(event);
+      setFlightLineScheduleDropPreview(aircraftNumber && nearestEvent ? { aircraftNumber, eventId: nearestEvent.id } : null);
+      setIsFlightLineAvailableDropActive(false);
+      setIsFlightLineUnavailableDropActive(false);
+      return;
+    }
+    if (!onExternalEventDrop) return;
+    if (!dragTypes.includes("application/neo-assist-event")) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = "copy";
   };
   const handleExternalDrop = (event) => {
-    if (!onExternalEventDrop || isReadOnly) return;
+    if (isReadOnly) return;
+    const aircraftNumber = event.dataTransfer.getData("application/flight-line-aircraft") || flightLineDraggedAircraftNumber || "";
+    if (aircraftNumber) {
+      const nearestEvent = getNearestFlightLineEventForDrop(event);
+      event.preventDefault();
+      if (nearestEvent) {
+        assignFlightLineAircraftToEvent(aircraftNumber, nearestEvent.id);
+      } else {
+        clearFlightLineDragState();
+      }
+      return;
+    }
+    if (!onExternalEventDrop) return;
     const raw = event.dataTransfer.getData("application/neo-assist-event");
     if (!raw) return;
     const placement = getExternalDropPlacement(event);
@@ -15358,6 +15462,43 @@ const ScheduleView = ({
       )
     ] });
   };
+  const renderFlightLineAircraftMarkers = () => /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: flightLineAircraftMarkerEntries.map(({ aircraftNumber, event, isPreview }) => {
+    const rowIndex = resources.indexOf(event.resourceId);
+    if (rowIndex < 0) return null;
+    const markerLeft = (event.startTime - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
+    const markerTop = rowIndex * ROW_HEIGHT$6 + 2;
+    const markerHeight = ROW_HEIGHT$6 - 4;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        draggable: true,
+        onDragStart: (dragEvent) => {
+          setFlightLineDraggedAircraftNumber(aircraftNumber);
+          dragEvent.dataTransfer.effectAllowed = "move";
+          dragEvent.dataTransfer.setData("application/flight-line-aircraft", aircraftNumber);
+          dragEvent.dataTransfer.setData("text/plain", aircraftNumber);
+        },
+        onDragEnd: clearFlightLineDragState,
+        onMouseDown: (mouseEvent) => mouseEvent.stopPropagation(),
+        className: `absolute cursor-grab transition-all duration-300 ease-out active:cursor-grabbing ${isPreview ? "opacity-70" : "opacity-100"}`,
+        style: {
+          left: `${markerLeft}px`,
+          top: `${markerTop}px`,
+          width: "38px",
+          height: `${markerHeight}px`,
+          zIndex: 48
+        },
+        title: `Aircraft ${aircraftNumber}`,
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-0 bottom-0 w-[18px] rounded-l-md bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-[14px] top-0 h-[5px] w-[24px] bg-[#4f5357]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-[14px] bottom-0 h-[5px] w-[24px] bg-[#4f5357]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-0 bottom-0 flex w-[18px] items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block rotate-90 font-mono text-[12px] font-black leading-none text-white", children: aircraftNumber }) })
+        ]
+      },
+      `flight-line-aircraft-marker-${aircraftNumber}-${event.id}`
+    );
+  }) });
   const renderEvents = () => {
     return resources.flatMap((resource, rowIndex) => {
       const resourceEvents = events.filter((e) => e.resourceId === resource).sort((a, b) => {
@@ -15618,6 +15759,7 @@ const ScheduleView = ({
                         const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(" ");
                         const isDragging = flightLineDraggedAircraftNumber === number;
                         const isUnavailable = flightLineEffectiveUnavailableSet.has(number);
+                        const isAssigned = flightLineAssignedAircraftSet.has(number);
                         return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                           "div",
                           {
@@ -15635,13 +15777,14 @@ const ScheduleView = ({
                                   ]
                                 }
                               ),
-                              !isUnavailable ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                              !isUnavailable && !isAssigned ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
                                 "div",
                                 {
                                   draggable: true,
                                   onDragStart: (event) => {
                                     setFlightLineDraggedAircraftNumber(number);
                                     event.dataTransfer.effectAllowed = "move";
+                                    event.dataTransfer.setData("application/flight-line-aircraft", number);
                                     event.dataTransfer.setData("text/plain", number);
                                   },
                                   onDragEnd: clearFlightLineDragState,
@@ -15691,6 +15834,7 @@ const ScheduleView = ({
                             onDragStart: (event) => {
                               setFlightLineDraggedAircraftNumber(number);
                               event.dataTransfer.effectAllowed = "move";
+                              event.dataTransfer.setData("application/flight-line-aircraft", number);
                               event.dataTransfer.setData("text/plain", number);
                             },
                             onDragEnd: clearFlightLineDragState,
@@ -15842,6 +15986,11 @@ const ScheduleView = ({
               onMouseUp: handleMouseUp,
               onMouseLeave: handleMouseUp,
               onDragOver: handleExternalDragOver,
+              onDragLeave: (event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setFlightLineScheduleDropPreview(null);
+                }
+              },
               onDrop: handleExternalDrop,
               children: [
                 renderGridLines(),
@@ -15874,6 +16023,7 @@ const ScheduleView = ({
                   }
                 ),
                 renderEvents(),
+                renderFlightLineAircraftMarkers(),
                 isVisualAdjustMode && visualAdjustEvent && onVisualAdjustTimeChange && /* @__PURE__ */ jsxRuntimeExports.jsx(
                   VisualAdjustGuide,
                   {
