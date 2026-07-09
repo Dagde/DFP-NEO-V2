@@ -112631,6 +112631,55 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     return null;
   };
+  const getFlightLineAircraftNumberForNeo = reactExports.useCallback((event, targetDate) => {
+    const storageDate = targetDate || event.date || date;
+    const storageKey = `dfp-flight-line-aircraft-event-assignments:${storageDate}:${school}:${activeUnitCode}`;
+    let storedNumber = "";
+    try {
+      const storedAssignments = JSON.parse(window.localStorage.getItem(storageKey) || "{}");
+      storedNumber = String(storedAssignments?.[event.id] || "").trim();
+    } catch (error) {
+      storedNumber = "";
+    }
+    const rawNumber = storedNumber || String(event.aircraftNumber || "").trim();
+    if (!rawNumber) return "";
+    const parsed = parseAircraftNumber(rawNumber, aircraftNumberSettings);
+    return String(parsed.number || rawNumber).trim();
+  }, [activeUnitCode, aircraftNumberSettings, date, school]);
+  const getFlightLineAircraftConflictReasons = reactExports.useCallback((event, allEventsForDate, targetDate) => {
+    if (event.type !== "flight") return [];
+    const settings = activePlatformResourcePool?.settings || {};
+    const rawAircraftCount = Number(settings.aircraft ?? configuredAirframeCount ?? 0);
+    const aircraftCount = Number.isFinite(rawAircraftCount) ? Math.max(0, Math.floor(rawAircraftCount)) : 0;
+    const configuredNumbers = Array.isArray(settings.aircraftInventoryNumbers) ? settings.aircraftInventoryNumbers.map((value) => String(value ?? "").trim()) : [];
+    const validAircraftNumbers = Array.from({ length: aircraftCount }, (_, index) => configuredNumbers[index] || String(index + 1).padStart(3, "0"));
+    const aircraftNumber = getFlightLineAircraftNumberForNeo(event, targetDate);
+    if (!aircraftNumber || validAircraftNumbers.length > 0 && !validAircraftNumbers.includes(aircraftNumber)) {
+      return [];
+    }
+    const displayAircraftNumber = formatAircraftNumber(
+      aircraftNumber,
+      aircraftNumberSettings.usePrefix ? aircraftNumberSettings.defaultPrefix || aircraftNumberSettings.prefixes[0] || "" : "",
+      aircraftNumberSettings
+    );
+    const turnaroundHours = Math.max(0, Number(flightTurnaround) || 0);
+    const requiredTurnaroundMinutes = Math.round(turnaroundHours * 60);
+    const eventProtectedEnd = event.startTime + event.duration + turnaroundHours;
+    const epsilon = 1e-3;
+    return allEventsForDate.filter((candidate) => candidate.id !== event.id && candidate.type === "flight").map((candidate) => ({
+      event: candidate,
+      aircraftNumber: getFlightLineAircraftNumberForNeo(candidate, targetDate)
+    })).filter((candidate) => candidate.aircraftNumber === aircraftNumber).filter(({ event: candidate }) => {
+      const candidateProtectedEnd = candidate.startTime + candidate.duration + turnaroundHours;
+      return event.startTime < candidateProtectedEnd - epsilon && candidate.startTime < eventProtectedEnd - epsilon;
+    }).sort((a, b) => a.event.startTime - b.event.startTime).map(({ event: conflictingEvent }) => {
+      const earlier = event.startTime <= conflictingEvent.startTime ? event : conflictingEvent;
+      const later = earlier.id === event.id ? conflictingEvent : event;
+      const gapMinutes = Math.round((later.startTime - (earlier.startTime + earlier.duration)) * 60);
+      const gapText = gapMinutes < 0 ? `overlap by ${Math.abs(gapMinutes)} min` : `gap is ${gapMinutes} min`;
+      return `❌ Aircraft tail number conflict - ${displayAircraftNumber} is assigned to both ${event.flightNumber} (${formatDecimalHourToString(event.startTime)}-${formatDecimalHourToString(event.startTime + event.duration)}) and ${conflictingEvent.flightNumber} (${formatDecimalHourToString(conflictingEvent.startTime)}-${formatDecimalHourToString(conflictingEvent.startTime + conflictingEvent.duration)}); ${gapText}, required flight turnaround is ${requiredTurnaroundMinutes} min.`;
+    });
+  }, [activePlatformResourcePool?.settings, aircraftNumberSettings, configuredAirframeCount, flightTurnaround, getFlightLineAircraftNumberForNeo]);
   const handleNeoClick = (event) => {
     const isNextDayContext = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
     const currentEvents = isNextDayContext ? nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })) : eventsForDate;
@@ -112875,6 +112924,8 @@ ${error instanceof Error ? error.message : String(error)}`,
         errors.push(`❌ ${(name || "").split(",")[0]} is unavailable - ${reason}`);
       }
     });
+    const aircraftTailConflictReasons = getFlightLineAircraftConflictReasons(event, allEventsForDate, event.date || date);
+    aircraftTailConflictReasons.forEach((reason) => errors.push(reason));
     return [...new Set(errors)];
   };
   const executeNeoRemedy = (remedy, problemTile) => {
@@ -116752,7 +116803,11 @@ Do you want to replace the existing entry?`,
               }
             });
           },
-          isConflict: (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayUnavailabilityConflicts : unavailabilityConflicts).has(selectedEvent.id) || (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(getValidationEventKey2(selectedEvent)),
+          isConflict: (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayUnavailabilityConflicts : unavailabilityConflicts).has(selectedEvent.id) || (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(getValidationEventKey2(selectedEvent)) || getFlightLineAircraftConflictReasons(
+            selectedEvent,
+            ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView) ? nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })) : eventsForDate,
+            selectedEvent.date || date
+          ).length > 0,
           onNeoClick: handleNeoClick,
           traineeLMPs,
           oracleContextForModal,
