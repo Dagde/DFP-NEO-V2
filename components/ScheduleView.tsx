@@ -6538,6 +6538,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             }),
         }));
     }, [flightLinePoolContext.aircraftCount, flightLinePoolContext.poolIndex, onUpdatePlatformConfig]);
+    const flightLinePanelHeight = useMemo(() => {
+        const panelWidth = resourceSlideoutFrame?.width || 0;
+        const reservedWidth = 200 + 200 + 40 + 32;
+        const tileAreaWidth = Math.max(50, panelWidth - reservedWidth);
+        const tileColumns = Math.max(1, Math.floor(tileAreaWidth / 58));
+        const tileRows = Math.max(1, Math.ceil((flightLinePoolContext.numbers.length || 1) / tileColumns));
+        return Math.max(200, 68 + (tileRows * 40) + ((tileRows - 1) * 8));
+    }, [flightLinePoolContext.numbers.length, resourceSlideoutFrame?.width]);
     // Initialize with timezone-adjusted time
     const [currentTime, setCurrentTime] = useState(() => {
         const now = new Date();
@@ -7553,12 +7561,16 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         left: `${resourceSlideoutFrame.left}px`,
                         bottom: `${resourceSlideoutFrame.bottom}px`,
                         width: `${resourceSlideoutFrame.width}px`,
-                        height: '228px',
+                        height: `${flightLinePanelHeight + 28}px`,
                     }}
                     aria-hidden={!isFlightLinePanelOpen}
                 >
                     <aside
-                        className={`absolute bottom-0 left-0 h-[200px] w-full pointer-events-auto border-t border-cyan-400/25 bg-slate-950/96 shadow-[0_-18px_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${isFlightLinePanelOpen ? 'translate-y-0' : 'translate-y-[200px]'}`}
+                        className="absolute bottom-0 left-0 w-full pointer-events-auto border-t border-cyan-400/25 bg-slate-950/96 shadow-[0_-18px_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out"
+                        style={{
+                            height: `${flightLinePanelHeight}px`,
+                            transform: isFlightLinePanelOpen ? 'translateY(0)' : `translateY(${flightLinePanelHeight}px)`,
+                        }}
                     >
                         <button
                             type="button"
@@ -7610,25 +7622,31 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                     </div>
                                 </div>
                                 <div className="flex min-w-0 flex-1 items-stretch">
-                                    <div className="min-w-0 flex-1 overflow-x-auto">
+                                    <div className="min-w-0 flex-1">
                                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Aircraft Tiles</p>
-                                        <div className="mt-3 grid auto-cols-[62px] grid-flow-col grid-rows-2 gap-2 pb-1">
+                                        <div className="mt-3 flex flex-wrap gap-2 pb-1">
                                             {flightLinePoolContext.numbers.map((number, index) => {
                                                 const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(' ');
                                                 return (
                                                     <div
                                                         key={`flight-line-aircraft-tile-${index}`}
-                                                        className="flex h-[52px] w-[62px] flex-col items-center justify-center rounded-md border border-slate-500/45 bg-[#686b6f] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"
+                                                        className="flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border border-slate-500/45 bg-[#686b6f] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"
                                                         title={tailNumber}
                                                     >
                                                         {flightLinePoolContext.prefix ? (
                                                             <span className="mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85">{flightLinePoolContext.prefix}</span>
                                                         ) : null}
-                                                        <span className="max-w-full truncate text-base font-black leading-none text-white">{number}</span>
+                                                        <span className="max-w-full truncate text-[12px] font-black leading-none text-white">{number}</span>
                                                     </div>
                                                 );
                                             })}
                                         </div>
+                                    </div>
+                                </div>
+                                <div className="flex w-[200px] max-w-[200px] shrink-0 flex-col border-l border-slate-700/70 pl-4">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Unavailable</p>
+                                    <div className="mt-3 rounded-md border border-slate-700/80 bg-slate-950/55 px-3 py-2 text-[10px] font-semibold leading-4 text-slate-500">
+                                        No aircraft marked unavailable.
                                     </div>
                                 </div>
                             </div>
