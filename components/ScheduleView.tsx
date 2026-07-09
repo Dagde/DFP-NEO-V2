@@ -7612,13 +7612,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 <div className="flex min-w-0 flex-1 items-stretch">
                                     <div className="min-w-0 flex-1 overflow-x-auto">
                                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Aircraft Tiles</p>
-                                        <div className="mt-3 grid auto-cols-[52px] grid-flow-col grid-rows-2 gap-2 pb-1">
+                                        <div className="mt-3 grid auto-cols-[62px] grid-flow-col grid-rows-2 gap-2 pb-1">
                                             {flightLinePoolContext.numbers.map((number, index) => {
                                                 const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(' ');
                                                 return (
                                                     <div
                                                         key={`flight-line-aircraft-tile-${index}`}
-                                                        className="flex h-[52px] w-[52px] items-center justify-center rounded-md border border-slate-500/45 bg-[#686b6f] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"
+                                                        className="flex h-[52px] w-[62px] items-center justify-center rounded-md border border-slate-500/45 bg-[#686b6f] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"
                                                         title={tailNumber}
                                                     >
                                                         <span className="flex max-w-full items-center justify-center gap-0.5 truncate">
