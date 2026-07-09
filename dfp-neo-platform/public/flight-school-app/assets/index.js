@@ -15394,13 +15394,13 @@ const ScheduleView = ({
           left: `${resourceSlideoutFrame.left}px`,
           bottom: `${resourceSlideoutFrame.bottom}px`,
           width: `${resourceSlideoutFrame.width}px`,
-          height: "158px"
+          height: "228px"
         },
         "aria-hidden": !isFlightLinePanelOpen,
         children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "aside",
           {
-            className: `absolute bottom-0 left-0 h-[130px] w-full pointer-events-auto border-t border-cyan-400/25 bg-slate-950/96 shadow-[0_-18px_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${isFlightLinePanelOpen ? "translate-y-0" : "translate-y-[130px]"}`,
+            className: `absolute bottom-0 left-0 h-[200px] w-full pointer-events-auto border-t border-cyan-400/25 bg-slate-950/96 shadow-[0_-18px_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${isFlightLinePanelOpen ? "translate-y-0" : "translate-y-[200px]"}`,
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-1/2 top-[-28px] z-[1] flex h-7 w-[96px] -translate-x-1/2 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
