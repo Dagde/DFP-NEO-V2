@@ -74503,13 +74503,16 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   const [crewLogTouched, setCrewLogTouched] = reactExports.useState(/* @__PURE__ */ new Set());
   function applySavedFormState(saved, source) {
     if (!saved || typeof saved !== "object") return;
+    const savedAircraftNumber = String(saved.aircraftNumber || "").trim();
+    const scheduledAircraftNumberValue = String(event.aircraftNumber || "").trim();
+    const aircraftNumberToRestore = scheduledAircraftNumberValue || savedAircraftNumber;
+    const parsedAircraftNumberToRestore = aircraftNumberToRestore ? parseAircraftNumber(aircraftNumberToRestore, aircraftNumberSettings) : null;
     if (saved.result != null && ["DCO", "DPCO", "DNCO", ""].includes(saved.result)) {
       setResult(saved.result || "");
     }
-    if (saved.aircraftNumber) {
-      const parsedAircraftNumber = parseAircraftNumber(saved.aircraftNumber, aircraftNumberSettings);
-      setAircraftNumber(parsedAircraftNumber.number || "001");
-      setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
+    if (parsedAircraftNumberToRestore) {
+      setAircraftNumber(parsedAircraftNumberToRestore.number || "001");
+      setAircraftNumberPrefix(parsedAircraftNumberToRestore.prefix || aircraftNumberSettings.defaultPrefix);
     }
     if (saved.from) setFrom(saved.from);
     if (saved.to) setTo(saved.to);
@@ -74553,8 +74556,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     if (saved.crewLog && typeof saved.crewLog === "object") setCrewLogOverride(saved.crewLog);
     initialFormState.current = {
       result: saved.result != null ? saved.result || "" : result,
-      aircraftNumber: saved.aircraftNumber ? parseAircraftNumber(saved.aircraftNumber, aircraftNumberSettings).number || "001" : aircraftNumber,
-      aircraftNumberPrefix: saved.aircraftNumber ? parseAircraftNumber(saved.aircraftNumber, aircraftNumberSettings).prefix || aircraftNumberSettings.defaultPrefix : aircraftNumberPrefix,
+      aircraftNumber: parsedAircraftNumberToRestore ? parsedAircraftNumberToRestore.number || "001" : aircraftNumber,
+      aircraftNumberPrefix: parsedAircraftNumberToRestore ? parsedAircraftNumberToRestore.prefix || aircraftNumberSettings.defaultPrefix : aircraftNumberPrefix,
       from: saved.from || from,
       to: saved.to || to,
       isFlightLog: saved.isFlightLog ?? isFlightLog,
