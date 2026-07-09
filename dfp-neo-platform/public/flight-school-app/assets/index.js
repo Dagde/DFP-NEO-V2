@@ -14736,20 +14736,58 @@ const ScheduleView = ({
     saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber2));
     clearFlightLineDragState();
   }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers, setFlightLineAssignmentState]);
+  const flightLineAircraftConflictEventIds = reactExports.useMemo(() => {
+    const conflictEventIds = /* @__PURE__ */ new Set();
+    const eventsByAircraft = /* @__PURE__ */ new Map();
+    events.forEach((event) => {
+      if (event.type !== "flight") return;
+      const aircraftNumber = flightLineEffectiveAircraftAssignments[event.id] || String(event.aircraftNumber || "").trim();
+      if (!aircraftNumber || !flightLinePoolContext.numbers.includes(aircraftNumber)) return;
+      const aircraftEvents = eventsByAircraft.get(aircraftNumber) || [];
+      aircraftEvents.push(event);
+      eventsByAircraft.set(aircraftNumber, aircraftEvents);
+    });
+    const flightTurnaroundHours = Math.max(0, Number(buildRuleSettings?.flightTurnaround ?? 1.2) || 0);
+    eventsByAircraft.forEach((aircraftEvents) => {
+      const sortedEvents = [...aircraftEvents].sort((a, b) => a.startTime - b.startTime);
+      for (let index = 0; index < sortedEvents.length; index += 1) {
+        const current = sortedEvents[index];
+        const currentProtectedEnd = current.startTime + current.duration + flightTurnaroundHours;
+        for (let nextIndex = index + 1; nextIndex < sortedEvents.length; nextIndex += 1) {
+          const next = sortedEvents[nextIndex];
+          if (next.startTime >= currentProtectedEnd - 1e-3) break;
+          conflictEventIds.add(current.id);
+          conflictEventIds.add(next.id);
+        }
+      }
+    });
+    return conflictEventIds;
+  }, [buildRuleSettings?.flightTurnaround, events, flightLineEffectiveAircraftAssignments, flightLinePoolContext.numbers]);
   const flightLineAircraftMarkerEntries = reactExports.useMemo(() => {
     const eventById = new Map(events.map((event) => [event.id, event]));
-    const entries = Object.entries(flightLineEffectiveAircraftAssignments).map(([eventId, aircraftNumber]) => ({ aircraftNumber, eventId, event: eventById.get(eventId) })).filter((entry) => !!entry.event);
+    const entries = Object.entries(flightLineEffectiveAircraftAssignments).map(([eventId, aircraftNumber]) => ({
+      aircraftNumber,
+      eventId,
+      event: eventById.get(eventId),
+      hasAircraftConflict: flightLineAircraftConflictEventIds.has(eventId)
+    })).filter((entry) => !!entry.event);
     if (flightLineScheduleDropPreview) {
       const previewEvent = eventById.get(flightLineScheduleDropPreview.eventId);
       if (previewEvent) {
         return [
           ...entries.filter((entry) => entry.eventId !== flightLineScheduleDropPreview.eventId),
-          { aircraftNumber: flightLineScheduleDropPreview.aircraftNumber, eventId: flightLineScheduleDropPreview.eventId, event: previewEvent, isPreview: true }
+          {
+            aircraftNumber: flightLineScheduleDropPreview.aircraftNumber,
+            eventId: flightLineScheduleDropPreview.eventId,
+            event: previewEvent,
+            hasAircraftConflict: flightLineAircraftConflictEventIds.has(flightLineScheduleDropPreview.eventId),
+            isPreview: true
+          }
         ];
       }
     }
     return entries;
-  }, [events, flightLineEffectiveAircraftAssignments, flightLineScheduleDropPreview]);
+  }, [events, flightLineAircraftConflictEventIds, flightLineEffectiveAircraftAssignments, flightLineScheduleDropPreview]);
   const flightLinePanelHeight = reactExports.useMemo(() => {
     const panelWidth = resourceSlideoutFrame?.width || 0;
     const reservedWidth = 200 + 200 + 40 + 32;
@@ -15502,13 +15540,15 @@ const ScheduleView = ({
       )
     ] });
   };
-  const renderFlightLineAircraftMarkers = () => /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: flightLineAircraftMarkerEntries.map(({ aircraftNumber, event, isPreview }) => {
+  const renderFlightLineAircraftMarkers = () => /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: flightLineAircraftMarkerEntries.map(({ aircraftNumber, event, hasAircraftConflict, isPreview }) => {
     const rowIndex = resources.indexOf(event.resourceId);
     if (rowIndex < 0) return null;
     const markerWidth = 22;
     const markerLeft = (event.startTime + event.duration - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
     const markerTop = rowIndex * ROW_HEIGHT$6 + 2;
     const markerHeight = ROW_HEIGHT$6 - 4;
+    const markerColourClass = hasAircraftConflict ? "bg-red-600" : "bg-[#4f5357]";
+    const markerTextClass = hasAircraftConflict ? "text-red-100" : "text-slate-300";
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
@@ -15530,12 +15570,12 @@ const ScheduleView = ({
           height: `${markerHeight}px`,
           zIndex: 48
         },
-        title: `Aircraft ${aircraftNumber}`,
+        title: hasAircraftConflict ? `Aircraft ${aircraftNumber} conflict` : `Aircraft ${aircraftNumber}`,
         children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute right-0 top-0 bottom-0 w-[11px] rounded-r-md bg-[#4f5357] shadow-[0_8px_18px_rgba(0,0,0,0.28)]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-0 h-[2.5px] w-[14px] bg-[#4f5357]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 bottom-0 h-[2.5px] w-[14px] bg-[#4f5357]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute right-0 top-0 bottom-0 flex w-[11px] items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block rotate-90 font-mono text-[8px] font-black leading-none text-slate-300", children: aircraftNumber }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `absolute right-0 top-0 bottom-0 w-[11px] rounded-r-md ${markerColourClass} shadow-[0_8px_18px_rgba(0,0,0,0.28)]` }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `absolute left-0 top-0 h-[2.5px] w-[14px] ${markerColourClass}` }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `absolute left-0 bottom-0 h-[2.5px] w-[14px] ${markerColourClass}` }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute right-0 top-0 bottom-0 flex w-[11px] items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `block rotate-90 font-mono text-[8px] font-black leading-none ${markerTextClass}`, children: aircraftNumber }) })
         ]
       },
       `flight-line-aircraft-marker-${aircraftNumber}-${event.id}`
@@ -15551,7 +15591,7 @@ const ScheduleView = ({
       return resourceEvents.map((event) => {
         const isDraggedTile = !!(draggingState && draggingState.initialPositions.has(event.id));
         const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId || event.id === realtimeResourceConflictId;
-        const isConflicting = showValidation && personnelConflictIds.has(getValidationEventKey$3(event)) || isStationaryConflictTile || isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId);
+        const isConflicting = showValidation && personnelConflictIds.has(getValidationEventKey$3(event)) || flightLineAircraftConflictEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId);
         const unavailabilityConflictData = unavailabilityConflicts.get(event.id);
         const isUnavailability = !!unavailabilityConflictData;
         const unavailablePeople = unavailabilityConflictData || [];

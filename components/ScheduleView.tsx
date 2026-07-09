@@ -6711,22 +6711,60 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber));
         clearFlightLineDragState();
     }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers, setFlightLineAssignmentState]);
+    const flightLineAircraftConflictEventIds = useMemo(() => {
+        const conflictEventIds = new Set<string>();
+        const eventsByAircraft = new Map<string, ScheduleEvent[]>();
+        events.forEach((event) => {
+            if (event.type !== 'flight') return;
+            const aircraftNumber = flightLineEffectiveAircraftAssignments[event.id] || String(event.aircraftNumber || '').trim();
+            if (!aircraftNumber || !flightLinePoolContext.numbers.includes(aircraftNumber)) return;
+            const aircraftEvents = eventsByAircraft.get(aircraftNumber) || [];
+            aircraftEvents.push(event);
+            eventsByAircraft.set(aircraftNumber, aircraftEvents);
+        });
+        const flightTurnaroundHours = Math.max(0, Number(buildRuleSettings?.flightTurnaround ?? 1.2) || 0);
+        eventsByAircraft.forEach((aircraftEvents) => {
+            const sortedEvents = [...aircraftEvents].sort((a, b) => a.startTime - b.startTime);
+            for (let index = 0; index < sortedEvents.length; index += 1) {
+                const current = sortedEvents[index];
+                const currentProtectedEnd = current.startTime + current.duration + flightTurnaroundHours;
+                for (let nextIndex = index + 1; nextIndex < sortedEvents.length; nextIndex += 1) {
+                    const next = sortedEvents[nextIndex];
+                    if (next.startTime >= currentProtectedEnd - 0.001) break;
+                    conflictEventIds.add(current.id);
+                    conflictEventIds.add(next.id);
+                }
+            }
+        });
+        return conflictEventIds;
+    }, [buildRuleSettings?.flightTurnaround, events, flightLineEffectiveAircraftAssignments, flightLinePoolContext.numbers]);
     const flightLineAircraftMarkerEntries = useMemo(() => {
         const eventById = new Map(events.map((event) => [event.id, event]));
         const entries = Object.entries(flightLineEffectiveAircraftAssignments)
-            .map(([eventId, aircraftNumber]) => ({ aircraftNumber, eventId, event: eventById.get(eventId) }))
-            .filter((entry): entry is { aircraftNumber: string; eventId: string; event: ScheduleEvent } => !!entry.event);
+            .map(([eventId, aircraftNumber]) => ({
+                aircraftNumber,
+                eventId,
+                event: eventById.get(eventId),
+                hasAircraftConflict: flightLineAircraftConflictEventIds.has(eventId),
+            }))
+            .filter((entry): entry is { aircraftNumber: string; eventId: string; event: ScheduleEvent; hasAircraftConflict: boolean } => !!entry.event);
         if (flightLineScheduleDropPreview) {
             const previewEvent = eventById.get(flightLineScheduleDropPreview.eventId);
             if (previewEvent) {
                 return [
                     ...entries.filter((entry) => entry.eventId !== flightLineScheduleDropPreview.eventId),
-                    { aircraftNumber: flightLineScheduleDropPreview.aircraftNumber, eventId: flightLineScheduleDropPreview.eventId, event: previewEvent, isPreview: true },
+                    {
+                        aircraftNumber: flightLineScheduleDropPreview.aircraftNumber,
+                        eventId: flightLineScheduleDropPreview.eventId,
+                        event: previewEvent,
+                        hasAircraftConflict: flightLineAircraftConflictEventIds.has(flightLineScheduleDropPreview.eventId),
+                        isPreview: true,
+                    },
                 ];
             }
         }
         return entries;
-    }, [events, flightLineEffectiveAircraftAssignments, flightLineScheduleDropPreview]);
+    }, [events, flightLineAircraftConflictEventIds, flightLineEffectiveAircraftAssignments, flightLineScheduleDropPreview]);
     const flightLinePanelHeight = useMemo(() => {
         const panelWidth = resourceSlideoutFrame?.width || 0;
         const reservedWidth = 200 + 200 + 40 + 32;
@@ -7626,13 +7664,15 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     const renderFlightLineAircraftMarkers = () => (
         <>
-            {flightLineAircraftMarkerEntries.map(({ aircraftNumber, event, isPreview }: any) => {
+            {flightLineAircraftMarkerEntries.map(({ aircraftNumber, event, hasAircraftConflict, isPreview }: any) => {
                 const rowIndex = resources.indexOf(event.resourceId);
                 if (rowIndex < 0) return null;
                 const markerWidth = 22;
                 const markerLeft = ((event.startTime + event.duration - START_HOUR) * PIXELS_PER_HOUR * zoomLevel);
                 const markerTop = rowIndex * ROW_HEIGHT + 2;
                 const markerHeight = ROW_HEIGHT - 4;
+                const markerColourClass = hasAircraftConflict ? 'bg-red-600' : 'bg-[#4f5357]';
+                const markerTextClass = hasAircraftConflict ? 'text-red-100' : 'text-slate-300';
                 return (
                     <div
                         key={`flight-line-aircraft-marker-${aircraftNumber}-${event.id}`}
@@ -7654,13 +7694,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             height: `${markerHeight}px`,
                             zIndex: 48,
                         }}
-                        title={`Aircraft ${aircraftNumber}`}
+                        title={hasAircraftConflict ? `Aircraft ${aircraftNumber} conflict` : `Aircraft ${aircraftNumber}`}
                     >
-                        <div className="absolute right-0 top-0 bottom-0 w-[11px] rounded-r-md bg-[#4f5357] shadow-[0_8px_18px_rgba(0,0,0,0.28)]" />
-                        <div className="absolute left-0 top-0 h-[2.5px] w-[14px] bg-[#4f5357]" />
-                        <div className="absolute left-0 bottom-0 h-[2.5px] w-[14px] bg-[#4f5357]" />
+                        <div className={`absolute right-0 top-0 bottom-0 w-[11px] rounded-r-md ${markerColourClass} shadow-[0_8px_18px_rgba(0,0,0,0.28)]`} />
+                        <div className={`absolute left-0 top-0 h-[2.5px] w-[14px] ${markerColourClass}`} />
+                        <div className={`absolute left-0 bottom-0 h-[2.5px] w-[14px] ${markerColourClass}`} />
                         <div className="absolute right-0 top-0 bottom-0 flex w-[11px] items-center justify-center">
-                            <span className="block rotate-90 font-mono text-[8px] font-black leading-none text-slate-300">{aircraftNumber}</span>
+                            <span className={`block rotate-90 font-mono text-[8px] font-black leading-none ${markerTextClass}`}>{aircraftNumber}</span>
                         </div>
                     </div>
                 );
@@ -7683,6 +7723,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId || event.id === realtimeResourceConflictId;
                 const isConflicting = 
                     (showValidation && personnelConflictIds.has(getValidationEventKey(event))) || 
+                    flightLineAircraftConflictEventIds.has(event.id) ||
                     isStationaryConflictTile ||
                     (isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId));
                 
