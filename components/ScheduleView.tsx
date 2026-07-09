@@ -7629,7 +7629,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                 return (
                                                     <div
                                                         key={`flight-line-aircraft-tile-${index}`}
-                                                        className="flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border border-slate-500/45 bg-[#686b6f] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"
+                                                        className="flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border border-slate-500/45 bg-[#4f5357] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"
                                                         title={tailNumber}
                                                     >
                                                         {flightLinePoolContext.prefix ? (
