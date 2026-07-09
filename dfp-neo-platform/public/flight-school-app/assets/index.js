@@ -112663,7 +112663,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       aircraftNumberSettings
     );
     const turnaroundHours = Math.max(0, Number(flightTurnaround) || 0);
-    const requiredTurnaroundMinutes = Math.round(turnaroundHours * 60);
+    const requiredTurnaroundHoursText = turnaroundHours.toFixed(1);
     const eventProtectedEnd = event.startTime + event.duration + turnaroundHours;
     const epsilon = 1e-3;
     return allEventsForDate.filter((candidate) => candidate.id !== event.id && candidate.type === "flight").map((candidate) => ({
@@ -112676,8 +112676,10 @@ ${error instanceof Error ? error.message : String(error)}`,
       const earlier = event.startTime <= conflictingEvent.startTime ? event : conflictingEvent;
       const later = earlier.id === event.id ? conflictingEvent : event;
       const gapMinutes = Math.round((later.startTime - (earlier.startTime + earlier.duration)) * 60);
-      const gapText = gapMinutes < 0 ? `overlap by ${Math.abs(gapMinutes)} min` : `gap is ${gapMinutes} min`;
-      return `❌ Aircraft tail number conflict - ${displayAircraftNumber} is assigned to both ${event.flightNumber} (${formatDecimalHourToString(event.startTime)}-${formatDecimalHourToString(event.startTime + event.duration)}) and ${conflictingEvent.flightNumber} (${formatDecimalHourToString(conflictingEvent.startTime)}-${formatDecimalHourToString(conflictingEvent.startTime + conflictingEvent.duration)}); ${gapText}, required flight turnaround is ${requiredTurnaroundMinutes} min.`;
+      const actualTurnaroundHours = Math.max(0, gapMinutes / 60);
+      const actualTurnaroundText = actualTurnaroundHours.toFixed(1);
+      const gapText = gapMinutes < 0 ? `the flights overlap by ${Math.abs(gapMinutes)} min` : `actual turnaround time ${actualTurnaroundText} hours`;
+      return `❌ Aircraft tail number minimum turnaround conflict - ${displayAircraftNumber} is assigned to both ${event.flightNumber} (${formatDecimalHourToString(event.startTime)}-${formatDecimalHourToString(event.startTime + event.duration)}) and ${conflictingEvent.flightNumber} (${formatDecimalHourToString(conflictingEvent.startTime)}-${formatDecimalHourToString(conflictingEvent.startTime + conflictingEvent.duration)}); minimum turnaround time ${requiredTurnaroundHoursText} hours, ${gapText}.`;
     });
   }, [activePlatformResourcePool?.settings, aircraftNumberSettings, configuredAirframeCount, flightTurnaround, getFlightLineAircraftNumberForNeo]);
   const handleNeoClick = (event) => {
@@ -116910,7 +116912,13 @@ Do you want to replace the existing entry?`,
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-sm", children: "Conflict Cause:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-400 text-sm font-medium text-right", children: neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("previous")) ? "Prior event turnaround" : neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("next")) ? "Next event turnaround" : "Scheduling conflict" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-400 text-sm font-medium text-right", children: (() => {
+                const aircraftTailConflict = neoProblemTileForFlyout.errors.find((e) => e.toLowerCase().includes("aircraft tail number minimum turnaround conflict"));
+                if (aircraftTailConflict) return aircraftTailConflict.replace(/^❌\s*/, "");
+                if (neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("previous"))) return "Prior event turnaround";
+                if (neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("next"))) return "Next event turnaround";
+                return "Scheduling conflict";
+              })() })
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center pt-2", children: [

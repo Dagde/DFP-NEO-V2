@@ -37192,7 +37192,7 @@ appliedUpdates.forEach(update => {
             aircraftNumberSettings,
         );
         const turnaroundHours = Math.max(0, Number(flightTurnaround) || 0);
-        const requiredTurnaroundMinutes = Math.round(turnaroundHours * 60);
+        const requiredTurnaroundHoursText = turnaroundHours.toFixed(1);
         const eventProtectedEnd = event.startTime + event.duration + turnaroundHours;
         const epsilon = 0.001;
 
@@ -37212,10 +37212,12 @@ appliedUpdates.forEach(update => {
                 const earlier = event.startTime <= conflictingEvent.startTime ? event : conflictingEvent;
                 const later = earlier.id === event.id ? conflictingEvent : event;
                 const gapMinutes = Math.round((later.startTime - (earlier.startTime + earlier.duration)) * 60);
+                const actualTurnaroundHours = Math.max(0, gapMinutes / 60);
+                const actualTurnaroundText = actualTurnaroundHours.toFixed(1);
                 const gapText = gapMinutes < 0
-                    ? `overlap by ${Math.abs(gapMinutes)} min`
-                    : `gap is ${gapMinutes} min`;
-                return `❌ Aircraft tail number conflict - ${displayAircraftNumber} is assigned to both ${event.flightNumber} (${formatDecimalHourToString(event.startTime)}-${formatDecimalHourToString(event.startTime + event.duration)}) and ${conflictingEvent.flightNumber} (${formatDecimalHourToString(conflictingEvent.startTime)}-${formatDecimalHourToString(conflictingEvent.startTime + conflictingEvent.duration)}); ${gapText}, required flight turnaround is ${requiredTurnaroundMinutes} min.`;
+                    ? `the flights overlap by ${Math.abs(gapMinutes)} min`
+                    : `actual turnaround time ${actualTurnaroundText} hours`;
+                return `❌ Aircraft tail number minimum turnaround conflict - ${displayAircraftNumber} is assigned to both ${event.flightNumber} (${formatDecimalHourToString(event.startTime)}-${formatDecimalHourToString(event.startTime + event.duration)}) and ${conflictingEvent.flightNumber} (${formatDecimalHourToString(conflictingEvent.startTime)}-${formatDecimalHourToString(conflictingEvent.startTime + conflictingEvent.duration)}); minimum turnaround time ${requiredTurnaroundHoursText} hours, ${gapText}.`;
             });
     }, [activePlatformResourcePool?.settings, aircraftNumberSettings, configuredAirframeCount, flightTurnaround, getFlightLineAircraftNumberForNeo]);
 
@@ -42021,11 +42023,13 @@ appliedUpdates.forEach(update => {
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-400 text-sm">Conflict Cause:</span>
                                     <span className="text-amber-400 text-sm font-medium text-right">
-                                        {neoProblemTileForFlyout.errors.some(e => e.toLowerCase().includes('previous'))
-                                            ? "Prior event turnaround"
-                                            : neoProblemTileForFlyout.errors.some(e => e.toLowerCase().includes('next'))
-                                                ? "Next event turnaround"
-                                                : "Scheduling conflict"}
+                                        {(() => {
+                                            const aircraftTailConflict = neoProblemTileForFlyout.errors.find(e => e.toLowerCase().includes('aircraft tail number minimum turnaround conflict'));
+                                            if (aircraftTailConflict) return aircraftTailConflict.replace(/^❌\s*/, '');
+                                            if (neoProblemTileForFlyout.errors.some(e => e.toLowerCase().includes('previous'))) return "Prior event turnaround";
+                                            if (neoProblemTileForFlyout.errors.some(e => e.toLowerCase().includes('next'))) return "Next event turnaround";
+                                            return "Scheduling conflict";
+                                        })()}
                                     </span>
                                 </div>
                             </div>
