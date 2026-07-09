@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, Pt051Assessment } from '../types';
+import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, Pt051Assessment, Trainee } from '../types';
 import TafWeatherWidget from './TafWeatherWidget';
 import { normaliseFixedCrewStaffRole } from '../utils/crewPositionTerminology';
 
@@ -19,9 +19,31 @@ interface MyDashboardProps {
     onSelectTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void;
     onReassignTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }, assignee: Instructor) => void;
     staffOptions?: Instructor[];
+    messageContactStaffOptions?: Instructor[];
+    messageContactTraineeOptions?: Trainee[];
     selectedStaffName?: string;
     onSelectStaffName?: (staffName: string) => void;
 }
+
+type DashboardMessageContact = {
+    id: string;
+    name: string;
+    displayName: string;
+    unit: string;
+    role: string;
+    type: 'Staff' | 'Trainee';
+};
+
+type DashboardMessage = {
+    id: string;
+    from: string;
+    to: string;
+    body: string;
+    sentAt: string;
+    readAt?: string;
+};
+
+const DASHBOARD_MESSAGES_STORAGE_KEY = 'dfp_dashboard_messages_v1';
 
 const formatTime = (time: number) => {
     const hours = Math.floor(time);
@@ -56,6 +78,31 @@ const formatDashboardStaffName = (staff: Instructor): string => {
     return `${staff.rank || ''} ${displayName}`.trim();
 };
 
+const normaliseDashboardContactName = (value?: string | null): string => (
+    String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+);
+
+const toDashboardContactDisplayName = (name: string, rank?: string): string => {
+    const [lastName, firstName] = String(name || '').split(',').map(part => part.trim());
+    const displayName = firstName ? `${firstName} ${lastName}` : name;
+    return `${rank || ''} ${displayName}`.trim();
+};
+
+const readDashboardMessages = (): DashboardMessage[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const parsed = JSON.parse(window.localStorage.getItem(DASHBOARD_MESSAGES_STORAGE_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+};
+
+const writeDashboardMessages = (messages: DashboardMessage[]) => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(DASHBOARD_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
+};
+
 const MyDashboard: React.FC<MyDashboardProps> = ({ 
     userName, 
     userRank, 
@@ -72,6 +119,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     onSelectTrainingReport,
     onReassignTrainingReport,
     staffOptions = [],
+    messageContactStaffOptions = staffOptions,
+    messageContactTraineeOptions = [],
     selectedStaffName,
     onSelectStaffName,
 }) => {
@@ -93,7 +142,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     }, [staffOptions]);
     const dashboardSelectedName = selectedStaffName || userName;
     const [staffPickerEntry, setStaffPickerEntry] = useState<{ report: AirCombatTrainingReport; staff: Instructor; mode: 'open' | 'reassign' } | null>(null);
-    const dashboardActionButtonClass = 'btn-aluminium-brushed flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]';
+    const dashboardActionButtonClass = 'btn-aluminium-brushed relative flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]';
+    const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+    const [isContactPickerOpen, setIsContactPickerOpen] = useState(false);
+    const [messageToText, setMessageToText] = useState('');
+    const [selectedMessageContact, setSelectedMessageContact] = useState<DashboardMessageContact | null>(null);
+    const [messageDraft, setMessageDraft] = useState('');
+    const [dashboardMessages, setDashboardMessages] = useState<DashboardMessage[]>(() => readDashboardMessages());
+    const [incomingToast, setIncomingToast] = useState<DashboardMessage | null>(null);
     const roleTone = (role?: string) => {
         const value = String(role || '').toLowerCase();
         if (value.includes('pilot')) return 'text-sky-300 border-sky-500/30';
@@ -104,6 +160,119 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const formatStaffRole = (staff: Instructor): string => (
         normaliseFixedCrewStaffRole(staff.role, staff.unit) || 'Staff'
     );
+    const dashboardUserKey = normaliseDashboardContactName(dashboardSelectedName);
+    const dashboardUserStaff = useMemo(() => (
+        messageContactStaffOptions.find(staff => normaliseDashboardContactName(staff.name) === dashboardUserKey)
+    ), [dashboardUserKey, messageContactStaffOptions]);
+    const dashboardUserUnitCodes = useMemo(() => {
+        const unit = String(dashboardUserStaff?.unit || '').trim().toUpperCase();
+        if (unit) return unit.split(/[+/]/).map(code => code.trim()).filter(Boolean);
+        return String(selectedStaffName || '').split(/[+/]/).map(code => code.trim().toUpperCase()).filter(Boolean);
+    }, [dashboardUserStaff?.unit, selectedStaffName]);
+    const dashboardUserUnitSet = useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join('|')]);
+    const messageContacts = useMemo<DashboardMessageContact[]>(() => {
+        const staffContacts = messageContactStaffOptions
+            .filter(staff => staff?.name)
+            .filter(staff => {
+                const unit = String(staff.unit || '').trim().toUpperCase();
+                return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
+            })
+            .map(staff => ({
+                id: `staff-${staff.idNumber}-${staff.name}`,
+                name: staff.name,
+                displayName: toDashboardContactDisplayName(staff.name, staff.rank),
+                unit: staff.unit || 'No Unit',
+                role: formatStaffRole(staff),
+                type: 'Staff' as const,
+            }));
+        const traineeContacts = messageContactTraineeOptions
+            .filter(trainee => trainee?.fullName || trainee?.name)
+            .filter(trainee => {
+                const unit = String(trainee.unit || '').trim().toUpperCase();
+                return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
+            })
+            .map(trainee => ({
+                id: `trainee-${trainee.idNumber}-${trainee.fullName || trainee.name}`,
+                name: trainee.fullName || trainee.name,
+                displayName: toDashboardContactDisplayName(trainee.fullName || trainee.name, trainee.rank),
+                unit: trainee.unit || 'No Unit',
+                role: trainee.course || 'Trainee',
+                type: 'Trainee' as const,
+            }));
+        const unique = new Map<string, DashboardMessageContact>();
+        [...staffContacts, ...traineeContacts]
+            .filter(contact => normaliseDashboardContactName(contact.name) !== dashboardUserKey)
+            .forEach(contact => unique.set(normaliseDashboardContactName(contact.name), contact));
+        return Array.from(unique.values()).sort((a, b) => (
+            a.unit.localeCompare(b.unit) ||
+            a.type.localeCompare(b.type) ||
+            a.displayName.localeCompare(b.displayName)
+        ));
+    }, [dashboardUserKey, dashboardUserUnitSet, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions]);
+    const messageSuggestions = useMemo(() => {
+        const query = normaliseDashboardContactName(messageToText);
+        if (!query) return [];
+        return messageContacts
+            .filter(contact => normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query))
+            .slice(0, 6);
+    }, [messageContacts, messageToText]);
+    const unreadMessages = useMemo(() => (
+        dashboardMessages.filter(message => (
+            normaliseDashboardContactName(message.to) === dashboardUserKey &&
+            !message.readAt
+        ))
+    ), [dashboardMessages, dashboardUserKey]);
+    const activeConversationMessages = useMemo(() => {
+        if (!selectedMessageContact) return [];
+        const contactKey = normaliseDashboardContactName(selectedMessageContact.name);
+        return dashboardMessages
+            .filter(message => {
+                const from = normaliseDashboardContactName(message.from);
+                const to = normaliseDashboardContactName(message.to);
+                return (from === dashboardUserKey && to === contactKey) || (from === contactKey && to === dashboardUserKey);
+            })
+            .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+    }, [dashboardMessages, dashboardUserKey, selectedMessageContact]);
+    const persistDashboardMessages = (updater: (messages: DashboardMessage[]) => DashboardMessage[]) => {
+        setDashboardMessages(prev => {
+            const next = updater(prev);
+            writeDashboardMessages(next);
+            return next;
+        });
+    };
+    const selectMessageContact = (contact: DashboardMessageContact) => {
+        setSelectedMessageContact(contact);
+        setMessageToText(contact.displayName);
+        setIsContactPickerOpen(false);
+    };
+    const sendDashboardMessage = () => {
+        if (!selectedMessageContact || !messageDraft.trim()) return;
+        const nextMessage: DashboardMessage = {
+            id: `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            from: dashboardSelectedName,
+            to: selectedMessageContact.name,
+            body: messageDraft.trim(),
+            sentAt: new Date().toISOString(),
+        };
+        persistDashboardMessages(messages => [...messages, nextMessage]);
+        setMessageDraft('');
+    };
+    useEffect(() => {
+        if (!isMessagesOpen || unreadMessages.length === 0) return;
+        const now = new Date().toISOString();
+        persistDashboardMessages(messages => messages.map(message => (
+            normaliseDashboardContactName(message.to) === dashboardUserKey && !message.readAt
+                ? { ...message, readAt: now }
+                : message
+        )));
+    }, [dashboardUserKey, isMessagesOpen, unreadMessages.length]);
+    useEffect(() => {
+        if (unreadMessages.length === 0) return;
+        const newest = unreadMessages[unreadMessages.length - 1];
+        setIncomingToast(newest);
+        const timer = window.setTimeout(() => setIncomingToast(null), 4000);
+        return () => window.clearTimeout(timer);
+    }, [unreadMessages.length]);
     const sameUnitStaff = useMemo(() => {
         if (!staffPickerEntry) return [];
         const unit = String(staffPickerEntry.staff.unit || staffPickerEntry.report.unitCode || '').trim();
@@ -190,8 +359,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 <div className="flex flex-wrap items-center gap-px">
                     <button
                         type="button"
+                        onClick={() => setIsMessagesOpen(true)}
                         className={dashboardActionButtonClass}
                     >
+                        {unreadMessages.length > 0 && (
+                            <span className="absolute -left-2 -bottom-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-[13px] font-bold text-white shadow-lg">
+                                {Math.min(unreadMessages.length, 9)}
+                            </span>
+                        )}
                         Messages
                     </button>
                     <button
@@ -208,6 +383,153 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     </button>
                 </div>
             </header>
+            {incomingToast && (
+                <div className="fixed inset-0 z-[100] flex pointer-events-none items-center justify-center p-4">
+                    <div className="max-w-sm rounded-2xl border border-sky-300/40 bg-gray-950/95 px-5 py-4 text-center shadow-2xl ring-1 ring-white/10">
+                        <p className="text-sm font-bold text-white">New Message</p>
+                        <p className="mt-1 text-xs text-gray-300">From {toDashboardContactDisplayName(incomingToast.from)}</p>
+                    </div>
+                </div>
+            )}
+            {isMessagesOpen && (
+                <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 p-4">
+                    <div className="relative flex h-[78vh] w-full max-w-[520px] flex-col overflow-hidden rounded-[28px] bg-[#f7f7f8] text-gray-950 shadow-2xl ring-1 ring-black/10">
+                        <div className="relative px-5 pb-3 pt-5">
+                            <h2 className="text-center text-2xl font-bold tracking-tight">New Message</h2>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsMessagesOpen(false);
+                                    setIsContactPickerOpen(false);
+                                }}
+                                className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-gray-200 text-4xl font-light leading-none text-gray-950 shadow-inner hover:bg-gray-300"
+                                aria-label="Close messages"
+                            >
+                                x
+                            </button>
+                        </div>
+                        <div className="relative mx-3 rounded-full border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]">
+                            <div className="flex h-14 items-center gap-2 px-4">
+                                <span className="text-xl text-gray-500">To:</span>
+                                <input
+                                    value={messageToText}
+                                    onChange={(event) => {
+                                        setMessageToText(event.target.value);
+                                        setSelectedMessageContact(null);
+                                    }}
+                                    className="min-w-0 flex-1 bg-transparent text-xl text-gray-950 outline-none"
+                                    autoComplete="off"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setIsContactPickerOpen(true)}
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200 text-3xl font-bold leading-none text-gray-950 hover:bg-gray-300"
+                                    aria-label="Open contacts"
+                                >
+                                    +
+                                </button>
+                            </div>
+                            {!selectedMessageContact && messageSuggestions.length > 0 && (
+                                <div className="absolute left-8 right-14 top-[58px] z-10 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
+                                    {messageSuggestions.map(contact => (
+                                        <button
+                                            key={contact.id}
+                                            type="button"
+                                            onClick={() => selectMessageContact(contact)}
+                                            className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-gray-100"
+                                        >
+                                            <span>
+                                                <span className="block text-sm font-semibold text-gray-950">{contact.displayName}</span>
+                                                <span className="block text-xs text-gray-500">{contact.unit} - {contact.role}</span>
+                                            </span>
+                                            <span className="text-[10px] font-bold uppercase text-gray-400">{contact.type}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-1 overflow-y-auto px-4 py-5">
+                            {selectedMessageContact ? (
+                                activeConversationMessages.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {activeConversationMessages.map(message => {
+                                            const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
+                                            const sentDate = new Date(message.sentAt);
+                                            const timeLabel = sentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                            return (
+                                                <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                                                    <div className={`max-w-[78%] rounded-2xl px-4 py-2 shadow-sm ${mine ? 'bg-sky-500 text-white' : 'bg-white text-gray-950'}`}>
+                                                        <p className="whitespace-pre-wrap text-sm">{message.body}</p>
+                                                        <div className={`mt-1 flex items-center justify-end gap-2 text-[10px] ${mine ? 'text-sky-50/80' : 'text-gray-500'}`}>
+                                                            <span>{timeLabel}</span>
+                                                            {mine && <span>{message.readAt ? 'Read' : 'Sent'}</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="pt-20 text-center text-sm text-gray-400">No messages yet.</p>
+                                )
+                            ) : (
+                                <p className="pt-20 text-center text-sm text-gray-400">Choose someone to message.</p>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2 border-t border-gray-200 bg-white/70 px-3 py-3 shadow-[0_-8px_22px_rgba(15,23,42,0.08)]">
+                            <input
+                                value={messageDraft}
+                                onChange={(event) => setMessageDraft(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter' && !event.shiftKey) {
+                                        event.preventDefault();
+                                        sendDashboardMessage();
+                                    }
+                                }}
+                                placeholder="Message"
+                                className="h-12 min-w-0 flex-1 rounded-full border border-white bg-white px-4 text-base text-gray-950 shadow-inner outline-none focus:ring-2 focus:ring-sky-400"
+                            />
+                            <button
+                                type="button"
+                                onClick={sendDashboardMessage}
+                                disabled={!selectedMessageContact || !messageDraft.trim()}
+                                className="flex h-12 w-14 items-center justify-center rounded-md bg-white text-sm font-bold text-sky-600 shadow disabled:cursor-not-allowed disabled:text-gray-300"
+                            >
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                    {isContactPickerOpen && (
+                        <div className="absolute inset-0 z-[105] flex items-center justify-center bg-black/45 p-4">
+                            <div className="w-full max-w-md rounded-2xl bg-white p-4 text-gray-950 shadow-2xl">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <h3 className="text-lg font-bold">Select Contact</h3>
+                                    <button type="button" onClick={() => setIsContactPickerOpen(false)} className="text-2xl leading-none text-gray-500 hover:text-gray-950">x</button>
+                                </div>
+                                <div className="max-h-[52vh] space-y-1 overflow-y-auto">
+                                    {messageContacts.map(contact => (
+                                        <button
+                                            key={contact.id}
+                                            type="button"
+                                            onClick={() => selectMessageContact(contact)}
+                                            className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-gray-100"
+                                        >
+                                            <span>
+                                                <span className="block text-sm font-semibold">{contact.displayName}</span>
+                                                <span className="block text-xs text-gray-500">{contact.unit} - {contact.role}</span>
+                                            </span>
+                                            <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-500">{contact.type}</span>
+                                        </button>
+                                    ))}
+                                    {messageContacts.length === 0 && (
+                                        <p className="py-8 text-center text-sm text-gray-500">No contacts found for this unit.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* My Hub */}

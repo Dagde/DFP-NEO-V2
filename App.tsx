@@ -39474,6 +39474,8 @@ appliedUpdates.forEach(update => {
                             pt051Assessments={pt051Assessments}
                             trainingReportsToComplete={pendingTrainingReports}
                             staffOptions={allInstructorsData}
+                            messageContactStaffOptions={instructorsData}
+                            messageContactTraineeOptions={traineesData}
                             selectedStaffName={dashboardUserName}
                             onSelectStaffName={setDashboardTestUserName}
                             onSelectTrainingReport={(entry) => {

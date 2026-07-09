@@ -31343,6 +31343,7 @@ const TafWeatherWidget = ({ onClose }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 pt-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Auto-refreshes every 30 minutes • Data from AVWX" }) })
   ] });
 };
+const DASHBOARD_MESSAGES_STORAGE_KEY = "dfp_dashboard_messages_v1";
 const formatTime$2 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
@@ -31371,6 +31372,25 @@ const formatDashboardStaffName = (staff) => {
   const displayName = firstName ? `${firstName} ${lastName}` : staff.name;
   return `${staff.rank || ""} ${displayName}`.trim();
 };
+const normaliseDashboardContactName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+const toDashboardContactDisplayName = (name, rank) => {
+  const [lastName, firstName] = String(name || "").split(",").map((part) => part.trim());
+  const displayName = firstName ? `${firstName} ${lastName}` : name;
+  return `${rank || ""} ${displayName}`.trim();
+};
+const readDashboardMessages = () => {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(DASHBOARD_MESSAGES_STORAGE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+const writeDashboardMessages = (messages) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(DASHBOARD_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
+};
 const MyDashboard = ({
   userName,
   userRank,
@@ -31387,6 +31407,8 @@ const MyDashboard = ({
   onSelectTrainingReport,
   onReassignTrainingReport,
   staffOptions = [],
+  messageContactStaffOptions = staffOptions,
+  messageContactTraineeOptions = [],
   selectedStaffName,
   onSelectStaffName
 }) => {
@@ -31402,7 +31424,14 @@ const MyDashboard = ({
   }, [staffOptions]);
   const dashboardSelectedName = selectedStaffName || userName;
   const [staffPickerEntry, setStaffPickerEntry] = reactExports.useState(null);
-  const dashboardActionButtonClass = "btn-aluminium-brushed flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]";
+  const dashboardActionButtonClass = "btn-aluminium-brushed relative flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]";
+  const [isMessagesOpen, setIsMessagesOpen] = reactExports.useState(false);
+  const [isContactPickerOpen, setIsContactPickerOpen] = reactExports.useState(false);
+  const [messageToText, setMessageToText] = reactExports.useState("");
+  const [selectedMessageContact, setSelectedMessageContact] = reactExports.useState(null);
+  const [messageDraft, setMessageDraft] = reactExports.useState("");
+  const [dashboardMessages, setDashboardMessages] = reactExports.useState(() => readDashboardMessages());
+  const [incomingToast, setIncomingToast] = reactExports.useState(null);
   const roleTone = (role) => {
     const value = String(role).toLowerCase();
     if (value.includes("pilot")) return "text-sky-300 border-sky-500/30";
@@ -31411,6 +31440,92 @@ const MyDashboard = ({
     return "text-gray-300 border-gray-600";
   };
   const formatStaffRole = (staff) => normaliseFixedCrewStaffRole(staff.role, staff.unit) || "Staff";
+  const dashboardUserKey = normaliseDashboardContactName(dashboardSelectedName);
+  const dashboardUserStaff = reactExports.useMemo(() => messageContactStaffOptions.find((staff) => normaliseDashboardContactName(staff.name) === dashboardUserKey), [dashboardUserKey, messageContactStaffOptions]);
+  const dashboardUserUnitCodes = reactExports.useMemo(() => {
+    const unit = String(dashboardUserStaff?.unit || "").trim().toUpperCase();
+    if (unit) return unit.split(/[+/]/).map((code) => code.trim()).filter(Boolean);
+    return String(selectedStaffName || "").split(/[+/]/).map((code) => code.trim().toUpperCase()).filter(Boolean);
+  }, [dashboardUserStaff?.unit, selectedStaffName]);
+  const dashboardUserUnitSet = reactExports.useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join("|")]);
+  const messageContacts = reactExports.useMemo(() => {
+    const staffContacts = messageContactStaffOptions.filter((staff) => staff?.name).filter((staff) => {
+      const unit = String(staff.unit || "").trim().toUpperCase();
+      return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
+    }).map((staff) => ({
+      id: `staff-${staff.idNumber}-${staff.name}`,
+      name: staff.name,
+      displayName: toDashboardContactDisplayName(staff.name, staff.rank),
+      unit: staff.unit || "No Unit",
+      role: formatStaffRole(staff),
+      type: "Staff"
+    }));
+    const traineeContacts = messageContactTraineeOptions.filter((trainee) => trainee?.fullName || trainee?.name).filter((trainee) => {
+      const unit = String(trainee.unit || "").trim().toUpperCase();
+      return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
+    }).map((trainee) => ({
+      id: `trainee-${trainee.idNumber}-${trainee.fullName || trainee.name}`,
+      name: trainee.fullName || trainee.name,
+      displayName: toDashboardContactDisplayName(trainee.fullName || trainee.name, trainee.rank),
+      unit: trainee.unit || "No Unit",
+      role: trainee.course || "Trainee",
+      type: "Trainee"
+    }));
+    const unique = /* @__PURE__ */ new Map();
+    [...staffContacts, ...traineeContacts].filter((contact) => normaliseDashboardContactName(contact.name) !== dashboardUserKey).forEach((contact) => unique.set(normaliseDashboardContactName(contact.name), contact));
+    return Array.from(unique.values()).sort((a, b) => a.unit.localeCompare(b.unit) || a.type.localeCompare(b.type) || a.displayName.localeCompare(b.displayName));
+  }, [dashboardUserKey, dashboardUserUnitSet, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions]);
+  const messageSuggestions = reactExports.useMemo(() => {
+    const query = normaliseDashboardContactName(messageToText);
+    if (!query) return [];
+    return messageContacts.filter((contact) => normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query)).slice(0, 6);
+  }, [messageContacts, messageToText]);
+  const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => normaliseDashboardContactName(message.to) === dashboardUserKey && !message.readAt), [dashboardMessages, dashboardUserKey]);
+  const activeConversationMessages = reactExports.useMemo(() => {
+    if (!selectedMessageContact) return [];
+    const contactKey = normaliseDashboardContactName(selectedMessageContact.name);
+    return dashboardMessages.filter((message) => {
+      const from = normaliseDashboardContactName(message.from);
+      const to = normaliseDashboardContactName(message.to);
+      return from === dashboardUserKey && to === contactKey || from === contactKey && to === dashboardUserKey;
+    }).sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+  }, [dashboardMessages, dashboardUserKey, selectedMessageContact]);
+  const persistDashboardMessages = (updater) => {
+    setDashboardMessages((prev) => {
+      const next = updater(prev);
+      writeDashboardMessages(next);
+      return next;
+    });
+  };
+  const selectMessageContact = (contact) => {
+    setSelectedMessageContact(contact);
+    setMessageToText(contact.displayName);
+    setIsContactPickerOpen(false);
+  };
+  const sendDashboardMessage = () => {
+    if (!selectedMessageContact || !messageDraft.trim()) return;
+    const nextMessage = {
+      id: `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      from: dashboardSelectedName,
+      to: selectedMessageContact.name,
+      body: messageDraft.trim(),
+      sentAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    persistDashboardMessages((messages) => [...messages, nextMessage]);
+    setMessageDraft("");
+  };
+  reactExports.useEffect(() => {
+    if (!isMessagesOpen || unreadMessages.length === 0) return;
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    persistDashboardMessages((messages) => messages.map((message) => normaliseDashboardContactName(message.to) === dashboardUserKey && !message.readAt ? { ...message, readAt: now } : message));
+  }, [dashboardUserKey, isMessagesOpen, unreadMessages.length]);
+  reactExports.useEffect(() => {
+    if (unreadMessages.length === 0) return;
+    const newest = unreadMessages[unreadMessages.length - 1];
+    setIncomingToast(newest);
+    const timer = window.setTimeout(() => setIncomingToast(null), 4e3);
+    return () => window.clearTimeout(timer);
+  }, [unreadMessages.length]);
   const sameUnitStaff = reactExports.useMemo(() => {
     if (!staffPickerEntry) return [];
     const unit = String(staffPickerEntry.staff.unit || staffPickerEntry.report.unitCode || "").trim();
@@ -31468,12 +31583,16 @@ const MyDashboard = ({
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-px", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
             type: "button",
+            onClick: () => setIsMessagesOpen(true),
             className: dashboardActionButtonClass,
-            children: "Messages"
+            children: [
+              unreadMessages.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -left-2 -bottom-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-[13px] font-bold text-white shadow-lg", children: Math.min(unreadMessages.length, 9) }),
+              "Messages"
+            ]
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -31501,6 +31620,148 @@ const MyDashboard = ({
           }
         )
       ] })
+    ] }),
+    incomingToast && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[100] flex pointer-events-none items-center justify-center p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-sm rounded-2xl border border-sky-300/40 bg-gray-950/95 px-5 py-4 text-center shadow-2xl ring-1 ring-white/10", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-white", children: "New Message" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-gray-300", children: [
+        "From ",
+        toDashboardContactDisplayName(incomingToast.from)
+      ] })
+    ] }) }),
+    isMessagesOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed inset-0 z-[95] flex items-center justify-center bg-black/55 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-[78vh] w-full max-w-[520px] flex-col overflow-hidden rounded-[28px] bg-[#f7f7f8] text-gray-950 shadow-2xl ring-1 ring-black/10", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative px-5 pb-3 pt-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-center text-2xl font-bold tracking-tight", children: "New Message" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                setIsMessagesOpen(false);
+                setIsContactPickerOpen(false);
+              },
+              className: "absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-gray-200 text-4xl font-light leading-none text-gray-950 shadow-inner hover:bg-gray-300",
+              "aria-label": "Close messages",
+              children: "x"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mx-3 rounded-full border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-14 items-center gap-2 px-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xl text-gray-500", children: "To:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                value: messageToText,
+                onChange: (event) => {
+                  setMessageToText(event.target.value);
+                  setSelectedMessageContact(null);
+                },
+                className: "min-w-0 flex-1 bg-transparent text-xl text-gray-950 outline-none",
+                autoComplete: "off"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setIsContactPickerOpen(true),
+                className: "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200 text-3xl font-bold leading-none text-gray-950 hover:bg-gray-300",
+                "aria-label": "Open contacts",
+                children: "+"
+              }
+            )
+          ] }),
+          !selectedMessageContact && messageSuggestions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-8 right-14 top-[58px] z-10 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl", children: messageSuggestions.map((contact) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => selectMessageContact(contact),
+              className: "flex w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-gray-100",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-950", children: contact.displayName }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-xs text-gray-500", children: [
+                    contact.unit,
+                    " - ",
+                    contact.role
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold uppercase text-gray-400", children: contact.type })
+              ]
+            },
+            contact.id
+          )) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-4 py-5", children: selectedMessageContact ? activeConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeConversationMessages.map((message) => {
+          const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
+          const sentDate = new Date(message.sentAt);
+          const timeLabel2 = sentDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${mine ? "justify-end" : "justify-start"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `max-w-[78%] rounded-2xl px-4 py-2 shadow-sm ${mine ? "bg-sky-500 text-white" : "bg-white text-gray-950"}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: message.body }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-1 flex items-center justify-end gap-2 text-[10px] ${mine ? "text-sky-50/80" : "text-gray-500"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: timeLabel2 }),
+              mine && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: message.readAt ? "Read" : "Sent" })
+            ] })
+          ] }) }, message.id);
+        }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "No messages yet." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "Choose someone to message." }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 border-t border-gray-200 bg-white/70 px-3 py-3 shadow-[0_-8px_22px_rgba(15,23,42,0.08)]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              value: messageDraft,
+              onChange: (event) => setMessageDraft(event.target.value),
+              onKeyDown: (event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  sendDashboardMessage();
+                }
+              },
+              placeholder: "Message",
+              className: "h-12 min-w-0 flex-1 rounded-full border border-white bg-white px-4 text-base text-gray-950 shadow-inner outline-none focus:ring-2 focus:ring-sky-400"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: sendDashboardMessage,
+              disabled: !selectedMessageContact || !messageDraft.trim(),
+              className: "flex h-12 w-14 items-center justify-center rounded-md bg-white text-sm font-bold text-sky-600 shadow disabled:cursor-not-allowed disabled:text-gray-300",
+              children: "Send"
+            }
+          )
+        ] })
+      ] }),
+      isContactPickerOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-[105] flex items-center justify-center bg-black/45 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-md rounded-2xl bg-white p-4 text-gray-950 shadow-2xl", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold", children: "Select Contact" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsContactPickerOpen(false), className: "text-2xl leading-none text-gray-500 hover:text-gray-950", children: "x" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-[52vh] space-y-1 overflow-y-auto", children: [
+          messageContacts.map((contact) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => selectMessageContact(contact),
+              className: "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-gray-100",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold", children: contact.displayName }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-xs text-gray-500", children: [
+                    contact.unit,
+                    " - ",
+                    contact.role
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-full bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-500", children: contact.type })
+              ]
+            },
+            contact.id
+          )),
+          messageContacts.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-8 text-center text-sm text-gray-500", children: "No contacts found for this unit." })
+        ] })
+      ] }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
@@ -113406,6 +113667,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             pt051Assessments,
             trainingReportsToComplete: pendingTrainingReports,
             staffOptions: allInstructorsData,
+            messageContactStaffOptions: instructorsData,
+            messageContactTraineeOptions: traineesData,
             selectedStaffName: dashboardUserName,
             onSelectStaffName: setDashboardTestUserName,
             onSelectTrainingReport: (entry) => {
