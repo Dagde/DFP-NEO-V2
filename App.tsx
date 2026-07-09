@@ -38456,6 +38456,10 @@ appliedUpdates.forEach(update => {
                                setShowDfpSidePanel(false);
                                setShowFlightLinePanel(false);
                            }}
+                           onToggleFlightLinePanel={() => {
+                               setShowDfpSidePanel(false);
+                               setShowFlightLinePanel(value => !value);
+                           }}
                            onInitialSetupWizardActiveChange={setIsInitialSetupWizardActive}
                            formationCallsigns={formationCallsigns}
                            buildRuleSettings={{

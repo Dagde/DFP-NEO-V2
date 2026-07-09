@@ -14511,6 +14511,7 @@ const ScheduleView = ({
   isNeoAssistPanelOpen = false,
   isFlightLinePanelOpen = false,
   onOrganisationSlideoutOpen,
+  onToggleFlightLinePanel,
   onInitialSetupWizardActiveChange,
   formationCallsigns = [],
   buildRuleSettings,
@@ -15402,29 +15403,38 @@ const ScheduleView = ({
           {
             className: `absolute bottom-0 left-0 h-[200px] w-full pointer-events-auto border-t border-cyan-400/25 bg-slate-950/96 shadow-[0_-18px_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${isFlightLinePanelOpen ? "translate-y-0" : "translate-y-[200px]"}`,
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-1/2 top-[-28px] z-[1] flex h-7 w-[96px] -translate-x-1/2 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "span",
-                  {
-                    className: "h-4 w-7 opacity-80",
-                    style: {
-                      backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                      backgroundSize: "8px 8px"
-                    }
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: isFlightLinePanelOpen ? "v" : "^" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "span",
-                  {
-                    className: "h-4 w-7 opacity-80",
-                    style: {
-                      backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                      backgroundSize: "8px 8px"
-                    }
-                  }
-                )
-              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  onClick: onToggleFlightLinePanel,
+                  "aria-label": isFlightLinePanelOpen ? "Close flight line panel" : "Open flight line panel",
+                  className: "absolute left-1/2 top-[-28px] z-[1] flex h-7 w-[96px] -translate-x-1/2 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "span",
+                      {
+                        className: "h-4 w-7 opacity-80",
+                        style: {
+                          backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                          backgroundSize: "8px 8px"
+                        }
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: isFlightLinePanelOpen ? "v" : "^" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "span",
+                      {
+                        className: "h-4 w-7 opacity-80",
+                        style: {
+                          backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                          backgroundSize: "8px 8px"
+                        }
+                      }
+                    )
+                  ]
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-hidden border-t border-white/5 bg-gradient-to-r from-slate-900/85 via-slate-950/95 to-slate-900/85 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full items-center gap-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[160px] border-r border-slate-700/70 pr-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300", children: "Flight Line" }),
@@ -113137,6 +113147,10 @@ ${error instanceof Error ? error.message : String(error)}`,
             onOrganisationSlideoutOpen: () => {
               setShowDfpSidePanel(false);
               setShowFlightLinePanel(false);
+            },
+            onToggleFlightLinePanel: () => {
+              setShowDfpSidePanel(false);
+              setShowFlightLinePanel((value) => !value);
             },
             onInitialSetupWizardActiveChange: setIsInitialSetupWizardActive,
             formationCallsigns,

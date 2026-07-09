@@ -114,6 +114,7 @@ interface ScheduleViewProps {
   isNeoAssistPanelOpen?: boolean;
   isFlightLinePanelOpen?: boolean;
   onOrganisationSlideoutOpen?: () => void;
+  onToggleFlightLinePanel?: () => void;
   onInitialSetupWizardActiveChange?: (active: boolean) => void;
   formationCallsigns?: FormationCallsign[];
   buildRuleSettings?: {
@@ -6471,6 +6472,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isNeoAssistPanelOpen = false,
     isFlightLinePanelOpen = false,
     onOrganisationSlideoutOpen,
+    onToggleFlightLinePanel,
     onInitialSetupWizardActiveChange,
     formationCallsigns = [],
     buildRuleSettings,
@@ -7506,7 +7508,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     <aside
                         className={`absolute bottom-0 left-0 h-[200px] w-full pointer-events-auto border-t border-cyan-400/25 bg-slate-950/96 shadow-[0_-18px_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${isFlightLinePanelOpen ? 'translate-y-0' : 'translate-y-[200px]'}`}
                     >
-                        <div className="absolute left-1/2 top-[-28px] z-[1] flex h-7 w-[96px] -translate-x-1/2 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur">
+                        <button
+                            type="button"
+                            onClick={onToggleFlightLinePanel}
+                            aria-label={isFlightLinePanelOpen ? 'Close flight line panel' : 'Open flight line panel'}
+                            className="absolute left-1/2 top-[-28px] z-[1] flex h-7 w-[96px] -translate-x-1/2 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
+                        >
                             <span
                                 className="h-4 w-7 opacity-80"
                                 style={{
@@ -7522,7 +7529,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                     backgroundSize: '8px 8px',
                                 }}
                             />
-                        </div>
+                        </button>
                         <div className="h-full overflow-hidden border-t border-white/5 bg-gradient-to-r from-slate-900/85 via-slate-950/95 to-slate-900/85 px-5 py-4">
                             <div className="flex h-full items-center gap-4">
                                 <div className="min-w-[160px] border-r border-slate-700/70 pr-4">
