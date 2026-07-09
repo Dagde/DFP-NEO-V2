@@ -35286,7 +35286,7 @@ const App: React.FC = () => {
     };
     // ───────────────────────────────────────────────────────────────────────────
 
-    type ScheduleTileUpdate = { eventId: string; newStartTime?: number; newResourceId?: string; };
+    type ScheduleTileUpdate = { eventId: string; newStartTime?: number; newResourceId?: string; newAircraftNumber?: string; };
     const expandFormationScheduleUpdates = (scheduleForDate: ScheduleEvent[], updates: ScheduleTileUpdate[]): ScheduleTileUpdate[] => {
         const expanded = new Map<string, ScheduleTileUpdate>(updates.map(update => [update.eventId, update]));
         updates.forEach(update => {
@@ -35330,6 +35330,7 @@ const App: React.FC = () => {
                         ...event,
                         startTime: update.newStartTime ?? event.startTime,
                         resourceId: update.newResourceId ?? event.resourceId,
+                        aircraftNumber: Object.prototype.hasOwnProperty.call(update, 'newAircraftNumber') ? update.newAircraftNumber : event.aircraftNumber,
                     };
                 }
                 return event;

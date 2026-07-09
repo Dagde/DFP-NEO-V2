@@ -45,7 +45,7 @@ interface ScheduleViewProps {
   standbyCount: number;
   ftdCount: number;
   cptCount: number;
-  onUpdateEvent: (updates: { eventId: string, newStartTime?: number, newResourceId?: string }[]) => void;
+  onUpdateEvent: (updates: { eventId: string, newStartTime?: number, newResourceId?: string, newAircraftNumber?: string }[]) => void;
   onSelectEvent: (event: ScheduleEvent) => void;
   onReorderResources: (resources: string[]) => void;
   zoomLevel: number;
@@ -6563,9 +6563,24 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             // Local persistence is best-effort only.
         }
     }, [flightLineAircraftAssignmentStorageKey, flightLineAircraftAssignments, flightLineAircraftAssignmentsHydratedKey]);
+    const flightLineEffectiveAircraftAssignments = useMemo(() => {
+        const next: Record<string, string> = {};
+        events.forEach((event) => {
+            const aircraftNumber = String(event.aircraftNumber || '').trim();
+            if (event.type === 'flight' && aircraftNumber && flightLinePoolContext.numbers.includes(aircraftNumber)) {
+                next[aircraftNumber] = event.id;
+            }
+        });
+        Object.entries(flightLineAircraftAssignments).forEach(([aircraftNumber, eventId]) => {
+            if (flightLinePoolContext.numbers.includes(aircraftNumber)) {
+                next[aircraftNumber] = eventId;
+            }
+        });
+        return next;
+    }, [events, flightLineAircraftAssignments, flightLinePoolContext.numbers]);
     const flightLineAssignedAircraftSet = useMemo(
-        () => new Set(Object.keys(flightLineAircraftAssignments)),
-        [flightLineAircraftAssignments],
+        () => new Set(Object.keys(flightLineEffectiveAircraftAssignments)),
+        [flightLineEffectiveAircraftAssignments],
     );
     const flightLineStoredUnavailableKey = flightLinePoolContext.unavailableNumbers.join('|');
     const flightLineConfiguredNumbersKey = flightLinePoolContext.numbers.join('|');
@@ -6634,6 +6649,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }, [flightLinePoolContext.numbers, flightLinePoolContext.poolIndex, onUpdatePlatformConfig, sortFlightLineAircraftNumbers]);
     const moveFlightLineAircraftToUnavailable = useCallback((aircraftNumber: string) => {
         const cleanNumber = aircraftNumber.trim();
+        const assignedEventId = flightLineEffectiveAircraftAssignments[cleanNumber];
+        if (assignedEventId) {
+            onUpdateEvent([{ eventId: assignedEventId, newAircraftNumber: '' }]);
+        }
         setFlightLineAircraftAssignments((current) => {
             const next = { ...current };
             delete next[cleanNumber];
@@ -6642,9 +6661,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         clearFlightLineDragState();
         if (!cleanNumber || !flightLinePoolContext.numbers.includes(cleanNumber)) return;
         saveFlightLineUnavailableAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber]);
-    }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, saveFlightLineUnavailableAircraftNumbers]);
+    }, [clearFlightLineDragState, flightLineEffectiveAircraftAssignments, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
     const moveFlightLineAircraftToAvailable = useCallback((aircraftNumber: string) => {
         const cleanNumber = aircraftNumber.trim();
+        const assignedEventId = flightLineEffectiveAircraftAssignments[cleanNumber];
+        if (assignedEventId) {
+            onUpdateEvent([{ eventId: assignedEventId, newAircraftNumber: '' }]);
+        }
         setFlightLineAircraftAssignments((current) => {
             const next = { ...current };
             delete next[cleanNumber];
@@ -6653,10 +6676,17 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         clearFlightLineDragState();
         if (!cleanNumber || !flightLinePoolContext.numbers.includes(cleanNumber)) return;
         saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber));
-    }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, saveFlightLineUnavailableAircraftNumbers]);
+    }, [clearFlightLineDragState, flightLineEffectiveAircraftAssignments, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
     const assignFlightLineAircraftToEvent = useCallback((aircraftNumber: string, eventId: string) => {
         const cleanNumber = aircraftNumber.trim();
         if (!cleanNumber || !eventId || !flightLinePoolContext.numbers.includes(cleanNumber)) return;
+        const aircraftPreviousEventId = flightLineEffectiveAircraftAssignments[cleanNumber];
+        const eventUpdates: { eventId: string; newAircraftNumber: string }[] = [];
+        if (aircraftPreviousEventId && aircraftPreviousEventId !== eventId) {
+            eventUpdates.push({ eventId: aircraftPreviousEventId, newAircraftNumber: '' });
+        }
+        eventUpdates.push({ eventId, newAircraftNumber: cleanNumber });
+        onUpdateEvent(eventUpdates);
         setFlightLineAircraftAssignments((current) => {
             const next: Record<string, string> = {};
             Object.entries(current).forEach(([number, assignedEventId]) => {
@@ -6669,10 +6699,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         });
         saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber));
         clearFlightLineDragState();
-    }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, saveFlightLineUnavailableAircraftNumbers]);
+    }, [clearFlightLineDragState, flightLineEffectiveAircraftAssignments, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
     const flightLineAircraftMarkerEntries = useMemo(() => {
         const eventById = new Map(events.map((event) => [event.id, event]));
-        const entries = Object.entries(flightLineAircraftAssignments)
+        const entries = Object.entries(flightLineEffectiveAircraftAssignments)
             .map(([aircraftNumber, eventId]) => ({ aircraftNumber, eventId, event: eventById.get(eventId) }))
             .filter((entry): entry is { aircraftNumber: string; eventId: string; event: ScheduleEvent } => !!entry.event);
         if (flightLineScheduleDropPreview) {
@@ -6685,7 +6715,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             }
         }
         return entries;
-    }, [events, flightLineAircraftAssignments, flightLineScheduleDropPreview]);
+    }, [events, flightLineEffectiveAircraftAssignments, flightLineScheduleDropPreview]);
     const flightLinePanelHeight = useMemo(() => {
         const panelWidth = resourceSlideoutFrame?.width || 0;
         const reservedWidth = 200 + 200 + 40 + 32;

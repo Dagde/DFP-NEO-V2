@@ -14592,9 +14592,24 @@ const ScheduleView = ({
     } catch (error) {
     }
   }, [flightLineAircraftAssignmentStorageKey, flightLineAircraftAssignments, flightLineAircraftAssignmentsHydratedKey]);
+  const flightLineEffectiveAircraftAssignments = reactExports.useMemo(() => {
+    const next = {};
+    events.forEach((event) => {
+      const aircraftNumber = String(event.aircraftNumber || "").trim();
+      if (event.type === "flight" && aircraftNumber && flightLinePoolContext.numbers.includes(aircraftNumber)) {
+        next[aircraftNumber] = event.id;
+      }
+    });
+    Object.entries(flightLineAircraftAssignments).forEach(([aircraftNumber, eventId]) => {
+      if (flightLinePoolContext.numbers.includes(aircraftNumber)) {
+        next[aircraftNumber] = eventId;
+      }
+    });
+    return next;
+  }, [events, flightLineAircraftAssignments, flightLinePoolContext.numbers]);
   const flightLineAssignedAircraftSet = reactExports.useMemo(
-    () => new Set(Object.keys(flightLineAircraftAssignments)),
-    [flightLineAircraftAssignments]
+    () => new Set(Object.keys(flightLineEffectiveAircraftAssignments)),
+    [flightLineEffectiveAircraftAssignments]
   );
   const flightLineStoredUnavailableKey = flightLinePoolContext.unavailableNumbers.join("|");
   const flightLineConfiguredNumbersKey = flightLinePoolContext.numbers.join("|");
@@ -14661,6 +14676,10 @@ const ScheduleView = ({
   }, [flightLinePoolContext.numbers, flightLinePoolContext.poolIndex, onUpdatePlatformConfig, sortFlightLineAircraftNumbers]);
   const moveFlightLineAircraftToUnavailable = reactExports.useCallback((aircraftNumber) => {
     const cleanNumber2 = aircraftNumber.trim();
+    const assignedEventId = flightLineEffectiveAircraftAssignments[cleanNumber2];
+    if (assignedEventId) {
+      onUpdateEvent([{ eventId: assignedEventId, newAircraftNumber: "" }]);
+    }
     setFlightLineAircraftAssignments((current) => {
       const next = { ...current };
       delete next[cleanNumber2];
@@ -14669,9 +14688,13 @@ const ScheduleView = ({
     clearFlightLineDragState();
     if (!cleanNumber2 || !flightLinePoolContext.numbers.includes(cleanNumber2)) return;
     saveFlightLineUnavailableAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber2]);
-  }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, saveFlightLineUnavailableAircraftNumbers]);
+  }, [clearFlightLineDragState, flightLineEffectiveAircraftAssignments, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
   const moveFlightLineAircraftToAvailable = reactExports.useCallback((aircraftNumber) => {
     const cleanNumber2 = aircraftNumber.trim();
+    const assignedEventId = flightLineEffectiveAircraftAssignments[cleanNumber2];
+    if (assignedEventId) {
+      onUpdateEvent([{ eventId: assignedEventId, newAircraftNumber: "" }]);
+    }
     setFlightLineAircraftAssignments((current) => {
       const next = { ...current };
       delete next[cleanNumber2];
@@ -14680,10 +14703,17 @@ const ScheduleView = ({
     clearFlightLineDragState();
     if (!cleanNumber2 || !flightLinePoolContext.numbers.includes(cleanNumber2)) return;
     saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber2));
-  }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, saveFlightLineUnavailableAircraftNumbers]);
+  }, [clearFlightLineDragState, flightLineEffectiveAircraftAssignments, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
   const assignFlightLineAircraftToEvent = reactExports.useCallback((aircraftNumber, eventId) => {
     const cleanNumber2 = aircraftNumber.trim();
     if (!cleanNumber2 || !eventId || !flightLinePoolContext.numbers.includes(cleanNumber2)) return;
+    const aircraftPreviousEventId = flightLineEffectiveAircraftAssignments[cleanNumber2];
+    const eventUpdates = [];
+    if (aircraftPreviousEventId && aircraftPreviousEventId !== eventId) {
+      eventUpdates.push({ eventId: aircraftPreviousEventId, newAircraftNumber: "" });
+    }
+    eventUpdates.push({ eventId, newAircraftNumber: cleanNumber2 });
+    onUpdateEvent(eventUpdates);
     setFlightLineAircraftAssignments((current) => {
       const next = {};
       Object.entries(current).forEach(([number, assignedEventId]) => {
@@ -14696,10 +14726,10 @@ const ScheduleView = ({
     });
     saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber2));
     clearFlightLineDragState();
-  }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, saveFlightLineUnavailableAircraftNumbers]);
+  }, [clearFlightLineDragState, flightLineEffectiveAircraftAssignments, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
   const flightLineAircraftMarkerEntries = reactExports.useMemo(() => {
     const eventById = new Map(events.map((event) => [event.id, event]));
-    const entries = Object.entries(flightLineAircraftAssignments).map(([aircraftNumber, eventId]) => ({ aircraftNumber, eventId, event: eventById.get(eventId) })).filter((entry) => !!entry.event);
+    const entries = Object.entries(flightLineEffectiveAircraftAssignments).map(([aircraftNumber, eventId]) => ({ aircraftNumber, eventId, event: eventById.get(eventId) })).filter((entry) => !!entry.event);
     if (flightLineScheduleDropPreview) {
       const previewEvent = eventById.get(flightLineScheduleDropPreview.eventId);
       if (previewEvent) {
@@ -14710,7 +14740,7 @@ const ScheduleView = ({
       }
     }
     return entries;
-  }, [events, flightLineAircraftAssignments, flightLineScheduleDropPreview]);
+  }, [events, flightLineEffectiveAircraftAssignments, flightLineScheduleDropPreview]);
   const flightLinePanelHeight = reactExports.useMemo(() => {
     const panelWidth = resourceSlideoutFrame?.width || 0;
     const reservedWidth = 200 + 200 + 40 + 32;
@@ -111069,7 +111099,8 @@ ${conflictLines.join("\n")}${moreText}`,
           return {
             ...event,
             startTime: update.newStartTime ?? event.startTime,
-            resourceId: update.newResourceId ?? event.resourceId
+            resourceId: update.newResourceId ?? event.resourceId,
+            aircraftNumber: Object.prototype.hasOwnProperty.call(update, "newAircraftNumber") ? update.newAircraftNumber : event.aircraftNumber
           };
         }
         return event;
