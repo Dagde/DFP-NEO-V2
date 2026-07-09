@@ -251,6 +251,47 @@ const writeDashboardMessages = (messages: DashboardMessage[]) => {
     window.dispatchEvent(new Event('dfp-dashboard-messages-updated'));
 };
 
+const mergeDashboardMessages = (current: DashboardMessage[], incoming: DashboardMessage[]): DashboardMessage[] => {
+    const merged = new Map<string, DashboardMessage>();
+    [...current, ...incoming].forEach(message => {
+        if (!message?.id) return;
+        merged.set(message.id, message);
+    });
+    return Array.from(merged.values())
+        .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+};
+
+const fetchDashboardMessagesFromApi = async (userName: string): Promise<DashboardMessage[]> => {
+    const response = await fetch(`/api/dashboard-messages?userName=${encodeURIComponent(userName)}`, {
+        credentials: 'include',
+    });
+    if (!response.ok) throw new Error(`Dashboard messages fetch failed: ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data.messages) ? data.messages : [];
+};
+
+const sendDashboardMessageToApi = async (message: DashboardMessage): Promise<DashboardMessage> => {
+    const response = await fetch('/api/dashboard-messages', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+    });
+    if (!response.ok) throw new Error(`Dashboard message send failed: ${response.status}`);
+    const data = await response.json();
+    return data.message || message;
+};
+
+const markDashboardConversationReadInApi = async (reader: string, sender: string, messageIds: string[]) => {
+    const response = await fetch('/api/dashboard-messages/read', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reader, sender, messageIds }),
+    });
+    if (!response.ok) throw new Error(`Dashboard message read update failed: ${response.status}`);
+};
+
 const MyDashboard: React.FC<MyDashboardProps> = ({ 
     userName, 
     userRank, 
@@ -457,6 +498,19 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             return next;
         });
     };
+    const refreshDashboardMessages = async () => {
+        if (!dashboardSelectedName) return;
+        try {
+            const apiMessages = await fetchDashboardMessagesFromApi(dashboardSelectedName);
+            setDashboardMessages(prev => {
+                const next = mergeDashboardMessages(prev, apiMessages);
+                writeDashboardMessages(next);
+                return next;
+            });
+        } catch (error) {
+            console.warn('[Dashboard Messages] Could not refresh shared messages:', error);
+        }
+    };
     useEffect(() => {
         const refreshMessages = () => setDashboardMessages(readDashboardMessages());
         const handleStorage = (event: StorageEvent) => {
@@ -473,6 +527,21 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     }, []);
     useEffect(() => {
         setDashboardMessages(readDashboardMessages());
+        refreshDashboardMessages();
+    }, [dashboardUserKey]);
+    useEffect(() => {
+        if (!dashboardUserKey) return;
+        let cancelled = false;
+        const pollMessages = async () => {
+            if (cancelled) return;
+            await refreshDashboardMessages();
+        };
+        pollMessages();
+        const interval = window.setInterval(pollMessages, 8000);
+        return () => {
+            cancelled = true;
+            window.clearInterval(interval);
+        };
     }, [dashboardUserKey]);
     const selectMessageContact = (contact: DashboardMessageContact) => {
         setSelectedMessageContact(contact);
@@ -480,7 +549,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         setIsContactPickerOpen(false);
         setMessageView('compose');
     };
-    const sendDashboardMessage = () => {
+    const sendDashboardMessage = async () => {
         if (!selectedMessageContact || !messageDraft.trim()) return;
         const nextMessage: DashboardMessage = {
             id: `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -491,10 +560,20 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         };
         persistDashboardMessages(messages => [...messages, nextMessage]);
         setMessageDraft('');
+        try {
+            const savedMessage = await sendDashboardMessageToApi(nextMessage);
+            persistDashboardMessages(messages => mergeDashboardMessages(messages, [savedMessage]));
+        } catch (error) {
+            console.error('[Dashboard Messages] Send failed:', error);
+        }
     };
     useEffect(() => {
         if (!isMessagesOpen || messageView !== 'compose' || !selectedMessageContact || unreadMessages.length === 0) return;
         const selectedKey = normaliseDashboardContactName(selectedMessageContact.name);
+        const messageIdsToMarkRead = unreadMessages
+            .filter(message => normaliseDashboardContactName(message.from) === selectedKey)
+            .map(message => message.id);
+        if (messageIdsToMarkRead.length === 0) return;
         const now = new Date().toISOString();
         persistDashboardMessages(messages => messages.map(message => (
             normaliseDashboardContactName(message.to) === dashboardUserKey &&
@@ -503,6 +582,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 ? { ...message, readAt: now }
                 : message
         )));
+        markDashboardConversationReadInApi(dashboardSelectedName, selectedMessageContact.name, messageIdsToMarkRead)
+            .then(() => refreshDashboardMessages())
+            .catch(error => console.warn('[Dashboard Messages] Could not mark shared messages read:', error));
     }, [dashboardUserKey, isMessagesOpen, messageView, selectedMessageContact?.name, unreadMessages.length]);
     const newestUnreadMessage = unreadMessages[unreadMessages.length - 1] || null;
     useEffect(() => {

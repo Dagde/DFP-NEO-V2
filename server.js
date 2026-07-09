@@ -783,6 +783,133 @@ app.post('/api/settings', async (req, res) => {
 });
 
 // ============================================================
+// DASHBOARD MESSAGES
+// Shared lightweight message store. Uses DataBackup JSON so the
+// feature can deliver across accounts without a schema migration.
+// ============================================================
+
+const DASHBOARD_MESSAGES_BACKUP_TYPE = 'dashboard_messages_v1';
+
+function normaliseDashboardMessageName(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function normaliseDashboardStoredMessages(data) {
+  const source = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.messages)
+      ? data.messages
+      : [];
+  return source
+    .filter(message => message && message.from && message.to && message.body)
+    .map(message => ({
+      id: String(message.id || `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+      from: String(message.from || ''),
+      to: String(message.to || ''),
+      body: String(message.body || ''),
+      sentAt: message.sentAt || new Date().toISOString(),
+      readAt: message.readAt || undefined,
+    }));
+}
+
+async function getDashboardMessages(db) {
+  const backup = await db.dataBackup.findFirst({
+    where: { type: DASHBOARD_MESSAGES_BACKUP_TYPE },
+    orderBy: { createdAt: 'desc' },
+  });
+  return normaliseDashboardStoredMessages(backup?.data);
+}
+
+async function saveDashboardMessages(db, messages) {
+  await db.dataBackup.deleteMany({ where: { type: DASHBOARD_MESSAGES_BACKUP_TYPE } });
+  await db.dataBackup.create({
+    data: {
+      type: DASHBOARD_MESSAGES_BACKUP_TYPE,
+      data: { messages },
+    },
+  });
+}
+
+app.get('/api/dashboard-messages', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const userName = normaliseDashboardMessageName(req.query.userName);
+    const messages = await getDashboardMessages(db);
+    const scopedMessages = userName
+      ? messages.filter(message => (
+          normaliseDashboardMessageName(message.from) === userName ||
+          normaliseDashboardMessageName(message.to) === userName
+        ))
+      : messages;
+    res.json({ messages: scopedMessages });
+  } catch (error) {
+    console.error('[Dashboard Messages] GET error:', error);
+    res.status(500).json({ error: 'Failed to load dashboard messages', details: error.message });
+  }
+});
+
+app.post('/api/dashboard-messages', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const messageInput = req.body?.message || req.body || {};
+    const from = String(messageInput.from || '').trim();
+    const to = String(messageInput.to || '').trim();
+    const body = String(messageInput.body || '').trim();
+    if (!from || !to || !body) {
+      return res.status(400).json({ error: 'Message requires from, to and body.' });
+    }
+    const messages = await getDashboardMessages(db);
+    const message = {
+      id: String(messageInput.id || `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+      from,
+      to,
+      body,
+      sentAt: messageInput.sentAt || new Date().toISOString(),
+      readAt: messageInput.readAt || undefined,
+    };
+    const deduped = messages.filter(existing => existing.id !== message.id);
+    const nextMessages = [...deduped, message].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+    await saveDashboardMessages(db, nextMessages);
+    res.json({ success: true, message });
+  } catch (error) {
+    console.error('[Dashboard Messages] POST error:', error);
+    res.status(500).json({ error: 'Failed to send dashboard message', details: error.message });
+  }
+});
+
+app.patch('/api/dashboard-messages/read', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const reader = normaliseDashboardMessageName(req.body?.reader);
+    const sender = normaliseDashboardMessageName(req.body?.sender);
+    const messageIds = new Set(Array.isArray(req.body?.messageIds) ? req.body.messageIds.map(id => String(id)) : []);
+    if (!reader) {
+      return res.status(400).json({ error: 'Reader is required.' });
+    }
+    const now = new Date().toISOString();
+    let updated = 0;
+    const messages = await getDashboardMessages(db);
+    const nextMessages = messages.map(message => {
+      const matchesReader = normaliseDashboardMessageName(message.to) === reader;
+      const matchesSender = !sender || normaliseDashboardMessageName(message.from) === sender;
+      const matchesId = messageIds.size === 0 || messageIds.has(message.id);
+      if (matchesReader && matchesSender && matchesId && !message.readAt) {
+        updated++;
+        return { ...message, readAt: now };
+      }
+      return message;
+    });
+    if (updated > 0) {
+      await saveDashboardMessages(db, nextMessages);
+    }
+    res.json({ success: true, updated, readAt: now });
+  } catch (error) {
+    console.error('[Dashboard Messages] PATCH read error:', error);
+    res.status(500).json({ error: 'Failed to update dashboard messages', details: error.message });
+  }
+});
+
+// ============================================================
 // COMMERCIAL PLATFORM CONFIGURATION
 // Stage-one configurable operating model. Existing V2 runtime
 // behavior is still read from current settings/tables; these
