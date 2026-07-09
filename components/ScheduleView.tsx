@@ -6837,8 +6837,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const resourceId = resources[rowIndex];
         if (!resourceId) return null;
         const rowFlightEvents = events
-            .filter((candidate) => candidate.resourceId === resourceId && candidate.type === 'flight' && candidate.startTime >= pointerTime)
-            .sort((a, b) => a.startTime - b.startTime);
+            .filter((candidate) => candidate.resourceId === resourceId && candidate.type === 'flight' && candidate.startTime <= pointerTime)
+            .sort((a, b) => Math.abs((a.startTime + a.duration) - pointerTime) - Math.abs((b.startTime + b.duration) - pointerTime));
         return rowFlightEvents[0] || null;
     };
 
@@ -7588,7 +7588,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 const rowIndex = resources.indexOf(event.resourceId);
                 if (rowIndex < 0) return null;
                 const markerWidth = 22;
-                const markerLeft = ((event.startTime - START_HOUR) * PIXELS_PER_HOUR * zoomLevel) - markerWidth;
+                const markerLeft = ((event.startTime + event.duration - START_HOUR) * PIXELS_PER_HOUR * zoomLevel);
                 const markerTop = rowIndex * ROW_HEIGHT + 2;
                 const markerHeight = ROW_HEIGHT - 4;
                 return (
@@ -7613,11 +7613,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         }}
                         title={`Aircraft ${aircraftNumber}`}
                     >
-                        <div className="absolute left-0 top-0 bottom-0 w-[11px] rounded-l-md bg-[#4f5357] shadow-[0_8px_18px_rgba(0,0,0,0.28)]" />
-                        <div className="absolute left-[8px] top-0 h-[2.5px] w-[14px] bg-[#4f5357]" />
-                        <div className="absolute left-[8px] bottom-0 h-[2.5px] w-[14px] bg-[#4f5357]" />
-                        <div className="absolute left-0 top-0 bottom-0 flex w-[11px] items-center justify-center">
-                            <span className="block -rotate-90 font-mono text-[8px] font-black leading-none text-slate-400">{aircraftNumber}</span>
+                        <div className="absolute right-0 top-0 bottom-0 w-[11px] rounded-r-md bg-[#4f5357] shadow-[0_8px_18px_rgba(0,0,0,0.28)]" />
+                        <div className="absolute left-0 top-0 h-[2.5px] w-[14px] bg-[#4f5357]" />
+                        <div className="absolute left-0 bottom-0 h-[2.5px] w-[14px] bg-[#4f5357]" />
+                        <div className="absolute right-0 top-0 bottom-0 flex w-[11px] items-center justify-center">
+                            <span className="block rotate-90 font-mono text-[8px] font-black leading-none text-slate-300">{aircraftNumber}</span>
                         </div>
                     </div>
                 );
