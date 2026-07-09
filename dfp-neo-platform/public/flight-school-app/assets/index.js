@@ -31402,6 +31402,7 @@ const MyDashboard = ({
   }, [staffOptions]);
   const dashboardSelectedName = selectedStaffName || userName;
   const [staffPickerEntry, setStaffPickerEntry] = reactExports.useState(null);
+  const dashboardActionButtonClass = "btn-aluminium-brushed flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]";
   const roleTone = (role) => {
     const value = String(role).toLowerCase();
     if (value.includes("pilot")) return "text-sky-300 border-sky-500/30";
@@ -31467,20 +31468,28 @@ const MyDashboard = ({
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
             type: "button",
-            className: "rounded-md border border-sky-500/40 bg-gray-800 px-4 py-2 text-sm font-semibold text-sky-100 shadow-sm transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-500/40",
-            children: "Change Password"
+            className: dashboardActionButtonClass,
+            children: [
+              "Change",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Password"
+            ]
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
             type: "button",
-            className: "rounded-md border border-rose-500/40 bg-gray-800 px-4 py-2 text-sm font-semibold text-rose-100 shadow-sm transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-500/40",
-            children: "Sign Out"
+            className: dashboardActionButtonClass,
+            children: [
+              "Sign",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Out"
+            ]
           }
         )
       ] })
@@ -31554,7 +31563,7 @@ const MyDashboard = ({
               {
                 type: "button",
                 onClick: () => setStaffPickerEntry({ ...entry, mode: "reassign" }),
-                className: "btn-aluminium-brushed flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]",
+                className: dashboardActionButtonClass,
                 children: "Re-Assign"
               }
             )
