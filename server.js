@@ -909,6 +909,34 @@ app.patch('/api/dashboard-messages/read', async (req, res) => {
   }
 });
 
+app.delete('/api/dashboard-messages/conversation', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const participant = normaliseDashboardMessageName(req.body?.participant);
+    const contact = normaliseDashboardMessageName(req.body?.contact);
+    if (!participant || !contact) {
+      return res.status(400).json({ error: 'Participant and contact are required.' });
+    }
+    const messages = await getDashboardMessages(db);
+    const nextMessages = messages.filter(message => {
+      const from = normaliseDashboardMessageName(message.from);
+      const to = normaliseDashboardMessageName(message.to);
+      return !(
+        (from === participant && to === contact) ||
+        (from === contact && to === participant)
+      );
+    });
+    const deleted = messages.length - nextMessages.length;
+    if (deleted > 0) {
+      await saveDashboardMessages(db, nextMessages);
+    }
+    res.json({ success: true, deleted });
+  } catch (error) {
+    console.error('[Dashboard Messages] DELETE conversation error:', error);
+    res.status(500).json({ error: 'Failed to delete dashboard conversation', details: error.message });
+  }
+});
+
 // ============================================================
 // COMMERCIAL PLATFORM CONFIGURATION
 // Stage-one configurable operating model. Existing V2 runtime

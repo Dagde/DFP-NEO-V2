@@ -105,6 +105,16 @@ const DashboardIconSquarePen: React.FC<DashboardIconProps> = ({ className = 'h-5
     </svg>
 );
 
+const DashboardIconTrash: React.FC<DashboardIconProps> = ({ className = 'h-5 w-5', strokeWidth = 2 }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 6h18" />
+        <path d="M8 6V4h8v2" />
+        <path d="m6 6 1 15h10l1-15" />
+        <path d="M10 11v6" />
+        <path d="M14 11v6" />
+    </svg>
+);
+
 const formatTime = (time: number) => {
     const hours = Math.floor(time);
     const minutes = Math.round((time % 1) * 60);
@@ -290,6 +300,16 @@ const markDashboardConversationReadInApi = async (reader: string, sender: string
         body: JSON.stringify({ reader, sender, messageIds }),
     });
     if (!response.ok) throw new Error(`Dashboard message read update failed: ${response.status}`);
+};
+
+const deleteDashboardConversationFromApi = async (participant: string, contact: string) => {
+    const response = await fetch('/api/dashboard-messages/conversation', {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participant, contact }),
+    });
+    if (!response.ok) throw new Error(`Dashboard conversation delete failed: ${response.status}`);
 };
 
 const MyDashboard: React.FC<MyDashboardProps> = ({ 
@@ -502,8 +522,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         if (!dashboardSelectedName) return;
         try {
             const apiMessages = await fetchDashboardMessagesFromApi(dashboardSelectedName);
+            const selectedKey = normaliseDashboardContactName(dashboardSelectedName);
             setDashboardMessages(prev => {
-                const next = mergeDashboardMessages(prev, apiMessages);
+                const messagesForOtherUsers = prev.filter(message => (
+                    normaliseDashboardContactName(message.from) !== selectedKey &&
+                    normaliseDashboardContactName(message.to) !== selectedKey
+                ));
+                const next = mergeDashboardMessages(messagesForOtherUsers, apiMessages);
                 writeDashboardMessages(next);
                 return next;
             });
@@ -548,6 +573,32 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         setMessageToText(contact.displayName);
         setIsContactPickerOpen(false);
         setMessageView('compose');
+    };
+    const deleteDashboardConversation = async (contact: DashboardMessageContact) => {
+        const confirmed = window.confirm(`Delete the conversation with ${contact.displayName}?`);
+        if (!confirmed) return;
+        const contactKey = normaliseDashboardContactName(contact.name);
+        persistDashboardMessages(messages => messages.filter(message => {
+            const from = normaliseDashboardContactName(message.from);
+            const to = normaliseDashboardContactName(message.to);
+            return !(
+                (from === dashboardUserKey && to === contactKey) ||
+                (from === contactKey && to === dashboardUserKey)
+            );
+        }));
+        if (selectedMessageContact && normaliseDashboardContactName(selectedMessageContact.name) === contactKey) {
+            setSelectedMessageContact(null);
+            setMessageToText('');
+            setMessageDraft('');
+            setMessageView('inbox');
+        }
+        try {
+            await deleteDashboardConversationFromApi(dashboardSelectedName, contact.name);
+            await refreshDashboardMessages();
+        } catch (error) {
+            console.error('[Dashboard Messages] Delete conversation failed:', error);
+            await refreshDashboardMessages();
+        }
     };
     const sendDashboardMessage = async () => {
         if (!selectedMessageContact || !messageDraft.trim()) return;
@@ -692,8 +743,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                         className={dashboardActionButtonClass}
                     >
                         {unreadMessages.length > 0 && (
-                            <span className="absolute -left-2 -bottom-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-[13px] font-bold text-white shadow-lg">
-                                {Math.min(unreadMessages.length, 9)}
+                            <span className="absolute -left-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg">
+                                <span className="-translate-x-px">{Math.min(unreadMessages.length, 9)}</span>
                             </span>
                         )}
                         Messages
@@ -757,30 +808,42 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     {filteredMessageConversations.length > 0 ? (
                                         <div className="divide-y divide-gray-200">
                                             {filteredMessageConversations.map(conversation => (
-                                                <button
+                                                <div
                                                     key={conversation.contact.id}
-                                                    type="button"
-                                                    onClick={() => selectMessageContact(conversation.contact)}
-                                                    className="relative flex w-full items-start gap-3 py-4 text-left hover:bg-white/50"
+                                                    className="relative flex w-full items-start gap-3 py-4 pr-11 text-left hover:bg-white/50"
                                                 >
-                                                    {conversation.unreadCount > 0 && (
-                                                        <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500" aria-label="Unread message" />
-                                                    )}
-                                                    <div className={`min-w-0 flex-1 ${conversation.unreadCount > 0 ? '' : 'pl-5'}`}>
-                                                        <div className="flex items-baseline gap-2">
-                                                            <p className="min-w-0 flex-1 truncate text-[22px] font-bold leading-tight text-black">
-                                                                {conversation.contact.displayName}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => selectMessageContact(conversation.contact)}
+                                                        className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                                                    >
+                                                        {conversation.unreadCount > 0 && (
+                                                            <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500" aria-label="Unread message" />
+                                                        )}
+                                                        <div className={`min-w-0 flex-1 ${conversation.unreadCount > 0 ? '' : 'pl-5'}`}>
+                                                            <div className="flex items-baseline gap-2">
+                                                                <p className="min-w-0 flex-1 truncate text-[22px] font-bold leading-tight text-black">
+                                                                    {conversation.contact.displayName}
+                                                                </p>
+                                                                <span className="shrink-0 text-lg text-gray-500">
+                                                                    {formatDashboardConversationDate(conversation.lastMessage.sentAt)}
+                                                                </span>
+                                                            </div>
+                                                            <p className="mt-1 line-clamp-2 text-[20px] leading-snug text-gray-500">
+                                                                {conversation.lastMessage.body}
                                                             </p>
-                                                            <span className="shrink-0 text-lg text-gray-500">
-                                                                {formatDashboardConversationDate(conversation.lastMessage.sentAt)}
-                                                            </span>
                                                         </div>
-                                                        <p className="mt-1 line-clamp-2 text-[20px] leading-snug text-gray-500">
-                                                            {conversation.lastMessage.body}
-                                                        </p>
-                                                    </div>
-                                                    <DashboardIconChevronRight className="mt-2 h-7 w-7 shrink-0 text-gray-500" strokeWidth={2.6} />
-                                                </button>
+                                                        <DashboardIconChevronRight className="mt-2 h-7 w-7 shrink-0 text-gray-500" strokeWidth={2.6} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => deleteDashboardConversation(conversation.contact)}
+                                                        className="absolute bottom-3 right-1 grid h-8 w-8 place-items-center rounded-full text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                                        aria-label={`Delete conversation with ${conversation.contact.displayName}`}
+                                                    >
+                                                        <DashboardIconTrash className="h-[18px] w-[18px]" strokeWidth={2.1} />
+                                                    </button>
+                                                </div>
                                             ))}
                                         </div>
                                     ) : (
