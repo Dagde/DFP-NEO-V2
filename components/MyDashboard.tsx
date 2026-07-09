@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, Pt051Assessment, Trainee } from '../types';
 import TafWeatherWidget from './TafWeatherWidget';
 import { normaliseFixedCrewStaffRole } from '../utils/crewPositionTerminology';
@@ -228,6 +228,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const [messageDraft, setMessageDraft] = useState('');
     const [dashboardMessages, setDashboardMessages] = useState<DashboardMessage[]>(() => readDashboardMessages());
     const [incomingToast, setIncomingToast] = useState<DashboardMessage | null>(null);
+    const shownIncomingToastIds = useRef<Set<string>>(new Set());
     const roleTone = (role?: string) => {
         const value = String(role || '').toLowerCase();
         if (value.includes('pilot')) return 'text-sky-300 border-sky-500/30';
@@ -366,13 +367,19 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 : message
         )));
     }, [dashboardUserKey, isMessagesOpen, unreadMessages.length]);
+    const newestUnreadMessage = unreadMessages[unreadMessages.length - 1] || null;
     useEffect(() => {
-        if (unreadMessages.length === 0) return;
-        const newest = unreadMessages[unreadMessages.length - 1];
+        if (!newestUnreadMessage) {
+            setIncomingToast(null);
+            return;
+        }
+        if (shownIncomingToastIds.current.has(newestUnreadMessage.id)) return;
+        shownIncomingToastIds.current.add(newestUnreadMessage.id);
+        const newest = newestUnreadMessage;
         setIncomingToast(newest);
         const timer = window.setTimeout(() => setIncomingToast(null), 4000);
         return () => window.clearTimeout(timer);
-    }, [unreadMessages.length]);
+    }, [newestUnreadMessage?.id]);
     const sameUnitStaff = useMemo(() => {
         if (!staffPickerEntry) return [];
         const unit = String(staffPickerEntry.staff.unit || staffPickerEntry.report.unitCode || '').trim();
@@ -505,7 +512,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                 className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300"
                                 aria-label="Close messages"
                             >
-                                <span className="block translate-x-px translate-y-[-3px] text-[34px] font-light leading-none">x</span>
+                                <span className="block translate-x-px translate-y-[-5px] text-[34px] font-light leading-none">x</span>
                             </button>
                         </div>
                         <div className="relative mx-3 rounded-full border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]">
@@ -526,7 +533,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-200 text-gray-950 hover:bg-gray-300"
                                     aria-label="Open contacts"
                                 >
-                                    <span className="block translate-x-px translate-y-[-3px] text-[32px] font-bold leading-none">+</span>
+                                    <span className="block translate-x-px translate-y-[-3px] text-[32px] font-semibold leading-none">+</span>
                                 </button>
                             </div>
                             {!selectedMessageContact && messageSuggestionGroups.length > 0 && (
@@ -597,7 +604,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                 <div className="mb-3 flex items-center justify-between">
                                     <h3 className="text-lg font-bold">Select Contact</h3>
                                     <button type="button" onClick={() => setIsContactPickerOpen(false)} className="grid h-9 w-9 place-items-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-950" aria-label="Close contacts">
-                                        <span className="block translate-x-px translate-y-[-3px] text-[24px] font-light leading-none">x</span>
+                                        <span className="block translate-x-px translate-y-[-5px] text-[24px] font-light leading-none">x</span>
                                     </button>
                                 </div>
                                 <div className="max-h-[52vh] space-y-3 overflow-y-auto">

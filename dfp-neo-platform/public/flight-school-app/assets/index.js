@@ -31483,6 +31483,7 @@ const MyDashboard = ({
   const [messageDraft, setMessageDraft] = reactExports.useState("");
   const [dashboardMessages, setDashboardMessages] = reactExports.useState(() => readDashboardMessages());
   const [incomingToast, setIncomingToast] = reactExports.useState(null);
+  const shownIncomingToastIds = reactExports.useRef(/* @__PURE__ */ new Set());
   const roleTone = (role) => {
     const value = String(role).toLowerCase();
     if (value.includes("pilot")) return "text-sky-300 border-sky-500/30";
@@ -31585,13 +31586,19 @@ const MyDashboard = ({
     const now = (/* @__PURE__ */ new Date()).toISOString();
     persistDashboardMessages((messages) => messages.map((message) => normaliseDashboardContactName(message.to) === dashboardUserKey && !message.readAt ? { ...message, readAt: now } : message));
   }, [dashboardUserKey, isMessagesOpen, unreadMessages.length]);
+  const newestUnreadMessage = unreadMessages[unreadMessages.length - 1] || null;
   reactExports.useEffect(() => {
-    if (unreadMessages.length === 0) return;
-    const newest = unreadMessages[unreadMessages.length - 1];
+    if (!newestUnreadMessage) {
+      setIncomingToast(null);
+      return;
+    }
+    if (shownIncomingToastIds.current.has(newestUnreadMessage.id)) return;
+    shownIncomingToastIds.current.add(newestUnreadMessage.id);
+    const newest = newestUnreadMessage;
     setIncomingToast(newest);
     const timer = window.setTimeout(() => setIncomingToast(null), 4e3);
     return () => window.clearTimeout(timer);
-  }, [unreadMessages.length]);
+  }, [newestUnreadMessage?.id]);
   const sameUnitStaff = reactExports.useMemo(() => {
     if (!staffPickerEntry) return [];
     const unit = String(staffPickerEntry.staff.unit || staffPickerEntry.report.unitCode || "").trim();
@@ -31708,7 +31715,7 @@ const MyDashboard = ({
               },
               className: "absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300",
               "aria-label": "Close messages",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-x-px translate-y-[-3px] text-[34px] font-light leading-none", children: "x" })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-x-px translate-y-[-5px] text-[34px] font-light leading-none", children: "x" })
             }
           )
         ] }),
@@ -31734,7 +31741,7 @@ const MyDashboard = ({
                 onClick: () => setIsContactPickerOpen(true),
                 className: "grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-200 text-gray-950 hover:bg-gray-300",
                 "aria-label": "Open contacts",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-x-px translate-y-[-3px] text-[32px] font-bold leading-none", children: "+" })
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-x-px translate-y-[-3px] text-[32px] font-semibold leading-none", children: "+" })
               }
             )
           ] }),
@@ -31786,7 +31793,7 @@ const MyDashboard = ({
       isContactPickerOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-[105] flex items-center justify-center bg-black/45 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-md rounded-2xl bg-white p-4 text-gray-950 shadow-2xl", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold", children: "Select Contact" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsContactPickerOpen(false), className: "grid h-9 w-9 place-items-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-950", "aria-label": "Close contacts", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-x-px translate-y-[-3px] text-[24px] font-light leading-none", children: "x" }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setIsContactPickerOpen(false), className: "grid h-9 w-9 place-items-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-950", "aria-label": "Close contacts", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block translate-x-px translate-y-[-5px] text-[24px] font-light leading-none", children: "x" }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-[52vh] space-y-3 overflow-y-auto", children: [
           messageContactGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
