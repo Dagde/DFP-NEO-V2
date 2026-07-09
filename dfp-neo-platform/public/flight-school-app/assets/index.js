@@ -15508,16 +15508,16 @@ const ScheduleView = ({
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-0 flex-1 items-stretch", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1 overflow-x-auto", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-slate-400", children: "Aircraft Tiles" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid auto-cols-[88px] grid-flow-col grid-rows-2 gap-2 pb-1", children: flightLinePoolContext.numbers.map((number, index) => {
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid auto-cols-[45px] grid-flow-col grid-rows-2 gap-2 pb-1", children: flightLinePoolContext.numbers.map((number, index) => {
                     const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(" ");
                     return /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "div",
                       {
-                        className: "flex h-[52px] w-[88px] items-center justify-center rounded-md border border-slate-500/45 bg-[#686b6f] px-2 text-center text-sm font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]",
+                        className: "flex h-[45px] w-[45px] items-center justify-center rounded-md border border-slate-500/45 bg-[#686b6f] px-1 text-center font-black text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]",
                         title: tailNumber,
-                        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex max-w-full items-baseline justify-center gap-1 truncate", children: [
-                          flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[7px] font-black uppercase tracking-wide text-slate-200/80", children: flightLinePoolContext.prefix }) : null,
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-base font-black leading-none text-white", children: number })
+                        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex max-w-full items-center justify-center gap-0.5 truncate", children: [
+                          flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-ml-0.5 text-[8px] font-black uppercase tracking-normal text-slate-200/80", children: flightLinePoolContext.prefix }) : null,
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-sm font-black leading-none text-white", children: number })
                         ] })
                       },
                       `flight-line-aircraft-tile-${index}`
