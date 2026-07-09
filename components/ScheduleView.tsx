@@ -6837,8 +6837,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const resourceId = resources[rowIndex];
         if (!resourceId) return null;
         const rowFlightEvents = events
-            .filter((candidate) => candidate.resourceId === resourceId && candidate.type === 'flight')
-            .sort((a, b) => Math.abs(a.startTime - pointerTime) - Math.abs(b.startTime - pointerTime));
+            .filter((candidate) => candidate.resourceId === resourceId && candidate.type === 'flight' && candidate.startTime >= pointerTime)
+            .sort((a, b) => a.startTime - b.startTime);
         return rowFlightEvents[0] || null;
     };
 
@@ -7587,7 +7587,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             {flightLineAircraftMarkerEntries.map(({ aircraftNumber, event, isPreview }: any) => {
                 const rowIndex = resources.indexOf(event.resourceId);
                 if (rowIndex < 0) return null;
-                const markerLeft = (event.startTime - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+                const markerWidth = 38;
+                const markerLeft = ((event.startTime - START_HOUR) * PIXELS_PER_HOUR * zoomLevel) - markerWidth;
                 const markerTop = rowIndex * ROW_HEIGHT + 2;
                 const markerHeight = ROW_HEIGHT - 4;
                 return (
@@ -7606,7 +7607,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         style={{
                             left: `${markerLeft}px`,
                             top: `${markerTop}px`,
-                            width: '38px',
+                            width: `${markerWidth}px`,
                             height: `${markerHeight}px`,
                             zIndex: 48,
                         }}

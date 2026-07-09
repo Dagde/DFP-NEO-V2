@@ -14827,7 +14827,7 @@ const ScheduleView = ({
     const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT$6)));
     const resourceId = resources[rowIndex];
     if (!resourceId) return null;
-    const rowFlightEvents = events.filter((candidate) => candidate.resourceId === resourceId && candidate.type === "flight").sort((a, b) => Math.abs(a.startTime - pointerTime) - Math.abs(b.startTime - pointerTime));
+    const rowFlightEvents = events.filter((candidate) => candidate.resourceId === resourceId && candidate.type === "flight" && candidate.startTime >= pointerTime).sort((a, b) => a.startTime - b.startTime);
     return rowFlightEvents[0] || null;
   };
   const handleExternalDragOver = (event) => {
@@ -15465,7 +15465,8 @@ const ScheduleView = ({
   const renderFlightLineAircraftMarkers = () => /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: flightLineAircraftMarkerEntries.map(({ aircraftNumber, event, isPreview }) => {
     const rowIndex = resources.indexOf(event.resourceId);
     if (rowIndex < 0) return null;
-    const markerLeft = (event.startTime - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
+    const markerWidth = 38;
+    const markerLeft = (event.startTime - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel - markerWidth;
     const markerTop = rowIndex * ROW_HEIGHT$6 + 2;
     const markerHeight = ROW_HEIGHT$6 - 4;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -15484,7 +15485,7 @@ const ScheduleView = ({
         style: {
           left: `${markerLeft}px`,
           top: `${markerTop}px`,
-          width: "38px",
+          width: `${markerWidth}px`,
           height: `${markerHeight}px`,
           zIndex: 48
         },
