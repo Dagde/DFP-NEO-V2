@@ -23,6 +23,7 @@ interface MyDashboardProps {
     messageContactTraineeOptions?: Trainee[];
     selectedStaffName?: string;
     onSelectStaffName?: (staffName: string) => void;
+    onUnreadMessageCountChange?: (count: number) => void;
 }
 
 type DashboardMessageContact = {
@@ -332,6 +333,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     messageContactTraineeOptions = [],
     selectedStaffName,
     onSelectStaffName,
+    onUnreadMessageCountChange,
 }) => {
     const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
     const groupedStaffOptions = useMemo(() => {
@@ -500,6 +502,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             !message.readAt
         ))
     ), [dashboardMessages, dashboardUserKey]);
+    useEffect(() => {
+        onUnreadMessageCountChange?.(unreadMessages.length);
+    }, [onUnreadMessageCountChange, unreadMessages.length]);
     const activeConversationMessages = useMemo(() => {
         if (!selectedMessageContact) return [];
         const contactKey = normaliseDashboardContactName(selectedMessageContact.name);

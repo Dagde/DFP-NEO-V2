@@ -21,6 +21,7 @@ interface SidebarProps {
     canAccessView?: (view: string) => boolean;
     modelUnavailableViews?: string[];
     colourKeyItems?: Array<{ key: string; label: string; color: string }>;
+    unreadMessageCount?: number;
 }
 
 const formatCourseName = (name: string): string => {
@@ -30,7 +31,7 @@ const formatCourseName = (name: string): string => {
   return name.replace(/^CSE\s*/i, 'ADF').replace(' ', '');
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [], colourKeyItems = [] }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = useState(false);
 
@@ -159,8 +160,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
         <div className="flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0">
           <button
             onClick={() => navigateIfAllowed('MyDashboard')}
-            className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
+            className={`relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
           >
+            {unreadMessageCount > 0 && (
+              <span className="absolute -right-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg">
+                <span className="-translate-x-px">{Math.min(unreadMessageCount, 9)}</span>
+              </span>
+            )}
             <span className="leading-tight">My<br/>Home</span>
           </button>
         </div>

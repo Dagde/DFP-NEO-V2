@@ -6793,7 +6793,7 @@ const formatCourseName = (name) => {
   }
   return name.replace(/^CSE\s*/i, "ADF").replace(" ", "");
 };
-const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [], colourKeyItems = [] }) => {
+const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = reactExports.useState(false);
   const [showUserSelector, setShowUserSelector] = reactExports.useState(false);
@@ -6879,16 +6879,19 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "button",
         {
           onClick: () => navigateIfAllowed("MyDashboard"),
-          className: `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "MyDashboard" ? "active" : ""}`,
-          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
-            "My",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-            "Home"
-          ] })
+          className: `relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "MyDashboard" ? "active" : ""}`,
+          children: [
+            unreadMessageCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -right-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-px", children: Math.min(unreadMessageCount, 9) }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
+              "My",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Home"
+            ] })
+          ]
         }
       ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 overflow-y-auto px-2 pt-[15px] space-y-[1px] flex flex-col items-center", children: [
@@ -31551,7 +31554,8 @@ const MyDashboard = ({
   messageContactStaffOptions = staffOptions,
   messageContactTraineeOptions = [],
   selectedStaffName,
-  onSelectStaffName
+  onSelectStaffName,
+  onUnreadMessageCountChange
 }) => {
   const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
   const groupedStaffOptions = reactExports.useMemo(() => {
@@ -31679,6 +31683,9 @@ const MyDashboard = ({
   const messageSuggestionGroups = reactExports.useMemo(() => groupDashboardMessageContacts(messageSuggestions), [messageSuggestions]);
   const messageContactGroups = reactExports.useMemo(() => groupDashboardMessageContacts(messageContacts), [messageContacts]);
   const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => normaliseDashboardContactName(message.to) === dashboardUserKey && !message.readAt), [dashboardMessages, dashboardUserKey]);
+  reactExports.useEffect(() => {
+    onUnreadMessageCountChange?.(unreadMessages.length);
+  }, [onUnreadMessageCountChange, unreadMessages.length]);
   const activeConversationMessages = reactExports.useMemo(() => {
     if (!selectedMessageContact) return [];
     const contactKey = normaliseDashboardContactName(selectedMessageContact.name);
@@ -100192,11 +100199,63 @@ const App = () => {
   };
   const [currentUserName, setCurrentUserName] = reactExports.useState("Bloggs, Joe");
   const [dashboardTestUserName, setDashboardTestUserName] = reactExports.useState("");
+  const [dashboardUnreadMessageCount, setDashboardUnreadMessageCount] = reactExports.useState(0);
   const currentUser2 = instructorsData.find((inst) => inst.name === currentUserName) || instructorsData[0];
   const [sessionUser, setSessionUser] = reactExports.useState(null);
   reactExports.useEffect(() => {
     setDashboardTestUserName("");
   }, [authUser?.userId, sessionUser?.userId]);
+  const normaliseDashboardNotificationName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const dashboardNotificationUserName = reactExports.useMemo(() => {
+    const sessionDashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
+    const sessionNameKeys = [
+      sessionDashboardUserName,
+      authUser?.displayName,
+      authUser?.firstName && authUser.lastName ? `${authUser.lastName}, ${authUser.firstName}` : "",
+      authUser?.firstName && authUser.lastName ? `${authUser.firstName} ${authUser.lastName}` : "",
+      currentUserName
+    ].map(normaliseDashboardNotificationName).filter(Boolean);
+    const sessionIdKeys = [
+      sessionUser?.userId,
+      authUser?.userId,
+      authUser?.id
+    ].map((value) => String(value || "").trim().toLowerCase()).filter(Boolean);
+    const sessionStaff = allInstructorsData.find((staff) => {
+      const staffName = normaliseDashboardNotificationName(staff.name);
+      const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
+      return sessionNameKeys.includes(staffName) || staffId && sessionIdKeys.includes(staffId);
+    });
+    const defaultDashboardStaff = allInstructorsData.find((staff) => normaliseDashboardNotificationName(staff.name) === "burns, alexander");
+    return dashboardTestUserName || sessionStaff?.name || sessionDashboardUserName || defaultDashboardStaff?.name || currentUserName;
+  }, [allInstructorsData, authUser, currentUserName, dashboardTestUserName, sessionUser]);
+  reactExports.useEffect(() => {
+    if (!dashboardNotificationUserName || !isAuthenticated) {
+      setDashboardUnreadMessageCount(0);
+      return;
+    }
+    let cancelled = false;
+    const loadUnreadMessages = async () => {
+      try {
+        const response = await fetch(`/api/dashboard-messages?userName=${encodeURIComponent(dashboardNotificationUserName)}`, {
+          credentials: "include"
+        });
+        if (!response.ok) throw new Error(`Dashboard messages fetch failed: ${response.status}`);
+        const data2 = await response.json();
+        const messages = Array.isArray(data2.messages) ? data2.messages : [];
+        const userKey = normaliseDashboardNotificationName(dashboardNotificationUserName);
+        const unreadCount = messages.filter((message) => normaliseDashboardNotificationName(message?.to) === userKey && !message?.readAt).length;
+        if (!cancelled) setDashboardUnreadMessageCount(unreadCount);
+      } catch (error) {
+        console.warn("[Dashboard Messages] Could not load sidebar unread count:", error);
+      }
+    };
+    loadUnreadMessages();
+    const interval = window.setInterval(loadUnreadMessages, 8e3);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [dashboardNotificationUserName, isAuthenticated]);
   const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig, [
     authUser?.id,
     authUser?.userId,
@@ -114036,6 +114095,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             messageContactTraineeOptions: traineesData,
             selectedStaffName: dashboardUserName,
             onSelectStaffName: setDashboardTestUserName,
+            onUnreadMessageCountChange: setDashboardUnreadMessageCount,
             onSelectTrainingReport: (entry) => {
               const selectedStaff = allInstructorsData.find((staff) => entry.staff.id ? staff.id === entry.staff.id : staff.idNumber === entry.staff.idNumber) || entry.staff;
               const reportAssignee = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(entry.report.dashboardAssigneeName || dashboardUserName)) || dashboardStaff;
@@ -115534,7 +115594,8 @@ Do you want to replace the existing entry?`,
           allTraineesData: traineesData,
           canAccessView,
           modelUnavailableViews: modelUnavailableLeftViews,
-          colourKeyItems: fixedCrewTileColourKeyItems
+          colourKeyItems: fixedCrewTileColourKeyItems,
+          unreadMessageCount: dashboardUnreadMessageCount
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col overflow-hidden", children: [

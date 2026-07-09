@@ -22601,6 +22601,7 @@ const App: React.FC = () => {
     // Current User State (for permission checking)
     const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
     const [dashboardTestUserName, setDashboardTestUserName] = useState<string>('');
+    const [dashboardUnreadMessageCount, setDashboardUnreadMessageCount] = useState(0);
     const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
 
     // Session user info (populated from auth)
@@ -22608,6 +22609,65 @@ const App: React.FC = () => {
     useEffect(() => {
         setDashboardTestUserName('');
     }, [authUser?.userId, sessionUser?.userId]);
+    const normaliseDashboardNotificationName = (value?: string | null) => String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ');
+    const dashboardNotificationUserName = useMemo(() => {
+        const sessionDashboardUserName = sessionUser?.firstName && sessionUser.lastName
+            ? `${sessionUser.lastName}, ${sessionUser.firstName}`
+            : currentUserName;
+        const sessionNameKeys = [
+            sessionDashboardUserName,
+            authUser?.displayName,
+            authUser?.firstName && authUser.lastName ? `${authUser.lastName}, ${authUser.firstName}` : '',
+            authUser?.firstName && authUser.lastName ? `${authUser.firstName} ${authUser.lastName}` : '',
+            currentUserName,
+        ].map(normaliseDashboardNotificationName).filter(Boolean);
+        const sessionIdKeys = [
+            sessionUser?.userId,
+            authUser?.userId,
+            authUser?.id,
+        ].map(value => String(value || '').trim().toLowerCase()).filter(Boolean);
+        const sessionStaff = allInstructorsData.find(staff => {
+            const staffName = normaliseDashboardNotificationName(staff.name);
+            const staffId = String((staff as any).idNumber || (staff as any).id || '').trim().toLowerCase();
+            return sessionNameKeys.includes(staffName) || (staffId && sessionIdKeys.includes(staffId));
+        });
+        const defaultDashboardStaff = allInstructorsData.find(staff => normaliseDashboardNotificationName(staff.name) === 'burns, alexander');
+        return dashboardTestUserName || sessionStaff?.name || sessionDashboardUserName || defaultDashboardStaff?.name || currentUserName;
+    }, [allInstructorsData, authUser, currentUserName, dashboardTestUserName, sessionUser]);
+    useEffect(() => {
+        if (!dashboardNotificationUserName || !isAuthenticated) {
+            setDashboardUnreadMessageCount(0);
+            return;
+        }
+        let cancelled = false;
+        const loadUnreadMessages = async () => {
+            try {
+                const response = await fetch(`/api/dashboard-messages?userName=${encodeURIComponent(dashboardNotificationUserName)}`, {
+                    credentials: 'include',
+                });
+                if (!response.ok) throw new Error(`Dashboard messages fetch failed: ${response.status}`);
+                const data = await response.json();
+                const messages = Array.isArray(data.messages) ? data.messages : [];
+                const userKey = normaliseDashboardNotificationName(dashboardNotificationUserName);
+                const unreadCount = messages.filter((message: any) => (
+                    normaliseDashboardNotificationName(message?.to) === userKey &&
+                    !message?.readAt
+                )).length;
+                if (!cancelled) setDashboardUnreadMessageCount(unreadCount);
+            } catch (error) {
+                console.warn('[Dashboard Messages] Could not load sidebar unread count:', error);
+            }
+        };
+        loadUnreadMessages();
+        const interval = window.setInterval(loadUnreadMessages, 8000);
+        return () => {
+            cancelled = true;
+            window.clearInterval(interval);
+        };
+    }, [dashboardNotificationUserName, isAuthenticated]);
     const platformAccessContext = useMemo(() => getPlatformAccessContext(platformConfig, [
         authUser?.id,
         authUser?.userId,
@@ -39498,6 +39558,7 @@ appliedUpdates.forEach(update => {
                             messageContactTraineeOptions={traineesData}
                             selectedStaffName={dashboardUserName}
                             onSelectStaffName={setDashboardTestUserName}
+                            onUnreadMessageCountChange={setDashboardUnreadMessageCount}
                             onSelectTrainingReport={(entry) => {
                                 const selectedStaff = allInstructorsData.find(staff => (
                                     (entry.staff as any).id
@@ -41193,6 +41254,7 @@ appliedUpdates.forEach(update => {
                 canAccessView={canAccessView}
                 modelUnavailableViews={modelUnavailableLeftViews}
                 colourKeyItems={fixedCrewTileColourKeyItems}
+                unreadMessageCount={dashboardUnreadMessageCount}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
                 {activeView !== 'PostFlight' && <Header
