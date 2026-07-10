@@ -453,6 +453,9 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         extraEventHours: initialAssessment?.dpcoFollowUp?.extraEventHours ?? undefined,
         extraHours: initialAssessment?.dpcoFollowUp?.extraHours ?? undefined,
     }));
+    const [dncoFollowUp, setDncoFollowUp] = useState<{ requestExtraFlight: boolean }>(() => ({
+        requestExtraFlight: initialAssessment?.dncoFollowUp?.requestExtraFlight === true,
+    }));
     
     const recentPerformanceHistory = useMemo(() => {
         const history: { name: string; score: number | string; date: string; timestamp: number }[] = [];
@@ -714,6 +717,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             overallResult,
             dcoResult,
             dpcoFollowUp: dcoResult === 'DPCO' ? dpcoFollowUp : undefined,
+            dncoFollowUp: dcoResult === 'DNCO' ? dncoFollowUp : undefined,
             groundSchoolAssessment,
             // Preserve timing data
             startTime: currentEvent?.startTime,
@@ -995,7 +999,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             handleSave(true);
         }, 1000); 
         return () => clearTimeout(timerId);
-    }, [assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, groundSchoolAssessment, canEditPt051]);
+    }, [assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, groundSchoolAssessment, canEditPt051]);
 
     useEffect(() => {
         registerDirtyCheck(
@@ -1003,7 +1007,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             () => handleSave(false), 
             () => { setIsDirty(false); } 
         );
-    }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, groundSchoolAssessment]);
+    }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, groundSchoolAssessment]);
 
     const gradeHeaderColors: { [key: string]: string } = {
         'MIN': 'bg-red-800/50',
@@ -1414,6 +1418,24 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                         className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
                                                     />
                                                     <span>Continue - no additions</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {dcoResult === 'DNCO' && (
+                                        <div className="-mt-3 min-h-[168px] rounded-lg border border-sky-500/45 bg-gray-950/60 p-3">
+                                            <div className="text-xs font-bold uppercase tracking-wide text-sky-200">DNCO action</div>
+                                            <div className="mt-3 space-y-2 text-sm font-semibold text-white">
+                                                <label className={`grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dncoFollowUp.requestExtraFlight ? 'border-sky-400/80 bg-sky-500/15' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
+                                                    <input
+                                                        type="radio"
+                                                        name="dnco-follow-up"
+                                                        value="request-extra-flight"
+                                                        checked={dncoFollowUp.requestExtraFlight}
+                                                        onChange={() => setDncoFollowUp({ requestExtraFlight: true })}
+                                                        className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                                                    />
+                                                    <span>Request extra flight</span>
                                                 </label>
                                             </div>
                                         </div>

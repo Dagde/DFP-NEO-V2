@@ -20265,6 +20265,9 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     extraEventHours: initialAssessment?.dpcoFollowUp?.extraEventHours ?? void 0,
     extraHours: initialAssessment?.dpcoFollowUp?.extraHours ?? void 0
   }));
+  const [dncoFollowUp, setDncoFollowUp] = reactExports.useState(() => ({
+    requestExtraFlight: initialAssessment?.dncoFollowUp?.requestExtraFlight === true
+  }));
   const recentPerformanceHistory = reactExports.useMemo(() => {
     const history = [];
     const isFlightOrFtd = (eventName) => {
@@ -20475,6 +20478,7 @@ ${commentFields[key]}`).join("\n\n");
       overallResult,
       dcoResult,
       dpcoFollowUp: dcoResult === "DPCO" ? dpcoFollowUp : void 0,
+      dncoFollowUp: dcoResult === "DNCO" ? dncoFollowUp : void 0,
       groundSchoolAssessment,
       // Preserve timing data
       startTime: currentEvent?.startTime,
@@ -20720,7 +20724,7 @@ This action cannot be undone.`;
       handleSave(true);
     }, 1e3);
     return () => clearTimeout(timerId);
-  }, [assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, groundSchoolAssessment, canEditPt051]);
+  }, [assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, groundSchoolAssessment, canEditPt051]);
   reactExports.useEffect(() => {
     registerDirtyCheck(
       () => isDirty,
@@ -20729,7 +20733,7 @@ This action cannot be undone.`;
         setIsDirty(false);
       }
     );
-  }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, groundSchoolAssessment]);
+  }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, groundSchoolAssessment]);
   const gradeHeaderColors = {
     "MIN": "bg-red-800/50",
     "DEMO": "bg-red-950/35 border-red-500/20",
@@ -21169,6 +21173,23 @@ This action cannot be undone.`;
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue - no additions" })
                       ] })
                     ] })
+                  ] }),
+                  dcoResult === "DNCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 min-h-[168px] rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DNCO action" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dncoFollowUp.requestExtraFlight ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "dnco-follow-up",
+                          value: "request-extra-flight",
+                          checked: dncoFollowUp.requestExtraFlight,
+                          onChange: () => setDncoFollowUp({ requestExtraFlight: true }),
+                          className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Request extra flight" })
+                    ] }) })
                   ] })
                 ] }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-4", children: [
@@ -54464,6 +54485,9 @@ const AirCombatTrainingReportModal = ({
     extraEventHours: initialReport?.dpcoFollowUp?.extraEventHours ?? void 0,
     extraHours: initialReport?.dpcoFollowUp?.extraHours ?? void 0
   }));
+  const [dncoFollowUp, setDncoFollowUp] = reactExports.useState(() => ({
+    requestExtraFlight: initialReport?.dncoFollowUp?.requestExtraFlight === true
+  }));
   const [commentSections, setCommentSections] = reactExports.useState(() => {
     const parsed = parseReportComments(initialReport?.notes || "");
     return {
@@ -54643,6 +54667,7 @@ const AirCombatTrainingReportModal = ({
         overallResult,
         dcoResult,
         dpcoFollowUp: dcoResult === "DPCO" ? dpcoFollowUp : void 0,
+        dncoFollowUp: dcoResult === "DNCO" ? dncoFollowUp : void 0,
         assessedElementScores: elementScores,
         groundSchoolAssessment,
         notes: buildReportComments(commentSections),
@@ -55000,6 +55025,26 @@ const AirCombatTrainingReportModal = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue - no additions" })
                   ] })
                 ] })
+              ] }),
+              dcoResult === "DNCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 min-h-[168px] rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DNCO action" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dncoFollowUp.requestExtraFlight ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "radio",
+                      name: "training-report-dnco-follow-up",
+                      value: "request-extra-flight",
+                      checked: dncoFollowUp.requestExtraFlight,
+                      onChange: () => {
+                        setDncoFollowUp({ requestExtraFlight: true });
+                        setSaveStatus("Unsaved");
+                      },
+                      className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Request extra flight" })
+                ] }) })
               ] })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [

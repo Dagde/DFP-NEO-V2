@@ -254,6 +254,9 @@ export interface AirCombatTrainingReport {
     extraEventHours?: number;
     extraHours?: number;
   };
+  dncoFollowUp?: {
+    requestExtraFlight?: boolean;
+  };
   assessedElementScores?: Array<{
     element: string;
     grade?: string;
@@ -522,6 +525,9 @@ export interface Pt051Assessment {
     action: 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
     extraEventHours?: number;
     extraHours?: number;
+  };
+  dncoFollowUp?: {
+    requestExtraFlight?: boolean;
   };
   overallComments?: string;
   // Add timing fields to preserve time data

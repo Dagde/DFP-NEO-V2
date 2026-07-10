@@ -200,6 +200,9 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     extraEventHours: initialReport?.dpcoFollowUp?.extraEventHours ?? undefined,
     extraHours: initialReport?.dpcoFollowUp?.extraHours ?? undefined,
   }));
+  const [dncoFollowUp, setDncoFollowUp] = useState<{ requestExtraFlight: boolean }>(() => ({
+    requestExtraFlight: initialReport?.dncoFollowUp?.requestExtraFlight === true,
+  }));
   const [commentSections, setCommentSections] = useState<Record<CommentSectionKey, string>>(() => {
     const parsed = parseReportComments(initialReport?.notes || '');
     return {
@@ -431,6 +434,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
         overallResult,
         dcoResult,
         dpcoFollowUp: dcoResult === 'DPCO' ? dpcoFollowUp : undefined,
+        dncoFollowUp: dcoResult === 'DNCO' ? dncoFollowUp : undefined,
         assessedElementScores: elementScores,
         groundSchoolAssessment,
         notes: buildReportComments(commentSections),
@@ -710,6 +714,24 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                               className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
                             />
                             <span>Continue - no additions</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                    {dcoResult === 'DNCO' && (
+                      <div className="-mt-3 min-h-[168px] rounded-lg border border-sky-500/45 bg-gray-950/60 p-3">
+                        <div className="text-xs font-bold uppercase tracking-wide text-sky-200">DNCO action</div>
+                        <div className="mt-3 space-y-2 text-sm font-semibold text-white">
+                          <label className={`grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dncoFollowUp.requestExtraFlight ? 'border-sky-400/80 bg-sky-500/15' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
+                            <input
+                              type="radio"
+                              name="training-report-dnco-follow-up"
+                              value="request-extra-flight"
+                              checked={dncoFollowUp.requestExtraFlight}
+                              onChange={() => { setDncoFollowUp({ requestExtraFlight: true }); setSaveStatus('Unsaved'); }}
+                              className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                            />
+                            <span>Request extra flight</span>
                           </label>
                         </div>
                       </div>
