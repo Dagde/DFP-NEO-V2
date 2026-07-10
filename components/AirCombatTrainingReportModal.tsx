@@ -195,8 +195,9 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const [overallGrade, setOverallGrade] = useState(initialReport?.overallGrade || '');
   const [overallResult, setOverallResult] = useState<'' | 'P' | 'F'>(initialReport?.overallResult || '');
   const [dcoResult, setDcoResult] = useState<'' | 'DCO' | 'DPCO' | 'DNCO'>(initialReport?.dcoResult || '');
-  const [dpcoFollowUp, setDpcoFollowUp] = useState<{ action: DpcoFollowUpAction; extraHours?: number }>(() => ({
+  const [dpcoFollowUp, setDpcoFollowUp] = useState<{ action: DpcoFollowUpAction; extraEventHours?: number; extraHours?: number }>(() => ({
     action: (initialReport?.dpcoFollowUp?.action || '') as DpcoFollowUpAction,
+    extraEventHours: initialReport?.dpcoFollowUp?.extraEventHours ?? undefined,
     extraHours: initialReport?.dpcoFollowUp?.extraHours ?? undefined,
   }));
   const [commentSections, setCommentSections] = useState<Record<CommentSectionKey, string>>(() => {
@@ -578,10 +579,10 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                       </label>
                     </div>
                     {dcoResult === 'DPCO' && (
-                      <div className="min-h-[168px] rounded-lg border border-amber-500/40 bg-amber-950/15 p-3">
-                        <div className="text-xs font-bold uppercase tracking-wide text-amber-200">DPCO follow-up</div>
+                      <div className="min-h-[168px] rounded-lg border border-amber-500/35 bg-gray-950/60 p-3">
+                        <div className="text-xs font-bold uppercase tracking-wide text-amber-200">DPCO action</div>
                         <div className="mt-3 space-y-2 text-sm font-semibold text-white">
-                          <label className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30">
+                          <label className={`grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === 'extra-event' ? 'border-amber-400/70 bg-amber-500/10' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
                             <input
                               type="radio"
                               name="training-report-dpco-follow-up"
@@ -590,9 +591,27 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                               onChange={() => { setDpcoFollowUp(prev => ({ ...prev, action: 'extra-event' })); setSaveStatus('Unsaved'); }}
                               className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                             />
-                            <span>Extra {isSimEvent ? 'Sim' : 'Flight'} required</span>
+                            <span>Extra {isSimEvent ? 'Sim' : 'Flight'}</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={dpcoFollowUp.extraEventHours ?? ''}
+                              placeholder="0.0"
+                              onChange={(event) => {
+                                setDpcoFollowUp({
+                                  ...dpcoFollowUp,
+                                  action: 'extra-event',
+                                  extraEventHours: event.target.value === '' ? undefined : Number(event.target.value),
+                                });
+                                setSaveStatus('Unsaved');
+                              }}
+                              onKeyDown={stopEditableKeyPropagation}
+                              className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                            />
+                            <span className="text-xs font-bold uppercase text-gray-400">hrs</span>
                           </label>
-                          <label className="flex cursor-pointer flex-wrap items-center gap-2 rounded p-1 hover:bg-gray-700/30">
+                          <label className={`grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === 'extra-hours-next-event' ? 'border-amber-400/70 bg-amber-500/10' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
                             <input
                               type="radio"
                               name="training-report-dpco-follow-up"
@@ -601,25 +620,27 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                               onChange={() => { setDpcoFollowUp(prev => ({ ...prev, action: 'extra-hours-next-event' })); setSaveStatus('Unsaved'); }}
                               className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                             />
-                            <span>Continue with extra</span>
+                            <span>Next event extra</span>
                             <input
                               type="number"
                               min="0"
                               step="0.1"
                               value={dpcoFollowUp.extraHours ?? ''}
+                              placeholder="0.0"
                               onChange={(event) => {
                                 setDpcoFollowUp({
+                                  ...dpcoFollowUp,
                                   action: 'extra-hours-next-event',
                                   extraHours: event.target.value === '' ? undefined : Number(event.target.value),
                                 });
                                 setSaveStatus('Unsaved');
                               }}
                               onKeyDown={stopEditableKeyPropagation}
-                              className="w-20 rounded border border-gray-600 bg-gray-900 px-2 py-1 text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                              className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
                             />
-                            <span>hours next event</span>
+                            <span className="text-xs font-bold uppercase text-gray-400">hrs</span>
                           </label>
-                          <label className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30">
+                          <label className={`grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === 'continue-no-additions' ? 'border-amber-400/70 bg-amber-500/10' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
                             <input
                               type="radio"
                               name="training-report-dpco-follow-up"
@@ -628,7 +649,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                               onChange={() => { setDpcoFollowUp(prev => ({ ...prev, action: 'continue-no-additions' })); setSaveStatus('Unsaved'); }}
                               className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                             />
-                            <span>Continue no additions</span>
+                            <span>Continue - no additions</span>
                           </label>
                         </div>
                       </div>

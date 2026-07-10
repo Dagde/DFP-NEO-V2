@@ -20262,6 +20262,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   const [dcoResult, setDcoResult] = reactExports.useState(initialAssessment?.dcoResult || "");
   const [dpcoFollowUp, setDpcoFollowUp] = reactExports.useState(() => ({
     action: initialAssessment?.dpcoFollowUp?.action || "",
+    extraEventHours: initialAssessment?.dpcoFollowUp?.extraEventHours ?? void 0,
     extraHours: initialAssessment?.dpcoFollowUp?.extraHours ?? void 0
   }));
   const recentPerformanceHistory = reactExports.useMemo(() => {
@@ -21016,10 +21017,10 @@ This action cannot be undone.`;
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 font-medium", children: "None" })
                       ] })
                     ] }),
-                    dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px] rounded-lg border border-amber-500/40 bg-amber-950/15 p-3", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-amber-200", children: "DPCO follow-up" }),
+                    dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px] rounded-lg border border-amber-500/35 bg-gray-950/60 p-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-amber-200", children: "DPCO action" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "extra-event" ? "border-amber-400/70 bg-amber-500/10" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "input",
                             {
@@ -21033,11 +21034,28 @@ This action cannot be undone.`;
                           ),
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                             "Extra ",
-                            isSimEvent ? "Sim" : "Flight",
-                            " required"
-                          ] })
+                            isSimEvent ? "Sim" : "Flight"
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "number",
+                              min: "0",
+                              step: "0.1",
+                              value: dpcoFollowUp.extraEventHours ?? "",
+                              placeholder: "0.0",
+                              onChange: (e) => setDpcoFollowUp({
+                                ...dpcoFollowUp,
+                                action: "extra-event",
+                                extraEventHours: e.target.value === "" ? void 0 : Number(e.target.value)
+                              }),
+                              onKeyDown: stopEditableKeyPropagation2,
+                              className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold uppercase text-gray-400", children: "hrs" })
                         ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer flex-wrap items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "extra-hours-next-event" ? "border-amber-400/70 bg-amber-500/10" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "input",
                             {
@@ -21049,7 +21067,7 @@ This action cannot be undone.`;
                               className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                             }
                           ),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue with extra" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Next event extra" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "input",
                             {
@@ -21057,17 +21075,19 @@ This action cannot be undone.`;
                               min: "0",
                               step: "0.1",
                               value: dpcoFollowUp.extraHours ?? "",
+                              placeholder: "0.0",
                               onChange: (e) => setDpcoFollowUp({
+                                ...dpcoFollowUp,
                                 action: "extra-hours-next-event",
                                 extraHours: e.target.value === "" ? void 0 : Number(e.target.value)
                               }),
                               onKeyDown: stopEditableKeyPropagation2,
-                              className: "w-20 rounded border border-gray-600 bg-gray-900 px-2 py-1 text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                              className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
                             }
                           ),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "hours next event" })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold uppercase text-gray-400", children: "hrs" })
                         ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "continue-no-additions" ? "border-amber-400/70 bg-amber-500/10" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "input",
                             {
@@ -21079,7 +21099,7 @@ This action cannot be undone.`;
                               className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                             }
                           ),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue no additions" })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue - no additions" })
                         ] })
                       ] })
                     ] })
@@ -54375,6 +54395,7 @@ const AirCombatTrainingReportModal = ({
   const [dcoResult, setDcoResult] = reactExports.useState(initialReport?.dcoResult || "");
   const [dpcoFollowUp, setDpcoFollowUp] = reactExports.useState(() => ({
     action: initialReport?.dpcoFollowUp?.action || "",
+    extraEventHours: initialReport?.dpcoFollowUp?.extraEventHours ?? void 0,
     extraHours: initialReport?.dpcoFollowUp?.extraHours ?? void 0
   }));
   const [commentSections, setCommentSections] = reactExports.useState(() => {
@@ -54746,10 +54767,10 @@ const AirCombatTrainingReportModal = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-gray-400", children: "None" })
                   ] })
                 ] }),
-                dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px] rounded-lg border border-amber-500/40 bg-amber-950/15 p-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-amber-200", children: "DPCO follow-up" }),
+                dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px] rounded-lg border border-amber-500/35 bg-gray-950/60 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-amber-200", children: "DPCO action" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "extra-event" ? "border-amber-400/70 bg-amber-500/10" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "input",
                         {
@@ -54766,11 +54787,31 @@ const AirCombatTrainingReportModal = ({
                       ),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                         "Extra ",
-                        isSimEvent ? "Sim" : "Flight",
-                        " required"
-                      ] })
+                        isSimEvent ? "Sim" : "Flight"
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "number",
+                          min: "0",
+                          step: "0.1",
+                          value: dpcoFollowUp.extraEventHours ?? "",
+                          placeholder: "0.0",
+                          onChange: (event) => {
+                            setDpcoFollowUp({
+                              ...dpcoFollowUp,
+                              action: "extra-event",
+                              extraEventHours: event.target.value === "" ? void 0 : Number(event.target.value)
+                            });
+                            setSaveStatus("Unsaved");
+                          },
+                          onKeyDown: stopEditableKeyPropagation2,
+                          className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold uppercase text-gray-400", children: "hrs" })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer flex-wrap items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "extra-hours-next-event" ? "border-amber-400/70 bg-amber-500/10" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "input",
                         {
@@ -54785,7 +54826,7 @@ const AirCombatTrainingReportModal = ({
                           className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                         }
                       ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue with extra" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Next event extra" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "input",
                         {
@@ -54793,20 +54834,22 @@ const AirCombatTrainingReportModal = ({
                           min: "0",
                           step: "0.1",
                           value: dpcoFollowUp.extraHours ?? "",
+                          placeholder: "0.0",
                           onChange: (event) => {
                             setDpcoFollowUp({
+                              ...dpcoFollowUp,
                               action: "extra-hours-next-event",
                               extraHours: event.target.value === "" ? void 0 : Number(event.target.value)
                             });
                             setSaveStatus("Unsaved");
                           },
                           onKeyDown: stopEditableKeyPropagation2,
-                          className: "w-20 rounded border border-gray-600 bg-gray-900 px-2 py-1 text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                          className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
                         }
                       ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "hours next event" })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold uppercase text-gray-400", children: "hrs" })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "continue-no-additions" ? "border-amber-400/70 bg-amber-500/10" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "input",
                         {
@@ -54821,7 +54864,7 @@ const AirCombatTrainingReportModal = ({
                           className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                         }
                       ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue no additions" })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue - no additions" })
                     ] })
                   ] })
                 ] })

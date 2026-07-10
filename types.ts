@@ -251,6 +251,7 @@ export interface AirCombatTrainingReport {
   dcoResult?: '' | 'DCO' | 'DPCO' | 'DNCO';
   dpcoFollowUp?: {
     action: 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
+    extraEventHours?: number;
     extraHours?: number;
   };
   assessedElementScores?: Array<{
@@ -519,6 +520,7 @@ export interface Pt051Assessment {
   dcoResult?: 'DCO' | 'DPCO' | 'DNCO' | '';
   dpcoFollowUp?: {
     action: 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
+    extraEventHours?: number;
     extraHours?: number;
   };
   overallComments?: string;
