@@ -56161,7 +56161,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
         ] }),
         activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-gray-700 rounded-lg bg-gray-800/70 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2", children: "Training report section" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full max-w-full overflow-x-auto pb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -56169,7 +56169,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
                 value: currentElementGroup,
                 onChange: (event) => handleElementGroupChange(selectedElement, event.target.value),
                 onKeyDown: (event) => event.stopPropagation(),
-                className: "w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -56177,14 +56177,14 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
               {
                 value: sectionOptions.includes(currentElementGroup) ? currentElementGroup : "",
                 onChange: (event) => handleElementGroupChange(selectedElement, event.target.value),
-                className: "w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500",
+                className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500",
                 children: [
                   !sectionOptions.includes(currentElementGroup) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Custom section" }),
                   sectionOptions.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: section, children: section }, section))
                 ]
               }
             )
-          ] }),
+          ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "This controls which heading this element appears under on the training report." })
         ] }),
         [5, 4, 3, 2, 1, 0].map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `border rounded-lg overflow-hidden ${getGradeColor(grade)}`, children: [
@@ -57995,7 +57995,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
       ] }),
       activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-gray-700 rounded-lg bg-gray-800/70 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2", children: "Training report section" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full max-w-full overflow-x-auto pb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
@@ -58004,7 +58004,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
               onChange: (event) => handleElementGroupChange(selectedElement, event.target.value),
               onKeyDown: (event) => event.stopPropagation(),
               readOnly,
-              className: "w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 read-only:text-gray-400"
+              className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 read-only:text-gray-400"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -58013,14 +58013,14 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
               value: sectionOptions.includes(currentElementGroup) ? currentElementGroup : "",
               onChange: (event) => handleElementGroupChange(selectedElement, event.target.value),
               disabled: readOnly,
-              className: "w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 disabled:text-gray-400",
+              className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 disabled:text-gray-400",
               children: [
                 !sectionOptions.includes(currentElementGroup) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Custom section" }),
                 sectionOptions.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: section, children: section }, section))
               ]
             }
           )
-        ] }),
+        ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "This controls which heading this element appears under on the training report." })
       ] }),
       [5, 4, 3, 2, 1, 0].map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `border rounded-lg overflow-hidden ${getGradeColor(grade)}`, children: [

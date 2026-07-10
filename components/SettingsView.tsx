@@ -364,26 +364,28 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
                         <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
                             Training report section
                         </label>
-                        <div className="grid grid-cols-1 md:grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3">
-                            <input
-                                type="text"
-                                value={currentElementGroup}
-                                onChange={(event) => handleElementGroupChange(selectedElement, event.target.value)}
-                                onKeyDown={(event) => event.stopPropagation()}
-                                readOnly={readOnly}
-                                className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 read-only:text-gray-400"
-                            />
-                            <select
-                                value={sectionOptions.includes(currentElementGroup) ? currentElementGroup : ''}
-                                onChange={(event) => handleElementGroupChange(selectedElement, event.target.value)}
-                                disabled={readOnly}
-                                className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 disabled:text-gray-400"
-                            >
-                                {!sectionOptions.includes(currentElementGroup) && <option value="">Custom section</option>}
-                                {sectionOptions.map(section => (
-                                    <option key={section} value={section}>{section}</option>
-                                ))}
-                            </select>
+                        <div className="w-full max-w-full overflow-x-auto pb-1">
+                            <div className="grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3">
+                                <input
+                                    type="text"
+                                    value={currentElementGroup}
+                                    onChange={(event) => handleElementGroupChange(selectedElement, event.target.value)}
+                                    onKeyDown={(event) => event.stopPropagation()}
+                                    readOnly={readOnly}
+                                    className="w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 read-only:text-gray-400"
+                                />
+                                <select
+                                    value={sectionOptions.includes(currentElementGroup) ? currentElementGroup : ''}
+                                    onChange={(event) => handleElementGroupChange(selectedElement, event.target.value)}
+                                    disabled={readOnly}
+                                    className="w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 disabled:text-gray-400"
+                                >
+                                    {!sectionOptions.includes(currentElementGroup) && <option value="">Custom section</option>}
+                                    {sectionOptions.map(section => (
+                                        <option key={section} value={section}>{section}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                         <p className="mt-2 text-xs text-gray-500">
                             This controls which heading this element appears under on the training report.
