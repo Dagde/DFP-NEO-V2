@@ -116283,8 +116283,9 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
                     assessment.dcoResult ? `DCO Result: ${assessment.dcoResult}` : null,
                     assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
                   ].filter(Boolean).join(", ");
-                  logAudit("Performance History", "Edit", `Modified PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+                  logAudit("Performance History", "Edit", `Modified PT-051 for ${normalizedAssessment.traineeFullName} - Event: ${normalizedAssessment.flightNumber} (${normalizedAssessment.date})`, changes);
                   await performanceSave;
+                  await maybeInsertTrainingReportExtraLmpEvent(normalizedAssessment);
                   setSuccessMessage("PT-051 Assessment Saved!");
                   const eventId = assessment.flightNumber;
                   if (eventId) {
