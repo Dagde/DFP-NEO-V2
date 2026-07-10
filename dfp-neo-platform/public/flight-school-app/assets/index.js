@@ -19948,6 +19948,7 @@ const PT051_STRUCTURE$1 = [
 ];
 PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
 const DEFAULT_ASSESSED_ELEMENTS$1 = ["Airmanship", "Preparation", "Technique"];
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 = "__scoringMatrixElementGroups";
 const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST"];
 const normaliseAssessedElements$1 = (elements) => {
   const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS$1;
@@ -19960,22 +19961,21 @@ const normaliseAssessedElements$1 = (elements) => {
   });
   return selected.length > 0 ? selected : DEFAULT_ASSESSED_ELEMENTS$1;
 };
-const buildAssessmentStructure = (elements) => {
+const getDefaultElementGroup = (element) => PT051_STRUCTURE$1.find(
+  (category) => category.elements.some((candidate) => candidate.toLowerCase() === element.toLowerCase())
+)?.category || "Additional Elements";
+const buildAssessmentStructure = (elements, phraseBank) => {
   const selectedElements = normaliseAssessedElements$1(elements);
-  const selectedKeys = new Set(selectedElements.map((element) => element.toLowerCase()));
-  const usedKeys = /* @__PURE__ */ new Set();
-  const categories = PT051_STRUCTURE$1.map((category) => ({
-    ...category,
-    elements: category.elements.filter((element) => {
-      const include = selectedKeys.has(element.toLowerCase());
-      if (include) usedKeys.add(element.toLowerCase());
-      return include;
-    })
-  })).filter((category) => category.elements.length > 0);
-  const additionalElements = selectedElements.filter((element) => !usedKeys.has(element.toLowerCase()));
-  if (additionalElements.length > 0) {
-    categories.push({ category: "Additional Elements", elements: additionalElements });
-  }
+  const configuredGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] || {};
+  const categoryOrder = PT051_STRUCTURE$1.map((category) => category.category);
+  const grouped = /* @__PURE__ */ new Map();
+  selectedElements.forEach((element) => {
+    const configuredGroup = String(configuredGroups[element] || "").trim();
+    const category = configuredGroup || getDefaultElementGroup(element);
+    if (!categoryOrder.includes(category)) categoryOrder.push(category);
+    grouped.set(category, [...grouped.get(category) || [], element]);
+  });
+  const categories = categoryOrder.map((category) => ({ category, elements: grouped.get(category) || [] })).filter((category) => category.elements.length > 0);
   return categories.length > 0 ? categories : [{ category: "Core Dimensions", elements: DEFAULT_ASSESSED_ELEMENTS$1 }];
 };
 const formatTime$6 = (time) => {
@@ -20193,8 +20193,8 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     return syllabusDetails.find((item) => eventCodes.some((code) => String(item.code || "").trim() === code || String(item.id || "").trim() === code));
   }, [event.eventCode, event.flightNumber, currentEvent?.eventCode, currentEvent?.flightNumber, initialAssessment?.flightNumber, syllabusDetails]);
   const assessmentStructure = reactExports.useMemo(
-    () => buildAssessmentStructure(syllabusEvent?.assessedElements),
-    [syllabusEvent?.assessedElements]
+    () => buildAssessmentStructure(syllabusEvent?.assessedElements, phraseBank),
+    [syllabusEvent?.assessedElements, phraseBank]
   );
   const assessmentElements = reactExports.useMemo(
     () => assessmentStructure.flatMap((category) => category.elements),
@@ -55857,6 +55857,43 @@ const INITIAL_ELEMENTS_LIST = [
   "Knowledge"
 ];
 const SCORING_MATRIX_ELEMENT_LIST_KEY$1 = "__scoringMatrixElements";
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY$1 = "__scoringMatrixElementGroups";
+const DEFAULT_SCORING_MATRIX_SECTIONS$1 = [
+  "Core Dimensions",
+  "Procedural Framework",
+  "Takeoff",
+  "Departure",
+  "Core Handling Skills",
+  "Turns",
+  "Recovery",
+  "Landing",
+  "Domestics",
+  "Additional Elements"
+];
+const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS$1 = {
+  Airmanship: "Core Dimensions",
+  Preparation: "Core Dimensions",
+  Technique: "Core Dimensions",
+  "Pre-Post Flight": "Procedural Framework",
+  "Walk Around": "Procedural Framework",
+  "Strap-in": "Procedural Framework",
+  "Ground Checks": "Procedural Framework",
+  "Airborne Checks": "Procedural Framework",
+  Stationary: "Takeoff",
+  Visual: "Departure",
+  "Effects of Control": "Core Handling Skills",
+  Trimming: "Core Handling Skills",
+  "Straight and Level": "Core Handling Skills",
+  "Level medium Turn": "Turns",
+  "Level Steep turn": "Turns",
+  "Visual - Initial & Pitch": "Recovery",
+  Landing: "Landing",
+  Crosswind: "Landing",
+  "Radio Comms": "Domestics",
+  "Situational Awareness": "Domestics",
+  Lookout: "Domestics",
+  Knowledge: "Domestics"
+};
 const getConfiguredScoringMatrixElements$1 = (phraseBank) => {
   const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$1];
   if (Array.isArray(savedElements)) {
@@ -55944,6 +55981,22 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
   });
   const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
   const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
+  const configuredElementGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$1] || {};
+  const currentElementGroup = configuredElementGroups[selectedElement] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS$1[selectedElement] || "Additional Elements";
+  const sectionOptions = Array.from(/* @__PURE__ */ new Set([
+    ...DEFAULT_SCORING_MATRIX_SECTIONS$1,
+    ...Object.values(configuredElementGroups).map((value) => String(value || "").trim()).filter(Boolean),
+    currentElementGroup
+  ]));
+  const handleElementGroupChange = (element, group) => {
+    onUpdatePhraseBank({
+      ...phraseBank,
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
+        ...configuredElementGroups,
+        [element]: group
+      }
+    });
+  };
   const toggleEditMode = (grade) => {
     const newEditModeGrades = new Set(editModeGrades);
     if (newEditModeGrades.has(grade)) {
@@ -56001,6 +56054,10 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
     onUpdatePhraseBank({
       ...phraseBank,
       [SCORING_MATRIX_ELEMENT_LIST_KEY$1]: nextElements,
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
+        ...configuredElementGroups,
+        [newElementName]: "Additional Elements"
+      },
       [newElementName]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
     });
     setSelectedElement(newElementName);
@@ -56013,7 +56070,12 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
     elementsToDelete.forEach((el) => {
       delete newPhraseBank[el];
     });
+    const nextGroups = { ...configuredElementGroups };
+    elementsToDelete.forEach((el) => {
+      delete nextGroups[el];
+    });
     newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$1] = newFlightElements;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$1] = nextGroups;
     onUpdatePhraseBank(newPhraseBank);
     if (elementsToDelete.has(selectedElement)) {
       setSelectedElement(newFlightElements[0] || "Generic Flying Elements");
@@ -56096,6 +56158,34 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-2xl font-bold text-sky-400", children: currentDimension }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Define standardized phrases for each grade level." })
+        ] }),
+        activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-gray-700 rounded-lg bg-gray-800/70 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2", children: "Training report section" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                value: currentElementGroup,
+                onChange: (event) => handleElementGroupChange(selectedElement, event.target.value),
+                onKeyDown: (event) => event.stopPropagation(),
+                className: "w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: sectionOptions.includes(currentElementGroup) ? currentElementGroup : "",
+                onChange: (event) => handleElementGroupChange(selectedElement, event.target.value),
+                className: "w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500",
+                children: [
+                  !sectionOptions.includes(currentElementGroup) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Custom section" }),
+                  sectionOptions.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: section, children: section }, section))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "This controls which heading this element appears under on the training report." })
         ] }),
         [5, 4, 3, 2, 1, 0].map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `border rounded-lg overflow-hidden ${getGradeColor(grade)}`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-2 font-bold text-sm border-b border-gray-700/30 flex justify-between items-center", children: [
@@ -57695,6 +57785,43 @@ const INITIAL_ELEMENTS_LIST_INLINE = [
   "Knowledge"
 ];
 const SCORING_MATRIX_ELEMENT_LIST_KEY = "__scoringMatrixElements";
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY = "__scoringMatrixElementGroups";
+const DEFAULT_SCORING_MATRIX_SECTIONS = [
+  "Core Dimensions",
+  "Procedural Framework",
+  "Takeoff",
+  "Departure",
+  "Core Handling Skills",
+  "Turns",
+  "Recovery",
+  "Landing",
+  "Domestics",
+  "Additional Elements"
+];
+const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS = {
+  Airmanship: "Core Dimensions",
+  Preparation: "Core Dimensions",
+  Technique: "Core Dimensions",
+  "Pre-Post Flight": "Procedural Framework",
+  "Walk Around": "Procedural Framework",
+  "Strap-in": "Procedural Framework",
+  "Ground Checks": "Procedural Framework",
+  "Airborne Checks": "Procedural Framework",
+  Stationary: "Takeoff",
+  Visual: "Departure",
+  "Effects of Control": "Core Handling Skills",
+  Trimming: "Core Handling Skills",
+  "Straight and Level": "Core Handling Skills",
+  "Level medium Turn": "Turns",
+  "Level Steep turn": "Turns",
+  "Visual - Initial & Pitch": "Recovery",
+  Landing: "Landing",
+  Crosswind: "Landing",
+  "Radio Comms": "Domestics",
+  "Situational Awareness": "Domestics",
+  Lookout: "Domestics",
+  Knowledge: "Domestics"
+};
 const getConfiguredScoringMatrixElements = (phraseBank) => {
   const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
   if (Array.isArray(savedElements)) {
@@ -57725,6 +57852,22 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
   });
   const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
   const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
+  const configuredElementGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY] || {};
+  const currentElementGroup = configuredElementGroups[selectedElement] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[selectedElement] || "Additional Elements";
+  const sectionOptions = Array.from(/* @__PURE__ */ new Set([
+    ...DEFAULT_SCORING_MATRIX_SECTIONS,
+    ...Object.values(configuredElementGroups).map((value) => String(value || "").trim()).filter(Boolean),
+    currentElementGroup
+  ]));
+  const handleElementGroupChange = (element, group) => {
+    onUpdatePhraseBank({
+      ...phraseBank,
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
+        ...configuredElementGroups,
+        [element]: group
+      }
+    });
+  };
   const handlePhraseChange = (grade, index, value) => {
     const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
     const gradePhrases = currentPhrases[grade] || [];
@@ -57754,6 +57897,10 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     onUpdatePhraseBank({
       ...phraseBank,
       [SCORING_MATRIX_ELEMENT_LIST_KEY]: nextElements,
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
+        ...configuredElementGroups,
+        [name]: "Additional Elements"
+      },
       [name]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
     });
     setSelectedElement(name);
@@ -57772,7 +57919,12 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     selectedToDelete.forEach((el) => {
       delete newPhraseBank[el];
     });
+    const nextGroups = { ...configuredElementGroups };
+    selectedToDelete.forEach((el) => {
+      delete nextGroups[el];
+    });
     newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY] = newFlightElements;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY] = nextGroups;
     onUpdatePhraseBank(newPhraseBank);
     if (selectedToDelete.has(selectedElement)) setSelectedElement(newFlightElements[0] || "Generic Flying Elements");
     setSelectedToDelete(/* @__PURE__ */ new Set());
@@ -57840,6 +57992,36 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-2xl font-bold text-sky-400", children: currentDimension }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Define standardized phrases for each grade level." })
+      ] }),
+      activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-gray-700 rounded-lg bg-gray-800/70 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2", children: "Training report section" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: currentElementGroup,
+              onChange: (event) => handleElementGroupChange(selectedElement, event.target.value),
+              onKeyDown: (event) => event.stopPropagation(),
+              readOnly,
+              className: "w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 read-only:text-gray-400"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: sectionOptions.includes(currentElementGroup) ? currentElementGroup : "",
+              onChange: (event) => handleElementGroupChange(selectedElement, event.target.value),
+              disabled: readOnly,
+              className: "w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 disabled:text-gray-400",
+              children: [
+                !sectionOptions.includes(currentElementGroup) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Custom section" }),
+                sectionOptions.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: section, children: section }, section))
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "This controls which heading this element appears under on the training report." })
       ] }),
       [5, 4, 3, 2, 1, 0].map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `border rounded-lg overflow-hidden ${getGradeColor(grade)}`, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-2 font-bold text-sm border-b border-gray-700/30 flex justify-between items-center", children: [

@@ -126,6 +126,43 @@ const INITIAL_ELEMENTS_LIST_INLINE = [
     'Crosswind', 'Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'
 ];
 const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
+const DEFAULT_SCORING_MATRIX_SECTIONS = [
+    'Core Dimensions',
+    'Procedural Framework',
+    'Takeoff',
+    'Departure',
+    'Core Handling Skills',
+    'Turns',
+    'Recovery',
+    'Landing',
+    'Domestics',
+    'Additional Elements',
+];
+const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS: Record<string, string> = {
+    Airmanship: 'Core Dimensions',
+    Preparation: 'Core Dimensions',
+    Technique: 'Core Dimensions',
+    'Pre-Post Flight': 'Procedural Framework',
+    'Walk Around': 'Procedural Framework',
+    'Strap-in': 'Procedural Framework',
+    'Ground Checks': 'Procedural Framework',
+    'Airborne Checks': 'Procedural Framework',
+    Stationary: 'Takeoff',
+    Visual: 'Departure',
+    'Effects of Control': 'Core Handling Skills',
+    Trimming: 'Core Handling Skills',
+    'Straight and Level': 'Core Handling Skills',
+    'Level medium Turn': 'Turns',
+    'Level Steep turn': 'Turns',
+    'Visual - Initial & Pitch': 'Recovery',
+    Landing: 'Landing',
+    Crosswind: 'Landing',
+    'Radio Comms': 'Domestics',
+    'Situational Awareness': 'Domestics',
+    Lookout: 'Domestics',
+    Knowledge: 'Domestics',
+};
 
 const getConfiguredScoringMatrixElements = (phraseBank: PhraseBank): string[] => {
     const savedElements = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
@@ -176,6 +213,23 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
     const [selectedElement, setSelectedElement] = useState<string>(flightElements[0]);
 
     const currentDimension = activeTab === 'Elements' ? selectedElement : activeTab;
+    const configuredElementGroups = ((phraseBank as any)?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY] || {}) as Record<string, string>;
+    const currentElementGroup = configuredElementGroups[selectedElement] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[selectedElement] || 'Additional Elements';
+    const sectionOptions = Array.from(new Set([
+        ...DEFAULT_SCORING_MATRIX_SECTIONS,
+        ...Object.values(configuredElementGroups).map(value => String(value || '').trim()).filter(Boolean),
+        currentElementGroup,
+    ]));
+
+    const handleElementGroupChange = (element: string, group: string) => {
+        onUpdatePhraseBank({
+            ...phraseBank,
+            [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
+                ...configuredElementGroups,
+                [element]: group,
+            },
+        } as PhraseBank);
+    };
 
     const handlePhraseChange = (grade: number, index: number, value: string) => {
         const currentPhrases = (phraseBank && phraseBank[currentDimension]) || {};
@@ -206,6 +260,10 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
         onUpdatePhraseBank({
             ...phraseBank,
             [SCORING_MATRIX_ELEMENT_LIST_KEY]: nextElements,
+            [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
+                ...configuredElementGroups,
+                [name]: 'Additional Elements',
+            },
             [name]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
         } as PhraseBank);
         setSelectedElement(name);
@@ -220,7 +278,10 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
         setFlightElements(newFlightElements);
         const newPhraseBank = { ...phraseBank };
         selectedToDelete.forEach(el => { delete newPhraseBank[el]; });
+        const nextGroups = { ...configuredElementGroups };
+        selectedToDelete.forEach(el => { delete nextGroups[el]; });
         (newPhraseBank as any)[SCORING_MATRIX_ELEMENT_LIST_KEY] = newFlightElements;
+        (newPhraseBank as any)[SCORING_MATRIX_ELEMENT_GROUPS_KEY] = nextGroups;
         onUpdatePhraseBank(newPhraseBank);
         if (selectedToDelete.has(selectedElement)) setSelectedElement(newFlightElements[0] || 'Generic Flying Elements');
         setSelectedToDelete(new Set());
@@ -297,6 +358,38 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
                     <h3 className="text-2xl font-bold text-sky-400">{currentDimension}</h3>
                     <p className="text-gray-400 text-sm">Define standardized phrases for each grade level.</p>
                 </div>
+
+                {activeTab === 'Elements' && (
+                    <div className="border border-gray-700 rounded-lg bg-gray-800/70 p-4">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                            Training report section
+                        </label>
+                        <div className="grid grid-cols-1 md:grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3">
+                            <input
+                                type="text"
+                                value={currentElementGroup}
+                                onChange={(event) => handleElementGroupChange(selectedElement, event.target.value)}
+                                onKeyDown={(event) => event.stopPropagation()}
+                                readOnly={readOnly}
+                                className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 read-only:text-gray-400"
+                            />
+                            <select
+                                value={sectionOptions.includes(currentElementGroup) ? currentElementGroup : ''}
+                                onChange={(event) => handleElementGroupChange(selectedElement, event.target.value)}
+                                disabled={readOnly}
+                                className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 disabled:text-gray-400"
+                            >
+                                {!sectionOptions.includes(currentElementGroup) && <option value="">Custom section</option>}
+                                {sectionOptions.map(section => (
+                                    <option key={section} value={section}>{section}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <p className="mt-2 text-xs text-gray-500">
+                            This controls which heading this element appears under on the training report.
+                        </p>
+                    </div>
+                )}
 
                 {[5, 4, 3, 2, 1, 0].map(grade => (
                     <div key={grade} className={`border rounded-lg overflow-hidden ${getGradeColor(grade)}`}>

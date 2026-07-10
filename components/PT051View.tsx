@@ -54,6 +54,7 @@ const PT051_STRUCTURE = [
 
 const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
 const DEFAULT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
 const COMMENT_SECTIONS = ['QFI', 'Weather', 'Profile', 'Overall', 'NEST'] as const;
 
 const normaliseAssessedElements = (elements?: string[]): string[] => {
@@ -71,24 +72,29 @@ const normaliseAssessedElements = (elements?: string[]): string[] => {
     return selected.length > 0 ? selected : DEFAULT_ASSESSED_ELEMENTS;
 };
 
-const buildAssessmentStructure = (elements?: string[]) => {
+const getDefaultElementGroup = (element: string): string => (
+    PT051_STRUCTURE.find(category =>
+        category.elements.some(candidate => candidate.toLowerCase() === element.toLowerCase())
+    )?.category || 'Additional Elements'
+);
+
+const buildAssessmentStructure = (elements?: string[], phraseBank?: PhraseBank) => {
     const selectedElements = normaliseAssessedElements(elements);
-    const selectedKeys = new Set(selectedElements.map(element => element.toLowerCase()));
-    const usedKeys = new Set<string>();
-    const categories = PT051_STRUCTURE
-        .map(category => ({
-            ...category,
-            elements: category.elements.filter(element => {
-                const include = selectedKeys.has(element.toLowerCase());
-                if (include) usedKeys.add(element.toLowerCase());
-                return include;
-            }),
-        }))
+    const configuredGroups = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY] || {};
+    const categoryOrder = PT051_STRUCTURE.map(category => category.category);
+    const grouped = new Map<string, string[]>();
+
+    selectedElements.forEach(element => {
+        const configuredGroup = String(configuredGroups[element] || '').trim();
+        const category = configuredGroup || getDefaultElementGroup(element);
+        if (!categoryOrder.includes(category)) categoryOrder.push(category);
+        grouped.set(category, [...(grouped.get(category) || []), element]);
+    });
+
+    const categories = categoryOrder
+        .map(category => ({ category, elements: grouped.get(category) || [] }))
         .filter(category => category.elements.length > 0);
-    const additionalElements = selectedElements.filter(element => !usedKeys.has(element.toLowerCase()));
-    if (additionalElements.length > 0) {
-        categories.push({ category: 'Additional Elements', elements: additionalElements });
-    }
+
     return categories.length > 0 ? categories : [{ category: 'Core Dimensions', elements: DEFAULT_ASSESSED_ELEMENTS }];
 };
 
@@ -368,8 +374,8 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         ));
     }, [event.eventCode, event.flightNumber, currentEvent?.eventCode, currentEvent?.flightNumber, initialAssessment?.flightNumber, syllabusDetails]);
     const assessmentStructure = useMemo(
-        () => buildAssessmentStructure(syllabusEvent?.assessedElements),
-        [syllabusEvent?.assessedElements]
+        () => buildAssessmentStructure(syllabusEvent?.assessedElements, phraseBank),
+        [syllabusEvent?.assessedElements, phraseBank]
     );
     const assessmentElements = useMemo(
         () => assessmentStructure.flatMap(category => category.elements),
