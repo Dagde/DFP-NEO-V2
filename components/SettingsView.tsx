@@ -163,6 +163,7 @@ const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS: Record<string, string> = {
     Lookout: 'Domestics',
     Knowledge: 'Domestics',
 };
+const SCORING_MATRIX_SECTION_HELP = 'Choose where this element appears in the training report. Type a new section name to add it. A section stays in the dropdown while at least one element uses it. To rename a section, change each element using the old name to the new name.';
 
 const getConfiguredScoringMatrixElements = (phraseBank: PhraseBank): string[] => {
     const savedElements = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
@@ -361,9 +362,22 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
 
                 {activeTab === 'Elements' && (
                     <div className="border border-gray-700 rounded-lg bg-gray-800/70 p-4">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
-                            Training report section
-                        </label>
+                        <div className="mb-2 flex items-center gap-2">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-gray-400">
+                                Training report section
+                            </label>
+                            <span className="group relative inline-flex">
+                                <span
+                                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300"
+                                    title={SCORING_MATRIX_SECTION_HELP}
+                                >
+                                    i
+                                </span>
+                                <span className="pointer-events-none absolute left-1/2 top-6 z-30 hidden w-72 -translate-x-1/2 rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-gray-200 shadow-xl group-hover:block">
+                                    {SCORING_MATRIX_SECTION_HELP}
+                                </span>
+                            </span>
+                        </div>
                         <div className="w-full max-w-full overflow-x-auto pb-1">
                             <div className="grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3">
                                 <input

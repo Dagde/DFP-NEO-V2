@@ -55894,6 +55894,7 @@ const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS$1 = {
   Lookout: "Domestics",
   Knowledge: "Domestics"
 };
+const SCORING_MATRIX_SECTION_HELP$1 = "Choose where this element appears in the training report. Type a new section name to add it. A section stays in the dropdown while at least one element uses it. To rename a section, change each element using the old name to the new name.";
 const getConfiguredScoringMatrixElements$1 = (phraseBank) => {
   const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$1];
   if (Array.isArray(savedElements)) {
@@ -56160,7 +56161,20 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Define standardized phrases for each grade level." })
         ] }),
         activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-gray-700 rounded-lg bg-gray-800/70 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2", children: "Training report section" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400", children: "Training report section" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "group relative inline-flex", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300",
+                  title: SCORING_MATRIX_SECTION_HELP$1,
+                  children: "i"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-30 hidden w-72 -translate-x-1/2 rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-gray-200 shadow-xl group-hover:block", children: SCORING_MATRIX_SECTION_HELP$1 })
+            ] })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full max-w-full overflow-x-auto pb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -57822,6 +57836,7 @@ const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS = {
   Lookout: "Domestics",
   Knowledge: "Domestics"
 };
+const SCORING_MATRIX_SECTION_HELP = "Choose where this element appears in the training report. Type a new section name to add it. A section stays in the dropdown while at least one element uses it. To rename a section, change each element using the old name to the new name.";
 const getConfiguredScoringMatrixElements = (phraseBank) => {
   const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
   if (Array.isArray(savedElements)) {
@@ -57994,7 +58009,20 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Define standardized phrases for each grade level." })
       ] }),
       activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-gray-700 rounded-lg bg-gray-800/70 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2", children: "Training report section" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400", children: "Training report section" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "group relative inline-flex", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300",
+                title: SCORING_MATRIX_SECTION_HELP,
+                children: "i"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-30 hidden w-72 -translate-x-1/2 rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-gray-200 shadow-xl group-hover:block", children: SCORING_MATRIX_SECTION_HELP })
+          ] })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full max-w-full overflow-x-auto pb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
