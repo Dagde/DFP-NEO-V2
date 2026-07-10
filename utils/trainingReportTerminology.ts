@@ -192,7 +192,7 @@ export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
 const cleanLabel = (value: unknown, fallback: string, maxLength: number): string => {
   if (typeof value !== 'string') return fallback;
   const trimmed = value.trim();
-  return (trimmed || fallback).slice(0, maxLength);
+  return trimmed.slice(0, maxLength);
 };
 
 export const normaliseTrainingReportTerminology = (

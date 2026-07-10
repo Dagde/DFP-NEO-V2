@@ -15,7 +15,7 @@ export const DEFAULT_RESOURCE_DISPLAY_NAMES: ResourceDisplayNames = {
 const cleanLabel = (value: unknown, fallback: string): string => {
   if (typeof value !== 'string') return fallback;
   const trimmed = value.trim();
-  return trimmed || fallback;
+  return trimmed;
 };
 
 export const getResourceDisplayNames = (resourcePool?: PlatformResourcePool | null): ResourceDisplayNames => {

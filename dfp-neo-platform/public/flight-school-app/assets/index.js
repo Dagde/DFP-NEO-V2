@@ -2997,7 +2997,7 @@ const DEFAULT_RESOURCE_DISPLAY_NAMES = {
 const cleanLabel$2 = (value, fallback) => {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
-  return trimmed || fallback;
+  return trimmed;
 };
 const getResourceDisplayNames = (resourcePool) => {
   const settings = resourcePool?.settings || {};
@@ -3973,7 +3973,7 @@ const DEFAULT_TRAINING_REPORT_TEMPLATE = {
 const cleanLabel$1 = (value, fallback, maxLength) => {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
-  return (trimmed || fallback).slice(0, maxLength);
+  return trimmed.slice(0, maxLength);
 };
 const normaliseTrainingReportTerminology = (input) => ({
   name: cleanLabel$1(input?.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name, TRAINING_REPORT_NAME_MAX_LENGTH)
@@ -71025,6 +71025,8 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   value: option.label,
                   disabled: !canEditTrainingReportTemplate,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                  onKeyDownCapture: stopEditableKeyPropagation,
+                  onKeyDown: stopEditableKeyPropagation,
                   onChange: (event) => updateTrainingReportGrade(option.value, { label: event.target.value })
                 }
               ) }),

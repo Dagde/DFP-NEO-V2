@@ -7614,6 +7614,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           value={option.label}
                           disabled={!canEditTrainingReportTemplate}
                           maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                          onKeyDownCapture={stopEditableKeyPropagation}
+                          onKeyDown={stopEditableKeyPropagation}
                           onChange={(event) => updateTrainingReportGrade(option.value, { label: event.target.value })}
                         />
                       </td>
