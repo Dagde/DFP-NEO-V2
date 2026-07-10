@@ -592,25 +592,52 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                               className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                             />
                             <span>Extra {isSimEvent ? 'Sim' : 'Flight'}</span>
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              min="0"
-                              value={dpcoFollowUp.extraEventHours ?? ''}
-                              placeholder="0.0"
-                              onChange={(event) => {
-                                const value = event.target.value;
-                                if (value !== '' && !/^\d*\.?\d*$/.test(value)) return;
-                                setDpcoFollowUp({
-                                  ...dpcoFollowUp,
-                                  action: 'extra-event',
-                                  extraEventHours: value === '' ? undefined : Number(value),
-                                });
-                                setSaveStatus('Unsaved');
-                              }}
-                              onKeyDown={stopEditableKeyPropagation}
-                              className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-center text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
-                            />
+                            <div className="relative h-8 rounded border border-gray-600 bg-gray-950 focus-within:border-amber-300 focus-within:ring-1 focus-within:ring-amber-300">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={dpcoFollowUp.extraEventHours ?? ''}
+                                placeholder="0.0"
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  if (value !== '' && !/^\d*\.?\d*$/.test(value)) return;
+                                  setDpcoFollowUp({
+                                    ...dpcoFollowUp,
+                                    action: 'extra-event',
+                                    extraEventHours: value === '' ? undefined : Number(value),
+                                  });
+                                  setSaveStatus('Unsaved');
+                                }}
+                                onKeyDown={stopEditableKeyPropagation}
+                                className="h-full w-full rounded bg-transparent py-1 pl-2 pr-6 text-center text-sm font-semibold text-white focus:outline-none"
+                              />
+                              <div className="absolute inset-y-0 right-0 flex w-5 flex-col border-l border-gray-700/70 text-[8px] leading-none text-gray-400">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setDpcoFollowUp(prev => ({ ...prev, action: 'extra-event', extraEventHours: Number((Number(prev.extraEventHours || 0) + 0.1).toFixed(1)) }));
+                                    setSaveStatus('Unsaved');
+                                  }}
+                                  className="flex flex-1 items-center justify-center rounded-tr hover:bg-gray-800 hover:text-gray-200"
+                                >
+                                  ▲
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setDpcoFollowUp(prev => ({ ...prev, action: 'extra-event', extraEventHours: Number(Math.max(0, Number(prev.extraEventHours || 0) - 0.1).toFixed(1)) }));
+                                    setSaveStatus('Unsaved');
+                                  }}
+                                  className="flex flex-1 items-center justify-center rounded-br hover:bg-gray-800 hover:text-gray-200"
+                                >
+                                  ▼
+                                </button>
+                              </div>
+                            </div>
                             <span className="text-xs font-bold uppercase text-gray-400">hrs</span>
                           </label>
                           <label className={`grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === 'extra-hours-next-event' ? 'border-amber-400/70 bg-amber-500/10' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
@@ -623,25 +650,52 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                               className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                             />
                             <span>Extend next event</span>
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              min="0"
-                              value={dpcoFollowUp.extraHours ?? ''}
-                              placeholder="0.0"
-                              onChange={(event) => {
-                                const value = event.target.value;
-                                if (value !== '' && !/^\d*\.?\d*$/.test(value)) return;
-                                setDpcoFollowUp({
-                                  ...dpcoFollowUp,
-                                  action: 'extra-hours-next-event',
-                                  extraHours: value === '' ? undefined : Number(value),
-                                });
-                                setSaveStatus('Unsaved');
-                              }}
-                              onKeyDown={stopEditableKeyPropagation}
-                              className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-center text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
-                            />
+                            <div className="relative h-8 rounded border border-gray-600 bg-gray-950 focus-within:border-amber-300 focus-within:ring-1 focus-within:ring-amber-300">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={dpcoFollowUp.extraHours ?? ''}
+                                placeholder="0.0"
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  if (value !== '' && !/^\d*\.?\d*$/.test(value)) return;
+                                  setDpcoFollowUp({
+                                    ...dpcoFollowUp,
+                                    action: 'extra-hours-next-event',
+                                    extraHours: value === '' ? undefined : Number(value),
+                                  });
+                                  setSaveStatus('Unsaved');
+                                }}
+                                onKeyDown={stopEditableKeyPropagation}
+                                className="h-full w-full rounded bg-transparent py-1 pl-2 pr-6 text-center text-sm font-semibold text-white focus:outline-none"
+                              />
+                              <div className="absolute inset-y-0 right-0 flex w-5 flex-col border-l border-gray-700/70 text-[8px] leading-none text-gray-400">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setDpcoFollowUp(prev => ({ ...prev, action: 'extra-hours-next-event', extraHours: Number((Number(prev.extraHours || 0) + 0.1).toFixed(1)) }));
+                                    setSaveStatus('Unsaved');
+                                  }}
+                                  className="flex flex-1 items-center justify-center rounded-tr hover:bg-gray-800 hover:text-gray-200"
+                                >
+                                  ▲
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setDpcoFollowUp(prev => ({ ...prev, action: 'extra-hours-next-event', extraHours: Number(Math.max(0, Number(prev.extraHours || 0) - 0.1).toFixed(1)) }));
+                                    setSaveStatus('Unsaved');
+                                  }}
+                                  className="flex flex-1 items-center justify-center rounded-br hover:bg-gray-800 hover:text-gray-200"
+                                >
+                                  ▼
+                                </button>
+                              </div>
+                            </div>
                             <span className="text-xs font-bold uppercase text-gray-400">hrs</span>
                           </label>
                           <label className={`grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === 'continue-no-additions' ? 'border-amber-400/70 bg-amber-500/10' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
