@@ -107931,6 +107931,153 @@ ${error instanceof Error ? error.message : String(error)}`,
     setDate(selectedDate);
     void loadSnapshotForDate(selectedDate);
   };
+  const shouldInsertTrainingReportExtraEvent = (assessment) => assessment.dcoResult === "DPCO" && assessment.dpcoFollowUp?.action === "extra-event" || assessment.dcoResult === "DNCO" && assessment.dncoFollowUp?.requestExtraFlight === true;
+  const getNextTrainingReportExtraEventCode = (sourceCode, existingCodes) => {
+    const cleanedSourceCode = String(sourceCode || "").trim();
+    if (!cleanedSourceCode) return "";
+    const buildCandidate = (code) => {
+      const suffixMatch = code.match(/^(.*?)(?:X(\d+))$/i);
+      if (!suffixMatch) return `${code}X2`;
+      const baseCode = suffixMatch[1] || code.replace(/X\d+$/i, "");
+      const currentNumber = Number(suffixMatch[2]);
+      const nextNumber = Number.isFinite(currentNumber) ? currentNumber <= 3 ? 4 : currentNumber + 1 : 2;
+      return `${baseCode}X${nextNumber}`;
+    };
+    let candidate = buildCandidate(cleanedSourceCode);
+    while (candidate && existingCodes.has(candidate.toUpperCase())) {
+      candidate = buildCandidate(candidate);
+    }
+    return candidate;
+  };
+  const findTrainingReportSourceLmpItem = (lmp, trainee, assessment) => {
+    const eventRefs = new Set([
+      assessment.eventId,
+      assessment.flightNumber
+    ].filter(Boolean).map((value) => String(value).trim()));
+    const generatedEventId = (item) => `lmp-${trainee.id || trainee.idNumber}-${item.code}`;
+    const sourceIndex = lmp.findIndex((item) => {
+      const itemRefs = [
+        item.id,
+        item.code,
+        item.masterEventId,
+        item.eventDescription,
+        generatedEventId(item)
+      ].filter(Boolean).map((value) => String(value).trim());
+      return itemRefs.some((ref) => eventRefs.has(ref));
+    });
+    return sourceIndex === -1 ? null : { item: lmp[sourceIndex], index: sourceIndex };
+  };
+  const maybeInsertTrainingReportExtraLmpEvent = async (assessment) => {
+    if (!shouldInsertTrainingReportExtraEvent(assessment)) return;
+    const trainee = allTraineesData.find((candidate) => candidate.fullName === assessment.traineeFullName);
+    if (!trainee) {
+      console.warn("[Training Report] Could not insert extra event: trainee not found", assessment.traineeFullName);
+      return;
+    }
+    const originalLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+    if (!originalLmp || originalLmp.length === 0) {
+      console.warn("[Training Report] Could not insert extra event: Individual LMP not found", assessment.traineeFullName);
+      return;
+    }
+    const existingFollowUp = originalLmp.find(
+      (item) => item.trainingReportSourceAssessmentId === assessment.id || item.trainingReportSourceEventId === assessment.eventId
+    );
+    if (existingFollowUp) return;
+    const sourceMatch = findTrainingReportSourceLmpItem(originalLmp, trainee, assessment);
+    if (!sourceMatch) {
+      console.warn("[Training Report] Could not insert extra event: assessed event not found in Individual LMP", {
+        trainee: assessment.traineeFullName,
+        eventId: assessment.eventId,
+        flightNumber: assessment.flightNumber
+      });
+      return;
+    }
+    const { item: sourceItem, index: sourceIndex } = sourceMatch;
+    if (sourceItem.type !== "Flight" && sourceItem.type !== "FTD") {
+      console.warn("[Training Report] Extra follow-up was selected for a non-flight/sim event; no LMP event inserted", {
+        trainee: assessment.traineeFullName,
+        event: sourceItem.code,
+        type: sourceItem.type
+      });
+      return;
+    }
+    const existingCodes = new Set(originalLmp.map((item) => String(item.code || item.id || "").trim().toUpperCase()).filter(Boolean));
+    const extraEventCode = getNextTrainingReportExtraEventCode(sourceItem.code || assessment.flightNumber, existingCodes);
+    if (!extraEventCode) return;
+    const nextMasterItem = originalLmp.slice(sourceIndex + 1).find((item) => !isLmpOverlayItem(item));
+    const requestedHours = assessment.dcoResult === "DPCO" ? Number(assessment.dpcoFollowUp?.extraEventHours) : NaN;
+    const eventHours = Number.isFinite(requestedHours) && requestedHours > 0 ? requestedHours : Number(sourceItem.flightOrSimHours || sourceItem.duration || sourceItem.totalEventHours || 1);
+    const preFlightTime = Number(sourceItem.preFlightTime || 0);
+    const postFlightTime = Number(sourceItem.postFlightTime || 0);
+    const anchorAfterMasterEventId = getMasterEventId(sourceItem);
+    const anchorBeforeMasterEventId = nextMasterItem ? getMasterEventId(nextMasterItem) : void 0;
+    const completedSafeSourceItem = sourceItem;
+    const { completedAt: _completedAt, isComplete: _isComplete, completed: _completed, ...sourceTemplate } = completedSafeSourceItem;
+    const extraEvent = {
+      ...sourceTemplate,
+      id: `training-report-extra-${assessment.id || assessment.eventId}-${extraEventCode}`,
+      code: extraEventCode,
+      eventDescription: extraEventCode,
+      completedAt: null,
+      isRemedial: true,
+      lmpSource: "remedial",
+      masterEventId: void 0,
+      prerequisites: [sourceItem.id || sourceItem.code].filter(Boolean),
+      prerequisitesGround: [],
+      prerequisitesFlying: [],
+      flightOrSimHours: eventHours,
+      duration: eventHours,
+      totalEventHours: eventHours + preFlightTime + postFlightTime,
+      module: sourceItem.module || "Training Report Follow-up",
+      orderKey: `${createLmpOrderKey(sourceIndex)}.${String(Date.now()).slice(-6)}`,
+      anchorAfterMasterEventId,
+      anchorBeforeMasterEventId,
+      anchorPolicy: "between",
+      userLockedPosition: true,
+      placementNeedsReview: !anchorAfterMasterEventId && !anchorBeforeMasterEventId,
+      location: sourceItem.location || school,
+      courses: sourceItem.courses || (trainee.course ? [trainee.course] : []),
+      lmpType: sourceItem.lmpType || getLmpTypeForTrainee(trainee),
+      trainingReportSourceAssessmentId: assessment.id,
+      trainingReportSourceEventId: assessment.eventId,
+      trainingReportSourceResult: assessment.dcoResult
+    };
+    const updatedLmp = [
+      ...originalLmp.slice(0, sourceIndex + 1),
+      extraEvent,
+      ...originalLmp.slice(sourceIndex + 1)
+    ];
+    try {
+      const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+      setTraineeLMPs((prev) => {
+        const updated = new Map(prev);
+        updated.set(trainee.fullName, persistedLmp);
+        return updated;
+      });
+      logAudit(
+        "Individual LMP",
+        "Insert",
+        `Inserted ${extraEventCode} from ${assessment.dcoResult} training report for ${trainee.fullName}`,
+        [
+          `Source event: ${sourceItem.code}`,
+          `Inserted event: ${extraEventCode}`,
+          `Type: ${sourceItem.type}`,
+          `Hours: ${eventHours}`,
+          `Training report: ${assessment.id || assessment.eventId}`
+        ].join("; ")
+      );
+      setSuccessMessage(`${extraEventCode} inserted into ${trainee.fullName}'s Individual LMP.`);
+    } catch (error) {
+      console.error("[Training Report] Failed to persist extra event from PT-051:", error);
+      void showDarkAlert2(
+        `The training report was saved, but the extra ${sourceItem.type === "FTD" ? "sim" : "flight"} could not be inserted into the trainee Individual LMP.
+
+${error instanceof Error ? error.message : String(error)}`,
+        "Extra Event Insert Failed",
+        "error"
+      );
+    }
+  };
   const onSavePT051Assessment = (assessment) => {
     const saveKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
     const updatedAssessments = new Map(pt051Assessments).set(saveKey, assessment);
@@ -107943,6 +108090,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
     ].filter(Boolean).join(", ");
     logAudit("Mass Completion", "Edit", `Updated PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+    void maybeInsertTrainingReportExtraLmpEvent(assessment);
   };
   const onDeletePT051Assessment = (assessmentId, eventId, traineeFullName) => {
     setPt051Assessments((prev) => {
