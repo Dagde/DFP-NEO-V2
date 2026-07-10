@@ -22822,6 +22822,39 @@ const App: React.FC = () => {
         }
     }
 
+    function summariseTrainingReportLmpItems(lmp: any[] | null | undefined): any {
+        const items = Array.isArray(lmp) ? lmp : [];
+        const reportItems = items.filter(item =>
+            item?.trainingReportSourceAssessmentId ||
+            item?.trainingReportSourceEventId ||
+            item?.trainingReportNextEventExtensions ||
+            item?.trainingReportLastExtendedByAssessmentId ||
+            item?.isRemedial === true ||
+            item?.lmpSource === 'remedial'
+        );
+        return {
+            count: items.length,
+            reportItemCount: reportItems.length,
+            reportItems: reportItems.slice(0, 12).map(item => ({
+                id: item?.id,
+                code: item?.code,
+                type: item?.type,
+                lmpSource: item?.lmpSource,
+                isRemedial: item?.isRemedial,
+                masterEventId: item?.masterEventId,
+                anchorAfterMasterEventId: item?.anchorAfterMasterEventId,
+                anchorBeforeMasterEventId: item?.anchorBeforeMasterEventId,
+                flightOrSimHours: item?.flightOrSimHours,
+                duration: item?.duration,
+                totalEventHours: item?.totalEventHours,
+                trainingReportSourceAssessmentId: item?.trainingReportSourceAssessmentId,
+                trainingReportSourceEventId: item?.trainingReportSourceEventId,
+                trainingReportNextEventExtensions: item?.trainingReportNextEventExtensions,
+                trainingReportLastExtendedByAssessmentId: item?.trainingReportLastExtendedByAssessmentId,
+            })),
+        };
+    }
+
     function shouldRecordDfpRenderDiagnostics(): boolean {
         try {
             return localStorage.getItem('neo_dfp_render_diag') === 'true';
@@ -28843,12 +28876,30 @@ const App: React.FC = () => {
     const loadPersistedTraineeLmp = useCallback(async (trainee: Trainee): Promise<SyllabusItemDetail[] | null> => {
         const matchedTrainee = allTraineesData.find((candidate: any) => candidate.fullName === trainee.fullName);
         const traineeDbId = (trainee as any).id || (matchedTrainee as any)?.id;
-        if (!traineeDbId) return null;
+        if (!traineeDbId) {
+            pushDfpDataDiag('report-lmp:load:missing-trainee-db-id', {
+                traineeFullName: trainee.fullName,
+                traineeId: (trainee as any).id || null,
+            });
+            return null;
+        }
 
         try {
             const apiBase = getApiBaseUrl();
+            pushDfpDataDiag('report-lmp:load:start', {
+                traineeFullName: trainee.fullName,
+                traineeDbId,
+                apiBase,
+            });
             const response = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
                 credentials: 'include',
+            });
+            pushDfpDataDiag('report-lmp:load:response', {
+                traineeFullName: trainee.fullName,
+                traineeDbId,
+                status: response.status,
+                ok: response.ok,
+                contentType: response.headers.get('content-type') || '',
             });
             if (!response.ok) {
                 console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, await response.text());
@@ -28857,10 +28908,23 @@ const App: React.FC = () => {
 
             const data = await response.json();
             const persistedLmp = data?.lmp?.events;
+            pushDfpDataDiag('report-lmp:load:json', {
+                traineeFullName: trainee.fullName,
+                traineeDbId,
+                lmpType: data?.lmp?.lmpType || null,
+                completedEventIds: Array.isArray(data?.lmp?.completedEventIds) ? data.lmp.completedEventIds.length : null,
+                ...summariseTrainingReportLmpItems(persistedLmp),
+            });
             if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return null;
             const persistedLmpType = data?.lmp?.lmpType || trainee.lmpType || 'BPC+IPC';
             const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode;
             if (!hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, 'Assign')) {
+                pushDfpDataDiag('report-lmp:load:blocked-access', {
+                    traineeFullName: trainee.fullName,
+                    traineeDbId,
+                    persistedLmpType,
+                    traineeUnitCode,
+                });
                 setTraineeLMPs(prev => {
                     const updated = new Map(prev);
                     updated.delete(trainee.fullName);
@@ -28878,10 +28942,15 @@ const App: React.FC = () => {
             console.log(`[Individual LMP] Loaded persisted LMP for ${trainee.fullName} (${persistedLmp.length} events)`);
             return persistedLmp;
         } catch (error) {
+            pushDfpDataDiag('report-lmp:load:error', {
+                traineeFullName: trainee.fullName,
+                traineeDbId,
+                error: error instanceof Error ? error.message : String(error),
+            });
             console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, error);
             return null;
         }
-    }, [activeUnitCode, allTraineesData, hasMasterLmpUnitAccess]);
+    }, [activeUnitCode, allTraineesData, hasMasterLmpUnitAccess, pushDfpDataDiag]);
 
     const loadPersistedPt051Assessment = useCallback(async (
         trainee: Trainee,
@@ -29800,6 +29869,10 @@ const App: React.FC = () => {
         const matchedTrainee = allTraineesData.find((candidate: any) => candidate.fullName === trainee.fullName);
         const traineeDbId = (trainee as any).id || (matchedTrainee as any)?.id;
         if (!traineeDbId) {
+            pushDfpDataDiag('report-lmp:persist:missing-trainee-db-id', {
+                traineeFullName: trainee.fullName,
+                traineeId: (trainee as any).id || null,
+            });
             throw new Error(`Cannot save Individual LMP: trainee database record not found for ${trainee.fullName}`);
         }
 
@@ -29814,6 +29887,14 @@ const App: React.FC = () => {
         const completedEventIds = Array.from(new Set([...completedFromLmp, ...completedFromScores]));
 
         const apiBase = getApiBaseUrl();
+        pushDfpDataDiag('report-lmp:persist:start', {
+            traineeFullName: trainee.fullName,
+            traineeDbId,
+            lmpType: getLmpTypeForTrainee(trainee),
+            completedEventIds: completedEventIds.length,
+            excludedCompletedEvents,
+            ...summariseTrainingReportLmpItems(lmp),
+        });
         const response = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -29825,16 +29906,58 @@ const App: React.FC = () => {
                 completedEventIds,
             }),
         });
+        pushDfpDataDiag('report-lmp:persist:response', {
+            traineeFullName: trainee.fullName,
+            traineeDbId,
+            status: response.status,
+            ok: response.ok,
+            contentType: response.headers.get('content-type') || '',
+        });
 
         if (!response.ok) {
             const errorText = await response.text();
+            pushDfpDataDiag('report-lmp:persist:error-response', {
+                traineeFullName: trainee.fullName,
+                traineeDbId,
+                status: response.status,
+                errorText,
+            });
             throw new Error(errorText || `Failed to persist Individual LMP (${response.status})`);
         }
 
         const saved = await response.json();
         const savedEvents = saved?.lmp?.events;
+        pushDfpDataDiag('report-lmp:persist:json', {
+            traineeFullName: trainee.fullName,
+            traineeDbId,
+            lmpType: saved?.lmp?.lmpType || null,
+            completedEventIds: Array.isArray(saved?.lmp?.completedEventIds) ? saved.lmp.completedEventIds.length : null,
+            ...summariseTrainingReportLmpItems(savedEvents),
+        });
         if (!Array.isArray(savedEvents) || savedEvents.length === 0) {
             throw new Error('Individual LMP save response did not include persisted events');
+        }
+
+        try {
+            const readBackResponse = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
+                credentials: 'include',
+            });
+            const readBackData = readBackResponse.ok ? await readBackResponse.json() : null;
+            pushDfpDataDiag('report-lmp:persist:readback', {
+                traineeFullName: trainee.fullName,
+                traineeDbId,
+                status: readBackResponse.status,
+                ok: readBackResponse.ok,
+                lmpType: readBackData?.lmp?.lmpType || null,
+                completedEventIds: Array.isArray(readBackData?.lmp?.completedEventIds) ? readBackData.lmp.completedEventIds.length : null,
+                ...summariseTrainingReportLmpItems(readBackData?.lmp?.events),
+            });
+        } catch (readBackError) {
+            pushDfpDataDiag('report-lmp:persist:readback-error', {
+                traineeFullName: trainee.fullName,
+                traineeDbId,
+                error: readBackError instanceof Error ? readBackError.message : String(readBackError),
+            });
         }
 
         return savedEvents;
@@ -30639,15 +30762,35 @@ const App: React.FC = () => {
     };
 
     const maybeInsertTrainingReportExtraLmpEvent = async (assessment: Pt051Assessment): Promise<void> => {
+        pushDfpDataDiag('report-lmp:extra-event:evaluate', {
+            assessmentId: assessment.id,
+            eventId: assessment.eventId,
+            flightNumber: assessment.flightNumber,
+            traineeFullName: assessment.traineeFullName,
+            dcoResult: assessment.dcoResult,
+            dpcoFollowUp: assessment.dpcoFollowUp || null,
+            dncoFollowUp: assessment.dncoFollowUp || null,
+            shouldInsert: shouldInsertTrainingReportExtraEvent(assessment),
+        });
         if (!shouldInsertTrainingReportExtraEvent(assessment)) return;
 
         const trainee = allTraineesData.find(candidate => candidate.fullName === assessment.traineeFullName);
         if (!trainee) {
+            pushDfpDataDiag('report-lmp:extra-event:no-trainee', {
+                assessmentId: assessment.id,
+                traineeFullName: assessment.traineeFullName,
+            });
             console.warn('[Training Report] Could not insert extra event: trainee not found', assessment.traineeFullName);
             return;
         }
 
         const originalLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+        pushDfpDataDiag('report-lmp:extra-event:original-lmp', {
+            assessmentId: assessment.id,
+            traineeFullName: trainee.fullName,
+            source: traineeLMPs.has(trainee.fullName) ? 'state' : 'persisted-load',
+            ...summariseTrainingReportLmpItems(originalLmp),
+        });
         if (!originalLmp || originalLmp.length === 0) {
             console.warn('[Training Report] Could not insert extra event: Individual LMP not found', assessment.traineeFullName);
             return;
@@ -30657,10 +30800,30 @@ const App: React.FC = () => {
             (item as any).trainingReportSourceAssessmentId === assessment.id ||
             (item as any).trainingReportSourceEventId === assessment.eventId
         );
-        if (existingFollowUp) return;
+        if (existingFollowUp) {
+            pushDfpDataDiag('report-lmp:extra-event:already-exists', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                existingId: existingFollowUp.id,
+                existingCode: existingFollowUp.code,
+            });
+            return;
+        }
 
         const sourceMatch = findTrainingReportSourceLmpItem(originalLmp, trainee, assessment);
         if (!sourceMatch) {
+            pushDfpDataDiag('report-lmp:extra-event:no-source-match', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                eventId: assessment.eventId,
+                flightNumber: assessment.flightNumber,
+                sample: originalLmp.slice(0, 20).map(item => ({
+                    id: item.id,
+                    code: item.code,
+                    masterEventId: item.masterEventId,
+                    eventDescription: item.eventDescription,
+                })),
+            });
             console.warn('[Training Report] Could not insert extra event: assessed event not found in Individual LMP', {
                 trainee: assessment.traineeFullName,
                 eventId: assessment.eventId,
@@ -30671,6 +30834,12 @@ const App: React.FC = () => {
 
         const { item: sourceItem, index: sourceIndex } = sourceMatch;
         if (sourceItem.type !== 'Flight' && sourceItem.type !== 'FTD') {
+            pushDfpDataDiag('report-lmp:extra-event:wrong-source-type', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                sourceCode: sourceItem.code,
+                sourceType: sourceItem.type,
+            });
             console.warn('[Training Report] Extra follow-up was selected for a non-flight/sim event; no LMP event inserted', {
                 trainee: assessment.traineeFullName,
                 event: sourceItem.code,
@@ -30732,9 +30901,35 @@ const App: React.FC = () => {
             extraEvent,
             ...originalLmp.slice(sourceIndex + 1),
         ];
+        pushDfpDataDiag('report-lmp:extra-event:prepared', {
+            assessmentId: assessment.id,
+            traineeFullName: trainee.fullName,
+            sourceCode: sourceItem.code,
+            sourceIndex,
+            extraEventCode,
+            anchorAfterMasterEventId,
+            anchorBeforeMasterEventId,
+            eventHours,
+            beforeCount: originalLmp.length,
+            afterCount: updatedLmp.length,
+            inserted: {
+                id: extraEvent.id,
+                code: extraEvent.code,
+                lmpSource: (extraEvent as any).lmpSource,
+                isRemedial: (extraEvent as any).isRemedial,
+                trainingReportSourceAssessmentId: (extraEvent as any).trainingReportSourceAssessmentId,
+                trainingReportSourceEventId: (extraEvent as any).trainingReportSourceEventId,
+            },
+        });
 
         try {
             const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+            pushDfpDataDiag('report-lmp:extra-event:persisted', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                extraEventCode,
+                ...summariseTrainingReportLmpItems(persistedLmp),
+            });
             setTraineeLMPs(prev => {
                 const updated = new Map(prev);
                 updated.set(trainee.fullName, persistedLmp);
@@ -30754,6 +30949,12 @@ const App: React.FC = () => {
             );
             setSuccessMessage(`${extraEventCode} inserted into ${trainee.fullName}'s Individual LMP.`);
         } catch (error) {
+            pushDfpDataDiag('report-lmp:extra-event:error', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                extraEventCode,
+                error: error instanceof Error ? error.message : String(error),
+            });
             console.error('[Training Report] Failed to persist extra event from PT-051:', error);
             void showDarkAlert(
                 `The training report was saved, but the extra ${sourceItem.type === 'FTD' ? 'sim' : 'flight'} could not be inserted into the trainee Individual LMP.\n\n${error instanceof Error ? error.message : String(error)}`,
@@ -30764,15 +30965,34 @@ const App: React.FC = () => {
     };
 
     const maybeExtendTrainingReportNextLmpEvent = async (assessment: Pt051Assessment): Promise<void> => {
+        pushDfpDataDiag('report-lmp:extend-next:evaluate', {
+            assessmentId: assessment.id,
+            eventId: assessment.eventId,
+            flightNumber: assessment.flightNumber,
+            traineeFullName: assessment.traineeFullName,
+            dcoResult: assessment.dcoResult,
+            dpcoFollowUp: assessment.dpcoFollowUp || null,
+            shouldExtend: shouldExtendTrainingReportNextEvent(assessment),
+        });
         if (!shouldExtendTrainingReportNextEvent(assessment)) return;
 
         const trainee = allTraineesData.find(candidate => candidate.fullName === assessment.traineeFullName);
         if (!trainee) {
+            pushDfpDataDiag('report-lmp:extend-next:no-trainee', {
+                assessmentId: assessment.id,
+                traineeFullName: assessment.traineeFullName,
+            });
             console.warn('[Training Report] Could not extend next event: trainee not found', assessment.traineeFullName);
             return;
         }
 
         const originalLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+        pushDfpDataDiag('report-lmp:extend-next:original-lmp', {
+            assessmentId: assessment.id,
+            traineeFullName: trainee.fullName,
+            source: traineeLMPs.has(trainee.fullName) ? 'state' : 'persisted-load',
+            ...summariseTrainingReportLmpItems(originalLmp),
+        });
         if (!originalLmp || originalLmp.length === 0) {
             console.warn('[Training Report] Could not extend next event: Individual LMP not found', assessment.traineeFullName);
             return;
@@ -30780,6 +31000,18 @@ const App: React.FC = () => {
 
         const sourceMatch = findTrainingReportSourceLmpItem(originalLmp, trainee, assessment);
         if (!sourceMatch) {
+            pushDfpDataDiag('report-lmp:extend-next:no-source-match', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                eventId: assessment.eventId,
+                flightNumber: assessment.flightNumber,
+                sample: originalLmp.slice(0, 20).map(item => ({
+                    id: item.id,
+                    code: item.code,
+                    masterEventId: item.masterEventId,
+                    eventDescription: item.eventDescription,
+                })),
+            });
             console.warn('[Training Report] Could not extend next event: assessed event not found in Individual LMP', {
                 trainee: assessment.traineeFullName,
                 eventId: assessment.eventId,
@@ -30790,6 +31022,12 @@ const App: React.FC = () => {
 
         const { item: sourceItem, index: sourceIndex } = sourceMatch;
         if (sourceItem.type !== 'Flight' && sourceItem.type !== 'FTD') {
+            pushDfpDataDiag('report-lmp:extend-next:wrong-source-type', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                sourceCode: sourceItem.code,
+                sourceType: sourceItem.type,
+            });
             console.warn('[Training Report] Extend next event was selected for a non-flight/sim event; no LMP event changed', {
                 trainee: assessment.traineeFullName,
                 event: sourceItem.code,
@@ -30804,6 +31042,13 @@ const App: React.FC = () => {
             !item.completedAt
         );
         if (nextEventIndex === -1) {
+            pushDfpDataDiag('report-lmp:extend-next:no-next-event', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                sourceCode: sourceItem.code,
+                sourceIndex,
+                sourceType: sourceItem.type,
+            });
             console.warn('[Training Report] Could not extend next event: no matching next flight/sim found', {
                 trainee: assessment.traineeFullName,
                 event: sourceItem.code,
@@ -30820,7 +31065,17 @@ const App: React.FC = () => {
         const previousExtension = Number(extensionLedger[extensionKey] || 0);
         const requestedExtension = Number(assessment.dpcoFollowUp?.extraHours || 0);
         const delta = requestedExtension - previousExtension;
-        if (Math.abs(delta) < 0.0001) return;
+        if (Math.abs(delta) < 0.0001) {
+            pushDfpDataDiag('report-lmp:extend-next:no-delta', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                sourceCode: sourceItem.code,
+                nextEventCode: nextEvent.code,
+                requestedExtension,
+                previousExtension,
+            });
+            return;
+        }
 
         const existingFlightOrSimHours = Number(nextEvent.flightOrSimHours || nextEvent.duration || 0);
         const existingDuration = Number(nextEvent.duration || nextEvent.flightOrSimHours || 0);
@@ -30837,9 +31092,38 @@ const App: React.FC = () => {
         };
 
         const updatedLmp = originalLmp.map((item, index) => index === nextEventIndex ? updatedNextEvent : item);
+        pushDfpDataDiag('report-lmp:extend-next:prepared', {
+            assessmentId: assessment.id,
+            traineeFullName: trainee.fullName,
+            sourceCode: sourceItem.code,
+            sourceIndex,
+            nextEventCode: nextEvent.code,
+            nextEventIndex,
+            requestedExtension,
+            previousExtension,
+            delta,
+            before: {
+                flightOrSimHours: existingFlightOrSimHours,
+                duration: existingDuration,
+                totalEventHours: existingTotalEventHours,
+            },
+            after: {
+                flightOrSimHours: updatedNextEvent.flightOrSimHours,
+                duration: updatedNextEvent.duration,
+                totalEventHours: updatedNextEvent.totalEventHours,
+                trainingReportNextEventExtensions: updatedNextEvent.trainingReportNextEventExtensions,
+                trainingReportLastExtendedByAssessmentId: updatedNextEvent.trainingReportLastExtendedByAssessmentId,
+            },
+        });
 
         try {
             const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+            pushDfpDataDiag('report-lmp:extend-next:persisted', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                nextEventCode: nextEvent.code,
+                ...summariseTrainingReportLmpItems(persistedLmp),
+            });
             setTraineeLMPs(prev => {
                 const updated = new Map(prev);
                 updated.set(trainee.fullName, persistedLmp);
@@ -30859,6 +31143,12 @@ const App: React.FC = () => {
             );
             setSuccessMessage(`${nextEvent.code} extended by ${requestedExtension.toFixed(1)} hrs in ${trainee.fullName}'s Individual LMP.`);
         } catch (error) {
+            pushDfpDataDiag('report-lmp:extend-next:error', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                nextEventCode: nextEvent.code,
+                error: error instanceof Error ? error.message : String(error),
+            });
             console.error('[Training Report] Failed to persist next event extension from PT-051:', error);
             void showDarkAlert(
                 `The training report was saved, but the next ${sourceItem.type === 'FTD' ? 'sim' : 'flight'} could not be extended in the trainee Individual LMP.\n\n${error instanceof Error ? error.message : String(error)}`,
@@ -30868,7 +31158,7 @@ const App: React.FC = () => {
         }
     };
 
-    const onSavePT051Assessment = (assessment: Pt051Assessment) => {
+    const onSavePT051Assessment = async (assessment: Pt051Assessment) => {
         // Use traineeFullName for the key to ensure consistency across the app
         const saveKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
         const updatedAssessments = new Map(pt051Assessments).set(saveKey, assessment);
@@ -30884,8 +31174,8 @@ const App: React.FC = () => {
         ].filter(Boolean).join(', ');
 
         logAudit('Mass Completion', 'Edit', `Updated PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
-        void maybeInsertTrainingReportExtraLmpEvent(assessment);
-        void maybeExtendTrainingReportNextLmpEvent(assessment);
+        await maybeInsertTrainingReportExtraLmpEvent(assessment);
+        await maybeExtendTrainingReportNextLmpEvent(assessment);
     };
 
     const onDeletePT051Assessment = (assessmentId: string, eventId: string, traineeFullName: string) => {

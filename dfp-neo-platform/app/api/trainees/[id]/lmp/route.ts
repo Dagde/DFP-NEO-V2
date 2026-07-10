@@ -6,6 +6,39 @@ const prisma = new PrismaClient();
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+const summariseReportLmpItems = (events: any) => {
+  const items = Array.isArray(events) ? events : [];
+  const reportItems = items.filter(item =>
+    item?.trainingReportSourceAssessmentId ||
+    item?.trainingReportSourceEventId ||
+    item?.trainingReportNextEventExtensions ||
+    item?.trainingReportLastExtendedByAssessmentId ||
+    item?.isRemedial === true ||
+    item?.lmpSource === 'remedial'
+  );
+  return {
+    eventCount: items.length,
+    reportItemCount: reportItems.length,
+    reportItems: reportItems.slice(0, 12).map(item => ({
+      id: item?.id,
+      code: item?.code,
+      type: item?.type,
+      lmpSource: item?.lmpSource,
+      isRemedial: item?.isRemedial,
+      masterEventId: item?.masterEventId,
+      anchorAfterMasterEventId: item?.anchorAfterMasterEventId,
+      anchorBeforeMasterEventId: item?.anchorBeforeMasterEventId,
+      flightOrSimHours: item?.flightOrSimHours,
+      duration: item?.duration,
+      totalEventHours: item?.totalEventHours,
+      trainingReportSourceAssessmentId: item?.trainingReportSourceAssessmentId,
+      trainingReportSourceEventId: item?.trainingReportSourceEventId,
+      trainingReportNextEventExtensions: item?.trainingReportNextEventExtensions,
+      trainingReportLastExtendedByAssessmentId: item?.trainingReportLastExtendedByAssessmentId,
+    })),
+  };
+};
+
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
@@ -30,8 +63,20 @@ export async function GET(
     });
 
     if (!lmp) {
+      console.log('[LMP GET DIAG]', {
+        id,
+        status: 'not-found',
+      });
       return NextResponse.json({ lmp: null }, { headers: getCorsHeaders(request) });
     }
+
+    console.log('[LMP GET DIAG]', {
+      id,
+      traineeFullName: lmp.traineeFullName,
+      lmpType: lmp.lmpType,
+      completedEventIds: Array.isArray(lmp.completedEventIds) ? lmp.completedEventIds.length : null,
+      ...summariseReportLmpItems(lmp.events),
+    });
 
     return NextResponse.json({ lmp }, { headers: getCorsHeaders(request) });
   } catch (error) {
@@ -81,6 +126,14 @@ export async function PUT(
     }
 
     const resolvedTraineeId = trainee.id;
+    console.log('[LMP PUT DIAG] request', {
+      requestedId: traineeId,
+      resolvedTraineeId,
+      traineeFullName,
+      lmpType,
+      completedEventIds: Array.isArray(completedEventIds) ? completedEventIds.length : null,
+      ...summariseReportLmpItems(events),
+    });
     const lmp = await (prisma as any).individualLMP.upsert({
       where: { traineeId: resolvedTraineeId },
       update: {
@@ -97,6 +150,15 @@ export async function PUT(
         events,
         completedEventIds: completedEventIds || [],
       },
+    });
+
+    console.log('[LMP PUT DIAG] saved', {
+      requestedId: traineeId,
+      resolvedTraineeId,
+      traineeFullName: lmp.traineeFullName,
+      lmpType: lmp.lmpType,
+      completedEventIds: Array.isArray(lmp.completedEventIds) ? lmp.completedEventIds.length : null,
+      ...summariseReportLmpItems(lmp.events),
     });
 
     return NextResponse.json({ success: true, lmp }, { headers: getCorsHeaders(request) });

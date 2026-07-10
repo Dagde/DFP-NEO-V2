@@ -70,6 +70,39 @@ const getIndividualLmpMasterOverrides = (item?: any): Record<string, any> => {
   }, {} as Record<string, any>);
 };
 
+const summariseReportLmpItems = (events: any) => {
+  const items = Array.isArray(events) ? events : [];
+  const reportItems = items.filter(item =>
+    item?.trainingReportSourceAssessmentId ||
+    item?.trainingReportSourceEventId ||
+    item?.trainingReportNextEventExtensions ||
+    item?.trainingReportLastExtendedByAssessmentId ||
+    item?.isRemedial === true ||
+    item?.lmpSource === 'remedial'
+  );
+  return {
+    eventCount: items.length,
+    reportItemCount: reportItems.length,
+    reportItems: reportItems.slice(0, 12).map(item => ({
+      id: item?.id,
+      code: item?.code,
+      type: item?.type,
+      lmpSource: item?.lmpSource,
+      isRemedial: item?.isRemedial,
+      masterEventId: item?.masterEventId,
+      anchorAfterMasterEventId: item?.anchorAfterMasterEventId,
+      anchorBeforeMasterEventId: item?.anchorBeforeMasterEventId,
+      flightOrSimHours: item?.flightOrSimHours,
+      duration: item?.duration,
+      totalEventHours: item?.totalEventHours,
+      trainingReportSourceAssessmentId: item?.trainingReportSourceAssessmentId,
+      trainingReportSourceEventId: item?.trainingReportSourceEventId,
+      trainingReportNextEventExtensions: item?.trainingReportNextEventExtensions,
+      trainingReportLastExtendedByAssessmentId: item?.trainingReportLastExtendedByAssessmentId,
+    })),
+  };
+};
+
 const mergeIndividualLmpWithMaster = (
   existingEvents: any[] | undefined,
   masterSyllabus: any[],
@@ -298,6 +331,18 @@ export async function POST(request: NextRequest) {
       );
 
       const lmpEvents = mergeIndividualLmpWithMaster(existingEvents, masterSyllabus, completedFromScores, trainee.scores as any[]);
+      const beforeSummary = summariseReportLmpItems(existingEvents);
+      const afterSummary = summariseReportLmpItems(lmpEvents);
+      if (beforeSummary.reportItemCount > 0 || afterSummary.reportItemCount > 0) {
+        console.log('[LMP Sync DIAG] merge report items', {
+          traineeFullName: trainee.fullName,
+          lmpType,
+          masterSyllabusEvents: masterSyllabus.length,
+          completedEventIds: completedEventIds.length,
+          before: beforeSummary,
+          after: afterSummary,
+        });
+      }
 
       // Upsert the IndividualLMP
       await (prisma as any).individualLMP.upsert({
