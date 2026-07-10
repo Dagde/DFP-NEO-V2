@@ -581,7 +581,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                       </div>
                     </div>
                     {dcoResult === 'DPCO' && (
-                      <div className="min-h-[168px] rounded-lg border border-sky-500/45 bg-gray-950/60 p-3">
+                      <div className="-mt-3 min-h-[168px] rounded-lg border border-sky-500/45 bg-gray-950/60 p-3">
                         <div className="text-xs font-bold uppercase tracking-wide text-sky-200">DPCO action</div>
                         <div className="mt-3 space-y-2 text-sm font-semibold text-white">
                           <label className={`grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === 'extra-event' ? 'border-sky-400/80 bg-sky-500/15' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
