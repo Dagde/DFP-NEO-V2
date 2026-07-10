@@ -747,7 +747,11 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                     <div className="mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2">
                       {overallGradeOptions.map(grade => (
                         <label key={grade || 'No Grade'} title={grade ? formatGradeOption(grade) : 'No Grade'} className={`flex h-[75px] w-[82px] cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${overallGrade === grade ? 'border-sky-400 bg-sky-500/15 text-white' : 'border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500'}`}>
-                          {grade && reportTemplate.grades.showNumbers && <span className="text-[11px] font-black uppercase leading-none text-white">{formatGradeNumber(grade)}</span>}
+                          {reportTemplate.grades.showNumbers && (
+                            grade
+                              ? <span className="text-[11px] font-black uppercase leading-none text-white">{formatGradeNumber(grade)}</span>
+                              : <span aria-hidden="true" className="text-[11px] font-black uppercase leading-none text-white opacity-0">0</span>
+                          )}
                           <span className="flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300">
                             {formatOverallGradeTileText(grade).split(/\s+/).map((word, index) => <span key={`${word}-${index}`}>{word}</span>)}
                           </span>
