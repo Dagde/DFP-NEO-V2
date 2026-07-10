@@ -27,6 +27,49 @@ const stampMasterLmpItems = (masterSyllabus: any[]): any[] =>
     placementNeedsReview: false,
   }));
 
+const INDIVIDUAL_LMP_EDITABLE_FIELDS = [
+  'code',
+  'eventDescription',
+  'phase',
+  'module',
+  'dayNight',
+  'type',
+  'sortieType',
+  'methodOfDelivery',
+  'methodOfAssessment',
+  'resourcesPhysical',
+  'resourcesHuman',
+  'resourceNumber',
+  'resourceCount',
+  'acceptableAircraftConfigs',
+  'eventDetailsCommon',
+  'eventDetailsSortie',
+  'flightOrSimHours',
+  'totalEventHours',
+  'duration',
+  'preFlightTime',
+  'postFlightTime',
+  'prerequisites',
+  'prerequisitesGround',
+  'prerequisitesFlying',
+  'location',
+  'twrDiReqd',
+  'cctOnly',
+  'notes',
+  'trainingReportNextEventExtensions',
+  'trainingReportLastExtendedByAssessmentId',
+];
+
+const getIndividualLmpMasterOverrides = (item?: any): Record<string, any> => {
+  if (!item) return {};
+  return INDIVIDUAL_LMP_EDITABLE_FIELDS.reduce((overrides, field) => {
+    if (Object.prototype.hasOwnProperty.call(item, field)) {
+      overrides[field] = item[field];
+    }
+    return overrides;
+  }, {} as Record<string, any>);
+};
+
 const mergeIndividualLmpWithMaster = (
   existingEvents: any[] | undefined,
   masterSyllabus: any[],
@@ -59,6 +102,10 @@ const mergeIndividualLmpWithMaster = (
 
     return {
       ...masterItem,
+      ...getIndividualLmpMasterOverrides(existingItem),
+      id: masterItem.id,
+      masterEventId: getMasterEventId(masterItem),
+      lmpSource: 'master',
       completedAt,
       userLockedPosition: existingItem?.userLockedPosition,
       orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKey(index),
