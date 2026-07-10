@@ -249,6 +249,10 @@ export interface AirCombatTrainingReport {
   overallGrade?: string;
   overallResult?: '' | 'P' | 'F';
   dcoResult?: '' | 'DCO' | 'DPCO' | 'DNCO';
+  dpcoFollowUp?: {
+    action: 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
+    extraHours?: number;
+  };
   assessedElementScores?: Array<{
     element: string;
     grade?: string;
@@ -513,6 +517,10 @@ export interface Pt051Assessment {
   overallGrade: Pt051OverallGrade | null;
   overallResult: 'P' | 'F' | null;
   dcoResult?: 'DCO' | 'DPCO' | 'DNCO' | '';
+  dpcoFollowUp?: {
+    action: 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
+    extraHours?: number;
+  };
   overallComments?: string;
   // Add timing fields to preserve time data
   startTime?: number; // in hours (e.g., 9.5 for 9:30)

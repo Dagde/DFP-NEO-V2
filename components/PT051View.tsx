@@ -56,6 +56,7 @@ const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
 const DEFAULT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
 const COMMENT_SECTIONS = ['QFI', 'Weather', 'Profile', 'Overall', 'NEST'] as const;
+type DpcoFollowUpAction = 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
 
 const normaliseAssessedElements = (elements?: string[]): string[] => {
     const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS;
@@ -381,6 +382,17 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         () => assessmentStructure.flatMap(category => category.elements),
         [assessmentStructure]
     );
+    const isSimEvent = useMemo(() => {
+        const values = [
+            currentEvent?.type,
+            currentEvent?.eventType,
+            syllabusEvent?.type,
+            syllabusEvent?.resourceType,
+            event.type,
+            event.eventType,
+        ];
+        return values.some(value => /sim/i.test(String(value || '')));
+    }, [currentEvent?.eventType, currentEvent?.type, event.eventType, event.type, syllabusEvent?.resourceType, syllabusEvent?.type]);
     const [assessment, setAssessment] = useState(() => {
         if (initialAssessment) {
             return initialAssessment;
@@ -436,6 +448,10 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: undefined }
     );
     const [dcoResult, setDcoResult] = useState<'DCO' | 'DPCO' | 'DNCO' | ''>(initialAssessment?.dcoResult || '');
+    const [dpcoFollowUp, setDpcoFollowUp] = useState<{ action: DpcoFollowUpAction; extraHours?: number }>(() => ({
+        action: (initialAssessment?.dpcoFollowUp?.action || '') as DpcoFollowUpAction,
+        extraHours: initialAssessment?.dpcoFollowUp?.extraHours ?? undefined,
+    }));
     
     const recentPerformanceHistory = useMemo(() => {
         const history: { name: string; score: number | string; date: string; timestamp: number }[] = [];
@@ -696,6 +712,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             overallGrade,
             overallResult,
             dcoResult,
+            dpcoFollowUp: dcoResult === 'DPCO' ? dpcoFollowUp : undefined,
             groundSchoolAssessment,
             // Preserve timing data
             startTime: currentEvent?.startTime,
@@ -977,7 +994,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             handleSave(true);
         }, 1000); 
         return () => clearTimeout(timerId);
-    }, [assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment, canEditPt051]);
+    }, [assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, groundSchoolAssessment, canEditPt051]);
 
     useEffect(() => {
         registerDirtyCheck(
@@ -985,7 +1002,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             () => handleSave(false), 
             () => { setIsDirty(false); } 
         );
-    }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment]);
+    }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, groundSchoolAssessment]);
 
     const gradeHeaderColors: { [key: string]: string } = {
         'MIN': 'bg-red-800/50',
@@ -1243,31 +1260,86 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             {/* DCO/DPCO/DNCO Radio Buttons - Always available for PT-051 assessments */}
                             <div className="mt-2 mb-4">
                                 <label className="block text-sm font-medium text-gray-400 mb-2">{overallFields.result}</label>
-                                <div className="flex flex-col space-y-2">
-                                    {reportTemplate.completionResults.map((option) => (
-                                        <label key={option.code} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded">
+                                <div className="grid gap-3 md:grid-cols-[minmax(180px,220px)_minmax(220px,1fr)]">
+                                    <div className="flex min-h-[168px] flex-col space-y-2">
+                                        {reportTemplate.completionResults.map((option) => (
+                                            <label key={option.code} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded">
+                                                <input
+                                                    type="radio"
+                                                    name="dco-result"
+                                                    value={option.code}
+                                                    checked={dcoResult === option.code}
+                                                    onChange={(e) => setDcoResult(e.target.value as any)}
+                                                    className="h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
+                                                />
+                                                <span className="text-white font-medium">{option.label}</span>
+                                            </label>
+                                        ))}
+                                        <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded">
                                             <input
                                                 type="radio"
                                                 name="dco-result"
-                                                value={option.code}
-                                                checked={dcoResult === option.code}
+                                                value=""
+                                                checked={dcoResult === ''}
                                                 onChange={(e) => setDcoResult(e.target.value as any)}
                                                 className="h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
                                             />
-                                            <span className="text-white font-medium">{option.label}</span>
+                                            <span className="text-gray-400 font-medium">None</span>
                                         </label>
-                                    ))}
-                                    <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded">
-                                        <input
-                                            type="radio"
-                                            name="dco-result"
-                                            value=""
-                                            checked={dcoResult === ''}
-                                            onChange={(e) => setDcoResult(e.target.value as any)}
-                                            className="h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
-                                        />
-                                        <span className="text-gray-400 font-medium">None</span>
-                                    </label>
+                                    </div>
+                                    {dcoResult === 'DPCO' && (
+                                        <div className="min-h-[168px] rounded-lg border border-amber-500/40 bg-amber-950/15 p-3">
+                                            <div className="text-xs font-bold uppercase tracking-wide text-amber-200">DPCO follow-up</div>
+                                            <div className="mt-3 space-y-2 text-sm font-semibold text-white">
+                                                <label className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30">
+                                                    <input
+                                                        type="radio"
+                                                        name="dpco-follow-up"
+                                                        value="extra-event"
+                                                        checked={dpcoFollowUp.action === 'extra-event'}
+                                                        onChange={() => setDpcoFollowUp(prev => ({ ...prev, action: 'extra-event' }))}
+                                                        className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                                                    />
+                                                    <span>Extra {isSimEvent ? 'Sim' : 'Flight'} required</span>
+                                                </label>
+                                                <label className="flex cursor-pointer flex-wrap items-center gap-2 rounded p-1 hover:bg-gray-700/30">
+                                                    <input
+                                                        type="radio"
+                                                        name="dpco-follow-up"
+                                                        value="extra-hours-next-event"
+                                                        checked={dpcoFollowUp.action === 'extra-hours-next-event'}
+                                                        onChange={() => setDpcoFollowUp(prev => ({ ...prev, action: 'extra-hours-next-event' }))}
+                                                        className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                                                    />
+                                                    <span>Continue with extra</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={dpcoFollowUp.extraHours ?? ''}
+                                                        onChange={(e) => setDpcoFollowUp({
+                                                            action: 'extra-hours-next-event',
+                                                            extraHours: e.target.value === '' ? undefined : Number(e.target.value),
+                                                        })}
+                                                        onKeyDown={stopEditableKeyPropagation}
+                                                        className="w-20 rounded border border-gray-600 bg-gray-900 px-2 py-1 text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                                                    />
+                                                    <span>hours next event</span>
+                                                </label>
+                                                <label className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30">
+                                                    <input
+                                                        type="radio"
+                                                        name="dpco-follow-up"
+                                                        value="continue-no-additions"
+                                                        checked={dpcoFollowUp.action === 'continue-no-additions'}
+                                                        onChange={() => setDpcoFollowUp(prev => ({ ...prev, action: 'continue-no-additions' }))}
+                                                        className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                                                    />
+                                                    <span>Continue no additions</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                              <div className="mt-2 space-y-4">

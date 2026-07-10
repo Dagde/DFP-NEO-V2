@@ -20200,6 +20200,17 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     () => assessmentStructure.flatMap((category) => category.elements),
     [assessmentStructure]
   );
+  const isSimEvent = reactExports.useMemo(() => {
+    const values = [
+      currentEvent?.type,
+      currentEvent?.eventType,
+      syllabusEvent?.type,
+      syllabusEvent?.resourceType,
+      event.type,
+      event.eventType
+    ];
+    return values.some((value) => /sim/i.test(String(value || "")));
+  }, [currentEvent?.eventType, currentEvent?.type, event.eventType, event.type, syllabusEvent?.resourceType, syllabusEvent?.type]);
   const [assessment, setAssessment] = reactExports.useState(() => {
     if (initialAssessment) {
       return initialAssessment;
@@ -20249,6 +20260,10 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: void 0 }
   );
   const [dcoResult, setDcoResult] = reactExports.useState(initialAssessment?.dcoResult || "");
+  const [dpcoFollowUp, setDpcoFollowUp] = reactExports.useState(() => ({
+    action: initialAssessment?.dpcoFollowUp?.action || "",
+    extraHours: initialAssessment?.dpcoFollowUp?.extraHours ?? void 0
+  }));
   const recentPerformanceHistory = reactExports.useMemo(() => {
     const history = [];
     const isFlightOrFtd = (eventName) => {
@@ -20458,6 +20473,7 @@ ${commentFields[key]}`).join("\n\n");
       overallGrade,
       overallResult,
       dcoResult,
+      dpcoFollowUp: dcoResult === "DPCO" ? dpcoFollowUp : void 0,
       groundSchoolAssessment,
       // Preserve timing data
       startTime: currentEvent?.startTime,
@@ -20703,7 +20719,7 @@ This action cannot be undone.`;
       handleSave(true);
     }, 1e3);
     return () => clearTimeout(timerId);
-  }, [assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment, canEditPt051]);
+  }, [assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, groundSchoolAssessment, canEditPt051]);
   reactExports.useEffect(() => {
     registerDirtyCheck(
       () => isDirty,
@@ -20712,7 +20728,7 @@ This action cannot be undone.`;
         setIsDirty(false);
       }
     );
-  }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment]);
+  }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, groundSchoolAssessment]);
   const gradeHeaderColors = {
     "MIN": "bg-red-800/50",
     "DEMO": "bg-red-950/35 border-red-500/20",
@@ -20969,34 +20985,103 @@ This action cannot be undone.`;
                 /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.overallAssessment.title }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 mb-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.result }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col space-y-2", children: [
-                    reportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "input",
-                        {
-                          type: "radio",
-                          name: "dco-result",
-                          value: option.code,
-                          checked: dcoResult === option.code,
-                          onChange: (e) => setDcoResult(e.target.value),
-                          className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: option.label })
-                    ] }, option.code)),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "input",
-                        {
-                          type: "radio",
-                          name: "dco-result",
-                          value: "",
-                          checked: dcoResult === "",
-                          onChange: (e) => setDcoResult(e.target.value),
-                          className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 font-medium", children: "None" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(180px,220px)_minmax(220px,1fr)]", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-[168px] flex-col space-y-2", children: [
+                      reportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "radio",
+                            name: "dco-result",
+                            value: option.code,
+                            checked: dcoResult === option.code,
+                            onChange: (e) => setDcoResult(e.target.value),
+                            className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: option.label })
+                      ] }, option.code)),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "radio",
+                            name: "dco-result",
+                            value: "",
+                            checked: dcoResult === "",
+                            onChange: (e) => setDcoResult(e.target.value),
+                            className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 font-medium", children: "None" })
+                      ] })
+                    ] }),
+                    dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px] rounded-lg border border-amber-500/40 bg-amber-950/15 p-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-amber-200", children: "DPCO follow-up" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "radio",
+                              name: "dpco-follow-up",
+                              value: "extra-event",
+                              checked: dpcoFollowUp.action === "extra-event",
+                              onChange: () => setDpcoFollowUp((prev) => ({ ...prev, action: "extra-event" })),
+                              className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                            "Extra ",
+                            isSimEvent ? "Sim" : "Flight",
+                            " required"
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer flex-wrap items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "radio",
+                              name: "dpco-follow-up",
+                              value: "extra-hours-next-event",
+                              checked: dpcoFollowUp.action === "extra-hours-next-event",
+                              onChange: () => setDpcoFollowUp((prev) => ({ ...prev, action: "extra-hours-next-event" })),
+                              className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue with extra" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "number",
+                              min: "0",
+                              step: "0.1",
+                              value: dpcoFollowUp.extraHours ?? "",
+                              onChange: (e) => setDpcoFollowUp({
+                                action: "extra-hours-next-event",
+                                extraHours: e.target.value === "" ? void 0 : Number(e.target.value)
+                              }),
+                              onKeyDown: stopEditableKeyPropagation2,
+                              className: "w-20 rounded border border-gray-600 bg-gray-900 px-2 py-1 text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "hours next event" })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "radio",
+                              name: "dpco-follow-up",
+                              value: "continue-no-additions",
+                              checked: dpcoFollowUp.action === "continue-no-additions",
+                              onChange: () => setDpcoFollowUp((prev) => ({ ...prev, action: "continue-no-additions" })),
+                              className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue no additions" })
+                        ] })
+                      ] })
                     ] })
                   ] })
                 ] }),
@@ -54271,6 +54356,10 @@ const AirCombatTrainingReportModal = ({
   const eventCode2 = eventCodeField || matchedItem?.code || selectedEventCode || "";
   const eventDescription = eventDescriptionField || matchedItem?.eventDescription || activeSourceEvent?.notes || initialReport?.eventDescription || matchedItem?.module || "";
   const eventType = eventTypeField || matchedItem?.type || activeSourceEvent?.type || initialReport?.eventType || "";
+  const isSimEvent = reactExports.useMemo(() => {
+    const values = [eventType, eventTypeField, matchedItem?.type, activeSourceEvent?.type, initialReport?.eventType];
+    return values.some((value) => /sim/i.test(String(value || "")));
+  }, [activeSourceEvent?.type, eventType, eventTypeField, initialReport?.eventType, matchedItem?.type]);
   const trainingCode = trainingCodeField || effectiveAssignment?.code || matchedItem?.phase || "";
   const defaultDate = activeSourceEvent?.date || initialReport?.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
   const defaultStart = Number(activeSourceEvent?.startTime ?? initialReport?.startTime ?? 8);
@@ -54284,6 +54373,10 @@ const AirCombatTrainingReportModal = ({
   const [overallGrade, setOverallGrade] = reactExports.useState(initialReport?.overallGrade || "");
   const [overallResult, setOverallResult] = reactExports.useState(initialReport?.overallResult || "");
   const [dcoResult, setDcoResult] = reactExports.useState(initialReport?.dcoResult || "");
+  const [dpcoFollowUp, setDpcoFollowUp] = reactExports.useState(() => ({
+    action: initialReport?.dpcoFollowUp?.action || "",
+    extraHours: initialReport?.dpcoFollowUp?.extraHours ?? void 0
+  }));
   const [commentSections, setCommentSections] = reactExports.useState(() => {
     const parsed = parseReportComments(initialReport?.notes || "");
     return {
@@ -54462,6 +54555,7 @@ const AirCombatTrainingReportModal = ({
         overallGrade,
         overallResult,
         dcoResult,
+        dpcoFollowUp: dcoResult === "DPCO" ? dpcoFollowUp : void 0,
         assessedElementScores: elementScores,
         groundSchoolAssessment,
         notes: buildReportComments(commentSections),
@@ -54635,20 +54729,101 @@ const AirCombatTrainingReportModal = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.overallAssessment.title }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 mt-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-sm font-medium text-gray-400", children: overallFields.result }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col space-y-2", children: [
-                reportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-dco-result", value: option.code, checked: dcoResult === option.code, onChange: (event) => {
-                    setDcoResult(event.target.value);
-                    setSaveStatus("Unsaved");
-                  }, className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-white", children: option.label })
-                ] }, option.code)),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-dco-result", value: "", checked: dcoResult === "", onChange: () => {
-                    setDcoResult("");
-                    setSaveStatus("Unsaved");
-                  }, className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-gray-400", children: "None" })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(180px,220px)_minmax(220px,1fr)]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-[168px] flex-col space-y-2", children: [
+                  reportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-dco-result", value: option.code, checked: dcoResult === option.code, onChange: (event) => {
+                      setDcoResult(event.target.value);
+                      setSaveStatus("Unsaved");
+                    }, className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-white", children: option.label })
+                  ] }, option.code)),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-dco-result", value: "", checked: dcoResult === "", onChange: () => {
+                      setDcoResult("");
+                      setSaveStatus("Unsaved");
+                    }, className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-gray-400", children: "None" })
+                  ] })
+                ] }),
+                dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px] rounded-lg border border-amber-500/40 bg-amber-950/15 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-amber-200", children: "DPCO follow-up" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "training-report-dpco-follow-up",
+                          value: "extra-event",
+                          checked: dpcoFollowUp.action === "extra-event",
+                          onChange: () => {
+                            setDpcoFollowUp((prev) => ({ ...prev, action: "extra-event" }));
+                            setSaveStatus("Unsaved");
+                          },
+                          className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                        "Extra ",
+                        isSimEvent ? "Sim" : "Flight",
+                        " required"
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer flex-wrap items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "training-report-dpco-follow-up",
+                          value: "extra-hours-next-event",
+                          checked: dpcoFollowUp.action === "extra-hours-next-event",
+                          onChange: () => {
+                            setDpcoFollowUp((prev) => ({ ...prev, action: "extra-hours-next-event" }));
+                            setSaveStatus("Unsaved");
+                          },
+                          className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue with extra" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "number",
+                          min: "0",
+                          step: "0.1",
+                          value: dpcoFollowUp.extraHours ?? "",
+                          onChange: (event) => {
+                            setDpcoFollowUp({
+                              action: "extra-hours-next-event",
+                              extraHours: event.target.value === "" ? void 0 : Number(event.target.value)
+                            });
+                            setSaveStatus("Unsaved");
+                          },
+                          onKeyDown: stopEditableKeyPropagation2,
+                          className: "w-20 rounded border border-gray-600 bg-gray-900 px-2 py-1 text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "hours next event" })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "training-report-dpco-follow-up",
+                          value: "continue-no-additions",
+                          checked: dpcoFollowUp.action === "continue-no-additions",
+                          onChange: () => {
+                            setDpcoFollowUp((prev) => ({ ...prev, action: "continue-no-additions" }));
+                            setSaveStatus("Unsaved");
+                          },
+                          className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue no additions" })
+                    ] })
+                  ] })
                 ] })
               ] })
             ] }),

@@ -58,6 +58,7 @@ const formatTrainingReportDate = (dateString?: string): string => {
 
 const COMMENT_SECTION_KEYS = ['assessor', 'weather', 'profile', 'overall', 'nest', 'notes'] as const;
 type CommentSectionKey = typeof COMMENT_SECTION_KEYS[number];
+type DpcoFollowUpAction = 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
 
 const parseReportComments = (raw?: string): Record<CommentSectionKey, string> => {
   const defaults: Record<CommentSectionKey, string> = {
@@ -174,6 +175,10 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const eventCode = eventCodeField || matchedItem?.code || selectedEventCode || '';
   const eventDescription = eventDescriptionField || matchedItem?.eventDescription || activeSourceEvent?.notes || initialReport?.eventDescription || matchedItem?.module || '';
   const eventType = eventTypeField || matchedItem?.type || activeSourceEvent?.type || initialReport?.eventType || '';
+  const isSimEvent = useMemo(() => {
+    const values = [eventType, eventTypeField, matchedItem?.type, activeSourceEvent?.type, initialReport?.eventType];
+    return values.some(value => /sim/i.test(String(value || '')));
+  }, [activeSourceEvent?.type, eventType, eventTypeField, initialReport?.eventType, matchedItem?.type]);
   const trainingCode = trainingCodeField || effectiveAssignment?.code || matchedItem?.phase || '';
   const defaultDate = activeSourceEvent?.date || initialReport?.date || new Date().toISOString().slice(0, 10);
   const defaultStart = Number(activeSourceEvent?.startTime ?? initialReport?.startTime ?? 8);
@@ -190,6 +195,10 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const [overallGrade, setOverallGrade] = useState(initialReport?.overallGrade || '');
   const [overallResult, setOverallResult] = useState<'' | 'P' | 'F'>(initialReport?.overallResult || '');
   const [dcoResult, setDcoResult] = useState<'' | 'DCO' | 'DPCO' | 'DNCO'>(initialReport?.dcoResult || '');
+  const [dpcoFollowUp, setDpcoFollowUp] = useState<{ action: DpcoFollowUpAction; extraHours?: number }>(() => ({
+    action: (initialReport?.dpcoFollowUp?.action || '') as DpcoFollowUpAction,
+    extraHours: initialReport?.dpcoFollowUp?.extraHours ?? undefined,
+  }));
   const [commentSections, setCommentSections] = useState<Record<CommentSectionKey, string>>(() => {
     const parsed = parseReportComments(initialReport?.notes || '');
     return {
@@ -420,6 +429,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
         overallGrade,
         overallResult,
         dcoResult,
+        dpcoFollowUp: dcoResult === 'DPCO' ? dpcoFollowUp : undefined,
         assessedElementScores: elementScores,
         groundSchoolAssessment,
         notes: buildReportComments(commentSections),
@@ -554,17 +564,75 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                 <legend className="px-2 text-sm font-semibold text-gray-300">{reportTemplate.modules.overallAssessment.title}</legend>
                 <div className="mb-4 mt-2">
                   <label className="mb-2 block text-sm font-medium text-gray-400">{overallFields.result}</label>
-                  <div className="flex flex-col space-y-2">
-                    {reportTemplate.completionResults.map((option) => (
-                      <label key={option.code} className="flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30">
-                        <input type="radio" name="training-report-dco-result" value={option.code} checked={dcoResult === option.code} onChange={(event) => { setDcoResult(event.target.value as 'DCO' | 'DPCO' | 'DNCO'); setSaveStatus('Unsaved'); }} className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" />
-                        <span className="font-medium text-white">{option.label}</span>
+                  <div className="grid gap-3 md:grid-cols-[minmax(180px,220px)_minmax(220px,1fr)]">
+                    <div className="flex min-h-[168px] flex-col space-y-2">
+                      {reportTemplate.completionResults.map((option) => (
+                        <label key={option.code} className="flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30">
+                          <input type="radio" name="training-report-dco-result" value={option.code} checked={dcoResult === option.code} onChange={(event) => { setDcoResult(event.target.value as 'DCO' | 'DPCO' | 'DNCO'); setSaveStatus('Unsaved'); }} className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" />
+                          <span className="font-medium text-white">{option.label}</span>
+                        </label>
+                      ))}
+                      <label className="flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30">
+                        <input type="radio" name="training-report-dco-result" value="" checked={dcoResult === ''} onChange={() => { setDcoResult(''); setSaveStatus('Unsaved'); }} className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" />
+                        <span className="font-medium text-gray-400">None</span>
                       </label>
-                    ))}
-                    <label className="flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30">
-                      <input type="radio" name="training-report-dco-result" value="" checked={dcoResult === ''} onChange={() => { setDcoResult(''); setSaveStatus('Unsaved'); }} className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" />
-                      <span className="font-medium text-gray-400">None</span>
-                    </label>
+                    </div>
+                    {dcoResult === 'DPCO' && (
+                      <div className="min-h-[168px] rounded-lg border border-amber-500/40 bg-amber-950/15 p-3">
+                        <div className="text-xs font-bold uppercase tracking-wide text-amber-200">DPCO follow-up</div>
+                        <div className="mt-3 space-y-2 text-sm font-semibold text-white">
+                          <label className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30">
+                            <input
+                              type="radio"
+                              name="training-report-dpco-follow-up"
+                              value="extra-event"
+                              checked={dpcoFollowUp.action === 'extra-event'}
+                              onChange={() => { setDpcoFollowUp(prev => ({ ...prev, action: 'extra-event' })); setSaveStatus('Unsaved'); }}
+                              className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                            />
+                            <span>Extra {isSimEvent ? 'Sim' : 'Flight'} required</span>
+                          </label>
+                          <label className="flex cursor-pointer flex-wrap items-center gap-2 rounded p-1 hover:bg-gray-700/30">
+                            <input
+                              type="radio"
+                              name="training-report-dpco-follow-up"
+                              value="extra-hours-next-event"
+                              checked={dpcoFollowUp.action === 'extra-hours-next-event'}
+                              onChange={() => { setDpcoFollowUp(prev => ({ ...prev, action: 'extra-hours-next-event' })); setSaveStatus('Unsaved'); }}
+                              className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                            />
+                            <span>Continue with extra</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={dpcoFollowUp.extraHours ?? ''}
+                              onChange={(event) => {
+                                setDpcoFollowUp({
+                                  action: 'extra-hours-next-event',
+                                  extraHours: event.target.value === '' ? undefined : Number(event.target.value),
+                                });
+                                setSaveStatus('Unsaved');
+                              }}
+                              onKeyDown={stopEditableKeyPropagation}
+                              className="w-20 rounded border border-gray-600 bg-gray-900 px-2 py-1 text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                            />
+                            <span>hours next event</span>
+                          </label>
+                          <label className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30">
+                            <input
+                              type="radio"
+                              name="training-report-dpco-follow-up"
+                              value="continue-no-additions"
+                              checked={dpcoFollowUp.action === 'continue-no-additions'}
+                              onChange={() => { setDpcoFollowUp(prev => ({ ...prev, action: 'continue-no-additions' })); setSaveStatus('Unsaved'); }}
+                              className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                            />
+                            <span>Continue no additions</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-4">
