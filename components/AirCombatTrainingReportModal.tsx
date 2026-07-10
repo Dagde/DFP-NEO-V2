@@ -752,7 +752,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                               ? <span className="text-[11px] font-black uppercase leading-none text-white">{formatGradeNumber(grade)}</span>
                               : <span aria-hidden="true" className="text-[11px] font-black uppercase leading-none text-white opacity-0">0</span>
                           )}
-                          <span className="flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300">
+                          <span className={`flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300 ${!grade ? '-translate-y-2' : ''}`}>
                             {formatOverallGradeTileText(grade).split(/\s+/).map((word, index) => <span key={`${word}-${index}`}>{word}</span>)}
                           </span>
                           <input
