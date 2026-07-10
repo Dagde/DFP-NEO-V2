@@ -1295,7 +1295,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                         </div>
                                     </div>
                                     {dcoResult === 'DPCO' && (
-                                        <div className="-mt-3 min-h-[168px] rounded-lg border border-sky-500/45 bg-gray-950/60 p-3">
+                                        <div className="-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3">
                                             <div className="text-xs font-bold uppercase tracking-wide text-sky-200">DPCO action</div>
                                             <div className="mt-3 space-y-2 text-sm font-semibold text-white">
                                                 <label className={`grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === 'extra-event' ? 'border-sky-400/80 bg-sky-500/15' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
@@ -1423,7 +1423,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                         </div>
                                     )}
                                     {dcoResult === 'DNCO' && (
-                                        <div className="-mt-3 min-h-[168px] rounded-lg border border-sky-500/45 bg-gray-950/60 p-3">
+                                        <div className="-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3">
                                             <div className="text-xs font-bold uppercase tracking-wide text-sky-200">DNCO action</div>
                                             <div className="mt-3 space-y-2 text-sm font-semibold text-white">
                                                 <label className={`grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dncoFollowUp.requestExtraFlight ? 'border-sky-400/80 bg-sky-500/15' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
@@ -1445,12 +1445,12 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                              <div className="mt-2 space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-400">{overallFields.overallGrade}</label>
-                                    <div className="mt-1 grid grid-cols-4 gap-2 rounded bg-gray-950/45 p-2 sm:grid-cols-6 xl:grid-cols-12">
+                                    <div className="mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2">
                                         {overallGradeOptions.map(grade => (
                                             <label
                                                 key={grade}
                                                 title={formatGradeOption(grade)}
-                                                className={`flex min-h-[64px] cursor-pointer flex-col items-center justify-between rounded border px-1.5 py-2 text-center transition ${
+                                                className={`flex h-16 w-10 cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${
                                                     overallGrade === grade
                                                         ? 'border-sky-400 bg-sky-500/15 text-white'
                                                         : 'border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500'

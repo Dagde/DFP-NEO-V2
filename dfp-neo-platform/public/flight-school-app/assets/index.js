@@ -21022,7 +21022,7 @@ This action cannot be undone.`;
                       ] })
                     ] })
                   ] }),
-                  dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 min-h-[168px] rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
+                  dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DPCO action" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "extra-event" ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
@@ -21174,7 +21174,7 @@ This action cannot be undone.`;
                       ] })
                     ] })
                   ] }),
-                  dcoResult === "DNCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 min-h-[168px] rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
+                  dcoResult === "DNCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DNCO action" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dncoFollowUp.requestExtraFlight ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -21195,11 +21195,11 @@ This action cannot be undone.`;
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: overallFields.overallGrade }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 grid grid-cols-4 gap-2 rounded bg-gray-950/45 p-2 sm:grid-cols-6 xl:grid-cols-12", children: overallGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2", children: overallGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "label",
                       {
                         title: formatGradeOption(grade),
-                        className: `flex min-h-[64px] cursor-pointer flex-col items-center justify-between rounded border px-1.5 py-2 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`,
+                        className: `flex h-16 w-10 cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`,
                         children: [
                           reportTemplate.grades.showNumbers && (grade !== "No Grade" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeValue(grade) }) : null),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300", children: formatGradeHeaderText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
@@ -54859,7 +54859,7 @@ const AirCombatTrainingReportModal = ({
                   ] })
                 ] })
               ] }),
-              dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 min-h-[168px] rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
+              dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DPCO action" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "extra-event" ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
@@ -55026,7 +55026,7 @@ const AirCombatTrainingReportModal = ({
                   ] })
                 ] })
               ] }),
-              dcoResult === "DNCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 min-h-[168px] rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
+              dcoResult === "DNCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DNCO action" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dncoFollowUp.requestExtraFlight ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -55050,7 +55050,7 @@ const AirCombatTrainingReportModal = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: overallFields.overallGrade }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 grid grid-cols-4 gap-2 rounded bg-gray-950/45 p-2 sm:grid-cols-6 xl:grid-cols-12", children: overallGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { title: grade ? formatGradeOption(grade) : "No Grade", className: `flex min-h-[64px] cursor-pointer flex-col items-center justify-between rounded border px-1.5 py-2 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2", children: overallGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { title: grade ? formatGradeOption(grade) : "No Grade", className: `flex h-16 w-10 cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`, children: [
                   grade && reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeNumber(grade) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300", children: (grade ? formatGradeHeaderText(grade) : "No Grade").split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
