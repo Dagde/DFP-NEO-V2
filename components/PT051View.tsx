@@ -283,6 +283,9 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         if (grade === 'DEMO' || grade === 'MIN') return String(grade);
         return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
     };
+    const formatOverallGradeTileText = (grade: Pt051OverallGrade) => (
+        grade === 'No Grade' ? 'No Grade' : formatGradeText(grade)
+    );
     const formatGradeHeaderText = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
         const label = formatGradeText(grade);
         const compactLabels: Record<string, string> = {
@@ -1462,7 +1465,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                     ) : null
                                                 )}
                                                 <span className="flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300">
-                                                    {formatGradeHeaderText(grade).split(/\s+/).map((word, index) => (
+                                                    {formatOverallGradeTileText(grade).split(/\s+/).map((word, index) => (
                                                         <span key={`${word}-${index}`}>{word}</span>
                                                     ))}
                                                 </span>

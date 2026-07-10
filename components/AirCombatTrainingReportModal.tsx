@@ -148,6 +148,9 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     const label = gradeLabelMap.get(Number(value)) || String(value);
     return reportTemplate.grades.showNumbers ? label : formatGradeOption(value);
   };
+  const formatOverallGradeTileText = (value: string): string => (
+    value ? (gradeLabelMap.get(Number(value)) || String(value)) : 'No Grade'
+  );
   const formatGradeNumber = (value: number | string): string => (
     String(value).toUpperCase() === 'DEMO' ? 'DEMO' : String(value)
   );
@@ -746,7 +749,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                         <label key={grade || 'No Grade'} title={grade ? formatGradeOption(grade) : 'No Grade'} className={`flex h-16 w-[70px] cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${overallGrade === grade ? 'border-sky-400 bg-sky-500/15 text-white' : 'border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500'}`}>
                           {grade && reportTemplate.grades.showNumbers && <span className="text-[11px] font-black uppercase leading-none text-white">{formatGradeNumber(grade)}</span>}
                           <span className="flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300">
-                            {(grade ? formatGradeHeaderText(grade) : 'No Grade').split(/\s+/).map((word, index) => <span key={`${word}-${index}`}>{word}</span>)}
+                            {formatOverallGradeTileText(grade).split(/\s+/).map((word, index) => <span key={`${word}-${index}`}>{word}</span>)}
                           </span>
                           <input
                             type="radio"

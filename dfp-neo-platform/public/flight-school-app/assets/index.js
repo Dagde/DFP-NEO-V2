@@ -20120,6 +20120,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     if (grade === "DEMO" || grade === "MIN") return String(grade);
     return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
   };
+  const formatOverallGradeTileText = (grade) => grade === "No Grade" ? "No Grade" : formatGradeText(grade);
   const formatGradeHeaderText = (grade) => {
     const label = formatGradeText(grade);
     const compactLabels = {
@@ -21202,7 +21203,7 @@ This action cannot be undone.`;
                         className: `flex h-16 w-[70px] cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`,
                         children: [
                           reportTemplate.grades.showNumbers && (grade !== "No Grade" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeValue(grade) }) : null),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300", children: formatGradeHeaderText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300", children: formatOverallGradeTileText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-grade", value: grade, checked: overallGrade === grade, onChange: () => setOverallGrade(grade), className: `h-4 w-4 ${getOverallRadioAccentColor(grade)} bg-gray-600` })
                         ]
                       },
@@ -54446,6 +54447,7 @@ const AirCombatTrainingReportModal = ({
     const label = gradeLabelMap.get(Number(value)) || String(value);
     return reportTemplate.grades.showNumbers ? label : formatGradeOption(value);
   };
+  const formatOverallGradeTileText = (value) => value ? gradeLabelMap.get(Number(value)) || String(value) : "No Grade";
   const formatGradeNumber = (value) => String(value).toUpperCase() === "DEMO" ? "DEMO" : String(value);
   const [isEditMode, setIsEditMode] = reactExports.useState(startInEditMode);
   const [showRecentEventPicker, setShowRecentEventPicker] = reactExports.useState(false);
@@ -55052,7 +55054,7 @@ const AirCombatTrainingReportModal = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: overallFields.overallGrade }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2", children: overallGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { title: grade ? formatGradeOption(grade) : "No Grade", className: `flex h-16 w-[70px] cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`, children: [
                   grade && reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeNumber(grade) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300", children: (grade ? formatGradeHeaderText(grade) : "No Grade").split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300", children: formatOverallGradeTileText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
                     {
