@@ -102848,12 +102848,24 @@ const App = () => {
     setPublishedSchedules((prev) => {
       const existingNonSeed = (prev[targetDate] || []).filter((e) => !e.isHistoricalSeed);
       if (!replace && existingNonSeed.length > 0 && events2.length > 0) return prev;
+      if (!replace && existingNonSeed.length > 0 && events2.length === 0) {
+        pushDfpDataDiag("snapshot:preserve-existing-on-empty-refresh", {
+          targetDate,
+          snapshotSchool,
+          snapshotUnit,
+          source,
+          existingCount: existingNonSeed.length,
+          snapKey: snap2.date
+        });
+        return prev;
+      }
       return { ...prev, [targetDate]: events2 };
     });
     const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
     setBaselineSchedules((prev) => {
       const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
       if (!replace && prev[baselineKey] && events2.length > 0) return prev;
+      if (!replace && prev[baselineKey] && events2.length === 0) return prev;
       return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
     });
     console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || "unit not set"}), ${events2.length} events`);
