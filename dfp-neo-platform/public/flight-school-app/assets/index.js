@@ -107932,6 +107932,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     void loadSnapshotForDate(selectedDate);
   };
   const shouldInsertTrainingReportExtraEvent = (assessment) => assessment.dcoResult === "DPCO" && assessment.dpcoFollowUp?.action === "extra-event" || assessment.dcoResult === "DNCO" && assessment.dncoFollowUp?.requestExtraFlight === true;
+  const shouldExtendTrainingReportNextEvent = (assessment) => assessment.dcoResult === "DPCO" && assessment.dpcoFollowUp?.action === "extra-hours-next-event" && Number(assessment.dpcoFollowUp?.extraHours) > 0;
   const getNextTrainingReportExtraEventCode = (sourceCode, existingCodes) => {
     const cleanedSourceCode = String(sourceCode || "").trim();
     if (!cleanedSourceCode) return "";
@@ -108078,6 +108079,100 @@ ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   };
+  const maybeExtendTrainingReportNextLmpEvent = async (assessment) => {
+    if (!shouldExtendTrainingReportNextEvent(assessment)) return;
+    const trainee = allTraineesData.find((candidate) => candidate.fullName === assessment.traineeFullName);
+    if (!trainee) {
+      console.warn("[Training Report] Could not extend next event: trainee not found", assessment.traineeFullName);
+      return;
+    }
+    const originalLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+    if (!originalLmp || originalLmp.length === 0) {
+      console.warn("[Training Report] Could not extend next event: Individual LMP not found", assessment.traineeFullName);
+      return;
+    }
+    const sourceMatch = findTrainingReportSourceLmpItem(originalLmp, trainee, assessment);
+    if (!sourceMatch) {
+      console.warn("[Training Report] Could not extend next event: assessed event not found in Individual LMP", {
+        trainee: assessment.traineeFullName,
+        eventId: assessment.eventId,
+        flightNumber: assessment.flightNumber
+      });
+      return;
+    }
+    const { item: sourceItem, index: sourceIndex } = sourceMatch;
+    if (sourceItem.type !== "Flight" && sourceItem.type !== "FTD") {
+      console.warn("[Training Report] Extend next event was selected for a non-flight/sim event; no LMP event changed", {
+        trainee: assessment.traineeFullName,
+        event: sourceItem.code,
+        type: sourceItem.type
+      });
+      return;
+    }
+    const nextEventIndex = originalLmp.findIndex(
+      (item, index) => index > sourceIndex && item.type === sourceItem.type && !item.completedAt
+    );
+    if (nextEventIndex === -1) {
+      console.warn("[Training Report] Could not extend next event: no matching next flight/sim found", {
+        trainee: assessment.traineeFullName,
+        event: sourceItem.code,
+        type: sourceItem.type
+      });
+      return;
+    }
+    const nextEvent = originalLmp[nextEventIndex];
+    const extensionKey = assessment.id || assessment.eventId;
+    const extensionLedger = {
+      ...nextEvent.trainingReportNextEventExtensions || {}
+    };
+    const previousExtension = Number(extensionLedger[extensionKey] || 0);
+    const requestedExtension = Number(assessment.dpcoFollowUp?.extraHours || 0);
+    const delta = requestedExtension - previousExtension;
+    if (Math.abs(delta) < 1e-4) return;
+    const existingFlightOrSimHours = Number(nextEvent.flightOrSimHours || nextEvent.duration || 0);
+    const existingDuration = Number(nextEvent.duration || nextEvent.flightOrSimHours || 0);
+    const existingTotalEventHours = Number(nextEvent.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
+    extensionLedger[extensionKey] = requestedExtension;
+    const updatedNextEvent = {
+      ...nextEvent,
+      flightOrSimHours: Math.max(0, Number((existingFlightOrSimHours + delta).toFixed(2))),
+      duration: Math.max(0, Number((existingDuration + delta).toFixed(2))),
+      totalEventHours: Math.max(0, Number((existingTotalEventHours + delta).toFixed(2))),
+      trainingReportNextEventExtensions: extensionLedger,
+      trainingReportLastExtendedByAssessmentId: extensionKey
+    };
+    const updatedLmp = originalLmp.map((item, index) => index === nextEventIndex ? updatedNextEvent : item);
+    try {
+      const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+      setTraineeLMPs((prev) => {
+        const updated = new Map(prev);
+        updated.set(trainee.fullName, persistedLmp);
+        return updated;
+      });
+      logAudit(
+        "Individual LMP",
+        "Edit",
+        `Extended ${nextEvent.code} from DPCO training report for ${trainee.fullName}`,
+        [
+          `Source event: ${sourceItem.code}`,
+          `Extended event: ${nextEvent.code}`,
+          `Added hours: ${requestedExtension}`,
+          `Previous applied hours: ${previousExtension}`,
+          `Training report: ${extensionKey}`
+        ].join("; ")
+      );
+      setSuccessMessage(`${nextEvent.code} extended by ${requestedExtension.toFixed(1)} hrs in ${trainee.fullName}'s Individual LMP.`);
+    } catch (error) {
+      console.error("[Training Report] Failed to persist next event extension from PT-051:", error);
+      void showDarkAlert2(
+        `The training report was saved, but the next ${sourceItem.type === "FTD" ? "sim" : "flight"} could not be extended in the trainee Individual LMP.
+
+${error instanceof Error ? error.message : String(error)}`,
+        "Next Event Extension Failed",
+        "error"
+      );
+    }
+  };
   const onSavePT051Assessment = (assessment) => {
     const saveKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
     const updatedAssessments = new Map(pt051Assessments).set(saveKey, assessment);
@@ -108091,6 +108186,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     ].filter(Boolean).join(", ");
     logAudit("Mass Completion", "Edit", `Updated PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
     void maybeInsertTrainingReportExtraLmpEvent(assessment);
+    void maybeExtendTrainingReportNextLmpEvent(assessment);
   };
   const onDeletePT051Assessment = (assessmentId, eventId, traineeFullName) => {
     setPt051Assessments((prev) => {
@@ -116286,6 +116382,7 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
                   logAudit("Performance History", "Edit", `Modified PT-051 for ${normalizedAssessment.traineeFullName} - Event: ${normalizedAssessment.flightNumber} (${normalizedAssessment.date})`, changes);
                   await performanceSave;
                   await maybeInsertTrainingReportExtraLmpEvent(normalizedAssessment);
+                  await maybeExtendTrainingReportNextLmpEvent(normalizedAssessment);
                   setSuccessMessage("PT-051 Assessment Saved!");
                   const eventId = assessment.flightNumber;
                   if (eventId) {
