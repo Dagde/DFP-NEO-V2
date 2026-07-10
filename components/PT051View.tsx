@@ -1261,7 +1261,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             {/* DCO/DPCO/DNCO Radio Buttons - Always available for PT-051 assessments */}
                             <div className="mt-2 mb-4">
                                 <label className="block text-sm font-medium text-gray-400 mb-2">{overallFields.result}</label>
-                                <div className="grid gap-3 md:grid-cols-[minmax(180px,220px)_minmax(220px,1fr)]">
+                                <div className="grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]">
                                     <div className="flex min-h-[168px] flex-col space-y-2">
                                         {reportTemplate.completionResults.map((option) => (
                                             <label key={option.code} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded">
@@ -1303,18 +1303,22 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                     />
                                                     <span>Extra {isSimEvent ? 'Sim' : 'Flight'}</span>
                                                     <input
-                                                        type="number"
+                                                        type="text"
+                                                        inputMode="decimal"
                                                         min="0"
-                                                        step="0.1"
                                                         value={dpcoFollowUp.extraEventHours ?? ''}
                                                         placeholder="0.0"
-                                                        onChange={(e) => setDpcoFollowUp({
-                                                            ...dpcoFollowUp,
-                                                            action: 'extra-event',
-                                                            extraEventHours: e.target.value === '' ? undefined : Number(e.target.value),
-                                                        })}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value;
+                                                            if (value !== '' && !/^\d*\.?\d*$/.test(value)) return;
+                                                            setDpcoFollowUp({
+                                                                ...dpcoFollowUp,
+                                                                action: 'extra-event',
+                                                                extraEventHours: value === '' ? undefined : Number(value),
+                                                            });
+                                                        }}
                                                         onKeyDown={stopEditableKeyPropagation}
-                                                        className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                                                        className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-center text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
                                                     />
                                                     <span className="text-xs font-bold uppercase text-gray-400">hrs</span>
                                                 </label>
@@ -1327,20 +1331,24 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                         onChange={() => setDpcoFollowUp(prev => ({ ...prev, action: 'extra-hours-next-event' }))}
                                                         className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                                                     />
-                                                    <span>Next event extra</span>
+                                                    <span>Extend next event</span>
                                                     <input
-                                                        type="number"
+                                                        type="text"
+                                                        inputMode="decimal"
                                                         min="0"
-                                                        step="0.1"
                                                         value={dpcoFollowUp.extraHours ?? ''}
                                                         placeholder="0.0"
-                                                        onChange={(e) => setDpcoFollowUp({
-                                                            ...dpcoFollowUp,
-                                                            action: 'extra-hours-next-event',
-                                                            extraHours: e.target.value === '' ? undefined : Number(e.target.value),
-                                                        })}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value;
+                                                            if (value !== '' && !/^\d*\.?\d*$/.test(value)) return;
+                                                            setDpcoFollowUp({
+                                                                ...dpcoFollowUp,
+                                                                action: 'extra-hours-next-event',
+                                                                extraHours: value === '' ? undefined : Number(value),
+                                                            });
+                                                        }}
                                                         onKeyDown={stopEditableKeyPropagation}
-                                                        className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                                                        className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-center text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
                                                     />
                                                     <span className="text-xs font-bold uppercase text-gray-400">hrs</span>
                                                 </label>

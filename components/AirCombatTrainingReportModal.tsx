@@ -565,7 +565,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                 <legend className="px-2 text-sm font-semibold text-gray-300">{reportTemplate.modules.overallAssessment.title}</legend>
                 <div className="mb-4 mt-2">
                   <label className="mb-2 block text-sm font-medium text-gray-400">{overallFields.result}</label>
-                  <div className="grid gap-3 md:grid-cols-[minmax(180px,220px)_minmax(220px,1fr)]">
+                  <div className="grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]">
                     <div className="flex min-h-[168px] flex-col space-y-2">
                       {reportTemplate.completionResults.map((option) => (
                         <label key={option.code} className="flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30">
@@ -593,21 +593,23 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                             />
                             <span>Extra {isSimEvent ? 'Sim' : 'Flight'}</span>
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
                               min="0"
-                              step="0.1"
                               value={dpcoFollowUp.extraEventHours ?? ''}
                               placeholder="0.0"
                               onChange={(event) => {
+                                const value = event.target.value;
+                                if (value !== '' && !/^\d*\.?\d*$/.test(value)) return;
                                 setDpcoFollowUp({
                                   ...dpcoFollowUp,
                                   action: 'extra-event',
-                                  extraEventHours: event.target.value === '' ? undefined : Number(event.target.value),
+                                  extraEventHours: value === '' ? undefined : Number(value),
                                 });
                                 setSaveStatus('Unsaved');
                               }}
                               onKeyDown={stopEditableKeyPropagation}
-                              className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                              className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-center text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
                             />
                             <span className="text-xs font-bold uppercase text-gray-400">hrs</span>
                           </label>
@@ -620,23 +622,25 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                               onChange={() => { setDpcoFollowUp(prev => ({ ...prev, action: 'extra-hours-next-event' })); setSaveStatus('Unsaved'); }}
                               className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                             />
-                            <span>Next event extra</span>
+                            <span>Extend next event</span>
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
                               min="0"
-                              step="0.1"
                               value={dpcoFollowUp.extraHours ?? ''}
                               placeholder="0.0"
                               onChange={(event) => {
+                                const value = event.target.value;
+                                if (value !== '' && !/^\d*\.?\d*$/.test(value)) return;
                                 setDpcoFollowUp({
                                   ...dpcoFollowUp,
                                   action: 'extra-hours-next-event',
-                                  extraHours: event.target.value === '' ? undefined : Number(event.target.value),
+                                  extraHours: value === '' ? undefined : Number(value),
                                 });
                                 setSaveStatus('Unsaved');
                               }}
                               onKeyDown={stopEditableKeyPropagation}
-                              className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                              className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-center text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
                             />
                             <span className="text-xs font-bold uppercase text-gray-400">hrs</span>
                           </label>

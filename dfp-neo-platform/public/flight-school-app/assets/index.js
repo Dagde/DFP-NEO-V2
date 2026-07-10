@@ -20986,7 +20986,7 @@ This action cannot be undone.`;
                 /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.overallAssessment.title }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 mb-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.result }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(180px,220px)_minmax(220px,1fr)]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-[168px] flex-col space-y-2", children: [
                       reportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -21039,18 +21039,22 @@ This action cannot be undone.`;
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "input",
                             {
-                              type: "number",
+                              type: "text",
+                              inputMode: "decimal",
                               min: "0",
-                              step: "0.1",
                               value: dpcoFollowUp.extraEventHours ?? "",
                               placeholder: "0.0",
-                              onChange: (e) => setDpcoFollowUp({
-                                ...dpcoFollowUp,
-                                action: "extra-event",
-                                extraEventHours: e.target.value === "" ? void 0 : Number(e.target.value)
-                              }),
+                              onChange: (e) => {
+                                const value = e.target.value;
+                                if (value !== "" && !/^\d*\.?\d*$/.test(value)) return;
+                                setDpcoFollowUp({
+                                  ...dpcoFollowUp,
+                                  action: "extra-event",
+                                  extraEventHours: value === "" ? void 0 : Number(value)
+                                });
+                              },
                               onKeyDown: stopEditableKeyPropagation2,
-                              className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                              className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-center text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
                             }
                           ),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold uppercase text-gray-400", children: "hrs" })
@@ -21067,22 +21071,26 @@ This action cannot be undone.`;
                               className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                             }
                           ),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Next event extra" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Extend next event" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "input",
                             {
-                              type: "number",
+                              type: "text",
+                              inputMode: "decimal",
                               min: "0",
-                              step: "0.1",
                               value: dpcoFollowUp.extraHours ?? "",
                               placeholder: "0.0",
-                              onChange: (e) => setDpcoFollowUp({
-                                ...dpcoFollowUp,
-                                action: "extra-hours-next-event",
-                                extraHours: e.target.value === "" ? void 0 : Number(e.target.value)
-                              }),
+                              onChange: (e) => {
+                                const value = e.target.value;
+                                if (value !== "" && !/^\d*\.?\d*$/.test(value)) return;
+                                setDpcoFollowUp({
+                                  ...dpcoFollowUp,
+                                  action: "extra-hours-next-event",
+                                  extraHours: value === "" ? void 0 : Number(value)
+                                });
+                              },
                               onKeyDown: stopEditableKeyPropagation2,
-                              className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                              className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-center text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
                             }
                           ),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold uppercase text-gray-400", children: "hrs" })
@@ -54750,7 +54758,7 @@ const AirCombatTrainingReportModal = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.overallAssessment.title }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 mt-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-sm font-medium text-gray-400", children: overallFields.result }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(180px,220px)_minmax(220px,1fr)]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-[168px] flex-col space-y-2", children: [
                   reportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-dco-result", value: option.code, checked: dcoResult === option.code, onChange: (event) => {
@@ -54792,21 +54800,23 @@ const AirCombatTrainingReportModal = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "input",
                         {
-                          type: "number",
+                          type: "text",
+                          inputMode: "decimal",
                           min: "0",
-                          step: "0.1",
                           value: dpcoFollowUp.extraEventHours ?? "",
                           placeholder: "0.0",
                           onChange: (event) => {
+                            const value = event.target.value;
+                            if (value !== "" && !/^\d*\.?\d*$/.test(value)) return;
                             setDpcoFollowUp({
                               ...dpcoFollowUp,
                               action: "extra-event",
-                              extraEventHours: event.target.value === "" ? void 0 : Number(event.target.value)
+                              extraEventHours: value === "" ? void 0 : Number(value)
                             });
                             setSaveStatus("Unsaved");
                           },
                           onKeyDown: stopEditableKeyPropagation2,
-                          className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                          className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-center text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
                         }
                       ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold uppercase text-gray-400", children: "hrs" })
@@ -54826,25 +54836,27 @@ const AirCombatTrainingReportModal = ({
                           className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
                         }
                       ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Next event extra" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Extend next event" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "input",
                         {
-                          type: "number",
+                          type: "text",
+                          inputMode: "decimal",
                           min: "0",
-                          step: "0.1",
                           value: dpcoFollowUp.extraHours ?? "",
                           placeholder: "0.0",
                           onChange: (event) => {
+                            const value = event.target.value;
+                            if (value !== "" && !/^\d*\.?\d*$/.test(value)) return;
                             setDpcoFollowUp({
                               ...dpcoFollowUp,
                               action: "extra-hours-next-event",
-                              extraHours: event.target.value === "" ? void 0 : Number(event.target.value)
+                              extraHours: value === "" ? void 0 : Number(value)
                             });
                             setSaveStatus("Unsaved");
                           },
                           onKeyDown: stopEditableKeyPropagation2,
-                          className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-right text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
+                          className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-center text-sm font-semibold text-white focus:border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-300"
                         }
                       ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold uppercase text-gray-400", children: "hrs" })
