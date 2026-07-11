@@ -22105,6 +22105,22 @@ const TraineeProfileFlyout = ({
     const summaryDoubleMarginal = scorePoints.filter((point) => point.status === "double-marginal");
     const summaryMarginal = scorePoints.filter((point) => point.status === "marginal");
     const currentScoreAverage = scorePoints.length > 0 ? scorePoints.reduce((sum, point) => sum + point.grade, 0) / scorePoints.length : 0;
+    const countableRefSet = new Set(countableLmp.flatMap(reviewLmpRefs));
+    const courseAverageRankings = Array.from(scores.entries()).map(([name2, peerScores]) => {
+      const peerFlightScores = peerScores.filter((score) => countableRefSet.has(reviewEventCode(score.event))).map((score) => reviewNumber(score.score)).filter((value) => Number.isFinite(value));
+      if (peerFlightScores.length === 0) return null;
+      return {
+        name: name2,
+        average: peerFlightScores.reduce((sum, value) => sum + value, 0) / peerFlightScores.length,
+        completed: peerFlightScores.length
+      };
+    }).filter(Boolean).sort((a, b) => {
+      if (b.average !== a.average) return b.average - a.average;
+      if (b.completed !== a.completed) return b.completed - a.completed;
+      return String(a.name).localeCompare(String(b.name));
+    });
+    const courseRankIndex = courseAverageRankings.findIndex((entry) => entry.name === trainee.fullName);
+    const courseAverageRank = courseRankIndex >= 0 ? { rank: courseRankIndex + 1, total: courseAverageRankings.length } : { rank: 0, total: courseAverageRankings.length };
     return {
       scorePoints,
       progress: {
@@ -22116,6 +22132,7 @@ const TraineeProfileFlyout = ({
         leastProgress
       },
       currentScoreAverage,
+      courseAverageRank,
       hourRows: logRows,
       hourTotals: {
         logbook: cumulativeLogbook,
@@ -22229,7 +22246,8 @@ const TraineeProfileFlyout = ({
       addText(`Events completed: ${reviewData.progress.completedCount}/${reviewData.progress.totalCount}`, margin + 50, y + 8, 8);
       addText(`Failed: ${reviewData.summaryFailed.length}   Double marginal: ${reviewData.summaryDoubleMarginal.length}   Marginal: ${reviewData.summaryMarginal.length}`, margin + 50, y + 14, 8);
       addText(`Current score average: ${reviewData.currentScoreAverage.toFixed(1)}`, margin + 50, y + 20, 8);
-      addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Most: ${reviewData.progress.mostProgress.toFixed(0)}%   Least: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin + 50, y + 26, 8);
+      addText(`Course rank by average score: ${reviewData.courseAverageRank.rank ? `${reviewData.courseAverageRank.rank}/${reviewData.courseAverageRank.total}` : "-"}`, margin + 50, y + 26, 8);
+      addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Most: ${reviewData.progress.mostProgress.toFixed(0)}%   Least: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin + 50, y + 32, 8);
       y += 42;
     };
     doc.setFillColor(15, 24, 36);
@@ -23213,6 +23231,10 @@ ${errorText || `HTTP ${response.status}`}`);
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1.5 pr-4 text-gray-400", children: "Current score average" }),
                             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1.5 text-right font-semibold text-sky-100", children: reviewData.currentScoreAverage.toFixed(1) })
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1.5 pr-4 text-gray-400", children: "Course rank by average score" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1.5 text-right font-semibold text-sky-100", children: reviewData.courseAverageRank.rank ? `${reviewData.courseAverageRank.rank}/${reviewData.courseAverageRank.total}` : "-" })
                           ] })
                         ] }) }) })
                       ] })
