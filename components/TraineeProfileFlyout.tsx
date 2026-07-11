@@ -1837,7 +1837,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           {canViewIndividualLmp && <button onClick={handleIndividualLMPClick} className={tabBtnClass('lmp')}>View Individual LMP</button>}
                           {canAddRemedialPackage && <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>}
                           <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
-                          <div className="mt-[1px]"></div>
                           <button onClick={() => setIsEditing(true)} disabled={isFrozen} className={btnClass}>Edit</button>
                           <button onClick={onClose} className={btnClass}>Close</button>
                         </>

@@ -23183,7 +23183,6 @@ ${errorText || `HTTP ${response.status}`}`);
             canViewIndividualLmp && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleIndividualLMPClick, className: tabBtnClass("lmp"), children: "View Individual LMP" }),
             canAddRemedialPackage && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-[1px]" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setIsEditing(true), disabled: isFrozen, className: btnClass, children: "Edit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: btnClass, children: "Close" })
           ] }),
