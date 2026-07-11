@@ -315,6 +315,7 @@ type TraineeReviewPoint = {
     grade: number;
     smoothed: number;
     status: 'fail' | 'marginal' | 'double-marginal' | 'pass';
+    comments: string;
 };
 
 type TraineeReviewHourRow = {
@@ -431,6 +432,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
       isEditing: boolean; isSaving: boolean;
       onEdit: () => void; onSave: () => void; onCancel: () => void;
     } | null>(null);
+    const [reviewScoreGraphExpanded, setReviewScoreGraphExpanded] = useState(false);
+    const [reviewProgressExpanded, setReviewProgressExpanded] = useState(false);
     const [reviewHoursExpanded, setReviewHoursExpanded] = useState(false);
     const [reviewLogbookEntries, setReviewLogbookEntries] = useState<any[]>([]);
     const [reviewLogbookLoading, setReviewLogbookLoading] = useState(false);
@@ -515,10 +518,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     date: assessment.date || '',
                     grade: Number(grade),
                     dcoResult: assessment.dcoResult || '',
+                    comments: String(assessment.overallComments || assessment.trainingReportNotes || '').trim(),
                 };
             })
             .filter(Boolean)
-            .filter((point: any) => isFlightOrSimulatorReviewPoint(point.code) || isFlightOrSimulatorReviewPoint(point.id)) as Array<{ id: string; code: string; date: string; grade: number; dcoResult: string }>;
+            .filter((point: any) => isFlightOrSimulatorReviewPoint(point.code) || isFlightOrSimulatorReviewPoint(point.id)) as Array<{ id: string; code: string; date: string; grade: number; dcoResult: string; comments: string }>;
 
         const scoreOnlyPoints = traineeScores
             .filter(score => !assessmentPoints.some(point => reviewEventCode(point.code) === reviewEventCode(score.event) && point.date === score.date))
@@ -529,6 +533,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 date: score.date || '',
                 grade: Number(score.score),
                 dcoResult: '',
+                comments: String(score.notes || '').trim(),
             }));
 
         const rawPoints = [...assessmentPoints, ...scoreOnlyPoints].sort((a, b) => {
@@ -554,6 +559,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 grade: point.grade,
                 smoothed,
                 status,
+                comments: point.comments,
             };
         });
 
@@ -600,7 +606,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 const lmpItem = lmpByCode.get(code) || countableLmp.find(item => reviewLmpRefs(item).includes(code));
                 const logbookHours = reviewNumber(entry.totalTime || entry.captainLogSnapshot?.total || entry.crewLogSnapshot?.total);
                 const ineffectiveHours = reviewNumber(entry.ineffectiveTime);
-                const syllabusHours = reviewNumber(lmpItem?.flightOrSimHours || lmpItem?.totalEventHours || lmpItem?.duration);
+                const syllabusHours = reviewNumber(lmpItem?.flightOrSimHours);
                 const effectiveHours = Math.max(0, logbookHours - ineffectiveHours);
                 cumulativeLogbook += logbookHours;
                 cumulativeSyllabus += syllabusHours;
@@ -683,10 +689,29 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         y += 12;
 
         addSection('Performance Summary');
-        addText(`Failed events: ${reviewData.summaryFailed.map(item => item.code).join(', ') || 'None'}`, margin, y);
-        addText(`Double marginal events: ${reviewData.summaryDoubleMarginal.map(item => item.code).join(', ') || 'None'}`, margin, y + 5);
-        addText(`Marginal events: ${reviewData.summaryMarginal.map(item => item.code).join(', ') || 'None'}`, margin, y + 10);
-        y += 17;
+        const addSummaryLines = (label: string, items: TraineeReviewPoint[]) => {
+            ensureSpace(8);
+            addText(`${label}:`, margin, y, 8, 'bold');
+            y += 4.5;
+            if (items.length === 0) {
+                addText('None', margin + 4, y, 7);
+                y += 4.5;
+                return;
+            }
+            items.forEach(item => {
+                ensureSpace(8);
+                const comment = item.comments || 'No overall comments recorded.';
+                const lines = doc.splitTextToSize(`${item.code}: ${comment}`, pageWidth - margin * 2 - 4);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7);
+                doc.text(lines, margin + 4, y);
+                y += lines.length * 3.8 + 1;
+            });
+        };
+        addSummaryLines('Failed events', reviewData.summaryFailed);
+        addSummaryLines('Double marginal events', reviewData.summaryDoubleMarginal);
+        addSummaryLines('Marginal events', reviewData.summaryMarginal);
+        y += 2;
 
         addSection('Cumulative Hours');
         addText('Event', margin, y, 8, 'bold');
@@ -1637,8 +1662,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     )}
 
                     {activeTab === 'review' && (() => {
-                      const chartWidth = 640;
-                      const chartHeight = 190;
+                      const chartWidth = 900;
+                      const chartHeight = reviewScoreGraphExpanded ? 300 : 190;
                       const chartPadding = { left: 34, right: 18, top: 16, bottom: 38 };
                       const chartInnerWidth = chartWidth - chartPadding.left - chartPadding.right;
                       const chartInnerHeight = chartHeight - chartPadding.top - chartPadding.bottom;
@@ -1654,7 +1679,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         const y2 = 70 + Math.sin(angle) * 50;
                         return (
                           <g key={label}>
-                            <line x1="70" y1="70" x2={x2} y2={y2} stroke={colour} strokeWidth="2.5" strokeLinecap="round" />
+                            <line x1="70" y1="70" x2={x2} y2={y2} stroke={colour} strokeWidth="1.4" strokeOpacity="0.45" strokeLinecap="round" />
                             <title>{`${label}: ${value.toFixed(0)}%`}</title>
                           </g>
                         );
@@ -1667,11 +1692,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             <span className="text-[11px] font-bold uppercase tracking-wide text-gray-300">{title}</span>
                             <span className={`rounded px-2 py-0.5 text-xs font-bold ${colourClass}`}>{items.length}</span>
                           </div>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
+                          <div className="mt-2 space-y-2">
                             {items.length > 0 ? items.map((item, index) => (
-                              <span key={`${title}-${item.code}-${index}`} className="rounded bg-gray-800 px-2 py-1 font-mono text-[10px] text-gray-200">
-                                {item.code}
-                              </span>
+                              <div key={`${title}-${item.code}-${index}`} className="rounded bg-gray-800/80 px-2 py-1.5">
+                                <div className="font-mono text-[10px] font-bold text-gray-100">{item.code}</div>
+                                <div className="mt-0.5 text-[11px] leading-snug text-gray-300">{item.comments || 'No overall comments recorded.'}</div>
+                              </div>
                             )) : (
                               <span className="text-xs italic text-gray-500">None</span>
                             )}
@@ -1696,18 +1722,23 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-4">
+                          <div className="space-y-4">
                             <div className="rounded border border-gray-600/70 bg-gray-950/30 p-3">
                               <div className="mb-2 flex items-center justify-between">
-                                <h5 className="text-xs font-bold uppercase tracking-wide text-sky-100">Scores by Event</h5>
-                                <div className="flex items-center gap-3 text-[10px] text-gray-400">
-                                  <span><span className="inline-block h-2 w-2 rounded-sm bg-red-500 mr-1" />Fail</span>
-                                  <span><span className="inline-block h-2 w-2 rounded-sm bg-amber-500 mr-1" />Marginal</span>
-                                  <span><span className="inline-block h-0.5 w-4 bg-cyan-300 mr-1 align-middle" />Smoothed avg</span>
+                                <div>
+                                  <h5 className="text-xs font-bold uppercase tracking-wide text-sky-100">Scores by Event</h5>
+                                  <div className="mt-1 flex items-center gap-3 text-[10px] text-gray-400">
+                                    <span><span className="inline-block h-2 w-2 rounded-sm bg-red-500 mr-1" />Fail</span>
+                                    <span><span className="inline-block h-2 w-2 rounded-sm bg-amber-500 mr-1" />Marginal</span>
+                                    <span><span className="inline-block h-0.5 w-4 bg-cyan-300 mr-1 align-middle" />Smoothed avg</span>
+                                  </div>
                                 </div>
+                                <button onClick={() => setReviewScoreGraphExpanded(prev => !prev)} className="w-[72px] h-[34px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md">
+                                  {reviewScoreGraphExpanded ? 'Collapse' : 'Expand'}
+                                </button>
                               </div>
                               {points.length > 0 ? (
-                                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-[220px] w-full overflow-visible">
+                                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className={`${reviewScoreGraphExpanded ? 'h-[480px]' : 'h-[220px]'} w-full overflow-visible`}>
                                   {[0, 1, 2, 3, 4, 5].map(grade => (
                                     <g key={grade}>
                                       <line x1={chartPadding.left} y1={yForGrade(grade)} x2={chartWidth - chartPadding.right} y2={yForGrade(grade)} stroke="rgba(148,163,184,0.16)" />
@@ -1748,10 +1779,15 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               )}
                             </div>
 
-                            <div className="rounded border border-gray-600/70 bg-gray-950/30 p-3">
-                              <h5 className="text-xs font-bold uppercase tracking-wide text-sky-100">Course Progress</h5>
-                              <div className="mt-3 flex justify-center">
-                                <svg viewBox="0 0 140 140" className="h-36 w-36">
+                            <div className={`rounded border border-gray-600/70 bg-gray-950/30 p-3 ${reviewProgressExpanded ? '' : 'max-w-[360px]'}`}>
+                              <div className="flex items-center justify-between">
+                                <h5 className="text-xs font-bold uppercase tracking-wide text-sky-100">Course Progress</h5>
+                                <button onClick={() => setReviewProgressExpanded(prev => !prev)} className="w-[72px] h-[34px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md">
+                                  {reviewProgressExpanded ? 'Collapse' : 'Expand'}
+                                </button>
+                              </div>
+                              <div className={`mt-3 flex ${reviewProgressExpanded ? 'items-center justify-center gap-8' : 'flex-col items-center'}`}>
+                                <svg viewBox="0 0 140 140" className={reviewProgressExpanded ? 'h-64 w-64' : 'h-36 w-36'}>
                                   <circle cx="70" cy="70" r="52" fill="rgba(15,23,42,0.9)" stroke="rgba(148,163,184,0.25)" strokeWidth="14" />
                                   <circle cx="70" cy="70" r="52" fill="none" stroke="#22c55e" strokeWidth="14" strokeDasharray={progressDash} pathLength="100" transform="rotate(-90 70 70)" strokeLinecap="round" />
                                   {lineForProgress(reviewData.progress.averageProgress, '#facc15', 'Course average')}
@@ -1760,11 +1796,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                   <text x="70" y="68" fill="#f8fafc" fontSize="18" fontWeight="800" textAnchor="middle">{reviewData.progress.progressPercent.toFixed(0)}%</text>
                                   <text x="70" y="84" fill="#94a3b8" fontSize="9" textAnchor="middle">{reviewData.progress.completedCount}/{reviewData.progress.totalCount}</text>
                                 </svg>
-                              </div>
-                              <div className="mt-2 space-y-1 text-[10px] text-gray-300">
-                                <div className="flex justify-between"><span className="text-yellow-300">Course average</span><span>{reviewData.progress.averageProgress.toFixed(0)}%</span></div>
-                                <div className="flex justify-between"><span className="text-sky-300">Most progressed</span><span>{reviewData.progress.mostProgress.toFixed(0)}%</span></div>
-                                <div className="flex justify-between"><span className="text-red-300">Least progressed</span><span>{reviewData.progress.leastProgress.toFixed(0)}%</span></div>
+                                <div className={`${reviewProgressExpanded ? 'w-56' : 'mt-2'} space-y-1 text-[10px] text-gray-300`}>
+                                  <div className="flex justify-between"><span className="text-yellow-200/75">Course average</span><span>{reviewData.progress.averageProgress.toFixed(0)}%</span></div>
+                                  <div className="flex justify-between"><span className="text-sky-200/75">Most progressed</span><span>{reviewData.progress.mostProgress.toFixed(0)}%</span></div>
+                                  <div className="flex justify-between"><span className="text-red-200/75">Least progressed</span><span>{reviewData.progress.leastProgress.toFixed(0)}%</span></div>
+                                </div>
                               </div>
                             </div>
                           </div>

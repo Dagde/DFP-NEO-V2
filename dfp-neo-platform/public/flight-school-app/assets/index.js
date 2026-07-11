@@ -21956,6 +21956,8 @@ const TraineeProfileFlyout = ({
   const [inlinePt051Assessment, setInlinePt051Assessment] = reactExports.useState(null);
   const [inlinePt051Event, setInlinePt051Event] = reactExports.useState(null);
   const [currencyEditState, setCurrencyEditState] = reactExports.useState(null);
+  const [reviewScoreGraphExpanded, setReviewScoreGraphExpanded] = reactExports.useState(false);
+  const [reviewProgressExpanded, setReviewProgressExpanded] = reactExports.useState(false);
   const [reviewHoursExpanded, setReviewHoursExpanded] = reactExports.useState(false);
   const [reviewLogbookEntries, setReviewLogbookEntries] = reactExports.useState([]);
   const [reviewLogbookLoading, setReviewLogbookLoading] = reactExports.useState(false);
@@ -22018,7 +22020,8 @@ const TraineeProfileFlyout = ({
         code: assessment.flightNumber || assessment.eventId,
         date: assessment.date || "",
         grade: Number(grade),
-        dcoResult: assessment.dcoResult || ""
+        dcoResult: assessment.dcoResult || "",
+        comments: String(assessment.overallComments || assessment.trainingReportNotes || "").trim()
       };
     }).filter(Boolean).filter((point) => isFlightOrSimulatorReviewPoint(point.code) || isFlightOrSimulatorReviewPoint(point.id));
     const scoreOnlyPoints = traineeScores.filter((score) => !assessmentPoints.some((point) => reviewEventCode(point.code) === reviewEventCode(score.event) && point.date === score.date)).filter((score) => isFlightOrSimulatorReviewPoint(score.event)).map((score) => ({
@@ -22026,7 +22029,8 @@ const TraineeProfileFlyout = ({
       code: getReviewLmpItemForRef(score.event)?.code || score.event,
       date: score.date || "",
       grade: Number(score.score),
-      dcoResult: ""
+      dcoResult: "",
+      comments: String(score.notes || "").trim()
     }));
     const rawPoints = [...assessmentPoints, ...scoreOnlyPoints].sort((a, b) => {
       const dateCompare = String(a.date || "").localeCompare(String(b.date || ""));
@@ -22043,7 +22047,8 @@ const TraineeProfileFlyout = ({
         date: point.date,
         grade: point.grade,
         smoothed,
-        status
+        status,
+        comments: point.comments
       };
     });
     const countableLmp = currentIndividualLMP.filter(reviewIsCountableLmpEvent);
@@ -22079,7 +22084,7 @@ const TraineeProfileFlyout = ({
       const lmpItem = lmpByCode.get(code) || countableLmp.find((item) => reviewLmpRefs(item).includes(code));
       const logbookHours = reviewNumber(entry.totalTime || entry.captainLogSnapshot?.total || entry.crewLogSnapshot?.total);
       const ineffectiveHours = reviewNumber(entry.ineffectiveTime);
-      const syllabusHours = reviewNumber(lmpItem?.flightOrSimHours || lmpItem?.totalEventHours || lmpItem?.duration);
+      const syllabusHours = reviewNumber(lmpItem?.flightOrSimHours);
       const effectiveHours = Math.max(0, logbookHours - ineffectiveHours);
       cumulativeLogbook += logbookHours;
       cumulativeSyllabus += syllabusHours;
@@ -22156,10 +22161,29 @@ const TraineeProfileFlyout = ({
     addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Most: ${reviewData.progress.mostProgress.toFixed(0)}%   Least: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin, y + 5);
     y += 12;
     addSection("Performance Summary");
-    addText(`Failed events: ${reviewData.summaryFailed.map((item) => item.code).join(", ") || "None"}`, margin, y);
-    addText(`Double marginal events: ${reviewData.summaryDoubleMarginal.map((item) => item.code).join(", ") || "None"}`, margin, y + 5);
-    addText(`Marginal events: ${reviewData.summaryMarginal.map((item) => item.code).join(", ") || "None"}`, margin, y + 10);
-    y += 17;
+    const addSummaryLines = (label, items) => {
+      ensureSpace(8);
+      addText(`${label}:`, margin, y, 8, "bold");
+      y += 4.5;
+      if (items.length === 0) {
+        addText("None", margin + 4, y, 7);
+        y += 4.5;
+        return;
+      }
+      items.forEach((item) => {
+        ensureSpace(8);
+        const comment = item.comments || "No overall comments recorded.";
+        const lines = doc.splitTextToSize(`${item.code}: ${comment}`, pageWidth - margin * 2 - 4);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.text(lines, margin + 4, y);
+        y += lines.length * 3.8 + 1;
+      });
+    };
+    addSummaryLines("Failed events", reviewData.summaryFailed);
+    addSummaryLines("Double marginal events", reviewData.summaryDoubleMarginal);
+    addSummaryLines("Marginal events", reviewData.summaryMarginal);
+    y += 2;
     addSection("Cumulative Hours");
     addText("Event", margin, y, 8, "bold");
     addText("Date", margin + 32, y, 8, "bold");
@@ -22934,8 +22958,8 @@ ${errorText || `HTTP ${response.status}`}`);
                 }
               ),
               activeTab === "review" && (() => {
-                const chartWidth = 640;
-                const chartHeight = 190;
+                const chartWidth = 900;
+                const chartHeight = reviewScoreGraphExpanded ? 300 : 190;
                 const chartPadding = { left: 34, right: 18, top: 16, bottom: 38 };
                 const chartInnerWidth = chartWidth - chartPadding.left - chartPadding.right;
                 const chartInnerHeight = chartHeight - chartPadding.top - chartPadding.bottom;
@@ -22950,7 +22974,7 @@ ${errorText || `HTTP ${response.status}`}`);
                   const x2 = 70 + Math.cos(angle) * 50;
                   const y2 = 70 + Math.sin(angle) * 50;
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "70", y1: "70", x2, y2, stroke: colour, strokeWidth: "2.5", strokeLinecap: "round" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "70", y1: "70", x2, y2, stroke: colour, strokeWidth: "1.4", strokeOpacity: "0.45", strokeLinecap: "round" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("title", { children: `${label}: ${value.toFixed(0)}%` })
                   ] }, label);
                 };
@@ -22961,7 +22985,10 @@ ${errorText || `HTTP ${response.status}`}`);
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold uppercase tracking-wide text-gray-300", children: title }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-2 py-0.5 text-xs font-bold ${colourClass}`, children: items.length })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap gap-1.5", children: items.length > 0 ? items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800 px-2 py-1 font-mono text-[10px] text-gray-200", children: item.code }, `${title}-${item.code}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs italic text-gray-500", children: "None" }) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-2", children: items.length > 0 ? items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-800/80 px-2 py-1.5", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-[10px] font-bold text-gray-100", children: item.code }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 text-[11px] leading-snug text-gray-300", children: item.comments || "No overall comments recorded." })
+                  ] }, `${title}-${item.code}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs italic text-gray-500", children: "None" }) })
                 ] });
                 return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-4", style: card3dStyle2, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between", children: [
@@ -22977,26 +23004,29 @@ ${errorText || `HTTP ${response.status}`}`);
                       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md", children: "Close" })
                     ] })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-600/70 bg-gray-950/30 p-3", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-xs font-bold uppercase tracking-wide text-sky-100", children: "Scores by Event" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 text-[10px] text-gray-400", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block h-2 w-2 rounded-sm bg-red-500 mr-1" }),
-                            "Fail"
-                          ] }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block h-2 w-2 rounded-sm bg-amber-500 mr-1" }),
-                            "Marginal"
-                          ] }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block h-0.5 w-4 bg-cyan-300 mr-1 align-middle" }),
-                            "Smoothed avg"
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-xs font-bold uppercase tracking-wide text-sky-100", children: "Scores by Event" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-center gap-3 text-[10px] text-gray-400", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block h-2 w-2 rounded-sm bg-red-500 mr-1" }),
+                              "Fail"
+                            ] }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block h-2 w-2 rounded-sm bg-amber-500 mr-1" }),
+                              "Marginal"
+                            ] }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block h-0.5 w-4 bg-cyan-300 mr-1 align-middle" }),
+                              "Smoothed avg"
+                            ] })
                           ] })
-                        ] })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setReviewScoreGraphExpanded((prev) => !prev), className: "w-[72px] h-[34px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md", children: reviewScoreGraphExpanded ? "Collapse" : "Expand" })
                       ] }),
-                      points.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: `0 0 ${chartWidth} ${chartHeight}`, className: "h-[220px] w-full overflow-visible", children: [
+                      points.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: `0 0 ${chartWidth} ${chartHeight}`, className: `${reviewScoreGraphExpanded ? "h-[480px]" : "h-[220px]"} w-full overflow-visible`, children: [
                         [0, 1, 2, 3, 4, 5].map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: chartPadding.left, y1: yForGrade(grade), x2: chartWidth - chartPadding.right, y2: yForGrade(grade), stroke: "rgba(148,163,184,0.16)" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "8", y: yForGrade(grade) + 3, fill: "#94a3b8", fontSize: "9", children: grade })
@@ -23027,44 +23057,49 @@ ${errorText || `HTTP ${response.status}`}`);
                         smoothPath && /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: smoothPath, fill: "none", stroke: "#67e8f9", strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round" })
                       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-[220px] items-center justify-center text-xs italic text-gray-500", children: "No scored events available." })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-600/70 bg-gray-950/30 p-3", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-xs font-bold uppercase tracking-wide text-sky-100", children: "Course Progress" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 140 140", className: "h-36 w-36", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "70", cy: "70", r: "52", fill: "rgba(15,23,42,0.9)", stroke: "rgba(148,163,184,0.25)", strokeWidth: "14" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "70", cy: "70", r: "52", fill: "none", stroke: "#22c55e", strokeWidth: "14", strokeDasharray: progressDash, pathLength: "100", transform: "rotate(-90 70 70)", strokeLinecap: "round" }),
-                        lineForProgress(reviewData.progress.averageProgress, "#facc15", "Course average"),
-                        lineForProgress(reviewData.progress.mostProgress, "#38bdf8", "Most progressed"),
-                        lineForProgress(reviewData.progress.leastProgress, "#f87171", "Least progressed"),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("text", { x: "70", y: "68", fill: "#f8fafc", fontSize: "18", fontWeight: "800", textAnchor: "middle", children: [
-                          reviewData.progress.progressPercent.toFixed(0),
-                          "%"
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("text", { x: "70", y: "84", fill: "#94a3b8", fontSize: "9", textAnchor: "middle", children: [
-                          reviewData.progress.completedCount,
-                          "/",
-                          reviewData.progress.totalCount
-                        ] })
-                      ] }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-1 text-[10px] text-gray-300", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-yellow-300", children: "Course average" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                            reviewData.progress.averageProgress.toFixed(0),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border border-gray-600/70 bg-gray-950/30 p-3 ${reviewProgressExpanded ? "" : "max-w-[360px]"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-xs font-bold uppercase tracking-wide text-sky-100", children: "Course Progress" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setReviewProgressExpanded((prev) => !prev), className: "w-[72px] h-[34px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md", children: reviewProgressExpanded ? "Collapse" : "Expand" })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 flex ${reviewProgressExpanded ? "items-center justify-center gap-8" : "flex-col items-center"}`, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 140 140", className: reviewProgressExpanded ? "h-64 w-64" : "h-36 w-36", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "70", cy: "70", r: "52", fill: "rgba(15,23,42,0.9)", stroke: "rgba(148,163,184,0.25)", strokeWidth: "14" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "70", cy: "70", r: "52", fill: "none", stroke: "#22c55e", strokeWidth: "14", strokeDasharray: progressDash, pathLength: "100", transform: "rotate(-90 70 70)", strokeLinecap: "round" }),
+                          lineForProgress(reviewData.progress.averageProgress, "#facc15", "Course average"),
+                          lineForProgress(reviewData.progress.mostProgress, "#38bdf8", "Most progressed"),
+                          lineForProgress(reviewData.progress.leastProgress, "#f87171", "Least progressed"),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("text", { x: "70", y: "68", fill: "#f8fafc", fontSize: "18", fontWeight: "800", textAnchor: "middle", children: [
+                            reviewData.progress.progressPercent.toFixed(0),
                             "%"
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("text", { x: "70", y: "84", fill: "#94a3b8", fontSize: "9", textAnchor: "middle", children: [
+                            reviewData.progress.completedCount,
+                            "/",
+                            reviewData.progress.totalCount
                           ] })
                         ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300", children: "Most progressed" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                            reviewData.progress.mostProgress.toFixed(0),
-                            "%"
-                          ] })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-300", children: "Least progressed" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                            reviewData.progress.leastProgress.toFixed(0),
-                            "%"
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${reviewProgressExpanded ? "w-56" : "mt-2"} space-y-1 text-[10px] text-gray-300`, children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-yellow-200/75", children: "Course average" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                              reviewData.progress.averageProgress.toFixed(0),
+                              "%"
+                            ] })
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-200/75", children: "Most progressed" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                              reviewData.progress.mostProgress.toFixed(0),
+                              "%"
+                            ] })
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-200/75", children: "Least progressed" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                              reviewData.progress.leastProgress.toFixed(0),
+                              "%"
+                            ] })
                           ] })
                         ] })
                       ] })
