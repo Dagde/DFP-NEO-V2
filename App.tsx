@@ -27153,10 +27153,103 @@ const App: React.FC = () => {
         return events;
     }, [date, publishedSchedules, snapshotDates]);
 
+    const decorateEventWithForwardedPreFlightNotes = useCallback((event: ScheduleEvent): ScheduleEvent => {
+        const tileEligible = event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt';
+        if (!tileEligible || traineeLMPs.size === 0) return event;
+
+        const notesByKey = new Map<string, string>();
+        const addNotes = (notes: unknown) => {
+            const cleanNotes = String(notes || '').trim();
+            if (!cleanNotes) return;
+            notesByKey.set(cleanNotes, cleanNotes);
+        };
+
+        addNotes(event.preFlightNotes);
+        Object.values((event.trainingReportForwardedNotes || {}) as Record<string, any>)
+            .forEach((entry: any) => addNotes(entry?.notes));
+
+        const eventRefs = new Set<string>();
+        const addRef = (value: unknown) => {
+            const ref = String(value || '').trim().toUpperCase();
+            if (ref) eventRefs.add(ref);
+        };
+        addRef(event.id);
+        addRef(event.flightNumber);
+        addRef(event.eventCode);
+
+        const candidateNames = new Set<string>();
+        const addPerson = (value: unknown) => {
+            if (!value) return;
+            if (Array.isArray(value)) {
+                value.forEach(addPerson);
+                return;
+            }
+            String(value)
+                .split(/\s+(?:and|&)\s+|[;\n]/i)
+                .map(part => part.trim())
+                .filter(Boolean)
+                .forEach(part => {
+                    candidateNames.add(part);
+                    const displayName = part.split(' – ')[0].split(' - ')[0].trim();
+                    if (displayName) candidateNames.add(displayName);
+                });
+        };
+        [
+            event.student,
+            event.pilot,
+            event.crew,
+            event.instructor,
+            event.attendees,
+            event.crewSelectionOrder,
+        ].forEach(addPerson);
+
+        const forwardedNotes: Record<string, any> = {
+            ...((event.trainingReportForwardedNotes || {}) as Record<string, any>),
+        };
+
+        const inspectLmpItem = (item: SyllabusItemDetail) => {
+            const itemRefs = [
+                item.id,
+                item.code,
+                item.masterEventId,
+            ].filter(Boolean).map(value => String(value).trim().toUpperCase());
+
+            if (!itemRefs.some(ref => eventRefs.has(ref))) return;
+
+            Object.entries(((item as any).trainingReportForwardedNotes || {}) as Record<string, any>)
+                .forEach(([key, entry]) => {
+                    forwardedNotes[key] = entry;
+                    addNotes((entry as any)?.notes);
+                });
+        };
+
+        candidateNames.forEach(name => {
+            const lmp = traineeLMPs.get(name);
+            if (Array.isArray(lmp)) {
+                lmp.forEach(inspectLmpItem);
+            }
+        });
+
+        if (notesByKey.size === 0) return event;
+
+        const preFlightNotes = Array.from(notesByKey.values()).join('\n\n');
+        return {
+            ...event,
+            preFlightNotes,
+            trainingReportForwardedNotes: Object.keys(forwardedNotes).length > 0
+                ? forwardedNotes
+                : event.trainingReportForwardedNotes,
+        };
+    }, [traineeLMPs]);
+
+    const eventsForDateWithPreFlightNotes = useMemo(() => (
+        eventsForDate.map(decorateEventWithForwardedPreFlightNotes)
+    ), [decorateEventWithForwardedPreFlightNotes, eventsForDate]);
+
     // Filter out STBY events for Staff and Trainee schedule views
     const eventsForStaffTraineeSchedule = useMemo(() => {
-        return eventsForDate.filter(e => !e.resourceId.startsWith('STBY'));
-    }, [eventsForDate]);
+        return eventsForDateWithPreFlightNotes.filter(e => !e.resourceId.startsWith('STBY'));
+    }, [eventsForDateWithPreFlightNotes]);
 
     const fixedCrewTileColourKeyItems = useMemo(() => {
         if (!isFixedCrewLikeOperationalModel(activeOperationalModel)) return [];
@@ -27179,8 +27272,8 @@ const App: React.FC = () => {
         // Include ALL events including STBY in the staff/trainee schedule view.
         // STBY events show the trainee (and instructor if assigned) their upcoming commitment.
         // STBY events are still excluded from build analytics until moved to the active Daily schedule.
-        return nextDayBuildEvents;
-    }, [nextDayBuildEvents]);
+        return nextDayBuildEvents.map(decorateEventWithForwardedPreFlightNotes);
+    }, [decorateEventWithForwardedPreFlightNotes, nextDayBuildEvents]);
 
     const isStaffAvailabilityDiagnoseBuildContext = activeView === 'NextDayBuild';
     const staffAvailabilityDiagnosticDate = isStaffAvailabilityDiagnoseBuildContext ? buildDfpDate : date;
@@ -27638,7 +27731,7 @@ const App: React.FC = () => {
         const todayEndTime = todayEnd.getTime();
 
         // FIX: Only load events for the currently viewed date to avoid ghost tiles from other dates.
-        const rawEvents: ScheduleEvent[] = (publishedSchedules[date] || []);
+        const rawEvents: ScheduleEvent[] = eventsForDateWithPreFlightNotes;
         // Deduplicate by event ID - publishedSchedules[date] may contain duplicate IDs causing stacked tiles
         const seenEIds = new Set<string>();
         const allEvents = rawEvents.filter(e => {
@@ -27713,7 +27806,7 @@ const App: React.FC = () => {
             }
         }
         return segments;
-    }, [activeFixedCrewTileColourMode, activeOperationalModel, date, publishedSchedules]);
+    }, [activeFixedCrewTileColourMode, activeOperationalModel, date, eventsForDateWithPreFlightNotes]);
 
     const staffAvailabilityDiagnosticEventIds = useMemo(() => {
         if (!isStaffAvailabilityDiagnoseActive || staffAvailabilityPointer.time === null) {
@@ -27776,7 +27869,9 @@ const App: React.FC = () => {
         todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
         const todayEndTime = todayEnd.getTime();
 
-        const buildEventsWithDate: ScheduleEvent[] = nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}));
+        const buildEventsWithDate: ScheduleEvent[] = nextDayBuildEvents
+            .map(decorateEventWithForwardedPreFlightNotes)
+            .map(e => ({...e, date: buildDfpDate}));
         console.log('🚀 [NEO-Build] buildEventsWithDate.length:', buildEventsWithDate.length);
         if (shouldRecordDfpRenderDiagnostics()) {
             pushDfpDataDiag('render:next-day-build-segments-input', {
@@ -27871,7 +27966,7 @@ const App: React.FC = () => {
             });
         }
         return uniqueSegments;
-    }, [buildDfpDate, isBuildingDfp, nextDayBuildEvents]);
+    }, [buildDfpDate, decorateEventWithForwardedPreFlightNotes, isBuildingDfp, nextDayBuildEvents]);
 
     useEffect(() => {
         // Initialize baselineSchedules when viewing published Daily DFP

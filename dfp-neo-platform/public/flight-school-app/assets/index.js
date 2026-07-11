@@ -7885,6 +7885,19 @@ const isAuthorisationWarningExempt = (event) => {
   const exemptOperationalRows = /* @__PURE__ */ new Set(["DUTY SUP", "TWR DI", "RUNWAY DI", "RWY DI"]);
   return event.type === "deployment" || exemptOperationalRows.has(resourceId) || exemptOperationalRows.has(flightNumber) || exemptOperationalRows.has(eventCategory);
 };
+const getPreFlightNotesForTile = (event) => {
+  const tileEligible = event.type === "flight" || event.type === "ftd" || event.type === "cpt";
+  if (!tileEligible) return "";
+  const explicitNotes = String(event.preFlightNotes || "").trim();
+  if (explicitNotes) return explicitNotes;
+  const metadataNotes = Object.values(event.trainingReportForwardedNotes || {}).map((entry) => String(entry?.notes || "").trim()).filter(Boolean).join("\n\n").trim();
+  if (metadataNotes) return metadataNotes;
+  const rawNotes = String(event.notes || "").trim();
+  const preFlightMatch = rawNotes.match(/^Pre-flight Notes\s*\n([\s\S]*)$/i);
+  if (preFlightMatch) return preFlightMatch[1].trim();
+  const legacyTrainingReportMatch = rawNotes.match(/^Training report notes from [^\n]+:\s*\n([\s\S]*)$/i);
+  return legacyTrainingReportMatch ? legacyTrainingReportMatch[1].trim() : "";
+};
 const getAuthorizationTextColorClass = (event, currentTime, settings) => {
   if (event.type !== "flight") {
     return "";
@@ -8020,6 +8033,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const isTwrDiEvent = event.eventCategory === "twr_di";
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
   const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
+  const preFlightNotesForTile = getPreFlightNotesForTile(event);
   const picName = isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
   const pooledCrewSecondaryName = (() => {
     if (!isPooledCrewEvent) return "";
@@ -8490,7 +8504,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     if (isPauseCompleted) finalClasses.push(pauseCompletedRingClass);
     if (isDiagnosticHighlighted) finalClasses.push(diagnosticHighlightClass);
   }
-  if (!isSmallTile) {
+  if (!isSmallTile && !preFlightNotesForTile) {
     finalClasses.push("overflow-hidden");
   }
   const renderFlyout = () => {
@@ -8522,6 +8536,43 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       ] }),
       callsign && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-500 text-[10px]", children: callsign })
     ] }) });
+  };
+  const renderPreFlightNotesMarker = () => {
+    if (!preFlightNotesForTile || isPreview) return null;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "group absolute bottom-0 right-0 z-40 h-4 w-4 cursor-help",
+        title: preFlightNotesForTile,
+        "aria-label": `Pre-flight Notes: ${preFlightNotesForTile}`,
+        onClick: (e) => e.stopPropagation(),
+        onMouseDown: (e) => e.stopPropagation(),
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              className: "absolute bottom-0 right-0 h-0 w-0 border-b-[14px] border-l-[14px] border-l-transparent",
+              style: { borderBottomColor: "#c66a2b" }
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: "pointer-events-none absolute bottom-4 right-0 hidden max-w-[280px] whitespace-pre-wrap rounded border px-3 py-2 text-[11px] font-semibold leading-snug shadow-xl group-hover:block",
+              style: {
+                backgroundColor: "rgba(15, 23, 42, 0.98)",
+                borderColor: "rgba(198, 106, 43, 0.72)",
+                color: "#fed7aa"
+              },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-wide", style: { color: "#fb923c" }, children: "Pre-flight Notes" }),
+                preFlightNotesForTile
+              ]
+            }
+          )
+        ]
+      }
+    );
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
@@ -8606,7 +8657,8 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
             }
           ),
           renderContent(),
-          renderFlyout()
+          renderFlyout(),
+          renderPreFlightNotesMarker()
         ] })
       ]
     }
@@ -105650,9 +105702,79 @@ ${"=".repeat(60)}`);
     }
     return events2;
   }, [date, publishedSchedules, snapshotDates]);
+  const decorateEventWithForwardedPreFlightNotes = reactExports.useCallback((event) => {
+    const tileEligible = event.type === "flight" || event.type === "ftd" || event.type === "cpt";
+    if (!tileEligible || traineeLMPs.size === 0) return event;
+    const notesByKey = /* @__PURE__ */ new Map();
+    const addNotes = (notes) => {
+      const cleanNotes = String(notes || "").trim();
+      if (!cleanNotes) return;
+      notesByKey.set(cleanNotes, cleanNotes);
+    };
+    addNotes(event.preFlightNotes);
+    Object.values(event.trainingReportForwardedNotes || {}).forEach((entry) => addNotes(entry?.notes));
+    const eventRefs = /* @__PURE__ */ new Set();
+    const addRef = (value) => {
+      const ref = String(value || "").trim().toUpperCase();
+      if (ref) eventRefs.add(ref);
+    };
+    addRef(event.id);
+    addRef(event.flightNumber);
+    addRef(event.eventCode);
+    const candidateNames = /* @__PURE__ */ new Set();
+    const addPerson2 = (value) => {
+      if (!value) return;
+      if (Array.isArray(value)) {
+        value.forEach(addPerson2);
+        return;
+      }
+      String(value).split(/\s+(?:and|&)\s+|[;\n]/i).map((part) => part.trim()).filter(Boolean).forEach((part) => {
+        candidateNames.add(part);
+        const displayName = part.split(" – ")[0].split(" - ")[0].trim();
+        if (displayName) candidateNames.add(displayName);
+      });
+    };
+    [
+      event.student,
+      event.pilot,
+      event.crew,
+      event.instructor,
+      event.attendees,
+      event.crewSelectionOrder
+    ].forEach(addPerson2);
+    const forwardedNotes = {
+      ...event.trainingReportForwardedNotes || {}
+    };
+    const inspectLmpItem = (item) => {
+      const itemRefs = [
+        item.id,
+        item.code,
+        item.masterEventId
+      ].filter(Boolean).map((value) => String(value).trim().toUpperCase());
+      if (!itemRefs.some((ref) => eventRefs.has(ref))) return;
+      Object.entries(item.trainingReportForwardedNotes || {}).forEach(([key, entry]) => {
+        forwardedNotes[key] = entry;
+        addNotes(entry?.notes);
+      });
+    };
+    candidateNames.forEach((name) => {
+      const lmp = traineeLMPs.get(name);
+      if (Array.isArray(lmp)) {
+        lmp.forEach(inspectLmpItem);
+      }
+    });
+    if (notesByKey.size === 0) return event;
+    const preFlightNotes = Array.from(notesByKey.values()).join("\n\n");
+    return {
+      ...event,
+      preFlightNotes,
+      trainingReportForwardedNotes: Object.keys(forwardedNotes).length > 0 ? forwardedNotes : event.trainingReportForwardedNotes
+    };
+  }, [traineeLMPs]);
+  const eventsForDateWithPreFlightNotes = reactExports.useMemo(() => eventsForDate.map(decorateEventWithForwardedPreFlightNotes), [decorateEventWithForwardedPreFlightNotes, eventsForDate]);
   const eventsForStaffTraineeSchedule = reactExports.useMemo(() => {
-    return eventsForDate.filter((e) => !e.resourceId.startsWith("STBY"));
-  }, [eventsForDate]);
+    return eventsForDateWithPreFlightNotes.filter((e) => !e.resourceId.startsWith("STBY"));
+  }, [eventsForDateWithPreFlightNotes]);
   const fixedCrewTileColourKeyItems = reactExports.useMemo(() => {
     if (!isFixedCrewLikeOperationalModel(activeOperationalModel)) return [];
     if (activeFixedCrewTileColourMode !== "crew") {
@@ -105666,8 +105788,8 @@ ${"=".repeat(60)}`);
     return buildFixedCrewTileColourKey(crewReferenceEvents.length > 0 ? crewReferenceEvents : eventsForDate, activeFixedCrewTileColourMode);
   }, [activeContextUnitCodeSet, activeFixedCrewTileColourMode, activeOperationalModel, activeUnitCode, eventsForDate, instructorsData]);
   const nextDayEventsForStaffTraineeSchedule = reactExports.useMemo(() => {
-    return nextDayBuildEvents;
-  }, [nextDayBuildEvents]);
+    return nextDayBuildEvents.map(decorateEventWithForwardedPreFlightNotes);
+  }, [decorateEventWithForwardedPreFlightNotes, nextDayBuildEvents]);
   const isStaffAvailabilityDiagnoseBuildContext = activeView === "NextDayBuild";
   const staffAvailabilityDiagnosticDate = isStaffAvailabilityDiagnoseBuildContext ? buildDfpDate : date;
   const staffAvailabilityDiagnosticEvents = reactExports.useMemo(() => {
@@ -106013,7 +106135,7 @@ ${"=".repeat(60)}`);
     const todayEnd = new Date(todayStart);
     todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
     const todayEndTime = todayEnd.getTime();
-    const rawEvents = publishedSchedules[date] || [];
+    const rawEvents = eventsForDateWithPreFlightNotes;
     const seenEIds = /* @__PURE__ */ new Set();
     const allEvents = rawEvents.filter((e) => {
       if (seenEIds.has(e.id)) return false;
@@ -106073,7 +106195,7 @@ ${"=".repeat(60)}`);
       }
     }
     return segments;
-  }, [activeFixedCrewTileColourMode, activeOperationalModel, date, publishedSchedules]);
+  }, [activeFixedCrewTileColourMode, activeOperationalModel, date, eventsForDateWithPreFlightNotes]);
   const staffAvailabilityDiagnosticEventIds = reactExports.useMemo(() => {
     if (!isStaffAvailabilityDiagnoseActive || staffAvailabilityPointer.time === null) {
       return /* @__PURE__ */ new Set();
@@ -106123,7 +106245,7 @@ ${"=".repeat(60)}`);
     const todayEnd = new Date(todayStart);
     todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
     const todayEndTime = todayEnd.getTime();
-    const buildEventsWithDate = nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate }));
+    const buildEventsWithDate = nextDayBuildEvents.map(decorateEventWithForwardedPreFlightNotes).map((e) => ({ ...e, date: buildDfpDate }));
     console.log("🚀 [NEO-Build] buildEventsWithDate.length:", buildEventsWithDate.length);
     if (shouldRecordDfpRenderDiagnostics()) {
       pushDfpDataDiag("render:next-day-build-segments-input", {
@@ -106205,7 +106327,7 @@ ${"=".repeat(60)}`);
       });
     }
     return uniqueSegments;
-  }, [buildDfpDate, isBuildingDfp, nextDayBuildEvents]);
+  }, [buildDfpDate, decorateEventWithForwardedPreFlightNotes, isBuildingDfp, nextDayBuildEvents]);
   reactExports.useEffect(() => {
     const dateStr = date;
     const baselineKey = `${school}:${dateStr}`;

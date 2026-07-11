@@ -109,6 +109,28 @@ const isAuthorisationWarningExempt = (event: ScheduleEvent | EventSegment): bool
         || exemptOperationalRows.has(eventCategory);
 };
 
+const getPreFlightNotesForTile = (event: ScheduleEvent | EventSegment): string => {
+    const tileEligible = event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt';
+    if (!tileEligible) return '';
+
+    const explicitNotes = String(event.preFlightNotes || '').trim();
+    if (explicitNotes) return explicitNotes;
+
+    const metadataNotes = Object.values((event.trainingReportForwardedNotes || {}) as Record<string, any>)
+        .map((entry: any) => String(entry?.notes || '').trim())
+        .filter(Boolean)
+        .join('\n\n')
+        .trim();
+    if (metadataNotes) return metadataNotes;
+
+    const rawNotes = String(event.notes || '').trim();
+    const preFlightMatch = rawNotes.match(/^Pre-flight Notes\s*\n([\s\S]*)$/i);
+    if (preFlightMatch) return preFlightMatch[1].trim();
+
+    const legacyTrainingReportMatch = rawNotes.match(/^Training report notes from [^\n]+:\s*\n([\s\S]*)$/i);
+    return legacyTrainingReportMatch ? legacyTrainingReportMatch[1].trim() : '';
+};
+
 const getAuthorizationTextColorClass = (
     event: ScheduleEvent | EventSegment,
     currentTime: Date,
@@ -322,6 +344,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const aircraftNumberDisplay = event.aircraftNumber
     ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number
     : '';
+  const preFlightNotesForTile = getPreFlightNotesForTile(event);
   
   
   
@@ -905,7 +928,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   // If we remove `overflow-hidden`, we must ensure inner content doesn't spill.
   // For safety, we will NOT use `overflow-hidden` on the main tile div if it's small, to allow the flyout to be visible if we nest it.
   // Better approach: Since we control inner content rendering, we can just omit overflow-hidden.
-  if (!isSmallTile) {
+  if (!isSmallTile && !preFlightNotesForTile) {
       finalClasses.push('overflow-hidden');
   }
 
@@ -941,6 +964,38 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
           </div>
       );
   }
+
+  const renderPreFlightNotesMarker = () => {
+      if (!preFlightNotesForTile || isPreview) return null;
+
+      return (
+          <div
+              className="group absolute bottom-0 right-0 z-40 h-4 w-4 cursor-help"
+              title={preFlightNotesForTile}
+              aria-label={`Pre-flight Notes: ${preFlightNotesForTile}`}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+          >
+              <div
+                  className="absolute bottom-0 right-0 h-0 w-0 border-b-[14px] border-l-[14px] border-l-transparent"
+                  style={{ borderBottomColor: '#c66a2b' }}
+              />
+              <div
+                  className="pointer-events-none absolute bottom-4 right-0 hidden max-w-[280px] whitespace-pre-wrap rounded border px-3 py-2 text-[11px] font-semibold leading-snug shadow-xl group-hover:block"
+                  style={{
+                      backgroundColor: 'rgba(15, 23, 42, 0.98)',
+                      borderColor: 'rgba(198, 106, 43, 0.72)',
+                      color: '#fed7aa',
+                  }}
+              >
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-wide" style={{ color: '#fb923c' }}>
+                      Pre-flight Notes
+                  </div>
+                  {preFlightNotesForTile}
+              </div>
+          </div>
+      );
+  };
 
   return (
     <div
@@ -1030,6 +1085,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
             )}
             {renderContent()}
             {renderFlyout()}
+            {renderPreFlightNotesMarker()}
         </div>
     </div>
   );

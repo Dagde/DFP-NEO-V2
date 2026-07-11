@@ -368,6 +368,8 @@ export interface ScheduleEvent {
       // Additional fields for enhanced priority events display
       dateCreated?: string;
       notes?: string;
+      preFlightNotes?: string;
+      trainingReportForwardedNotes?: Record<string, { notes?: string; [key: string]: any }>;
   currency?: string;
   currencyDraftId?: string;
   aircraftCount?: number;
