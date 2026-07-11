@@ -8542,7 +8542,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
-        className: "group absolute bottom-0 right-0 z-40 h-4 w-4 cursor-help",
+        className: "group absolute bottom-0 right-0 z-40 h-3 w-3 cursor-help",
         title: preFlightNotesForTile,
         "aria-label": `Pre-flight Notes: ${preFlightNotesForTile}`,
         onClick: (e) => e.stopPropagation(),
@@ -8551,21 +8551,21 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
             {
-              className: "absolute bottom-0 right-0 h-0 w-0 border-b-[14px] border-l-[14px] border-l-transparent",
+              className: "absolute bottom-0 right-0 h-0 w-0 border-b-[9px] border-l-[9px] border-l-transparent",
               style: { borderBottomColor: "#c66a2b" }
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
-              className: "pointer-events-none absolute bottom-4 right-0 hidden max-w-[280px] whitespace-pre-wrap rounded border px-3 py-2 text-[11px] font-semibold leading-snug shadow-xl group-hover:block",
+              className: "pointer-events-none absolute bottom-3 right-0 hidden w-[420px] max-w-[min(420px,80vw)] max-h-[120px] overflow-auto whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl group-hover:block",
               style: {
                 backgroundColor: "rgba(15, 23, 42, 0.98)",
                 borderColor: "rgba(198, 106, 43, 0.72)",
                 color: "#fed7aa"
               },
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-wide", style: { color: "#fb923c" }, children: "Pre-flight Notes" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-0.5 text-[8px] font-bold uppercase tracking-wide", style: { color: "#fb923c" }, children: "Pre-flight Notes" }),
                 preFlightNotesForTile
               ]
             }
