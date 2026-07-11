@@ -8034,6 +8034,19 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
   const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
   const preFlightNotesForTile = getPreFlightNotesForTile(event);
+  const [showPreFlightNotesTooltip, setShowPreFlightNotesTooltip] = reactExports.useState(false);
+  const preFlightNotesTooltipTimerRef = reactExports.useRef(null);
+  const clearPreFlightNotesTooltipTimer = () => {
+    if (preFlightNotesTooltipTimerRef.current) {
+      clearTimeout(preFlightNotesTooltipTimerRef.current);
+      preFlightNotesTooltipTimerRef.current = null;
+    }
+  };
+  reactExports.useEffect(() => {
+    setShowPreFlightNotesTooltip(false);
+    clearPreFlightNotesTooltipTimer();
+    return clearPreFlightNotesTooltipTimer;
+  }, [preFlightNotesForTile]);
   const picName = isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
   const pooledCrewSecondaryName = (() => {
     if (!isPooledCrewEvent) return "";
@@ -8543,10 +8556,19 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       "div",
       {
         className: "group absolute bottom-0 right-0 z-40 h-3 w-3 cursor-help",
-        title: preFlightNotesForTile,
         "aria-label": `Pre-flight Notes: ${preFlightNotesForTile}`,
         onClick: (e) => e.stopPropagation(),
         onMouseDown: (e) => e.stopPropagation(),
+        onMouseEnter: () => {
+          clearPreFlightNotesTooltipTimer();
+          preFlightNotesTooltipTimerRef.current = setTimeout(() => {
+            setShowPreFlightNotesTooltip(true);
+          }, 1e3);
+        },
+        onMouseLeave: () => {
+          clearPreFlightNotesTooltipTimer();
+          setShowPreFlightNotesTooltip(false);
+        },
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
@@ -8558,11 +8580,13 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
-              className: "pointer-events-none absolute bottom-3 right-0 hidden w-[420px] max-w-[min(420px,80vw)] max-h-[120px] overflow-auto whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl group-hover:block",
+              className: `pointer-events-none absolute bottom-3 right-0 whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl ${showPreFlightNotesTooltip ? "block" : "hidden"}`,
               style: {
                 backgroundColor: "rgba(15, 23, 42, 0.98)",
                 borderColor: "rgba(198, 106, 43, 0.72)",
-                color: "#fed7aa"
+                color: "#fed7aa",
+                width: "max-content",
+                maxWidth: "min(420px, 80vw)"
               },
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-0.5 text-[8px] font-bold uppercase tracking-wide", style: { color: "#fb923c" }, children: "Pre-flight Notes" }),

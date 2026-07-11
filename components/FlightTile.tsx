@@ -1,5 +1,5 @@
 
-import React, { MouseEvent } from 'react';
+import React, { MouseEvent, useEffect, useRef, useState } from 'react';
 import { ScheduleEvent, Trainee, EventSegment } from '../types';
 import {
   AircraftNumberSettings,
@@ -345,6 +345,21 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number
     : '';
   const preFlightNotesForTile = getPreFlightNotesForTile(event);
+  const [showPreFlightNotesTooltip, setShowPreFlightNotesTooltip] = useState(false);
+  const preFlightNotesTooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearPreFlightNotesTooltipTimer = () => {
+      if (preFlightNotesTooltipTimerRef.current) {
+          clearTimeout(preFlightNotesTooltipTimerRef.current);
+          preFlightNotesTooltipTimerRef.current = null;
+      }
+  };
+
+  useEffect(() => {
+      setShowPreFlightNotesTooltip(false);
+      clearPreFlightNotesTooltipTimer();
+      return clearPreFlightNotesTooltipTimer;
+  }, [preFlightNotesForTile]);
   
   
   
@@ -971,21 +986,32 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       return (
           <div
               className="group absolute bottom-0 right-0 z-40 h-3 w-3 cursor-help"
-              title={preFlightNotesForTile}
               aria-label={`Pre-flight Notes: ${preFlightNotesForTile}`}
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
+              onMouseEnter={() => {
+                  clearPreFlightNotesTooltipTimer();
+                  preFlightNotesTooltipTimerRef.current = setTimeout(() => {
+                      setShowPreFlightNotesTooltip(true);
+                  }, 1000);
+              }}
+              onMouseLeave={() => {
+                  clearPreFlightNotesTooltipTimer();
+                  setShowPreFlightNotesTooltip(false);
+              }}
           >
               <div
                   className="absolute bottom-0 right-0 h-0 w-0 border-b-[9px] border-l-[9px] border-l-transparent"
                   style={{ borderBottomColor: '#c66a2b' }}
               />
               <div
-                  className="pointer-events-none absolute bottom-3 right-0 hidden w-[420px] max-w-[min(420px,80vw)] max-h-[120px] overflow-auto whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl group-hover:block"
+                  className={`pointer-events-none absolute bottom-3 right-0 whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl ${showPreFlightNotesTooltip ? 'block' : 'hidden'}`}
                   style={{
                       backgroundColor: 'rgba(15, 23, 42, 0.98)',
                       borderColor: 'rgba(198, 106, 43, 0.72)',
                       color: '#fed7aa',
+                      width: 'max-content',
+                      maxWidth: 'min(420px, 80vw)',
                   }}
               >
                   <div className="mb-0.5 text-[8px] font-bold uppercase tracking-wide" style={{ color: '#fb923c' }}>
