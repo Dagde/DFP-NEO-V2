@@ -31415,7 +31415,7 @@ const App: React.FC = () => {
             return;
         }
 
-        const originalLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+        const originalLmp = await loadPersistedTraineeLmp(trainee) || traineeLMPs.get(trainee.fullName);
         if (!originalLmp || originalLmp.length === 0) {
             console.warn('[Training Report] Could not pass notes forward: Individual LMP not found', assessment.traineeFullName);
             return;

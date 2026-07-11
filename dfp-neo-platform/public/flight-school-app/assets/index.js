@@ -108955,7 +108955,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       console.warn("[Training Report] Could not pass notes forward: trainee not found", assessment.traineeFullName);
       return;
     }
-    const originalLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+    const originalLmp = await loadPersistedTraineeLmp(trainee) || traineeLMPs.get(trainee.fullName);
     if (!originalLmp || originalLmp.length === 0) {
       console.warn("[Training Report] Could not pass notes forward: Individual LMP not found", assessment.traineeFullName);
       return;
