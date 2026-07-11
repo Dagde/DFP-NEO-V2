@@ -49,6 +49,7 @@ const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV'
 
 interface TraineeProfileFlyoutProps {
   trainee: Trainee;
+  traineesData?: Trainee[];
   onClose: () => void;
   onUpdateTrainee: (data: Trainee) => void;
   events: ScheduleEvent[];
@@ -353,6 +354,7 @@ const reviewFormatHours = (value: number): string => reviewNumber(value).toFixed
 
 const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   trainee,
+  traineesData = [],
   onClose,
   onUpdateTrainee,
   events,
@@ -631,7 +633,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             ? scorePoints.reduce((sum, point) => sum + point.grade, 0) / scorePoints.length
             : 0;
         const countableRefSet = new Set(countableLmp.flatMap(reviewLmpRefs));
+        const currentCourse = String(trainee.course || '').trim().toUpperCase();
+        const sameCourseTraineeNames = new Set(
+            (traineesData.length > 0 ? traineesData : [trainee])
+                .filter(candidate => String(candidate.course || '').trim().toUpperCase() === currentCourse)
+                .map(candidate => candidate.fullName)
+                .filter(Boolean)
+        );
+        if (trainee.fullName) sameCourseTraineeNames.add(trainee.fullName);
         const courseAverageRankings = Array.from(scores.entries())
+            .filter(([name]) => sameCourseTraineeNames.has(name))
             .map(([name, peerScores]) => {
                 const peerFlightScores = peerScores
                     .filter(score => countableRefSet.has(reviewEventCode(score.event)))

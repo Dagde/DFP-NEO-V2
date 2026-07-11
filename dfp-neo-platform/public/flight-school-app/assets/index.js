@@ -21886,6 +21886,7 @@ const reviewIsCountableLmpEvent = (item) => {
 const reviewFormatHours = (value) => reviewNumber(value).toFixed(1);
 const TraineeProfileFlyout = ({
   trainee,
+  traineesData = [],
   onClose,
   onUpdateTrainee,
   events,
@@ -22106,7 +22107,12 @@ const TraineeProfileFlyout = ({
     const summaryMarginal = scorePoints.filter((point) => point.status === "marginal");
     const currentScoreAverage = scorePoints.length > 0 ? scorePoints.reduce((sum, point) => sum + point.grade, 0) / scorePoints.length : 0;
     const countableRefSet = new Set(countableLmp.flatMap(reviewLmpRefs));
-    const courseAverageRankings = Array.from(scores.entries()).map(([name2, peerScores]) => {
+    const currentCourse = String(trainee.course || "").trim().toUpperCase();
+    const sameCourseTraineeNames = new Set(
+      (traineesData.length > 0 ? traineesData : [trainee]).filter((candidate) => String(candidate.course || "").trim().toUpperCase() === currentCourse).map((candidate) => candidate.fullName).filter(Boolean)
+    );
+    if (trainee.fullName) sameCourseTraineeNames.add(trainee.fullName);
+    const courseAverageRankings = Array.from(scores.entries()).filter(([name2]) => sameCourseTraineeNames.has(name2)).map(([name2, peerScores]) => {
       const peerFlightScores = peerScores.filter((score) => countableRefSet.has(reviewEventCode(score.event))).map((score) => reviewNumber(score.score)).filter((value) => Number.isFinite(value));
       if (peerFlightScores.length === 0) return null;
       return {
@@ -24678,6 +24684,7 @@ const CourseRosterView = ({
       TraineeProfileFlyout,
       {
         trainee: isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee,
+        traineesData,
         onClose: () => {
           setSelectedTrainee(null);
           setProfileInitialTab(null);

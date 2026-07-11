@@ -500,6 +500,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
             {(selectedTrainee || isCreatingNew) && (
                 <TraineeProfileFlyout
                     trainee={isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!}
+                    traineesData={traineesData}
                     onClose={() => {
                         setSelectedTrainee(null);
                         setProfileInitialTab(null);
