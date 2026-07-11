@@ -106756,6 +106756,14 @@ ${"=".repeat(60)}`);
         const response = await fetch(`${apiBase2}/trainee-performance/${encodeURIComponent(event.id)}`);
         if (response.ok) {
           const loaded = await response.json();
+          pushDfpDataDiag("pt051:load:event-response", {
+            eventId: event.id,
+            flightNumber: event.flightNumber,
+            traineeFullName: trainee.fullName,
+            loadedTraineeFullName: loaded?.traineeFullName,
+            loadedDpcoFollowUp: loaded?.dpcoFollowUp || null,
+            loadedDncoFollowUp: loaded?.dncoFollowUp || null
+          });
           if (loaded?.traineeFullName === trainee.fullName) {
             assessment = loaded;
           }
@@ -106773,6 +106781,45 @@ ${"=".repeat(60)}`);
         }
       }
       if (assessment?.eventId && assessment?.traineeFullName) {
+        if (assessment.dcoResult === "DPCO" && !assessment.dpcoFollowUp && trainee.fullName === assessment.traineeFullName) {
+          const persistedLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+          const sourceIndex = Array.isArray(persistedLmp) ? persistedLmp.findIndex((item) => String(item.id || "") === String(assessment.eventId || "") || String(item.masterEventId || "") === String(assessment.eventId || "") || String(item.code || "").trim().toUpperCase() === String(assessment.flightNumber || "").trim().toUpperCase()) : -1;
+          const nextFlightOrSim = Array.isArray(persistedLmp) ? persistedLmp.find((item, index) => index > sourceIndex && (item.type === "Flight" || item.type === "FTD") && item.trainingReportNextEventExtensions && typeof item.trainingReportNextEventExtensions === "object") : void 0;
+          const extensionLedger = nextFlightOrSim?.trainingReportNextEventExtensions || {};
+          const extensionKeys = [
+            assessment.id,
+            assessment.eventId,
+            `${assessment.eventId}`,
+            `${assessment.flightNumber}-${assessment.traineeFullName}`
+          ].map((value) => String(value || "").trim()).filter(Boolean);
+          const matchingExtensionKey = extensionKeys.find((key) => Number(extensionLedger[key]) > 0);
+          const fallbackExtension = matchingExtensionKey ? Number(extensionLedger[matchingExtensionKey]) : Object.keys(extensionLedger).length === 1 ? Number(Object.values(extensionLedger)[0]) : 0;
+          if (fallbackExtension > 0) {
+            assessment = {
+              ...assessment,
+              dpcoFollowUp: {
+                action: "extra-hours-next-event",
+                extraHours: Number(fallbackExtension.toFixed(1))
+              }
+            };
+            pushDfpDataDiag("pt051:load:follow-up-recovered-from-lmp", {
+              eventId: assessment.eventId,
+              flightNumber: assessment.flightNumber,
+              traineeFullName: assessment.traineeFullName,
+              nextEventCode: nextFlightOrSim?.code,
+              matchingExtensionKey: matchingExtensionKey || "single-ledger-entry",
+              recoveredExtraHours: assessment.dpcoFollowUp.extraHours
+            });
+          }
+        }
+        pushDfpDataDiag("pt051:load:selected-assessment", {
+          eventId: assessment.eventId,
+          flightNumber: assessment.flightNumber,
+          traineeFullName: assessment.traineeFullName,
+          dcoResult: assessment.dcoResult,
+          dpcoFollowUp: assessment.dpcoFollowUp || null,
+          dncoFollowUp: assessment.dncoFollowUp || null
+        });
         setPt051Assessments((prev) => {
           const updated = new Map(prev);
           updated.set(`pt051-${assessment.eventId}-${assessment.traineeFullName}`, assessment);
@@ -108975,6 +109022,15 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (!traineeId) {
       throw new Error(`Cannot save PT-051: trainee database record not found for ${assessment.traineeFullName}`);
     }
+    pushDfpDataDiag("pt051:persist:request", {
+      assessmentId: assessment.id,
+      eventId: assessment.eventId,
+      flightNumber: assessment.flightNumber,
+      traineeFullName: assessment.traineeFullName,
+      dcoResult: assessment.dcoResult,
+      dpcoFollowUp: assessment.dpcoFollowUp || null,
+      dncoFollowUp: assessment.dncoFollowUp || null
+    });
     const response = await fetch(`${apiBase2}/trainee-performance`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -108987,9 +109043,24 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
     if (!response.ok) {
       const errorText = await response.text();
+      pushDfpDataDiag("pt051:persist:error", {
+        assessmentId: assessment.id,
+        eventId: assessment.eventId,
+        status: response.status,
+        errorText
+      });
       throw new Error(errorText || `Failed to save PT-051 record (${response.status})`);
     }
-    return response.json();
+    const saved = await response.json();
+    pushDfpDataDiag("pt051:persist:response", {
+      assessmentId: assessment.id,
+      eventId: assessment.eventId,
+      flightNumber: assessment.flightNumber,
+      traineeFullName: assessment.traineeFullName,
+      responseDpcoFollowUp: saved?.dpcoFollowUp || null,
+      responseDncoFollowUp: saved?.dncoFollowUp || null
+    });
+    return saved;
   };
   const handleSaveEvents = async (eventsToSave, isPriority) => {
     console.log("🔵 ========== handleSaveEvents START ==========");

@@ -13548,8 +13548,9 @@ app.put('/api/trainee-performance/:eventId', async (req, res) => {
     }
 
     // Build update from Pt051Assessment fields
-    const comments = buildCommentsString(data);
-    const elementScores = (data.scores || data.elementScores || []);
+    const row = mapAssessmentToRow(data);
+    const comments = row.comments;
+    const elementScores = row.elementScores;
     const isGS = data.groundSchoolAssessment?.isAssessment || false;
     const gsResult = data.groundSchoolAssessment?.result ?? null;
     const isCompleted = data.isCompleted === true ||
@@ -13688,6 +13689,8 @@ function mapRowToAssessment(row) {
     try { scores = JSON.parse(scores); } catch { scores = []; }
   }
   if (!Array.isArray(scores)) scores = [];
+  const followUpMeta = scores.find(score => score && typeof score === 'object' && score.element === '__pt051FollowUp')?.metadata || {};
+  scores = scores.filter(score => !(score && typeof score === 'object' && score.element === '__pt051FollowUp'));
 
   // comments is the structured "QFI: ...\nWeather: ..." string
   // overallComments is extracted from it for backward compatibility
@@ -13710,6 +13713,8 @@ function mapRowToAssessment(row) {
     overallGrade:        overallGrade,
     overallResult:       row.overallResult || null,
     dcoResult:           row.dcoResult || '',
+    dpcoFollowUp:        followUpMeta.dpcoFollowUp || undefined,
+    dncoFollowUp:        followUpMeta.dncoFollowUp || undefined,
     overallComments:     overallComments,
     comments:            row.comments || '',
     startTime:           row.startTime || null,
@@ -13737,11 +13742,24 @@ function mapAssessmentToRow(data) {
   const isDcoComplete = String(dcoResult || '').trim().toUpperCase() === 'DCO';
 
   // Normalize scores: app uses data.scores, import uses data.elementScores
-  const elementScores = (data.scores || data.elementScores || []).map(s => ({
-    element: s.element || '',
-    grade:   s.grade != null ? String(s.grade) : null,
-    comment: s.comment || ''
-  }));
+  const elementScores = (data.scores || data.elementScores || [])
+    .filter(s => !(s && s.element === '__pt051FollowUp'))
+    .map(s => ({
+      element: s.element || '',
+      grade:   s.grade != null ? String(s.grade) : null,
+      comment: s.comment || ''
+    }));
+  if (data.dpcoFollowUp || data.dncoFollowUp) {
+    elementScores.push({
+      element: '__pt051FollowUp',
+      grade: null,
+      comment: '',
+      metadata: {
+        dpcoFollowUp: data.dpcoFollowUp || null,
+        dncoFollowUp: data.dncoFollowUp || null,
+      },
+    });
+  }
 
   // Build structured comments string from Pt051Assessment shape
   const comments = data.comments || buildCommentsString(data);
