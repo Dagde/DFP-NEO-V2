@@ -28879,6 +28879,42 @@ const App: React.FC = () => {
         setActiveView('CourseRoster');
     }, [activeView, selectedTraineeForHateSheet]);
 
+    const getForwardedNotesFromLmpItem = (item?: Partial<SyllabusItemDetail> | null): string => (
+        Object.values(((item as any)?.trainingReportForwardedNotes || {}) as Record<string, any>)
+            .map((entry: any) => String(entry?.notes || '').trim())
+            .filter(Boolean)
+            .join('\n\n')
+    );
+
+    const attachForwardedTrainingReportNotes = useCallback((trainee: Trainee, event: ScheduleEvent): ScheduleEvent => {
+        const traineeLmp = traineeLMPs.get(trainee.fullName) || [];
+        if (!Array.isArray(traineeLmp) || traineeLmp.length === 0) return event;
+
+        const eventRefs = new Set([
+            event.id,
+            event.flightNumber,
+            (event as any).eventCode,
+        ].filter(Boolean).map(value => String(value).trim().toUpperCase()));
+
+        const matchingItem = traineeLmp.find(item => {
+            const itemRefs = [
+                item.id,
+                item.code,
+                item.masterEventId,
+                `lmp-${(trainee as any).id || trainee.idNumber}-${item.code}`,
+            ].filter(Boolean).map(value => String(value).trim().toUpperCase());
+            return itemRefs.some(ref => eventRefs.has(ref));
+        });
+        const forwardedNotes = getForwardedNotesFromLmpItem(matchingItem);
+        if (!forwardedNotes) return event;
+
+        return {
+            ...event,
+            preFlightNotes: forwardedNotes,
+            trainingReportForwardedNotes: (matchingItem as any)?.trainingReportForwardedNotes,
+        } as ScheduleEvent;
+    }, [traineeLMPs]);
+
     const openPt051FromTraineeProfile = useCallback((trainee: Trainee, assessment: Pt051Assessment) => {
         if (!canViewTraineePt051(trainee)) {
             denyPlatformAction('PT-051 record');
@@ -28926,7 +28962,7 @@ const App: React.FC = () => {
         }
 
         setSelectedTraineeForHateSheet(trainee);
-        setEventForPt051(eventForAssessment);
+        setEventForPt051(attachForwardedTrainingReportNotes(trainee, eventForAssessment));
         logAudit(
             'Performance History',
             'View',
@@ -28934,6 +28970,7 @@ const App: React.FC = () => {
         );
         handleNavigation('PT051');
     }, [
+        attachForwardedTrainingReportNotes,
         buildDfpDate,
         canViewTraineePt051,
         denyPlatformAction,

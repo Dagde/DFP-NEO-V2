@@ -832,13 +832,36 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const buildPt051EventFromAssessment = (assessment: Pt051Assessment): ScheduleEvent => {
+        const lmpItem = currentIndividualLMP?.find(item => {
+            const assessmentRefs = new Set([
+                assessment.eventId,
+                assessment.flightNumber,
+            ].filter(Boolean).map(value => String(value).trim().toUpperCase()));
+            const itemRefs = [
+                item.id,
+                item.code,
+                item.masterEventId,
+                `lmp-${(trainee as any).id || trainee.idNumber}-${item.code}`,
+            ].filter(Boolean).map(value => String(value).trim().toUpperCase());
+            return itemRefs.some(ref => assessmentRefs.has(ref));
+        });
+        const forwardedPreFlightNotes = Object.values(((lmpItem as any)?.trainingReportForwardedNotes || {}) as Record<string, any>)
+            .map((entry: any) => String(entry?.notes || '').trim())
+            .filter(Boolean)
+            .join('\n\n');
         const scheduledEvent = events.find(e => e.id === assessment.eventId)
             || events.find(e =>
                 e.flightNumber === assessment.flightNumber &&
                 (!assessment.date || !e.date || e.date === assessment.date) &&
                 (e.student === trainee.fullName || e.pilot === trainee.fullName || String(e.crew || '').includes(trainee.fullName))
             );
-        if (scheduledEvent) return scheduledEvent;
+        if (scheduledEvent) {
+            return {
+                ...scheduledEvent,
+                preFlightNotes: forwardedPreFlightNotes || (scheduledEvent as any).preFlightNotes,
+                trainingReportForwardedNotes: (lmpItem as any)?.trainingReportForwardedNotes || (scheduledEvent as any).trainingReportForwardedNotes,
+            } as ScheduleEvent;
+        }
 
         const flightNum = assessment.flightNumber || '';
         const eventType: ScheduleEvent['type'] = flightNum.includes('CPT') || flightNum.includes('Cpt')
@@ -859,9 +882,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             aircraft: '',
             type: eventType,
             status: 'Scheduled',
-            notes: '',
+            notes: lmpItem?.notes || '',
+            preFlightNotes: forwardedPreFlightNotes,
+            trainingReportForwardedNotes: (lmpItem as any)?.trainingReportForwardedNotes,
             crew: []
-        };
+        } as ScheduleEvent;
     };
 
     const openInlinePt051 = (assessment: Pt051Assessment) => {

@@ -22149,10 +22149,30 @@ const TraineeProfileFlyout = ({
     }
   };
   const buildPt051EventFromAssessment = (assessment) => {
+    const lmpItem = currentIndividualLMP?.find((item) => {
+      const assessmentRefs = new Set([
+        assessment.eventId,
+        assessment.flightNumber
+      ].filter(Boolean).map((value) => String(value).trim().toUpperCase()));
+      const itemRefs = [
+        item.id,
+        item.code,
+        item.masterEventId,
+        `lmp-${trainee.id || trainee.idNumber}-${item.code}`
+      ].filter(Boolean).map((value) => String(value).trim().toUpperCase());
+      return itemRefs.some((ref) => assessmentRefs.has(ref));
+    });
+    const forwardedPreFlightNotes = Object.values(lmpItem?.trainingReportForwardedNotes || {}).map((entry) => String(entry?.notes || "").trim()).filter(Boolean).join("\n\n");
     const scheduledEvent = events.find((e) => e.id === assessment.eventId) || events.find(
       (e) => e.flightNumber === assessment.flightNumber && (!assessment.date || !e.date || e.date === assessment.date) && (e.student === trainee.fullName || e.pilot === trainee.fullName || String(e.crew || "").includes(trainee.fullName))
     );
-    if (scheduledEvent) return scheduledEvent;
+    if (scheduledEvent) {
+      return {
+        ...scheduledEvent,
+        preFlightNotes: forwardedPreFlightNotes || scheduledEvent.preFlightNotes,
+        trainingReportForwardedNotes: lmpItem?.trainingReportForwardedNotes || scheduledEvent.trainingReportForwardedNotes
+      };
+    }
     const flightNum = assessment.flightNumber || "";
     const eventType = flightNum.includes("CPT") || flightNum.includes("Cpt") ? "cpt" : flightNum.includes("MB") || flightNum.includes("GS") || flightNum.includes("Ground") || flightNum.includes("GROUND") ? "ground" : "flight";
     return {
@@ -22167,7 +22187,9 @@ const TraineeProfileFlyout = ({
       aircraft: "",
       type: eventType,
       status: "Scheduled",
-      notes: "",
+      notes: lmpItem?.notes || "",
+      preFlightNotes: forwardedPreFlightNotes,
+      trainingReportForwardedNotes: lmpItem?.trainingReportForwardedNotes,
       crew: []
     };
   };
@@ -106804,6 +106826,32 @@ ${"=".repeat(60)}`);
     setPreviousView("HateSheet");
     setActiveView("CourseRoster");
   }, [activeView, selectedTraineeForHateSheet]);
+  const getForwardedNotesFromLmpItem = (item) => Object.values(item?.trainingReportForwardedNotes || {}).map((entry) => String(entry?.notes || "").trim()).filter(Boolean).join("\n\n");
+  const attachForwardedTrainingReportNotes = reactExports.useCallback((trainee, event) => {
+    const traineeLmp = traineeLMPs.get(trainee.fullName) || [];
+    if (!Array.isArray(traineeLmp) || traineeLmp.length === 0) return event;
+    const eventRefs = new Set([
+      event.id,
+      event.flightNumber,
+      event.eventCode
+    ].filter(Boolean).map((value) => String(value).trim().toUpperCase()));
+    const matchingItem = traineeLmp.find((item) => {
+      const itemRefs = [
+        item.id,
+        item.code,
+        item.masterEventId,
+        `lmp-${trainee.id || trainee.idNumber}-${item.code}`
+      ].filter(Boolean).map((value) => String(value).trim().toUpperCase());
+      return itemRefs.some((ref) => eventRefs.has(ref));
+    });
+    const forwardedNotes = getForwardedNotesFromLmpItem(matchingItem);
+    if (!forwardedNotes) return event;
+    return {
+      ...event,
+      preFlightNotes: forwardedNotes,
+      trainingReportForwardedNotes: matchingItem?.trainingReportForwardedNotes
+    };
+  }, [traineeLMPs]);
   const openPt051FromTraineeProfile = reactExports.useCallback((trainee, assessment) => {
     if (!canViewTraineePt051(trainee)) {
       denyPlatformAction("PT-051 record");
@@ -106840,7 +106888,7 @@ ${"=".repeat(60)}`);
       };
     }
     setSelectedTraineeForHateSheet(trainee);
-    setEventForPt051(eventForAssessment);
+    setEventForPt051(attachForwardedTrainingReportNotes(trainee, eventForAssessment));
     logAudit(
       "Performance History",
       "View",
@@ -106848,6 +106896,7 @@ ${"=".repeat(60)}`);
     );
     handleNavigation("PT051");
   }, [
+    attachForwardedTrainingReportNotes,
     buildDfpDate,
     canViewTraineePt051,
     denyPlatformAction,
