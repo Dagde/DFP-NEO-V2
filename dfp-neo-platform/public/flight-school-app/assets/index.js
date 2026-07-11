@@ -23167,14 +23167,14 @@ ${errorText || `HTTP ${response.status}`}`);
                         smoothPath && /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: smoothPath, fill: "none", stroke: "#67e8f9", strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round" })
                       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-[220px] items-center justify-center text-xs italic text-gray-500", children: "No scored events available." })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 xl:grid-cols-[minmax(260px,360px)_minmax(0,1fr)] gap-4", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border border-gray-600/70 bg-gray-950/30 p-3 ${reviewProgressExpanded ? "xl:max-w-none" : ""}`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid grid-cols-1 gap-4 ${reviewProgressExpanded ? "" : "xl:grid-cols-[minmax(260px,360px)_minmax(0,1fr)]"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border border-gray-600/70 bg-gray-950/30 p-3 ${reviewProgressExpanded ? "min-h-[460px]" : ""}`, children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-xs font-bold uppercase tracking-wide text-sky-100", children: "Course Progress" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setReviewProgressExpanded((prev) => !prev), className: "w-[72px] h-[34px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md", children: reviewProgressExpanded ? "Collapse" : "Expand" })
                         ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 flex ${reviewProgressExpanded ? "items-center justify-center gap-8" : "flex-col items-center"}`, children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 140 140", className: reviewProgressExpanded ? "h-64 w-64" : "h-36 w-36", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 flex ${reviewProgressExpanded ? "flex-col items-center justify-center" : "flex-col items-center"}`, children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 140 140", className: reviewProgressExpanded ? "h-80 w-80" : "h-36 w-36", children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "70", cy: "70", r: "52", fill: "rgba(15,23,42,0.9)", stroke: "rgba(148,163,184,0.25)", strokeWidth: "14" }),
                             /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "70", cy: "70", r: "52", fill: "none", stroke: "#22c55e", strokeWidth: "14", strokeDasharray: progressDash, pathLength: "100", transform: "rotate(-90 70 70)", strokeLinecap: "round" }),
                             lineForProgress(reviewData.progress.averageProgress, "#facc15", "Course average"),
@@ -23190,7 +23190,7 @@ ${errorText || `HTTP ${response.status}`}`);
                               reviewData.progress.totalCount
                             ] })
                           ] }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${reviewProgressExpanded ? "w-56" : "mt-2"} space-y-1 text-[10px] text-gray-300`, children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${reviewProgressExpanded ? "mt-4 w-72 text-[11px]" : "mt-2 text-[10px]"} space-y-1 text-gray-300`, children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
                               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-yellow-200/75", children: "Course average" }),
                               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
