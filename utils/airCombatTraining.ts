@@ -178,6 +178,28 @@ export const normaliseAirCombatTrainingAssignments = (preferences?: PersonnelPre
 export const normaliseAirCombatTrainingReports = (preferences?: PersonnelPreferences | null): AirCombatTrainingReport[] => {
   const raw = preferences?.airCombat?.trainingReports;
   if (!Array.isArray(raw)) return [];
+  const normalisePositiveNumber = (value: unknown): number | undefined => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : undefined;
+  };
+  const normaliseDpcoFollowUp = (value: any): AirCombatTrainingReport['dpcoFollowUp'] => {
+    if (!value || typeof value !== 'object') return undefined;
+    const action = ['extra-event', 'extra-hours-next-event', 'continue-no-additions'].includes(value.action)
+      ? value.action
+      : '';
+    if (!action) return undefined;
+    return {
+      action,
+      extraEventHours: normalisePositiveNumber(value.extraEventHours),
+      extraHours: normalisePositiveNumber(value.extraHours),
+    };
+  };
+  const normaliseDncoFollowUp = (value: any): AirCombatTrainingReport['dncoFollowUp'] => {
+    if (!value || typeof value !== 'object') return undefined;
+    return {
+      requestExtraFlight: value.requestExtraFlight === true,
+    };
+  };
   return raw
     .map((report: any) => ({
       id: String(report.id || ''),
@@ -204,6 +226,8 @@ export const normaliseAirCombatTrainingReports = (preferences?: PersonnelPrefere
       overallGrade: report.overallGrade ? String(report.overallGrade) : undefined,
       overallResult: report.overallResult === 'P' || report.overallResult === 'F' ? report.overallResult : '',
       dcoResult: ['DCO', 'DPCO', 'DNCO'].includes(report.dcoResult) ? report.dcoResult : '',
+      dpcoFollowUp: normaliseDpcoFollowUp(report.dpcoFollowUp),
+      dncoFollowUp: normaliseDncoFollowUp(report.dncoFollowUp),
       assessedElementScores: Array.isArray(report.assessedElementScores)
         ? report.assessedElementScores
           .map((score: any) => ({

@@ -4663,6 +4663,26 @@ const normaliseAirCombatTrainingAssignments = (preferences) => {
 const normaliseAirCombatTrainingReports = (preferences) => {
   const raw = preferences?.airCombat?.trainingReports;
   if (!Array.isArray(raw)) return [];
+  const normalisePositiveNumber = (value) => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : void 0;
+  };
+  const normaliseDpcoFollowUp = (value) => {
+    if (!value || typeof value !== "object") return void 0;
+    const action = ["extra-event", "extra-hours-next-event", "continue-no-additions"].includes(value.action) ? value.action : "";
+    if (!action) return void 0;
+    return {
+      action,
+      extraEventHours: normalisePositiveNumber(value.extraEventHours),
+      extraHours: normalisePositiveNumber(value.extraHours)
+    };
+  };
+  const normaliseDncoFollowUp = (value) => {
+    if (!value || typeof value !== "object") return void 0;
+    return {
+      requestExtraFlight: value.requestExtraFlight === true
+    };
+  };
   return raw.map((report) => ({
     id: String(report.id || ""),
     reportName: String(report.reportName || "PT-051"),
@@ -4688,6 +4708,8 @@ const normaliseAirCombatTrainingReports = (preferences) => {
     overallGrade: report.overallGrade ? String(report.overallGrade) : void 0,
     overallResult: report.overallResult === "P" || report.overallResult === "F" ? report.overallResult : "",
     dcoResult: ["DCO", "DPCO", "DNCO"].includes(report.dcoResult) ? report.dcoResult : "",
+    dpcoFollowUp: normaliseDpcoFollowUp(report.dpcoFollowUp),
+    dncoFollowUp: normaliseDncoFollowUp(report.dncoFollowUp),
     assessedElementScores: Array.isArray(report.assessedElementScores) ? report.assessedElementScores.map((score) => ({
       element: String(score.element || "").trim(),
       grade: score.grade === void 0 || score.grade === null ? "" : String(score.grade),
