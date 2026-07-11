@@ -20010,6 +20010,15 @@ const formatFollowUpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : "";
 };
+const extractPreFlightNotes = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const preFlightMatch = raw.match(/^Pre-flight Notes\s*\n([\s\S]*)$/i);
+  if (preFlightMatch) return preFlightMatch[1].trim();
+  const legacyMatch = raw.match(/^Training report notes from [^\n]+:\s*\n([\s\S]*)$/i);
+  if (legacyMatch) return legacyMatch[1].trim();
+  return "";
+};
 const normaliseAssessedElements$1 = (elements) => {
   const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS$1;
   const seen = /* @__PURE__ */ new Set();
@@ -20313,8 +20322,13 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     if (!parsed.QFI && event.instructor) {
       parsed.QFI = event.instructor;
     }
+    parsed.Notes = stripGeneratedFollowUpNotes$1(parsed.Notes || "");
+    if (!parsed.Notes) {
+      parsed.Notes = extractPreFlightNotes(event.notes);
+    }
     return parsed;
   });
+  const hasForwardedPreFlightNotes = extractPreFlightNotes(event.notes).length > 0;
   const [overallGrade, setOverallGrade] = reactExports.useState(initialAssessment?.overallGrade ?? null);
   const [overallResult, setOverallResult] = reactExports.useState(initialAssessment?.overallResult || null);
   const [groundSchoolAssessment, setGroundSchoolAssessment] = reactExports.useState(
@@ -21574,6 +21588,7 @@ This action cannot be undone.`;
               /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: commentFieldsConfig.notes || "Notes" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
                 getFollowUpNotesPrefix() && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-sky-500/35 bg-sky-950/30 px-3 py-2 text-sm font-semibold text-sky-100", children: getFollowUpNotesPrefix() }),
+                hasForwardedPreFlightNotes && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-red-300 underline decoration-red-300 decoration-2 underline-offset-4", children: "Pre-flight Notes" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "textarea",
                   {
@@ -108925,7 +108940,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const forwardedBlocks = Object.values(forwardedNotes).map((entry) => {
       const noteText = String(entry?.notes || "").trim();
       if (!noteText) return "";
-      return `Training report notes from ${entry.sourceCode || assessment.flightNumber}:
+      return `Pre-flight Notes
 ${noteText}`;
     }).filter(Boolean);
     const updatedTargetEvent = {

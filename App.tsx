@@ -31429,7 +31429,7 @@ const App: React.FC = () => {
             .map(entry => {
                 const noteText = String(entry?.notes || '').trim();
                 if (!noteText) return '';
-                return `Training report notes from ${entry.sourceCode || assessment.flightNumber}:\n${noteText}`;
+                return `Pre-flight Notes\n${noteText}`;
             })
             .filter(Boolean);
         const updatedTargetEvent: SyllabusItemDetail & Record<string, any> = {
