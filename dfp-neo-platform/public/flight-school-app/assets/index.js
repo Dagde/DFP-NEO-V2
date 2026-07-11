@@ -21868,6 +21868,22 @@ const initialExperience$1 = {
   instrument: { sim: 0, actual: 0 },
   simulator: { p1: 0, p2: 0, dual: 0, total: 0 }
 };
+const reviewNumber = (value) => {
+  const parsed = typeof value === "number" ? value : parseFloat(String(value ?? ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+const reviewEventCode = (value) => String(value || "").trim().toUpperCase();
+const reviewLmpRefs = (item) => [
+  item.id,
+  item.code,
+  item.masterEventId
+].filter(Boolean).map(reviewEventCode);
+const reviewIsCountableLmpEvent = (item) => {
+  const code = reviewEventCode(item.code);
+  if (!code || code.includes(" MB") || code.includes("MORNING_BREAK")) return false;
+  return !item.isRemedial && ["Flight", "FTD"].includes(item.type);
+};
+const reviewFormatHours = (value) => reviewNumber(value).toFixed(1);
 const TraineeProfileFlyout = ({
   trainee,
   onClose,
@@ -21940,6 +21956,10 @@ const TraineeProfileFlyout = ({
   const [inlinePt051Assessment, setInlinePt051Assessment] = reactExports.useState(null);
   const [inlinePt051Event, setInlinePt051Event] = reactExports.useState(null);
   const [currencyEditState, setCurrencyEditState] = reactExports.useState(null);
+  const [reviewHoursExpanded, setReviewHoursExpanded] = reactExports.useState(false);
+  const [reviewLogbookEntries, setReviewLogbookEntries] = reactExports.useState([]);
+  const [reviewLogbookLoading, setReviewLogbookLoading] = reactExports.useState(false);
+  const [reviewLogbookError, setReviewLogbookError] = reactExports.useState(null);
   const [localCurrencyStatus, setLocalCurrencyStatus] = reactExports.useState(void 0);
   const localCurrencyStatusRef = reactExports.useRef(void 0);
   const [showCurrencyAudit, setShowCurrencyAudit] = reactExports.useState(false);
@@ -21950,6 +21970,212 @@ const TraineeProfileFlyout = ({
   const activeTrainingReportUnitCode = trainee.unit || "";
   const activeTrainingReportTemplate = trainingReportTemplate || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode) || DEFAULT_TRAINING_REPORT_TEMPLATE;
   const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
+  reactExports.useEffect(() => {
+    if (activeTab !== "review") return;
+    setReviewLogbookLoading(true);
+    setReviewLogbookError(null);
+    fetch(`/api/flight-log?personName=${encodeURIComponent(trainee.fullName)}`, { credentials: "include" }).then((response) => response.ok ? response.json() : Promise.reject(new Error("Failed to load logbook rows"))).then((json) => {
+      const entries = Array.isArray(json?.entries) ? json.entries : [];
+      entries.sort((a, b) => {
+        const dateA = String(a.eventDate || "");
+        const dateB = String(b.eventDate || "");
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        return String(a.eventCode || "").localeCompare(String(b.eventCode || ""));
+      });
+      setReviewLogbookEntries(entries);
+      setReviewLogbookLoading(false);
+    }).catch(() => {
+      setReviewLogbookEntries([]);
+      setReviewLogbookError("Could not load post-flight logbook entries.");
+      setReviewLogbookLoading(false);
+    });
+  }, [activeTab, trainee.fullName]);
+  const reviewData = reactExports.useMemo(() => {
+    const traineeScores = [...scores.get(trainee.fullName) || []].sort((a, b) => {
+      const dateCompare = String(a.date || "").localeCompare(String(b.date || ""));
+      if (dateCompare !== 0) return dateCompare;
+      return reviewEventCode(a.event).localeCompare(reviewEventCode(b.event));
+    });
+    const traineeAssessments = pt051Assessments ? Array.from(pt051Assessments.values()).filter((assessment) => assessment.traineeFullName === trainee.fullName).sort((a, b) => {
+      const dateCompare = String(a.date || "").localeCompare(String(b.date || ""));
+      if (dateCompare !== 0) return dateCompare;
+      return reviewEventCode(a.flightNumber).localeCompare(reviewEventCode(b.flightNumber));
+    }) : [];
+    const assessmentPoints = traineeAssessments.map((assessment) => {
+      const grade = typeof assessment.overallGrade === "number" ? assessment.overallGrade : assessment.overallResult === "F" ? 0 : null;
+      if (grade === null || !Number.isFinite(Number(grade))) return null;
+      return {
+        id: assessment.id || assessment.eventId || `${assessment.flightNumber}-${assessment.date}`,
+        code: assessment.flightNumber || assessment.eventId,
+        date: assessment.date || "",
+        grade: Number(grade),
+        dcoResult: assessment.dcoResult || ""
+      };
+    }).filter(Boolean);
+    const scoreOnlyPoints = traineeScores.filter((score) => !assessmentPoints.some((point) => reviewEventCode(point.code) === reviewEventCode(score.event) && point.date === score.date)).map((score) => ({
+      id: `${score.event}-${score.date}`,
+      code: currentIndividualLMP.find((item) => reviewLmpRefs(item).includes(reviewEventCode(score.event)))?.code || score.event,
+      date: score.date || "",
+      grade: Number(score.score),
+      dcoResult: ""
+    }));
+    const rawPoints = [...assessmentPoints, ...scoreOnlyPoints].sort((a, b) => {
+      const dateCompare = String(a.date || "").localeCompare(String(b.date || ""));
+      if (dateCompare !== 0) return dateCompare;
+      return reviewEventCode(a.code).localeCompare(reviewEventCode(b.code));
+    });
+    const scorePoints = rawPoints.map((point, index) => {
+      const windowPoints = rawPoints.slice(Math.max(0, index - 2), index + 1);
+      const smoothed = windowPoints.reduce((sum, item) => sum + reviewNumber(item.grade), 0) / Math.max(1, windowPoints.length);
+      const previous = index > 0 ? rawPoints[index - 1] : null;
+      const status = point.grade === 0 ? "fail" : point.grade === 1 && previous?.grade === 1 ? "double-marginal" : point.grade === 1 || point.dcoResult === "DPCO" ? "marginal" : "pass";
+      return {
+        code: point.code,
+        date: point.date,
+        grade: point.grade,
+        smoothed,
+        status
+      };
+    });
+    const countableLmp = currentIndividualLMP.filter(reviewIsCountableLmpEvent);
+    const completedRefs = /* @__PURE__ */ new Set();
+    traineeScores.forEach((score) => completedRefs.add(reviewEventCode(score.event)));
+    traineeAssessments.forEach((assessment) => {
+      completedRefs.add(reviewEventCode(assessment.eventId));
+      completedRefs.add(reviewEventCode(assessment.flightNumber));
+    });
+    const isCompletedLmp = (item) => reviewLmpRefs(item).some((ref) => completedRefs.has(ref));
+    const completedCount = countableLmp.filter(isCompletedLmp).length;
+    const progressPercent = countableLmp.length > 0 ? completedCount / countableLmp.length * 100 : 0;
+    const peerProgressValues = Array.from(scores.entries()).map(([name2, peerScores]) => {
+      const peerRefs = new Set(peerScores.map((score) => reviewEventCode(score.event)));
+      if (pt051Assessments) {
+        Array.from(pt051Assessments.values()).filter((assessment) => assessment.traineeFullName === name2).forEach((assessment) => {
+          peerRefs.add(reviewEventCode(assessment.eventId));
+          peerRefs.add(reviewEventCode(assessment.flightNumber));
+        });
+      }
+      const peerCompleted = countableLmp.filter((item) => reviewLmpRefs(item).some((ref) => peerRefs.has(ref))).length;
+      return countableLmp.length > 0 ? peerCompleted / countableLmp.length * 100 : 0;
+    }).filter((value) => Number.isFinite(value));
+    const averageProgress = peerProgressValues.length > 0 ? peerProgressValues.reduce((sum, value) => sum + value, 0) / peerProgressValues.length : progressPercent;
+    const mostProgress = peerProgressValues.length > 0 ? Math.max(...peerProgressValues) : progressPercent;
+    const leastProgress = peerProgressValues.length > 0 ? Math.min(...peerProgressValues) : progressPercent;
+    let cumulativeLogbook = 0;
+    let cumulativeSyllabus = 0;
+    let cumulativeEffective = 0;
+    const lmpByCode = new Map(countableLmp.map((item) => [reviewEventCode(item.code), item]));
+    const logRows = reviewLogbookEntries.filter((entry) => String(entry.personRole || "").toLowerCase().includes("trainee") || String(entry.personName || "").trim().toLowerCase() === trainee.fullName.toLowerCase()).map((entry) => {
+      const code = reviewEventCode(entry.eventCode || entry.duty || entry.scheduleEventId);
+      const lmpItem = lmpByCode.get(code) || countableLmp.find((item) => reviewLmpRefs(item).includes(code));
+      const logbookHours = reviewNumber(entry.totalTime || entry.captainLogSnapshot?.total || entry.crewLogSnapshot?.total);
+      const ineffectiveHours = reviewNumber(entry.ineffectiveTime);
+      const syllabusHours = reviewNumber(lmpItem?.flightOrSimHours || lmpItem?.totalEventHours || lmpItem?.duration);
+      const effectiveHours = Math.max(0, logbookHours - ineffectiveHours);
+      cumulativeLogbook += logbookHours;
+      cumulativeSyllabus += syllabusHours;
+      cumulativeEffective += effectiveHours;
+      return {
+        code: code || reviewEventCode(lmpItem?.code) || "EVENT",
+        date: entry.eventDate || "",
+        logbookHours,
+        syllabusHours,
+        ineffectiveHours,
+        effectiveHours,
+        cumulativeLogbook,
+        cumulativeSyllabus,
+        cumulativeEffective
+      };
+    });
+    const summaryFailed = scorePoints.filter((point) => point.status === "fail");
+    const summaryDoubleMarginal = scorePoints.filter((point) => point.status === "double-marginal");
+    const summaryMarginal = scorePoints.filter((point) => point.status === "marginal");
+    return {
+      scorePoints,
+      progress: {
+        completedCount,
+        totalCount: countableLmp.length,
+        progressPercent,
+        averageProgress,
+        mostProgress,
+        leastProgress
+      },
+      hourRows: logRows,
+      hourTotals: {
+        logbook: cumulativeLogbook,
+        syllabus: cumulativeSyllabus,
+        effective: cumulativeEffective
+      },
+      summaryFailed,
+      summaryDoubleMarginal,
+      summaryMarginal
+    };
+  }, [currentIndividualLMP, pt051Assessments, reviewLogbookEntries, scores, trainee.fullName]);
+  const exportTraineeReviewPdf = () => {
+    const doc = new E({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 14;
+    let y = 16;
+    const addText = (text, x, yy, size = 9, style = "normal") => {
+      doc.setFont("helvetica", style);
+      doc.setFontSize(size);
+      doc.text(text, x, yy);
+    };
+    const addSection = (title) => {
+      y += 7;
+      doc.setFillColor(31, 45, 66);
+      doc.rect(margin, y - 4.5, pageWidth - margin * 2, 7, "F");
+      doc.setTextColor(255, 255, 255);
+      addText(title, margin + 2, y, 9, "bold");
+      doc.setTextColor(15, 23, 42);
+      y += 6;
+    };
+    const ensureSpace = (height) => {
+      if (y + height < 282) return;
+      doc.addPage();
+      y = 16;
+    };
+    doc.setFillColor(15, 24, 36);
+    doc.rect(0, 0, pageWidth, 24, "F");
+    doc.setTextColor(255, 255, 255);
+    addText("TRAINEE REVIEW SUMMARY", margin, 11, 14, "bold");
+    addText(`${trainee.rank || ""} ${trainee.name}  |  ${trainee.course || "No course"}  |  ${trainee.unit || ""}`, margin, 18, 9);
+    doc.setTextColor(15, 23, 42);
+    y = 30;
+    addSection("Course Progress");
+    addText(`Progress: ${reviewData.progress.completedCount}/${reviewData.progress.totalCount} events (${reviewData.progress.progressPercent.toFixed(0)}%)`, margin, y);
+    addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Most: ${reviewData.progress.mostProgress.toFixed(0)}%   Least: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin, y + 5);
+    y += 12;
+    addSection("Performance Summary");
+    addText(`Failed events: ${reviewData.summaryFailed.map((item) => item.code).join(", ") || "None"}`, margin, y);
+    addText(`Double marginal events: ${reviewData.summaryDoubleMarginal.map((item) => item.code).join(", ") || "None"}`, margin, y + 5);
+    addText(`Marginal events: ${reviewData.summaryMarginal.map((item) => item.code).join(", ") || "None"}`, margin, y + 10);
+    y += 17;
+    addSection("Cumulative Hours");
+    addText("Event", margin, y, 8, "bold");
+    addText("Date", margin + 32, y, 8, "bold");
+    addText("Log", margin + 58, y, 8, "bold");
+    addText("Syllabus", margin + 78, y, 8, "bold");
+    addText("Effective", margin + 105, y, 8, "bold");
+    y += 5;
+    const rowsForPdf = reviewData.hourRows.length > 0 ? reviewData.hourRows : [];
+    rowsForPdf.slice(0, 28).forEach((row) => {
+      ensureSpace(5);
+      addText(row.code.slice(0, 14), margin, y, 7);
+      addText(row.date || "-", margin + 32, y, 7);
+      addText(reviewFormatHours(row.cumulativeLogbook), margin + 58, y, 7);
+      addText(reviewFormatHours(row.cumulativeSyllabus), margin + 78, y, 7);
+      addText(reviewFormatHours(row.cumulativeEffective), margin + 105, y, 7);
+      y += 4.5;
+    });
+    if (rowsForPdf.length === 0) {
+      addText("No post-flight logbook rows available.", margin, y, 8);
+      y += 5;
+    }
+    y += 3;
+    addText(`Totals: Logbook ${reviewFormatHours(reviewData.hourTotals.logbook)} | Syllabus ${reviewFormatHours(reviewData.hourTotals.syllabus)} | Effective ${reviewFormatHours(reviewData.hourTotals.effective)}`, margin, y, 8, "bold");
+    doc.save(`Trainee_Review_${trainee.name.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`);
+  };
   const handleTabClick = (tab) => setActiveTab((prev) => {
     const next = prev === tab ? null : tab;
     if (next !== null) {
@@ -22698,13 +22924,193 @@ ${errorText || `HTTP ${response.status}`}`);
                   onClose: () => setShowCurrencyAudit(false)
                 }
               ),
-              activeTab === "review" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-4", style: card3dStyle2, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
-                  "Trainee Review — ",
-                  trainee.name
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
-              ] }) }),
+              activeTab === "review" && (() => {
+                const chartWidth = 640;
+                const chartHeight = 190;
+                const chartPadding = { left: 34, right: 18, top: 16, bottom: 38 };
+                const chartInnerWidth = chartWidth - chartPadding.left - chartPadding.right;
+                const chartInnerHeight = chartHeight - chartPadding.top - chartPadding.bottom;
+                const points = reviewData.scorePoints;
+                const maxGrade = Math.max(5, ...points.map((point) => point.grade));
+                const xForPoint = (index) => chartPadding.left + (index + 0.5) / Math.max(1, points.length) * chartInnerWidth;
+                const yForGrade = (grade) => chartPadding.top + chartInnerHeight - Math.max(0, grade) / maxGrade * chartInnerHeight;
+                const smoothPath = points.map((point, index) => `${index === 0 ? "M" : "L"} ${xForPoint(index)} ${yForGrade(point.smoothed)}`).join(" ");
+                const progressAngle = (value) => -90 + Math.max(0, Math.min(100, value)) / 100 * 360;
+                const lineForProgress = (value, colour, label) => {
+                  const angle = progressAngle(value) * Math.PI / 180;
+                  const x2 = 70 + Math.cos(angle) * 50;
+                  const y2 = 70 + Math.sin(angle) * 50;
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "70", y1: "70", x2, y2, stroke: colour, strokeWidth: "2.5", strokeLinecap: "round" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("title", { children: `${label}: ${value.toFixed(0)}%` })
+                  ] }, label);
+                };
+                const progressDash = `${Math.max(0, Math.min(100, reviewData.progress.progressPercent))} ${100 - Math.max(0, Math.min(100, reviewData.progress.progressPercent))}`;
+                const displayHourRows = reviewHoursExpanded ? reviewData.hourRows : reviewData.hourRows.slice(-1);
+                const summaryBlock = (title, items, colourClass) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-600/70 bg-gray-900/35 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold uppercase tracking-wide text-gray-300", children: title }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-2 py-0.5 text-xs font-bold ${colourClass}`, children: items.length })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap gap-1.5", children: items.length > 0 ? items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800 px-2 py-1 font-mono text-[10px] text-gray-200", children: item.code }, `${title}-${item.code}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs italic text-gray-500", children: "None" }) })
+                ] });
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-4", style: card3dStyle2, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
+                        "Trainee Review — ",
+                        trainee.name
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-gray-400", children: "Performance, course progress, cumulative hours and review flags." })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: exportTraineeReviewPdf, className: "w-[74px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md", children: "Export PDF" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md", children: "Close" })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-4", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-600/70 bg-gray-950/30 p-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-xs font-bold uppercase tracking-wide text-sky-100", children: "Scores by Event" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 text-[10px] text-gray-400", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block h-2 w-2 rounded-sm bg-red-500 mr-1" }),
+                            "Fail"
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block h-2 w-2 rounded-sm bg-amber-500 mr-1" }),
+                            "Marginal"
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block h-0.5 w-4 bg-cyan-300 mr-1 align-middle" }),
+                            "Smoothed avg"
+                          ] })
+                        ] })
+                      ] }),
+                      points.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: `0 0 ${chartWidth} ${chartHeight}`, className: "h-[220px] w-full overflow-visible", children: [
+                        [0, 1, 2, 3, 4, 5].map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: chartPadding.left, y1: yForGrade(grade), x2: chartWidth - chartPadding.right, y2: yForGrade(grade), stroke: "rgba(148,163,184,0.16)" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "8", y: yForGrade(grade) + 3, fill: "#94a3b8", fontSize: "9", children: grade })
+                        ] }, grade)),
+                        points.map((point, index) => {
+                          const barWidth = Math.max(8, Math.min(22, chartInnerWidth / Math.max(1, points.length) - 6));
+                          const x = xForPoint(index) - barWidth / 2;
+                          const y = yForGrade(point.grade);
+                          const fill = point.status === "fail" || point.status === "double-marginal" ? "#ef4444" : point.status === "marginal" ? "#f59e0b" : "#38bdf8";
+                          return /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x, y, width: barWidth, height: chartPadding.top + chartInnerHeight - y, rx: "2", fill, opacity: "0.88" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "text",
+                              {
+                                x: xForPoint(index),
+                                y: chartHeight - 20,
+                                fill: point.status === "fail" || point.status === "double-marginal" ? "#f87171" : point.status === "marginal" ? "#fb923c" : "#cbd5e1",
+                                fontSize: "8",
+                                fontWeight: point.status === "pass" ? 500 : 800,
+                                textAnchor: "middle",
+                                transform: `rotate(-45 ${xForPoint(index)} ${chartHeight - 20})`,
+                                children: point.code
+                              }
+                            ),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("title", { children: `${point.code}: ${point.grade} (${point.status})` })
+                          ] }, `${point.code}-${index}`);
+                        }),
+                        smoothPath && /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: smoothPath, fill: "none", stroke: "#67e8f9", strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round" })
+                      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-[220px] items-center justify-center text-xs italic text-gray-500", children: "No scored events available." })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-600/70 bg-gray-950/30 p-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-xs font-bold uppercase tracking-wide text-sky-100", children: "Course Progress" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 140 140", className: "h-36 w-36", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "70", cy: "70", r: "52", fill: "rgba(15,23,42,0.9)", stroke: "rgba(148,163,184,0.25)", strokeWidth: "14" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "70", cy: "70", r: "52", fill: "none", stroke: "#22c55e", strokeWidth: "14", strokeDasharray: progressDash, pathLength: "100", transform: "rotate(-90 70 70)", strokeLinecap: "round" }),
+                        lineForProgress(reviewData.progress.averageProgress, "#facc15", "Course average"),
+                        lineForProgress(reviewData.progress.mostProgress, "#38bdf8", "Most progressed"),
+                        lineForProgress(reviewData.progress.leastProgress, "#f87171", "Least progressed"),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("text", { x: "70", y: "68", fill: "#f8fafc", fontSize: "18", fontWeight: "800", textAnchor: "middle", children: [
+                          reviewData.progress.progressPercent.toFixed(0),
+                          "%"
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("text", { x: "70", y: "84", fill: "#94a3b8", fontSize: "9", textAnchor: "middle", children: [
+                          reviewData.progress.completedCount,
+                          "/",
+                          reviewData.progress.totalCount
+                        ] })
+                      ] }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-1 text-[10px] text-gray-300", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-yellow-300", children: "Course average" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                            reviewData.progress.averageProgress.toFixed(0),
+                            "%"
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300", children: "Most progressed" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                            reviewData.progress.mostProgress.toFixed(0),
+                            "%"
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-300", children: "Least progressed" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                            reviewData.progress.leastProgress.toFixed(0),
+                            "%"
+                          ] })
+                        ] })
+                      ] })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded border border-gray-600/70 bg-gray-950/30 p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-xs font-bold uppercase tracking-wide text-sky-100", children: "Cumulative Hours" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-gray-500", children: "Effective hours = logbook hours minus ineffective post-flight time." })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setReviewHoursExpanded((prev) => !prev), className: "w-[72px] h-[34px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md", children: reviewHoursExpanded ? "Collapse" : "Expand" })
+                    ] }),
+                    reviewLogbookLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "py-5 text-center text-xs italic text-gray-500", children: "Loading post-flight logbook entries..." }) : reviewLogbookError ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "py-5 text-center text-xs italic text-amber-300", children: reviewLogbookError }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-[11px]", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-1 pr-3", children: "Event" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-1 pr-3", children: "Date" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-1 pr-3 text-right", children: "Logbook" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-1 pr-3 text-right", children: "Syllabus" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-1 pr-3 text-right", children: "Ineff" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-1 pr-3 text-right", children: "Effective" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-1 pr-3 text-right", children: "Cum Log" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-1 pr-3 text-right", children: "Cum Syl" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-1 text-right", children: "Cum Eff" })
+                      ] }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: displayHourRows.length > 0 ? displayHourRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-800/80 text-gray-200", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 pr-3 font-mono", children: row.code }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 pr-3 text-gray-400", children: row.date || "-" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 pr-3 text-right", children: reviewFormatHours(row.logbookHours) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 pr-3 text-right", children: reviewFormatHours(row.syllabusHours) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 pr-3 text-right text-amber-200", children: reviewFormatHours(row.ineffectiveHours) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 pr-3 text-right", children: reviewFormatHours(row.effectiveHours) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 pr-3 text-right font-semibold", children: reviewFormatHours(row.cumulativeLogbook) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 pr-3 text-right font-semibold", children: reviewFormatHours(row.cumulativeSyllabus) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 text-right font-semibold", children: reviewFormatHours(row.cumulativeEffective) })
+                      ] }, `${row.code}-${row.date}-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, className: "py-5 text-center italic text-gray-500", children: "No post-flight logbook rows available." }) }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("tfoot", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "text-sky-100", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "pt-2 font-bold", colSpan: 2, children: "Totals" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "pt-2 pr-3 text-right font-bold", children: reviewFormatHours(reviewData.hourTotals.logbook) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "pt-2 pr-3 text-right font-bold", children: reviewFormatHours(reviewData.hourTotals.syllabus) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", {}),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", {}),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", {}),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", {}),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "pt-2 text-right font-bold", children: reviewFormatHours(reviewData.hourTotals.effective) })
+                      ] }) })
+                    ] }) })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-1 md:grid-cols-3 gap-3", children: [
+                    summaryBlock("Failed Events", reviewData.summaryFailed, "bg-red-500/20 text-red-200"),
+                    summaryBlock("Double Marginal Events", reviewData.summaryDoubleMarginal, "bg-red-500/20 text-red-200"),
+                    summaryBlock("Marginal Events", reviewData.summaryMarginal, "bg-amber-500/20 text-amber-200")
+                  ] })
+                ] });
+              })(),
               activeTab === "unavailable" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-4", style: card3dStyle2, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [

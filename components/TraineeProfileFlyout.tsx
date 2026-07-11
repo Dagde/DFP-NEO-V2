@@ -2,6 +2,7 @@ import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { jsPDF } from 'jspdf';
 import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, Pt051Assessment, PhraseBank } from '../types';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import PauseConfirmationFlyout from './PauseConfirmationFlyout';
@@ -75,7 +76,7 @@ interface TraineeProfileFlyoutProps {
   pt051PerformanceLoading?: boolean;
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
   userProfile?: any;
-  initialActiveTab?: 'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | null;
+  initialActiveTab?: 'unavailable' | 'currency' | 'review' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | null;
   onSelectPt051ForEvent?: (assessment: Pt051Assessment) => void;
   onSavePt051Assessment?: (assessment: Pt051Assessment) => void;
   onDeletePt051Assessment?: (assessmentId: string, eventId: string, traineeFullName: string) => void;
@@ -308,6 +309,47 @@ const initialExperience: LogbookExperience = {
     simulator: { p1: 0, p2: 0, dual: 0, total: 0 }
 };
 
+type TraineeReviewPoint = {
+    code: string;
+    date: string;
+    grade: number;
+    smoothed: number;
+    status: 'fail' | 'marginal' | 'double-marginal' | 'pass';
+};
+
+type TraineeReviewHourRow = {
+    code: string;
+    date: string;
+    logbookHours: number;
+    syllabusHours: number;
+    ineffectiveHours: number;
+    effectiveHours: number;
+    cumulativeLogbook: number;
+    cumulativeSyllabus: number;
+    cumulativeEffective: number;
+};
+
+const reviewNumber = (value: unknown): number => {
+    const parsed = typeof value === 'number' ? value : parseFloat(String(value ?? ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const reviewEventCode = (value: unknown): string => String(value || '').trim().toUpperCase();
+
+const reviewLmpRefs = (item: SyllabusItemDetail): string[] => [
+    item.id,
+    item.code,
+    item.masterEventId,
+].filter(Boolean).map(reviewEventCode);
+
+const reviewIsCountableLmpEvent = (item: SyllabusItemDetail): boolean => {
+    const code = reviewEventCode(item.code);
+    if (!code || code.includes(' MB') || code.includes('MORNING_BREAK')) return false;
+    return !item.isRemedial && ['Flight', 'FTD'].includes(item.type);
+};
+
+const reviewFormatHours = (value: number): string => reviewNumber(value).toFixed(1);
+
 const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   trainee,
   onClose,
@@ -389,6 +431,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
       isEditing: boolean; isSaving: boolean;
       onEdit: () => void; onSave: () => void; onCancel: () => void;
     } | null>(null);
+    const [reviewHoursExpanded, setReviewHoursExpanded] = useState(false);
+    const [reviewLogbookEntries, setReviewLogbookEntries] = useState<any[]>([]);
+    const [reviewLogbookLoading, setReviewLogbookLoading] = useState(false);
+    const [reviewLogbookError, setReviewLogbookError] = useState<string | null>(null);
     // Local currency status override — updated after successful save without triggering full onUpdateTrainee
     const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[] | undefined>(undefined);
     const localCurrencyStatusRef = useRef<PersonCurrencyStatus[] | undefined>(undefined);
@@ -404,6 +450,258 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
       || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode)
       || DEFAULT_TRAINING_REPORT_TEMPLATE;
     const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
+
+    useEffect(() => {
+        if (activeTab !== 'review') return;
+        setReviewLogbookLoading(true);
+        setReviewLogbookError(null);
+        fetch(`/api/flight-log?personName=${encodeURIComponent(trainee.fullName)}`, { credentials: 'include' })
+            .then(response => response.ok ? response.json() : Promise.reject(new Error('Failed to load logbook rows')))
+            .then((json: any) => {
+                const entries = Array.isArray(json?.entries) ? json.entries : [];
+                entries.sort((a: any, b: any) => {
+                    const dateA = String(a.eventDate || '');
+                    const dateB = String(b.eventDate || '');
+                    if (dateA !== dateB) return dateA.localeCompare(dateB);
+                    return String(a.eventCode || '').localeCompare(String(b.eventCode || ''));
+                });
+                setReviewLogbookEntries(entries);
+                setReviewLogbookLoading(false);
+            })
+            .catch(() => {
+                setReviewLogbookEntries([]);
+                setReviewLogbookError('Could not load post-flight logbook entries.');
+                setReviewLogbookLoading(false);
+            });
+    }, [activeTab, trainee.fullName]);
+
+    const reviewData = useMemo(() => {
+        const traineeScores = [...(scores.get(trainee.fullName) || [])].sort((a, b) => {
+            const dateCompare = String(a.date || '').localeCompare(String(b.date || ''));
+            if (dateCompare !== 0) return dateCompare;
+            return reviewEventCode(a.event).localeCompare(reviewEventCode(b.event));
+        });
+        const traineeAssessments = pt051Assessments
+            ? Array.from(pt051Assessments.values())
+                .filter((assessment: Pt051Assessment) => assessment.traineeFullName === trainee.fullName)
+                .sort((a, b) => {
+                    const dateCompare = String(a.date || '').localeCompare(String(b.date || ''));
+                    if (dateCompare !== 0) return dateCompare;
+                    return reviewEventCode(a.flightNumber).localeCompare(reviewEventCode(b.flightNumber));
+                })
+            : [];
+
+        const assessmentPoints = traineeAssessments
+            .map(assessment => {
+                const grade = typeof assessment.overallGrade === 'number'
+                    ? assessment.overallGrade
+                    : assessment.overallResult === 'F'
+                        ? 0
+                        : null;
+                if (grade === null || !Number.isFinite(Number(grade))) return null;
+                return {
+                    id: assessment.id || assessment.eventId || `${assessment.flightNumber}-${assessment.date}`,
+                    code: assessment.flightNumber || assessment.eventId,
+                    date: assessment.date || '',
+                    grade: Number(grade),
+                    dcoResult: assessment.dcoResult || '',
+                };
+            })
+            .filter(Boolean) as Array<{ id: string; code: string; date: string; grade: number; dcoResult: string }>;
+
+        const scoreOnlyPoints = traineeScores
+            .filter(score => !assessmentPoints.some(point => reviewEventCode(point.code) === reviewEventCode(score.event) && point.date === score.date))
+            .map(score => ({
+                id: `${score.event}-${score.date}`,
+                code: currentIndividualLMP.find(item => reviewLmpRefs(item).includes(reviewEventCode(score.event)))?.code || score.event,
+                date: score.date || '',
+                grade: Number(score.score),
+                dcoResult: '',
+            }));
+
+        const rawPoints = [...assessmentPoints, ...scoreOnlyPoints].sort((a, b) => {
+            const dateCompare = String(a.date || '').localeCompare(String(b.date || ''));
+            if (dateCompare !== 0) return dateCompare;
+            return reviewEventCode(a.code).localeCompare(reviewEventCode(b.code));
+        });
+
+        const scorePoints: TraineeReviewPoint[] = rawPoints.map((point, index) => {
+            const windowPoints = rawPoints.slice(Math.max(0, index - 2), index + 1);
+            const smoothed = windowPoints.reduce((sum, item) => sum + reviewNumber(item.grade), 0) / Math.max(1, windowPoints.length);
+            const previous = index > 0 ? rawPoints[index - 1] : null;
+            const status: TraineeReviewPoint['status'] = point.grade === 0
+                ? 'fail'
+                : point.grade === 1 && previous?.grade === 1
+                    ? 'double-marginal'
+                    : point.grade === 1 || point.dcoResult === 'DPCO'
+                        ? 'marginal'
+                        : 'pass';
+            return {
+                code: point.code,
+                date: point.date,
+                grade: point.grade,
+                smoothed,
+                status,
+            };
+        });
+
+        const countableLmp = currentIndividualLMP.filter(reviewIsCountableLmpEvent);
+        const completedRefs = new Set<string>();
+        traineeScores.forEach(score => completedRefs.add(reviewEventCode(score.event)));
+        traineeAssessments.forEach(assessment => {
+            completedRefs.add(reviewEventCode(assessment.eventId));
+            completedRefs.add(reviewEventCode(assessment.flightNumber));
+        });
+        const isCompletedLmp = (item: SyllabusItemDetail) => reviewLmpRefs(item).some(ref => completedRefs.has(ref));
+        const completedCount = countableLmp.filter(isCompletedLmp).length;
+        const progressPercent = countableLmp.length > 0 ? (completedCount / countableLmp.length) * 100 : 0;
+
+        const peerProgressValues = Array.from(scores.entries())
+            .map(([name, peerScores]) => {
+                const peerRefs = new Set(peerScores.map(score => reviewEventCode(score.event)));
+                if (pt051Assessments) {
+                    Array.from(pt051Assessments.values())
+                        .filter(assessment => assessment.traineeFullName === name)
+                        .forEach(assessment => {
+                            peerRefs.add(reviewEventCode(assessment.eventId));
+                            peerRefs.add(reviewEventCode(assessment.flightNumber));
+                        });
+                }
+                const peerCompleted = countableLmp.filter(item => reviewLmpRefs(item).some(ref => peerRefs.has(ref))).length;
+                return countableLmp.length > 0 ? (peerCompleted / countableLmp.length) * 100 : 0;
+            })
+            .filter(value => Number.isFinite(value));
+        const averageProgress = peerProgressValues.length > 0
+            ? peerProgressValues.reduce((sum, value) => sum + value, 0) / peerProgressValues.length
+            : progressPercent;
+        const mostProgress = peerProgressValues.length > 0 ? Math.max(...peerProgressValues) : progressPercent;
+        const leastProgress = peerProgressValues.length > 0 ? Math.min(...peerProgressValues) : progressPercent;
+
+        let cumulativeLogbook = 0;
+        let cumulativeSyllabus = 0;
+        let cumulativeEffective = 0;
+        const lmpByCode = new Map(countableLmp.map(item => [reviewEventCode(item.code), item]));
+        const logRows = reviewLogbookEntries
+            .filter(entry => String(entry.personRole || '').toLowerCase().includes('trainee') || String(entry.personName || '').trim().toLowerCase() === trainee.fullName.toLowerCase())
+            .map(entry => {
+                const code = reviewEventCode(entry.eventCode || entry.duty || entry.scheduleEventId);
+                const lmpItem = lmpByCode.get(code) || countableLmp.find(item => reviewLmpRefs(item).includes(code));
+                const logbookHours = reviewNumber(entry.totalTime || entry.captainLogSnapshot?.total || entry.crewLogSnapshot?.total);
+                const ineffectiveHours = reviewNumber(entry.ineffectiveTime);
+                const syllabusHours = reviewNumber(lmpItem?.flightOrSimHours || lmpItem?.totalEventHours || lmpItem?.duration);
+                const effectiveHours = Math.max(0, logbookHours - ineffectiveHours);
+                cumulativeLogbook += logbookHours;
+                cumulativeSyllabus += syllabusHours;
+                cumulativeEffective += effectiveHours;
+                return {
+                    code: code || reviewEventCode(lmpItem?.code) || 'EVENT',
+                    date: entry.eventDate || '',
+                    logbookHours,
+                    syllabusHours,
+                    ineffectiveHours,
+                    effectiveHours,
+                    cumulativeLogbook,
+                    cumulativeSyllabus,
+                    cumulativeEffective,
+                };
+            });
+
+        const summaryFailed = scorePoints.filter(point => point.status === 'fail');
+        const summaryDoubleMarginal = scorePoints.filter(point => point.status === 'double-marginal');
+        const summaryMarginal = scorePoints.filter(point => point.status === 'marginal');
+
+        return {
+            scorePoints,
+            progress: {
+                completedCount,
+                totalCount: countableLmp.length,
+                progressPercent,
+                averageProgress,
+                mostProgress,
+                leastProgress,
+            },
+            hourRows: logRows,
+            hourTotals: {
+                logbook: cumulativeLogbook,
+                syllabus: cumulativeSyllabus,
+                effective: cumulativeEffective,
+            },
+            summaryFailed,
+            summaryDoubleMarginal,
+            summaryMarginal,
+        };
+    }, [currentIndividualLMP, pt051Assessments, reviewLogbookEntries, scores, trainee.fullName]);
+
+    const exportTraineeReviewPdf = () => {
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 14;
+        let y = 16;
+        const addText = (text: string, x: number, yy: number, size = 9, style: 'normal' | 'bold' = 'normal') => {
+            doc.setFont('helvetica', style);
+            doc.setFontSize(size);
+            doc.text(text, x, yy);
+        };
+        const addSection = (title: string) => {
+            y += 7;
+            doc.setFillColor(31, 45, 66);
+            doc.rect(margin, y - 4.5, pageWidth - margin * 2, 7, 'F');
+            doc.setTextColor(255, 255, 255);
+            addText(title, margin + 2, y, 9, 'bold');
+            doc.setTextColor(15, 23, 42);
+            y += 6;
+        };
+        const ensureSpace = (height: number) => {
+            if (y + height < 282) return;
+            doc.addPage();
+            y = 16;
+        };
+
+        doc.setFillColor(15, 24, 36);
+        doc.rect(0, 0, pageWidth, 24, 'F');
+        doc.setTextColor(255, 255, 255);
+        addText('TRAINEE REVIEW SUMMARY', margin, 11, 14, 'bold');
+        addText(`${trainee.rank || ''} ${trainee.name}  |  ${trainee.course || 'No course'}  |  ${trainee.unit || ''}`, margin, 18, 9);
+        doc.setTextColor(15, 23, 42);
+        y = 30;
+
+        addSection('Course Progress');
+        addText(`Progress: ${reviewData.progress.completedCount}/${reviewData.progress.totalCount} events (${reviewData.progress.progressPercent.toFixed(0)}%)`, margin, y);
+        addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Most: ${reviewData.progress.mostProgress.toFixed(0)}%   Least: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin, y + 5);
+        y += 12;
+
+        addSection('Performance Summary');
+        addText(`Failed events: ${reviewData.summaryFailed.map(item => item.code).join(', ') || 'None'}`, margin, y);
+        addText(`Double marginal events: ${reviewData.summaryDoubleMarginal.map(item => item.code).join(', ') || 'None'}`, margin, y + 5);
+        addText(`Marginal events: ${reviewData.summaryMarginal.map(item => item.code).join(', ') || 'None'}`, margin, y + 10);
+        y += 17;
+
+        addSection('Cumulative Hours');
+        addText('Event', margin, y, 8, 'bold');
+        addText('Date', margin + 32, y, 8, 'bold');
+        addText('Log', margin + 58, y, 8, 'bold');
+        addText('Syllabus', margin + 78, y, 8, 'bold');
+        addText('Effective', margin + 105, y, 8, 'bold');
+        y += 5;
+        const rowsForPdf = reviewData.hourRows.length > 0 ? reviewData.hourRows : [];
+        rowsForPdf.slice(0, 28).forEach(row => {
+            ensureSpace(5);
+            addText(row.code.slice(0, 14), margin, y, 7);
+            addText(row.date || '-', margin + 32, y, 7);
+            addText(reviewFormatHours(row.cumulativeLogbook), margin + 58, y, 7);
+            addText(reviewFormatHours(row.cumulativeSyllabus), margin + 78, y, 7);
+            addText(reviewFormatHours(row.cumulativeEffective), margin + 105, y, 7);
+            y += 4.5;
+        });
+        if (rowsForPdf.length === 0) {
+            addText('No post-flight logbook rows available.', margin, y, 8);
+            y += 5;
+        }
+        y += 3;
+        addText(`Totals: Logbook ${reviewFormatHours(reviewData.hourTotals.logbook)} | Syllabus ${reviewFormatHours(reviewData.hourTotals.syllabus)} | Effective ${reviewFormatHours(reviewData.hourTotals.effective)}`, margin, y, 8, 'bold');
+
+        doc.save(`Trainee_Review_${trainee.name.replace(/[^A-Za-z0-9]+/g, '_')}.pdf`);
+    };
 
     const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => {
       const next = prev === tab ? null : tab;
@@ -1326,14 +1624,211 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       />
                     )}
 
-                    {activeTab === 'review' && (
-                      <div className={card3d + " p-4"} style={card3dStyle}>
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-bold text-white">Trainee Review — {trainee.name}</h4>
-                          <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                    {activeTab === 'review' && (() => {
+                      const chartWidth = 640;
+                      const chartHeight = 190;
+                      const chartPadding = { left: 34, right: 18, top: 16, bottom: 38 };
+                      const chartInnerWidth = chartWidth - chartPadding.left - chartPadding.right;
+                      const chartInnerHeight = chartHeight - chartPadding.top - chartPadding.bottom;
+                      const points = reviewData.scorePoints;
+                      const maxGrade = Math.max(5, ...points.map(point => point.grade));
+                      const xForPoint = (index: number) => chartPadding.left + ((index + 0.5) / Math.max(1, points.length)) * chartInnerWidth;
+                      const yForGrade = (grade: number) => chartPadding.top + chartInnerHeight - (Math.max(0, grade) / maxGrade) * chartInnerHeight;
+                      const smoothPath = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${xForPoint(index)} ${yForGrade(point.smoothed)}`).join(' ');
+                      const progressAngle = (value: number) => -90 + (Math.max(0, Math.min(100, value)) / 100) * 360;
+                      const lineForProgress = (value: number, colour: string, label: string) => {
+                        const angle = progressAngle(value) * Math.PI / 180;
+                        const x2 = 70 + Math.cos(angle) * 50;
+                        const y2 = 70 + Math.sin(angle) * 50;
+                        return (
+                          <g key={label}>
+                            <line x1="70" y1="70" x2={x2} y2={y2} stroke={colour} strokeWidth="2.5" strokeLinecap="round" />
+                            <title>{`${label}: ${value.toFixed(0)}%`}</title>
+                          </g>
+                        );
+                      };
+                      const progressDash = `${Math.max(0, Math.min(100, reviewData.progress.progressPercent))} ${100 - Math.max(0, Math.min(100, reviewData.progress.progressPercent))}`;
+                      const displayHourRows = reviewHoursExpanded ? reviewData.hourRows : reviewData.hourRows.slice(-1);
+                      const summaryBlock = (title: string, items: TraineeReviewPoint[], colourClass: string) => (
+                        <div className="rounded border border-gray-600/70 bg-gray-900/35 p-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wide text-gray-300">{title}</span>
+                            <span className={`rounded px-2 py-0.5 text-xs font-bold ${colourClass}`}>{items.length}</span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {items.length > 0 ? items.map((item, index) => (
+                              <span key={`${title}-${item.code}-${index}`} className="rounded bg-gray-800 px-2 py-1 font-mono text-[10px] text-gray-200">
+                                {item.code}
+                              </span>
+                            )) : (
+                              <span className="text-xs italic text-gray-500">None</span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+
+                      return (
+                        <div className={card3d + " p-4"} style={card3dStyle}>
+                          <div className="mb-4 flex items-center justify-between">
+                            <div>
+                              <h4 className="text-sm font-bold text-white">Trainee Review — {trainee.name}</h4>
+                              <p className="text-[11px] text-gray-400">Performance, course progress, cumulative hours and review flags.</p>
+                            </div>
+                            <div className="flex items-center gap-[1px]">
+                              <button onClick={exportTraineeReviewPdf} className="w-[74px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md">
+                                Export PDF
+                              </button>
+                              <button onClick={() => setActiveTab(null)} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md">
+                                Close
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-4">
+                            <div className="rounded border border-gray-600/70 bg-gray-950/30 p-3">
+                              <div className="mb-2 flex items-center justify-between">
+                                <h5 className="text-xs font-bold uppercase tracking-wide text-sky-100">Scores by Event</h5>
+                                <div className="flex items-center gap-3 text-[10px] text-gray-400">
+                                  <span><span className="inline-block h-2 w-2 rounded-sm bg-red-500 mr-1" />Fail</span>
+                                  <span><span className="inline-block h-2 w-2 rounded-sm bg-amber-500 mr-1" />Marginal</span>
+                                  <span><span className="inline-block h-0.5 w-4 bg-cyan-300 mr-1 align-middle" />Smoothed avg</span>
+                                </div>
+                              </div>
+                              {points.length > 0 ? (
+                                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-[220px] w-full overflow-visible">
+                                  {[0, 1, 2, 3, 4, 5].map(grade => (
+                                    <g key={grade}>
+                                      <line x1={chartPadding.left} y1={yForGrade(grade)} x2={chartWidth - chartPadding.right} y2={yForGrade(grade)} stroke="rgba(148,163,184,0.16)" />
+                                      <text x="8" y={yForGrade(grade) + 3} fill="#94a3b8" fontSize="9">{grade}</text>
+                                    </g>
+                                  ))}
+                                  {points.map((point, index) => {
+                                    const barWidth = Math.max(8, Math.min(22, chartInnerWidth / Math.max(1, points.length) - 6));
+                                    const x = xForPoint(index) - barWidth / 2;
+                                    const y = yForGrade(point.grade);
+                                    const fill = point.status === 'fail' || point.status === 'double-marginal'
+                                      ? '#ef4444'
+                                      : point.status === 'marginal'
+                                        ? '#f59e0b'
+                                        : '#38bdf8';
+                                    return (
+                                      <g key={`${point.code}-${index}`}>
+                                        <rect x={x} y={y} width={barWidth} height={chartPadding.top + chartInnerHeight - y} rx="2" fill={fill} opacity="0.88" />
+                                        <text
+                                          x={xForPoint(index)}
+                                          y={chartHeight - 20}
+                                          fill={point.status === 'fail' || point.status === 'double-marginal' ? '#f87171' : point.status === 'marginal' ? '#fb923c' : '#cbd5e1'}
+                                          fontSize="8"
+                                          fontWeight={point.status === 'pass' ? 500 : 800}
+                                          textAnchor="middle"
+                                          transform={`rotate(-45 ${xForPoint(index)} ${chartHeight - 20})`}
+                                        >
+                                          {point.code}
+                                        </text>
+                                        <title>{`${point.code}: ${point.grade} (${point.status})`}</title>
+                                      </g>
+                                    );
+                                  })}
+                                  {smoothPath && <path d={smoothPath} fill="none" stroke="#67e8f9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+                                </svg>
+                              ) : (
+                                <div className="flex h-[220px] items-center justify-center text-xs italic text-gray-500">No scored events available.</div>
+                              )}
+                            </div>
+
+                            <div className="rounded border border-gray-600/70 bg-gray-950/30 p-3">
+                              <h5 className="text-xs font-bold uppercase tracking-wide text-sky-100">Course Progress</h5>
+                              <div className="mt-3 flex justify-center">
+                                <svg viewBox="0 0 140 140" className="h-36 w-36">
+                                  <circle cx="70" cy="70" r="52" fill="rgba(15,23,42,0.9)" stroke="rgba(148,163,184,0.25)" strokeWidth="14" />
+                                  <circle cx="70" cy="70" r="52" fill="none" stroke="#22c55e" strokeWidth="14" strokeDasharray={progressDash} pathLength="100" transform="rotate(-90 70 70)" strokeLinecap="round" />
+                                  {lineForProgress(reviewData.progress.averageProgress, '#facc15', 'Course average')}
+                                  {lineForProgress(reviewData.progress.mostProgress, '#38bdf8', 'Most progressed')}
+                                  {lineForProgress(reviewData.progress.leastProgress, '#f87171', 'Least progressed')}
+                                  <text x="70" y="68" fill="#f8fafc" fontSize="18" fontWeight="800" textAnchor="middle">{reviewData.progress.progressPercent.toFixed(0)}%</text>
+                                  <text x="70" y="84" fill="#94a3b8" fontSize="9" textAnchor="middle">{reviewData.progress.completedCount}/{reviewData.progress.totalCount}</text>
+                                </svg>
+                              </div>
+                              <div className="mt-2 space-y-1 text-[10px] text-gray-300">
+                                <div className="flex justify-between"><span className="text-yellow-300">Course average</span><span>{reviewData.progress.averageProgress.toFixed(0)}%</span></div>
+                                <div className="flex justify-between"><span className="text-sky-300">Most progressed</span><span>{reviewData.progress.mostProgress.toFixed(0)}%</span></div>
+                                <div className="flex justify-between"><span className="text-red-300">Least progressed</span><span>{reviewData.progress.leastProgress.toFixed(0)}%</span></div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 rounded border border-gray-600/70 bg-gray-950/30 p-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <div>
+                                <h5 className="text-xs font-bold uppercase tracking-wide text-sky-100">Cumulative Hours</h5>
+                                <p className="text-[10px] text-gray-500">Effective hours = logbook hours minus ineffective post-flight time.</p>
+                              </div>
+                              <button onClick={() => setReviewHoursExpanded(prev => !prev)} className="w-[72px] h-[34px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md">
+                                {reviewHoursExpanded ? 'Collapse' : 'Expand'}
+                              </button>
+                            </div>
+                            {reviewLogbookLoading ? (
+                              <div className="py-5 text-center text-xs italic text-gray-500">Loading post-flight logbook entries...</div>
+                            ) : reviewLogbookError ? (
+                              <div className="py-5 text-center text-xs italic text-amber-300">{reviewLogbookError}</div>
+                            ) : (
+                              <div className="overflow-x-auto">
+                                <table className="min-w-full text-left text-[11px]">
+                                  <thead className="text-gray-400">
+                                    <tr className="border-b border-gray-700">
+                                      <th className="py-1 pr-3">Event</th>
+                                      <th className="py-1 pr-3">Date</th>
+                                      <th className="py-1 pr-3 text-right">Logbook</th>
+                                      <th className="py-1 pr-3 text-right">Syllabus</th>
+                                      <th className="py-1 pr-3 text-right">Ineff</th>
+                                      <th className="py-1 pr-3 text-right">Effective</th>
+                                      <th className="py-1 pr-3 text-right">Cum Log</th>
+                                      <th className="py-1 pr-3 text-right">Cum Syl</th>
+                                      <th className="py-1 text-right">Cum Eff</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {displayHourRows.length > 0 ? displayHourRows.map((row, index) => (
+                                      <tr key={`${row.code}-${row.date}-${index}`} className="border-b border-gray-800/80 text-gray-200">
+                                        <td className="py-1 pr-3 font-mono">{row.code}</td>
+                                        <td className="py-1 pr-3 text-gray-400">{row.date || '-'}</td>
+                                        <td className="py-1 pr-3 text-right">{reviewFormatHours(row.logbookHours)}</td>
+                                        <td className="py-1 pr-3 text-right">{reviewFormatHours(row.syllabusHours)}</td>
+                                        <td className="py-1 pr-3 text-right text-amber-200">{reviewFormatHours(row.ineffectiveHours)}</td>
+                                        <td className="py-1 pr-3 text-right">{reviewFormatHours(row.effectiveHours)}</td>
+                                        <td className="py-1 pr-3 text-right font-semibold">{reviewFormatHours(row.cumulativeLogbook)}</td>
+                                        <td className="py-1 pr-3 text-right font-semibold">{reviewFormatHours(row.cumulativeSyllabus)}</td>
+                                        <td className="py-1 text-right font-semibold">{reviewFormatHours(row.cumulativeEffective)}</td>
+                                      </tr>
+                                    )) : (
+                                      <tr><td colSpan={9} className="py-5 text-center italic text-gray-500">No post-flight logbook rows available.</td></tr>
+                                    )}
+                                  </tbody>
+                                  <tfoot>
+                                    <tr className="text-sky-100">
+                                      <td className="pt-2 font-bold" colSpan={2}>Totals</td>
+                                      <td className="pt-2 pr-3 text-right font-bold">{reviewFormatHours(reviewData.hourTotals.logbook)}</td>
+                                      <td className="pt-2 pr-3 text-right font-bold">{reviewFormatHours(reviewData.hourTotals.syllabus)}</td>
+                                      <td />
+                                      <td />
+                                      <td />
+                                      <td />
+                                      <td className="pt-2 text-right font-bold">{reviewFormatHours(reviewData.hourTotals.effective)}</td>
+                                    </tr>
+                                  </tfoot>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {summaryBlock('Failed Events', reviewData.summaryFailed, 'bg-red-500/20 text-red-200')}
+                            {summaryBlock('Double Marginal Events', reviewData.summaryDoubleMarginal, 'bg-red-500/20 text-red-200')}
+                            {summaryBlock('Marginal Events', reviewData.summaryMarginal, 'bg-amber-500/20 text-amber-200')}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {activeTab === 'unavailable' && (
                       <div className={card3d + " p-4"} style={card3dStyle}>
