@@ -29190,11 +29190,16 @@ const App: React.FC = () => {
             locationType: 'Local',
             origin: '',
             destination: '',
-            notes: '',
+            notes: item.notes || '',
             crew: '',
             eventCode: item.code,
             eventCategory: 'lmp_event',
-        };
+            preFlightNotes: Object.values(((item as any).trainingReportForwardedNotes || {}) as Record<string, any>)
+                .map((entry: any) => String(entry?.notes || '').trim())
+                .filter(Boolean)
+                .join('\n\n'),
+            trainingReportForwardedNotes: (item as any).trainingReportForwardedNotes,
+        } as ScheduleEvent;
     };
 
     const handleGeneratePt051FromLmpItem = async (trainee: Trainee, item: SyllabusItemDetail) => {
@@ -31425,18 +31430,11 @@ const App: React.FC = () => {
                 notes: String(assessment.trainingReportNotes || '').trim(),
             },
         } as Record<string, { sourceCode?: string; notes?: string }>;
-        const forwardedBlocks = Object.values(forwardedNotes)
-            .map(entry => {
-                const noteText = String(entry?.notes || '').trim();
-                if (!noteText) return '';
-                return `Pre-flight Notes\n${noteText}`;
-            })
-            .filter(Boolean);
         const updatedTargetEvent: SyllabusItemDetail & Record<string, any> = {
             ...targetEvent,
             trainingReportBaseNotes: baseNotes,
             trainingReportForwardedNotes: forwardedNotes,
-            notes: [...forwardedBlocks, baseNotes.trim()].filter(Boolean).join('\n\n'),
+            notes: baseNotes,
         };
         const updatedLmp = originalLmp.map((item, index) => index === nextEventIndex ? updatedTargetEvent : item);
 

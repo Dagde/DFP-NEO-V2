@@ -71,8 +71,18 @@ const formatFollowUpHours = (value?: number): string => {
     return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : '';
 };
 
-const extractPreFlightNotes = (value?: string): string => {
-    const raw = String(value || '').trim();
+const extractPreFlightNotes = (eventLike?: Partial<ScheduleEvent> | null): string => {
+    const source = eventLike as any;
+    const explicitNotes = String(source?.preFlightNotes || '').trim();
+    if (explicitNotes) return explicitNotes;
+
+    const metadataNotes = Object.values((source?.trainingReportForwardedNotes || {}) as Record<string, any>)
+        .map((entry: any) => String(entry?.notes || '').trim())
+        .filter(Boolean)
+        .join('\n\n');
+    if (metadataNotes) return metadataNotes;
+
+    const raw = String(source?.notes || '').trim();
     if (!raw) return '';
     const preFlightMatch = raw.match(/^Pre-flight Notes\s*\n([\s\S]*)$/i);
     if (preFlightMatch) return preFlightMatch[1].trim();
@@ -466,12 +476,9 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             parsed.QFI = event.instructor;
         }
         parsed.Notes = stripGeneratedFollowUpNotes(parsed.Notes || '');
-        if (!parsed.Notes) {
-            parsed.Notes = extractPreFlightNotes(event.notes);
-        }
         return parsed;
     });
-    const hasForwardedPreFlightNotes = extractPreFlightNotes(event.notes).length > 0;
+    const forwardedPreFlightNotes = extractPreFlightNotes(event);
     
     const [overallGrade, setOverallGrade] = useState<Pt051OverallGrade | null>(initialAssessment?.overallGrade ?? null);
     const [overallResult, setOverallResult] = useState<'P' | 'F' | null>(initialAssessment?.overallResult || null);
@@ -1837,9 +1844,10 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     {getFollowUpNotesPrefix()}
                                 </div>
                             )}
-                            {hasForwardedPreFlightNotes && (
-                                <div className="text-sm font-bold text-red-300 underline decoration-red-300 decoration-2 underline-offset-4">
-                                    Pre-flight Notes
+                            {forwardedPreFlightNotes && (
+                                <div className="rounded border border-gray-700 bg-gray-950/45 p-3">
+                                    <div className="text-xs font-semibold text-red-300 underline decoration-red-300 underline-offset-4">Pre-flight Notes</div>
+                                    <div className="mt-2 whitespace-pre-wrap text-sm text-gray-100">{forwardedPreFlightNotes}</div>
                                 </div>
                             )}
                             <textarea

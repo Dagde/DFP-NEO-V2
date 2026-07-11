@@ -20010,8 +20010,13 @@ const formatFollowUpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : "";
 };
-const extractPreFlightNotes = (value) => {
-  const raw = String(value || "").trim();
+const extractPreFlightNotes = (eventLike) => {
+  const source = eventLike;
+  const explicitNotes = String(source?.preFlightNotes || "").trim();
+  if (explicitNotes) return explicitNotes;
+  const metadataNotes = Object.values(source?.trainingReportForwardedNotes || {}).map((entry) => String(entry?.notes || "").trim()).filter(Boolean).join("\n\n");
+  if (metadataNotes) return metadataNotes;
+  const raw = String(source?.notes || "").trim();
   if (!raw) return "";
   const preFlightMatch = raw.match(/^Pre-flight Notes\s*\n([\s\S]*)$/i);
   if (preFlightMatch) return preFlightMatch[1].trim();
@@ -20323,12 +20328,9 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
       parsed.QFI = event.instructor;
     }
     parsed.Notes = stripGeneratedFollowUpNotes$1(parsed.Notes || "");
-    if (!parsed.Notes) {
-      parsed.Notes = extractPreFlightNotes(event.notes);
-    }
     return parsed;
   });
-  const hasForwardedPreFlightNotes = extractPreFlightNotes(event.notes).length > 0;
+  const forwardedPreFlightNotes = extractPreFlightNotes(event);
   const [overallGrade, setOverallGrade] = reactExports.useState(initialAssessment?.overallGrade ?? null);
   const [overallResult, setOverallResult] = reactExports.useState(initialAssessment?.overallResult || null);
   const [groundSchoolAssessment, setGroundSchoolAssessment] = reactExports.useState(
@@ -21588,7 +21590,10 @@ This action cannot be undone.`;
               /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: commentFieldsConfig.notes || "Notes" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
                 getFollowUpNotesPrefix() && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-sky-500/35 bg-sky-950/30 px-3 py-2 text-sm font-semibold text-sky-100", children: getFollowUpNotesPrefix() }),
-                hasForwardedPreFlightNotes && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-red-300 underline decoration-red-300 decoration-2 underline-offset-4", children: "Pre-flight Notes" }),
+                forwardedPreFlightNotes && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/45 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold text-red-300 underline decoration-red-300 underline-offset-4", children: "Pre-flight Notes" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 whitespace-pre-wrap text-sm text-gray-100", children: forwardedPreFlightNotes })
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "textarea",
                   {
@@ -107056,10 +107061,12 @@ ${"=".repeat(60)}`);
       locationType: "Local",
       origin: "",
       destination: "",
-      notes: "",
+      notes: item.notes || "",
       crew: "",
       eventCode: item.code,
-      eventCategory: "lmp_event"
+      eventCategory: "lmp_event",
+      preFlightNotes: Object.values(item.trainingReportForwardedNotes || {}).map((entry) => String(entry?.notes || "").trim()).filter(Boolean).join("\n\n"),
+      trainingReportForwardedNotes: item.trainingReportForwardedNotes
     };
   };
   const handleGeneratePt051FromLmpItem = async (trainee, item) => {
@@ -108937,17 +108944,11 @@ ${error instanceof Error ? error.message : String(error)}`,
         notes: String(assessment.trainingReportNotes || "").trim()
       }
     };
-    const forwardedBlocks = Object.values(forwardedNotes).map((entry) => {
-      const noteText = String(entry?.notes || "").trim();
-      if (!noteText) return "";
-      return `Pre-flight Notes
-${noteText}`;
-    }).filter(Boolean);
     const updatedTargetEvent = {
       ...targetEvent,
       trainingReportBaseNotes: baseNotes,
       trainingReportForwardedNotes: forwardedNotes,
-      notes: [...forwardedBlocks, baseNotes.trim()].filter(Boolean).join("\n\n")
+      notes: baseNotes
     };
     const updatedLmp = originalLmp.map((item, index) => index === nextEventIndex ? updatedTargetEvent : item);
     try {
