@@ -4386,6 +4386,8 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC = [
   'notes',
   'trainingReportNextEventExtensions',
   'trainingReportLastExtendedByAssessmentId',
+  'trainingReportBaseNotes',
+  'trainingReportForwardedNotes',
 ];
 
 const getIndividualLmpMasterOverridesForSync = (item) => {
@@ -4403,7 +4405,8 @@ const summariseTrainingReportLmpItemsForSync = (events = []) => {
     item?.isRemedial ||
     item?.lmpSource === 'remedial' ||
     item?.trainingReportNextEventExtensions ||
-    item?.trainingReportLastExtendedByAssessmentId
+    item?.trainingReportLastExtendedByAssessmentId ||
+    item?.trainingReportForwardedNotes
   );
   return {
     total: Array.isArray(events) ? events.length : 0,
@@ -4418,6 +4421,8 @@ const summariseTrainingReportLmpItemsForSync = (events = []) => {
       duration: item?.duration,
       trainingReportNextEventExtensions: item?.trainingReportNextEventExtensions,
       trainingReportLastExtendedByAssessmentId: item?.trainingReportLastExtendedByAssessmentId,
+      trainingReportBaseNotes: item?.trainingReportBaseNotes,
+      trainingReportForwardedNotes: item?.trainingReportForwardedNotes,
     })),
   };
 };
