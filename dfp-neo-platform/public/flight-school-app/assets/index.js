@@ -20011,7 +20011,8 @@ const stripGeneratedFollowUpNotes$1 = (value, generatedPrefix = "") => {
   const cleanedLines = lines.flatMap((line) => {
     const trimmedLine = line.trim();
     if (cleanedPrefix && trimmedLine.startsWith(cleanedPrefix)) {
-      const remainder = trimmedLine.slice(cleanedPrefix.length).trim();
+      const prefixStart = line.indexOf(cleanedPrefix);
+      const remainder = line.slice(prefixStart + cleanedPrefix.length).replace(/^\s/, "");
       return remainder ? [remainder] : [];
     }
     return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
@@ -20511,7 +20512,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   };
   const buildTrainingReportNotes = () => {
     const followUpPrefix = getFollowUpNotesPrefix();
-    const freeText = stripGeneratedFollowUpNotes$1(commentFields.Notes || "", followUpPrefix).trim();
+    const freeText = stripGeneratedFollowUpNotes$1(commentFields.Notes || "", followUpPrefix);
     return [followUpPrefix, freeText].filter(Boolean).join("\n\n");
   };
   const unitInstructors = reactExports.useMemo(() => {
@@ -21652,6 +21653,8 @@ This action cannot be undone.`;
                   {
                     value: buildTrainingReportNotes(),
                     onChange: (e) => handleCommentFieldChange("Notes", e.target.value),
+                    onKeyDownCapture: stopEditableKeyPropagation2,
+                    onKeyDown: stopEditableKeyPropagation2,
                     rows: 5,
                     className: "w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
                     placeholder: "Record what was missed, not completed, or should be carried into the next event."
@@ -54687,7 +54690,8 @@ const stripGeneratedFollowUpNotes = (value, generatedPrefix = "") => {
   const cleanedLines = lines.flatMap((line) => {
     const trimmedLine = line.trim();
     if (cleanedPrefix && trimmedLine.startsWith(cleanedPrefix)) {
-      const remainder = trimmedLine.slice(cleanedPrefix.length).trim();
+      const prefixStart = line.indexOf(cleanedPrefix);
+      const remainder = line.slice(prefixStart + cleanedPrefix.length).replace(/^\s/, "");
       return remainder ? [remainder] : [];
     }
     return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
@@ -54929,7 +54933,7 @@ const AirCombatTrainingReportModal = ({
   };
   const buildNotesWithFollowUp = () => {
     const followUpPrefix = getFollowUpNotesPrefix();
-    const freeText = stripGeneratedFollowUpNotes(commentSections.notes || "", followUpPrefix).trim();
+    const freeText = stripGeneratedFollowUpNotes(commentSections.notes || "", followUpPrefix);
     return [followUpPrefix, freeText].filter(Boolean).join("\n\n");
   };
   const updateElementScore = (element, patch) => {
@@ -55590,6 +55594,8 @@ const AirCombatTrainingReportModal = ({
                     updateCommentSection("notes", stripGeneratedFollowUpNotes(event.target.value, getFollowUpNotesPrefix()));
                     setSaveStatus("Unsaved");
                   },
+                  onKeyDownCapture: stopEditableKeyPropagation2,
+                  onKeyDown: stopEditableKeyPropagation2,
                   rows: 5,
                   className: "w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
                   placeholder: "Record what was missed, not completed, or should be carried into the next event."

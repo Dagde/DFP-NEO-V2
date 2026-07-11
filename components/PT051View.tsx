@@ -64,7 +64,8 @@ const stripGeneratedFollowUpNotes = (value: string, generatedPrefix = ''): strin
     const cleanedLines = lines.flatMap((line) => {
         const trimmedLine = line.trim();
         if (cleanedPrefix && trimmedLine.startsWith(cleanedPrefix)) {
-            const remainder = trimmedLine.slice(cleanedPrefix.length).trim();
+            const prefixStart = line.indexOf(cleanedPrefix);
+            const remainder = line.slice(prefixStart + cleanedPrefix.length).replace(/^\s/, '');
             return remainder ? [remainder] : [];
         }
         return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
@@ -688,7 +689,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
     const buildTrainingReportNotes = (): string => {
         const followUpPrefix = getFollowUpNotesPrefix();
-        const freeText = stripGeneratedFollowUpNotes(commentFields.Notes || '', followUpPrefix).trim();
+        const freeText = stripGeneratedFollowUpNotes(commentFields.Notes || '', followUpPrefix);
         return [followUpPrefix, freeText].filter(Boolean).join('\n\n');
     };
 
@@ -1898,6 +1899,8 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             <textarea
                                 value={buildTrainingReportNotes()}
                                 onChange={(e) => handleCommentFieldChange('Notes', e.target.value)}
+                                onKeyDownCapture={stopEditableKeyPropagation}
+                                onKeyDown={stopEditableKeyPropagation}
                                 rows={5}
                                 className="w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                                 placeholder="Record what was missed, not completed, or should be carried into the next event."
