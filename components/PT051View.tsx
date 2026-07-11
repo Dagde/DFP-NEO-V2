@@ -58,13 +58,19 @@ const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
 const COMMENT_SECTIONS = ['QFI', 'Weather', 'Profile', 'Overall', 'NEST', 'Notes'] as const;
 type DpcoFollowUpAction = 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
 
-const stripGeneratedFollowUpNotes = (value: string): string => (
-    String(value || '')
-        .split('\n')
-        .filter(line => !/^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(line.trim()))
-        .join('\n')
-        .replace(/^\s+/, '')
-);
+const stripGeneratedFollowUpNotes = (value: string, generatedPrefix = ''): string => {
+    const lines = String(value || '').split('\n');
+    const cleanedPrefix = generatedPrefix.trim();
+    const cleanedLines = lines.flatMap((line) => {
+        const trimmedLine = line.trim();
+        if (cleanedPrefix && trimmedLine.startsWith(cleanedPrefix)) {
+            const remainder = trimmedLine.slice(cleanedPrefix.length).trim();
+            return remainder ? [remainder] : [];
+        }
+        return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
+    });
+    return cleanedLines.join('\n').replace(/^\s+/, '');
+};
 
 const formatFollowUpHours = (value?: number): string => {
     const numericValue = Number(value);
@@ -633,7 +639,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     };
 
     const handleCommentFieldChange = (key: typeof COMMENT_SECTIONS[number], value: string) => {
-        setCommentFields(prev => ({ ...prev, [key]: key === 'Notes' ? stripGeneratedFollowUpNotes(value) : value }));
+        setCommentFields(prev => ({ ...prev, [key]: key === 'Notes' ? stripGeneratedFollowUpNotes(value, getFollowUpNotesPrefix()) : value }));
         
         // Mirror QFI field to instructorName field
         if (key === 'QFI') {
@@ -682,7 +688,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
     const buildTrainingReportNotes = (): string => {
         const followUpPrefix = getFollowUpNotesPrefix();
-        const freeText = stripGeneratedFollowUpNotes(commentFields.Notes || '').trim();
+        const freeText = stripGeneratedFollowUpNotes(commentFields.Notes || '', followUpPrefix).trim();
         return [followUpPrefix, freeText].filter(Boolean).join('\n\n');
     };
 

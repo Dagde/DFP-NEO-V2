@@ -20005,7 +20005,19 @@ PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
 const DEFAULT_ASSESSED_ELEMENTS$1 = ["Airmanship", "Preparation", "Technique"];
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 = "__scoringMatrixElementGroups";
 const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST", "Notes"];
-const stripGeneratedFollowUpNotes$1 = (value) => String(value || "").split("\n").filter((line) => !/^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(line.trim())).join("\n").replace(/^\s+/, "");
+const stripGeneratedFollowUpNotes$1 = (value, generatedPrefix = "") => {
+  const lines = String(value || "").split("\n");
+  const cleanedPrefix = generatedPrefix.trim();
+  const cleanedLines = lines.flatMap((line) => {
+    const trimmedLine = line.trim();
+    if (cleanedPrefix && trimmedLine.startsWith(cleanedPrefix)) {
+      const remainder = trimmedLine.slice(cleanedPrefix.length).trim();
+      return remainder ? [remainder] : [];
+    }
+    return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
+  });
+  return cleanedLines.join("\n").replace(/^\s+/, "");
+};
 const formatFollowUpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : "";
@@ -20466,7 +20478,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     }));
   };
   const handleCommentFieldChange = (key, value) => {
-    setCommentFields((prev) => ({ ...prev, [key]: key === "Notes" ? stripGeneratedFollowUpNotes$1(value) : value }));
+    setCommentFields((prev) => ({ ...prev, [key]: key === "Notes" ? stripGeneratedFollowUpNotes$1(value, getFollowUpNotesPrefix()) : value }));
     if (key === "QFI") {
       setAssessment((prev) => ({ ...prev, instructorName: value }));
     }
@@ -20499,7 +20511,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   };
   const buildTrainingReportNotes = () => {
     const followUpPrefix = getFollowUpNotesPrefix();
-    const freeText = stripGeneratedFollowUpNotes$1(commentFields.Notes || "").trim();
+    const freeText = stripGeneratedFollowUpNotes$1(commentFields.Notes || "", followUpPrefix).trim();
     return [followUpPrefix, freeText].filter(Boolean).join("\n\n");
   };
   const unitInstructors = reactExports.useMemo(() => {
@@ -54669,7 +54681,19 @@ const buildReportComments = (sections) => [
   ["NEST", sections.nest],
   ["Notes", sections.notes]
 ].filter(([, value]) => String(value || "").trim()).map(([label, value]) => `${label}: ${String(value).trim()}`).join("\n\n");
-const stripGeneratedFollowUpNotes = (value) => String(value || "").split("\n").filter((line) => !/^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(line.trim())).join("\n").replace(/^\s+/, "");
+const stripGeneratedFollowUpNotes = (value, generatedPrefix = "") => {
+  const lines = String(value || "").split("\n");
+  const cleanedPrefix = generatedPrefix.trim();
+  const cleanedLines = lines.flatMap((line) => {
+    const trimmedLine = line.trim();
+    if (cleanedPrefix && trimmedLine.startsWith(cleanedPrefix)) {
+      const remainder = trimmedLine.slice(cleanedPrefix.length).trim();
+      return remainder ? [remainder] : [];
+    }
+    return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
+  });
+  return cleanedLines.join("\n").replace(/^\s+/, "");
+};
 const formatHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : "";
@@ -54905,7 +54929,7 @@ const AirCombatTrainingReportModal = ({
   };
   const buildNotesWithFollowUp = () => {
     const followUpPrefix = getFollowUpNotesPrefix();
-    const freeText = stripGeneratedFollowUpNotes(commentSections.notes || "").trim();
+    const freeText = stripGeneratedFollowUpNotes(commentSections.notes || "", followUpPrefix).trim();
     return [followUpPrefix, freeText].filter(Boolean).join("\n\n");
   };
   const updateElementScore = (element, patch) => {
@@ -55563,7 +55587,7 @@ const AirCombatTrainingReportModal = ({
                 {
                   value: buildNotesWithFollowUp(),
                   onChange: (event) => {
-                    updateCommentSection("notes", stripGeneratedFollowUpNotes(event.target.value));
+                    updateCommentSection("notes", stripGeneratedFollowUpNotes(event.target.value, getFollowUpNotesPrefix()));
                     setSaveStatus("Unsaved");
                   },
                   rows: 5,

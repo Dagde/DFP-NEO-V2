@@ -109,13 +109,19 @@ const buildReportComments = (sections: Record<CommentSectionKey, string>): strin
     .join('\n\n')
 );
 
-const stripGeneratedFollowUpNotes = (value: string): string => (
-  String(value || '')
-    .split('\n')
-    .filter(line => !/^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(line.trim()))
-    .join('\n')
-    .replace(/^\s+/, '')
-);
+const stripGeneratedFollowUpNotes = (value: string, generatedPrefix = ''): string => {
+  const lines = String(value || '').split('\n');
+  const cleanedPrefix = generatedPrefix.trim();
+  const cleanedLines = lines.flatMap((line) => {
+    const trimmedLine = line.trim();
+    if (cleanedPrefix && trimmedLine.startsWith(cleanedPrefix)) {
+      const remainder = trimmedLine.slice(cleanedPrefix.length).trim();
+      return remainder ? [remainder] : [];
+    }
+    return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
+  });
+  return cleanedLines.join('\n').replace(/^\s+/, '');
+};
 
 const formatHours = (value?: number): string => {
   const numericValue = Number(value);
@@ -417,7 +423,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   };
   const buildNotesWithFollowUp = (): string => {
     const followUpPrefix = getFollowUpNotesPrefix();
-    const freeText = stripGeneratedFollowUpNotes(commentSections.notes || '').trim();
+    const freeText = stripGeneratedFollowUpNotes(commentSections.notes || '', followUpPrefix).trim();
     return [followUpPrefix, freeText].filter(Boolean).join('\n\n');
   };
   const updateElementScore = (element: string, patch: Partial<{ grade: string; comment: string }>) => {
@@ -985,7 +991,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
             <div className="space-y-3">
               <textarea
                 value={buildNotesWithFollowUp()}
-                onChange={(event) => { updateCommentSection('notes', stripGeneratedFollowUpNotes(event.target.value)); setSaveStatus('Unsaved'); }}
+                onChange={(event) => { updateCommentSection('notes', stripGeneratedFollowUpNotes(event.target.value, getFollowUpNotesPrefix())); setSaveStatus('Unsaved'); }}
                 rows={5}
                 className="w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 placeholder="Record what was missed, not completed, or should be carried into the next event."
