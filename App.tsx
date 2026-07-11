@@ -28906,6 +28906,17 @@ const App: React.FC = () => {
             return itemRefs.some(ref => eventRefs.has(ref));
         });
         const forwardedNotes = getForwardedNotesFromLmpItem(matchingItem);
+        pushDfpDataDiag('report-notes:attach-open-event', {
+            traineeFullName: trainee.fullName,
+            eventId: event.id,
+            eventCode: event.flightNumber || (event as any).eventCode || null,
+            lmpCount: traineeLmp.length,
+            matchedItemId: matchingItem?.id || null,
+            matchedItemCode: matchingItem?.code || null,
+            forwardedNoteLength: forwardedNotes.length,
+            forwardedNotePreview: forwardedNotes.slice(0, 120),
+            forwardedKeys: matchingItem ? Object.keys(((matchingItem as any).trainingReportForwardedNotes || {}) as Record<string, any>) : [],
+        });
         if (!forwardedNotes) return event;
 
         return {
@@ -31407,22 +31418,62 @@ const App: React.FC = () => {
     };
 
     const maybePassTrainingReportNotesToNextLmpEvent = async (assessment: Pt051Assessment): Promise<void> => {
+        pushDfpDataDiag('report-notes:forward:evaluate', {
+            assessmentId: assessment.id,
+            eventId: assessment.eventId,
+            flightNumber: assessment.flightNumber,
+            traineeFullName: assessment.traineeFullName,
+            dcoResult: assessment.dcoResult,
+            dpcoFollowUp: assessment.dpcoFollowUp || null,
+            dncoFollowUp: assessment.dncoFollowUp || null,
+            passNotesToNextEvent: assessment.passNotesToNextEvent === true,
+            trainingReportNotesLength: String(assessment.trainingReportNotes || '').trim().length,
+            trainingReportNotesPreview: String(assessment.trainingReportNotes || '').trim().slice(0, 160),
+            shouldPass: shouldPassTrainingReportNotesToNextEvent(assessment),
+        });
         if (!shouldPassTrainingReportNotesToNextEvent(assessment)) return;
 
         const trainee = allTraineesData.find(candidate => candidate.fullName === assessment.traineeFullName);
         if (!trainee) {
+            pushDfpDataDiag('report-notes:forward:no-trainee', {
+                assessmentId: assessment.id,
+                traineeFullName: assessment.traineeFullName,
+            });
             console.warn('[Training Report] Could not pass notes forward: trainee not found', assessment.traineeFullName);
             return;
         }
 
         const originalLmp = await loadPersistedTraineeLmp(trainee) || traineeLMPs.get(trainee.fullName);
+        pushDfpDataDiag('report-notes:forward:original-lmp', {
+            assessmentId: assessment.id,
+            traineeFullName: trainee.fullName,
+            source: 'persisted-first',
+            ...summariseTrainingReportLmpItems(originalLmp),
+        });
         if (!originalLmp || originalLmp.length === 0) {
+            pushDfpDataDiag('report-notes:forward:no-lmp', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+            });
             console.warn('[Training Report] Could not pass notes forward: Individual LMP not found', assessment.traineeFullName);
             return;
         }
 
         const sourceMatch = findTrainingReportSourceLmpItem(originalLmp, trainee, assessment);
         if (!sourceMatch) {
+            pushDfpDataDiag('report-notes:forward:no-source-match', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                eventId: assessment.eventId,
+                flightNumber: assessment.flightNumber,
+                sample: originalLmp.slice(0, 20).map(item => ({
+                    id: item.id,
+                    code: item.code,
+                    type: item.type,
+                    masterEventId: item.masterEventId,
+                    forwardedKeys: Object.keys(((item as any).trainingReportForwardedNotes || {}) as Record<string, any>),
+                })),
+            });
             console.warn('[Training Report] Could not pass notes forward: assessed event not found in Individual LMP', {
                 trainee: assessment.traineeFullName,
                 eventId: assessment.eventId,
@@ -31432,7 +31483,15 @@ const App: React.FC = () => {
         }
 
         const { item: sourceItem, index: sourceIndex } = sourceMatch;
-        if (sourceItem.type !== 'Flight' && sourceItem.type !== 'FTD') return;
+        if (sourceItem.type !== 'Flight' && sourceItem.type !== 'FTD') {
+            pushDfpDataDiag('report-notes:forward:wrong-source-type', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                sourceCode: sourceItem.code,
+                sourceType: sourceItem.type,
+            });
+            return;
+        }
 
         const assessmentKey = assessment.id || assessment.eventId;
         const insertedFollowUpIndex = originalLmp.findIndex(item => (
@@ -31446,8 +31505,35 @@ const App: React.FC = () => {
                 item.type === sourceItem.type &&
                 !item.completedAt
             );
+        pushDfpDataDiag('report-notes:forward:target-selection', {
+            assessmentId: assessment.id,
+            traineeFullName: trainee.fullName,
+            sourceCode: sourceItem.code,
+            sourceType: sourceItem.type,
+            sourceIndex,
+            insertedFollowUpIndex,
+            nextEventIndex,
+            nextEventCode: nextEventIndex >= 0 ? originalLmp[nextEventIndex]?.code : null,
+            nextEventType: nextEventIndex >= 0 ? originalLmp[nextEventIndex]?.type : null,
+            candidateWindow: originalLmp.slice(Math.max(0, sourceIndex), Math.min(originalLmp.length, sourceIndex + 8)).map((item, index) => ({
+                relativeIndex: index,
+                absoluteIndex: Math.max(0, sourceIndex) + index,
+                id: item.id,
+                code: item.code,
+                type: item.type,
+                completedAt: (item as any).completedAt || null,
+                extensionKeys: Object.keys(((item as any).trainingReportNextEventExtensions || {}) as Record<string, any>),
+                forwardedKeys: Object.keys(((item as any).trainingReportForwardedNotes || {}) as Record<string, any>),
+            })),
+        });
 
         if (nextEventIndex === -1) {
+            pushDfpDataDiag('report-notes:forward:no-target', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                sourceCode: sourceItem.code,
+                sourceType: sourceItem.type,
+            });
             console.warn('[Training Report] Could not pass notes forward: no matching next flight/sim found', {
                 trainee: assessment.traineeFullName,
                 event: sourceItem.code,
@@ -31474,13 +31560,51 @@ const App: React.FC = () => {
             notes: baseNotes,
         };
         const updatedLmp = originalLmp.map((item, index) => index === nextEventIndex ? updatedTargetEvent : item);
+        pushDfpDataDiag('report-notes:forward:prepared', {
+            assessmentId: assessment.id,
+            traineeFullName: trainee.fullName,
+            sourceCode: sourceItem.code,
+            targetCode: targetEvent.code,
+            targetType: targetEvent.type,
+            assessmentKey,
+            baseNotesLength: baseNotes.length,
+            forwardedKeysBefore: Object.keys((targetEvent.trainingReportForwardedNotes || {}) as Record<string, any>),
+            forwardedKeysAfter: Object.keys(forwardedNotes),
+            forwardedNoteLength: String(assessment.trainingReportNotes || '').trim().length,
+            extensionKeysOnTarget: Object.keys((targetEvent.trainingReportNextEventExtensions || {}) as Record<string, any>),
+            targetHours: {
+                flightOrSimHours: targetEvent.flightOrSimHours,
+                duration: targetEvent.duration,
+                totalEventHours: targetEvent.totalEventHours,
+            },
+        });
 
         try {
             const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+            const persistedTarget = Array.isArray(persistedLmp)
+                ? persistedLmp.find(item => (
+                    String(item.id || '') === String(updatedTargetEvent.id || '') ||
+                    String(item.code || '').trim().toUpperCase() === String(updatedTargetEvent.code || '').trim().toUpperCase()
+                )) as (SyllabusItemDetail & Record<string, any>) | undefined
+                : undefined;
             setTraineeLMPs(prev => {
                 const updated = new Map(prev);
                 updated.set(trainee.fullName, persistedLmp);
                 return updated;
+            });
+            pushDfpDataDiag('report-notes:forward:persisted', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                targetCode: targetEvent.code,
+                persistedTargetCode: persistedTarget?.code || null,
+                persistedForwardedKeys: Object.keys((persistedTarget?.trainingReportForwardedNotes || {}) as Record<string, any>),
+                persistedForwardedNoteLength: getForwardedNotesFromLmpItem(persistedTarget).length,
+                persistedExtensionKeys: Object.keys((persistedTarget?.trainingReportNextEventExtensions || {}) as Record<string, any>),
+                persistedTargetHours: persistedTarget ? {
+                    flightOrSimHours: persistedTarget.flightOrSimHours,
+                    duration: persistedTarget.duration,
+                    totalEventHours: persistedTarget.totalEventHours,
+                } : null,
             });
             logAudit(
                 'Individual LMP',
@@ -31921,6 +32045,9 @@ const App: React.FC = () => {
             dcoResult: assessment.dcoResult,
             dpcoFollowUp: assessment.dpcoFollowUp || null,
             dncoFollowUp: assessment.dncoFollowUp || null,
+            passNotesToNextEvent: assessment.passNotesToNextEvent === true,
+            trainingReportNotesLength: String(assessment.trainingReportNotes || '').trim().length,
+            trainingReportNotesPreview: String(assessment.trainingReportNotes || '').trim().slice(0, 120),
         });
         const response = await fetch(`${apiBase}/trainee-performance`, {
             method: 'POST',

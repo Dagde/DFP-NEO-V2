@@ -160,6 +160,23 @@ const ExperienceDisplay: React.FC<{ label: string; value: number }> = ({ label, 
     </div>
 );
 
+const pushTrainingReportNotesDiag = (stage: string, payload: Record<string, any> = {}) => {
+  try {
+    const existing = JSON.parse(window.localStorage.getItem('neo_training_report_notes_diag') || '[]');
+    const next = [
+      ...(Array.isArray(existing) ? existing : []),
+      {
+        ts: new Date().toISOString(),
+        stage,
+        ...payload,
+      },
+    ].slice(-250);
+    window.localStorage.setItem('neo_training_report_notes_diag', JSON.stringify(next));
+  } catch {
+    // Diagnostics must not affect profile rendering.
+  }
+};
+
 const CircularGauge: React.FC<{ title: string; mainValue: number; subItems: { label: string; value: number }[] }> = ({ title, mainValue, subItems }) => (
   <div className="flex flex-col items-center bg-gray-800/60 rounded-lg p-2 min-w-[80px]">
     <div className="text-[10px] text-gray-400 font-semibold mb-1 text-center">{title}</div>
@@ -849,6 +866,19 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             .map((entry: any) => String(entry?.notes || '').trim())
             .filter(Boolean)
             .join('\n\n');
+        pushTrainingReportNotesDiag('profile:build-pt051-event', {
+            traineeFullName: trainee.fullName,
+            assessmentId: assessment.id,
+            eventId: assessment.eventId,
+            flightNumber: assessment.flightNumber,
+            lmpCount: currentIndividualLMP?.length || 0,
+            matchedItemId: lmpItem?.id || null,
+            matchedItemCode: lmpItem?.code || null,
+            matchedItemType: lmpItem?.type || null,
+            forwardedKeys: Object.keys(((lmpItem as any)?.trainingReportForwardedNotes || {}) as Record<string, any>),
+            forwardedPreFlightNotesLength: forwardedPreFlightNotes.length,
+            forwardedPreFlightNotesPreview: forwardedPreFlightNotes.slice(0, 160),
+        });
         const scheduledEvent = events.find(e => e.id === assessment.eventId)
             || events.find(e =>
                 e.flightNumber === assessment.flightNumber &&

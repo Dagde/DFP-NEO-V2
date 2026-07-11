@@ -91,6 +91,23 @@ const extractPreFlightNotes = (eventLike?: Partial<ScheduleEvent> | null): strin
     return '';
 };
 
+const pushTrainingReportNotesDiag = (stage: string, payload: Record<string, any> = {}) => {
+    try {
+        const existing = JSON.parse(window.localStorage.getItem('neo_training_report_notes_diag') || '[]');
+        const next = [
+            ...(Array.isArray(existing) ? existing : []),
+            {
+                ts: new Date().toISOString(),
+                stage,
+                ...payload,
+            },
+        ].slice(-250);
+        window.localStorage.setItem('neo_training_report_notes_diag', JSON.stringify(next));
+    } catch {
+        // Diagnostics must never affect training report behaviour.
+    }
+};
+
 const normaliseAssessedElements = (elements?: string[]): string[] => {
     const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS;
     const seen = new Set<string>();
@@ -479,6 +496,21 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         return parsed;
     });
     const forwardedPreFlightNotes = extractPreFlightNotes(event);
+    useEffect(() => {
+        pushTrainingReportNotesDiag('pt051:hydrate-notes', {
+            traineeFullName: trainee.fullName,
+            eventId: event.id,
+            eventCode: event.flightNumber || (event as any).eventCode || '',
+            initialAssessmentId: initialAssessment?.id || null,
+            initialPassNotesToNextEvent: initialAssessment?.passNotesToNextEvent === true,
+            initialTrainingReportNotesLength: String(initialAssessment?.trainingReportNotes || '').trim().length,
+            eventPreFlightNotesLength: String((event as any).preFlightNotes || '').trim().length,
+            forwardedPreFlightNotesLength: forwardedPreFlightNotes.length,
+            forwardedPreFlightNotesPreview: forwardedPreFlightNotes.slice(0, 160),
+            forwardedKeys: Object.keys(((event as any).trainingReportForwardedNotes || {}) as Record<string, any>),
+            eventNotesPreview: String(event.notes || '').slice(0, 160),
+        });
+    }, [event.id, event.flightNumber, event.notes, forwardedPreFlightNotes, initialAssessment?.id, initialAssessment?.passNotesToNextEvent, initialAssessment?.trainingReportNotes, trainee.fullName]);
     
     const [overallGrade, setOverallGrade] = useState<Pt051OverallGrade | null>(initialAssessment?.overallGrade ?? null);
     const [overallResult, setOverallResult] = useState<'P' | 'F' | null>(initialAssessment?.overallResult || null);
@@ -813,6 +845,18 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             duration: currentEvent?.duration,
             endTime: currentEvent ? (currentEvent.startTime || 0) + (currentEvent.duration || 0) : undefined
         };
+        pushTrainingReportNotesDiag('pt051:save-payload', {
+            traineeFullName: trainee.fullName,
+            eventId: finalAssessment.eventId,
+            flightNumber: finalAssessment.flightNumber,
+            dcoResult: finalAssessment.dcoResult,
+            dpcoFollowUp: finalAssessment.dpcoFollowUp || null,
+            passNotesToNextEvent: finalAssessment.passNotesToNextEvent === true,
+            trainingReportNotesLength: String(finalAssessment.trainingReportNotes || '').trim().length,
+            trainingReportNotesPreview: String(finalAssessment.trainingReportNotes || '').trim().slice(0, 160),
+            commentNotesLength: String(commentFields.Notes || '').trim().length,
+            followUpPrefix: getFollowUpNotesPrefix(),
+        });
         
         // Also save the event timing data by calling onEventUpdate
         if (onEventUpdate && currentEvent) {

@@ -20024,6 +20024,21 @@ const extractPreFlightNotes = (eventLike) => {
   if (legacyMatch) return legacyMatch[1].trim();
   return "";
 };
+const pushTrainingReportNotesDiag$1 = (stage, payload = {}) => {
+  try {
+    const existing = JSON.parse(window.localStorage.getItem("neo_training_report_notes_diag") || "[]");
+    const next = [
+      ...Array.isArray(existing) ? existing : [],
+      {
+        ts: (/* @__PURE__ */ new Date()).toISOString(),
+        stage,
+        ...payload
+      }
+    ].slice(-250);
+    window.localStorage.setItem("neo_training_report_notes_diag", JSON.stringify(next));
+  } catch {
+  }
+};
 const normaliseAssessedElements$1 = (elements) => {
   const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS$1;
   const seen = /* @__PURE__ */ new Set();
@@ -20331,6 +20346,21 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     return parsed;
   });
   const forwardedPreFlightNotes = extractPreFlightNotes(event);
+  reactExports.useEffect(() => {
+    pushTrainingReportNotesDiag$1("pt051:hydrate-notes", {
+      traineeFullName: trainee.fullName,
+      eventId: event.id,
+      eventCode: event.flightNumber || event.eventCode || "",
+      initialAssessmentId: initialAssessment?.id || null,
+      initialPassNotesToNextEvent: initialAssessment?.passNotesToNextEvent === true,
+      initialTrainingReportNotesLength: String(initialAssessment?.trainingReportNotes || "").trim().length,
+      eventPreFlightNotesLength: String(event.preFlightNotes || "").trim().length,
+      forwardedPreFlightNotesLength: forwardedPreFlightNotes.length,
+      forwardedPreFlightNotesPreview: forwardedPreFlightNotes.slice(0, 160),
+      forwardedKeys: Object.keys(event.trainingReportForwardedNotes || {}),
+      eventNotesPreview: String(event.notes || "").slice(0, 160)
+    });
+  }, [event.id, event.flightNumber, event.notes, forwardedPreFlightNotes, initialAssessment?.id, initialAssessment?.passNotesToNextEvent, initialAssessment?.trainingReportNotes, trainee.fullName]);
   const [overallGrade, setOverallGrade] = reactExports.useState(initialAssessment?.overallGrade ?? null);
   const [overallResult, setOverallResult] = reactExports.useState(initialAssessment?.overallResult || null);
   const [groundSchoolAssessment, setGroundSchoolAssessment] = reactExports.useState(
@@ -20600,6 +20630,18 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
       duration: currentEvent?.duration,
       endTime: currentEvent ? (currentEvent.startTime || 0) + (currentEvent.duration || 0) : void 0
     };
+    pushTrainingReportNotesDiag$1("pt051:save-payload", {
+      traineeFullName: trainee.fullName,
+      eventId: finalAssessment.eventId,
+      flightNumber: finalAssessment.flightNumber,
+      dcoResult: finalAssessment.dcoResult,
+      dpcoFollowUp: finalAssessment.dpcoFollowUp || null,
+      passNotesToNextEvent: finalAssessment.passNotesToNextEvent === true,
+      trainingReportNotesLength: String(finalAssessment.trainingReportNotes || "").trim().length,
+      trainingReportNotesPreview: String(finalAssessment.trainingReportNotes || "").trim().slice(0, 160),
+      commentNotesLength: String(commentFields.Notes || "").trim().length,
+      followUpPrefix: getFollowUpNotesPrefix()
+    });
     if (onEventUpdate && currentEvent) {
       onEventUpdate(currentEvent);
     }
@@ -21705,6 +21747,21 @@ const ExperienceInput$1 = ({ label, value, onChange }) => /* @__PURE__ */ jsxRun
     }
   )
 ] });
+const pushTrainingReportNotesDiag = (stage, payload = {}) => {
+  try {
+    const existing = JSON.parse(window.localStorage.getItem("neo_training_report_notes_diag") || "[]");
+    const next = [
+      ...Array.isArray(existing) ? existing : [],
+      {
+        ts: (/* @__PURE__ */ new Date()).toISOString(),
+        stage,
+        ...payload
+      }
+    ].slice(-250);
+    window.localStorage.setItem("neo_training_report_notes_diag", JSON.stringify(next));
+  } catch {
+  }
+};
 const formatDate$4 = (dateString) => {
   if (!dateString) return "";
   const date = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
@@ -22163,6 +22220,19 @@ const TraineeProfileFlyout = ({
       return itemRefs.some((ref) => assessmentRefs.has(ref));
     });
     const forwardedPreFlightNotes = Object.values(lmpItem?.trainingReportForwardedNotes || {}).map((entry) => String(entry?.notes || "").trim()).filter(Boolean).join("\n\n");
+    pushTrainingReportNotesDiag("profile:build-pt051-event", {
+      traineeFullName: trainee.fullName,
+      assessmentId: assessment.id,
+      eventId: assessment.eventId,
+      flightNumber: assessment.flightNumber,
+      lmpCount: currentIndividualLMP?.length || 0,
+      matchedItemId: lmpItem?.id || null,
+      matchedItemCode: lmpItem?.code || null,
+      matchedItemType: lmpItem?.type || null,
+      forwardedKeys: Object.keys(lmpItem?.trainingReportForwardedNotes || {}),
+      forwardedPreFlightNotesLength: forwardedPreFlightNotes.length,
+      forwardedPreFlightNotesPreview: forwardedPreFlightNotes.slice(0, 160)
+    });
     const scheduledEvent = events.find((e) => e.id === assessment.eventId) || events.find(
       (e) => e.flightNumber === assessment.flightNumber && (!assessment.date || !e.date || e.date === assessment.date) && (e.student === trainee.fullName || e.pilot === trainee.fullName || String(e.crew || "").includes(trainee.fullName))
     );
@@ -106845,6 +106915,17 @@ ${"=".repeat(60)}`);
       return itemRefs.some((ref) => eventRefs.has(ref));
     });
     const forwardedNotes = getForwardedNotesFromLmpItem(matchingItem);
+    pushDfpDataDiag("report-notes:attach-open-event", {
+      traineeFullName: trainee.fullName,
+      eventId: event.id,
+      eventCode: event.flightNumber || event.eventCode || null,
+      lmpCount: traineeLmp.length,
+      matchedItemId: matchingItem?.id || null,
+      matchedItemCode: matchingItem?.code || null,
+      forwardedNoteLength: forwardedNotes.length,
+      forwardedNotePreview: forwardedNotes.slice(0, 120),
+      forwardedKeys: matchingItem ? Object.keys(matchingItem.trainingReportForwardedNotes || {}) : []
+    });
     if (!forwardedNotes) return event;
     return {
       ...event,
@@ -108949,19 +109030,59 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
   };
   const maybePassTrainingReportNotesToNextLmpEvent = async (assessment) => {
+    pushDfpDataDiag("report-notes:forward:evaluate", {
+      assessmentId: assessment.id,
+      eventId: assessment.eventId,
+      flightNumber: assessment.flightNumber,
+      traineeFullName: assessment.traineeFullName,
+      dcoResult: assessment.dcoResult,
+      dpcoFollowUp: assessment.dpcoFollowUp || null,
+      dncoFollowUp: assessment.dncoFollowUp || null,
+      passNotesToNextEvent: assessment.passNotesToNextEvent === true,
+      trainingReportNotesLength: String(assessment.trainingReportNotes || "").trim().length,
+      trainingReportNotesPreview: String(assessment.trainingReportNotes || "").trim().slice(0, 160),
+      shouldPass: shouldPassTrainingReportNotesToNextEvent(assessment)
+    });
     if (!shouldPassTrainingReportNotesToNextEvent(assessment)) return;
     const trainee = allTraineesData.find((candidate) => candidate.fullName === assessment.traineeFullName);
     if (!trainee) {
+      pushDfpDataDiag("report-notes:forward:no-trainee", {
+        assessmentId: assessment.id,
+        traineeFullName: assessment.traineeFullName
+      });
       console.warn("[Training Report] Could not pass notes forward: trainee not found", assessment.traineeFullName);
       return;
     }
     const originalLmp = await loadPersistedTraineeLmp(trainee) || traineeLMPs.get(trainee.fullName);
+    pushDfpDataDiag("report-notes:forward:original-lmp", {
+      assessmentId: assessment.id,
+      traineeFullName: trainee.fullName,
+      source: "persisted-first",
+      ...summariseTrainingReportLmpItems(originalLmp)
+    });
     if (!originalLmp || originalLmp.length === 0) {
+      pushDfpDataDiag("report-notes:forward:no-lmp", {
+        assessmentId: assessment.id,
+        traineeFullName: trainee.fullName
+      });
       console.warn("[Training Report] Could not pass notes forward: Individual LMP not found", assessment.traineeFullName);
       return;
     }
     const sourceMatch = findTrainingReportSourceLmpItem(originalLmp, trainee, assessment);
     if (!sourceMatch) {
+      pushDfpDataDiag("report-notes:forward:no-source-match", {
+        assessmentId: assessment.id,
+        traineeFullName: trainee.fullName,
+        eventId: assessment.eventId,
+        flightNumber: assessment.flightNumber,
+        sample: originalLmp.slice(0, 20).map((item) => ({
+          id: item.id,
+          code: item.code,
+          type: item.type,
+          masterEventId: item.masterEventId,
+          forwardedKeys: Object.keys(item.trainingReportForwardedNotes || {})
+        }))
+      });
       console.warn("[Training Report] Could not pass notes forward: assessed event not found in Individual LMP", {
         trainee: assessment.traineeFullName,
         eventId: assessment.eventId,
@@ -108970,13 +109091,48 @@ ${error instanceof Error ? error.message : String(error)}`,
       return;
     }
     const { item: sourceItem, index: sourceIndex } = sourceMatch;
-    if (sourceItem.type !== "Flight" && sourceItem.type !== "FTD") return;
+    if (sourceItem.type !== "Flight" && sourceItem.type !== "FTD") {
+      pushDfpDataDiag("report-notes:forward:wrong-source-type", {
+        assessmentId: assessment.id,
+        traineeFullName: trainee.fullName,
+        sourceCode: sourceItem.code,
+        sourceType: sourceItem.type
+      });
+      return;
+    }
     const assessmentKey = assessment.id || assessment.eventId;
     const insertedFollowUpIndex = originalLmp.findIndex((item) => item.trainingReportSourceAssessmentId === assessmentKey || item.trainingReportSourceEventId === assessment.eventId);
     const nextEventIndex = insertedFollowUpIndex >= 0 ? insertedFollowUpIndex : originalLmp.findIndex(
       (item, index) => index > sourceIndex && item.type === sourceItem.type && !item.completedAt
     );
+    pushDfpDataDiag("report-notes:forward:target-selection", {
+      assessmentId: assessment.id,
+      traineeFullName: trainee.fullName,
+      sourceCode: sourceItem.code,
+      sourceType: sourceItem.type,
+      sourceIndex,
+      insertedFollowUpIndex,
+      nextEventIndex,
+      nextEventCode: nextEventIndex >= 0 ? originalLmp[nextEventIndex]?.code : null,
+      nextEventType: nextEventIndex >= 0 ? originalLmp[nextEventIndex]?.type : null,
+      candidateWindow: originalLmp.slice(Math.max(0, sourceIndex), Math.min(originalLmp.length, sourceIndex + 8)).map((item, index) => ({
+        relativeIndex: index,
+        absoluteIndex: Math.max(0, sourceIndex) + index,
+        id: item.id,
+        code: item.code,
+        type: item.type,
+        completedAt: item.completedAt || null,
+        extensionKeys: Object.keys(item.trainingReportNextEventExtensions || {}),
+        forwardedKeys: Object.keys(item.trainingReportForwardedNotes || {})
+      }))
+    });
     if (nextEventIndex === -1) {
+      pushDfpDataDiag("report-notes:forward:no-target", {
+        assessmentId: assessment.id,
+        traineeFullName: trainee.fullName,
+        sourceCode: sourceItem.code,
+        sourceType: sourceItem.type
+      });
       console.warn("[Training Report] Could not pass notes forward: no matching next flight/sim found", {
         trainee: assessment.traineeFullName,
         event: sourceItem.code,
@@ -109000,12 +109156,45 @@ ${error instanceof Error ? error.message : String(error)}`,
       notes: baseNotes
     };
     const updatedLmp = originalLmp.map((item, index) => index === nextEventIndex ? updatedTargetEvent : item);
+    pushDfpDataDiag("report-notes:forward:prepared", {
+      assessmentId: assessment.id,
+      traineeFullName: trainee.fullName,
+      sourceCode: sourceItem.code,
+      targetCode: targetEvent.code,
+      targetType: targetEvent.type,
+      assessmentKey,
+      baseNotesLength: baseNotes.length,
+      forwardedKeysBefore: Object.keys(targetEvent.trainingReportForwardedNotes || {}),
+      forwardedKeysAfter: Object.keys(forwardedNotes),
+      forwardedNoteLength: String(assessment.trainingReportNotes || "").trim().length,
+      extensionKeysOnTarget: Object.keys(targetEvent.trainingReportNextEventExtensions || {}),
+      targetHours: {
+        flightOrSimHours: targetEvent.flightOrSimHours,
+        duration: targetEvent.duration,
+        totalEventHours: targetEvent.totalEventHours
+      }
+    });
     try {
       const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+      const persistedTarget = Array.isArray(persistedLmp) ? persistedLmp.find((item) => String(item.id || "") === String(updatedTargetEvent.id || "") || String(item.code || "").trim().toUpperCase() === String(updatedTargetEvent.code || "").trim().toUpperCase()) : void 0;
       setTraineeLMPs((prev) => {
         const updated = new Map(prev);
         updated.set(trainee.fullName, persistedLmp);
         return updated;
+      });
+      pushDfpDataDiag("report-notes:forward:persisted", {
+        assessmentId: assessment.id,
+        traineeFullName: trainee.fullName,
+        targetCode: targetEvent.code,
+        persistedTargetCode: persistedTarget?.code || null,
+        persistedForwardedKeys: Object.keys(persistedTarget?.trainingReportForwardedNotes || {}),
+        persistedForwardedNoteLength: getForwardedNotesFromLmpItem(persistedTarget).length,
+        persistedExtensionKeys: Object.keys(persistedTarget?.trainingReportNextEventExtensions || {}),
+        persistedTargetHours: persistedTarget ? {
+          flightOrSimHours: persistedTarget.flightOrSimHours,
+          duration: persistedTarget.duration,
+          totalEventHours: persistedTarget.totalEventHours
+        } : null
       });
       logAudit(
         "Individual LMP",
@@ -109354,7 +109543,10 @@ ${error instanceof Error ? error.message : String(error)}`,
       traineeFullName: assessment.traineeFullName,
       dcoResult: assessment.dcoResult,
       dpcoFollowUp: assessment.dpcoFollowUp || null,
-      dncoFollowUp: assessment.dncoFollowUp || null
+      dncoFollowUp: assessment.dncoFollowUp || null,
+      passNotesToNextEvent: assessment.passNotesToNextEvent === true,
+      trainingReportNotesLength: String(assessment.trainingReportNotes || "").trim().length,
+      trainingReportNotesPreview: String(assessment.trainingReportNotes || "").trim().slice(0, 120)
     });
     const response = await fetch(`${apiBase2}/trainee-performance`, {
       method: "POST",

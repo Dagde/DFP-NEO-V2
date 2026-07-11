@@ -13681,6 +13681,24 @@ app.post('/api/trainee-performance/bulk', async (req, res) => {
 // -----------------------------------------------------------------------
 // Helper: Map DB row → Pt051Assessment (app interface shape)
 // -----------------------------------------------------------------------
+function appendTrainingReportNotesServerDiag(stage, payload = {}) {
+  try {
+    global.__trainingReportNotesDiag = [
+      ...(Array.isArray(global.__trainingReportNotesDiag) ? global.__trainingReportNotesDiag : []),
+      {
+        ts: new Date().toISOString(),
+        stage,
+        ...payload,
+      },
+    ].slice(-250);
+    if (process.env.TRAINING_REPORT_NOTES_DIAG === 'true') {
+      console.log('[TrainingReportNotesDiag]', stage, payload);
+    }
+  } catch {
+    // Diagnostics must not affect API behaviour.
+  }
+}
+
 function mapRowToAssessment(row) {
   if (!row) return null;
   // elementScores is stored as JSONB - parse if string
@@ -13690,6 +13708,15 @@ function mapRowToAssessment(row) {
   }
   if (!Array.isArray(scores)) scores = [];
   const followUpMeta = scores.find(score => score && typeof score === 'object' && score.element === '__pt051FollowUp')?.metadata || {};
+  appendTrainingReportNotesServerDiag('map-row-to-assessment', {
+    eventId: row.eventId,
+    flightNumber: row.flightNumber,
+    traineeFullName: row.traineeFullName,
+    hasFollowUpMeta: !!scores.find(score => score && typeof score === 'object' && score.element === '__pt051FollowUp'),
+    passNotesToNextEvent: followUpMeta.passNotesToNextEvent === true,
+    trainingReportNotesLength: String(followUpMeta.trainingReportNotes || '').trim().length,
+    trainingReportNotesPreview: String(followUpMeta.trainingReportNotes || '').trim().slice(0, 160),
+  });
   scores = scores.filter(score => !(score && typeof score === 'object' && score.element === '__pt051FollowUp'));
 
   // comments is the structured "QFI: ...\nWeather: ..." string
@@ -13764,6 +13791,19 @@ function mapAssessmentToRow(data) {
       },
     });
   }
+  appendTrainingReportNotesServerDiag('map-assessment-to-row', {
+    id,
+    eventId: data.eventId || '',
+    flightNumber: data.flightNumber || '',
+    traineeFullName: data.traineeFullName || data.trainedFullName || '',
+    dcoResult,
+    dpcoFollowUp: data.dpcoFollowUp || null,
+    dncoFollowUp: data.dncoFollowUp || null,
+    passNotesToNextEvent: data.passNotesToNextEvent === true,
+    trainingReportNotesLength: String(data.trainingReportNotes || '').trim().length,
+    trainingReportNotesPreview: String(data.trainingReportNotes || '').trim().slice(0, 160),
+    hasFollowUpMetaRow: elementScores.some(score => score && score.element === '__pt051FollowUp'),
+  });
 
   // Build structured comments string from Pt051Assessment shape
   const comments = data.comments || buildCommentsString(data);
@@ -13796,6 +13836,11 @@ function mapAssessmentToRow(data) {
     createdBy:               data.createdBy || null
   };
 }
+
+app.get('/api/diagnostics/training-report-notes', (req, res) => {
+  const entries = Array.isArray(global.__trainingReportNotesDiag) ? global.__trainingReportNotesDiag : [];
+  res.json({ entries, count: entries.length });
+});
 
 // Helper: Build "QFI: ...\nWeather: ..." string from Pt051Assessment fields
 function buildCommentsString(data) {
