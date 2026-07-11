@@ -4660,6 +4660,22 @@ const normaliseAirCombatTrainingAssignments = (preferences) => {
     trainingPackages: normaliseList(raw.trainingPackages, "training_package")
   };
 };
+const appendTrainingReportFollowUpDiag = (stage, payload = {}) => {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    const existing = JSON.parse(window.localStorage.getItem("dfp_training_report_followup_diag") || "[]");
+    const next = [
+      ...Array.isArray(existing) ? existing : [],
+      {
+        ts: (/* @__PURE__ */ new Date()).toISOString(),
+        stage,
+        ...payload
+      }
+    ].slice(-250);
+    window.localStorage.setItem("dfp_training_report_followup_diag", JSON.stringify(next));
+  } catch {
+  }
+};
 const normaliseAirCombatTrainingReports = (preferences) => {
   const raw = preferences?.airCombat?.trainingReports;
   if (!Array.isArray(raw)) return [];
@@ -4683,7 +4699,7 @@ const normaliseAirCombatTrainingReports = (preferences) => {
       requestExtraFlight: value.requestExtraFlight === true
     };
   };
-  return raw.map((report) => ({
+  const normalisedReports = raw.map((report) => ({
     id: String(report.id || ""),
     reportName: String(report.reportName || "PT-051"),
     staffIdNumber: Number(report.staffIdNumber || 0),
@@ -4727,6 +4743,22 @@ const normaliseAirCombatTrainingReports = (preferences) => {
     updatedAt: report.updatedAt ? String(report.updatedAt) : void 0,
     updatedBy: report.updatedBy ? String(report.updatedBy) : void 0
   })).filter((report) => report.id && report.eventCode);
+  const reportsWithFollowUp = normalisedReports.filter((report) => report.dpcoFollowUp || report.dncoFollowUp || report.dcoResult === "DPCO" || report.dcoResult === "DNCO").map((report) => ({
+    id: report.id,
+    staffName: report.staffName,
+    eventCode: report.eventCode,
+    dcoResult: report.dcoResult,
+    dpcoFollowUp: report.dpcoFollowUp,
+    dncoFollowUp: report.dncoFollowUp
+  })).slice(0, 20);
+  if (reportsWithFollowUp.length > 0) {
+    appendTrainingReportFollowUpDiag("normalise:reports", {
+      rawReportCount: raw.length,
+      normalisedReportCount: normalisedReports.length,
+      reportsWithFollowUp
+    });
+  }
+  return normalisedReports;
 };
 const setAirCombatTrainingAssignment = (instructor, assignment, assigned) => {
   const preferences = { ...instructor.preferences || {} };
@@ -54512,6 +54544,19 @@ const AirCombatTrainingReportModal = ({
   const [dncoFollowUp, setDncoFollowUp] = reactExports.useState(() => ({
     requestExtraFlight: initialReport?.dncoFollowUp?.requestExtraFlight === true
   }));
+  reactExports.useEffect(() => {
+    appendTrainingReportFollowUpDiag("modal:hydrate", {
+      reportId: initialReport?.id,
+      staffName: staff.name,
+      staffIdNumber: staff.idNumber,
+      eventCode: initialReport?.eventCode || eventCode2,
+      dcoResult: initialReport?.dcoResult,
+      initialDpcoFollowUp: initialReport?.dpcoFollowUp,
+      initialDncoFollowUp: initialReport?.dncoFollowUp,
+      stateDpcoFollowUp: dpcoFollowUp,
+      stateDncoFollowUp: dncoFollowUp
+    });
+  }, [dncoFollowUp, dpcoFollowUp, eventCode2, initialReport?.dcoResult, initialReport?.dncoFollowUp, initialReport?.dpcoFollowUp, initialReport?.eventCode, initialReport?.id, staff.idNumber, staff.name]);
   const [commentSections, setCommentSections] = reactExports.useState(() => {
     const parsed = parseReportComments(initialReport?.notes || "");
     return {
@@ -54665,7 +54710,7 @@ const AirCombatTrainingReportModal = ({
     try {
       const now = (/* @__PURE__ */ new Date()).toISOString();
       const duration = Math.max(0.25, endTime - startTime);
-      await onSave({
+      const payload = {
         id: reportId,
         reportName: reportTemplate.displayName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
         staffIdNumber: staff.idNumber,
@@ -54701,7 +54746,17 @@ const AirCombatTrainingReportModal = ({
         createdBy: initialReport?.createdBy || currentUserName,
         updatedAt: now,
         updatedBy: currentUserName
+      };
+      appendTrainingReportFollowUpDiag("modal:save-payload", {
+        reportId: payload.id,
+        staffName: payload.staffName,
+        staffIdNumber: payload.staffIdNumber,
+        eventCode: payload.eventCode,
+        dcoResult: payload.dcoResult,
+        dpcoFollowUp: payload.dpcoFollowUp,
+        dncoFollowUp: payload.dncoFollowUp
       });
+      await onSave(payload);
       setSaveStatus("Saved");
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : String(error));
@@ -106927,10 +106982,33 @@ ${error instanceof Error ? error.message : String(error)}`,
     setAirCombatTrainingReportDraft({ staff, assignment, item: matchingItem, sourceEvent });
   };
   const handleSaveAirCombatTrainingReport = async (report) => {
+    appendTrainingReportFollowUpDiag("app:save-received", {
+      reportId: report.id,
+      staffName: report.staffName,
+      staffIdNumber: report.staffIdNumber,
+      eventCode: report.eventCode,
+      dcoResult: report.dcoResult,
+      dpcoFollowUp: report.dpcoFollowUp,
+      dncoFollowUp: report.dncoFollowUp
+    });
     const staff = allInstructorsData.find((person) => airCombatTrainingReportDraft?.staff?.id ? person.id === airCombatTrainingReportDraft.staff.id : person.idNumber === airCombatTrainingReportDraft?.staff.idNumber) || airCombatTrainingReportDraft?.staff;
-    if (!staff) return;
+    if (!staff) {
+      appendTrainingReportFollowUpDiag("app:save-no-staff", {
+        reportId: report.id,
+        staffName: report.staffName,
+        staffIdNumber: report.staffIdNumber
+      });
+      return;
+    }
     const preferences = { ...staff.preferences || {} };
     const existingReports = normaliseAirCombatTrainingReports(preferences);
+    appendTrainingReportFollowUpDiag("app:save-existing-reports", {
+      reportId: report.id,
+      staffName: staff.name,
+      staffIdNumber: staff.idNumber,
+      existingCount: existingReports.length,
+      existingMatch: existingReports.find((existing) => existing.id === report.id) || null
+    });
     const updatedReports = [
       report,
       ...existingReports.filter((existing) => existing.id !== report.id)
@@ -106946,6 +107024,14 @@ ${error instanceof Error ? error.message : String(error)}`,
       }
     };
     const dbId = updatedStaff.id;
+    appendTrainingReportFollowUpDiag("app:save-before-patch", {
+      reportId: report.id,
+      dbId,
+      staffName: updatedStaff.name,
+      staffIdNumber: updatedStaff.idNumber,
+      firstUpdatedReport: updatedReports[0],
+      persistedReportMatch: updatedStaff.preferences?.airCombat?.trainingReports?.find((item) => item.id === report.id) || null
+    });
     if (dbId) {
       const response = await fetch(`/api/personnel/${dbId}`, {
         method: "PATCH",
@@ -106953,14 +107039,32 @@ ${error instanceof Error ? error.message : String(error)}`,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedStaff)
       });
+      appendTrainingReportFollowUpDiag("app:save-patch-response", {
+        reportId: report.id,
+        dbId,
+        ok: response.ok,
+        status: response.status
+      });
       if (!response.ok) {
         const errorText = await response.text();
+        appendTrainingReportFollowUpDiag("app:save-patch-error", {
+          reportId: report.id,
+          dbId,
+          status: response.status,
+          errorText
+        });
         throw new Error(errorText || `Failed to save Air Combat training report (${response.status})`);
       }
     }
     setInstructorsData((prev) => prev.map((person) => dbId ? person.id === dbId ? updatedStaff : person : person.idNumber === updatedStaff.idNumber ? updatedStaff : person));
     setAirCombatTrainingReportDraft(null);
     setSelectedPersonForProfile(updatedStaff);
+    appendTrainingReportFollowUpDiag("app:save-state-updated", {
+      reportId: report.id,
+      staffName: updatedStaff.name,
+      staffIdNumber: updatedStaff.idNumber,
+      savedReport: updatedReports.find((existing) => existing.id === report.id) || null
+    });
     logAudit(
       "Air Combat Training Reports",
       "Create",

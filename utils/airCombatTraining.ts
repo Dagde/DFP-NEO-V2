@@ -175,6 +175,24 @@ export const normaliseAirCombatTrainingAssignments = (preferences?: PersonnelPre
   };
 };
 
+export const appendTrainingReportFollowUpDiag = (stage: string, payload: Record<string, any> = {}) => {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const existing = JSON.parse(window.localStorage.getItem('dfp_training_report_followup_diag') || '[]');
+    const next = [
+      ...(Array.isArray(existing) ? existing : []),
+      {
+        ts: new Date().toISOString(),
+        stage,
+        ...payload,
+      },
+    ].slice(-250);
+    window.localStorage.setItem('dfp_training_report_followup_diag', JSON.stringify(next));
+  } catch {
+    // Diagnostics must never affect training report behaviour.
+  }
+};
+
 export const normaliseAirCombatTrainingReports = (preferences?: PersonnelPreferences | null): AirCombatTrainingReport[] => {
   const raw = preferences?.airCombat?.trainingReports;
   if (!Array.isArray(raw)) return [];
@@ -200,7 +218,7 @@ export const normaliseAirCombatTrainingReports = (preferences?: PersonnelPrefere
       requestExtraFlight: value.requestExtraFlight === true,
     };
   };
-  return raw
+  const normalisedReports = raw
     .map((report: any) => ({
       id: String(report.id || ''),
       reportName: String(report.reportName || 'PT-051'),
@@ -252,6 +270,25 @@ export const normaliseAirCombatTrainingReports = (preferences?: PersonnelPrefere
       updatedBy: report.updatedBy ? String(report.updatedBy) : undefined,
     }))
     .filter(report => report.id && report.eventCode) as AirCombatTrainingReport[];
+  const reportsWithFollowUp = normalisedReports
+    .filter(report => report.dpcoFollowUp || report.dncoFollowUp || report.dcoResult === 'DPCO' || report.dcoResult === 'DNCO')
+    .map(report => ({
+      id: report.id,
+      staffName: report.staffName,
+      eventCode: report.eventCode,
+      dcoResult: report.dcoResult,
+      dpcoFollowUp: report.dpcoFollowUp,
+      dncoFollowUp: report.dncoFollowUp,
+    }))
+    .slice(0, 20);
+  if (reportsWithFollowUp.length > 0) {
+    appendTrainingReportFollowUpDiag('normalise:reports', {
+      rawReportCount: raw.length,
+      normalisedReportCount: normalisedReports.length,
+      reportsWithFollowUp,
+    });
+  }
+  return normalisedReports;
 };
 
 export const setAirCombatTrainingAssignment = (

@@ -111,6 +111,7 @@ import {
     type UnitCallsignSettings,
 } from './utils/unitCallsigns';
 import {
+    appendTrainingReportFollowUpDiag,
     getAirCombatAssignmentFromItem,
     getAirCombatTrainingKey,
     normaliseAirCombatSchedulingWeights,
@@ -29320,15 +29321,38 @@ const App: React.FC = () => {
     };
 
     const handleSaveAirCombatTrainingReport = async (report: AirCombatTrainingReport) => {
+        appendTrainingReportFollowUpDiag('app:save-received', {
+            reportId: report.id,
+            staffName: report.staffName,
+            staffIdNumber: report.staffIdNumber,
+            eventCode: report.eventCode,
+            dcoResult: report.dcoResult,
+            dpcoFollowUp: report.dpcoFollowUp,
+            dncoFollowUp: report.dncoFollowUp,
+        });
         const staff = allInstructorsData.find(person => (
             (airCombatTrainingReportDraft?.staff as any)?.id
                 ? (person as any).id === (airCombatTrainingReportDraft.staff as any).id
                 : person.idNumber === airCombatTrainingReportDraft?.staff.idNumber
         )) || airCombatTrainingReportDraft?.staff;
-        if (!staff) return;
+        if (!staff) {
+            appendTrainingReportFollowUpDiag('app:save-no-staff', {
+                reportId: report.id,
+                staffName: report.staffName,
+                staffIdNumber: report.staffIdNumber,
+            });
+            return;
+        }
 
         const preferences = { ...(staff.preferences || {}) };
         const existingReports = normaliseAirCombatTrainingReports(preferences);
+        appendTrainingReportFollowUpDiag('app:save-existing-reports', {
+            reportId: report.id,
+            staffName: staff.name,
+            staffIdNumber: staff.idNumber,
+            existingCount: existingReports.length,
+            existingMatch: existingReports.find(existing => existing.id === report.id) || null,
+        });
         const updatedReports = [
             report,
             ...existingReports.filter(existing => existing.id !== report.id),
@@ -29345,6 +29369,14 @@ const App: React.FC = () => {
         };
 
         const dbId = (updatedStaff as any).id;
+        appendTrainingReportFollowUpDiag('app:save-before-patch', {
+            reportId: report.id,
+            dbId,
+            staffName: updatedStaff.name,
+            staffIdNumber: updatedStaff.idNumber,
+            firstUpdatedReport: updatedReports[0],
+            persistedReportMatch: (updatedStaff.preferences as any)?.airCombat?.trainingReports?.find((item: any) => item.id === report.id) || null,
+        });
         if (dbId) {
             const response = await fetch(`/api/personnel/${dbId}`, {
                 method: 'PATCH',
@@ -29352,8 +29384,20 @@ const App: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedStaff),
             });
+            appendTrainingReportFollowUpDiag('app:save-patch-response', {
+                reportId: report.id,
+                dbId,
+                ok: response.ok,
+                status: response.status,
+            });
             if (!response.ok) {
                 const errorText = await response.text();
+                appendTrainingReportFollowUpDiag('app:save-patch-error', {
+                    reportId: report.id,
+                    dbId,
+                    status: response.status,
+                    errorText,
+                });
                 throw new Error(errorText || `Failed to save Air Combat training report (${response.status})`);
             }
         }
@@ -29365,6 +29409,12 @@ const App: React.FC = () => {
         )));
         setAirCombatTrainingReportDraft(null);
         setSelectedPersonForProfile(updatedStaff);
+        appendTrainingReportFollowUpDiag('app:save-state-updated', {
+            reportId: report.id,
+            staffName: updatedStaff.name,
+            staffIdNumber: updatedStaff.idNumber,
+            savedReport: updatedReports.find(existing => existing.id === report.id) || null,
+        });
         logAudit(
             'Air Combat Training Reports',
             'Create',

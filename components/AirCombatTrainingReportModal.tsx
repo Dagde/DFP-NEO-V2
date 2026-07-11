@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AirCombatTrainingAssignment, AirCombatTrainingReport, Instructor, ScheduleEvent, SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
 import {
@@ -6,7 +6,7 @@ import {
   normaliseTrainingReportTemplate,
   type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
-import { getAirCombatAssignmentFromItem } from '../utils/airCombatTraining';
+import { appendTrainingReportFollowUpDiag, getAirCombatAssignmentFromItem } from '../utils/airCombatTraining';
 
 interface AirCombatTrainingReportModalProps {
   staff: Instructor;
@@ -206,6 +206,19 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const [dncoFollowUp, setDncoFollowUp] = useState<{ requestExtraFlight: boolean }>(() => ({
     requestExtraFlight: initialReport?.dncoFollowUp?.requestExtraFlight === true,
   }));
+  useEffect(() => {
+    appendTrainingReportFollowUpDiag('modal:hydrate', {
+      reportId: initialReport?.id,
+      staffName: staff.name,
+      staffIdNumber: staff.idNumber,
+      eventCode: initialReport?.eventCode || eventCode,
+      dcoResult: initialReport?.dcoResult,
+      initialDpcoFollowUp: initialReport?.dpcoFollowUp,
+      initialDncoFollowUp: initialReport?.dncoFollowUp,
+      stateDpcoFollowUp: dpcoFollowUp,
+      stateDncoFollowUp: dncoFollowUp,
+    });
+  }, [dncoFollowUp, dpcoFollowUp, eventCode, initialReport?.dcoResult, initialReport?.dncoFollowUp, initialReport?.dpcoFollowUp, initialReport?.eventCode, initialReport?.id, staff.idNumber, staff.name]);
   const [commentSections, setCommentSections] = useState<Record<CommentSectionKey, string>>(() => {
     const parsed = parseReportComments(initialReport?.notes || '');
     return {
@@ -411,7 +424,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     try {
       const now = new Date().toISOString();
       const duration = Math.max(0.25, endTime - startTime);
-      await onSave({
+      const payload: AirCombatTrainingReport = {
         id: reportId,
         reportName: reportTemplate.displayName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
         staffIdNumber: staff.idNumber,
@@ -447,7 +460,17 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
         createdBy: initialReport?.createdBy || currentUserName,
         updatedAt: now,
         updatedBy: currentUserName,
+      };
+      appendTrainingReportFollowUpDiag('modal:save-payload', {
+        reportId: payload.id,
+        staffName: payload.staffName,
+        staffIdNumber: payload.staffIdNumber,
+        eventCode: payload.eventCode,
+        dcoResult: payload.dcoResult,
+        dpcoFollowUp: payload.dpcoFollowUp,
+        dncoFollowUp: payload.dncoFollowUp,
       });
+      await onSave(payload);
       setSaveStatus('Saved');
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : String(error));
