@@ -491,6 +491,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 })
             : [];
 
+        const getReviewLmpItemForRef = (value: unknown): SyllabusItemDetail | undefined => {
+            const ref = reviewEventCode(value);
+            if (!ref) return undefined;
+            return currentIndividualLMP.find(item => reviewLmpRefs(item).includes(ref));
+        };
+        const isFlightOrSimulatorReviewPoint = (value: unknown): boolean => {
+            const item = getReviewLmpItemForRef(value);
+            return item ? item.type === 'Flight' || item.type === 'FTD' : false;
+        };
+
         const assessmentPoints = traineeAssessments
             .map(assessment => {
                 const grade = typeof assessment.overallGrade === 'number'
@@ -507,13 +517,15 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     dcoResult: assessment.dcoResult || '',
                 };
             })
-            .filter(Boolean) as Array<{ id: string; code: string; date: string; grade: number; dcoResult: string }>;
+            .filter(Boolean)
+            .filter((point: any) => isFlightOrSimulatorReviewPoint(point.code) || isFlightOrSimulatorReviewPoint(point.id)) as Array<{ id: string; code: string; date: string; grade: number; dcoResult: string }>;
 
         const scoreOnlyPoints = traineeScores
             .filter(score => !assessmentPoints.some(point => reviewEventCode(point.code) === reviewEventCode(score.event) && point.date === score.date))
+            .filter(score => isFlightOrSimulatorReviewPoint(score.event))
             .map(score => ({
                 id: `${score.event}-${score.date}`,
-                code: currentIndividualLMP.find(item => reviewLmpRefs(item).includes(reviewEventCode(score.event)))?.code || score.event,
+                code: getReviewLmpItemForRef(score.event)?.code || score.event,
                 date: score.date || '',
                 grade: Number(score.score),
                 dcoResult: '',

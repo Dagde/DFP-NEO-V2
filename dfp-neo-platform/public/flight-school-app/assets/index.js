@@ -22001,6 +22001,15 @@ const TraineeProfileFlyout = ({
       if (dateCompare !== 0) return dateCompare;
       return reviewEventCode(a.flightNumber).localeCompare(reviewEventCode(b.flightNumber));
     }) : [];
+    const getReviewLmpItemForRef = (value) => {
+      const ref = reviewEventCode(value);
+      if (!ref) return void 0;
+      return currentIndividualLMP.find((item) => reviewLmpRefs(item).includes(ref));
+    };
+    const isFlightOrSimulatorReviewPoint = (value) => {
+      const item = getReviewLmpItemForRef(value);
+      return item ? item.type === "Flight" || item.type === "FTD" : false;
+    };
     const assessmentPoints = traineeAssessments.map((assessment) => {
       const grade = typeof assessment.overallGrade === "number" ? assessment.overallGrade : assessment.overallResult === "F" ? 0 : null;
       if (grade === null || !Number.isFinite(Number(grade))) return null;
@@ -22011,10 +22020,10 @@ const TraineeProfileFlyout = ({
         grade: Number(grade),
         dcoResult: assessment.dcoResult || ""
       };
-    }).filter(Boolean);
-    const scoreOnlyPoints = traineeScores.filter((score) => !assessmentPoints.some((point) => reviewEventCode(point.code) === reviewEventCode(score.event) && point.date === score.date)).map((score) => ({
+    }).filter(Boolean).filter((point) => isFlightOrSimulatorReviewPoint(point.code) || isFlightOrSimulatorReviewPoint(point.id));
+    const scoreOnlyPoints = traineeScores.filter((score) => !assessmentPoints.some((point) => reviewEventCode(point.code) === reviewEventCode(score.event) && point.date === score.date)).filter((score) => isFlightOrSimulatorReviewPoint(score.event)).map((score) => ({
       id: `${score.event}-${score.date}`,
-      code: currentIndividualLMP.find((item) => reviewLmpRefs(item).includes(reviewEventCode(score.event)))?.code || score.event,
+      code: getReviewLmpItemForRef(score.event)?.code || score.event,
       date: score.date || "",
       grade: Number(score.score),
       dcoResult: ""
