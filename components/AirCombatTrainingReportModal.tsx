@@ -983,13 +983,8 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
           <fieldset className="rounded-lg border border-gray-700 p-4">
             <legend className="px-2 text-sm font-semibold text-gray-300">{commentFields.notes}</legend>
             <div className="space-y-3">
-              {getFollowUpNotesPrefix() && (
-                <div className="rounded border border-sky-500/35 bg-sky-950/30 px-3 py-2 text-sm font-semibold text-sky-100">
-                  {getFollowUpNotesPrefix()}
-                </div>
-              )}
               <textarea
-                value={commentSections.notes}
+                value={buildNotesWithFollowUp()}
                 onChange={(event) => { updateCommentSection('notes', stripGeneratedFollowUpNotes(event.target.value)); setSaveStatus('Unsaved'); }}
                 rows={5}
                 className="w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"

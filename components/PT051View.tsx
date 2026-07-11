@@ -1883,11 +1883,6 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                     <fieldset className="p-4 border border-gray-700 rounded-lg">
                         <legend className="px-2 text-sm font-semibold text-gray-300">{commentFieldsConfig.notes || 'Notes'}</legend>
                         <div className="space-y-3">
-                            {getFollowUpNotesPrefix() && (
-                                <div className="rounded border border-sky-500/35 bg-sky-950/30 px-3 py-2 text-sm font-semibold text-sky-100">
-                                    {getFollowUpNotesPrefix()}
-                                </div>
-                            )}
                             {forwardedPreFlightNotes && (
                                 <div className="rounded border border-gray-700 bg-gray-950/45 p-3">
                                     <div className="text-xs font-semibold text-red-300 underline decoration-red-300 underline-offset-4">Pre-flight Notes</div>
@@ -1895,7 +1890,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                 </div>
                             )}
                             <textarea
-                                value={commentFields.Notes}
+                                value={buildTrainingReportNotes()}
                                 onChange={(e) => handleCommentFieldChange('Notes', e.target.value)}
                                 rows={5}
                                 className="w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"

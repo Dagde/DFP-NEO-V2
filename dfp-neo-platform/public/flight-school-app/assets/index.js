@@ -21631,7 +21631,6 @@ This action cannot be undone.`;
             /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: commentFieldsConfig.notes || "Notes" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-                getFollowUpNotesPrefix() && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-sky-500/35 bg-sky-950/30 px-3 py-2 text-sm font-semibold text-sky-100", children: getFollowUpNotesPrefix() }),
                 forwardedPreFlightNotes && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/45 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold text-red-300 underline decoration-red-300 underline-offset-4", children: "Pre-flight Notes" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 whitespace-pre-wrap text-sm text-gray-100", children: forwardedPreFlightNotes })
@@ -21639,7 +21638,7 @@ This action cannot be undone.`;
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "textarea",
                   {
-                    value: commentFields.Notes,
+                    value: buildTrainingReportNotes(),
                     onChange: (e) => handleCommentFieldChange("Notes", e.target.value),
                     rows: 5,
                     className: "w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
@@ -55559,11 +55558,10 @@ const AirCombatTrainingReportModal = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "rounded-lg border border-gray-700 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: commentFields.notes }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-              getFollowUpNotesPrefix() && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-sky-500/35 bg-sky-950/30 px-3 py-2 text-sm font-semibold text-sky-100", children: getFollowUpNotesPrefix() }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "textarea",
                 {
-                  value: commentSections.notes,
+                  value: buildNotesWithFollowUp(),
                   onChange: (event) => {
                     updateCommentSection("notes", stripGeneratedFollowUpNotes(event.target.value));
                     setSaveStatus("Unsaved");
