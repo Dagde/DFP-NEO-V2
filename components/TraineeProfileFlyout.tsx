@@ -627,6 +627,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         const summaryFailed = scorePoints.filter(point => point.status === 'fail');
         const summaryDoubleMarginal = scorePoints.filter(point => point.status === 'double-marginal');
         const summaryMarginal = scorePoints.filter(point => point.status === 'marginal');
+        const currentScoreAverage = scorePoints.length > 0
+            ? scorePoints.reduce((sum, point) => sum + point.grade, 0) / scorePoints.length
+            : 0;
 
         return {
             scorePoints,
@@ -638,6 +641,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 mostProgress,
                 leastProgress,
             },
+            currentScoreAverage,
             hourRows: logRows,
             hourTotals: {
                 logbook: cumulativeLogbook,
@@ -674,6 +678,87 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             doc.addPage();
             y = 16;
         };
+        const drawScoreGraph = () => {
+            ensureSpace(58);
+            const x = margin;
+            const graphY = y + 4;
+            const width = pageWidth - margin * 2;
+            const height = 42;
+            doc.setDrawColor(203, 213, 225);
+            doc.setLineWidth(0.2);
+            doc.line(x, graphY + height, x + width, graphY + height);
+            [0, 1, 2, 3, 4, 5].forEach(grade => {
+                const gy = graphY + height - (grade / 5) * height;
+                doc.setDrawColor(226, 232, 240);
+                doc.line(x, gy, x + width, gy);
+                doc.setTextColor(100, 116, 139);
+                addText(String(grade), x - 4, gy + 1, 6);
+            });
+            const points = reviewData.scorePoints;
+            const barWidth = Math.min(5, Math.max(1.8, width / Math.max(1, points.length) - 1));
+            points.forEach((point, index) => {
+                const px = x + ((index + 0.5) / Math.max(1, points.length)) * width - barWidth / 2;
+                const barHeight = (Math.max(0, Math.min(5, point.grade)) / 5) * height;
+                if (point.status === 'fail' || point.status === 'double-marginal') doc.setFillColor(239, 68, 68);
+                else if (point.status === 'marginal') doc.setFillColor(245, 158, 11);
+                else doc.setFillColor(14, 165, 233);
+                doc.rect(px, graphY + height - barHeight, barWidth, barHeight, 'F');
+                if (index % Math.ceil(Math.max(1, points.length / 18)) === 0) {
+                    doc.setTextColor(point.status === 'fail' || point.status === 'double-marginal' ? 185 : point.status === 'marginal' ? 180 : 71, point.status === 'marginal' ? 83 : 85, point.status === 'fail' || point.status === 'double-marginal' ? 83 : 105);
+                    doc.setFontSize(5.5);
+                    doc.text(point.code.slice(0, 8), px, graphY + height + 5, { angle: 45 });
+                }
+            });
+            if (points.length > 1) {
+                doc.setDrawColor(8, 145, 178);
+                doc.setLineWidth(0.7);
+                points.forEach((point, index) => {
+                    if (index === 0) return;
+                    const prev = points[index - 1];
+                    const x1 = x + ((index - 0.5) / points.length) * width;
+                    const y1 = graphY + height - (Math.max(0, Math.min(5, prev.smoothed)) / 5) * height;
+                    const x2 = x + ((index + 0.5) / points.length) * width;
+                    const y2 = graphY + height - (Math.max(0, Math.min(5, point.smoothed)) / 5) * height;
+                    doc.line(x1, y1, x2, y2);
+                });
+            }
+            y += 60;
+        };
+        const drawProgressGraph = () => {
+            ensureSpace(42);
+            const cx = margin + 22;
+            const cy = y + 18;
+            const radius = 16;
+            doc.setDrawColor(203, 213, 225);
+            doc.setFillColor(248, 250, 252);
+            doc.circle(cx, cy, radius, 'S');
+            doc.setFillColor(34, 197, 94);
+            const percent = Math.max(0, Math.min(100, reviewData.progress.progressPercent));
+            const slices = Math.round(percent / 4);
+            for (let i = 0; i < slices; i++) {
+                const a1 = (-90 + i * 14.4) * Math.PI / 180;
+                const a2 = (-90 + (i + 1) * 14.4) * Math.PI / 180;
+                doc.triangle(cx, cy, cx + Math.cos(a1) * radius, cy + Math.sin(a1) * radius, cx + Math.cos(a2) * radius, cy + Math.sin(a2) * radius, 'F');
+            }
+            doc.setFillColor(255, 255, 255);
+            doc.circle(cx, cy, 9, 'F');
+            doc.setTextColor(15, 23, 42);
+            addText(`${percent.toFixed(0)}%`, cx - 5, cy + 1, 7, 'bold');
+            const drawBenchmark = (value: number, r: number, g: number, b: number) => {
+                const angle = (-90 + (Math.max(0, Math.min(100, value)) / 100) * 360) * Math.PI / 180;
+                doc.setDrawColor(r, g, b);
+                doc.setLineWidth(0.35);
+                doc.line(cx, cy, cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+            };
+            drawBenchmark(reviewData.progress.averageProgress, 180, 137, 36);
+            drawBenchmark(reviewData.progress.mostProgress, 14, 116, 144);
+            drawBenchmark(reviewData.progress.leastProgress, 185, 28, 28);
+            addText(`Events completed: ${reviewData.progress.completedCount}/${reviewData.progress.totalCount}`, margin + 50, y + 8, 8);
+            addText(`Failed: ${reviewData.summaryFailed.length}   Double marginal: ${reviewData.summaryDoubleMarginal.length}   Marginal: ${reviewData.summaryMarginal.length}`, margin + 50, y + 14, 8);
+            addText(`Current score average: ${reviewData.currentScoreAverage.toFixed(1)}`, margin + 50, y + 20, 8);
+            addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Most: ${reviewData.progress.mostProgress.toFixed(0)}%   Least: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin + 50, y + 26, 8);
+            y += 42;
+        };
 
         doc.setFillColor(15, 24, 36);
         doc.rect(0, 0, pageWidth, 24, 'F');
@@ -683,7 +768,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         doc.setTextColor(15, 23, 42);
         y = 30;
 
+        addSection('Scores by Event');
+        drawScoreGraph();
         addSection('Course Progress');
+        drawProgressGraph();
         addText(`Progress: ${reviewData.progress.completedCount}/${reviewData.progress.totalCount} events (${reviewData.progress.progressPercent.toFixed(0)}%)`, margin, y);
         addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Most: ${reviewData.progress.mostProgress.toFixed(0)}%   Least: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin, y + 5);
         y += 12;
@@ -1779,7 +1867,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               )}
                             </div>
 
-                            <div className={`rounded border border-gray-600/70 bg-gray-950/30 p-3 ${reviewProgressExpanded ? '' : 'max-w-[360px]'}`}>
+                            <div className="grid grid-cols-1 xl:grid-cols-[minmax(260px,360px)_minmax(0,1fr)] gap-4">
+                            <div className={`rounded border border-gray-600/70 bg-gray-950/30 p-3 ${reviewProgressExpanded ? 'xl:max-w-none' : ''}`}>
                               <div className="flex items-center justify-between">
                                 <h5 className="text-xs font-bold uppercase tracking-wide text-sky-100">Course Progress</h5>
                                 <button onClick={() => setReviewProgressExpanded(prev => !prev)} className="w-[72px] h-[34px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md">
@@ -1802,6 +1891,37 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                   <div className="flex justify-between"><span className="text-red-200/75">Least progressed</span><span>{reviewData.progress.leastProgress.toFixed(0)}%</span></div>
                                 </div>
                               </div>
+                            </div>
+
+                            <div className="rounded border border-gray-600/70 bg-gray-950/30 p-3">
+                              <h5 className="text-xs font-bold uppercase tracking-wide text-sky-100">Review Metrics</h5>
+                              <div className="mt-3 overflow-x-auto">
+                                <table className="min-w-full text-left text-[11px]">
+                                  <tbody className="divide-y divide-gray-800/80">
+                                    <tr>
+                                      <td className="py-1.5 pr-4 text-gray-400">Events completed</td>
+                                      <td className="py-1.5 text-right font-semibold text-white">{reviewData.progress.completedCount}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="py-1.5 pr-4 text-gray-400">Failed events</td>
+                                      <td className="py-1.5 text-right font-semibold text-red-200">{reviewData.summaryFailed.length}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="py-1.5 pr-4 text-gray-400">Double marginal events</td>
+                                      <td className="py-1.5 text-right font-semibold text-red-200">{reviewData.summaryDoubleMarginal.length}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="py-1.5 pr-4 text-gray-400">Marginal events</td>
+                                      <td className="py-1.5 text-right font-semibold text-amber-200">{reviewData.summaryMarginal.length}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="py-1.5 pr-4 text-gray-400">Current score average</td>
+                                      <td className="py-1.5 text-right font-semibold text-sky-100">{reviewData.currentScoreAverage.toFixed(1)}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
                             </div>
                           </div>
 
@@ -1869,7 +1989,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             )}
                           </div>
 
-                          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className="mt-4 space-y-3">
                             {summaryBlock('Failed Events', reviewData.summaryFailed, 'bg-red-500/20 text-red-200')}
                             {summaryBlock('Double Marginal Events', reviewData.summaryDoubleMarginal, 'bg-red-500/20 text-red-200')}
                             {summaryBlock('Marginal Events', reviewData.summaryMarginal, 'bg-amber-500/20 text-amber-200')}
