@@ -4367,6 +4367,8 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC = [
   'methodOfAssessment',
   'resourcesPhysical',
   'resourceNumber',
+  'resourceCount',
+  'acceptableAircraftConfigs',
   'resourcesHuman',
   'eventDetailsCommon',
   'eventDetailsSortie',
@@ -4382,6 +4384,8 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC = [
   'twrDiReqd',
   'cctOnly',
   'notes',
+  'trainingReportNextEventExtensions',
+  'trainingReportLastExtendedByAssessmentId',
 ];
 
 const getIndividualLmpMasterOverridesForSync = (item) => {
@@ -4392,6 +4396,30 @@ const getIndividualLmpMasterOverridesForSync = (item) => {
     }
     return overrides;
   }, {});
+};
+
+const summariseTrainingReportLmpItemsForSync = (events = []) => {
+  const reportItems = (Array.isArray(events) ? events : []).filter((item) =>
+    item?.isRemedial ||
+    item?.lmpSource === 'remedial' ||
+    item?.trainingReportNextEventExtensions ||
+    item?.trainingReportLastExtendedByAssessmentId
+  );
+  return {
+    total: Array.isArray(events) ? events.length : 0,
+    reportItemCount: reportItems.length,
+    sample: reportItems.slice(0, 5).map((item) => ({
+      id: item?.id,
+      code: item?.code,
+      title: item?.title || item?.eventTitle || item?.eventDescription,
+      lmpSource: item?.lmpSource,
+      isRemedial: item?.isRemedial,
+      flightOrSimHours: item?.flightOrSimHours,
+      duration: item?.duration,
+      trainingReportNextEventExtensions: item?.trainingReportNextEventExtensions,
+      trainingReportLastExtendedByAssessmentId: item?.trainingReportLastExtendedByAssessmentId,
+    })),
+  };
 };
 
 const getLmpResourceNumberForSync = (item) => {
@@ -4864,11 +4892,13 @@ app.put('/api/trainees/:id/lmp', async (req, res) => {
     }
 
     const resolvedTraineeId = trainee.id;
+    const requestedReportLmpSummary = summariseTrainingReportLmpItemsForSync(events);
     await upsertTraineeLmpOverlays(db, resolvedTraineeId, traineeFullName, events, { deactivateMissing: true });
 
     const masterSyllabus = await loadMasterSyllabusForLmpType(db, lmpType);
     const overlayEvents = await loadTraineeLmpOverlays(db, resolvedTraineeId);
     const composedEvents = composeIndividualLmpEvents(events, masterSyllabus, overlayEvents, completedEventIds || []);
+    const composedReportLmpSummary = summariseTrainingReportLmpItemsForSync(composedEvents);
 
     const lmp = await db.individualLMP.upsert({
       where: { traineeId: resolvedTraineeId },
@@ -4889,6 +4919,14 @@ app.put('/api/trainees/:id/lmp', async (req, res) => {
     });
 
     console.log(`✅ PUT /api/trainees/${resolvedTraineeId}/lmp - ${traineeFullName}: ${(completedEventIds || []).length} events complete, ${overlayEvents.length} overlay(s)`);
+    if (requestedReportLmpSummary.reportItemCount > 0 || composedReportLmpSummary.reportItemCount > 0) {
+      console.log('[LMP PUT DIAG] training report LMP persistence', {
+        traineeFullName,
+        lmpType,
+        requested: requestedReportLmpSummary,
+        composed: composedReportLmpSummary,
+      });
+    }
     res.json({ success: true, lmp });
   } catch (error) {
     console.error('❌ PUT /api/trainees/:id/lmp error:', error);
