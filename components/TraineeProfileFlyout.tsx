@@ -381,7 +381,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
 
     // Tab state — null means no tab open
-    const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | null>(initialActiveTab);
+    const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'review' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | null>(initialActiveTab);
     const [inlinePt051Assessment, setInlinePt051Assessment] = useState<Pt051Assessment | null>(null);
     const [inlinePt051Event, setInlinePt051Event] = useState<ScheduleEvent | null>(null);
     // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
@@ -1326,6 +1326,15 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       />
                     )}
 
+                    {activeTab === 'review' && (
+                      <div className={card3d + " p-4"} style={card3dStyle}>
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-bold text-white">Trainee Review — {trainee.name}</h4>
+                          <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                        </div>
+                      </div>
+                    )}
+
                     {activeTab === 'unavailable' && (
                       <div className={card3d + " p-4"} style={card3dStyle}>
                         <div className="flex items-center justify-between mb-3">
@@ -1836,6 +1845,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           )}
                           {canViewIndividualLmp && <button onClick={handleIndividualLMPClick} className={tabBtnClass('lmp')}>View Individual LMP</button>}
                           {canAddRemedialPackage && <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>}
+                          <button onClick={() => handleTabClick('review')} className={tabBtnClass('review')}>
+                            <span className="leading-tight">Trainee<br />Review</span>
+                          </button>
                           <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
                           <button onClick={() => setIsEditing(true)} disabled={isFrozen} className={btnClass}>Edit</button>
                           <button onClick={onClose} className={btnClass}>Close</button>

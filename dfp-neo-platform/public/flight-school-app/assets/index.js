@@ -22698,6 +22698,13 @@ ${errorText || `HTTP ${response.status}`}`);
                   onClose: () => setShowCurrencyAudit(false)
                 }
               ),
+              activeTab === "review" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-4", style: card3dStyle2, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
+                  "Trainee Review — ",
+                  trainee.name
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
+              ] }) }),
               activeTab === "unavailable" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-4", style: card3dStyle2, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
@@ -23182,6 +23189,11 @@ ${errorText || `HTTP ${response.status}`}`);
             ),
             canViewIndividualLmp && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleIndividualLMPClick, className: tabBtnClass("lmp"), children: "View Individual LMP" }),
             canAddRemedialPackage && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("review"), className: tabBtnClass("review"), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
+              "Trainee",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Review"
+            ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setIsEditing(true), disabled: isFrozen, className: btnClass, children: "Edit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: btnClass, children: "Close" })
