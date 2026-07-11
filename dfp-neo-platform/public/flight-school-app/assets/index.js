@@ -22052,27 +22052,49 @@ const TraineeProfileFlyout = ({
         comments: point.comments
       };
     });
-    const countableLmp = currentIndividualLMP.filter(reviewIsCountableLmpEvent);
-    const completedRefs = /* @__PURE__ */ new Set();
-    traineeScores.forEach((score) => completedRefs.add(reviewEventCode(score.event)));
-    traineeAssessments.forEach((assessment) => {
-      completedRefs.add(reviewEventCode(assessment.eventId));
-      completedRefs.add(reviewEventCode(assessment.flightNumber));
-    });
-    const isCompletedLmp = (item) => reviewLmpRefs(item).some((ref) => completedRefs.has(ref));
-    const completedCount = countableLmp.filter(isCompletedLmp).length;
-    const progressPercent = countableLmp.length > 0 ? completedCount / countableLmp.length * 100 : 0;
-    const peerProgressValues = Array.from(scores.entries()).map(([name2, peerScores]) => {
-      const peerRefs = new Set(peerScores.map((score) => reviewEventCode(score.event)));
+    const currentCourse = String(trainee.course || "").trim().toUpperCase();
+    const sameCourseTraineeNames = new Set(
+      (traineesData.length > 0 ? traineesData : [trainee]).filter((candidate) => String(candidate.course || "").trim().toUpperCase() === currentCourse).map((candidate) => candidate.fullName).filter(Boolean)
+    );
+    if (trainee.fullName) sameCourseTraineeNames.add(trainee.fullName);
+    const getCompletionRefsForTrainee = (name2) => {
+      const refs = /* @__PURE__ */ new Set();
+      (scores.get(name2) || []).forEach((score) => refs.add(reviewEventCode(score.event)));
       if (pt051Assessments) {
         Array.from(pt051Assessments.values()).filter((assessment) => assessment.traineeFullName === name2).forEach((assessment) => {
-          peerRefs.add(reviewEventCode(assessment.eventId));
-          peerRefs.add(reviewEventCode(assessment.flightNumber));
+          refs.add(reviewEventCode(assessment.eventId));
+          refs.add(reviewEventCode(assessment.flightNumber));
         });
       }
-      const peerCompleted = countableLmp.filter((item) => reviewLmpRefs(item).some((ref) => peerRefs.has(ref))).length;
-      return countableLmp.length > 0 ? peerCompleted / countableLmp.length * 100 : 0;
-    }).filter((value) => Number.isFinite(value));
+      return refs;
+    };
+    const isMarkedCompleteInLmp = (item) => Boolean(item.completedAt);
+    const getProgressForTrainee = (name2, lmpItems) => {
+      const countableItems = lmpItems.filter(reviewIsCountableLmpEvent);
+      const refs = getCompletionRefsForTrainee(name2);
+      const hasIndividualLmpCompletion = countableItems.some(isMarkedCompleteInLmp);
+      const furthestCompletedIndex = countableItems.reduce((furthest, item, index) => {
+        const completedByLmp = isMarkedCompleteInLmp(item);
+        const completedByRefs = !hasIndividualLmpCompletion && reviewLmpRefs(item).some((ref) => refs.has(ref));
+        return completedByLmp || completedByRefs ? Math.max(furthest, index) : furthest;
+      }, -1);
+      const completedThroughCount = furthestCompletedIndex >= 0 ? furthestCompletedIndex + 1 : 0;
+      return {
+        completedCount: completedThroughCount,
+        totalCount: countableItems.length,
+        percent: countableItems.length > 0 ? completedThroughCount / countableItems.length * 100 : 0,
+        countableItems
+      };
+    };
+    const ownProgress = getProgressForTrainee(trainee.fullName, currentIndividualLMP);
+    const countableLmp = ownProgress.countableItems;
+    const completedCount = ownProgress.completedCount;
+    const progressPercent = ownProgress.percent;
+    const peerProgressValues = Array.from(sameCourseTraineeNames).map((name2) => {
+      const peerLmp = traineeLMPs?.get(name2) || (name2 === trainee.fullName ? currentIndividualLMP : []);
+      if (!peerLmp || peerLmp.length === 0) return null;
+      return getProgressForTrainee(name2, peerLmp).percent;
+    }).filter((value) => value !== null && Number.isFinite(value));
     const averageProgress = peerProgressValues.length > 0 ? peerProgressValues.reduce((sum, value) => sum + value, 0) / peerProgressValues.length : progressPercent;
     const mostProgress = peerProgressValues.length > 0 ? Math.max(...peerProgressValues) : progressPercent;
     const leastProgress = peerProgressValues.length > 0 ? Math.min(...peerProgressValues) : progressPercent;
@@ -22107,11 +22129,6 @@ const TraineeProfileFlyout = ({
     const summaryMarginal = scorePoints.filter((point) => point.status === "marginal");
     const currentScoreAverage = scorePoints.length > 0 ? scorePoints.reduce((sum, point) => sum + point.grade, 0) / scorePoints.length : 0;
     const countableRefSet = new Set(countableLmp.flatMap(reviewLmpRefs));
-    const currentCourse = String(trainee.course || "").trim().toUpperCase();
-    const sameCourseTraineeNames = new Set(
-      (traineesData.length > 0 ? traineesData : [trainee]).filter((candidate) => String(candidate.course || "").trim().toUpperCase() === currentCourse).map((candidate) => candidate.fullName).filter(Boolean)
-    );
-    if (trainee.fullName) sameCourseTraineeNames.add(trainee.fullName);
     const courseAverageRankings = Array.from(scores.entries()).filter(([name2]) => sameCourseTraineeNames.has(name2)).map(([name2, peerScores]) => {
       const peerFlightScores = peerScores.filter((score) => countableRefSet.has(reviewEventCode(score.event))).map((score) => reviewNumber(score.score)).filter((value) => Number.isFinite(value));
       if (peerFlightScores.length === 0) return null;
@@ -22149,7 +22166,7 @@ const TraineeProfileFlyout = ({
       summaryDoubleMarginal,
       summaryMarginal
     };
-  }, [currentIndividualLMP, pt051Assessments, reviewLogbookEntries, scores, trainee.fullName]);
+  }, [currentIndividualLMP, pt051Assessments, reviewLogbookEntries, scores, trainee.course, trainee.fullName, traineeLMPs, traineesData]);
   const exportTraineeReviewPdf = () => {
     const doc = new E({ orientation: "portrait", unit: "mm", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
