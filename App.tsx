@@ -23553,6 +23553,87 @@ const App: React.FC = () => {
                         syllabusItems: syllabusDetails.length,
                         trainees: data.trainees?.length || 0,
                     });
+                    const lmpHydrateStartedAt = performance.now();
+                    try {
+                        const apiBase = getAppApiBase();
+                        const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync?includeEvents=true`, { credentials: 'include' });
+                        pushDfpDataDiag('startup:lmp-hydrate:get-response', {
+                            durationMs: Math.round(performance.now() - lmpHydrateStartedAt),
+                            status: lmpRes.status,
+                            ok: lmpRes.ok,
+                            contentType: lmpRes.headers.get('content-type') || '',
+                        });
+                        if (lmpRes.ok) {
+                            const lmpData = await lmpRes.json();
+                            const lmps = (lmpData.lmps || []) as Array<{
+                                traineeFullName: string;
+                                lmpType: string;
+                                events?: SyllabusItemDetail[];
+                                completedEventIds?: string[];
+                            }>;
+                            pushDfpDataDiag('startup:lmp-hydrate:get-json', {
+                                durationMs: Math.round(performance.now() - lmpHydrateStartedAt),
+                                lmpCount: lmps.length,
+                                eventTotal: lmps.reduce((total, lmp) => total + (lmp.events?.length || 0), 0),
+                                completedEventTotal: lmps.reduce((total, lmp) => total + (lmp.completedEventIds?.length || 0), 0),
+                                reportLmpCount: lmps.filter(lmp => summariseTrainingReportLmpItems(lmp.events).reportItemCount > 0).length,
+                                reportSamples: lmps
+                                    .filter(lmp => summariseTrainingReportLmpItems(lmp.events).reportItemCount > 0)
+                                    .slice(0, 8)
+                                    .map(lmp => ({
+                                        traineeFullName: lmp.traineeFullName,
+                                        lmpType: lmp.lmpType,
+                                        ...summariseTrainingReportLmpItems(lmp.events),
+                                    })),
+                            });
+                            if (lmps.length > 0) {
+                                setTraineeLMPs(prev => {
+                                    const newLMPs = new Map(prev);
+                                    let hydrated = 0;
+                                    let skipped = 0;
+                                    lmps.forEach(lmp => {
+                                        if (!lmp.traineeFullName || !Array.isArray(lmp.events) || lmp.events.length === 0) return;
+                                        const traineeForLmp = data.trainees.find((candidate: any) => (
+                                            candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName
+                                        ));
+                                        const traineeUnitCode = resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, 'Assign');
+                                        if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, 'Assign')) {
+                                            newLMPs.delete(lmp.traineeFullName);
+                                            skipped++;
+                                            return;
+                                        }
+                                        const normalizedCompletedIds = (lmp.completedEventIds || []).map((id: string) => id.replace(/\*/g, ''));
+                                        const hydratedEvents = lmp.events.map(item => {
+                                            const itemCompletionKeys = [item.id, item.code, (item as any).masterEventId]
+                                                .map((key: string | undefined) => (key || '').replace(/\*/g, ''))
+                                                .filter(Boolean);
+                                            const isCompleted = itemCompletionKeys.some((key: string) => normalizedCompletedIds.includes(key));
+                                            return {
+                                                ...item,
+                                                completedAt: isCompleted ? ((item as any).completedAt || new Date().toISOString()) : ((item as any).completedAt || null),
+                                                isComplete: isCompleted || (item as any).isComplete === true,
+                                                completed: isCompleted || (item as any).completed === true,
+                                            };
+                                        });
+                                        newLMPs.set(lmp.traineeFullName, hydratedEvents);
+                                        hydrated++;
+                                    });
+                                    pushDfpDataDiag('startup:lmp-hydrate:state-seeded', {
+                                        durationMs: Math.round(performance.now() - lmpHydrateStartedAt),
+                                        hydrated,
+                                        skipped,
+                                        totalStateSize: newLMPs.size,
+                                    });
+                                    return newLMPs;
+                                });
+                            }
+                        }
+                    } catch (hydrateErr) {
+                        pushDfpDataDiag('startup:lmp-hydrate:error', {
+                            durationMs: Math.round(performance.now() - lmpHydrateStartedAt),
+                            error: String(hydrateErr),
+                        });
+                    }
                 } else {
                     console.log(`[LMP Sync] Starting optional startup Individual LMP sync...`);
                     const lmpSyncStartedAt = performance.now();
@@ -24060,6 +24141,7 @@ const App: React.FC = () => {
             const startedAt = performance.now();
             try {
                 const apiBase = getAppApiBase();
+                let legacySeedingMetadata: any = null;
                 pushDfpDataDiag('history:load-start', {
                     requestedSchool,
                     requestedUnit,
@@ -24131,6 +24213,7 @@ const App: React.FC = () => {
                     const historicalParseStartedAt = performance.now();
                     const data = await res.json();
                     if (cancelled) return;
+                    legacySeedingMetadata = data.seedingMetadata || null;
 
                     if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
                         const seedSchedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
@@ -24220,8 +24303,8 @@ const App: React.FC = () => {
                     if (!cancelled) setPt051PerformanceLoading(false);
                 }
 
-                if (data.seedingMetadata) {
-                    console.log(`[Historical] Seeded at: ${data.seedingMetadata.seededAt}, courses: ${(data.seedingMetadata.coursesSeeded || []).join(', ')}`);
+                if (legacySeedingMetadata) {
+                    console.log(`[Historical] Seeded at: ${legacySeedingMetadata.seededAt}, courses: ${(legacySeedingMetadata.coursesSeeded || []).join(', ')}`);
                 }
                 pushDfpDataDiag('history:load-end', {
                     durationMs: Math.round(performance.now() - startedAt),
