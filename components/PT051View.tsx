@@ -55,8 +55,21 @@ const PT051_STRUCTURE = [
 const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
 const DEFAULT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
-const COMMENT_SECTIONS = ['QFI', 'Weather', 'Profile', 'Overall', 'NEST'] as const;
+const COMMENT_SECTIONS = ['QFI', 'Weather', 'Profile', 'Overall', 'NEST', 'Notes'] as const;
 type DpcoFollowUpAction = 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
+
+const stripGeneratedFollowUpNotes = (value: string): string => (
+    String(value || '')
+        .split('\n')
+        .filter(line => !/^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(line.trim()))
+        .join('\n')
+        .replace(/^\s+/, '')
+);
+
+const formatFollowUpHours = (value?: number): string => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : '';
+};
 
 const normaliseAssessedElements = (elements?: string[]): string[] => {
     const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS;
@@ -113,7 +126,7 @@ const formatTime = (time: number): string => {
 };
 
 const parseComments = (raw: string | undefined) => {
-    const defaults = { QFI: '', Weather: '', Profile: '', Overall: '', NEST: '' };
+    const defaults = { QFI: '', Weather: '', Profile: '', Overall: '', NEST: '', Notes: '' };
     if (!raw) return defaults;
     
     const result = { ...defaults };
@@ -438,7 +451,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     };
 
     const [commentFields, setCommentFields] = useState(() => {
-        const parsed = parseComments(initialAssessment?.overallComments);
+        const parsed = parseComments((initialAssessment as any)?.comments || initialAssessment?.overallComments);
         if (!parsed.QFI && event.instructor) {
             parsed.QFI = event.instructor;
         }
@@ -459,6 +472,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const [dncoFollowUp, setDncoFollowUp] = useState<{ requestExtraFlight: boolean }>(() => ({
         requestExtraFlight: initialAssessment?.dncoFollowUp?.requestExtraFlight === true,
     }));
+    const [passNotesToNextEvent, setPassNotesToNextEvent] = useState(initialAssessment?.passNotesToNextEvent === true);
     
     const recentPerformanceHistory = useMemo(() => {
         const history: { name: string; score: number | string; date: string; timestamp: number }[] = [];
@@ -565,12 +579,57 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     };
 
     const handleCommentFieldChange = (key: typeof COMMENT_SECTIONS[number], value: string) => {
-        setCommentFields(prev => ({ ...prev, [key]: value }));
+        setCommentFields(prev => ({ ...prev, [key]: key === 'Notes' ? stripGeneratedFollowUpNotes(value) : value }));
         
         // Mirror QFI field to instructorName field
         if (key === 'QFI') {
             setAssessment(prev => ({ ...prev, instructorName: value }));
         }
+    };
+
+    const isSimulatorReportEvent = useMemo(() => {
+        const detail = syllabusDetails.find(item => (
+            String(item.code || '').trim().toUpperCase() === String(event.flightNumber || '').trim().toUpperCase() ||
+            String(item.id || '').trim() === String(event.id || '').trim()
+        ));
+        return event.type === 'ftd' || /sim|ftd/i.test(String(detail?.type || event.type || ''));
+    }, [event.flightNumber, event.id, event.type, syllabusDetails]);
+
+    const getNextReportEventCode = (): string => {
+        const detailIndex = syllabusDetails.findIndex(item => (
+            String(item.code || '').trim().toUpperCase() === String(event.flightNumber || '').trim().toUpperCase() ||
+            String(item.id || '').trim() === String(event.id || '').trim()
+        ));
+        if (detailIndex === -1) return '';
+        const sourceType = String(syllabusDetails[detailIndex]?.type || '').trim();
+        const next = syllabusDetails.slice(detailIndex + 1).find(item => (
+            !sourceType || String(item.type || '').trim() === sourceType
+        ));
+        return String(next?.code || '').trim();
+    };
+
+    const getFollowUpNotesPrefix = (): string => {
+        if (dcoResult === 'DPCO' && dpcoFollowUp.action === 'extra-hours-next-event') {
+            const hours = formatFollowUpHours(dpcoFollowUp.extraHours);
+            if (!hours) return '';
+            return `${hours} hrs added to ${getNextReportEventCode() || 'next event'}.`;
+        }
+        if (dcoResult === 'DPCO' && dpcoFollowUp.action === 'extra-event') {
+            const hours = formatFollowUpHours(dpcoFollowUp.extraEventHours);
+            return hours
+                ? `${hours} hrs added to ${event.flightNumber || 're-fly event'}.`
+                : `Re-fly requested: ${event.flightNumber || 'event'}.`;
+        }
+        if (dcoResult === 'DNCO' && dncoFollowUp.requestExtraFlight) {
+            return `Re-fly requested: ${event.flightNumber || 'event'}.`;
+        }
+        return '';
+    };
+
+    const buildTrainingReportNotes = (): string => {
+        const followUpPrefix = getFollowUpNotesPrefix();
+        const freeText = stripGeneratedFollowUpNotes(commentFields.Notes || '').trim();
+        return [followUpPrefix, freeText].filter(Boolean).join('\n\n');
     };
 
     // Filter instructors by trainee's unit
@@ -690,12 +749,14 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             isInitialCommentHydration.current = false;
             return;
         }
-        const combined = COMMENT_SECTIONS.map(key => `${key}:\n${commentFields[key]}`).join('\n\n');
+        const combined = COMMENT_SECTIONS.map(key => `${key}:\n${key === 'Notes' ? buildTrainingReportNotes() : commentFields[key]}`).join('\n\n');
         setAssessment(prev => ({
             ...prev,
-            overallComments: combined
+            overallComments: combined,
+            trainingReportNotes: buildTrainingReportNotes(),
+            passNotesToNextEvent,
         }));
-    }, [commentFields]);
+    }, [commentFields, dcoResult, dncoFollowUp, dpcoFollowUp, passNotesToNextEvent]);
 
     const handleSave = async (isAutoSave = false): Promise<boolean> => {
         if (!canEditPt051) {
@@ -721,6 +782,9 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             dcoResult,
             dpcoFollowUp: dcoResult === 'DPCO' ? dpcoFollowUp : undefined,
             dncoFollowUp: dcoResult === 'DNCO' ? dncoFollowUp : undefined,
+            passNotesToNextEvent,
+            trainingReportNotes: buildTrainingReportNotes(),
+            overallComments: COMMENT_SECTIONS.map(key => `${key}:\n${key === 'Notes' ? buildTrainingReportNotes() : commentFields[key]}`).join('\n\n'),
             groundSchoolAssessment,
             // Preserve timing data
             startTime: currentEvent?.startTime,
@@ -1002,7 +1066,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             handleSave(true);
         }, 1000); 
         return () => clearTimeout(timerId);
-    }, [assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, groundSchoolAssessment, canEditPt051]);
+    }, [assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment, canEditPt051]);
 
     useEffect(() => {
         registerDirtyCheck(
@@ -1010,7 +1074,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             () => handleSave(false), 
             () => { setIsDirty(false); } 
         );
-    }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, groundSchoolAssessment]);
+    }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment]);
 
     const gradeHeaderColors: { [key: string]: string } = {
         'MIN': 'bg-red-800/50',
@@ -1651,7 +1715,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                 
                 {/* BOTTOM SECTION - GRADING */}
                 <div className="space-y-4">
-                     {assessmentStructure.map(category => {
+                    {assessmentStructure.map(category => {
                         const isGroundEvent = event.type === 'ground';
                         return (
                         <fieldset key={category.category} className={`p-4 border rounded-lg ${isGroundEvent ? 'border-gray-800 bg-gray-800/30 opacity-50' : 'border-gray-700'}`}>
@@ -1750,6 +1814,45 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                         </fieldset>
                         );
                     })}
+                    <fieldset className="p-4 border border-gray-700 rounded-lg">
+                        <legend className="px-2 text-sm font-semibold text-gray-300">{commentFieldsConfig.notes || 'Notes'}</legend>
+                        <div className="space-y-3">
+                            {getFollowUpNotesPrefix() && (
+                                <div className="rounded border border-sky-500/35 bg-sky-950/30 px-3 py-2 text-sm font-semibold text-sky-100">
+                                    {getFollowUpNotesPrefix()}
+                                </div>
+                            )}
+                            <textarea
+                                value={commentFields.Notes}
+                                onChange={(e) => handleCommentFieldChange('Notes', e.target.value)}
+                                rows={5}
+                                className="w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                placeholder="Record what was missed, not completed, or should be carried into the next event."
+                            />
+                            <div className="flex flex-wrap gap-3 text-sm font-semibold">
+                                <label className={`flex cursor-pointer items-center gap-2 rounded border px-3 py-2 ${passNotesToNextEvent ? 'border-sky-400/80 bg-sky-500/15 text-white' : 'border-gray-700 bg-gray-900/70 text-gray-300 hover:border-gray-500'}`}>
+                                    <input
+                                        type="radio"
+                                        name="pt051-pass-notes"
+                                        checked={passNotesToNextEvent}
+                                        onChange={() => setPassNotesToNextEvent(true)}
+                                        className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                                    />
+                                    <span>Pass notes to next {isSimulatorReportEvent ? 'simulator' : 'flight'} event</span>
+                                </label>
+                                <label className={`flex cursor-pointer items-center gap-2 rounded border px-3 py-2 ${!passNotesToNextEvent ? 'border-sky-400/80 bg-sky-500/15 text-white' : 'border-gray-700 bg-gray-900/70 text-gray-300 hover:border-gray-500'}`}>
+                                    <input
+                                        type="radio"
+                                        name="pt051-pass-notes"
+                                        checked={!passNotesToNextEvent}
+                                        onChange={() => setPassNotesToNextEvent(false)}
+                                        className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                                    />
+                                    <span>Keep notes on this report only</span>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
                 </div>
             </div>
             {showPhraseModal && currentPhraseElement && (

@@ -30913,6 +30913,11 @@ const App: React.FC = () => {
         Number(assessment.dpcoFollowUp?.extraHours) > 0
     );
 
+    const shouldPassTrainingReportNotesToNextEvent = (assessment: Pt051Assessment): boolean => (
+        assessment.passNotesToNextEvent === true &&
+        String(assessment.trainingReportNotes || '').trim().length > 0
+    );
+
     const getNextTrainingReportExtraEventCode = (sourceCode: string, existingCodes: Set<string>): string => {
         const cleanedSourceCode = String(sourceCode || '').trim();
         if (!cleanedSourceCode) return '';
@@ -31359,6 +31364,105 @@ const App: React.FC = () => {
         }
     };
 
+    const maybePassTrainingReportNotesToNextLmpEvent = async (assessment: Pt051Assessment): Promise<void> => {
+        if (!shouldPassTrainingReportNotesToNextEvent(assessment)) return;
+
+        const trainee = allTraineesData.find(candidate => candidate.fullName === assessment.traineeFullName);
+        if (!trainee) {
+            console.warn('[Training Report] Could not pass notes forward: trainee not found', assessment.traineeFullName);
+            return;
+        }
+
+        const originalLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+        if (!originalLmp || originalLmp.length === 0) {
+            console.warn('[Training Report] Could not pass notes forward: Individual LMP not found', assessment.traineeFullName);
+            return;
+        }
+
+        const sourceMatch = findTrainingReportSourceLmpItem(originalLmp, trainee, assessment);
+        if (!sourceMatch) {
+            console.warn('[Training Report] Could not pass notes forward: assessed event not found in Individual LMP', {
+                trainee: assessment.traineeFullName,
+                eventId: assessment.eventId,
+                flightNumber: assessment.flightNumber,
+            });
+            return;
+        }
+
+        const { item: sourceItem, index: sourceIndex } = sourceMatch;
+        if (sourceItem.type !== 'Flight' && sourceItem.type !== 'FTD') return;
+
+        const assessmentKey = assessment.id || assessment.eventId;
+        const insertedFollowUpIndex = originalLmp.findIndex(item => (
+            (item as any).trainingReportSourceAssessmentId === assessmentKey ||
+            (item as any).trainingReportSourceEventId === assessment.eventId
+        ));
+        const nextEventIndex = insertedFollowUpIndex >= 0
+            ? insertedFollowUpIndex
+            : originalLmp.findIndex((item, index) =>
+                index > sourceIndex &&
+                item.type === sourceItem.type &&
+                !item.completedAt
+            );
+
+        if (nextEventIndex === -1) {
+            console.warn('[Training Report] Could not pass notes forward: no matching next flight/sim found', {
+                trainee: assessment.traineeFullName,
+                event: sourceItem.code,
+                type: sourceItem.type,
+            });
+            return;
+        }
+
+        const targetEvent = originalLmp[nextEventIndex] as SyllabusItemDetail & Record<string, any>;
+        const baseNotes = typeof targetEvent.trainingReportBaseNotes === 'string'
+            ? targetEvent.trainingReportBaseNotes
+            : String(targetEvent.notes || '');
+        const forwardedNotes = {
+            ...(targetEvent.trainingReportForwardedNotes || {}),
+            [assessmentKey]: {
+                sourceCode: sourceItem.code || assessment.flightNumber,
+                notes: String(assessment.trainingReportNotes || '').trim(),
+            },
+        } as Record<string, { sourceCode?: string; notes?: string }>;
+        const forwardedBlocks = Object.values(forwardedNotes)
+            .map(entry => {
+                const noteText = String(entry?.notes || '').trim();
+                if (!noteText) return '';
+                return `Training report notes from ${entry.sourceCode || assessment.flightNumber}:\n${noteText}`;
+            })
+            .filter(Boolean);
+        const updatedTargetEvent: SyllabusItemDetail & Record<string, any> = {
+            ...targetEvent,
+            trainingReportBaseNotes: baseNotes,
+            trainingReportForwardedNotes: forwardedNotes,
+            notes: [...forwardedBlocks, baseNotes.trim()].filter(Boolean).join('\n\n'),
+        };
+        const updatedLmp = originalLmp.map((item, index) => index === nextEventIndex ? updatedTargetEvent : item);
+
+        try {
+            const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+            setTraineeLMPs(prev => {
+                const updated = new Map(prev);
+                updated.set(trainee.fullName, persistedLmp);
+                return updated;
+            });
+            logAudit(
+                'Individual LMP',
+                'Edit',
+                `Passed training report notes from ${sourceItem.code || assessment.flightNumber} to ${targetEvent.code || 'next event'} for ${trainee.fullName}`,
+                `Training report: ${assessmentKey}`
+            );
+        } catch (error) {
+            console.error('[Training Report] Failed to pass notes to next LMP event:', error);
+            void showDarkAlert(
+                `The training report was saved, but the notes could not be passed to the next ${sourceItem.type === 'FTD' ? 'sim' : 'flight'} event.\n\n${error instanceof Error ? error.message : String(error)}`,
+                'Forward Notes Failed',
+                'error'
+            );
+        }
+    };
+
     const onSavePT051Assessment = async (assessment: Pt051Assessment) => {
         // Use traineeFullName for the key to ensure consistency across the app
         const saveKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
@@ -31377,6 +31481,7 @@ const App: React.FC = () => {
         logAudit('Mass Completion', 'Edit', `Updated PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
         await maybeInsertTrainingReportExtraLmpEvent(assessment);
         await maybeExtendTrainingReportNextLmpEvent(assessment);
+        await maybePassTrainingReportNotesToNextLmpEvent(assessment);
     };
 
     const onDeletePT051Assessment = (assessmentId: string, eventId: string, traineeFullName: string) => {
@@ -41303,6 +41408,7 @@ appliedUpdates.forEach(update => {
                                 await performanceSave;
                                 await maybeInsertTrainingReportExtraLmpEvent(normalizedAssessment);
                                 await maybeExtendTrainingReportNextLmpEvent(normalizedAssessment);
+                                await maybePassTrainingReportNotesToNextLmpEvent(normalizedAssessment);
                                 setSuccessMessage('PT-051 Assessment Saved!');
 
                                 // PT-051 COMPLETION -> SCORE DB SYNC

@@ -257,6 +257,7 @@ export interface AirCombatTrainingReport {
   dncoFollowUp?: {
     requestExtraFlight?: boolean;
   };
+  passNotesToNextEvent?: boolean;
   assessedElementScores?: Array<{
     element: string;
     grade?: string;
@@ -529,6 +530,8 @@ export interface Pt051Assessment {
   dncoFollowUp?: {
     requestExtraFlight?: boolean;
   };
+  passNotesToNextEvent?: boolean;
+  trainingReportNotes?: string;
   overallComments?: string;
   // Add timing fields to preserve time data
   startTime?: number; // in hours (e.g., 9.5 for 9:30)

@@ -4726,6 +4726,7 @@ const normaliseAirCombatTrainingReports = (preferences) => {
     dcoResult: ["DCO", "DPCO", "DNCO"].includes(report.dcoResult) ? report.dcoResult : "",
     dpcoFollowUp: normaliseDpcoFollowUp(report.dpcoFollowUp),
     dncoFollowUp: normaliseDncoFollowUp(report.dncoFollowUp),
+    passNotesToNextEvent: report.passNotesToNextEvent === true,
     assessedElementScores: Array.isArray(report.assessedElementScores) ? report.assessedElementScores.map((score) => ({
       element: String(score.element || "").trim(),
       grade: score.grade === void 0 || score.grade === null ? "" : String(score.grade),
@@ -19401,7 +19402,7 @@ const formatDisplayType = (displayType, resourceDisplayNames) => {
 };
 const REMEDIAL_EVENT_CODE_REGEX$2 = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialLmpItem = (item) => item.lmpSource === "remedial" || item.isRemedial === true || item.module === "Remedial" || REMEDIAL_EVENT_CODE_REGEX$2.test(item.id || "") || REMEDIAL_EVENT_CODE_REGEX$2.test(item.code || "");
-const formatHours = (value) => {
+const formatHours$1 = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue.toFixed(1) : "0.0";
 };
@@ -19415,7 +19416,7 @@ const formatLmpSortieLabel = (item, resourceDisplayNames) => {
   if (item.type === "Flight") return item.sortieType || "Dual";
   return formatDisplayType(getDisplayType(item), resourceDisplayNames);
 };
-const formatLmpDurationLabel = (item) => `${formatHours(item.duration)}h`;
+const formatLmpDurationLabel = (item) => `${formatHours$1(item.duration)}h`;
 const DEFAULT_ASSESSED_ELEMENTS$2 = ["Airmanship", "Preparation", "Technique"];
 const getAssessedElements = (item) => Array.isArray(item.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : DEFAULT_ASSESSED_ELEMENTS$2;
 const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isRemedial = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
@@ -19448,12 +19449,12 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Day/Night", value: item.dayNight || "Day" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Dual/Solo", value: item.sortieType || "Dual" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Total Event Hours", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        formatHours(item.totalEventHours),
+        formatHours$1(item.totalEventHours),
         " ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Flight/Sim Hours", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        formatHours(item.flightOrSimHours),
+        formatHours$1(item.flightOrSimHours),
         " ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
       ] }) }),
@@ -20003,7 +20004,12 @@ const PT051_STRUCTURE$1 = [
 PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
 const DEFAULT_ASSESSED_ELEMENTS$1 = ["Airmanship", "Preparation", "Technique"];
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 = "__scoringMatrixElementGroups";
-const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST"];
+const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST", "Notes"];
+const stripGeneratedFollowUpNotes$1 = (value) => String(value || "").split("\n").filter((line) => !/^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(line.trim())).join("\n").replace(/^\s+/, "");
+const formatFollowUpHours = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : "";
+};
 const normaliseAssessedElements$1 = (elements) => {
   const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS$1;
   const seen = /* @__PURE__ */ new Set();
@@ -20038,7 +20044,7 @@ const formatTime$6 = (time) => {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
 const parseComments = (raw) => {
-  const defaults = { QFI: "", Weather: "", Profile: "", Overall: "", NEST: "" };
+  const defaults = { QFI: "", Weather: "", Profile: "", Overall: "", NEST: "", Notes: "" };
   if (!raw) return defaults;
   const result = { ...defaults };
   COMMENT_SECTIONS.forEach((section, index) => {
@@ -20303,7 +20309,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     }
   };
   const [commentFields, setCommentFields] = reactExports.useState(() => {
-    const parsed = parseComments(initialAssessment?.overallComments);
+    const parsed = parseComments(initialAssessment?.comments || initialAssessment?.overallComments);
     if (!parsed.QFI && event.instructor) {
       parsed.QFI = event.instructor;
     }
@@ -20323,6 +20329,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   const [dncoFollowUp, setDncoFollowUp] = reactExports.useState(() => ({
     requestExtraFlight: initialAssessment?.dncoFollowUp?.requestExtraFlight === true
   }));
+  const [passNotesToNextEvent, setPassNotesToNextEvent] = reactExports.useState(initialAssessment?.passNotesToNextEvent === true);
   const recentPerformanceHistory = reactExports.useMemo(() => {
     const history = [];
     const isFlightOrFtd = (eventName) => {
@@ -20413,10 +20420,41 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     }));
   };
   const handleCommentFieldChange = (key, value) => {
-    setCommentFields((prev) => ({ ...prev, [key]: value }));
+    setCommentFields((prev) => ({ ...prev, [key]: key === "Notes" ? stripGeneratedFollowUpNotes$1(value) : value }));
     if (key === "QFI") {
       setAssessment((prev) => ({ ...prev, instructorName: value }));
     }
+  };
+  const isSimulatorReportEvent = reactExports.useMemo(() => {
+    const detail = syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === String(event.flightNumber || "").trim().toUpperCase() || String(item.id || "").trim() === String(event.id || "").trim());
+    return event.type === "ftd" || /sim|ftd/i.test(String(detail?.type || event.type || ""));
+  }, [event.flightNumber, event.id, event.type, syllabusDetails]);
+  const getNextReportEventCode = () => {
+    const detailIndex = syllabusDetails.findIndex((item) => String(item.code || "").trim().toUpperCase() === String(event.flightNumber || "").trim().toUpperCase() || String(item.id || "").trim() === String(event.id || "").trim());
+    if (detailIndex === -1) return "";
+    const sourceType = String(syllabusDetails[detailIndex]?.type || "").trim();
+    const next = syllabusDetails.slice(detailIndex + 1).find((item) => !sourceType || String(item.type || "").trim() === sourceType);
+    return String(next?.code || "").trim();
+  };
+  const getFollowUpNotesPrefix = () => {
+    if (dcoResult === "DPCO" && dpcoFollowUp.action === "extra-hours-next-event") {
+      const hours = formatFollowUpHours(dpcoFollowUp.extraHours);
+      if (!hours) return "";
+      return `${hours} hrs added to ${getNextReportEventCode() || "next event"}.`;
+    }
+    if (dcoResult === "DPCO" && dpcoFollowUp.action === "extra-event") {
+      const hours = formatFollowUpHours(dpcoFollowUp.extraEventHours);
+      return hours ? `${hours} hrs added to ${event.flightNumber || "re-fly event"}.` : `Re-fly requested: ${event.flightNumber || "event"}.`;
+    }
+    if (dcoResult === "DNCO" && dncoFollowUp.requestExtraFlight) {
+      return `Re-fly requested: ${event.flightNumber || "event"}.`;
+    }
+    return "";
+  };
+  const buildTrainingReportNotes = () => {
+    const followUpPrefix = getFollowUpNotesPrefix();
+    const freeText = stripGeneratedFollowUpNotes$1(commentFields.Notes || "").trim();
+    return [followUpPrefix, freeText].filter(Boolean).join("\n\n");
   };
   const unitInstructors = reactExports.useMemo(() => {
     return instructors.filter((instructor) => instructor.unit === trainee.unit);
@@ -20506,12 +20544,14 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
       return;
     }
     const combined = COMMENT_SECTIONS.map((key) => `${key}:
-${commentFields[key]}`).join("\n\n");
+${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\n");
     setAssessment((prev) => ({
       ...prev,
-      overallComments: combined
+      overallComments: combined,
+      trainingReportNotes: buildTrainingReportNotes(),
+      passNotesToNextEvent
     }));
-  }, [commentFields]);
+  }, [commentFields, dcoResult, dncoFollowUp, dpcoFollowUp, passNotesToNextEvent]);
   const handleSave = async (isAutoSave = false) => {
     if (!canEditPt051) {
       if (!isAutoSave) {
@@ -20534,6 +20574,10 @@ ${commentFields[key]}`).join("\n\n");
       dcoResult,
       dpcoFollowUp: dcoResult === "DPCO" ? dpcoFollowUp : void 0,
       dncoFollowUp: dcoResult === "DNCO" ? dncoFollowUp : void 0,
+      passNotesToNextEvent,
+      trainingReportNotes: buildTrainingReportNotes(),
+      overallComments: COMMENT_SECTIONS.map((key) => `${key}:
+${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\n"),
       groundSchoolAssessment,
       // Preserve timing data
       startTime: currentEvent?.startTime,
@@ -20779,7 +20823,7 @@ This action cannot be undone.`;
       handleSave(true);
     }, 1e3);
     return () => clearTimeout(timerId);
-  }, [assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, groundSchoolAssessment, canEditPt051]);
+  }, [assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment, canEditPt051]);
   reactExports.useEffect(() => {
     registerDirtyCheck(
       () => isDirty,
@@ -20788,7 +20832,7 @@ This action cannot be undone.`;
         setIsDirty(false);
       }
     );
-  }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, groundSchoolAssessment]);
+  }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment]);
   const gradeHeaderColors = {
     "MIN": "bg-red-800/50",
     "DEMO": "bg-red-950/35 border-red-500/20",
@@ -21442,89 +21486,139 @@ This action cannot be undone.`;
               ] }, "Overall")
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: assessmentStructure.map((category) => {
-            const isGroundEvent = event.type === "ground";
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: `p-4 border rounded-lg ${isGroundEvent ? "border-gray-800 bg-gray-800/30 opacity-50" : "border-gray-700"}`, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: `px-2 text-sm font-semibold ${isGroundEvent ? "text-gray-500" : "text-gray-300"}`, children: category.category }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1200px] w-full table-fixed border-collapse", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
-                  assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[40px]" }, String(g))),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[480px]" })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Element" }),
-                  assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "th",
-                    {
-                      title: formatGradeOption(g),
-                      className: "relative h-[98px] px-0 pb-2 text-center align-bottom text-[9px] font-black uppercase leading-[0.95] text-gray-400",
-                      children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap", children: formatGradeHeaderText(g).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) })
-                    },
-                    String(g)
-                  )),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "h-[98px] px-2 pb-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
-                ] }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: category.elements.map((element) => {
-                  const score = assessment.scores.find((s) => s.element === element);
-                  const commentCell = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "relative py-3 pl-3 pr-2 align-middle", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "textarea",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+            assessmentStructure.map((category) => {
+              const isGroundEvent = event.type === "ground";
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: `p-4 border rounded-lg ${isGroundEvent ? "border-gray-800 bg-gray-800/30 opacity-50" : "border-gray-700"}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: `px-2 text-sm font-semibold ${isGroundEvent ? "text-gray-500" : "text-gray-300"}`, children: category.category }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1200px] w-full table-fixed border-collapse", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
+                    assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[40px]" }, String(g))),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[480px]" })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Element" }),
+                    assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "th",
                       {
-                        value: score?.comment || "",
-                        onChange: (e) => handleCommentChange(element, e.target.value),
-                        rows: 1,
-                        placeholder: "Comments...",
-                        className: "w-full bg-gray-800 border border-gray-600 rounded p-2 pr-8 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
-                        style: { minHeight: "42px" },
-                        onInput: (e) => {
-                          e.currentTarget.style.height = "auto";
-                          e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
-                        },
-                        ref: (el) => {
-                          if (el) {
-                            el.style.height = "auto";
-                            el.style.height = el.scrollHeight + "px";
+                        title: formatGradeOption(g),
+                        className: "relative h-[98px] px-0 pb-2 text-center align-bottom text-[9px] font-black uppercase leading-[0.95] text-gray-400",
+                        children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap", children: formatGradeHeaderText(g).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) })
+                      },
+                      String(g)
+                    )),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "h-[98px] px-2 pb-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
+                  ] }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: category.elements.map((element) => {
+                    const score = assessment.scores.find((s) => s.element === element);
+                    const commentCell = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "relative py-3 pl-3 pr-2 align-middle", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "textarea",
+                        {
+                          value: score?.comment || "",
+                          onChange: (e) => handleCommentChange(element, e.target.value),
+                          rows: 1,
+                          placeholder: "Comments...",
+                          className: "w-full bg-gray-800 border border-gray-600 rounded p-2 pr-8 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
+                          style: { minHeight: "42px" },
+                          onInput: (e) => {
+                            e.currentTarget.style.height = "auto";
+                            e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
+                          },
+                          ref: (el) => {
+                            if (el) {
+                              el.style.height = "auto";
+                              el.style.height = el.scrollHeight + "px";
+                            }
                           }
                         }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          onClick: () => handleOpenPhraseSelector(element),
+                          className: "absolute top-4 right-2 text-gray-400 hover:text-sky-400 p-1",
+                          title: "Insert from Phrase Bank",
+                          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13z", clipRule: "evenodd" })
+                          ] })
+                        }
+                      )
+                    ] });
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
+                      assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { title: formatGradeOption(grade), className: `border-l border-gray-800 px-0.5 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || "border-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: `flex min-h-[36px] items-center justify-center rounded ${isGroundEvent ? "cursor-not-allowed" : "cursor-pointer hover:bg-white/5"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col items-center justify-center gap-1", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "radio",
+                            name: element,
+                            value: String(grade),
+                            checked: score?.grade === grade,
+                            onChange: () => handleGradeChange(element, grade),
+                            disabled: isGroundEvent,
+                            className: `h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? "opacity-50 cursor-not-allowed" : ""}`
+                          }
+                        ),
+                        reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-bold leading-none text-gray-500", children: formatGradeNumber(grade) })
+                      ] }) }) }, String(grade))),
+                      commentCell()
+                    ] }, element);
+                  }) })
+                ] }) })
+              ] }, category.category);
+            }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: commentFieldsConfig.notes || "Notes" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+                getFollowUpNotesPrefix() && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-sky-500/35 bg-sky-950/30 px-3 py-2 text-sm font-semibold text-sky-100", children: getFollowUpNotesPrefix() }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "textarea",
+                  {
+                    value: commentFields.Notes,
+                    onChange: (e) => handleCommentFieldChange("Notes", e.target.value),
+                    rows: 5,
+                    className: "w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
+                    placeholder: "Record what was missed, not completed, or should be carried into the next event."
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-3 text-sm font-semibold", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-3 py-2 ${passNotesToNextEvent ? "border-sky-400/80 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/70 text-gray-300 hover:border-gray-500"}`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "radio",
+                        name: "pt051-pass-notes",
+                        checked: passNotesToNextEvent,
+                        onChange: () => setPassNotesToNextEvent(true),
+                        className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
                       }
                     ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                      "Pass notes to next ",
+                      isSimulatorReportEvent ? "simulator" : "flight",
+                      " event"
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-3 py-2 ${!passNotesToNextEvent ? "border-sky-400/80 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/70 text-gray-300 hover:border-gray-500"}`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
+                      "input",
                       {
-                        onClick: () => handleOpenPhraseSelector(element),
-                        className: "absolute top-4 right-2 text-gray-400 hover:text-sky-400 p-1",
-                        title: "Insert from Phrase Bank",
-                        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13z", clipRule: "evenodd" })
-                        ] })
+                        type: "radio",
+                        name: "pt051-pass-notes",
+                        checked: !passNotesToNextEvent,
+                        onChange: () => setPassNotesToNextEvent(false),
+                        className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
                       }
-                    )
-                  ] });
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
-                    assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { title: formatGradeOption(grade), className: `border-l border-gray-800 px-0.5 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || "border-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: `flex min-h-[36px] items-center justify-center rounded ${isGroundEvent ? "cursor-not-allowed" : "cursor-pointer hover:bg-white/5"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col items-center justify-center gap-1", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "input",
-                        {
-                          type: "radio",
-                          name: element,
-                          value: String(grade),
-                          checked: score?.grade === grade,
-                          onChange: () => handleGradeChange(element, grade),
-                          disabled: isGroundEvent,
-                          className: `h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? "opacity-50 cursor-not-allowed" : ""}`
-                        }
-                      ),
-                      reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-bold leading-none text-gray-500", children: formatGradeNumber(grade) })
-                    ] }) }) }, String(grade))),
-                    commentCell()
-                  ] }, element);
-                }) })
-              ] }) })
-            ] }, category.category);
-          }) })
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Keep notes on this report only" })
+                  ] })
+                ] })
+              ] })
+            ] })
+          ] })
         ] }),
         showPhraseModal && currentPhraseElement && /* @__PURE__ */ jsxRuntimeExports.jsx(
           PhraseSelector,
@@ -54464,6 +54558,11 @@ const buildReportComments = (sections) => [
   ["NEST", sections.nest],
   ["Notes", sections.notes]
 ].filter(([, value]) => String(value || "").trim()).map(([label, value]) => `${label}: ${String(value).trim()}`).join("\n\n");
+const stripGeneratedFollowUpNotes = (value) => String(value || "").split("\n").filter((line) => !/^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(line.trim())).join("\n").replace(/^\s+/, "");
+const formatHours = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : "";
+};
 const AirCombatTrainingReportModal = ({
   staff,
   assignment,
@@ -54544,6 +54643,7 @@ const AirCombatTrainingReportModal = ({
   const [dncoFollowUp, setDncoFollowUp] = reactExports.useState(() => ({
     requestExtraFlight: initialReport?.dncoFollowUp?.requestExtraFlight === true
   }));
+  const [passNotesToNextEvent, setPassNotesToNextEvent] = reactExports.useState(initialReport?.passNotesToNextEvent === true);
   reactExports.useEffect(() => {
     appendTrainingReportFollowUpDiag("modal:hydrate", {
       reportId: initialReport?.id,
@@ -54561,7 +54661,8 @@ const AirCombatTrainingReportModal = ({
     const parsed = parseReportComments(initialReport?.notes || "");
     return {
       ...parsed,
-      assessor: parsed.assessor || initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || ""
+      assessor: parsed.assessor || initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || "",
+      notes: stripGeneratedFollowUpNotes(parsed.notes || "")
     };
   });
   const [isSaving2, setIsSaving] = reactExports.useState(false);
@@ -54668,6 +54769,34 @@ const AirCombatTrainingReportModal = ({
       setInstructorName(value);
     }
   };
+  const getNextEventCode = () => {
+    const selectedCode = String(eventCode2 || "").trim().toUpperCase();
+    const selectedIndex = syllabusDetails.findIndex((candidate) => String(candidate.code || "").trim().toUpperCase() === selectedCode);
+    if (selectedIndex === -1) return "";
+    const selectedType = String(matchedItem?.type || eventType || "").trim();
+    const next = syllabusDetails.slice(selectedIndex + 1).find((candidate) => !selectedType || String(candidate.type || "").trim() === selectedType);
+    return String(next?.code || "").trim();
+  };
+  const getFollowUpNotesPrefix = () => {
+    if (dcoResult === "DPCO" && dpcoFollowUp.action === "extra-hours-next-event") {
+      const hours = formatHours(dpcoFollowUp.extraHours);
+      if (!hours) return "";
+      return `${hours} hrs added to ${getNextEventCode() || "next event"}.`;
+    }
+    if (dcoResult === "DPCO" && dpcoFollowUp.action === "extra-event") {
+      const hours = formatHours(dpcoFollowUp.extraEventHours);
+      return hours ? `${hours} hrs added to ${eventCode2 || "re-fly event"}.` : `Re-fly requested: ${eventCode2 || "event"}.`;
+    }
+    if (dcoResult === "DNCO" && dncoFollowUp.requestExtraFlight) {
+      return `Re-fly requested: ${eventCode2 || "event"}.`;
+    }
+    return "";
+  };
+  const buildNotesWithFollowUp = () => {
+    const followUpPrefix = getFollowUpNotesPrefix();
+    const freeText = stripGeneratedFollowUpNotes(commentSections.notes || "").trim();
+    return [followUpPrefix, freeText].filter(Boolean).join("\n\n");
+  };
   const updateElementScore = (element, patch) => {
     setElementScores((prev) => {
       const next = prev.some((score) => score.element === element) ? prev.map((score) => score.element === element ? { ...score, ...patch } : score) : [...prev, { element, grade: "", comment: "", ...patch }];
@@ -54737,9 +54866,10 @@ const AirCombatTrainingReportModal = ({
         dcoResult,
         dpcoFollowUp: dcoResult === "DPCO" ? dpcoFollowUp : void 0,
         dncoFollowUp: dcoResult === "DNCO" ? dncoFollowUp : void 0,
+        passNotesToNextEvent,
         assessedElementScores: elementScores,
         groundSchoolAssessment,
-        notes: buildReportComments(commentSections),
+        notes: buildReportComments({ ...commentSections, notes: buildNotesWithFollowUp() }),
         status: "Draft",
         dashboardAcknowledgedAt: now,
         createdAt: initialReport?.createdAt || now,
@@ -55272,60 +55402,106 @@ const AirCombatTrainingReportModal = ({
                 className: "mt-1 w-full resize-none rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               }
             )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "hidden", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFields.notes }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "textarea",
-              {
-                value: commentSections.notes,
-                onChange: (event) => updateCommentSection("notes", event.target.value),
-                rows: 3,
-                className: "mt-1 w-full resize-none rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
-                placeholder: "Record additional training observations, debrief points, or follow-up actions."
-              }
-            )
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "rounded-lg border border-gray-700 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Core Dimensions" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1200px] w-full table-fixed border-collapse", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
-              assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[40px]" }, grade)),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[480px]" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Element" }),
-              assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { title: formatGradeOption(grade), className: "relative h-[98px] px-0 pb-2 text-center align-bottom text-[9px] font-black uppercase leading-[0.95] text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap", children: formatGradeHeaderText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }) }, grade)),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "h-[98px] px-2 pb-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: assessmentElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
-              assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { title: formatGradeOption(grade), className: `border-l border-gray-800 px-0.5 py-3 text-center align-middle ${gradeHeaderColors[grade] || "border-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "flex min-h-[36px] cursor-pointer items-center justify-center rounded hover:bg-white/5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col items-center justify-center gap-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: `training-report-element-${element}`, value: grade, checked: getElementScore(element).grade === grade, onChange: () => {
-                  updateElementScore(element, { grade });
-                  setSaveStatus("Unsaved");
-                }, className: `h-4 w-4 ${getRadioAccentColor(grade)} border-gray-600 bg-gray-700 focus:ring-2 focus:ring-sky-500` }),
-                reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-bold leading-none text-gray-500", children: formatGradeNumber(grade) })
-              ] }) }) }, grade)),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative py-3 pl-3 pr-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "rounded-lg border border-gray-700 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Core Dimensions" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1200px] w-full table-fixed border-collapse", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
+                assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[40px]" }, grade)),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[480px]" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Element" }),
+                assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { title: formatGradeOption(grade), className: "relative h-[98px] px-0 pb-2 text-center align-bottom text-[9px] font-black uppercase leading-[0.95] text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap", children: formatGradeHeaderText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }) }, grade)),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "h-[98px] px-2 pb-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: assessmentElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
+                assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { title: formatGradeOption(grade), className: `border-l border-gray-800 px-0.5 py-3 text-center align-middle ${gradeHeaderColors[grade] || "border-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "flex min-h-[36px] cursor-pointer items-center justify-center rounded hover:bg-white/5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col items-center justify-center gap-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: `training-report-element-${element}`, value: grade, checked: getElementScore(element).grade === grade, onChange: () => {
+                    updateElementScore(element, { grade });
+                    setSaveStatus("Unsaved");
+                  }, className: `h-4 w-4 ${getRadioAccentColor(grade)} border-gray-600 bg-gray-700 focus:ring-2 focus:ring-sky-500` }),
+                  reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-bold leading-none text-gray-500", children: formatGradeNumber(grade) })
+                ] }) }) }, grade)),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative py-3 pl-3 pr-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "textarea",
+                  {
+                    value: getElementScore(element).comment,
+                    onChange: (event) => {
+                      updateElementScore(element, { comment: event.target.value });
+                      setSaveStatus("Unsaved");
+                    },
+                    rows: 1,
+                    className: "w-full resize-none overflow-hidden rounded border border-gray-600 bg-gray-800 p-2 text-sm text-gray-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500",
+                    placeholder: "Comments...",
+                    style: { minHeight: "42px" }
+                  }
+                ) })
+              ] }, element)) })
+            ] }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "rounded-lg border border-gray-700 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: commentFields.notes }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+              getFollowUpNotesPrefix() && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-sky-500/35 bg-sky-950/30 px-3 py-2 text-sm font-semibold text-sky-100", children: getFollowUpNotesPrefix() }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "textarea",
                 {
-                  value: getElementScore(element).comment,
+                  value: commentSections.notes,
                   onChange: (event) => {
-                    updateElementScore(element, { comment: event.target.value });
+                    updateCommentSection("notes", stripGeneratedFollowUpNotes(event.target.value));
                     setSaveStatus("Unsaved");
                   },
-                  rows: 1,
-                  className: "w-full resize-none overflow-hidden rounded border border-gray-600 bg-gray-800 p-2 text-sm text-gray-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500",
-                  placeholder: "Comments...",
-                  style: { minHeight: "42px" }
+                  rows: 5,
+                  className: "w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
+                  placeholder: "Record what was missed, not completed, or should be carried into the next event."
                 }
-              ) })
-            ] }, element)) })
-          ] }) })
-        ] }) }),
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-3 text-sm font-semibold", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-3 py-2 ${passNotesToNextEvent ? "border-sky-400/80 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/70 text-gray-300 hover:border-gray-500"}`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "radio",
+                      name: "training-report-pass-notes",
+                      checked: passNotesToNextEvent,
+                      onChange: () => {
+                        setPassNotesToNextEvent(true);
+                        setSaveStatus("Unsaved");
+                      },
+                      className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                    "Pass notes to next ",
+                    isSimEvent ? "simulator" : "flight",
+                    " event"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-3 py-2 ${!passNotesToNextEvent ? "border-sky-400/80 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/70 text-gray-300 hover:border-gray-500"}`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "radio",
+                      name: "training-report-pass-notes",
+                      checked: !passNotesToNextEvent,
+                      onChange: () => {
+                        setPassNotesToNextEvent(false);
+                        setSaveStatus("Unsaved");
+                      },
+                      className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Keep notes on this report only" })
+                ] })
+              ] })
+            ] })
+          ] })
+        ] }),
         saveError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-red-500/50 bg-red-950/40 px-3 py-2 text-sm text-red-200", children: saveError })
       ] })
     ] })
@@ -108293,6 +108469,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const shouldInsertTrainingReportExtraEvent = (assessment) => assessment.dcoResult === "DPCO" && assessment.dpcoFollowUp?.action === "extra-event" || assessment.dcoResult === "DNCO" && assessment.dncoFollowUp?.requestExtraFlight === true;
   const shouldExtendTrainingReportNextEvent = (assessment) => assessment.dcoResult === "DPCO" && assessment.dpcoFollowUp?.action === "extra-hours-next-event" && Number(assessment.dpcoFollowUp?.extraHours) > 0;
+  const shouldPassTrainingReportNotesToNextEvent = (assessment) => assessment.passNotesToNextEvent === true && String(assessment.trainingReportNotes || "").trim().length > 0;
   const getNextTrainingReportExtraEventCode = (sourceCode, existingCodes) => {
     const cleanedSourceCode = String(sourceCode || "").trim();
     if (!cleanedSourceCode) return "";
@@ -108700,6 +108877,88 @@ ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   };
+  const maybePassTrainingReportNotesToNextLmpEvent = async (assessment) => {
+    if (!shouldPassTrainingReportNotesToNextEvent(assessment)) return;
+    const trainee = allTraineesData.find((candidate) => candidate.fullName === assessment.traineeFullName);
+    if (!trainee) {
+      console.warn("[Training Report] Could not pass notes forward: trainee not found", assessment.traineeFullName);
+      return;
+    }
+    const originalLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+    if (!originalLmp || originalLmp.length === 0) {
+      console.warn("[Training Report] Could not pass notes forward: Individual LMP not found", assessment.traineeFullName);
+      return;
+    }
+    const sourceMatch = findTrainingReportSourceLmpItem(originalLmp, trainee, assessment);
+    if (!sourceMatch) {
+      console.warn("[Training Report] Could not pass notes forward: assessed event not found in Individual LMP", {
+        trainee: assessment.traineeFullName,
+        eventId: assessment.eventId,
+        flightNumber: assessment.flightNumber
+      });
+      return;
+    }
+    const { item: sourceItem, index: sourceIndex } = sourceMatch;
+    if (sourceItem.type !== "Flight" && sourceItem.type !== "FTD") return;
+    const assessmentKey = assessment.id || assessment.eventId;
+    const insertedFollowUpIndex = originalLmp.findIndex((item) => item.trainingReportSourceAssessmentId === assessmentKey || item.trainingReportSourceEventId === assessment.eventId);
+    const nextEventIndex = insertedFollowUpIndex >= 0 ? insertedFollowUpIndex : originalLmp.findIndex(
+      (item, index) => index > sourceIndex && item.type === sourceItem.type && !item.completedAt
+    );
+    if (nextEventIndex === -1) {
+      console.warn("[Training Report] Could not pass notes forward: no matching next flight/sim found", {
+        trainee: assessment.traineeFullName,
+        event: sourceItem.code,
+        type: sourceItem.type
+      });
+      return;
+    }
+    const targetEvent = originalLmp[nextEventIndex];
+    const baseNotes = typeof targetEvent.trainingReportBaseNotes === "string" ? targetEvent.trainingReportBaseNotes : String(targetEvent.notes || "");
+    const forwardedNotes = {
+      ...targetEvent.trainingReportForwardedNotes || {},
+      [assessmentKey]: {
+        sourceCode: sourceItem.code || assessment.flightNumber,
+        notes: String(assessment.trainingReportNotes || "").trim()
+      }
+    };
+    const forwardedBlocks = Object.values(forwardedNotes).map((entry) => {
+      const noteText = String(entry?.notes || "").trim();
+      if (!noteText) return "";
+      return `Training report notes from ${entry.sourceCode || assessment.flightNumber}:
+${noteText}`;
+    }).filter(Boolean);
+    const updatedTargetEvent = {
+      ...targetEvent,
+      trainingReportBaseNotes: baseNotes,
+      trainingReportForwardedNotes: forwardedNotes,
+      notes: [...forwardedBlocks, baseNotes.trim()].filter(Boolean).join("\n\n")
+    };
+    const updatedLmp = originalLmp.map((item, index) => index === nextEventIndex ? updatedTargetEvent : item);
+    try {
+      const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+      setTraineeLMPs((prev) => {
+        const updated = new Map(prev);
+        updated.set(trainee.fullName, persistedLmp);
+        return updated;
+      });
+      logAudit(
+        "Individual LMP",
+        "Edit",
+        `Passed training report notes from ${sourceItem.code || assessment.flightNumber} to ${targetEvent.code || "next event"} for ${trainee.fullName}`,
+        `Training report: ${assessmentKey}`
+      );
+    } catch (error) {
+      console.error("[Training Report] Failed to pass notes to next LMP event:", error);
+      void showDarkAlert2(
+        `The training report was saved, but the notes could not be passed to the next ${sourceItem.type === "FTD" ? "sim" : "flight"} event.
+
+${error instanceof Error ? error.message : String(error)}`,
+        "Forward Notes Failed",
+        "error"
+      );
+    }
+  };
   const onSavePT051Assessment = async (assessment) => {
     const saveKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
     const updatedAssessments = new Map(pt051Assessments).set(saveKey, assessment);
@@ -108714,6 +108973,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     logAudit("Mass Completion", "Edit", `Updated PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
     await maybeInsertTrainingReportExtraLmpEvent(assessment);
     await maybeExtendTrainingReportNextLmpEvent(assessment);
+    await maybePassTrainingReportNotesToNextLmpEvent(assessment);
   };
   const onDeletePT051Assessment = (assessmentId, eventId, traineeFullName) => {
     setPt051Assessments((prev) => {
@@ -116934,6 +117194,7 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
                   await performanceSave;
                   await maybeInsertTrainingReportExtraLmpEvent(normalizedAssessment);
                   await maybeExtendTrainingReportNextLmpEvent(normalizedAssessment);
+                  await maybePassTrainingReportNotesToNextLmpEvent(normalizedAssessment);
                   setSuccessMessage("PT-051 Assessment Saved!");
                   const eventId = assessment.flightNumber;
                   if (eventId) {

@@ -246,6 +246,7 @@ export const normaliseAirCombatTrainingReports = (preferences?: PersonnelPrefere
       dcoResult: ['DCO', 'DPCO', 'DNCO'].includes(report.dcoResult) ? report.dcoResult : '',
       dpcoFollowUp: normaliseDpcoFollowUp(report.dpcoFollowUp),
       dncoFollowUp: normaliseDncoFollowUp(report.dncoFollowUp),
+      passNotesToNextEvent: report.passNotesToNextEvent === true,
       assessedElementScores: Array.isArray(report.assessedElementScores)
         ? report.assessedElementScores
           .map((score: any) => ({

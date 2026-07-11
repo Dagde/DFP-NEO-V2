@@ -13715,6 +13715,8 @@ function mapRowToAssessment(row) {
     dcoResult:           row.dcoResult || '',
     dpcoFollowUp:        followUpMeta.dpcoFollowUp || undefined,
     dncoFollowUp:        followUpMeta.dncoFollowUp || undefined,
+    passNotesToNextEvent: followUpMeta.passNotesToNextEvent === true,
+    trainingReportNotes: followUpMeta.trainingReportNotes || undefined,
     overallComments:     overallComments,
     comments:            row.comments || '',
     startTime:           row.startTime || null,
@@ -13749,7 +13751,7 @@ function mapAssessmentToRow(data) {
       grade:   s.grade != null ? String(s.grade) : null,
       comment: s.comment || ''
     }));
-  if (data.dpcoFollowUp || data.dncoFollowUp) {
+  if (data.dpcoFollowUp || data.dncoFollowUp || data.passNotesToNextEvent || data.trainingReportNotes) {
     elementScores.push({
       element: '__pt051FollowUp',
       grade: null,
@@ -13757,6 +13759,8 @@ function mapAssessmentToRow(data) {
       metadata: {
         dpcoFollowUp: data.dpcoFollowUp || null,
         dncoFollowUp: data.dncoFollowUp || null,
+        passNotesToNextEvent: data.passNotesToNextEvent === true,
+        trainingReportNotes: data.trainingReportNotes || null,
       },
     });
   }
@@ -13797,6 +13801,7 @@ function mapAssessmentToRow(data) {
 function buildCommentsString(data) {
   // If already in structured format, return as-is
   if (data.comments && data.comments.includes('QFI:')) return data.comments;
+  if (data.overallComments && data.overallComments.includes('QFI:')) return data.overallComments;
   // Build from individual fields (backward compat)
   const qfi     = data.qfiComments     || '';
   const weather  = data.weatherComments || '';

@@ -109,6 +109,19 @@ const buildReportComments = (sections: Record<CommentSectionKey, string>): strin
     .join('\n\n')
 );
 
+const stripGeneratedFollowUpNotes = (value: string): string => (
+  String(value || '')
+    .split('\n')
+    .filter(line => !/^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(line.trim()))
+    .join('\n')
+    .replace(/^\s+/, '')
+);
+
+const formatHours = (value?: number): string => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : '';
+};
+
 export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModalProps> = ({
   staff,
   assignment,
@@ -206,6 +219,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const [dncoFollowUp, setDncoFollowUp] = useState<{ requestExtraFlight: boolean }>(() => ({
     requestExtraFlight: initialReport?.dncoFollowUp?.requestExtraFlight === true,
   }));
+  const [passNotesToNextEvent, setPassNotesToNextEvent] = useState(initialReport?.passNotesToNextEvent === true);
   useEffect(() => {
     appendTrainingReportFollowUpDiag('modal:hydrate', {
       reportId: initialReport?.id,
@@ -224,6 +238,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     return {
       ...parsed,
       assessor: parsed.assessor || initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || '',
+      notes: stripGeneratedFollowUpNotes(parsed.notes || ''),
     };
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -371,6 +386,40 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
       setInstructorName(value);
     }
   };
+  const getNextEventCode = (): string => {
+    const selectedCode = String(eventCode || '').trim().toUpperCase();
+    const selectedIndex = syllabusDetails.findIndex(candidate => (
+      String(candidate.code || '').trim().toUpperCase() === selectedCode
+    ));
+    if (selectedIndex === -1) return '';
+    const selectedType = String(matchedItem?.type || eventType || '').trim();
+    const next = syllabusDetails.slice(selectedIndex + 1).find(candidate => (
+      !selectedType || String(candidate.type || '').trim() === selectedType
+    ));
+    return String(next?.code || '').trim();
+  };
+  const getFollowUpNotesPrefix = (): string => {
+    if (dcoResult === 'DPCO' && dpcoFollowUp.action === 'extra-hours-next-event') {
+      const hours = formatHours(dpcoFollowUp.extraHours);
+      if (!hours) return '';
+      return `${hours} hrs added to ${getNextEventCode() || 'next event'}.`;
+    }
+    if (dcoResult === 'DPCO' && dpcoFollowUp.action === 'extra-event') {
+      const hours = formatHours(dpcoFollowUp.extraEventHours);
+      return hours
+        ? `${hours} hrs added to ${eventCode || 're-fly event'}.`
+        : `Re-fly requested: ${eventCode || 'event'}.`;
+    }
+    if (dcoResult === 'DNCO' && dncoFollowUp.requestExtraFlight) {
+      return `Re-fly requested: ${eventCode || 'event'}.`;
+    }
+    return '';
+  };
+  const buildNotesWithFollowUp = (): string => {
+    const followUpPrefix = getFollowUpNotesPrefix();
+    const freeText = stripGeneratedFollowUpNotes(commentSections.notes || '').trim();
+    return [followUpPrefix, freeText].filter(Boolean).join('\n\n');
+  };
   const updateElementScore = (element: string, patch: Partial<{ grade: string; comment: string }>) => {
     setElementScores(prev => {
       const next = prev.some(score => score.element === element)
@@ -451,9 +500,10 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
         dcoResult,
         dpcoFollowUp: dcoResult === 'DPCO' ? dpcoFollowUp : undefined,
         dncoFollowUp: dcoResult === 'DNCO' ? dncoFollowUp : undefined,
+        passNotesToNextEvent,
         assessedElementScores: elementScores,
         groundSchoolAssessment,
-        notes: buildReportComments(commentSections),
+        notes: buildReportComments({ ...commentSections, notes: buildNotesWithFollowUp() }),
         status: 'Draft',
         dashboardAcknowledgedAt: now,
         createdAt: initialReport?.createdAt || now,
@@ -875,16 +925,6 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                 className="mt-1 w-full resize-none rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
             </div>
-            <div className="hidden">
-              <label className="block text-sm font-medium text-gray-400">{commentFields.notes}</label>
-              <textarea
-                value={commentSections.notes}
-                onChange={(event) => updateCommentSection('notes', event.target.value)}
-                rows={3}
-                className="mt-1 w-full resize-none rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                placeholder="Record additional training observations, debrief points, or follow-up actions."
-              />
-            </div>
           </div>
 
             <div className="space-y-4">
@@ -938,6 +978,45 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                   ))}
                 </tbody>
               </table>
+            </div>
+          </fieldset>
+          <fieldset className="rounded-lg border border-gray-700 p-4">
+            <legend className="px-2 text-sm font-semibold text-gray-300">{commentFields.notes}</legend>
+            <div className="space-y-3">
+              {getFollowUpNotesPrefix() && (
+                <div className="rounded border border-sky-500/35 bg-sky-950/30 px-3 py-2 text-sm font-semibold text-sky-100">
+                  {getFollowUpNotesPrefix()}
+                </div>
+              )}
+              <textarea
+                value={commentSections.notes}
+                onChange={(event) => { updateCommentSection('notes', stripGeneratedFollowUpNotes(event.target.value)); setSaveStatus('Unsaved'); }}
+                rows={5}
+                className="w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                placeholder="Record what was missed, not completed, or should be carried into the next event."
+              />
+              <div className="flex flex-wrap gap-3 text-sm font-semibold">
+                <label className={`flex cursor-pointer items-center gap-2 rounded border px-3 py-2 ${passNotesToNextEvent ? 'border-sky-400/80 bg-sky-500/15 text-white' : 'border-gray-700 bg-gray-900/70 text-gray-300 hover:border-gray-500'}`}>
+                  <input
+                    type="radio"
+                    name="training-report-pass-notes"
+                    checked={passNotesToNextEvent}
+                    onChange={() => { setPassNotesToNextEvent(true); setSaveStatus('Unsaved'); }}
+                    className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                  />
+                  <span>Pass notes to next {isSimEvent ? 'simulator' : 'flight'} event</span>
+                </label>
+                <label className={`flex cursor-pointer items-center gap-2 rounded border px-3 py-2 ${!passNotesToNextEvent ? 'border-sky-400/80 bg-sky-500/15 text-white' : 'border-gray-700 bg-gray-900/70 text-gray-300 hover:border-gray-500'}`}>
+                  <input
+                    type="radio"
+                    name="training-report-pass-notes"
+                    checked={!passNotesToNextEvent}
+                    onChange={() => { setPassNotesToNextEvent(false); setSaveStatus('Unsaved'); }}
+                    className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                  />
+                  <span>Keep notes on this report only</span>
+                </label>
+              </div>
             </div>
           </fieldset>
             </div>
