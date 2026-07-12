@@ -7233,7 +7233,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <button
                 type="button"
                 onClick={() => setTrainingReportTemplateUnlocked(false)}
-                className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200"
+                className={platformActionButtonClass}
               >
                 Lock
               </button>
@@ -7241,7 +7241,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <button
                 type="button"
                 onClick={() => setTrainingReportTemplateUnlocked(true)}
-                className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200"
+                className={platformActionButtonClass}
               >
                 Edit
               </button>

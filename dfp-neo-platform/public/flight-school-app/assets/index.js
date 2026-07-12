@@ -72401,7 +72401,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             {
               type: "button",
               onClick: () => setTrainingReportTemplateUnlocked(false),
-              className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200",
+              className: platformActionButtonClass,
               children: "Lock"
             }
           ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -72409,7 +72409,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             {
               type: "button",
               onClick: () => setTrainingReportTemplateUnlocked(true),
-              className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200",
+              className: platformActionButtonClass,
               children: "Edit"
             }
           ) : null
