@@ -75111,7 +75111,6 @@ const sectionGroups = [
       "platform-licensing",
       "platform-rank-terminology",
       "organisation",
-      "locale-settings",
       "appearance"
     ]
   },
@@ -75164,7 +75163,7 @@ const sectionGroups = [
     description: "Operational runbook, evidence, cancellation code governance, imports and enduring historical records.",
     accent: "emerald",
     defaultSection: "platform-operational-runbook",
-    sections: ["platform-operational-runbook", "validation", "data-sources", "data-loaders", "historical-data"]
+    sections: ["platform-operational-runbook", "validation", "data-loaders", "historical-data"]
   },
   {
     label: "Emergency",
