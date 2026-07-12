@@ -7388,18 +7388,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             </div>
             <ToggleField
-              label="Show Grade Numbers"
-              checked={trainingReportTemplate.grades.showNumbers}
-              disabled={!canEditTrainingReportTemplate}
-              onChange={(checked) => updateTrainingReportTemplate((template) => ({
-                grades: {
-                  ...template.grades,
-                  showNumbers: checked,
-                },
-              }))}
-              info="When off, users see only the grade text, but the underlying 0 to 10 value is still retained for ordering and repeat rules."
-            />
-            <ToggleField
               label="Include DEMO Grade"
               checked={trainingReportTemplate.grades.includeDemo}
               disabled={!canEditTrainingReportTemplate}
@@ -7616,6 +7604,42 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 }))}
                 info="Text displayed when the assessment outcome is unsatisfactory. Organisations may use wording such as Unsatisfactory, Not Yet Competent, Not Achieved or Fail."
               />
+              <div className="rounded border border-gray-700 bg-gray-900/50 p-3">
+                <FieldLabel
+                  label="Grade Display"
+                  info="Choose whether report grade tiles show the numeric grade with its descriptor, or descriptor text only."
+                />
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {[
+                    { label: 'Number & Descriptor', showNumbers: true },
+                    { label: 'Descriptor Only', showNumbers: false },
+                  ].map((option) => (
+                    <label
+                      key={option.label}
+                      className={`flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded border px-3 py-2 text-center text-xs font-bold uppercase tracking-wide transition ${
+                        trainingReportTemplate.grades.showNumbers === option.showNumbers
+                          ? 'border-cyan-400 bg-cyan-500/15 text-cyan-100'
+                          : 'border-gray-700 bg-gray-950/70 text-gray-400 hover:border-gray-500'
+                      } ${!canEditTrainingReportTemplate ? 'cursor-not-allowed opacity-60' : ''}`}
+                    >
+                      <input
+                        type="radio"
+                        name="training-report-grade-display"
+                        checked={trainingReportTemplate.grades.showNumbers === option.showNumbers}
+                        disabled={!canEditTrainingReportTemplate}
+                        onChange={() => updateTrainingReportTemplate((template) => ({
+                          grades: {
+                            ...template.grades,
+                            showNumbers: option.showNumbers,
+                          },
+                        }))}
+                        className="h-4 w-4 flex-shrink-0 border-gray-500 bg-gray-600 accent-cyan-400"
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               <Field
                 label="Repeated Low-performance"
                 value={trainingReportTemplate.overallResults.doubleRepeatLabel}
