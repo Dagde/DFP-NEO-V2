@@ -641,7 +641,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
           <div className="p-4 md:p-6">
             <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
               <dl
-                className={`space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 ${isEditMode ? 'border-sky-500/60' : 'border-gray-700'}`}
+                className={`space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 lg:w-[calc(100%-25px)] ${isEditMode ? 'border-sky-500/60' : 'border-gray-700'}`}
               >
                 {renderEventSelectorField()}
                 {renderEventDataField(overviewFields.type, eventDescription, setEventDescriptionField, eventType || 'N/A')}
@@ -651,7 +651,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                 <div><dt className="text-sm font-medium text-gray-400">{overviewFields.timing}</dt><dd className="mt-1 text-sm font-semibold text-white">{formatDecimalTime(startTime)} - {formatDecimalTime(endTime)}</dd></div>
                 {renderEventDataField(overviewFields.resource, isEditMode ? resourceIdField : displayResourceId, setResourceIdField)}
                 {renderEventDataField(overviewFields.callsign, callsignField || activeSourceEvent?.callsign || staff.callsign || '', setCallsignField)}
-                <div><dt className="text-sm font-medium text-gray-400">{overviewFields.assessor}</dt><dd className="mt-1"><input value={instructorName} onChange={(event) => { setInstructorName(event.target.value); updateCommentSection('assessor', event.target.value); setSaveStatus('Unsaved'); }} className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" /></dd></div>
+                <div><dt className="text-sm font-medium text-gray-400">{overviewFields.assessor}</dt><dd className="mt-1"><input value={instructorName} onChange={(event) => { setInstructorName(event.target.value); updateCommentSection('assessor', event.target.value); setSaveStatus('Unsaved'); }} className="w-[calc(100%-25px)] rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" /></dd></div>
               </dl>
 
               <fieldset className="rounded-lg border border-gray-600 p-4 lg:col-span-2">

@@ -21106,7 +21106,7 @@ This action cannot be undone.`;
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 md:p-6 w-full max-w-full mx-auto", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { className: "lg:col-span-1 space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { className: "lg:col-span-1 lg:w-[calc(100%-25px)] space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.event }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white font-semibold", children: event.flightNumber || "N/A" })
@@ -21238,14 +21238,14 @@ This action cannot be undone.`;
                   )
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2 max-w-[calc(100%-25px)]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.assessor }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "select",
                   {
                     value: assessment.instructorName || "",
                     onChange: (e) => handleInstructorNameChange(e.target.value),
-                    className: "text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-full focus:ring-1 focus:ring-sky-500",
+                    className: "text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-[calc(100%-25px)] focus:ring-1 focus:ring-sky-500",
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select instructor..." }),
                       unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: instructor.name, children: [
@@ -55919,7 +55919,7 @@ const AirCombatTrainingReportModal = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "dl",
             {
-              className: `space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 ${isEditMode ? "border-sky-500/60" : "border-gray-700"}`,
+              className: `space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 lg:w-[calc(100%-25px)] ${isEditMode ? "border-sky-500/60" : "border-gray-700"}`,
               children: [
                 renderEventSelectorField(),
                 renderEventDataField(overviewFields.type, eventDescription, setEventDescriptionField, eventType || "N/A"),
@@ -55955,7 +55955,7 @@ const AirCombatTrainingReportModal = ({
                     setInstructorName(event.target.value);
                     updateCommentSection("assessor", event.target.value);
                     setSaveStatus("Unsaved");
-                  }, className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" }) })
+                  }, className: "w-[calc(100%-25px)] rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" }) })
                 ] })
               ]
             }

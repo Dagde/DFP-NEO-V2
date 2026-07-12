@@ -1258,7 +1258,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             <div className="p-4 md:p-6 w-full max-w-full mx-auto">
                 {/* TOP SECTION: Details & Overall Assessment */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                    <dl className="lg:col-span-1 space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg">
+                    <dl className="lg:col-span-1 lg:w-[calc(100%-25px)] space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg">
                         <div>
                             <dt className="text-sm font-medium text-gray-400">{overviewFields.event}</dt>
                             <dd className="mt-1 text-sm text-white font-semibold">{event.flightNumber || 'N/A'}</dd>
@@ -1385,14 +1385,14 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                 />
                             </dd>
                         </div>
-                         <div className="col-span-2">
+                         <div className="col-span-2 max-w-[calc(100%-25px)]">
                              <dt className="text-sm font-medium text-gray-400">{overviewFields.assessor}</dt>
                              <dd className="mt-1">
                                  {/* Dropdown for unit instructors only */}
                                  <select
                                      value={assessment.instructorName || ''}
                                      onChange={(e) => handleInstructorNameChange(e.target.value)}
-                                     className="text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-full focus:ring-1 focus:ring-sky-500"
+                                     className="text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-[calc(100%-25px)] focus:ring-1 focus:ring-sky-500"
                                  >
                                      <option value="">Select instructor...</option>
                                      {unitInstructors.map(instructor => (
