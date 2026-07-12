@@ -1323,6 +1323,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     });
     const [settingsSearch, setSettingsSearch] = useState('');
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+    const settingsGroupOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [settingsFocusTarget, setSettingsFocusTarget] = useState<{
         unitCode?: string;
         locationCode?: string;
@@ -1361,6 +1362,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
         contentScrollRef.current?.scrollTo({ top: restoreScrollTop ?? 0, left: 0, behavior: 'auto' });
     }, [activeSection]);
+
+    useEffect(() => () => {
+        if (settingsGroupOpenTimerRef.current) {
+            clearTimeout(settingsGroupOpenTimerRef.current);
+        }
+    }, []);
 
     // Initialize filtered mockdata with instructorsData
     React.useEffect(() => {
@@ -1438,6 +1445,10 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const isPlatformConfigurationActive = Boolean(activePlatformTarget);
     const isSearchActive = settingsSearch.trim().length > 0;
     const openSettingsGroup = (group: typeof visibleSettingGroups[number]) => {
+        if (settingsGroupOpenTimerRef.current) {
+            clearTimeout(settingsGroupOpenTimerRef.current);
+            settingsGroupOpenTimerRef.current = null;
+        }
         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
         const isOpen = expandedGroups[group.label] ?? groupActive;
 
@@ -1446,10 +1457,28 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             return;
         }
 
-        setExpandedGroups({ [group.label]: true });
-        if (!groupActive) {
-            setActiveSection(getDefaultSectionForGroup(group));
+        const openSelectedGroup = () => {
+            setExpandedGroups({ [group.label]: true });
+            if (!groupActive) {
+                setActiveSection(getDefaultSectionForGroup(group));
+            }
+            settingsGroupOpenTimerRef.current = null;
+        };
+        const anotherGroupOpen = !isSearchActive && visibleSettingGroups.some(candidate => (
+            candidate.label !== group.label
+            && (expandedGroups[candidate.label] ?? (activeSection !== 'home' && candidate.sections.includes(activeSection as SettingsMenuSection)))
+        ));
+
+        if (anotherGroupOpen) {
+            setExpandedGroups(visibleSettingGroups.reduce<Record<string, boolean>>((next, candidate) => {
+                next[candidate.label] = false;
+                return next;
+            }, {}));
+            settingsGroupOpenTimerRef.current = setTimeout(openSelectedGroup, 210);
+            return;
         }
+
+        openSelectedGroup();
     };
 
     return (
@@ -1465,34 +1494,28 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                     />
                 </div>
-                <nav className="space-y-2">
+                <nav className="flex flex-col items-center gap-[1px]">
                     {visibleSettingGroups.map(group => {
                         const accent = getAccentClasses(group.accent);
                         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection);
                         const showSubmenu = isSearchActive || (expandedGroups[group.label] ?? groupActive);
                         return (
-                            <div key={group.label} className={`rounded-lg border ${groupActive ? accent.border : 'border-gray-800'} ${groupActive ? 'bg-gray-900/70' : 'bg-gray-900/45'} p-2`}>
+                            <div key={group.label} className="w-[200px]">
                                 <button
                                     type="button"
                                     onClick={() => openSettingsGroup(group)}
-                                    className={`flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm transition-colors ${
-                                        groupActive
-                                            ? `${accent.badge} ${accent.text}`
-                                            : group.label === 'Emergency'
-                                                ? 'text-red-300 hover:bg-red-500/10 hover:text-red-200'
-                                                : 'text-gray-200 hover:bg-gray-800'
+                                    className={`btn-aluminium-brushed flex h-[55px] w-[200px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${
+                                        groupActive ? 'ring-1 ring-cyan-400/55' : ''
                                     }`}
                                     aria-expanded={showSubmenu}
                                     aria-controls={getGroupId(group.label)}
                                 >
-                                    <span className={`h-2.5 w-2.5 rounded-full ${accent.rail}`} />
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block truncate font-bold">{group.label}</span>
-                                        <span className="mt-0.5 block truncate text-[11px] font-normal text-gray-500">{group.shortLabel}</span>
+                                    <span className={`h-2 w-2 flex-shrink-0 rounded-full ${accent.rail}`} />
+                                    <span className="min-w-0 flex-1 text-center">
+                                        <span className="block whitespace-normal break-words">{group.label}</span>
                                     </span>
-                                    <span className="text-xs text-gray-600">{group.visibleSections.length}</span>
                                     <svg
-                                        className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${showSubmenu ? 'rotate-90' : ''}`}
+                                        className={`h-3 w-3 flex-shrink-0 transition-transform ${showSubmenu ? 'rotate-90' : ''}`}
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
@@ -1500,36 +1523,38 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                     </svg>
                                 </button>
-                                {showSubmenu && (
-                                <div id={getGroupId(group.label)} className="mt-1 ml-5 space-y-0.5 border-l border-gray-800 pl-3 pt-1">
-                                    {group.visibleSections.map(section => {
-                                        const sectionAccent = getSectionAccent(section, group.accent);
-                                        return (
-                                            <button
-                                                key={section}
-                                                onClick={() => setActiveSection(section)}
-                                                className={`flex w-full items-start gap-2 rounded px-3 py-1.5 text-left text-xs font-semibold transition-colors ${
-                                                    activeSection === section
-                                                        ? `${sectionAccent.badge} ${sectionAccent.text}`
-                                                        : section === 'emergency'
-                                                            ? 'text-red-300 hover:bg-red-500/10 hover:text-red-200'
-                                                            : 'text-gray-500 hover:bg-gray-800 hover:text-gray-200'
-                                                }`}
-                                            >
-                                                <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${sectionAccent.rail}`} />
-                                                <span className="min-w-0">
-                                                    <span className="block truncate">{sectionLabels[section]}</span>
-                                                    {activeSection === section && (
-                                                        <span className="mt-0.5 block whitespace-normal text-[11px] font-normal leading-snug text-gray-500">
-                                                            {sectionDescriptions[section]}
+                                <div
+                                    id={getGroupId(group.label)}
+                                    className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
+                                        showSubmenu ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                                    }`}
+                                >
+                                    <div className="min-h-0 overflow-hidden">
+                                        <div className="space-y-[1px] py-[1px]">
+                                            {group.visibleSections.map(section => {
+                                                const sectionAccent = getSectionAccent(section, group.accent);
+                                                return (
+                                                    <button
+                                                        key={section}
+                                                        onClick={() => setActiveSection(section)}
+                                                        className={`flex min-h-[34px] w-[200px] items-center gap-2 rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${
+                                                            activeSection === section
+                                                                ? `${sectionAccent.badge} ${sectionAccent.text}`
+                                                                : section === 'emergency'
+                                                                    ? 'border-red-500/20 bg-gray-950/50 text-red-300 hover:bg-red-500/10 hover:text-red-200'
+                                                                    : 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                                                        }`}
+                                                    >
+                                                        <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${sectionAccent.rail}`} />
+                                                        <span className="min-w-0">
+                                                            <span className="block truncate">{sectionLabels[section]}</span>
                                                         </span>
-                                                    )}
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
-                                )}
                             </div>
                         );
                     })}
@@ -1550,14 +1575,13 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             <div ref={contentScrollRef} data-settings-content-scroll="true" className="flex-1 overflow-y-auto bg-gray-900">
                 <div className="p-4 sm:p-6">
 
-                    {/* ── ICON GRID HOME ───────────────────────────────────── */}
+                    {/* ── SETTINGS HOME ───────────────────────────────────── */}
                     {activeSection === 'home' && (
                         <div className="space-y-5">
                             <div className="rounded-lg border border-gray-700 bg-gray-800/70 shadow-lg overflow-hidden">
-                                <div className="flex flex-wrap items-center gap-4 border-b border-gray-700 px-5 py-4">
+                                <div className="flex flex-wrap items-center gap-4 px-5 py-4">
                                     <div className="min-w-0">
                                         <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">Settings</h1>
-                                        <p className="text-sm text-gray-400 mt-0.5">Use the chapters on the left, or the cards below, to jump directly to the setting you need.</p>
                                     </div>
                                     <div className="ml-auto flex items-center gap-[10px]">
                                         {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
@@ -1568,7 +1592,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                         <AuditButton pageName="Settings" />
                                     </div>
                                 </div>
-                                <div className="p-4 lg:p-5">
+                                <div className="border-t border-gray-700 p-4 lg:p-5 xl:hidden">
                                     <div className="mb-4 rounded-lg border border-gray-700 bg-gray-900/45 p-4 xl:hidden">
                                         <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500">Find Setting</label>
                                         <input
@@ -1578,61 +1602,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                             placeholder="Search settings..."
                                             className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                                         />
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
-                                        {visibleSettingGroups.map((group) => {
-                                            const accent = getAccentClasses(group.accent);
-                                            return (
-                                                <section
-                                                    id={getGroupId(group.label)}
-                                                    key={group.label}
-                                                    className={`rounded-lg border ${accent.border} bg-gray-900/45 shadow-md overflow-hidden`}
-                                                >
-                                                    <div className="border-b border-gray-700/80 bg-gray-800/65 px-4 py-3">
-                                                        <div className="flex items-start gap-3">
-                                                            <span className={`mt-1 h-9 w-1.5 rounded-full ${accent.rail}`} />
-                                                            <div className="min-w-0">
-                                                                <h2 className="text-lg font-bold text-white">{group.label}</h2>
-                                                                <p className="mt-0.5 text-xs leading-relaxed text-gray-400">{group.description}</p>
-                                                            </div>
-                                                            <span className={`ml-auto rounded border px-2 py-1 text-[11px] font-semibold ${accent.badge} ${accent.text}`}>
-                                                                {group.shortLabel}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className={`grid grid-cols-1 gap-2 p-3 ${group.label === 'Crew Composition' ? 'lg:grid-cols-2' : 'sm:grid-cols-2'}`}>
-                                                        {group.visibleSections.map(section => {
-                                                            const sectionAccent = getSectionAccent(section, group.accent);
-                                                            const highlightedCrewPage = group.label === 'Crew Composition' && isHighlightedCrewPageSection(section);
-                                                            return (
-                                                                <button
-                                                                    key={section}
-                                                                    onClick={() => setActiveSection(section)}
-                                                                    className={`flex w-full items-start gap-3 rounded-md border px-3 py-3 text-left transition-colors ${
-                                                                        highlightedCrewPage
-                                                                            ? `min-h-[112px] ${activeSection === section ? `${sectionAccent.border} ${sectionAccent.badge}` : 'border-cyan-500/20 bg-gray-950/55 hover:border-cyan-400/45 hover:bg-cyan-500/10'}`
-                                                                            : `min-h-[76px] border-gray-800 bg-gray-950/35 ${section === 'emergency' ? 'hover:border-red-500/40 hover:bg-red-500/10' : 'hover:border-gray-700 hover:bg-gray-800/70'}`
-                                                                    }`}
-                                                                >
-                                                                    <span className={`${highlightedCrewPage ? 'mt-1 h-3 w-3' : 'mt-1 h-2 w-2'} rounded-full ${sectionAccent.rail}`} />
-                                                                    <span className="min-w-0">
-                                                                        <span className={`block ${highlightedCrewPage ? 'text-base font-black text-cyan-50' : `text-sm font-semibold ${section === 'emergency' ? 'text-red-300' : 'text-gray-100'}`}`}>{sectionLabels[section]}</span>
-                                                                        <span className={`mt-1 block leading-snug ${highlightedCrewPage ? 'text-sm text-gray-300' : 'text-xs text-gray-500'}`}>{sectionDescriptions[section]}</span>
-                                                                        {highlightedCrewPage && (
-                                                                            <span className="mt-3 inline-flex rounded border border-cyan-400/30 bg-cyan-500/10 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-cyan-100">
-                                                                                Open Page
-                                                                            </span>
-                                                                        )}
-                                                                    </span>
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-
-                                                </section>
-                                            );
-                                        })}
                                     </div>
                                     {!hasSettingsMatches && (
                                         <div className="rounded-lg border border-gray-700 bg-gray-900/60 p-8 text-center">

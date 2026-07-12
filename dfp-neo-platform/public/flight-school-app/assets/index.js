@@ -74924,8 +74924,6 @@ const sectionGroups = [
     sections: ["emergency"]
   }
 ];
-const highlightedCrewPageSections = ["crew-composition", "standard-missions", "currency-profiles"];
-const isHighlightedCrewPageSection = (section) => highlightedCrewPageSections.includes(section);
 const timezoneOptions = [
   { value: -12, label: "UTC-12:00" },
   { value: -11, label: "UTC-11:00" },
@@ -75418,6 +75416,7 @@ const SettingsViewWithMenu = (props) => {
   });
   const [settingsSearch, setSettingsSearch] = reactExports.useState("");
   const [expandedGroups, setExpandedGroups] = reactExports.useState({});
+  const settingsGroupOpenTimerRef = reactExports.useRef(null);
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   reactExports.useEffect(() => {
     const request = props.requestedSettingsSection;
@@ -75448,6 +75447,11 @@ const SettingsViewWithMenu = (props) => {
     }
     contentScrollRef.current?.scrollTo({ top: restoreScrollTop ?? 0, left: 0, behavior: "auto" });
   }, [activeSection]);
+  reactExports.useEffect(() => () => {
+    if (settingsGroupOpenTimerRef.current) {
+      clearTimeout(settingsGroupOpenTimerRef.current);
+    }
+  }, []);
   React.useEffect(() => {
     setFilteredMockdata(props.instructorsData);
   }, [props.instructorsData]);
@@ -75505,16 +75509,33 @@ const SettingsViewWithMenu = (props) => {
   const isPlatformConfigurationActive = Boolean(activePlatformTarget);
   const isSearchActive = settingsSearch.trim().length > 0;
   const openSettingsGroup = (group) => {
+    if (settingsGroupOpenTimerRef.current) {
+      clearTimeout(settingsGroupOpenTimerRef.current);
+      settingsGroupOpenTimerRef.current = null;
+    }
     const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
     const isOpen = expandedGroups[group.label] ?? groupActive;
     if (isOpen) {
       setExpandedGroups((previous) => ({ ...previous, [group.label]: false }));
       return;
     }
-    setExpandedGroups({ [group.label]: true });
-    if (!groupActive) {
-      setActiveSection(getDefaultSectionForGroup(group));
+    const openSelectedGroup = () => {
+      setExpandedGroups({ [group.label]: true });
+      if (!groupActive) {
+        setActiveSection(getDefaultSectionForGroup(group));
+      }
+      settingsGroupOpenTimerRef.current = null;
+    };
+    const anotherGroupOpen = !isSearchActive && visibleSettingGroups.some((candidate) => candidate.label !== group.label && (expandedGroups[candidate.label] ?? (activeSection !== "home" && candidate.sections.includes(activeSection))));
+    if (anotherGroupOpen) {
+      setExpandedGroups(visibleSettingGroups.reduce((next, candidate) => {
+        next[candidate.label] = false;
+        return next;
+      }, {}));
+      settingsGroupOpenTimerRef.current = setTimeout(openSelectedGroup, 210);
+      return;
     }
+    openSelectedGroup();
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-settings-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", onKeyDownCapture: stopEditableKeyPropagation, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
@@ -75531,30 +75552,26 @@ const SettingsViewWithMenu = (props) => {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "space-y-2", children: visibleSettingGroups.map((group) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
         const accent = getAccentClasses(group.accent);
         const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
         const showSubmenu = isSearchActive || (expandedGroups[group.label] ?? groupActive);
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border ${groupActive ? accent.border : "border-gray-800"} ${groupActive ? "bg-gray-900/70" : "bg-gray-900/45"} p-2`, children: [
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[200px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
               type: "button",
               onClick: () => openSettingsGroup(group),
-              className: `flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm transition-colors ${groupActive ? `${accent.badge} ${accent.text}` : group.label === "Emergency" ? "text-red-300 hover:bg-red-500/10 hover:text-red-200" : "text-gray-200 hover:bg-gray-800"}`,
+              className: `btn-aluminium-brushed flex h-[55px] w-[200px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${groupActive ? "ring-1 ring-cyan-400/55" : ""}`,
               "aria-expanded": showSubmenu,
               "aria-controls": getGroupId(group.label),
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2.5 w-2.5 rounded-full ${accent.rail}` }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate font-bold", children: group.label }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block truncate text-[11px] font-normal text-gray-500", children: group.shortLabel })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-600", children: group.visibleSections.length }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-2 flex-shrink-0 rounded-full ${accent.rail}` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 flex-1 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words", children: group.label }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "svg",
                   {
-                    className: `h-3.5 w-3.5 flex-shrink-0 transition-transform ${showSubmenu ? "rotate-90" : ""}`,
+                    className: `h-3 w-3 flex-shrink-0 transition-transform ${showSubmenu ? "rotate-90" : ""}`,
                     fill: "none",
                     stroke: "currentColor",
                     viewBox: "0 0 24 24",
@@ -75564,24 +75581,28 @@ const SettingsViewWithMenu = (props) => {
               ]
             }
           ),
-          showSubmenu && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: getGroupId(group.label), className: "mt-1 ml-5 space-y-0.5 border-l border-gray-800 pl-3 pt-1", children: group.visibleSections.map((section) => {
-            const sectionAccent = getSectionAccent(section, group.accent);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: () => setActiveSection(section),
-                className: `flex w-full items-start gap-2 rounded px-3 py-1.5 text-left text-xs font-semibold transition-colors ${activeSection === section ? `${sectionAccent.badge} ${sectionAccent.text}` : section === "emergency" ? "text-red-300 hover:bg-red-500/10 hover:text-red-200" : "text-gray-500 hover:bg-gray-800 hover:text-gray-200"}`,
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-1.5 w-1.5 flex-shrink-0 rounded-full ${sectionAccent.rail}` }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: sectionLabels[section] }),
-                    activeSection === section && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block whitespace-normal text-[11px] font-normal leading-snug text-gray-500", children: sectionDescriptions[section] })
-                  ] })
-                ]
-              },
-              section
-            );
-          }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              id: getGroupId(group.label),
+              className: `grid transition-[grid-template-rows,opacity] duration-200 ease-out ${showSubmenu ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
+                const sectionAccent = getSectionAccent(section, group.accent);
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    onClick: () => setActiveSection(section),
+                    className: `flex min-h-[34px] w-[200px] items-center gap-2 rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${activeSection === section ? `${sectionAccent.badge} ${sectionAccent.text}` : section === "emergency" ? "border-red-500/20 bg-gray-950/50 text-red-300 hover:bg-red-500/10 hover:text-red-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-1.5 w-1.5 flex-shrink-0 rounded-full ${sectionAccent.rail}` }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: sectionLabels[section] }) })
+                    ]
+                  },
+                  section
+                );
+              }) }) })
+            }
+          )
         ] }, group.label);
       }) }),
       !hasSettingsMatches && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-800 bg-gray-900/70 p-4 text-sm text-gray-400", children: [
@@ -75598,17 +75619,14 @@ const SettingsViewWithMenu = (props) => {
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: contentScrollRef, "data-settings-content-scroll": "true", className: "flex-1 overflow-y-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 sm:p-6", children: [
       activeSection === "home" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/70 shadow-lg overflow-hidden", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-4 border-b border-gray-700 px-5 py-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl lg:text-3xl font-bold text-white tracking-tight", children: "Settings" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mt-0.5", children: "Use the chapters on the left, or the cards below, to jump directly to the setting you need." })
-          ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-4 px-5 py-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl lg:text-3xl font-bold text-white tracking-tight", children: "Settings" }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
             !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1 whitespace-nowrap", children: "Read-Only Mode" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Settings" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 lg:p-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 p-4 lg:p-5 xl:hidden", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 rounded-lg border border-gray-700 bg-gray-900/45 p-4 xl:hidden", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500", children: "Find Setting" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -75622,47 +75640,6 @@ const SettingsViewWithMenu = (props) => {
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-4 2xl:grid-cols-2", children: visibleSettingGroups.map((group) => {
-            const accent = getAccentClasses(group.accent);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "section",
-              {
-                id: getGroupId(group.label),
-                className: `rounded-lg border ${accent.border} bg-gray-900/45 shadow-md overflow-hidden`,
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-700/80 bg-gray-800/65 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 h-9 w-1.5 rounded-full ${accent.rail}` }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: group.label }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs leading-relaxed text-gray-400", children: group.description })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `ml-auto rounded border px-2 py-1 text-[11px] font-semibold ${accent.badge} ${accent.text}`, children: group.shortLabel })
-                  ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid grid-cols-1 gap-2 p-3 ${group.label === "Crew Composition" ? "lg:grid-cols-2" : "sm:grid-cols-2"}`, children: group.visibleSections.map((section) => {
-                    const sectionAccent = getSectionAccent(section, group.accent);
-                    const highlightedCrewPage = group.label === "Crew Composition" && isHighlightedCrewPageSection(section);
-                    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "button",
-                      {
-                        onClick: () => setActiveSection(section),
-                        className: `flex w-full items-start gap-3 rounded-md border px-3 py-3 text-left transition-colors ${highlightedCrewPage ? `min-h-[112px] ${activeSection === section ? `${sectionAccent.border} ${sectionAccent.badge}` : "border-cyan-500/20 bg-gray-950/55 hover:border-cyan-400/45 hover:bg-cyan-500/10"}` : `min-h-[76px] border-gray-800 bg-gray-950/35 ${section === "emergency" ? "hover:border-red-500/40 hover:bg-red-500/10" : "hover:border-gray-700 hover:bg-gray-800/70"}`}`,
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${highlightedCrewPage ? "mt-1 h-3 w-3" : "mt-1 h-2 w-2"} rounded-full ${sectionAccent.rail}` }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `block ${highlightedCrewPage ? "text-base font-black text-cyan-50" : `text-sm font-semibold ${section === "emergency" ? "text-red-300" : "text-gray-100"}`}`, children: sectionLabels[section] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 block leading-snug ${highlightedCrewPage ? "text-sm text-gray-300" : "text-xs text-gray-500"}`, children: sectionDescriptions[section] }),
-                            highlightedCrewPage && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-3 inline-flex rounded border border-cyan-400/30 bg-cyan-500/10 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-cyan-100", children: "Open Page" })
-                          ] })
-                        ]
-                      },
-                      section
-                    );
-                  }) })
-                ]
-              },
-              group.label
-            );
-          }) }),
           !hasSettingsMatches && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/60 p-8 text-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-gray-300", children: "No settings match that search." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
