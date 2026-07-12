@@ -1587,7 +1587,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                             <label
                                                 key={grade}
                                                 title={formatGradeOption(grade)}
-                                                className={`flex h-[75px] w-[82px] cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${
+                                                className={`flex ${reportTemplate.grades.showNumbers ? 'h-[75px] justify-between py-2' : 'h-[190px] justify-start pb-2 pt-[150px]'} w-[82px] cursor-pointer flex-col items-center rounded border px-1 text-center transition ${
                                                     overallGrade === grade
                                                         ? 'border-sky-400 bg-sky-500/15 text-white'
                                                         : 'border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500'
@@ -1600,7 +1600,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                         <span aria-hidden="true" className="text-[11px] font-black uppercase leading-none text-white opacity-0">0</span>
                                                     )
                                                 )}
-                                                <span className={`flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300 ${grade === 'No Grade' ? '-translate-y-2' : ''}`}>
+                                                <span className={`flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300 ${grade === 'No Grade' && reportTemplate.grades.showNumbers ? '-translate-y-2' : ''}`}>
                                                     {formatOverallGradeTileText(grade).split(/\s+/).map((word, index) => (
                                                         <span key={`${word}-${index}`}>{word}</span>
                                                     ))}
