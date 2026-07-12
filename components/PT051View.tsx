@@ -587,9 +587,12 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
     const previousPerformance = recentPerformanceHistory.length > 0 ? recentPerformanceHistory[0] : null;
 
-    const shouldRepeatForGrade = (grade: Pt051OverallGrade | null) => {
+    const gradeRequiresRepeatEvent = (grade: Pt051OverallGrade | null) => {
+        return typeof grade === 'number' && reportTemplate.repeatRules.gradesRequiringRepeat.includes(grade);
+    };
+
+    const shouldTriggerRepeatedLowPerformance = (grade: Pt051OverallGrade | null) => {
         if (typeof grade !== 'number') return false;
-        if (reportTemplate.repeatRules.gradesRequiringRepeat.includes(grade)) return true;
         if (reportTemplate.repeatRules.consecutive.enabled && reportTemplate.repeatRules.consecutive.grades.includes(grade)) {
             const previousScores = recentPerformanceHistory
                 .slice(0, Math.max(0, reportTemplate.repeatRules.consecutive.count - 1))
@@ -611,7 +614,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     };
 
     useEffect(() => {
-        if (shouldRepeatForGrade(overallGrade)) {
+        if (shouldTriggerRepeatedLowPerformance(overallGrade)) {
             setShowDoubleMarginalWarning(true);
             setOverallResult('F');
         } else {
@@ -622,7 +625,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     useEffect(() => {
         if (overallGrade === 'No Grade' || overallGrade === null) {
             setOverallResult(null);
-        } else if (shouldRepeatForGrade(overallGrade)) {
+        } else if (shouldTriggerRepeatedLowPerformance(overallGrade) || gradeRequiresRepeatEvent(overallGrade)) {
             setOverallResult('F');
         } else if (typeof overallGrade === 'number') {
             setOverallResult('P');
