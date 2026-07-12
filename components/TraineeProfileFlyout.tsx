@@ -1986,9 +1986,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                   <text x="70" y="84" fill="#94a3b8" fontSize="9" textAnchor="middle">{reviewData.progress.completedCount}/{reviewData.progress.totalCount}</text>
                                 </svg>
                                 <div className={`${reviewProgressExpanded ? 'mt-4 w-72 text-[11px]' : 'mt-2 text-[10px]'} space-y-1 text-gray-300`}>
-                                  <div className="flex justify-between"><span className="text-yellow-200/75">Course average</span><span>{reviewData.progress.averageProgress.toFixed(0)}%</span></div>
-                                  <div className="flex justify-between"><span className="text-sky-200/75">Front runner</span><span>{reviewData.progress.mostProgress.toFixed(0)}%</span></div>
-                                  <div className="flex justify-between"><span className="text-red-200/75">Back marker</span><span>{reviewData.progress.leastProgress.toFixed(0)}%</span></div>
+                                  <div className="flex justify-between"><span style={{ color: '#ffb000' }}>Course average</span><span>{reviewData.progress.averageProgress.toFixed(0)}%</span></div>
+                                  <div className="flex justify-between"><span style={{ color: '#00d9ff' }}>Front runner</span><span>{reviewData.progress.mostProgress.toFixed(0)}%</span></div>
+                                  <div className="flex justify-between"><span style={{ color: '#ff4040' }}>Back marker</span><span>{reviewData.progress.leastProgress.toFixed(0)}%</span></div>
                                 </div>
                               </div>
                             </div>

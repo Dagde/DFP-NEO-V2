@@ -23246,21 +23246,21 @@ ${errorText || `HTTP ${response.status}`}`);
                           ] }),
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${reviewProgressExpanded ? "mt-4 w-72 text-[11px]" : "mt-2 text-[10px]"} space-y-1 text-gray-300`, children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-yellow-200/75", children: "Course average" }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#ffb000" }, children: "Course average" }),
                               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                                 reviewData.progress.averageProgress.toFixed(0),
                                 "%"
                               ] })
                             ] }),
                             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-200/75", children: "Front runner" }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#00d9ff" }, children: "Front runner" }),
                               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                                 reviewData.progress.mostProgress.toFixed(0),
                                 "%"
                               ] })
                             ] }),
                             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-200/75", children: "Back marker" }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#ff4040" }, children: "Back marker" }),
                               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                                 reviewData.progress.leastProgress.toFixed(0),
                                 "%"
