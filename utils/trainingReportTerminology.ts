@@ -9,6 +9,7 @@ export interface TrainingReportGradeOption {
   value: number;
   label: string;
   requiresRepeat: boolean;
+  enabled?: boolean;
 }
 
 export interface TrainingReportTemplate {
@@ -172,6 +173,7 @@ export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
       value,
       label: DEFAULT_GRADE_LABELS[value],
       requiresRepeat: value === 0,
+      enabled: true,
     })),
   },
   repeatRules: {
@@ -230,10 +232,16 @@ const normaliseGradeOptions = (
   return Array.from({ length: scaleMax - scaleMin + 1 }, (_, index) => {
     const value = scaleMin + index;
     const existing = source.find((option) => Number(option?.value) === value);
+    const hasConfiguredLabel = existing && Object.prototype.hasOwnProperty.call(existing, 'label');
+    const configuredLabel = hasConfiguredLabel ? String(existing?.label ?? '').trim() : '';
+    const label = hasConfiguredLabel
+      ? configuredLabel
+      : cleanLabel(existing?.label, DEFAULT_GRADE_LABELS[value] || `Grade ${value}`, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH);
     return {
       value,
-      label: cleanLabel(existing?.label, DEFAULT_GRADE_LABELS[value] || `Grade ${value}`, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
+      label,
       requiresRepeat: cleanBoolean(existing?.requiresRepeat, repeatGrades.includes(value)),
+      enabled: hasConfiguredLabel ? configuredLabel.length > 0 : cleanBoolean(existing?.enabled, true),
     };
   });
 };
@@ -332,6 +340,7 @@ export const normaliseTrainingReportTemplate = (
       options: gradeOptions.map((option) => ({
         ...option,
         requiresRepeat: gradesRequiringRepeat.includes(option.value),
+        enabled: option.enabled !== false,
       })),
     },
     repeatRules: {

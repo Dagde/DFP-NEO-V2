@@ -318,7 +318,9 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const missionStatusOptions = enabledCompletionResults.length > 0
         ? enabledCompletionResults
         : [{ code: 'Complete', label: 'Complete', enabled: true }];
-    const gradeOptions = reportTemplate.grades.options;
+    const gradeOptions = useMemo(() => (
+        reportTemplate.grades.options.filter((option) => option.enabled !== false && String(option.label || '').trim())
+    ), [reportTemplate.grades.options]);
     const assessmentGradeOptions = useMemo<(Pt051Grade | 'DEMO')[]>(() => [
         ...(reportTemplate.grades.includeDemo ? ['DEMO' as const] : []),
         ...gradeOptions.map((option) => option.value as Pt051Grade),

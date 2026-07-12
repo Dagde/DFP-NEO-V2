@@ -3971,7 +3971,8 @@ const DEFAULT_TRAINING_REPORT_TEMPLATE = {
     options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => ({
       value,
       label: DEFAULT_GRADE_LABELS[value],
-      requiresRepeat: value === 0
+      requiresRepeat: value === 0,
+      enabled: true
     }))
   },
   repeatRules: {
@@ -4013,10 +4014,14 @@ const normaliseGradeOptions = (input, scaleMin, scaleMax, repeatGrades) => {
   return Array.from({ length: scaleMax - scaleMin + 1 }, (_, index) => {
     const value = scaleMin + index;
     const existing = source.find((option) => Number(option?.value) === value);
+    const hasConfiguredLabel = existing && Object.prototype.hasOwnProperty.call(existing, "label");
+    const configuredLabel = hasConfiguredLabel ? String(existing?.label ?? "").trim() : "";
+    const label = hasConfiguredLabel ? configuredLabel : cleanLabel$1(existing?.label, DEFAULT_GRADE_LABELS[value] || `Grade ${value}`, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH);
     return {
       value,
-      label: cleanLabel$1(existing?.label, DEFAULT_GRADE_LABELS[value] || `Grade ${value}`, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
-      requiresRepeat: cleanBoolean(existing?.requiresRepeat, repeatGrades.includes(value))
+      label,
+      requiresRepeat: cleanBoolean(existing?.requiresRepeat, repeatGrades.includes(value)),
+      enabled: hasConfiguredLabel ? configuredLabel.length > 0 : cleanBoolean(existing?.enabled, true)
     };
   });
 };
@@ -4097,7 +4102,8 @@ const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
       showNumbers: cleanBoolean(source.grades?.showNumbers, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.showNumbers),
       options: gradeOptions.map((option) => ({
         ...option,
-        requiresRepeat: gradesRequiringRepeat.includes(option.value)
+        requiresRepeat: gradesRequiringRepeat.includes(option.value),
+        enabled: option.enabled !== false
       }))
     },
     repeatRules: {
@@ -20301,7 +20307,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   const commentFieldsConfig = reportTemplate.modules.comments.fields;
   const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
   const missionStatusOptions = enabledCompletionResults.length > 0 ? enabledCompletionResults : [{ code: "Complete", label: "Complete", enabled: true }];
-  const gradeOptions = reportTemplate.grades.options;
+  const gradeOptions = reactExports.useMemo(() => reportTemplate.grades.options.filter((option) => option.enabled !== false && String(option.label || "").trim()), [reportTemplate.grades.options]);
   const assessmentGradeOptions = reactExports.useMemo(() => [
     ...reportTemplate.grades.includeDemo ? ["DEMO"] : [],
     ...gradeOptions.map((option) => option.value)
@@ -55500,7 +55506,8 @@ const AirCombatTrainingReportModal = ({
   const commentFields = reportTemplate.modules.comments.fields;
   const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
   const missionStatusOptions = enabledCompletionResults.length > 0 ? enabledCompletionResults : [{ code: "Complete", label: "Complete", enabled: true }];
-  const gradeLabelMap = reactExports.useMemo(() => new Map(reportTemplate.grades.options.map((option) => [option.value, option.label])), [reportTemplate.grades.options]);
+  const enabledGradeOptions = reactExports.useMemo(() => reportTemplate.grades.options.filter((option) => option.enabled !== false && String(option.label || "").trim()), [reportTemplate.grades.options]);
+  const gradeLabelMap = reactExports.useMemo(() => new Map(enabledGradeOptions.map((option) => [option.value, option.label])), [enabledGradeOptions]);
   const formatGradeOption = (value) => {
     if (String(value).toUpperCase() === "DEMO") return "DEMO";
     const numericValue = Number(value);
@@ -55718,7 +55725,7 @@ const AirCombatTrainingReportModal = ({
     });
   };
   const getElementScore = (element) => elementScores.find((score) => score.element === element) || { element, grade: "", comment: "" };
-  const gradeOptions = reportTemplate.grades.options.map((option) => String(option.value));
+  const gradeOptions = enabledGradeOptions.map((option) => String(option.value));
   const overallGradeOptions = ["", ...gradeOptions];
   const assessmentGradeOptions = ["DEMO", ...gradeOptions];
   const awardedOverallGrade = String(overallGrade || "").trim();
@@ -68683,7 +68690,11 @@ This permanently removes the organisation record from platform configuration and
   };
   const updateTrainingReportGrade = (gradeValue, changes) => {
     updateTrainingReportTemplate((template) => {
-      const nextOptions = template.grades.options.map((option) => option.value === gradeValue ? { ...option, ...changes } : option);
+      const nextOptions = template.grades.options.map((option) => option.value === gradeValue ? {
+        ...option,
+        ...changes,
+        ...Object.prototype.hasOwnProperty.call(changes, "label") ? { enabled: String(changes.label || "").trim().length > 0 } : {}
+      } : option);
       const gradesRequiringRepeat = nextOptions.filter((option) => option.requiresRepeat).map((option) => option.value);
       return {
         grades: {

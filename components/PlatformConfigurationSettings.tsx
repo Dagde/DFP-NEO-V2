@@ -3063,10 +3063,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     } as Partial<TrainingReportTemplate>));
   };
 
-  const updateTrainingReportGrade = (gradeValue: number, changes: Partial<{ label: string; requiresRepeat: boolean }>) => {
+  const updateTrainingReportGrade = (gradeValue: number, changes: Partial<{ label: string; requiresRepeat: boolean; enabled: boolean }>) => {
     updateTrainingReportTemplate((template) => {
       const nextOptions = template.grades.options.map((option) => (
-        option.value === gradeValue ? { ...option, ...changes } : option
+        option.value === gradeValue
+          ? {
+              ...option,
+              ...changes,
+              ...(Object.prototype.hasOwnProperty.call(changes, 'label')
+                ? { enabled: String(changes.label || '').trim().length > 0 }
+                : {}),
+            }
+          : option
       ));
       const gradesRequiringRepeat = nextOptions.filter((option) => option.requiresRepeat).map((option) => option.value);
       return {

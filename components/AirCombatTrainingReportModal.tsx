@@ -158,9 +158,12 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const missionStatusOptions = enabledCompletionResults.length > 0
     ? enabledCompletionResults
     : [{ code: 'Complete', label: 'Complete', enabled: true }];
-  const gradeLabelMap = useMemo(() => (
-    new Map(reportTemplate.grades.options.map((option) => [option.value, option.label]))
+  const enabledGradeOptions = useMemo(() => (
+    reportTemplate.grades.options.filter((option) => option.enabled !== false && String(option.label || '').trim())
   ), [reportTemplate.grades.options]);
+  const gradeLabelMap = useMemo(() => (
+    new Map(enabledGradeOptions.map((option) => [option.value, option.label]))
+  ), [enabledGradeOptions]);
   const formatGradeOption = (value: number | string) => {
     if (String(value).toUpperCase() === 'DEMO') return 'DEMO';
     const numericValue = Number(value);
@@ -444,7 +447,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const getElementScore = (element: string) => (
     elementScores.find(score => score.element === element) || { element, grade: '', comment: '' }
   );
-  const gradeOptions = reportTemplate.grades.options.map(option => String(option.value));
+  const gradeOptions = enabledGradeOptions.map(option => String(option.value));
   const overallGradeOptions = ['', ...gradeOptions];
   const assessmentGradeOptions = ['DEMO', ...gradeOptions];
   const awardedOverallGrade = String(overallGrade || '').trim();
