@@ -39,6 +39,12 @@ export default function AdminPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetMessage, setResetMessage] = useState('');
 
+  // Delete user state
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState('');
+
   // Edit role state
   const [editRoleTarget, setEditRoleTarget] = useState<string | null>(null);
   const [editRoleValue, setEditRoleValue] = useState<string>('USER');
@@ -139,6 +145,44 @@ export default function AdminPage() {
     }
   };
 
+  const handleDeleteUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deleteTarget || !deletePassword) return;
+    if (deleteTarget.userId === user?.userId) {
+      setDeleteMessage('❌ You cannot delete your own signed-in account.');
+      return;
+    }
+    setDeleteLoading(true);
+    setDeleteMessage('');
+    try {
+      const res = await fetch('/api/admin/direct-delete-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+          'x-user-id': user?.userId || '',
+        },
+        body: JSON.stringify({
+          targetUserId: deleteTarget.userId,
+          password: deletePassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Delete failed');
+      setDeleteMessage(`✅ Deleted user ${deleteTarget.userId}`);
+      setUsers(prev => prev.filter(candidate => candidate.userId !== deleteTarget.userId));
+      setDeletePassword('');
+      setTimeout(() => {
+        setDeleteTarget(null);
+        setDeleteMessage('');
+      }, 1800);
+    } catch (err: any) {
+      setDeleteMessage(`❌ ${err.message}`);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateLoading(true);
@@ -232,6 +276,8 @@ export default function AdminPage() {
     };
     return colors[role] || colors.USER;
   };
+
+  const signedInUserId = user?.userId || '';
 
   if (isLoading) {
     return (
@@ -347,6 +393,8 @@ export default function AdminPage() {
                         <div className="flex gap-2 ml-4">
                           <button
                             onClick={() => {
+                              setDeleteTarget(null);
+                              setResetTarget(null);
                               setEditRoleTarget(user.userId);
                               setEditRoleValue(user.role);
                               setEditRoleMessage('');
@@ -357,6 +405,8 @@ export default function AdminPage() {
                           </button>
                           <button
                             onClick={() => {
+                              setDeleteTarget(null);
+                              setEditRoleTarget(null);
                               setResetTarget(user.userId);
                               setResetPassword('');
                               setResetMessage('');
@@ -364,6 +414,20 @@ export default function AdminPage() {
                             className="px-3 py-1.5 rounded-lg text-xs font-medium text-amber-300 border border-amber-700/40 bg-amber-900/20 hover:bg-amber-900/40 transition-colors"
                           >
                             Reset Password
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditRoleTarget(null);
+                              setResetTarget(null);
+                              setDeleteTarget(user);
+                              setDeletePassword('');
+                              setDeleteMessage('');
+                            }}
+                            disabled={user.userId === signedInUserId}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-300 border border-red-700/40 bg-red-900/20 hover:bg-red-900/40 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                            title={user.userId === signedInUserId ? 'You cannot delete your own signed-in account' : 'Delete User'}
+                          >
+                            Delete User
                           </button>
                         </div>
                       </div>
@@ -448,6 +512,54 @@ export default function AdminPage() {
                           {resetMessage && (
                             <p className={`text-xs mt-2 ${resetMessage.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>
                               {resetMessage}
+                            </p>
+                          )}
+                        </form>
+                      )}
+
+                      {/* Inline delete user form */}
+                      {deleteTarget?.userId === user.userId && (
+                        <form onSubmit={handleDeleteUser} className="mt-3 pt-3 border-t border-red-700/40">
+                          <div className="mb-3 rounded-lg border border-red-700/40 bg-red-950/30 px-3 py-2">
+                            <p className="text-xs font-semibold text-red-200">
+                              Delete {user.displayName || user.userId}
+                            </p>
+                            <p className="mt-1 text-xs text-red-200/70">
+                              This removes the login account and active sessions. Linked staff or trainee profile records are preserved.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="password"
+                              value={deletePassword}
+                              onChange={e => setDeletePassword(e.target.value)}
+                              placeholder="Your password"
+                              className="flex-1 px-3 py-2 rounded-lg text-xs text-white placeholder-gray-500 border border-gray-600 focus:border-red-500 focus:outline-none"
+                              style={{ background: 'rgba(255,255,255,0.05)' }}
+                              autoFocus
+                            />
+                            <button
+                              type="submit"
+                              disabled={deleteLoading || !deletePassword}
+                              className="px-3 py-2 rounded-lg text-xs font-medium text-white bg-red-700 hover:bg-red-600 disabled:opacity-50 transition-colors"
+                            >
+                              {deleteLoading ? '...' : 'Delete'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDeleteTarget(null);
+                                setDeletePassword('');
+                                setDeleteMessage('');
+                              }}
+                              className="px-3 py-2 rounded-lg text-xs font-medium text-gray-400 border border-gray-600 hover:border-gray-500 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                          {deleteMessage && (
+                            <p className={`text-xs mt-2 ${deleteMessage.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>
+                              {deleteMessage}
                             </p>
                           )}
                         </form>
