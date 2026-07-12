@@ -22269,34 +22269,49 @@ const TraineeProfileFlyout = ({
       ensureSpace(42);
       const cx = margin + 22;
       const cy = y + 18;
-      const radius = 16;
-      doc.setDrawColor(203, 213, 225);
-      doc.setFillColor(248, 250, 252);
-      doc.circle(cx, cy, radius, "S");
-      doc.setFillColor(34, 197, 94);
+      const radius = 16.5;
+      const ringWidth = 7;
       const percent = Math.max(0, Math.min(100, reviewData.progress.progressPercent));
-      const slices = Math.round(percent / 4);
-      for (let i = 0; i < slices; i++) {
-        const a1 = (-90 + i * 14.4) * Math.PI / 180;
-        const a2 = (-90 + (i + 1) * 14.4) * Math.PI / 180;
-        doc.triangle(cx, cy, cx + Math.cos(a1) * radius, cy + Math.sin(a1) * radius, cx + Math.cos(a2) * radius, cy + Math.sin(a2) * radius, "F");
+      const drawArc = (startDegrees, endDegrees, r, red, green, blue) => {
+        const segments = Math.max(8, Math.ceil(Math.abs(endDegrees - startDegrees) / 3));
+        doc.setDrawColor(red, green, blue);
+        doc.setLineWidth(ringWidth);
+        doc.setLineCap("round");
+        doc.setLineJoin("round");
+        for (let index = 0; index < segments; index += 1) {
+          const a1 = (startDegrees + (endDegrees - startDegrees) * index / segments) * Math.PI / 180;
+          const a2 = (startDegrees + (endDegrees - startDegrees) * (index + 1) / segments) * Math.PI / 180;
+          doc.line(
+            cx + Math.cos(a1) * r,
+            cy + Math.sin(a1) * r,
+            cx + Math.cos(a2) * r,
+            cy + Math.sin(a2) * r
+          );
+        }
+        doc.setLineCap("butt");
+      };
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(ringWidth);
+      doc.circle(cx, cy, radius, "S");
+      if (percent > 0) {
+        drawArc(-90, -90 + percent / 100 * 360, radius, 34, 197, 94);
       }
-      doc.setFillColor(255, 255, 255);
-      doc.circle(cx, cy, 9, "F");
       doc.setTextColor(15, 23, 42);
       addText(`${percent.toFixed(0)}%`, cx - 5, cy + 1, 7, "bold");
       const drawBenchmark = (value, r, g, b) => {
         const angle = (-90 + Math.max(0, Math.min(100, value)) / 100 * 360) * Math.PI / 180;
-        const innerRadius = radius - 1.5;
-        const outerRadius = radius + 3.5;
+        const innerRadius = radius - ringWidth / 2 - 1.2;
+        const outerRadius = radius + ringWidth / 2 + 1.4;
         doc.setDrawColor(r, g, b);
-        doc.setLineWidth(0.55);
+        doc.setLineWidth(1.1);
+        doc.setLineCap("round");
         doc.line(
           cx + Math.cos(angle) * innerRadius,
           cy + Math.sin(angle) * innerRadius,
           cx + Math.cos(angle) * outerRadius,
           cy + Math.sin(angle) * outerRadius
         );
+        doc.setLineCap("butt");
       };
       drawBenchmark(reviewData.progress.averageProgress, 255, 170, 0);
       drawBenchmark(reviewData.progress.mostProgress, 0, 210, 255);
