@@ -1306,7 +1306,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 }
             }
         } catch (e) { /* ignore */ }
-        return 'home';
+        return 'platform-configuration-health';
     });
     const [filteredMockdata, setFilteredMockdata] = useState<Instructor[]>([]);
     const [filteredTraineeMockdata, setFilteredTraineeMockdata] = useState<Trainee[]>([]);
@@ -1483,7 +1483,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
     return (
         <div data-settings-view="true" className="flex-1 flex overflow-hidden bg-gray-900" onKeyDownCapture={stopEditableKeyPropagation}>
-            <aside className="hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block">
+            <aside className="hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block">
                 <div className="mb-4">
                     <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500">Find Setting</label>
                     <input
@@ -1494,7 +1494,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                     />
                 </div>
-                <nav className="mt-[15px] flex flex-col items-center gap-[1px]">
+                <nav className="mt-[30px] flex flex-col items-center gap-[1px]">
                     {visibleSettingGroups.map(group => {
                         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection);
                         const showSubmenu = isSearchActive || (expandedGroups[group.label] ?? groupActive);

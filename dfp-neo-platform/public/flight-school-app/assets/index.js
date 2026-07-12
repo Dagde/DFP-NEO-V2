@@ -75398,7 +75398,7 @@ const SettingsViewWithMenu = (props) => {
       }
     } catch (e) {
     }
-    return "home";
+    return "platform-configuration-health";
   });
   const [filteredMockdata, setFilteredMockdata] = reactExports.useState([]);
   const [filteredTraineeMockdata, setFilteredTraineeMockdata] = reactExports.useState([]);
@@ -75538,7 +75538,7 @@ const SettingsViewWithMenu = (props) => {
     openSelectedGroup();
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-settings-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", onKeyDownCapture: stopEditableKeyPropagation, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500", children: "Find Setting" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -75552,7 +75552,7 @@ const SettingsViewWithMenu = (props) => {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "mt-[15px] flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "mt-[30px] flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
         const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
         const showSubmenu = isSearchActive || (expandedGroups[group.label] ?? groupActive);
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[175px]", children: [
