@@ -11,6 +11,7 @@ import {
     getLastNWeeksRange,
     convertSnapshotsToTimeline
 } from '../utils/aircraftAvailabilityUtils';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface AircraftAvailabilitySettingsProps {}
 
@@ -216,7 +217,7 @@ const AircraftAvailabilitySettings: React.FC<AircraftAvailabilitySettingsProps> 
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6" onKeyDownCapture={stopEditableKeyPropagation}>
             {/* Header */}
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-sky-400">Aircraft Availability History</h2>

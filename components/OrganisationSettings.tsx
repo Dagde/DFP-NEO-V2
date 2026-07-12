@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { logAudit } from '../utils/auditLogger';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface UnitDesiredAllocation {
   unitCode: string;
@@ -593,7 +594,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" onKeyDownCapture={stopEditableKeyPropagation}>
       <div className="bg-sky-500/10 border border-sky-500/30 rounded-lg p-4">
         <h3 className="text-lg font-semibold text-sky-200 mb-2">Operational Sharing Controls</h3>
         <p className="text-sm text-gray-300">

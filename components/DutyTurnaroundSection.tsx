@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { logAudit } from '../utils/auditLogger';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface DutyTurnaroundSectionProps {
@@ -49,7 +50,7 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
     };
 
     return (
-        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit">
+        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit" onKeyDownCapture={stopEditableKeyPropagation}>
             <div className="p-4 flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-gray-200">Duty & Turnaround</h2>
             </div>

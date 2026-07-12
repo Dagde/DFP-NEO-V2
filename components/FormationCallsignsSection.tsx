@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FormationCallsign } from '../types';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface FormationCallsignsSectionProps {
     callsigns: FormationCallsign[];
@@ -78,7 +79,7 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
         : (selectedUnit === 'ALL' ? callsigns : callsigns.filter(c => c.unit === selectedUnit));
 
     return (
-        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[800px] h-fit">
+        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[800px] h-fit" onKeyDownCapture={stopEditableKeyPropagation}>
             <div className="p-4 flex justify-between items-center border-b border-gray-700">
                 <h2 className="text-lg font-semibold text-gray-200">Formation Callsigns</h2>
                 {isEditing ? (

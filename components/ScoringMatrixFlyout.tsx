@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { PhraseBank } from '../types';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface ScoringMatrixFlyoutProps {
   onClose: () => void;
@@ -344,7 +345,7 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
 
     return (
         <div className="fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in" onClick={onClose}>
-            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl border border-gray-700 flex flex-col h-[85vh]" onClick={e => e.stopPropagation()}>
+            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl border border-gray-700 flex flex-col h-[85vh]" onClick={e => e.stopPropagation()} onKeyDownCapture={stopEditableKeyPropagation}>
                 
                 {/* Header */}
                 <div className="p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center shrink-0">
