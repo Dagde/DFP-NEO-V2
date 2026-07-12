@@ -7297,7 +7297,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 type="button"
                 disabled={!canEditTrainingReportTemplate || !trainingReportSyncUnitCode || saving || applyingChanges}
                 onClick={syncTrainingReportSettingsFromUnit}
-                className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                className={platformActionButtonClass}
               >
                 Sync Settings
               </button>
