@@ -1406,7 +1406,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                     </dl>
                     
                     <div className="lg:col-span-2 space-y-4">
-                        <fieldset className="p-4 border border-gray-600 rounded-lg">
+                        <fieldset className="p-4 border border-gray-600 rounded-lg lg:-ml-[44px] lg:w-[calc(100%+44px)]">
                             <legend className="px-2 text-sm font-semibold text-gray-300">{reportTemplate.modules.overallAssessment.title}</legend>
                             {/* DCO/DPCO/DNCO Radio Buttons - Always available for PT-051 assessments */}
                             <div className="mt-2 mb-4">
