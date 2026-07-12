@@ -75496,7 +75496,7 @@ const SettingsViewWithMenu = (props) => {
       settingsGroupOpenTimerRef.current = null;
     }
     const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
-    const isOpen = expandedGroups[group.label] ?? groupActive;
+    const isOpen = expandedGroups[group.label] === true;
     if (isOpen) {
       setExpandedGroups((previous) => ({ ...previous, [group.label]: false }));
       return;
@@ -75508,7 +75508,7 @@ const SettingsViewWithMenu = (props) => {
       }
       settingsGroupOpenTimerRef.current = null;
     };
-    const anotherGroupOpen = !isSearchActive && visibleSettingGroups.some((candidate) => candidate.label !== group.label && (expandedGroups[candidate.label] ?? (activeSection !== "home" && candidate.sections.includes(activeSection))));
+    const anotherGroupOpen = !isSearchActive && visibleSettingGroups.some((candidate) => candidate.label !== group.label && expandedGroups[candidate.label] === true);
     if (anotherGroupOpen) {
       setExpandedGroups(visibleSettingGroups.reduce((next, candidate) => {
         next[candidate.label] = false;
@@ -75536,7 +75536,7 @@ const SettingsViewWithMenu = (props) => {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "mt-[30px] flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
         const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
-        const showSubmenu = isSearchActive || (expandedGroups[group.label] ?? groupActive);
+        const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[175px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",

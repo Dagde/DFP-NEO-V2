@@ -1444,7 +1444,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             settingsGroupOpenTimerRef.current = null;
         }
         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
-        const isOpen = expandedGroups[group.label] ?? groupActive;
+        const isOpen = expandedGroups[group.label] === true;
 
         if (isOpen) {
             setExpandedGroups(previous => ({ ...previous, [group.label]: false }));
@@ -1460,7 +1460,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         };
         const anotherGroupOpen = !isSearchActive && visibleSettingGroups.some(candidate => (
             candidate.label !== group.label
-            && (expandedGroups[candidate.label] ?? (activeSection !== 'home' && candidate.sections.includes(activeSection as SettingsMenuSection)))
+            && expandedGroups[candidate.label] === true
         ));
 
         if (anotherGroupOpen) {
@@ -1491,7 +1491,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 <nav className="mt-[30px] flex flex-col items-center gap-[1px]">
                     {visibleSettingGroups.map(group => {
                         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection);
-                        const showSubmenu = isSearchActive || (expandedGroups[group.label] ?? groupActive);
+                        const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
                         return (
                             <div key={group.label} className="w-[175px]">
                                 <button
