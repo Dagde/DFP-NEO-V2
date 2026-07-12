@@ -6929,6 +6929,187 @@ app.post('/api/auth/direct-logout', async (req, res) => {
   }
 });
 
+async function requireDirectAdmin(req, res) {
+  const authHeader = req.headers.authorization || '';
+  const sessionToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!sessionToken) {
+    res.status(401).json({ error: 'Unauthorized', message: 'No token provided' });
+    return null;
+  }
+
+  const db = await getPrisma();
+  const sessions = await db.$queryRawUnsafe(
+    `SELECT s."sessionToken", s.expires, u.id, u."userId", u.username, u.email, u."firstName", u."lastName", u.role, u."isActive", u.password
+     FROM "Session" s
+     JOIN "User" u ON u.id = s."userId"
+     WHERE s."sessionToken" = $1
+     LIMIT 1`,
+    sessionToken
+  );
+  const admin = sessions?.[0];
+  if (!admin) {
+    res.status(401).json({ error: 'Invalid token', message: 'Session not found' });
+    return null;
+  }
+  if (new Date(admin.expires).getTime() <= Date.now()) {
+    await db.$executeRawUnsafe(`DELETE FROM "Session" WHERE "sessionToken" = $1`, sessionToken);
+    res.status(401).json({ error: 'Token expired', message: 'Session has expired' });
+    return null;
+  }
+  if (!admin.isActive || !['ADMIN', 'SUPER_ADMIN'].includes(String(admin.role || '').toUpperCase())) {
+    res.status(403).json({ error: 'Forbidden', message: 'Admin permission is required' });
+    return null;
+  }
+  return { db, admin, sessionToken };
+}
+
+const toDirectAdminUser = (user) => ({
+  id: user.id,
+  userId: user.userId,
+  username: user.username,
+  email: user.email,
+  role: user.role,
+  firstName: user.firstName,
+  lastName: user.lastName,
+  displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.userId,
+  isActive: user.isActive,
+  mustChangePassword: false,
+  lastLoginAt: user.lastLogin,
+  createdAt: user.createdAt,
+  permissionsRoleId: '',
+});
+
+app.get('/api/admin/direct-users', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const users = await context.db.$queryRawUnsafe(
+      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "lastLogin", "createdAt"
+       FROM "User"
+       ORDER BY "lastName" NULLS LAST, "firstName" NULLS LAST, username, "userId"`
+    );
+    res.json({ users: users.map(toDirectAdminUser) });
+  } catch (error) {
+    console.error('❌ GET /api/admin/direct-users error:', error);
+    res.status(500).json({ error: 'Internal server error', message: 'Failed to list users' });
+  }
+});
+
+app.post('/api/admin/direct-create-user', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const { userId, password, email, firstName, lastName, role = 'USER' } = req.body || {};
+    const cleanUserId = String(userId || '').trim();
+    if (!cleanUserId || !password || String(password).length < 8) {
+      return res.status(400).json({ error: 'Invalid request', message: 'User ID and password of at least 8 characters are required' });
+    }
+    const safeRole = ['SUPER_ADMIN', 'ADMIN', 'INSTRUCTOR', 'PILOT', 'USER'].includes(String(role).toUpperCase())
+      ? String(role).toUpperCase()
+      : 'USER';
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const rows = await context.db.$queryRawUnsafe(
+      `INSERT INTO "User" ("id", "userId", username, email, password, role, "firstName", "lastName", "isActive", "createdById", "createdAt", "updatedAt")
+       VALUES (gen_random_uuid()::text, $1, $1, $2, $3, $4::"Role", $5, $6, true, $7, NOW(), NOW())
+       RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", "lastLogin", "createdAt"`,
+      cleanUserId,
+      email || null,
+      hashedPassword,
+      safeRole,
+      firstName || null,
+      lastName || null,
+      context.admin.id
+    );
+    res.json({ user: toDirectAdminUser(rows[0]) });
+  } catch (error) {
+    const message = String(error?.message || error);
+    console.error('❌ POST /api/admin/direct-create-user error:', error);
+    res.status(message.includes('unique') || message.includes('duplicate') ? 409 : 500).json({
+      error: 'Create failed',
+      message: message.includes('unique') || message.includes('duplicate') ? 'A user with that ID or email already exists' : 'Failed to create user',
+    });
+  }
+});
+
+app.post('/api/admin/direct-reset-password', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const { targetUserId, newPassword } = req.body || {};
+    if (!targetUserId || !newPassword || String(newPassword).length < 8) {
+      return res.status(400).json({ error: 'Invalid request', message: 'Target user and password of at least 8 characters are required' });
+    }
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const result = await context.db.$executeRawUnsafe(
+      `UPDATE "User" SET password = $1, "updatedAt" = NOW() WHERE "userId" = $2 OR username = $2`,
+      hashedPassword,
+      targetUserId
+    );
+    if (Number(result) === 0) {
+      return res.status(404).json({ error: 'Not found', message: 'User not found' });
+    }
+    await context.db.$executeRawUnsafe(
+      `DELETE FROM "Session" WHERE "userId" IN (SELECT id FROM "User" WHERE "userId" = $1 OR username = $1)`,
+      targetUserId
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ POST /api/admin/direct-reset-password error:', error);
+    res.status(500).json({ error: 'Reset failed', message: 'Failed to reset password' });
+  }
+});
+
+app.post('/api/admin/direct-delete-user', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const { targetUserId, password } = req.body || {};
+    const cleanTargetUserId = String(targetUserId || '').trim();
+    if (!cleanTargetUserId || !password) {
+      return res.status(400).json({ error: 'Invalid request', message: 'Target user and your password are required' });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const validPassword = await bcrypt.compare(password, context.admin.password || '');
+    if (!validPassword) {
+      return res.status(403).json({ error: 'Forbidden', message: 'Your password was not accepted' });
+    }
+
+    const users = await context.db.$queryRawUnsafe(
+      `SELECT id, "userId", username, email, "firstName", "lastName", role
+       FROM "User"
+       WHERE "userId" = $1 OR username = $1 OR id = $1
+       LIMIT 1`,
+      cleanTargetUserId
+    );
+    const target = users?.[0];
+    if (!target) {
+      return res.status(404).json({ error: 'Not found', message: 'User not found' });
+    }
+    if (target.id === context.admin.id || target.userId === context.admin.userId) {
+      return res.status(400).json({ error: 'Unsafe delete blocked', message: 'You cannot delete your own signed-in account' });
+    }
+
+    await context.db.$executeRawUnsafe(`UPDATE "Personnel" SET "userId" = NULL WHERE "userId" = $1`, target.id);
+    await context.db.$executeRawUnsafe(`UPDATE "Trainee" SET "userId" = NULL WHERE "userId" = $1`, target.id);
+    await context.db.$executeRawUnsafe(
+      `DELETE FROM "CommercialUserAccess" WHERE "userId" = $1 OR username = $1 OR "userId" = $2 OR username = $2`,
+      target.userId,
+      target.username || ''
+    );
+    await context.db.$executeRawUnsafe(`DELETE FROM "Session" WHERE "userId" = $1`, target.id);
+    await context.db.user.delete({ where: { id: target.id } });
+
+    console.log(`✅ Admin user deleted: ${target.userId} by ${context.admin.userId}`);
+    res.json({ success: true, deletedUserId: target.userId });
+  } catch (error) {
+    console.error('❌ POST /api/admin/direct-delete-user error:', error);
+    res.status(500).json({ error: 'Delete failed', message: error.message || 'Failed to delete user' });
+  }
+});
+
 
 
   // ============================================================

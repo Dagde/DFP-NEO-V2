@@ -581,6 +581,7 @@ const AUTH_SERVER = "";
 const API_USERS = "/api/admin/direct-users";
 const API_RESET_PASSWORD = "/api/admin/direct-reset-password";
 const API_CREATE_USER = "/api/admin/direct-create-user";
+const API_DELETE_USER = "/api/admin/direct-delete-user";
 const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
   const [users, setUsers] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true);
@@ -594,6 +595,10 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
   const [resetMustChange, setResetMustChange] = reactExports.useState(true);
   const [resetLoading, setResetLoading] = reactExports.useState(false);
   const [resetMessage, setResetMessage] = reactExports.useState("");
+  const [deleteTarget, setDeleteTarget] = reactExports.useState(null);
+  const [deletePassword, setDeletePassword] = reactExports.useState("");
+  const [deleteLoading, setDeleteLoading] = reactExports.useState(false);
+  const [deleteMessage, setDeleteMessage] = reactExports.useState("");
   const [newUserId, setNewUserId] = reactExports.useState("");
   const [newPassword, setNewPassword] = reactExports.useState("");
   const [newEmail, setNewEmail] = reactExports.useState("");
@@ -694,6 +699,42 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
       setCreateLoading(false);
     }
   };
+  const handleDeleteUser = async (e) => {
+    e.preventDefault();
+    if (!deleteTarget || !deletePassword) return;
+    if (deleteTarget.userId === currentUserId) {
+      setDeleteMessage("❌ You cannot delete your own signed-in account.");
+      return;
+    }
+    setDeleteLoading(true);
+    setDeleteMessage("");
+    try {
+      const res = await fetch(`${AUTH_SERVER}${API_DELETE_USER}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify({
+          targetUserId: deleteTarget.userId,
+          password: deletePassword
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Delete failed");
+      setDeleteMessage(`✅ Deleted user ${deleteTarget.userId}`);
+      setUsers((prev) => prev.filter((user) => user.userId !== deleteTarget.userId));
+      setDeletePassword("");
+      setTimeout(() => {
+        setDeleteTarget(null);
+        setDeleteMessage("");
+      }, 1800);
+    } catch (err) {
+      setDeleteMessage(`❌ ${err.message}`);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
   const formatDate2 = (val) => {
     if (!val) return "Never";
     try {
@@ -758,18 +799,36 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
               ] })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => {
-                setResetTarget(user.userId);
-                setResetPassword("");
-                setResetMessage("");
-              },
-              className: "ml-4 px-3 py-1.5 rounded-lg text-xs font-medium text-amber-300 border border-amber-700/40 bg-amber-900/20 hover:bg-amber-900/40 transition-colors",
-              children: "Reset Password"
-            }
-          )
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-4 flex flex-col gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => {
+                  setDeleteTarget(null);
+                  setResetTarget(user.userId);
+                  setResetPassword("");
+                  setResetMessage("");
+                },
+                className: "px-3 py-1.5 rounded-lg text-xs font-medium text-amber-300 border border-amber-700/40 bg-amber-900/20 hover:bg-amber-900/40 transition-colors",
+                children: "Reset Password"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => {
+                  setResetTarget(null);
+                  setDeleteTarget(user);
+                  setDeletePassword("");
+                  setDeleteMessage("");
+                },
+                disabled: user.userId === currentUserId,
+                className: "px-3 py-1.5 rounded-lg text-xs font-medium text-red-300 border border-red-700/40 bg-red-900/20 hover:bg-red-900/40 disabled:cursor-not-allowed disabled:opacity-40 transition-colors",
+                title: user.userId === currentUserId ? "You cannot delete your own signed-in account" : "Delete User",
+                children: "Delete User"
+              }
+            )
+          ] })
         ] }),
         resetTarget === user.userId && /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleResetPassword, className: "mt-3 pt-3 border-t border-gray-700/50", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
@@ -817,6 +876,48 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
             )
           ] }),
           resetMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xs mt-2 ${resetMessage.startsWith("✅") ? "text-green-400" : "text-red-400"}`, children: resetMessage })
+        ] }),
+        deleteTarget?.userId === user.userId && /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleDeleteUser, className: "mt-3 pt-3 border-t border-red-700/40", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded-lg border border-red-700/40 bg-red-950/30 px-3 py-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs font-semibold text-red-200", children: [
+              "Delete ",
+              user.displayName || user.userId
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-red-200/70", children: "This removes the login account and active platform access scopes. Linked staff or trainee profile records are preserved." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "password",
+                value: deletePassword,
+                onChange: (e) => setDeletePassword(e.target.value),
+                placeholder: "Your password",
+                className: "flex-1 px-3 py-2 rounded-lg text-xs text-white placeholder-gray-500 border border-gray-600 focus:border-red-500 focus:outline-none",
+                style: { background: "rgba(255,255,255,0.05)" },
+                autoFocus: true
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "submit",
+                disabled: deleteLoading || !deletePassword,
+                className: "px-3 py-2 rounded-lg text-xs font-medium text-white bg-red-700 hover:bg-red-600 disabled:opacity-50 transition-colors",
+                children: deleteLoading ? "..." : "Delete"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setDeleteTarget(null),
+                className: "px-3 py-2 rounded-lg text-xs font-medium text-gray-400 border border-gray-600 hover:border-gray-500 transition-colors",
+                children: "Cancel"
+              }
+            )
+          ] }),
+          deleteMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xs mt-2 ${deleteMessage.startsWith("✅") ? "text-green-400" : "text-red-400"}`, children: deleteMessage })
         ] })
       ] }, user.id)) }) }),
       activeTab === "create" && /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleCreateUser, className: "space-y-4", children: [
