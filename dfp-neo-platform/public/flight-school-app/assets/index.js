@@ -113136,10 +113136,12 @@ ${conflictLines.join("\n")}${moreText}`,
         })
       );
     }
-    setPublishedSchedules((prev) => ({
-      ...prev,
+    const nextPublishedSchedulesForPublish = {
+      ...publishedSchedulesRef.current,
       [buildDfpDate]: newEventsForDate
-    }));
+    };
+    publishedSchedulesRef.current = nextPublishedSchedulesForPublish;
+    setPublishedSchedules(nextPublishedSchedulesForPublish);
     const publishedSnapshotKey = getDailySnapshotKey(buildDfpDate);
     setAircraftConfigStateByDate((prev) => ({
       ...prev,

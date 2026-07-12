@@ -36108,10 +36108,16 @@ const App: React.FC = () => {
             );
         }
 
-        setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({
-            ...prev,
+        const nextPublishedSchedulesForPublish: Record<string, ScheduleEvent[]> = {
+            ...publishedSchedulesRef.current,
             [buildDfpDate]: newEventsForDate
-        }));
+        };
+        // Keep the ref in step immediately. Program Schedule runs entry-time
+        // snapshot guards before React's state/effect cycle has always caught up;
+        // without this, it can force-load an empty DB snapshot while publish save
+        // is still in flight and make the just-published DFP appear blank.
+        publishedSchedulesRef.current = nextPublishedSchedulesForPublish;
+        setPublishedSchedules(nextPublishedSchedulesForPublish);
         const publishedSnapshotKey = getDailySnapshotKey(buildDfpDate);
         setAircraftConfigStateByDate(prev => ({
             ...prev,
