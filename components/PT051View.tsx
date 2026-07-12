@@ -1262,8 +1262,8 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             {/* Content */}
             <div className="p-4 md:p-6 w-full max-w-full mx-auto">
                 {/* TOP SECTION: Details & Overall Assessment */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                    <dl className="lg:col-span-1 lg:w-[calc(100%-25px)] space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg">
+                <div className="grid grid-cols-1 items-stretch gap-6 mb-6 lg:grid-cols-3">
+                    <dl className="lg:col-span-1 lg:w-[calc(100%-25px)] h-full space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg">
                         <div>
                             <dt className="text-sm font-medium text-gray-400">{overviewFields.event}</dt>
                             <dd className="mt-1 text-sm text-white font-semibold">{event.flightNumber || 'N/A'}</dd>
@@ -1410,13 +1410,13 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                          </div>
                     </dl>
                     
-                    <div className="lg:col-span-2 space-y-4">
-                        <div className="relative p-4 border border-gray-600 rounded-lg lg:-ml-[44px] lg:w-[calc(100%+44px)]">
+                    <div className="lg:col-span-2 flex h-full flex-col space-y-4">
+                        <div className="relative flex-1 p-4 border border-gray-600 rounded-lg lg:-ml-[44px] lg:w-[calc(100%+44px)]">
                             <div className="absolute -top-3 left-6 bg-gray-900 px-2 text-sm font-semibold text-gray-300">{reportTemplate.modules.overallAssessment.title}</div>
                             {/* DCO/DPCO/DNCO Radio Buttons - Always available for PT-051 assessments */}
-                            <div className="mt-2 mb-4">
+                            <div className="mt-2 mb-3">
                                 <div className="grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]">
-                                    <div className="min-h-[168px]">
+                                    <div>
                                         <label className="block text-sm font-medium text-gray-400 mb-2">{overallFields.result}</label>
                                         <div className="flex flex-col space-y-2">
                                         {missionStatusOptions.map((option) => (
@@ -1582,7 +1582,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     )}
                                 </div>
                             </div>
-                             <div className="mt-2 space-y-4">
+                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-400">{overallFields.overallGrade}</label>
                                     <div className="mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2">
@@ -1682,12 +1682,12 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     </div>
                                 </div>
                             </div>
+                            {showDoubleMarginalWarning && (
+                                <div className="mt-4 p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-sm text-red-300">
+                                    <strong>Warning:</strong> This grade matches the configured repeat rule for this training report. A review may be required.
+                                </div>
+                            )}
                         </div>
-                        {showDoubleMarginalWarning && (
-                            <div className="p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-sm text-red-300">
-                                <strong>Warning:</strong> This grade matches the configured repeat rule for this training report. A review may be required.
-                            </div>
-                        )}
                     </div>
                 </div>
 

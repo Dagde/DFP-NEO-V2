@@ -21113,8 +21113,8 @@ This action cannot be undone.`;
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 md:p-6 w-full max-w-full mx-auto", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { className: "lg:col-span-1 lg:w-[calc(100%-25px)] space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 items-stretch gap-6 mb-6 lg:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { className: "lg:col-span-1 lg:w-[calc(100%-25px)] h-full space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.event }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white font-semibold", children: event.flightNumber || "N/A" })
@@ -21266,284 +21266,282 @@ This action cannot be undone.`;
                 ) })
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "lg:col-span-2 space-y-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative p-4 border border-gray-600 rounded-lg lg:-ml-[44px] lg:w-[calc(100%+44px)]", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute -top-3 left-6 bg-gray-900 px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.overallAssessment.title }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px]", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.result }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col space-y-2", children: missionStatusOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2 flex h-full flex-col space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1 p-4 border border-gray-600 rounded-lg lg:-ml-[44px] lg:w-[calc(100%+44px)]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute -top-3 left-6 bg-gray-900 px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.overallAssessment.title }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.result }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col space-y-2", children: missionStatusOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "radio",
+                        name: "dco-result",
+                        value: option.code,
+                        checked: dcoResult === option.code,
+                        onChange: (e) => setDcoResult(e.target.value),
+                        className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: option.label })
+                  ] }, option.code)) })
+                ] }),
+                dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DPCO action" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "extra-event" ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "input",
                         {
                           type: "radio",
-                          name: "dco-result",
-                          value: option.code,
-                          checked: dcoResult === option.code,
-                          onChange: (e) => setDcoResult(e.target.value),
-                          className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: option.label })
-                    ] }, option.code)) })
-                  ] }),
-                  dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DPCO action" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "extra-event" ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "input",
-                          {
-                            type: "radio",
-                            name: "dpco-follow-up",
-                            value: "extra-event",
-                            checked: dpcoFollowUp.action === "extra-event",
-                            onChange: () => setDpcoFollowUp((prev) => ({ ...prev, action: "extra-event" })),
-                            className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
-                          }
-                        ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                          "Extra ",
-                          isSimEvent ? "Sim" : "Flight"
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-8 rounded border border-gray-600 bg-gray-950 focus-within:border-sky-300 focus-within:ring-1 focus-within:ring-sky-300", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(
-                            "input",
-                            {
-                              type: "text",
-                              inputMode: "decimal",
-                              value: dpcoFollowUp.extraEventHours ?? "",
-                              placeholder: "0.0",
-                              onChange: (e) => {
-                                const value = e.target.value;
-                                if (value !== "" && !/^\d*\.?\d*$/.test(value)) return;
-                                setDpcoFollowUp({
-                                  ...dpcoFollowUp,
-                                  action: "extra-event",
-                                  extraEventHours: value === "" ? void 0 : Number(value)
-                                });
-                              },
-                              onKeyDown: stopEditableKeyPropagation2,
-                              className: "h-full w-full rounded bg-transparent py-1 pl-2 pr-6 text-center text-sm font-semibold text-white focus:outline-none"
-                            }
-                          ),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-y-0 right-0 flex w-5 flex-col border-l border-gray-700/70 text-[8px] leading-none text-gray-400", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx(
-                              "button",
-                              {
-                                type: "button",
-                                onClick: (e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setDpcoFollowUp((prev) => ({ ...prev, action: "extra-event", extraEventHours: Number((Number(prev.extraEventHours || 0) + 0.1).toFixed(1)) }));
-                                },
-                                className: "flex flex-1 items-center justify-center rounded-tr hover:bg-gray-800 hover:text-gray-200",
-                                children: "▲"
-                              }
-                            ),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx(
-                              "button",
-                              {
-                                type: "button",
-                                onClick: (e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setDpcoFollowUp((prev) => ({ ...prev, action: "extra-event", extraEventHours: Number(Math.max(0, Number(prev.extraEventHours || 0) - 0.1).toFixed(1)) }));
-                                },
-                                className: "flex flex-1 items-center justify-center rounded-br hover:bg-gray-800 hover:text-gray-200",
-                                children: "▼"
-                              }
-                            )
-                          ] })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold uppercase text-gray-400", children: "hrs" })
-                      ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "extra-hours-next-event" ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "input",
-                          {
-                            type: "radio",
-                            name: "dpco-follow-up",
-                            value: "extra-hours-next-event",
-                            checked: dpcoFollowUp.action === "extra-hours-next-event",
-                            onChange: () => setDpcoFollowUp((prev) => ({ ...prev, action: "extra-hours-next-event" })),
-                            className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
-                          }
-                        ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Extend next event" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-8 rounded border border-gray-600 bg-gray-950 focus-within:border-sky-300 focus-within:ring-1 focus-within:ring-sky-300", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(
-                            "input",
-                            {
-                              type: "text",
-                              inputMode: "decimal",
-                              value: dpcoFollowUp.extraHours ?? "",
-                              placeholder: "0.0",
-                              onChange: (e) => {
-                                const value = e.target.value;
-                                if (value !== "" && !/^\d*\.?\d*$/.test(value)) return;
-                                setDpcoFollowUp({
-                                  ...dpcoFollowUp,
-                                  action: "extra-hours-next-event",
-                                  extraHours: value === "" ? void 0 : Number(value)
-                                });
-                              },
-                              onKeyDown: stopEditableKeyPropagation2,
-                              className: "h-full w-full rounded bg-transparent py-1 pl-2 pr-6 text-center text-sm font-semibold text-white focus:outline-none"
-                            }
-                          ),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-y-0 right-0 flex w-5 flex-col border-l border-gray-700/70 text-[8px] leading-none text-gray-400", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx(
-                              "button",
-                              {
-                                type: "button",
-                                onClick: (e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setDpcoFollowUp((prev) => ({ ...prev, action: "extra-hours-next-event", extraHours: Number((Number(prev.extraHours || 0) + 0.1).toFixed(1)) }));
-                                },
-                                className: "flex flex-1 items-center justify-center rounded-tr hover:bg-gray-800 hover:text-gray-200",
-                                children: "▲"
-                              }
-                            ),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx(
-                              "button",
-                              {
-                                type: "button",
-                                onClick: (e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setDpcoFollowUp((prev) => ({ ...prev, action: "extra-hours-next-event", extraHours: Number(Math.max(0, Number(prev.extraHours || 0) - 0.1).toFixed(1)) }));
-                                },
-                                className: "flex flex-1 items-center justify-center rounded-br hover:bg-gray-800 hover:text-gray-200",
-                                children: "▼"
-                              }
-                            )
-                          ] })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold uppercase text-gray-400", children: "hrs" })
-                      ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "continue-no-additions" ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "input",
-                          {
-                            type: "radio",
-                            name: "dpco-follow-up",
-                            value: "continue-no-additions",
-                            checked: dpcoFollowUp.action === "continue-no-additions",
-                            onChange: () => setDpcoFollowUp((prev) => ({ ...prev, action: "continue-no-additions" })),
-                            className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
-                          }
-                        ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue - no additions" })
-                      ] })
-                    ] })
-                  ] }),
-                  dcoResult === "DNCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DNCO action" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dncoFollowUp.requestExtraFlight ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "input",
-                        {
-                          type: "radio",
-                          name: "dnco-follow-up",
-                          value: "request-extra-flight",
-                          checked: dncoFollowUp.requestExtraFlight,
-                          onChange: () => setDncoFollowUp({ requestExtraFlight: true }),
+                          name: "dpco-follow-up",
+                          value: "extra-event",
+                          checked: dpcoFollowUp.action === "extra-event",
+                          onChange: () => setDpcoFollowUp((prev) => ({ ...prev, action: "extra-event" })),
                           className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
                         }
                       ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Request extra flight" })
-                    ] }) })
-                  ] })
-                ] }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-4", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: overallFields.overallGrade }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2", children: overallGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "label",
-                      {
-                        title: formatGradeOption(grade),
-                        className: `relative flex ${reportTemplate.grades.showNumbers ? "justify-between py-2" : "justify-start pb-2 pt-[15px]"} h-[75px] w-[82px] cursor-pointer flex-col items-center rounded border px-1 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`,
-                        children: [
-                          reportTemplate.grades.showNumbers && (grade !== "No Grade" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeValue(grade) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", className: "text-[11px] font-black uppercase leading-none text-white opacity-0", children: "0" })),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300 ${grade === "No Grade" && reportTemplate.grades.showNumbers ? "-translate-y-2" : ""}`, children: formatOverallGradeTileText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-grade", value: grade, checked: overallGrade === grade, onChange: () => setOverallGrade(grade), className: `h-4 w-4 ${!reportTemplate.grades.showNumbers ? "absolute bottom-[15px]" : ""} ${getOverallRadioAccentColor(grade)} bg-gray-600` })
-                        ]
-                      },
-                      grade
-                    )) })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.overallResult }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex space-x-4", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "P" ? "bg-green-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-green-800/50 text-green-200 hover:bg-green-700/50"} ${overallResult === null ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "P", checked: overallResult === "P", onChange: () => setOverallResult("P"), className: "sr-only" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: reportTemplate.overallResults.passLabel })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                        "Extra ",
+                        isSimEvent ? "Sim" : "Flight"
                       ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "F" || showDoubleMarginalWarning ? "bg-red-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-red-800/50 text-red-200 hover:bg-red-700/50"} ${overallResult === null && !showDoubleMarginalWarning ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "F", checked: overallResult === "F", onChange: () => setOverallResult("F"), className: "sr-only" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: showDoubleMarginalWarning ? reportTemplate.overallResults.doubleRepeatLabel : reportTemplate.overallResults.failLabel })
-                      ] })
-                    ] })
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 pt-4 border-t border-gray-600", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.groundSchoolAssessment }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "input",
-                        {
-                          type: "checkbox",
-                          checked: groundSchoolAssessment.isAssessment,
-                          onChange: (e) => setGroundSchoolAssessment({
-                            ...groundSchoolAssessment,
-                            isAssessment: e.target.checked,
-                            result: e.target.checked ? groundSchoolAssessment.result || 0 : void 0
-                          }),
-                          className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500 rounded"
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium text-gray-300", children: "Assessment" })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-xs font-medium text-gray-400", children: [
-                        overallFields.result,
-                        ":"
-                      ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-8 rounded border border-gray-600 bg-gray-950 focus-within:border-sky-300 focus-within:ring-1 focus-within:ring-sky-300", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "input",
                           {
                             type: "text",
-                            inputMode: "numeric",
-                            value: groundSchoolAssessment.isAssessment ? groundSchoolAssessment.result ?? "" : "",
+                            inputMode: "decimal",
+                            value: dpcoFollowUp.extraEventHours ?? "",
+                            placeholder: "0.0",
                             onChange: (e) => {
-                              const rawValue = e.target.value.trim();
-                              if (rawValue !== "" && !/^\d{0,3}$/.test(rawValue)) return;
-                              const value = rawValue === "" ? void 0 : Math.min(100, Math.max(0, parseInt(rawValue, 10) || 0));
-                              setGroundSchoolAssessment({
-                                ...groundSchoolAssessment,
-                                result: value
+                              const value = e.target.value;
+                              if (value !== "" && !/^\d*\.?\d*$/.test(value)) return;
+                              setDpcoFollowUp({
+                                ...dpcoFollowUp,
+                                action: "extra-event",
+                                extraEventHours: value === "" ? void 0 : Number(value)
                               });
                             },
-                            disabled: !groundSchoolAssessment.isAssessment,
-                            className: `w-16 px-2 py-1 rounded-md text-center font-semibold text-xs
-                                                    ${groundSchoolAssessment.isAssessment ? "bg-gray-700 text-white border-gray-600 focus:ring-2 focus:ring-sky-500" : "bg-gray-600/50 text-gray-500 cursor-not-allowed border-gray-600"} border`
+                            onKeyDown: stopEditableKeyPropagation2,
+                            className: "h-full w-full rounded bg-transparent py-1 pl-2 pr-6 text-center text-sm font-semibold text-white focus:outline-none"
                           }
                         ),
-                        groundSchoolAssessment.isAssessment && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400", children: "%" })
-                      ] })
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-y-0 right-0 flex w-5 flex-col border-l border-gray-700/70 text-[8px] leading-none text-gray-400", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDpcoFollowUp((prev) => ({ ...prev, action: "extra-event", extraEventHours: Number((Number(prev.extraEventHours || 0) + 0.1).toFixed(1)) }));
+                              },
+                              className: "flex flex-1 items-center justify-center rounded-tr hover:bg-gray-800 hover:text-gray-200",
+                              children: "▲"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDpcoFollowUp((prev) => ({ ...prev, action: "extra-event", extraEventHours: Number(Math.max(0, Number(prev.extraEventHours || 0) - 0.1).toFixed(1)) }));
+                              },
+                              className: "flex flex-1 items-center justify-center rounded-br hover:bg-gray-800 hover:text-gray-200",
+                              children: "▼"
+                            }
+                          )
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold uppercase text-gray-400", children: "hrs" })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "extra-hours-next-event" ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "dpco-follow-up",
+                          value: "extra-hours-next-event",
+                          checked: dpcoFollowUp.action === "extra-hours-next-event",
+                          onChange: () => setDpcoFollowUp((prev) => ({ ...prev, action: "extra-hours-next-event" })),
+                          className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Extend next event" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-8 rounded border border-gray-600 bg-gray-950 focus-within:border-sky-300 focus-within:ring-1 focus-within:ring-sky-300", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "text",
+                            inputMode: "decimal",
+                            value: dpcoFollowUp.extraHours ?? "",
+                            placeholder: "0.0",
+                            onChange: (e) => {
+                              const value = e.target.value;
+                              if (value !== "" && !/^\d*\.?\d*$/.test(value)) return;
+                              setDpcoFollowUp({
+                                ...dpcoFollowUp,
+                                action: "extra-hours-next-event",
+                                extraHours: value === "" ? void 0 : Number(value)
+                              });
+                            },
+                            onKeyDown: stopEditableKeyPropagation2,
+                            className: "h-full w-full rounded bg-transparent py-1 pl-2 pr-6 text-center text-sm font-semibold text-white focus:outline-none"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-y-0 right-0 flex w-5 flex-col border-l border-gray-700/70 text-[8px] leading-none text-gray-400", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDpcoFollowUp((prev) => ({ ...prev, action: "extra-hours-next-event", extraHours: Number((Number(prev.extraHours || 0) + 0.1).toFixed(1)) }));
+                              },
+                              className: "flex flex-1 items-center justify-center rounded-tr hover:bg-gray-800 hover:text-gray-200",
+                              children: "▲"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDpcoFollowUp((prev) => ({ ...prev, action: "extra-hours-next-event", extraHours: Number(Math.max(0, Number(prev.extraHours || 0) - 0.1).toFixed(1)) }));
+                              },
+                              className: "flex flex-1 items-center justify-center rounded-br hover:bg-gray-800 hover:text-gray-200",
+                              children: "▼"
+                            }
+                          )
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold uppercase text-gray-400", children: "hrs" })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "continue-no-additions" ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "dpco-follow-up",
+                          value: "continue-no-additions",
+                          checked: dpcoFollowUp.action === "continue-no-additions",
+                          onChange: () => setDpcoFollowUp((prev) => ({ ...prev, action: "continue-no-additions" })),
+                          className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Continue - no additions" })
+                    ] })
+                  ] })
+                ] }),
+                dcoResult === "DNCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DNCO action" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dncoFollowUp.requestExtraFlight ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "radio",
+                        name: "dnco-follow-up",
+                        value: "request-extra-flight",
+                        checked: dncoFollowUp.requestExtraFlight,
+                        onChange: () => setDncoFollowUp({ requestExtraFlight: true }),
+                        className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-400"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Request extra flight" })
+                  ] }) })
+                ] })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: overallFields.overallGrade }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2", children: overallGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "label",
+                    {
+                      title: formatGradeOption(grade),
+                      className: `relative flex ${reportTemplate.grades.showNumbers ? "justify-between py-2" : "justify-start pb-2 pt-[15px]"} h-[75px] w-[82px] cursor-pointer flex-col items-center rounded border px-1 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`,
+                      children: [
+                        reportTemplate.grades.showNumbers && (grade !== "No Grade" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeValue(grade) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", className: "text-[11px] font-black uppercase leading-none text-white opacity-0", children: "0" })),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300 ${grade === "No Grade" && reportTemplate.grades.showNumbers ? "-translate-y-2" : ""}`, children: formatOverallGradeTileText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-grade", value: grade, checked: overallGrade === grade, onChange: () => setOverallGrade(grade), className: `h-4 w-4 ${!reportTemplate.grades.showNumbers ? "absolute bottom-[15px]" : ""} ${getOverallRadioAccentColor(grade)} bg-gray-600` })
+                      ]
+                    },
+                    grade
+                  )) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.overallResult }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex space-x-4", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "P" ? "bg-green-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-green-800/50 text-green-200 hover:bg-green-700/50"} ${overallResult === null ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "P", checked: overallResult === "P", onChange: () => setOverallResult("P"), className: "sr-only" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: reportTemplate.overallResults.passLabel })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "F" || showDoubleMarginalWarning ? "bg-red-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-red-800/50 text-red-200 hover:bg-red-700/50"} ${overallResult === null && !showDoubleMarginalWarning ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "F", checked: overallResult === "F", onChange: () => setOverallResult("F"), className: "sr-only" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: showDoubleMarginalWarning ? reportTemplate.overallResults.doubleRepeatLabel : reportTemplate.overallResults.failLabel })
                     ] })
                   ] })
                 ] })
               ] }),
-              showDoubleMarginalWarning && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-sm text-red-300", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 pt-4 border-t border-gray-600", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.groundSchoolAssessment }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: groundSchoolAssessment.isAssessment,
+                        onChange: (e) => setGroundSchoolAssessment({
+                          ...groundSchoolAssessment,
+                          isAssessment: e.target.checked,
+                          result: e.target.checked ? groundSchoolAssessment.result || 0 : void 0
+                        }),
+                        className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500 rounded"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium text-gray-300", children: "Assessment" })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-xs font-medium text-gray-400", children: [
+                      overallFields.result,
+                      ":"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "text",
+                          inputMode: "numeric",
+                          value: groundSchoolAssessment.isAssessment ? groundSchoolAssessment.result ?? "" : "",
+                          onChange: (e) => {
+                            const rawValue = e.target.value.trim();
+                            if (rawValue !== "" && !/^\d{0,3}$/.test(rawValue)) return;
+                            const value = rawValue === "" ? void 0 : Math.min(100, Math.max(0, parseInt(rawValue, 10) || 0));
+                            setGroundSchoolAssessment({
+                              ...groundSchoolAssessment,
+                              result: value
+                            });
+                          },
+                          disabled: !groundSchoolAssessment.isAssessment,
+                          className: `w-16 px-2 py-1 rounded-md text-center font-semibold text-xs
+                                                    ${groundSchoolAssessment.isAssessment ? "bg-gray-700 text-white border-gray-600 focus:ring-2 focus:ring-sky-500" : "bg-gray-600/50 text-gray-500 cursor-not-allowed border-gray-600"} border`
+                        }
+                      ),
+                      groundSchoolAssessment.isAssessment && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400", children: "%" })
+                    ] })
+                  ] })
+                ] })
+              ] }),
+              showDoubleMarginalWarning && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-sm text-red-300", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Warning:" }),
                 " This grade matches the configured repeat rule for this training report. A review may be required."
               ] })
-            ] })
+            ] }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6 mb-6", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 lg:grid-cols-[minmax(180px,0.85fr)_minmax(360px,1.7fr)_120px]", children: [
