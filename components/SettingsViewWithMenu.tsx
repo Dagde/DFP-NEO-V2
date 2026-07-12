@@ -1432,12 +1432,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         if (group.visibleSections.includes(group.defaultSection)) return group.defaultSection;
         return group.visibleSections[0] as SettingsMenuSection;
     };
-    const activeGroup =
-        activeSection === 'home'
-            ? null
-            : sectionGroups.find(group => group.sections.includes(activeSection as SettingsMenuSection)) || null;
-    const activeGroupAccent = activeGroup ? getAccentClasses(activeGroup.accent) : null;
-    const activeGroupSections = activeGroup?.sections || [];
     const activePlatformTarget =
         activeSection !== 'home' && isPlatformConfigurationMenuSection(activeSection)
             ? platformSectionTargets[activeSection]
@@ -1648,36 +1642,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 <AuditButton pageName={`Settings - ${sectionLabels[activeSection as SettingsMenuSection]}`} />
                             </div>
                         </div>
-
-                        {activeGroup && activeGroupSections.length > 1 && activeGroupAccent && (
-                            <div className={`mb-5 rounded-lg border ${activeGroupAccent.border} bg-gray-900/55 p-3`}>
-                                <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">
-                                    <span className={`h-2 w-2 rounded-full ${activeGroupAccent.rail}`} />
-                                    {activeGroup.label}
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {activeGroupSections.map(section => {
-                                        const isActive = activeSection === section;
-                                        const sectionAccent = getSectionAccent(section, activeGroup.accent);
-                                        const highlightCrewCompositionTab = activeGroup.label === 'Crew Composition' && section === 'crew-composition';
-                                        return (
-                                            <button
-                                                key={section}
-                                                type="button"
-                                                onClick={() => setActiveSection(section)}
-                                                className={`rounded-md border px-3 py-2 text-xs font-semibold transition-colors ${
-                                                    isActive
-                                                        ? `${sectionAccent.badge} ${sectionAccent.text}`
-                                                        : 'border-gray-800 bg-gray-950/40 text-gray-400 hover:border-gray-700 hover:bg-gray-800/70 hover:text-gray-200'
-                                                } ${highlightCrewCompositionTab ? 'shadow-[0_0_16px_rgba(34,211,238,0.2),inset_0_0_10px_rgba(34,211,238,0.06)] ring-1 ring-cyan-300/20 hover:shadow-[0_0_22px_rgba(34,211,238,0.28),inset_0_0_12px_rgba(34,211,238,0.08)]' : ''}`}
-                                            >
-                                                {sectionLabels[section]}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
 
                     {/* Scoring Matrix - with internal Airmanship/Preparation/Technique/Elements tabs */}
                     {activeSection === 'scoring-matrix' && (

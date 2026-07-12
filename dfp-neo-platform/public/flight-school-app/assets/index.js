@@ -75475,21 +75475,6 @@ const SettingsViewWithMenu = (props) => {
       sectionDescriptions[section]
     ].some((value) => value.toLowerCase().includes(query));
   };
-  const getAccentClasses = (accent) => {
-    const classes = {
-      cyan: { rail: "bg-cyan-400", badge: "bg-cyan-500/10 border-cyan-500/30", text: "text-cyan-300", border: "border-cyan-500/30", shadow: "hover:shadow-cyan-950/30" },
-      violet: { rail: "bg-violet-400", badge: "bg-violet-500/10 border-violet-500/30", text: "text-violet-300", border: "border-violet-500/30", shadow: "hover:shadow-violet-950/30" },
-      sky: { rail: "bg-sky-400", badge: "bg-sky-500/10 border-sky-500/30", text: "text-sky-300", border: "border-sky-500/30", shadow: "hover:shadow-sky-950/30" },
-      amber: { rail: "bg-amber-400", badge: "bg-amber-500/10 border-amber-500/30", text: "text-amber-300", border: "border-amber-500/30", shadow: "hover:shadow-amber-950/30" },
-      emerald: { rail: "bg-emerald-400", badge: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-300", border: "border-emerald-500/30", shadow: "hover:shadow-emerald-950/30" },
-      red: { rail: "bg-red-400", badge: "bg-red-500/10 border-red-500/30", text: "text-red-300", border: "border-red-500/30", shadow: "hover:shadow-red-950/30" }
-    };
-    return classes[accent] || classes.sky;
-  };
-  const getSectionAccent = (section, fallback) => {
-    if (section === "emergency") return getAccentClasses("red");
-    return getAccentClasses(fallback);
-  };
   const getGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   const isFixedCrewSettingsContext = isFixedCrewLikeOperationalModel(props.activeOperationalModel);
   const isSectionAvailable = (section) => section !== "standard-missions" || isFixedCrewSettingsContext;
@@ -75502,9 +75487,6 @@ const SettingsViewWithMenu = (props) => {
     if (group.visibleSections.includes(group.defaultSection)) return group.defaultSection;
     return group.visibleSections[0];
   };
-  const activeGroup = activeSection === "home" ? null : sectionGroups.find((group) => group.sections.includes(activeSection)) || null;
-  const activeGroupAccent = activeGroup ? getAccentClasses(activeGroup.accent) : null;
-  const activeGroupSections = activeGroup?.sections || [];
   const activePlatformTarget = activeSection !== "home" && isPlatformConfigurationMenuSection(activeSection) ? platformSectionTargets[activeSection] : void 0;
   const isPlatformConfigurationActive = Boolean(activePlatformTarget);
   const isSearchActive = settingsSearch.trim().length > 0;
@@ -75667,27 +75649,6 @@ const SettingsViewWithMenu = (props) => {
             !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Read-Only Mode" }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `Settings - ${sectionLabels[activeSection]}` })
           ] })
-        ] }),
-        activeGroup && activeGroupSections.length > 1 && activeGroupAccent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mb-5 rounded-lg border ${activeGroupAccent.border} bg-gray-900/55 p-3`, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-2 rounded-full ${activeGroupAccent.rail}` }),
-            activeGroup.label
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: activeGroupSections.map((section) => {
-            const isActive = activeSection === section;
-            const sectionAccent = getSectionAccent(section, activeGroup.accent);
-            const highlightCrewCompositionTab = activeGroup.label === "Crew Composition" && section === "crew-composition";
-            return /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => setActiveSection(section),
-                className: `rounded-md border px-3 py-2 text-xs font-semibold transition-colors ${isActive ? `${sectionAccent.badge} ${sectionAccent.text}` : "border-gray-800 bg-gray-950/40 text-gray-400 hover:border-gray-700 hover:bg-gray-800/70 hover:text-gray-200"} ${highlightCrewCompositionTab ? "shadow-[0_0_16px_rgba(34,211,238,0.2),inset_0_0_10px_rgba(34,211,238,0.06)] ring-1 ring-cyan-300/20 hover:shadow-[0_0_22px_rgba(34,211,238,0.28),inset_0_0_12px_rgba(34,211,238,0.08)]" : ""}`,
-                children: sectionLabels[section]
-              },
-              section
-            );
-          }) })
         ] }),
         activeSection === "scoring-matrix" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 flex items-center justify-between pr-3", children: [
