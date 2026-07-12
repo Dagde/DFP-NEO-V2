@@ -72696,48 +72696,43 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-3 text-sm font-bold uppercase tracking-wide text-gray-200", children: "Results & Grades" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
-            trainingReportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide ${canEditTrainingReportTemplate ? "cursor-pointer text-gray-300" : "cursor-not-allowed text-gray-500"}`, children: [
+            trainingReportTemplate.completionResults.map((option) => {
+              const optionEnabled = option.enabled !== false;
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border p-3 transition ${optionEnabled ? "border-gray-700 bg-gray-900/50" : "border-gray-800 bg-gray-950/45 opacity-60"}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: canEditTrainingReportTemplate ? "cursor-pointer" : "cursor-not-allowed", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "sr-only", children: option.code }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      checked: optionEnabled,
+                      disabled: !canEditTrainingReportTemplate,
+                      onChange: (event) => updateTrainingReportCompletionResult(option.code, { enabled: event.target.checked }),
+                      className: "h-4 w-4 rounded border-gray-600 bg-gray-950 accent-sky-500"
+                    }
+                  )
+                ] }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
+                  Field,
                   {
-                    type: "checkbox",
-                    checked: option.enabled !== false,
-                    disabled: !canEditTrainingReportTemplate,
-                    onChange: (event) => updateTrainingReportCompletionResult(option.code, { enabled: event.target.checked }),
-                    className: "h-4 w-4 rounded border-gray-600 bg-gray-950 accent-sky-500"
+                    label: {
+                      DCO: "Mission Completed Text",
+                      DPCO: "Mission Partially Completed Text",
+                      DNCO: "Mission Not Completed Text"
+                    }[option.code],
+                    value: optionEnabled ? option.label : "",
+                    disabled: !canEditTrainingReportTemplate || !optionEnabled,
+                    maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                    onChange: (value) => updateTrainingReportCompletionResult(option.code, { label: value }),
+                    info: {
+                      DCO: "Text displayed when the mission or training event was completed. The wording can change, but the outcome remains the completed-mission result.",
+                      DPCO: "Text displayed when the mission was partially completed. Use this when an event occurred but did not fully satisfy the planned mission or training requirement.",
+                      DNCO: "Text displayed when the mission was not completed. The wording can change, but the outcome remains the not-completed-mission result."
+                    }[option.code]
                   }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                  "Use ",
-                  option.code
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: {
-                  DCO: "Enable this if the organisation records a mission completed classification.",
-                  DPCO: "Enable this if the organisation records a mission partially completed classification.",
-                  DNCO: "Enable this if the organisation records a mission not completed classification."
-                }[option.code] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                Field,
-                {
-                  label: {
-                    DCO: "Mission Completed Text",
-                    DPCO: "Mission Partially Completed Text",
-                    DNCO: "Mission Not Completed Text"
-                  }[option.code],
-                  value: option.label,
-                  disabled: !canEditTrainingReportTemplate || option.enabled === false,
-                  maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
-                  onChange: (value) => updateTrainingReportCompletionResult(option.code, { label: value }),
-                  info: {
-                    DCO: "Text displayed when the mission or training event was completed. The wording can change, but the outcome remains the completed-mission result.",
-                    DPCO: "Text displayed when the mission was partially completed. Use this when an event occurred but did not fully satisfy the planned mission or training requirement.",
-                    DNCO: "Text displayed when the mission was not completed. The wording can change, but the outcome remains the not-completed-mission result."
-                  }[option.code]
-                }
-              )
-            ] }, option.code)),
+                )
+              ] }, option.code);
+            }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               Field,
               {
