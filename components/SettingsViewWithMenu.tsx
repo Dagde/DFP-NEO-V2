@@ -1499,11 +1499,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection);
                         const showSubmenu = isSearchActive || (expandedGroups[group.label] ?? groupActive);
                         return (
-                            <div key={group.label} className="w-[150px]">
+                            <div key={group.label} className="w-[175px]">
                                 <button
                                     type="button"
                                     onClick={() => openSettingsGroup(group)}
-                                    className={`btn-aluminium-brushed flex h-[45px] w-[150px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${
+                                    className={`btn-aluminium-brushed flex h-[45px] w-[175px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${
                                         groupActive ? 'ring-1 ring-gray-500/60' : ''
                                     }`}
                                     aria-expanded={showSubmenu}
@@ -1534,7 +1534,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                     <button
                                                         key={section}
                                                         onClick={() => setActiveSection(section)}
-                                                        className={`flex min-h-[32px] w-[150px] items-center rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${
+                                                        className={`flex min-h-[32px] w-[175px] items-center rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${
                                                             activeSection === section
                                                                 ? 'border-gray-500 bg-gray-800 text-gray-100'
                                                                 : section === 'emergency'

@@ -75555,13 +75555,13 @@ const SettingsViewWithMenu = (props) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
         const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
         const showSubmenu = isSearchActive || (expandedGroups[group.label] ?? groupActive);
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[150px]", children: [
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[175px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
               type: "button",
               onClick: () => openSettingsGroup(group),
-              className: `btn-aluminium-brushed flex h-[45px] w-[150px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${groupActive ? "ring-1 ring-gray-500/60" : ""}`,
+              className: `btn-aluminium-brushed flex h-[45px] w-[175px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${groupActive ? "ring-1 ring-gray-500/60" : ""}`,
               "aria-expanded": showSubmenu,
               "aria-controls": getGroupId(group.label),
               children: [
@@ -75589,7 +75589,7 @@ const SettingsViewWithMenu = (props) => {
                   "button",
                   {
                     onClick: () => setActiveSection(section),
-                    className: `flex min-h-[32px] w-[150px] items-center rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${activeSection === section ? "border-gray-500 bg-gray-800 text-gray-100" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
+                    className: `flex min-h-[32px] w-[175px] items-center rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${activeSection === section ? "border-gray-500 bg-gray-800 text-gray-100" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
                     children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: sectionLabels[section] }) })
                   },
                   section
