@@ -22321,10 +22321,20 @@ const TraineeProfileFlyout = ({
         `Progress: ${reviewData.progress.completedCount}/${reviewData.progress.totalCount} events (${reviewData.progress.progressPercent.toFixed(0)}%)`,
         `Failed: ${reviewData.summaryFailed.length}   Double marginal: ${reviewData.summaryDoubleMarginal.length}   Marginal: ${reviewData.summaryMarginal.length}`,
         `Current score average: ${reviewData.currentScoreAverage.toFixed(1)}`,
-        `Course rank by average score: ${reviewData.courseAverageRank.rank ? `${reviewData.courseAverageRank.rank}/${reviewData.courseAverageRank.total}` : "-"}`,
-        `Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Front runner: ${reviewData.progress.mostProgress.toFixed(0)}%   Back marker: ${reviewData.progress.leastProgress.toFixed(0)}%`
+        `Course rank by average score: ${reviewData.courseAverageRank.rank ? `${reviewData.courseAverageRank.rank}/${reviewData.courseAverageRank.total}` : "-"}`
       ];
       metricRows.forEach((row, index) => addText(row, textX, y + 7 + index * 6, 8));
+      const benchmarkY = y + 7 + metricRows.length * 6;
+      let benchmarkX = textX;
+      const addBenchmarkText = (text, r, g, b) => {
+        doc.setTextColor(r, g, b);
+        addText(text, benchmarkX, benchmarkY, 8);
+        benchmarkX += doc.getTextWidth(text) + 4;
+      };
+      addBenchmarkText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%`, 255, 170, 0);
+      addBenchmarkText(`Front runner: ${reviewData.progress.mostProgress.toFixed(0)}%`, 0, 210, 255);
+      addBenchmarkText(`Back marker: ${reviewData.progress.leastProgress.toFixed(0)}%`, 255, 64, 64);
+      doc.setTextColor(15, 23, 42);
       y += 42;
     };
     doc.setFillColor(15, 24, 36);
