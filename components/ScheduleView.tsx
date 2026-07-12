@@ -7676,6 +7676,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 return (
                     <div
                         key={`flight-line-aircraft-marker-${aircraftNumber}-${event.id}`}
+                        data-dfp-context-kind="aircraft"
+                        data-dfp-aircraft-number={aircraftNumber}
+                        data-dfp-event-id={event.id}
+                        data-dfp-event-label={event.flightNumber || event.eventCode || event.id}
+                        data-dfp-resource-id={event.resourceId}
                         draggable
                         onDragStart={(dragEvent) => {
                             setFlightLineDraggedAircraftNumber(aircraftNumber);
@@ -7973,6 +7978,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                     >
                                                         <div
                                                             className="absolute inset-0 flex flex-col items-center justify-center rounded-md border border-dashed border-slate-500/45 bg-[#4f5357]/25 px-1 text-center font-black text-slate-300/70 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.18)] transition-all duration-300 ease-out"
+                                                            data-dfp-context-kind="aircraft-slot"
+                                                            data-dfp-aircraft-number={number}
+                                                            data-dfp-resource-label={tailNumber}
                                                             title={`${tailNumber} slot`}
                                                         >
                                                             {flightLinePoolContext.prefix ? (
@@ -7982,6 +7990,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                         </div>
                                                         {!isUnavailable ? (
                                                             <div
+                                                                data-dfp-context-kind="aircraft"
+                                                                data-dfp-aircraft-number={number}
+                                                                data-dfp-resource-label={tailNumber}
                                                                 draggable
                                                                 onDragStart={(event) => {
                                                                     setFlightLineDraggedAircraftNumber(number);
@@ -8032,6 +8043,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                     return (
                                                         <div
                                                             key={`flight-line-unavailable-aircraft-tile-${number}`}
+                                                            data-dfp-context-kind="aircraft"
+                                                            data-dfp-aircraft-number={number}
+                                                            data-dfp-resource-label={tailNumber}
                                                             draggable
                                                             onDragStart={(event) => {
                                                                 setFlightLineDraggedAircraftNumber(number);

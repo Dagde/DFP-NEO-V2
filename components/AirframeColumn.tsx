@@ -109,10 +109,20 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
                 
             const hoverClass = isDraggable ? 'hover:bg-gray-700' : '';
             const dragClass = draggedIndex === index ? 'opacity-50 bg-sky-900' : '';
+            const contextKind = resource === 'Duty Sup'
+                ? 'duty-supervisor'
+                : resource.startsWith('FTD') || resource.startsWith('CPT')
+                    ? 'simulator-resource'
+                    : resource.startsWith('PC-21') || resource.startsWith('Deployed') || resource.startsWith('STBY') || resource.startsWith('BNF-STBY')
+                        ? 'aircraft-resource'
+                        : 'resource';
           
           return (
             <li
               key={`${resource}-${index}`}
+              data-dfp-context-kind={contextKind}
+              data-dfp-resource-id={resource}
+              data-dfp-resource-label={displayText}
               draggable={isDraggable}
               onDragStart={() => isDraggable && handleDragStart(index)}
               onDragOver={handleDragOver}

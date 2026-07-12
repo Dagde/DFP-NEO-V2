@@ -8732,6 +8732,14 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     "div",
     {
       "data-is-flight-tile": "true",
+      "data-dfp-context-kind": isDutySup ? "duty-supervisor" : event.type === "ftd" || event.type === "cpt" ? "simulator" : event.type === "flight" ? "flight-tile" : event.type === "ground" ? "ground-event" : event.type === "deployment" ? "deployment" : "event",
+      "data-dfp-event-id": event.id,
+      "data-dfp-event-type": event.type,
+      "data-dfp-event-label": event.flightNumber || event.eventCode || event.id,
+      "data-dfp-resource-id": event.resourceId,
+      "data-dfp-aircraft-number": event.aircraftNumber || "",
+      "data-dfp-primary-person": picName || "",
+      "data-dfp-secondary-person": typeof studentDisplay === "string" ? studentDisplay : displayStudentNameForRender || "",
       style,
       className: finalClasses.join(" "),
       onClick: onSelectEvent,
@@ -8889,9 +8897,13 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
     const borderClass = isCategoryStart ? "border-t-2 border-t-gray-500 border-b border-b-gray-700/50" : "border-b border-gray-700/50";
     const hoverClass = isDraggable ? "hover:bg-gray-700" : "";
     const dragClass = draggedIndex === index ? "opacity-50 bg-sky-900" : "";
+    const contextKind = resource === "Duty Sup" ? "duty-supervisor" : resource.startsWith("FTD") || resource.startsWith("CPT") ? "simulator-resource" : resource.startsWith("PC-21") || resource.startsWith("Deployed") || resource.startsWith("STBY") || resource.startsWith("BNF-STBY") ? "aircraft-resource" : "resource";
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
       "li",
       {
+        "data-dfp-context-kind": contextKind,
+        "data-dfp-resource-id": resource,
+        "data-dfp-resource-label": displayText,
         draggable: isDraggable,
         onDragStart: () => isDraggable && handleDragStart(index),
         onDragOver: handleDragOver,
@@ -15813,6 +15825,11 @@ const ScheduleView = ({
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
+        "data-dfp-context-kind": "aircraft",
+        "data-dfp-aircraft-number": aircraftNumber,
+        "data-dfp-event-id": event.id,
+        "data-dfp-event-label": event.flightNumber || event.eventCode || event.id,
+        "data-dfp-resource-id": event.resourceId,
         draggable: true,
         onDragStart: (dragEvent) => {
           setFlightLineDraggedAircraftNumber(aircraftNumber);
@@ -16113,6 +16130,9 @@ const ScheduleView = ({
                                 "div",
                                 {
                                   className: "absolute inset-0 flex flex-col items-center justify-center rounded-md border border-dashed border-slate-500/45 bg-[#4f5357]/25 px-1 text-center font-black text-slate-300/70 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.18)] transition-all duration-300 ease-out",
+                                  "data-dfp-context-kind": "aircraft-slot",
+                                  "data-dfp-aircraft-number": number,
+                                  "data-dfp-resource-label": tailNumber,
                                   title: `${tailNumber} slot`,
                                   children: [
                                     flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-300/55", children: flightLinePoolContext.prefix }) : null,
@@ -16123,6 +16143,9 @@ const ScheduleView = ({
                               !isUnavailable ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
                                 "div",
                                 {
+                                  "data-dfp-context-kind": "aircraft",
+                                  "data-dfp-aircraft-number": number,
+                                  "data-dfp-resource-label": tailNumber,
                                   draggable: true,
                                   onDragStart: (event) => {
                                     setFlightLineDraggedAircraftNumber(number);
@@ -16173,6 +16196,9 @@ const ScheduleView = ({
                         return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                           "div",
                           {
+                            "data-dfp-context-kind": "aircraft",
+                            "data-dfp-aircraft-number": number,
+                            "data-dfp-resource-label": tailNumber,
                             draggable: true,
                             onDragStart: (event) => {
                               setFlightLineDraggedAircraftNumber(number);
@@ -101422,10 +101448,57 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   _diagFinalizeInstructors();
   return sortedEvents;
 }
+const getContextDatasetValue = (element, key) => element?.dataset?.[key] || "";
+const DfpContextMenu = ({ menu, onClose }) => {
+  if (!menu) return null;
+  const estimatedWidth = 250;
+  const estimatedHeight = Math.min(360, 58 + menu.items.length * 42);
+  const left = Math.min(menu.x, Math.max(8, window.innerWidth - estimatedWidth - 8));
+  const top = Math.min(menu.y, Math.max(8, window.innerHeight - estimatedHeight - 8));
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      className: "fixed z-[900] min-w-[230px] max-w-[280px] overflow-hidden rounded-md border border-slate-500/45 bg-slate-950/98 text-slate-100 shadow-2xl shadow-black/45 backdrop-blur",
+      style: { left, top },
+      role: "menu",
+      "aria-label": "DFP NEO context menu",
+      onMouseDown: (event) => event.stopPropagation(),
+      onClick: (event) => event.stopPropagation(),
+      onContextMenu: (event) => event.preventDefault(),
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-slate-700/80 bg-slate-900/80 px-3 py-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300", children: "DFP NEO" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-sm font-bold text-white", children: menu.title }),
+          menu.subtitle && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-[11px] font-semibold text-slate-400", children: menu.subtitle })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "py-1", children: menu.items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            role: "menuitem",
+            disabled: item.disabled,
+            onClick: () => {
+              if (item.disabled) return;
+              onClose();
+              item.onSelect?.();
+            },
+            className: `block w-full px-3 py-2 text-left transition ${item.disabled ? "cursor-not-allowed text-slate-500" : item.danger ? "text-red-200 hover:bg-red-950/55" : "text-slate-100 hover:bg-cyan-500/12"}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold", children: item.label }),
+              item.detail && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold leading-3 text-slate-500", children: item.detail })
+            ]
+          },
+          `${item.label}-${index}`
+        )) })
+      ]
+    }
+  );
+};
 const App = () => {
   const zoomLevel = 1;
   const setupTestProfile = getSetupTestProfile();
   const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = reactExports.useState(false);
+  const [dfpContextMenu, setDfpContextMenu] = reactExports.useState(null);
   const { theme } = useTheme();
   const { checkAndWarn, freezeState } = useSystemFreeze$1();
   const freezeStateRef = React.useRef(freezeState);
@@ -116695,6 +116768,181 @@ ${error instanceof Error ? error.message : String(error)}`,
       return affectedPersonnel.some((person) => buildIntelligencePersonnelSet.has(person));
     });
   }, [buildIntelligenceEvents, buildIntelligencePersonnelSet, cancellationRecords]);
+  const closeDfpContextMenu = reactExports.useCallback(() => {
+    setDfpContextMenu(null);
+  }, []);
+  reactExports.useEffect(() => {
+    if (!dfpContextMenu) return;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") closeDfpContextMenu();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [closeDfpContextMenu, dfpContextMenu]);
+  reactExports.useEffect(() => {
+    closeDfpContextMenu();
+  }, [activeView, closeDfpContextMenu]);
+  const formatContextMenuTime = reactExports.useCallback((time) => {
+    if (typeof time !== "number" || !Number.isFinite(time)) return "";
+    const hours = Math.floor(time);
+    const minutes = Math.round((time - hours) * 60);
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  }, []);
+  const getContextMenuEvent = reactExports.useCallback((eventId) => {
+    if (!eventId) return null;
+    return (eventSegmentsForDate || []).find((event) => event.id === eventId) || (publishedSchedules[date] || []).find((event) => event.id === eventId) || null;
+  }, [date, eventSegmentsForDate, publishedSchedules]);
+  const copyContextSummary = reactExports.useCallback((summary) => {
+    if (!summary) return;
+    navigator.clipboard?.writeText(summary).catch(() => {
+    });
+  }, []);
+  const handleDfpWorkspaceContextMenu = reactExports.useCallback((event) => {
+    const target = event.target;
+    const workspace = event.currentTarget;
+    if (!target || !workspace.contains(target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const contextElement = target.closest("[data-dfp-context-kind]");
+    const gridElement = target.closest('[data-schedule-grid="true"]');
+    const contextKind = getContextDatasetValue(contextElement, "dfpContextKind");
+    const eventId = getContextDatasetValue(contextElement, "dfpEventId");
+    const resourceId = getContextDatasetValue(contextElement, "dfpResourceId");
+    const aircraftNumber = getContextDatasetValue(contextElement, "dfpAircraftNumber");
+    const resourceLabel = getContextDatasetValue(contextElement, "dfpResourceLabel") || resourceId;
+    const eventLabel = getContextDatasetValue(contextElement, "dfpEventLabel");
+    const primaryPerson = getContextDatasetValue(contextElement, "dfpPrimaryPerson");
+    const secondaryPerson = getContextDatasetValue(contextElement, "dfpSecondaryPerson");
+    const selectedEvent2 = getContextMenuEvent(eventId);
+    const canEditActiveDfp = canEditDfpTiles && !isViewingPastDfp;
+    const canUseValidation = canRunValidation;
+    const menuItems = [];
+    let title = "DFP Workspace";
+    let subtitle = activeView;
+    let kind = contextKind || "workspace";
+    const openEventDetails = () => {
+      if (selectedEvent2) handleOpenModal(selectedEvent2);
+    };
+    const eventSummary = selectedEvent2 ? `${selectedEvent2.flightNumber || eventLabel || selectedEvent2.id} ${selectedEvent2.resourceId || ""} ${formatContextMenuTime(selectedEvent2.startTime)}-${formatContextMenuTime(selectedEvent2.startTime + selectedEvent2.duration)}`.trim() : "";
+    if (selectedEvent2 && contextKind !== "aircraft" && contextKind !== "aircraft-slot") {
+      const isSimulatorEvent = selectedEvent2.type === "ftd" || selectedEvent2.type === "cpt";
+      const isDutySupervisor = contextKind === "duty-supervisor" || selectedEvent2.resourceId === "Duty Sup";
+      title = isDutySupervisor ? "Duty Supervisor" : isSimulatorEvent ? `Simulator ${selectedEvent2.flightNumber || eventLabel || ""}`.trim() : selectedEvent2.type === "flight" ? `Flight ${selectedEvent2.flightNumber || eventLabel || ""}`.trim() : selectedEvent2.flightNumber || eventLabel || "Schedule Event";
+      subtitle = [
+        selectedEvent2.resourceId,
+        `${formatContextMenuTime(selectedEvent2.startTime)}-${formatContextMenuTime(selectedEvent2.startTime + selectedEvent2.duration)}`,
+        primaryPerson || selectedEvent2.instructor || selectedEvent2.pilot || "",
+        secondaryPerson || selectedEvent2.student || selectedEvent2.crew || ""
+      ].filter(Boolean).join(" | ");
+      menuItems.push(
+        { label: "Open Details", detail: "Open the selected schedule event.", onSelect: openEventDetails },
+        { label: "Edit Event", detail: canEditActiveDfp ? "Open details in the normal edit workflow." : "Tile editing is not available for this DFP.", disabled: !canEditActiveDfp, onSelect: openEventDetails },
+        { label: selectedEvent2.type === "flight" ? "Assign Aircraft" : "Open Flight Line", detail: "Open the aircraft flight-line panel.", disabled: !canEditActiveDfp, onSelect: () => {
+          setShowDfpSidePanel(false);
+          setShowFlightLinePanel(true);
+        } },
+        { label: "Select Tile", detail: "Add this tile to the current DFP selection.", onSelect: () => {
+          setSelectedEventIds(/* @__PURE__ */ new Set([...Array.from(selectedEventIds), selectedEvent2.id]));
+        } },
+        { label: "Copy Event Summary", detail: eventSummary, onSelect: () => copyContextSummary(eventSummary) }
+      );
+      if (canUseValidation) {
+        menuItems.push({ label: showValidation ? "Hide Validation" : "Show Validation", detail: "Toggle schedule validation overlay.", onSelect: () => setShowValidation(!showValidation) });
+      }
+    } else if (aircraftNumber || contextKind === "aircraft" || contextKind === "aircraft-slot") {
+      title = aircraftNumber ? `Aircraft ${aircraftNumber}` : "Aircraft";
+      subtitle = [resourceLabel || "Flight Line", selectedEvent2 ? selectedEvent2.flightNumber || eventLabel : ""].filter(Boolean).join(" | ");
+      kind = "aircraft";
+      menuItems.push(
+        { label: "Open Flight Line", detail: "Open aircraft inventory and unavailable bays.", onSelect: () => {
+          setShowDfpSidePanel(false);
+          setShowFlightLinePanel(true);
+        } },
+        { label: "Copy Aircraft Number", detail: aircraftNumber || resourceLabel, disabled: !(aircraftNumber || resourceLabel), onSelect: () => copyContextSummary(aircraftNumber || resourceLabel) }
+      );
+    } else if (resourceId || contextKind === "aircraft-resource" || contextKind === "simulator-resource" || contextKind === "resource") {
+      const isSimulatorResource = contextKind === "simulator-resource";
+      const isDutySupervisorResource = contextKind === "duty-supervisor" || resourceId === "Duty Sup";
+      title = isDutySupervisorResource ? "Duty Supervisor Row" : isSimulatorResource ? `Simulator ${resourceLabel || resourceId}`.trim() : contextKind === "aircraft-resource" ? `Aircraft Row ${resourceLabel || resourceId}`.trim() : resourceLabel || resourceId || "Resource Row";
+      subtitle = "Schedule resource";
+      menuItems.push(
+        { label: "Copy Resource Name", detail: resourceLabel || resourceId, onSelect: () => copyContextSummary(resourceLabel || resourceId) },
+        { label: "Open Flight Line", detail: "Open aircraft inventory and unavailable bays.", onSelect: () => {
+          setShowDfpSidePanel(false);
+          setShowFlightLinePanel(true);
+        } }
+      );
+      if (canUseValidation) {
+        menuItems.push({ label: showValidation ? "Hide Validation" : "Show Validation", detail: "Toggle schedule validation overlay.", onSelect: () => setShowValidation(!showValidation) });
+      }
+    } else if (gridElement) {
+      const rect = gridElement.getBoundingClientRect();
+      const pixelsPerHour = Number(gridElement.dataset.schedulePixelsPerHour || 200);
+      const startHour = Number(gridElement.dataset.scheduleStartHour || 0);
+      const time = startHour + Math.max(0, event.clientX - rect.left) / Math.max(1, pixelsPerHour);
+      const rowIndex = Math.floor(Math.max(0, event.clientY - rect.top) / 32);
+      const gridResource = buildResources[rowIndex] || "";
+      title = "Empty Schedule Space";
+      subtitle = [gridResource, formatContextMenuTime(time)].filter(Boolean).join(" | ");
+      kind = "empty-schedule-space";
+      menuItems.push(
+        { label: "Add Flight Tile", detail: canEditActiveDfp ? "Create a new flight event." : "Tile editing is not available for this DFP.", disabled: !canEditActiveDfp, onSelect: () => {
+          setIsAddingTile(true);
+          handleOpenModal(null, { type: "flight" });
+        } },
+        { label: "Add Ground Tile", detail: canEditActiveDfp ? "Create a new ground event." : "Tile editing is not available for this DFP.", disabled: !canEditActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
+        { label: "Open Flight Line", detail: "Open aircraft inventory and unavailable bays.", onSelect: () => {
+          setShowDfpSidePanel(false);
+          setShowFlightLinePanel(true);
+        } }
+      );
+      if (canUseValidation) {
+        menuItems.push({ label: showValidation ? "Hide Validation" : "Show Validation", detail: "Toggle schedule validation overlay.", onSelect: () => setShowValidation(!showValidation) });
+      }
+    } else {
+      title = "DFP Workspace";
+      subtitle = activeView;
+      kind = "workspace";
+      menuItems.push(
+        { label: activeView === "Program Schedule" ? "Open Flight Line" : "Go To DFP", detail: "Return to the main schedule workspace.", onSelect: () => {
+          if (activeView !== "Program Schedule") handleNavigation("Program Schedule");
+          else setShowFlightLinePanel(true);
+        } },
+        { label: "Open Admin Panel", detail: "Available to platform administrators.", disabled: !["ADMIN", "SUPER_ADMIN"].includes(String(sessionUser?.role || authUser?.role || "").toUpperCase()), onSelect: () => setShowAdminPanel(true) }
+      );
+    }
+    if (menuItems.length === 0) return;
+    setDfpContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      title,
+      subtitle,
+      kind,
+      items: menuItems
+    });
+  }, [
+    activeView,
+    authUser?.role,
+    buildResources,
+    canEditDfpTiles,
+    canRunValidation,
+    closeDfpContextMenu,
+    copyContextSummary,
+    formatContextMenuTime,
+    getContextMenuEvent,
+    handleNavigation,
+    handleOpenModal,
+    isViewingPastDfp,
+    selectedEventIds,
+    sessionUser?.role,
+    setSelectedEventIds,
+    showValidation
+  ]);
+  const handleDfpWorkspaceMouseDownCapture = reactExports.useCallback((event) => {
+    if (event.button === 0 && dfpContextMenu) {
+      closeDfpContextMenu();
+    }
+  }, [closeDfpContextMenu, dfpContextMenu]);
   const renderActiveView = () => {
     switch (activeView) {
       case "Program Schedule":
@@ -119464,245 +119712,256 @@ Do you want to replace the existing entry?`,
             ]
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1 overflow-hidden flex flex-row min-h-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderActiveView() }),
-          activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "aside",
-            {
-              className: `absolute inset-y-0 right-0 z-40 w-[40%] min-w-[360px] max-w-[680px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
-              "aria-hidden": !showDfpSidePanel,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => setShowDfpSidePanel((value) => !value),
-                    "aria-label": showDfpSidePanel ? "Close DFP side panel" : "Open DFP side panel",
-                    className: "absolute left-[-56px] top-1/2 z-50 flex h-7 w-[96px] -translate-y-1/2 -rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "span",
-                        {
-                          className: "h-4 w-7 opacity-80",
-                          style: {
-                            backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                            backgroundSize: "8px 8px"
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "relative flex-1 overflow-hidden flex flex-row min-h-0",
+            "data-dfp-workspace": "true",
+            onContextMenu: handleDfpWorkspaceContextMenu,
+            onMouseDownCapture: handleDfpWorkspaceMouseDownCapture,
+            onScrollCapture: closeDfpContextMenu,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(DfpContextMenu, { menu: dfpContextMenu, onClose: closeDfpContextMenu }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderActiveView() }),
+              activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "aside",
+                {
+                  className: `absolute inset-y-0 right-0 z-40 w-[40%] min-w-[360px] max-w-[680px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
+                  "aria-hidden": !showDfpSidePanel,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setShowDfpSidePanel((value) => !value),
+                        "aria-label": showDfpSidePanel ? "Close DFP side panel" : "Open DFP side panel",
+                        className: "absolute left-[-56px] top-1/2 z-50 flex h-7 w-[96px] -translate-y-1/2 -rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "span",
+                            {
+                              className: "h-4 w-7 opacity-80",
+                              style: {
+                                backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                                backgroundSize: "8px 8px"
+                              }
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: showDfpSidePanel ? "v" : "^" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "span",
+                            {
+                              className: "h-4 w-7 opacity-80",
+                              style: {
+                                backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                                backgroundSize: "8px 8px"
+                              }
+                            }
+                          )
+                        ]
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-y-auto border-l border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      DfpSidePanelTimeline,
+                      {
+                        flyingStartTime,
+                        flyingEndTime,
+                        onUpdateFlyingStartTime: setFlyingStartTime,
+                        onUpdateFlyingEndTime: setFlyingEndTime,
+                        ftdStartTime,
+                        ftdEndTime,
+                        onUpdateFtdStartTime: setFtdStartTime,
+                        onUpdateFtdEndTime: setFtdEndTime,
+                        allowNightFlying,
+                        commenceNightFlying,
+                        ceaseNightFlying,
+                        onUpdateAllowNightFlying: setAllowNightFlying,
+                        onUpdateCommenceNightFlying: setCommenceNightFlying,
+                        onUpdateCeaseNightFlying: setCeaseNightFlying,
+                        flyingWindowExclusions,
+                        onUpdateFlyingWindowExclusions: handleUpdateFlyingWindowExclusions,
+                        date,
+                        activeDfpEvents: publishedSchedules[date] || [],
+                        resources: buildResources,
+                        instructors: instructorsData,
+                        syllabusDetails: visibleSyllabusDetails,
+                        taskProfiles: activeTaskProfiles,
+                        taskProfileAbbreviations: activeTaskProfileAbbreviations,
+                        coursePriorities,
+                        onUpdateCoursePriorities: setCoursePriorities,
+                        coursePercentages,
+                        onUpdateCoursePercentages: setCoursePercentages,
+                        packagePriorities,
+                        onUpdatePackagePriorities: setPackagePriorities,
+                        currencyNames,
+                        airCombatSchedulingWeights,
+                        onUpdateAirCombatSchedulingWeights: handleUpdateAirCombatSchedulingWeights,
+                        fixedCrewTrainingPriorities,
+                        onUpdateFixedCrewTrainingPriorities: setFixedCrewTrainingPriorities,
+                        highestPriorityEvents,
+                        onAddPriorityEvents: (eventsToAdd) => {
+                          setHighestPriorityEvents((prev) => {
+                            const incomingIds = new Set(eventsToAdd.map((event) => event.id));
+                            return [
+                              ...prev.filter((event) => !incomingIds.has(event.id)),
+                              ...eventsToAdd
+                            ];
+                          });
+                        },
+                        onDeletePriorityEvent: handleDeletePriorityEvent,
+                        sctFlights,
+                        sctFtds,
+                        onAddSctRequestFromAssist: async (type, request) => {
+                          if (type === "flight") setSctFlights((prev) => [...prev, request]);
+                          else setSctFtds((prev) => [...prev, request]);
+                          const userId = getCurrentUserId();
+                          if (!userId) return;
+                          try {
+                            const res = await fetch("/api/sct-requests", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ ...request, userId, requestType: type })
+                            });
+                            if (res.ok) {
+                              const saved = await res.json();
+                              const updater = (prev) => prev.map((item) => item.id === request.id ? { ...item, id: saved.id } : item);
+                              if (type === "flight") setSctFlights(updater);
+                              else setSctFtds(updater);
+                            }
+                          } catch (err) {
+                            console.error("Failed to save NEO Assist SCT request:", err);
                           }
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: showDfpSidePanel ? "v" : "^" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "span",
-                        {
-                          className: "h-4 w-7 opacity-80",
-                          style: {
-                            backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                            backgroundSize: "8px 8px"
-                          }
-                        }
-                      )
-                    ]
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-y-auto border-l border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  DfpSidePanelTimeline,
-                  {
-                    flyingStartTime,
-                    flyingEndTime,
-                    onUpdateFlyingStartTime: setFlyingStartTime,
-                    onUpdateFlyingEndTime: setFlyingEndTime,
-                    ftdStartTime,
-                    ftdEndTime,
-                    onUpdateFtdStartTime: setFtdStartTime,
-                    onUpdateFtdEndTime: setFtdEndTime,
-                    allowNightFlying,
-                    commenceNightFlying,
-                    ceaseNightFlying,
-                    onUpdateAllowNightFlying: setAllowNightFlying,
-                    onUpdateCommenceNightFlying: setCommenceNightFlying,
-                    onUpdateCeaseNightFlying: setCeaseNightFlying,
-                    flyingWindowExclusions,
-                    onUpdateFlyingWindowExclusions: handleUpdateFlyingWindowExclusions,
-                    date,
-                    activeDfpEvents: publishedSchedules[date] || [],
-                    resources: buildResources,
-                    instructors: instructorsData,
-                    syllabusDetails: visibleSyllabusDetails,
-                    taskProfiles: activeTaskProfiles,
-                    taskProfileAbbreviations: activeTaskProfileAbbreviations,
-                    coursePriorities,
-                    onUpdateCoursePriorities: setCoursePriorities,
-                    coursePercentages,
-                    onUpdateCoursePercentages: setCoursePercentages,
-                    packagePriorities,
-                    onUpdatePackagePriorities: setPackagePriorities,
-                    currencyNames,
-                    airCombatSchedulingWeights,
-                    onUpdateAirCombatSchedulingWeights: handleUpdateAirCombatSchedulingWeights,
-                    fixedCrewTrainingPriorities,
-                    onUpdateFixedCrewTrainingPriorities: setFixedCrewTrainingPriorities,
-                    highestPriorityEvents,
-                    onAddPriorityEvents: (eventsToAdd) => {
-                      setHighestPriorityEvents((prev) => {
-                        const incomingIds = new Set(eventsToAdd.map((event) => event.id));
-                        return [
-                          ...prev.filter((event) => !incomingIds.has(event.id)),
-                          ...eventsToAdd
-                        ];
-                      });
-                    },
-                    onDeletePriorityEvent: handleDeletePriorityEvent,
-                    sctFlights,
-                    sctFtds,
-                    onAddSctRequestFromAssist: async (type, request) => {
-                      if (type === "flight") setSctFlights((prev) => [...prev, request]);
-                      else setSctFtds((prev) => [...prev, request]);
-                      const userId = getCurrentUserId();
-                      if (!userId) return;
-                      try {
-                        const res = await fetch("/api/sct-requests", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ ...request, userId, requestType: type })
-                        });
-                        if (res.ok) {
-                          const saved = await res.json();
-                          const updater = (prev) => prev.map((item) => item.id === request.id ? { ...item, id: saved.id } : item);
+                        },
+                        onPatchSctRequestFromAssist: async (id, updates, type) => {
+                          const updater = (prev) => prev.map((request) => request.id === id ? { ...request, ...updates } : request);
                           if (type === "flight") setSctFlights(updater);
                           else setSctFtds(updater);
+                          setNextDayBuildEvents((prev) => prev.filter((event) => event.id !== `sct-${type}-${id}`));
+                          try {
+                            await fetch(`/api/sct-requests/${id}`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify(updates)
+                            });
+                          } catch (err) {
+                            console.error("Failed to patch NEO Assist SCT request:", err);
+                          }
+                        },
+                        onSyncSctRequestsFromAssist: syncPriorityEventsWithSctAndRemedial,
+                        availableAircraftCount: neoAvailableAircraftCount,
+                        onUpdateAircraftCount: handleUpdateNeoAvailableAircraftCount,
+                        maxAircraftCount: configuredAirframeCount,
+                        aircraftConfigCapacities: neoAircraftConfigCapacities,
+                        aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
+                        aircraftCrewComposition: activeAircraftCrewComposition,
+                        crewPositionTerminology: activeCrewPositionTerminology,
+                        onUpdateAircraftConfigCapacities: handleUpdateNeoAircraftConfigCapacities,
+                        availableFtdCount,
+                        onUpdateFtdCount: setAvailableFtdCount,
+                        maxFtdCount: configuredFtdCount,
+                        availableCptCount,
+                        onUpdateCptCount: setAvailableCptCount,
+                        maxCptCount: configuredCptCount,
+                        locationCode: school,
+                        trainingAreas: activeTrainingAreas,
+                        callsignOptions: neoAssistCallsignOptions,
+                        staffListNames: neoAssistStaffListNames,
+                        formatResourceLabel: formatResourceDisplayLabel,
+                        operationalModel: activeOperationalModel,
+                        activeUnitCode,
+                        activeAircraftType: activeRuntimeAircraftType,
+                        staffQualificationCatalogue: activeStaffQualificationCatalogue,
+                        unitCallsignSettings: activeUnitCallsignSettings,
+                        scheduleZoomLevel: zoomLevel,
+                        onRunNeoBuild: handleBuildDfp,
+                        onOpenPrioritiesExclusions: () => {
+                          try {
+                            localStorage.setItem("neo_open_departure_arrival_exclusions", "1");
+                          } catch {
+                          }
+                          setShowDfpSidePanel(false);
+                          handleNavigation("Priorities");
                         }
-                      } catch (err) {
-                        console.error("Failed to save NEO Assist SCT request:", err);
                       }
-                    },
-                    onPatchSctRequestFromAssist: async (id, updates, type) => {
-                      const updater = (prev) => prev.map((request) => request.id === id ? { ...request, ...updates } : request);
-                      if (type === "flight") setSctFlights(updater);
-                      else setSctFtds(updater);
-                      setNextDayBuildEvents((prev) => prev.filter((event) => event.id !== `sct-${type}-${id}`));
-                      try {
-                        await fetch(`/api/sct-requests/${id}`, {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify(updates)
-                        });
-                      } catch (err) {
-                        console.error("Failed to patch NEO Assist SCT request:", err);
-                      }
-                    },
-                    onSyncSctRequestsFromAssist: syncPriorityEventsWithSctAndRemedial,
-                    availableAircraftCount: neoAvailableAircraftCount,
-                    onUpdateAircraftCount: handleUpdateNeoAvailableAircraftCount,
-                    maxAircraftCount: configuredAirframeCount,
-                    aircraftConfigCapacities: neoAircraftConfigCapacities,
-                    aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
-                    aircraftCrewComposition: activeAircraftCrewComposition,
-                    crewPositionTerminology: activeCrewPositionTerminology,
-                    onUpdateAircraftConfigCapacities: handleUpdateNeoAircraftConfigCapacities,
-                    availableFtdCount,
-                    onUpdateFtdCount: setAvailableFtdCount,
-                    maxFtdCount: configuredFtdCount,
-                    availableCptCount,
-                    onUpdateCptCount: setAvailableCptCount,
-                    maxCptCount: configuredCptCount,
-                    locationCode: school,
-                    trainingAreas: activeTrainingAreas,
-                    callsignOptions: neoAssistCallsignOptions,
-                    staffListNames: neoAssistStaffListNames,
-                    formatResourceLabel: formatResourceDisplayLabel,
-                    operationalModel: activeOperationalModel,
-                    activeUnitCode,
-                    activeAircraftType: activeRuntimeAircraftType,
-                    staffQualificationCatalogue: activeStaffQualificationCatalogue,
-                    unitCallsignSettings: activeUnitCallsignSettings,
-                    scheduleZoomLevel: zoomLevel,
-                    onRunNeoBuild: handleBuildDfp,
-                    onOpenPrioritiesExclusions: () => {
-                      try {
-                        localStorage.setItem("neo_open_departure_arrival_exclusions", "1");
-                      } catch {
-                      }
-                      setShowDfpSidePanel(false);
-                      handleNavigation("Priorities");
-                    }
-                  }
-                ) })
-              ]
-            }
-          ),
-          showPausePanel && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            PauseFlightOpsPanel,
-            {
-              isOpen: showPausePanel,
-              onClose: () => {
-                setShowPausePanel(false);
-                setPauseIsSelectingCompleted(false);
-                setPauseCompletedEventIds(/* @__PURE__ */ new Set());
-                setPausePanelPhase("configure");
-                setPauseStagedEvents([]);
-                setPauseOverlayStart(null);
-                setPauseOverlayEnd(null);
-              },
-              date,
-              eventsForDate: (() => {
-                const seenIds = /* @__PURE__ */ new Set();
-                const seenSlots = /* @__PURE__ */ new Set();
-                return (publishedSchedules[date] || []).filter((e) => {
-                  if (seenIds.has(e.id)) return false;
-                  if (!e.date || typeof e.date !== "string" || !e.date.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
-                  if (e.resourceId && (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY"))) return false;
-                  const slotKey = `${e.flightNumber}__${e.startTime}__${e.type}`;
-                  if (seenSlots.has(slotKey)) return false;
-                  seenIds.add(e.id);
-                  seenSlots.add(slotKey);
-                  return true;
-                });
-              })(),
-              flyingStartTime,
-              flyingEndTime,
-              ftdStartTime,
-              ftdEndTime,
-              onBuildPause: handlePauseBuild,
-              onPublish: handlePausePublish,
-              authUser,
-              onSelectModeChange: (active) => setPauseIsSelectingCompleted(active),
-              completedEventIds: pauseCompletedEventIds,
-              onCompletedEventIdsChange: setPauseCompletedEventIds,
-              onStagedEventsReady: (events2) => {
-                if (events2 !== null) {
-                  const seenIds = /* @__PURE__ */ new Set();
-                  const deduped = events2.filter((e) => {
-                    if (seenIds.has(e.id)) return false;
-                    seenIds.add(e.id);
-                    return true;
-                  }).map((e) => {
-                    const { date: _d, ...rest } = e;
-                    return rest;
-                  });
-                  setNextDayBuildEvents(deduped);
-                } else {
-                  setNextDayBuildEvents(pauseOriginalEvents);
+                    ) })
+                  ]
                 }
-              },
-              onRevert: () => {
-                setNextDayBuildEvents(pauseOriginalEvents);
-                setPauseCompletedEventIds(/* @__PURE__ */ new Set());
-                setPauseIsSelectingCompleted(false);
-                setPauseOverlayStart(null);
-                setPauseOverlayEnd(null);
-              },
-              phase: pausePanelPhase,
-              onPhaseChange: setPausePanelPhase,
-              stagedEvents: pauseStagedEvents,
-              onStagedEventsChange: setPauseStagedEvents,
-              onOverlayTimesChange: (start, end) => {
-                setPauseOverlayStart(start);
-                setPauseOverlayEnd(end);
-              },
-              resourceDisplayNames
-            }
-          )
-        ] })
+              ),
+              showPausePanel && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                PauseFlightOpsPanel,
+                {
+                  isOpen: showPausePanel,
+                  onClose: () => {
+                    setShowPausePanel(false);
+                    setPauseIsSelectingCompleted(false);
+                    setPauseCompletedEventIds(/* @__PURE__ */ new Set());
+                    setPausePanelPhase("configure");
+                    setPauseStagedEvents([]);
+                    setPauseOverlayStart(null);
+                    setPauseOverlayEnd(null);
+                  },
+                  date,
+                  eventsForDate: (() => {
+                    const seenIds = /* @__PURE__ */ new Set();
+                    const seenSlots = /* @__PURE__ */ new Set();
+                    return (publishedSchedules[date] || []).filter((e) => {
+                      if (seenIds.has(e.id)) return false;
+                      if (!e.date || typeof e.date !== "string" || !e.date.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
+                      if (e.resourceId && (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY"))) return false;
+                      const slotKey = `${e.flightNumber}__${e.startTime}__${e.type}`;
+                      if (seenSlots.has(slotKey)) return false;
+                      seenIds.add(e.id);
+                      seenSlots.add(slotKey);
+                      return true;
+                    });
+                  })(),
+                  flyingStartTime,
+                  flyingEndTime,
+                  ftdStartTime,
+                  ftdEndTime,
+                  onBuildPause: handlePauseBuild,
+                  onPublish: handlePausePublish,
+                  authUser,
+                  onSelectModeChange: (active) => setPauseIsSelectingCompleted(active),
+                  completedEventIds: pauseCompletedEventIds,
+                  onCompletedEventIdsChange: setPauseCompletedEventIds,
+                  onStagedEventsReady: (events2) => {
+                    if (events2 !== null) {
+                      const seenIds = /* @__PURE__ */ new Set();
+                      const deduped = events2.filter((e) => {
+                        if (seenIds.has(e.id)) return false;
+                        seenIds.add(e.id);
+                        return true;
+                      }).map((e) => {
+                        const { date: _d, ...rest } = e;
+                        return rest;
+                      });
+                      setNextDayBuildEvents(deduped);
+                    } else {
+                      setNextDayBuildEvents(pauseOriginalEvents);
+                    }
+                  },
+                  onRevert: () => {
+                    setNextDayBuildEvents(pauseOriginalEvents);
+                    setPauseCompletedEventIds(/* @__PURE__ */ new Set());
+                    setPauseIsSelectingCompleted(false);
+                    setPauseOverlayStart(null);
+                    setPauseOverlayEnd(null);
+                  },
+                  phase: pausePanelPhase,
+                  onPhaseChange: setPausePanelPhase,
+                  stagedEvents: pauseStagedEvents,
+                  onStagedEventsChange: setPauseStagedEvents,
+                  onOverlayTimesChange: (start, end) => {
+                    setPauseOverlayStart(start);
+                    setPauseOverlayEnd(end);
+                  },
+                  resourceDisplayNames
+                }
+              )
+            ]
+          }
+        )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         RightSidebar,

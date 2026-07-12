@@ -20858,11 +20858,89 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 }
 
 
+type DfpContextMenuItem = {
+    label: string;
+    detail?: string;
+    disabled?: boolean;
+    danger?: boolean;
+    onSelect?: () => void;
+};
+
+type DfpContextMenuState = {
+    x: number;
+    y: number;
+    title: string;
+    subtitle?: string;
+    kind: string;
+    items: DfpContextMenuItem[];
+};
+
+const getContextDatasetValue = (element: HTMLElement | null, key: string): string => (
+    element?.dataset?.[key] || ''
+);
+
+const DfpContextMenu: React.FC<{
+    menu: DfpContextMenuState | null;
+    onClose: () => void;
+}> = ({ menu, onClose }) => {
+    if (!menu) return null;
+
+    const estimatedWidth = 250;
+    const estimatedHeight = Math.min(360, 58 + (menu.items.length * 42));
+    const left = Math.min(menu.x, Math.max(8, window.innerWidth - estimatedWidth - 8));
+    const top = Math.min(menu.y, Math.max(8, window.innerHeight - estimatedHeight - 8));
+
+    return (
+        <div
+            className="fixed z-[900] min-w-[230px] max-w-[280px] overflow-hidden rounded-md border border-slate-500/45 bg-slate-950/98 text-slate-100 shadow-2xl shadow-black/45 backdrop-blur"
+            style={{ left, top }}
+            role="menu"
+            aria-label="DFP NEO context menu"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+            onContextMenu={(event) => event.preventDefault()}
+        >
+            <div className="border-b border-slate-700/80 bg-slate-900/80 px-3 py-2">
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">DFP NEO</div>
+                <div className="mt-0.5 truncate text-sm font-bold text-white">{menu.title}</div>
+                {menu.subtitle && <div className="mt-0.5 truncate text-[11px] font-semibold text-slate-400">{menu.subtitle}</div>}
+            </div>
+            <div className="py-1">
+                {menu.items.map((item, index) => (
+                    <button
+                        key={`${item.label}-${index}`}
+                        type="button"
+                        role="menuitem"
+                        disabled={item.disabled}
+                        onClick={() => {
+                            if (item.disabled) return;
+                            onClose();
+                            item.onSelect?.();
+                        }}
+                        className={`block w-full px-3 py-2 text-left transition ${
+                            item.disabled
+                                ? 'cursor-not-allowed text-slate-500'
+                                : item.danger
+                                    ? 'text-red-200 hover:bg-red-950/55'
+                                    : 'text-slate-100 hover:bg-cyan-500/12'
+                        }`}
+                    >
+                        <span className="block text-xs font-bold">{item.label}</span>
+                        {item.detail && <span className="mt-0.5 block text-[10px] font-semibold leading-3 text-slate-500">{item.detail}</span>}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+
 const App: React.FC = () => {
        // Default zoom level (fixed at 1 since zoom functionality was removed)
        const zoomLevel = 1;
     const setupTestProfile = getSetupTestProfile();
     const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = useState(false);
+    const [dfpContextMenu, setDfpContextMenu] = useState<DfpContextMenuState | null>(null);
 
     // Theme
     const { theme } = useTheme();
@@ -39695,6 +39773,211 @@ appliedUpdates.forEach(update => {
         });
     }, [buildIntelligenceEvents, buildIntelligencePersonnelSet, cancellationRecords]);
 
+    const closeDfpContextMenu = useCallback(() => {
+        setDfpContextMenu(null);
+    }, []);
+
+    useEffect(() => {
+        if (!dfpContextMenu) return;
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') closeDfpContextMenu();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [closeDfpContextMenu, dfpContextMenu]);
+
+    useEffect(() => {
+        closeDfpContextMenu();
+    }, [activeView, closeDfpContextMenu]);
+
+    const formatContextMenuTime = useCallback((time?: number) => {
+        if (typeof time !== 'number' || !Number.isFinite(time)) return '';
+        const hours = Math.floor(time);
+        const minutes = Math.round((time - hours) * 60);
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }, []);
+
+    const getContextMenuEvent = useCallback((eventId: string): ScheduleEvent | null => {
+        if (!eventId) return null;
+        return (
+            (eventSegmentsForDate || []).find((event: any) => event.id === eventId) ||
+            (publishedSchedules[date] || []).find((event: ScheduleEvent) => event.id === eventId) ||
+            null
+        ) as ScheduleEvent | null;
+    }, [date, eventSegmentsForDate, publishedSchedules]);
+
+    const copyContextSummary = useCallback((summary: string) => {
+        if (!summary) return;
+        navigator.clipboard?.writeText(summary).catch(() => {});
+    }, []);
+
+    const handleDfpWorkspaceContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+        const target = event.target as HTMLElement | null;
+        const workspace = event.currentTarget;
+        if (!target || !workspace.contains(target)) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const contextElement = target.closest('[data-dfp-context-kind]') as HTMLElement | null;
+        const gridElement = target.closest('[data-schedule-grid="true"]') as HTMLElement | null;
+        const contextKind = getContextDatasetValue(contextElement, 'dfpContextKind');
+        const eventId = getContextDatasetValue(contextElement, 'dfpEventId');
+        const resourceId = getContextDatasetValue(contextElement, 'dfpResourceId');
+        const aircraftNumber = getContextDatasetValue(contextElement, 'dfpAircraftNumber');
+        const resourceLabel = getContextDatasetValue(contextElement, 'dfpResourceLabel') || resourceId;
+        const eventLabel = getContextDatasetValue(contextElement, 'dfpEventLabel');
+        const primaryPerson = getContextDatasetValue(contextElement, 'dfpPrimaryPerson');
+        const secondaryPerson = getContextDatasetValue(contextElement, 'dfpSecondaryPerson');
+        const selectedEvent = getContextMenuEvent(eventId);
+        const canEditActiveDfp = canEditDfpTiles && !isViewingPastDfp;
+        const canUseValidation = canRunValidation;
+        const menuItems: DfpContextMenuItem[] = [];
+        let title = 'DFP Workspace';
+        let subtitle = activeView;
+        let kind = contextKind || 'workspace';
+
+        const openEventDetails = () => {
+            if (selectedEvent) handleOpenModal(selectedEvent);
+        };
+        const eventSummary = selectedEvent
+            ? `${selectedEvent.flightNumber || eventLabel || selectedEvent.id} ${selectedEvent.resourceId || ''} ${formatContextMenuTime(selectedEvent.startTime)}-${formatContextMenuTime(selectedEvent.startTime + selectedEvent.duration)}`.trim()
+            : '';
+
+        if (selectedEvent && contextKind !== 'aircraft' && contextKind !== 'aircraft-slot') {
+            const isSimulatorEvent = selectedEvent.type === 'ftd' || selectedEvent.type === 'cpt';
+            const isDutySupervisor = contextKind === 'duty-supervisor' || selectedEvent.resourceId === 'Duty Sup';
+            title = isDutySupervisor
+                ? 'Duty Supervisor'
+                : isSimulatorEvent
+                    ? `Simulator ${selectedEvent.flightNumber || eventLabel || ''}`.trim()
+                    : selectedEvent.type === 'flight'
+                        ? `Flight ${selectedEvent.flightNumber || eventLabel || ''}`.trim()
+                        : selectedEvent.flightNumber || eventLabel || 'Schedule Event';
+            subtitle = [
+                selectedEvent.resourceId,
+                `${formatContextMenuTime(selectedEvent.startTime)}-${formatContextMenuTime(selectedEvent.startTime + selectedEvent.duration)}`,
+                primaryPerson || selectedEvent.instructor || selectedEvent.pilot || '',
+                secondaryPerson || selectedEvent.student || selectedEvent.crew || '',
+            ].filter(Boolean).join(' | ');
+            menuItems.push(
+                { label: 'Open Details', detail: 'Open the selected schedule event.', onSelect: openEventDetails },
+                { label: 'Edit Event', detail: canEditActiveDfp ? 'Open details in the normal edit workflow.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: openEventDetails },
+                { label: selectedEvent.type === 'flight' ? 'Assign Aircraft' : 'Open Flight Line', detail: 'Open the aircraft flight-line panel.', disabled: !canEditActiveDfp, onSelect: () => {
+                    setShowDfpSidePanel(false);
+                    setShowFlightLinePanel(true);
+                }},
+                { label: 'Select Tile', detail: 'Add this tile to the current DFP selection.', onSelect: () => {
+                    setSelectedEventIds(new Set([...Array.from(selectedEventIds), selectedEvent.id]));
+                }},
+                { label: 'Copy Event Summary', detail: eventSummary, onSelect: () => copyContextSummary(eventSummary) }
+            );
+            if (canUseValidation) {
+                menuItems.push({ label: showValidation ? 'Hide Validation' : 'Show Validation', detail: 'Toggle schedule validation overlay.', onSelect: () => setShowValidation(!showValidation) });
+            }
+        } else if (aircraftNumber || contextKind === 'aircraft' || contextKind === 'aircraft-slot') {
+            title = aircraftNumber ? `Aircraft ${aircraftNumber}` : 'Aircraft';
+            subtitle = [resourceLabel || 'Flight Line', selectedEvent ? selectedEvent.flightNumber || eventLabel : ''].filter(Boolean).join(' | ');
+            kind = 'aircraft';
+            menuItems.push(
+                { label: 'Open Flight Line', detail: 'Open aircraft inventory and unavailable bays.', onSelect: () => {
+                    setShowDfpSidePanel(false);
+                    setShowFlightLinePanel(true);
+                }},
+                { label: 'Copy Aircraft Number', detail: aircraftNumber || resourceLabel, disabled: !(aircraftNumber || resourceLabel), onSelect: () => copyContextSummary(aircraftNumber || resourceLabel) }
+            );
+        } else if (resourceId || contextKind === 'aircraft-resource' || contextKind === 'simulator-resource' || contextKind === 'resource') {
+            const isSimulatorResource = contextKind === 'simulator-resource';
+            const isDutySupervisorResource = contextKind === 'duty-supervisor' || resourceId === 'Duty Sup';
+            title = isDutySupervisorResource
+                ? 'Duty Supervisor Row'
+                : isSimulatorResource
+                    ? `Simulator ${resourceLabel || resourceId}`.trim()
+                    : contextKind === 'aircraft-resource'
+                        ? `Aircraft Row ${resourceLabel || resourceId}`.trim()
+                        : resourceLabel || resourceId || 'Resource Row';
+            subtitle = 'Schedule resource';
+            menuItems.push(
+                { label: 'Copy Resource Name', detail: resourceLabel || resourceId, onSelect: () => copyContextSummary(resourceLabel || resourceId) },
+                { label: 'Open Flight Line', detail: 'Open aircraft inventory and unavailable bays.', onSelect: () => {
+                    setShowDfpSidePanel(false);
+                    setShowFlightLinePanel(true);
+                }}
+            );
+            if (canUseValidation) {
+                menuItems.push({ label: showValidation ? 'Hide Validation' : 'Show Validation', detail: 'Toggle schedule validation overlay.', onSelect: () => setShowValidation(!showValidation) });
+            }
+        } else if (gridElement) {
+            const rect = gridElement.getBoundingClientRect();
+            const pixelsPerHour = Number(gridElement.dataset.schedulePixelsPerHour || 200);
+            const startHour = Number(gridElement.dataset.scheduleStartHour || 0);
+            const time = startHour + Math.max(0, event.clientX - rect.left) / Math.max(1, pixelsPerHour);
+            const rowIndex = Math.floor(Math.max(0, event.clientY - rect.top) / 32);
+            const gridResource = buildResources[rowIndex] || '';
+            title = 'Empty Schedule Space';
+            subtitle = [gridResource, formatContextMenuTime(time)].filter(Boolean).join(' | ');
+            kind = 'empty-schedule-space';
+            menuItems.push(
+                { label: 'Add Flight Tile', detail: canEditActiveDfp ? 'Create a new flight event.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: () => {
+                    setIsAddingTile(true);
+                    handleOpenModal(null, { type: 'flight' });
+                }},
+                { label: 'Add Ground Tile', detail: canEditActiveDfp ? 'Create a new ground event.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
+                { label: 'Open Flight Line', detail: 'Open aircraft inventory and unavailable bays.', onSelect: () => {
+                    setShowDfpSidePanel(false);
+                    setShowFlightLinePanel(true);
+                }}
+            );
+            if (canUseValidation) {
+                menuItems.push({ label: showValidation ? 'Hide Validation' : 'Show Validation', detail: 'Toggle schedule validation overlay.', onSelect: () => setShowValidation(!showValidation) });
+            }
+        } else {
+            title = 'DFP Workspace';
+            subtitle = activeView;
+            kind = 'workspace';
+            menuItems.push(
+                { label: activeView === 'Program Schedule' ? 'Open Flight Line' : 'Go To DFP', detail: 'Return to the main schedule workspace.', onSelect: () => {
+                    if (activeView !== 'Program Schedule') handleNavigation('Program Schedule');
+                    else setShowFlightLinePanel(true);
+                }},
+                { label: 'Open Admin Panel', detail: 'Available to platform administrators.', disabled: !['ADMIN', 'SUPER_ADMIN'].includes(String(sessionUser?.role || authUser?.role || '').toUpperCase()), onSelect: () => setShowAdminPanel(true) }
+            );
+        }
+
+        if (menuItems.length === 0) return;
+        setDfpContextMenu({
+            x: event.clientX,
+            y: event.clientY,
+            title,
+            subtitle,
+            kind,
+            items: menuItems,
+        });
+    }, [
+        activeView,
+        authUser?.role,
+        buildResources,
+        canEditDfpTiles,
+        canRunValidation,
+        closeDfpContextMenu,
+        copyContextSummary,
+        formatContextMenuTime,
+        getContextMenuEvent,
+        handleNavigation,
+        handleOpenModal,
+        isViewingPastDfp,
+        selectedEventIds,
+        sessionUser?.role,
+        setSelectedEventIds,
+        showValidation,
+    ]);
+
+    const handleDfpWorkspaceMouseDownCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+        if (event.button === 0 && dfpContextMenu) {
+            closeDfpContextMenu();
+        }
+    }, [closeDfpContextMenu, dfpContextMenu]);
+
 
     const renderActiveView = () => {
         switch (activeView) {
@@ -42718,7 +43001,14 @@ appliedUpdates.forEach(update => {
                         </div>
                     </div>
                 )}
-                <div className="relative flex-1 overflow-hidden flex flex-row min-h-0">
+                <div
+                    className="relative flex-1 overflow-hidden flex flex-row min-h-0"
+                    data-dfp-workspace="true"
+                    onContextMenu={handleDfpWorkspaceContextMenu}
+                    onMouseDownCapture={handleDfpWorkspaceMouseDownCapture}
+                    onScrollCapture={closeDfpContextMenu}
+                >
+                    <DfpContextMenu menu={dfpContextMenu} onClose={closeDfpContextMenu} />
                     <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                         {renderActiveView()}
                     </div>

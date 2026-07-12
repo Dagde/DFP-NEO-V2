@@ -1026,6 +1026,14 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   return (
     <div
       data-is-flight-tile="true"
+      data-dfp-context-kind={isDutySup ? 'duty-supervisor' : event.type === 'ftd' || event.type === 'cpt' ? 'simulator' : event.type === 'flight' ? 'flight-tile' : event.type === 'ground' ? 'ground-event' : event.type === 'deployment' ? 'deployment' : 'event'}
+      data-dfp-event-id={event.id}
+      data-dfp-event-type={event.type}
+      data-dfp-event-label={event.flightNumber || event.eventCode || event.id}
+      data-dfp-resource-id={event.resourceId}
+      data-dfp-aircraft-number={event.aircraftNumber || ''}
+      data-dfp-primary-person={picName || ''}
+      data-dfp-secondary-person={typeof studentDisplay === 'string' ? studentDisplay : displayStudentNameForRender || ''}
       style={style}
       className={finalClasses.join(' ')}
       onClick={onSelectEvent}
