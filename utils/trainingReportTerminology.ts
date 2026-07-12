@@ -57,6 +57,7 @@ export interface TrainingReportTemplate {
   completionResults: Array<{
     code: 'DCO' | 'DPCO' | 'DNCO';
     label: string;
+    enabled: boolean;
   }>;
   overallResults: {
     passLabel: string;
@@ -153,13 +154,13 @@ export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
     },
   },
   completionResults: [
-    { code: 'DCO', label: 'DCO' },
-    { code: 'DPCO', label: 'DPCO' },
-    { code: 'DNCO', label: 'DNCO' },
+    { code: 'DCO', label: 'DCO', enabled: true },
+    { code: 'DPCO', label: 'DPCO', enabled: true },
+    { code: 'DNCO', label: 'DNCO', enabled: true },
   ],
   overallResults: {
-    passLabel: 'PASS',
-    failLabel: 'FAIL',
+    passLabel: 'Satisfactory',
+    failLabel: 'Unsatisfactory',
     doubleRepeatLabel: 'Repeated Low-performance',
   },
   grades: {
@@ -310,6 +311,7 @@ export const normaliseTrainingReportTemplate = (
       return {
         code: result.code,
         label: cleanLabel(existing?.label, result.label, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
+        enabled: cleanBoolean(existing?.enabled, result.enabled),
       };
     }),
     overallResults: {

@@ -2104,8 +2104,8 @@ const OrganisationMyUnitSettings: React.FC<{
                         <UnitSettingsField label="Display name" value={trainingReportTemplate.displayName} onChange={(value) => updateUnitTrainingReportTemplate({ displayName: value.slice(0, 20) })} disabled={!canEdit} />
                         <UnitSettingsNumberField label="Grade minimum" value={Number(trainingReportTemplate.grades.scaleMin ?? 0)} onChange={(value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMin: value } })} disabled={!canEdit} />
                         <UnitSettingsNumberField label="Grade maximum" value={Number(trainingReportTemplate.grades.scaleMax ?? 5)} onChange={(value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMax: value } })} disabled={!canEdit} />
-                        <UnitSettingsField label="Pass label" value={trainingReportTemplate.overallResults.passLabel || ''} onChange={(value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, passLabel: value } })} disabled={!canEdit} />
-                        <UnitSettingsField label="Fail label" value={trainingReportTemplate.overallResults.failLabel || ''} onChange={(value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, failLabel: value } })} disabled={!canEdit} />
+                        <UnitSettingsField label="Satisfactory label" value={trainingReportTemplate.overallResults.passLabel || ''} onChange={(value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, passLabel: value } })} disabled={!canEdit} />
+                        <UnitSettingsField label="Unsatisfactory label" value={trainingReportTemplate.overallResults.failLabel || ''} onChange={(value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, failLabel: value } })} disabled={!canEdit} />
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Scoring Matrix for Training Reports" description="Assessment element scoring standards used by training reports." action={settingsLink('scoring-matrix', 'Take me there')}>
                         <UnitSettingsReadRow label="Scope" value="Organisation scoring standards used by applicable training reports." />
@@ -2600,7 +2600,7 @@ const InitialSetupWizard: React.FC<{
     const [traineeDraft, setTraineeDraft] = useState('');
     const [traineeAllocationCommitted, setTraineeAllocationCommitted] = useState(false);
     const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = useState(false);
-    const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('Training Report | PT-051 | 0 | 5 | Yes | No | PASS | FAIL');
+    const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('Training Report | PT-051 | 0 | 5 | Yes | No | Satisfactory | Unsatisfactory');
     const [unitModulesDraft, setUnitModulesDraft] = useState('DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On');
     const [rankLabelsDraft, setRankLabelsDraft] = useState('1 | AIRCDRE = BRIG = CDRE | Same seniority across services\n2 | GPCAPT = COL = CAPT | Same seniority across services\n3 | WGCDR = LTCOL = CMDR | Same seniority across services\n4 | SQNLDR = MAJ = LCDR | Same seniority across services');
     const [resourceSharingDraft, setResourceSharingDraft] = useState('Resource sharing | Off |  | Unit keeps its own aircraft and resource pool capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.');
@@ -4156,7 +4156,7 @@ const InitialSetupWizard: React.FC<{
     };
     const renderTrainingRecordsEditor = () => {
         const rows = parseWizardTrainingReportRows(trainingRecordsDraft);
-        const row = rows[0] || { genericName: 'Training Report', organisationName: 'PT-051', gradeMin: '0', gradeMax: '5', showNumbers: 'Yes', demoGrade: 'No', passLabel: 'PASS', failLabel: 'FAIL' };
+        const row = rows[0] || { genericName: 'Training Report', organisationName: 'PT-051', gradeMin: '0', gradeMax: '5', showNumbers: 'Yes', demoGrade: 'No', passLabel: 'Satisfactory', failLabel: 'Unsatisfactory' };
         const updateRow = (field: keyof typeof row, value: string) => {
             setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, [field]: value }]));
         };
@@ -4172,8 +4172,8 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Highest grade', row.gradeMax, (value) => updateRow('gradeMax', value), undefined, '5')}
                     {wizardField('Show grade numbers', row.showNumbers, (value) => updateRow('showNumbers', value), ['Yes', 'No'])}
                     {wizardField('Include DEMO grade', row.demoGrade, (value) => updateRow('demoGrade', value), ['No', 'Yes'])}
-                    {wizardField('Pass label', row.passLabel, (value) => updateRow('passLabel', value), undefined, 'PASS')}
-                    {wizardField('Fail label', row.failLabel, (value) => updateRow('failLabel', value), undefined, 'FAIL')}
+                    {wizardField('Satisfactory label', row.passLabel, (value) => updateRow('passLabel', value), undefined, 'Satisfactory')}
+                    {wizardField('Unsatisfactory label', row.failLabel, (value) => updateRow('failLabel', value), undefined, 'Unsatisfactory')}
                 </div>
             </div>
         );
@@ -4967,8 +4967,8 @@ const InitialSetupWizard: React.FC<{
                             showNumbers: String(trainingReportRow.showNumbers || '').toLowerCase() !== 'no',
                         },
                         overallResults: {
-                            passLabel: trainingReportRow.passLabel || 'PASS',
-                            failLabel: trainingReportRow.failLabel || 'FAIL',
+                            passLabel: trainingReportRow.passLabel || 'Satisfactory',
+                            failLabel: trainingReportRow.failLabel || 'Unsatisfactory',
                         },
                     } : undefined,
                     trainingReportPhraseBank,

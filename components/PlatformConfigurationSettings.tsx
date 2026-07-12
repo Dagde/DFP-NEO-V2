@@ -1543,9 +1543,9 @@ const TRAINING_REPORT_OVERVIEW_FIELD_INFO: Record<string, string> = {
 };
 
 const TRAINING_REPORT_OVERALL_FIELD_INFO: Record<string, string> = {
-  result: 'The label for the duty completion outcome. The wording can be customised, but the system still treats DCO as duty completed, DPCO as duty partially completed and DNCO as duty not completed.',
-  overallGrade: 'The label for the assessor’s whole-event grade. This is the single grade used for progression, repeat-rule checks and historical trend analysis.',
-  overallResult: 'The label for the final pass/fail style outcome. The organisation can rename the visible text while the system keeps the underlying pass/fail function intact.',
+  result: 'The label for the mission completion outcome. The wording can be customised, but the system still treats DCO as mission completed, DPCO as mission partially completed and DNCO as mission not completed.',
+  overallGrade: 'The label for the assessor’s whole-mission grade. This is the single grade used for progression, repeat-rule checks and historical trend analysis.',
+  overallResult: 'The label for the final satisfactory/unsatisfactory style outcome. The organisation can rename the visible text while the system keeps the underlying success/unsuccessful function intact.',
   groundSchoolAssessment: 'The label for an optional ground-school assessment result. This is used when an event also records a separate academic or ground assessment percentage.',
 };
 
@@ -3075,10 +3075,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   };
 
-  const updateTrainingReportCompletionResult = (code: 'DCO' | 'DPCO' | 'DNCO', label: string) => {
+  const updateTrainingReportCompletionResult = (code: 'DCO' | 'DPCO' | 'DNCO', changes: Partial<{ label: string; enabled: boolean }>) => {
     updateTrainingReportTemplate((template) => ({
       completionResults: template.completionResults.map((option) => (
-        option.code === code ? { ...option, label } : option
+        option.code === code ? { ...option, ...changes } : option
       )),
     }));
   };
@@ -7451,7 +7451,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
                 <TrainingReportModulePreview title={trainingReportTemplate.modules.overallAssessment.title}>
                   <div className="grid gap-3 md:grid-cols-4">
-                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.result} value={trainingReportTemplate.completionResults.map((option) => option.label).join(' / ')} />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.result} value={trainingReportTemplate.completionResults.filter((option) => option.enabled !== false).map((option) => option.label).join(' / ') || 'None'} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.overallGrade} value={trainingReportTemplate.grades.showNumbers ? '7 - Very Good' : 'Very Good'} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.overallResult} value={`${trainingReportTemplate.overallResults.passLabel} / ${trainingReportTemplate.overallResults.failLabel}`} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.groundSchoolAssessment} value="Assessment / 85%" />
@@ -7533,43 +7533,59 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-200">Results & Grades</h4>
             <div className="grid gap-3 lg:grid-cols-3">
               {trainingReportTemplate.completionResults.map((option) => (
-                <Field
-                  key={option.code}
-                  label={{
-                    DCO: 'Duty Completed text',
-                    DPCO: 'Duty Partially Completed',
-                    DNCO: 'Duty Not Completed',
-                  }[option.code]}
-                  value={option.label}
-                  disabled={!canEditTrainingReportTemplate}
-                  maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                  onChange={(value) => updateTrainingReportCompletionResult(option.code, value)}
-                  info={{
-                    DCO: 'Text displayed when the duty or training event was completed. The wording can change, but the outcome remains the completed-duty result.',
-                    DPCO: 'Text displayed when the duty was partially completed. Use this when an event occurred but did not fully satisfy the planned duty or training requirement.',
-                    DNCO: 'Text displayed when the duty was not completed. The wording can change, but the outcome remains the not-completed-duty result.',
-                  }[option.code]}
-                />
+                <div key={option.code} className="rounded border border-gray-700 bg-gray-900/50 p-3">
+                  <label className={`mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide ${canEditTrainingReportTemplate ? 'cursor-pointer text-gray-300' : 'cursor-not-allowed text-gray-500'}`}>
+                    <input
+                      type="checkbox"
+                      checked={option.enabled !== false}
+                      disabled={!canEditTrainingReportTemplate}
+                      onChange={(event) => updateTrainingReportCompletionResult(option.code, { enabled: event.target.checked })}
+                      className="h-4 w-4 rounded border-gray-600 bg-gray-950 accent-sky-500"
+                    />
+                    <span>Use {option.code}</span>
+                    <InfoHint text={{
+                      DCO: 'Enable this if the organisation records a mission completed classification.',
+                      DPCO: 'Enable this if the organisation records a mission partially completed classification.',
+                      DNCO: 'Enable this if the organisation records a mission not completed classification.',
+                    }[option.code]} />
+                  </label>
+                  <Field
+                    label={{
+                      DCO: 'Mission Completed Text',
+                      DPCO: 'Mission Partially Completed Text',
+                      DNCO: 'Mission Not Completed Text',
+                    }[option.code]}
+                    value={option.label}
+                    disabled={!canEditTrainingReportTemplate || option.enabled === false}
+                    maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                    onChange={(value) => updateTrainingReportCompletionResult(option.code, { label: value })}
+                    info={{
+                      DCO: 'Text displayed when the mission or training event was completed. The wording can change, but the outcome remains the completed-mission result.',
+                      DPCO: 'Text displayed when the mission was partially completed. Use this when an event occurred but did not fully satisfy the planned mission or training requirement.',
+                      DNCO: 'Text displayed when the mission was not completed. The wording can change, but the outcome remains the not-completed-mission result.',
+                    }[option.code]}
+                  />
+                </div>
               ))}
               <Field
-                label="Pass Label"
+                label="Satisfactory Label"
                 value={trainingReportTemplate.overallResults.passLabel}
                 disabled={!canEditTrainingReportTemplate}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                 onChange={(value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, passLabel: value },
                 }))}
-                info="Text displayed when the assessment outcome is successful. Organisations may use wording such as Pass, Satisfactory, Competent or Achieved."
+                info="Text displayed when the assessment outcome is satisfactory. Organisations may use wording such as Satisfactory, Competent, Achieved or Pass."
               />
               <Field
-                label="Fail Label"
+                label="Unsatisfactory Label"
                 value={trainingReportTemplate.overallResults.failLabel}
                 disabled={!canEditTrainingReportTemplate}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                 onChange={(value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, failLabel: value },
                 }))}
-                info="Text displayed when the assessment outcome is unsuccessful. Organisations may use wording such as Fail, Unsatisfactory, Not Yet Competent or Not Achieved."
+                info="Text displayed when the assessment outcome is unsatisfactory. Organisations may use wording such as Unsatisfactory, Not Yet Competent, Not Achieved or Fail."
               />
               <Field
                 label="Repeated Low-performance"

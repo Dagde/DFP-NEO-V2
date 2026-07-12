@@ -3935,13 +3935,13 @@ const DEFAULT_TRAINING_REPORT_TEMPLATE = {
     }
   },
   completionResults: [
-    { code: "DCO", label: "DCO" },
-    { code: "DPCO", label: "DPCO" },
-    { code: "DNCO", label: "DNCO" }
+    { code: "DCO", label: "DCO", enabled: true },
+    { code: "DPCO", label: "DPCO", enabled: true },
+    { code: "DNCO", label: "DNCO", enabled: true }
   ],
   overallResults: {
-    passLabel: "PASS",
-    failLabel: "FAIL",
+    passLabel: "Satisfactory",
+    failLabel: "Unsatisfactory",
     doubleRepeatLabel: "Repeated Low-performance"
   },
   grades: {
@@ -4059,7 +4059,8 @@ const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
       const existing = Array.isArray(source.completionResults) ? source.completionResults.find((option) => option?.code === result.code) : null;
       return {
         code: result.code,
-        label: cleanLabel$1(existing?.label, result.label, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)
+        label: cleanLabel$1(existing?.label, result.label, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
+        enabled: cleanBoolean(existing?.enabled, result.enabled)
       };
     }),
     overallResults: {
@@ -10725,8 +10726,8 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Display name", value: trainingReportTemplate.displayName, onChange: (value) => updateUnitTrainingReportTemplate({ displayName: value.slice(0, 20) }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Grade minimum", value: Number(trainingReportTemplate.grades.scaleMin ?? 0), onChange: (value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMin: value } }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Grade maximum", value: Number(trainingReportTemplate.grades.scaleMax ?? 5), onChange: (value) => updateUnitTrainingReportTemplate({ grades: { ...trainingReportTemplate.grades, scaleMax: value } }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Pass label", value: trainingReportTemplate.overallResults.passLabel || "", onChange: (value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, passLabel: value } }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Fail label", value: trainingReportTemplate.overallResults.failLabel || "", onChange: (value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, failLabel: value } }), disabled: true })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Satisfactory label", value: trainingReportTemplate.overallResults.passLabel || "", onChange: (value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, passLabel: value } }), disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unsatisfactory label", value: trainingReportTemplate.overallResults.failLabel || "", onChange: (value) => updateUnitTrainingReportTemplate({ overallResults: { ...trainingReportTemplate.overallResults, failLabel: value } }), disabled: true })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Scoring Matrix for Training Reports", description: "Assessment element scoring standards used by training reports.", action: settingsLink("scoring-matrix", "Take me there"), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Scope", value: "Organisation scoring standards used by applicable training reports." }),
@@ -11118,7 +11119,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const [traineeDraft, setTraineeDraft] = reactExports.useState("");
   const [traineeAllocationCommitted, setTraineeAllocationCommitted] = reactExports.useState(false);
   const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = reactExports.useState(false);
-  const [trainingRecordsDraft, setTrainingRecordsDraft] = reactExports.useState("Training Report | PT-051 | 0 | 5 | Yes | No | PASS | FAIL");
+  const [trainingRecordsDraft, setTrainingRecordsDraft] = reactExports.useState("Training Report | PT-051 | 0 | 5 | Yes | No | Satisfactory | Unsatisfactory");
   const [unitModulesDraft, setUnitModulesDraft] = reactExports.useState("DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On");
   const [rankLabelsDraft, setRankLabelsDraft] = reactExports.useState("1 | AIRCDRE = BRIG = CDRE | Same seniority across services\n2 | GPCAPT = COL = CAPT | Same seniority across services\n3 | WGCDR = LTCOL = CMDR | Same seniority across services\n4 | SQNLDR = MAJ = LCDR | Same seniority across services");
   const [resourceSharingDraft, setResourceSharingDraft] = reactExports.useState("Resource sharing | Off |  | Unit keeps its own aircraft and resource pool capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.");
@@ -12507,7 +12508,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const renderTrainingRecordsEditor = () => {
     const rows = parseWizardTrainingReportRows(trainingRecordsDraft);
-    const row = rows[0] || { genericName: "Training Report", organisationName: "PT-051", gradeMin: "0", gradeMax: "5", showNumbers: "Yes", demoGrade: "No", passLabel: "PASS", failLabel: "FAIL" };
+    const row = rows[0] || { genericName: "Training Report", organisationName: "PT-051", gradeMin: "0", gradeMax: "5", showNumbers: "Yes", demoGrade: "No", passLabel: "Satisfactory", failLabel: "Unsatisfactory" };
     const updateRow = (field, value) => {
       setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, [field]: value }]));
     };
@@ -12520,8 +12521,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         wizardField("Highest grade", row.gradeMax, (value) => updateRow("gradeMax", value), void 0, "5"),
         wizardField("Show grade numbers", row.showNumbers, (value) => updateRow("showNumbers", value), ["Yes", "No"]),
         wizardField("Include DEMO grade", row.demoGrade, (value) => updateRow("demoGrade", value), ["No", "Yes"]),
-        wizardField("Pass label", row.passLabel, (value) => updateRow("passLabel", value), void 0, "PASS"),
-        wizardField("Fail label", row.failLabel, (value) => updateRow("failLabel", value), void 0, "FAIL")
+        wizardField("Satisfactory label", row.passLabel, (value) => updateRow("passLabel", value), void 0, "Satisfactory"),
+        wizardField("Unsatisfactory label", row.failLabel, (value) => updateRow("failLabel", value), void 0, "Unsatisfactory")
       ] })
     ] });
   };
@@ -13173,8 +13174,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
               showNumbers: String(trainingReportRow.showNumbers || "").toLowerCase() !== "no"
             },
             overallResults: {
-              passLabel: trainingReportRow.passLabel || "PASS",
-              failLabel: trainingReportRow.failLabel || "FAIL"
+              passLabel: trainingReportRow.passLabel || "Satisfactory",
+              failLabel: trainingReportRow.failLabel || "Unsatisfactory"
             }
           } : void 0,
           trainingReportPhraseBank
@@ -20276,6 +20277,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   const overviewFields = reportTemplate.modules.overview.fields;
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFieldsConfig = reportTemplate.modules.comments.fields;
+  const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
   const gradeOptions = reportTemplate.grades.options;
   const assessmentGradeOptions = reactExports.useMemo(() => [
     ...reportTemplate.grades.includeDemo ? ["DEMO"] : [],
@@ -21238,7 +21240,7 @@ This action cannot be undone.`;
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px]", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.result }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col space-y-2", children: [
-                      reportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
+                      enabledCompletionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "input",
                           {
@@ -55487,6 +55489,7 @@ const AirCombatTrainingReportModal = ({
   const overviewFields = reportTemplate.modules.overview.fields;
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFields = reportTemplate.modules.comments.fields;
+  const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
   const gradeLabelMap = reactExports.useMemo(() => new Map(reportTemplate.grades.options.map((option) => [option.value, option.label])), [reportTemplate.grades.options]);
   const formatGradeOption = (value) => {
     if (String(value).toUpperCase() === "DEMO") return "DEMO";
@@ -55951,7 +55954,7 @@ const AirCombatTrainingReportModal = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-sm font-medium text-gray-400", children: overallFields.result }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col space-y-2", children: [
-                  reportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
+                  enabledCompletionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-dco-result", value: option.code, checked: dcoResult === option.code, onChange: (event) => {
                       setDcoResult(event.target.value);
                       setSaveStatus("Unsaved");
@@ -67466,9 +67469,9 @@ const TRAINING_REPORT_OVERVIEW_FIELD_INFO = {
   assessor: "The label for the person completing or signing the report. Organisations may call this QFI, instructor, assessor, supervisor, check pilot or another local term."
 };
 const TRAINING_REPORT_OVERALL_FIELD_INFO = {
-  result: "The label for the duty completion outcome. The wording can be customised, but the system still treats DCO as duty completed, DPCO as duty partially completed and DNCO as duty not completed.",
-  overallGrade: "The label for the assessor’s whole-event grade. This is the single grade used for progression, repeat-rule checks and historical trend analysis.",
-  overallResult: "The label for the final pass/fail style outcome. The organisation can rename the visible text while the system keeps the underlying pass/fail function intact.",
+  result: "The label for the mission completion outcome. The wording can be customised, but the system still treats DCO as mission completed, DPCO as mission partially completed and DNCO as mission not completed.",
+  overallGrade: "The label for the assessor’s whole-mission grade. This is the single grade used for progression, repeat-rule checks and historical trend analysis.",
+  overallResult: "The label for the final satisfactory/unsatisfactory style outcome. The organisation can rename the visible text while the system keeps the underlying success/unsuccessful function intact.",
   groundSchoolAssessment: "The label for an optional ground-school assessment result. This is used when an event also records a separate academic or ground assessment percentage."
 };
 const TRAINING_REPORT_COMMENT_FIELD_INFO = {
@@ -68691,9 +68694,9 @@ This permanently removes the organisation record from platform configuration and
       }
     }));
   };
-  const updateTrainingReportCompletionResult = (code, label) => {
+  const updateTrainingReportCompletionResult = (code, changes) => {
     updateTrainingReportTemplate((template) => ({
-      completionResults: template.completionResults.map((option) => option.code === code ? { ...option, label } : option)
+      completionResults: template.completionResults.map((option) => option.code === code ? { ...option, ...changes } : option)
     }));
   };
   const toggleTrainingReportRuleGrade = (ruleKey, gradeValue, checked) => {
@@ -72629,7 +72632,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 key
               )) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportModulePreview, { title: trainingReportTemplate.modules.overallAssessment.title, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.result, value: trainingReportTemplate.completionResults.map((option) => option.label).join(" / ") }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.result, value: trainingReportTemplate.completionResults.filter((option) => option.enabled !== false).map((option) => option.label).join(" / ") || "None" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.overallGrade, value: trainingReportTemplate.grades.showNumbers ? "7 - Very Good" : "Very Good" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.overallResult, value: `${trainingReportTemplate.overallResults.passLabel} / ${trainingReportTemplate.overallResults.failLabel}` }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.groundSchoolAssessment, value: "Assessment / 85%" })
@@ -72693,50 +72696,72 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-3 text-sm font-bold uppercase tracking-wide text-gray-200", children: "Results & Grades" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
-            trainingReportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Field,
-              {
-                label: {
-                  DCO: "Duty Completed text",
-                  DPCO: "Duty Partially Completed",
-                  DNCO: "Duty Not Completed"
-                }[option.code],
-                value: option.label,
-                disabled: !canEditTrainingReportTemplate,
-                maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
-                onChange: (value) => updateTrainingReportCompletionResult(option.code, value),
-                info: {
-                  DCO: "Text displayed when the duty or training event was completed. The wording can change, but the outcome remains the completed-duty result.",
-                  DPCO: "Text displayed when the duty was partially completed. Use this when an event occurred but did not fully satisfy the planned duty or training requirement.",
-                  DNCO: "Text displayed when the duty was not completed. The wording can change, but the outcome remains the not-completed-duty result."
-                }[option.code]
-              },
-              option.code
-            )),
+            trainingReportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide ${canEditTrainingReportTemplate ? "cursor-pointer text-gray-300" : "cursor-not-allowed text-gray-500"}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: option.enabled !== false,
+                    disabled: !canEditTrainingReportTemplate,
+                    onChange: (event) => updateTrainingReportCompletionResult(option.code, { enabled: event.target.checked }),
+                    className: "h-4 w-4 rounded border-gray-600 bg-gray-950 accent-sky-500"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  "Use ",
+                  option.code
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: {
+                  DCO: "Enable this if the organisation records a mission completed classification.",
+                  DPCO: "Enable this if the organisation records a mission partially completed classification.",
+                  DNCO: "Enable this if the organisation records a mission not completed classification."
+                }[option.code] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: {
+                    DCO: "Mission Completed Text",
+                    DPCO: "Mission Partially Completed Text",
+                    DNCO: "Mission Not Completed Text"
+                  }[option.code],
+                  value: option.label,
+                  disabled: !canEditTrainingReportTemplate || option.enabled === false,
+                  maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                  onChange: (value) => updateTrainingReportCompletionResult(option.code, { label: value }),
+                  info: {
+                    DCO: "Text displayed when the mission or training event was completed. The wording can change, but the outcome remains the completed-mission result.",
+                    DPCO: "Text displayed when the mission was partially completed. Use this when an event occurred but did not fully satisfy the planned mission or training requirement.",
+                    DNCO: "Text displayed when the mission was not completed. The wording can change, but the outcome remains the not-completed-mission result."
+                  }[option.code]
+                }
+              )
+            ] }, option.code)),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               Field,
               {
-                label: "Pass Label",
+                label: "Satisfactory Label",
                 value: trainingReportTemplate.overallResults.passLabel,
                 disabled: !canEditTrainingReportTemplate,
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                 onChange: (value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, passLabel: value }
                 })),
-                info: "Text displayed when the assessment outcome is successful. Organisations may use wording such as Pass, Satisfactory, Competent or Achieved."
+                info: "Text displayed when the assessment outcome is satisfactory. Organisations may use wording such as Satisfactory, Competent, Achieved or Pass."
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               Field,
               {
-                label: "Fail Label",
+                label: "Unsatisfactory Label",
                 value: trainingReportTemplate.overallResults.failLabel,
                 disabled: !canEditTrainingReportTemplate,
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                 onChange: (value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, failLabel: value }
                 })),
-                info: "Text displayed when the assessment outcome is unsuccessful. Organisations may use wording such as Fail, Unsatisfactory, Not Yet Competent or Not Achieved."
+                info: "Text displayed when the assessment outcome is unsatisfactory. Organisations may use wording such as Unsatisfactory, Not Yet Competent, Not Achieved or Fail."
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(

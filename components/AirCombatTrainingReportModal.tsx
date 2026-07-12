@@ -154,6 +154,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const overviewFields = reportTemplate.modules.overview.fields;
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFields = reportTemplate.modules.comments.fields;
+  const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
   const gradeLabelMap = useMemo(() => (
     new Map(reportTemplate.grades.options.map((option) => [option.value, option.label]))
   ), [reportTemplate.grades.options]);
@@ -655,7 +656,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                     <div className="min-h-[168px]">
                       <label className="mb-2 block text-sm font-medium text-gray-400">{overallFields.result}</label>
                       <div className="flex flex-col space-y-2">
-                      {reportTemplate.completionResults.map((option) => (
+                      {enabledCompletionResults.map((option) => (
                         <label key={option.code} className="flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30">
                           <input type="radio" name="training-report-dco-result" value={option.code} checked={dcoResult === option.code} onChange={(event) => { setDcoResult(event.target.value as 'DCO' | 'DPCO' | 'DNCO'); setSaveStatus('Unsaved'); }} className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" />
                           <span className="font-medium text-white">{option.label}</span>

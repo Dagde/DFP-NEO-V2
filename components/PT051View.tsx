@@ -314,6 +314,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const overviewFields = reportTemplate.modules.overview.fields;
     const overallFields = reportTemplate.modules.overallAssessment.fields;
     const commentFieldsConfig = reportTemplate.modules.comments.fields;
+    const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
     const gradeOptions = reportTemplate.grades.options;
     const assessmentGradeOptions = useMemo<(Pt051Grade | 'DEMO')[]>(() => [
         ...(reportTemplate.grades.includeDemo ? ['DEMO' as const] : []),
@@ -1408,7 +1409,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     <div className="min-h-[168px]">
                                         <label className="block text-sm font-medium text-gray-400 mb-2">{overallFields.result}</label>
                                         <div className="flex flex-col space-y-2">
-                                        {reportTemplate.completionResults.map((option) => (
+                                        {enabledCompletionResults.map((option) => (
                                             <label key={option.code} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded">
                                                 <input
                                                     type="radio"
