@@ -350,6 +350,11 @@ const reviewIsCountableLmpEvent = (item: SyllabusItemDetail): boolean => {
     return !item.isRemedial && ['Flight', 'FTD'].includes(item.type);
 };
 
+const reviewIsCourseProgressLmpEvent = (item: SyllabusItemDetail): boolean => {
+    const lmpSource = String((item as any).lmpSource || 'master').toLowerCase();
+    return Boolean(reviewEventCode(item.code)) && !item.isRemedial && lmpSource === 'master';
+};
+
 const reviewFormatHours = (value: number): string => reviewNumber(value).toFixed(1);
 
 const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
@@ -589,7 +594,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         };
         const isMarkedCompleteInLmp = (item: SyllabusItemDetail): boolean => Boolean((item as any).completedAt);
         const getProgressForTrainee = (name: string, lmpItems: SyllabusItemDetail[]) => {
-            const countableItems = lmpItems.filter(reviewIsCountableLmpEvent);
+            const countableItems = lmpItems.filter(reviewIsCourseProgressLmpEvent);
             const refs = getCompletionRefsForTrainee(name);
             const hasIndividualLmpCompletion = countableItems.some(isMarkedCompleteInLmp);
             const furthestCompletedIndex = countableItems.reduce((furthest, item, index) => {
@@ -607,9 +612,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         };
 
         const ownProgress = getProgressForTrainee(trainee.fullName, currentIndividualLMP);
-        const countableLmp = ownProgress.countableItems;
         const completedCount = ownProgress.completedCount;
         const progressPercent = ownProgress.percent;
+        const countableLmp = currentIndividualLMP.filter(reviewIsCountableLmpEvent);
 
         const peerProgressValues = Array.from(sameCourseTraineeNames)
             .map(name => {
@@ -689,7 +694,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             scorePoints,
             progress: {
                 completedCount,
-                totalCount: countableLmp.length,
+                totalCount: ownProgress.totalCount,
                 progressPercent,
                 averageProgress,
                 mostProgress,
@@ -801,9 +806,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             addText(`${percent.toFixed(0)}%`, cx - 5, cy + 1, 7, 'bold');
             const drawBenchmark = (value: number, r: number, g: number, b: number) => {
                 const angle = (-90 + (Math.max(0, Math.min(100, value)) / 100) * 360) * Math.PI / 180;
+                const innerRadius = radius - 4;
+                const outerRadius = radius + 3;
                 doc.setDrawColor(r, g, b);
                 doc.setLineWidth(0.35);
-                doc.line(cx, cy, cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+                doc.line(
+                    cx + Math.cos(angle) * innerRadius,
+                    cy + Math.sin(angle) * innerRadius,
+                    cx + Math.cos(angle) * outerRadius,
+                    cy + Math.sin(angle) * outerRadius
+                );
             };
             drawBenchmark(reviewData.progress.averageProgress, 180, 137, 36);
             drawBenchmark(reviewData.progress.mostProgress, 14, 116, 144);
@@ -812,7 +824,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             addText(`Failed: ${reviewData.summaryFailed.length}   Double marginal: ${reviewData.summaryDoubleMarginal.length}   Marginal: ${reviewData.summaryMarginal.length}`, margin + 50, y + 14, 8);
             addText(`Current score average: ${reviewData.currentScoreAverage.toFixed(1)}`, margin + 50, y + 20, 8);
             addText(`Course rank by average score: ${reviewData.courseAverageRank.rank ? `${reviewData.courseAverageRank.rank}/${reviewData.courseAverageRank.total}` : '-'}`, margin + 50, y + 26, 8);
-            addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Most: ${reviewData.progress.mostProgress.toFixed(0)}%   Least: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin + 50, y + 32, 8);
+            addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Front runner: ${reviewData.progress.mostProgress.toFixed(0)}%   Back marker: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin + 50, y + 32, 8);
             y += 42;
         };
 
@@ -829,7 +841,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         addSection('Course Progress');
         drawProgressGraph();
         addText(`Progress: ${reviewData.progress.completedCount}/${reviewData.progress.totalCount} events (${reviewData.progress.progressPercent.toFixed(0)}%)`, margin, y);
-        addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Most: ${reviewData.progress.mostProgress.toFixed(0)}%   Least: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin, y + 5);
+        addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Front runner: ${reviewData.progress.mostProgress.toFixed(0)}%   Back marker: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin, y + 5);
         y += 12;
 
         addSection('Performance Summary');
@@ -1819,11 +1831,13 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       const progressAngle = (value: number) => -90 + (Math.max(0, Math.min(100, value)) / 100) * 360;
                       const lineForProgress = (value: number, colour: string, label: string) => {
                         const angle = progressAngle(value) * Math.PI / 180;
-                        const x2 = 70 + Math.cos(angle) * 50;
-                        const y2 = 70 + Math.sin(angle) * 50;
+                        const x1 = 70 + Math.cos(angle) * 43;
+                        const y1 = 70 + Math.sin(angle) * 43;
+                        const x2 = 70 + Math.cos(angle) * 62;
+                        const y2 = 70 + Math.sin(angle) * 62;
                         return (
                           <g key={label}>
-                            <line x1="70" y1="70" x2={x2} y2={y2} stroke={colour} strokeWidth="1.4" strokeOpacity="0.45" strokeLinecap="round" />
+                            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={colour} strokeWidth="1.4" strokeOpacity="0.45" strokeLinecap="round" />
                             <title>{`${label}: ${value.toFixed(0)}%`}</title>
                           </g>
                         );
@@ -1936,15 +1950,15 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                   <circle cx="70" cy="70" r="52" fill="rgba(15,23,42,0.9)" stroke="rgba(148,163,184,0.25)" strokeWidth="14" />
                                   <circle cx="70" cy="70" r="52" fill="none" stroke="#22c55e" strokeWidth="14" strokeDasharray={progressDash} pathLength="100" transform="rotate(-90 70 70)" strokeLinecap="round" />
                                   {lineForProgress(reviewData.progress.averageProgress, '#facc15', 'Course average')}
-                                  {lineForProgress(reviewData.progress.mostProgress, '#38bdf8', 'Most progressed')}
-                                  {lineForProgress(reviewData.progress.leastProgress, '#f87171', 'Least progressed')}
+                                  {lineForProgress(reviewData.progress.mostProgress, '#38bdf8', 'Front runner')}
+                                  {lineForProgress(reviewData.progress.leastProgress, '#f87171', 'Back marker')}
                                   <text x="70" y="68" fill="#f8fafc" fontSize="18" fontWeight="800" textAnchor="middle">{reviewData.progress.progressPercent.toFixed(0)}%</text>
                                   <text x="70" y="84" fill="#94a3b8" fontSize="9" textAnchor="middle">{reviewData.progress.completedCount}/{reviewData.progress.totalCount}</text>
                                 </svg>
                                 <div className={`${reviewProgressExpanded ? 'mt-4 w-72 text-[11px]' : 'mt-2 text-[10px]'} space-y-1 text-gray-300`}>
                                   <div className="flex justify-between"><span className="text-yellow-200/75">Course average</span><span>{reviewData.progress.averageProgress.toFixed(0)}%</span></div>
-                                  <div className="flex justify-between"><span className="text-sky-200/75">Most progressed</span><span>{reviewData.progress.mostProgress.toFixed(0)}%</span></div>
-                                  <div className="flex justify-between"><span className="text-red-200/75">Least progressed</span><span>{reviewData.progress.leastProgress.toFixed(0)}%</span></div>
+                                  <div className="flex justify-between"><span className="text-sky-200/75">Front runner</span><span>{reviewData.progress.mostProgress.toFixed(0)}%</span></div>
+                                  <div className="flex justify-between"><span className="text-red-200/75">Back marker</span><span>{reviewData.progress.leastProgress.toFixed(0)}%</span></div>
                                 </div>
                               </div>
                             </div>

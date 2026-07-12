@@ -21883,6 +21883,10 @@ const reviewIsCountableLmpEvent = (item) => {
   if (!code || code.includes(" MB") || code.includes("MORNING_BREAK")) return false;
   return !item.isRemedial && ["Flight", "FTD"].includes(item.type);
 };
+const reviewIsCourseProgressLmpEvent = (item) => {
+  const lmpSource = String(item.lmpSource || "master").toLowerCase();
+  return Boolean(reviewEventCode(item.code)) && !item.isRemedial && lmpSource === "master";
+};
 const reviewFormatHours = (value) => reviewNumber(value).toFixed(1);
 const TraineeProfileFlyout = ({
   trainee,
@@ -22070,7 +22074,7 @@ const TraineeProfileFlyout = ({
     };
     const isMarkedCompleteInLmp = (item) => Boolean(item.completedAt);
     const getProgressForTrainee = (name2, lmpItems) => {
-      const countableItems = lmpItems.filter(reviewIsCountableLmpEvent);
+      const countableItems = lmpItems.filter(reviewIsCourseProgressLmpEvent);
       const refs = getCompletionRefsForTrainee(name2);
       const hasIndividualLmpCompletion = countableItems.some(isMarkedCompleteInLmp);
       const furthestCompletedIndex = countableItems.reduce((furthest, item, index) => {
@@ -22087,9 +22091,9 @@ const TraineeProfileFlyout = ({
       };
     };
     const ownProgress = getProgressForTrainee(trainee.fullName, currentIndividualLMP);
-    const countableLmp = ownProgress.countableItems;
     const completedCount = ownProgress.completedCount;
     const progressPercent = ownProgress.percent;
+    const countableLmp = currentIndividualLMP.filter(reviewIsCountableLmpEvent);
     const peerProgressValues = Array.from(sameCourseTraineeNames).map((name2) => {
       const peerLmp = traineeLMPs?.get(name2) || (name2 === trainee.fullName ? currentIndividualLMP : []);
       if (!peerLmp || peerLmp.length === 0) return null;
@@ -22148,7 +22152,7 @@ const TraineeProfileFlyout = ({
       scorePoints,
       progress: {
         completedCount,
-        totalCount: countableLmp.length,
+        totalCount: ownProgress.totalCount,
         progressPercent,
         averageProgress,
         mostProgress,
@@ -22259,9 +22263,16 @@ const TraineeProfileFlyout = ({
       addText(`${percent.toFixed(0)}%`, cx - 5, cy + 1, 7, "bold");
       const drawBenchmark = (value, r, g, b) => {
         const angle = (-90 + Math.max(0, Math.min(100, value)) / 100 * 360) * Math.PI / 180;
+        const innerRadius = radius - 4;
+        const outerRadius = radius + 3;
         doc.setDrawColor(r, g, b);
         doc.setLineWidth(0.35);
-        doc.line(cx, cy, cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+        doc.line(
+          cx + Math.cos(angle) * innerRadius,
+          cy + Math.sin(angle) * innerRadius,
+          cx + Math.cos(angle) * outerRadius,
+          cy + Math.sin(angle) * outerRadius
+        );
       };
       drawBenchmark(reviewData.progress.averageProgress, 180, 137, 36);
       drawBenchmark(reviewData.progress.mostProgress, 14, 116, 144);
@@ -22270,7 +22281,7 @@ const TraineeProfileFlyout = ({
       addText(`Failed: ${reviewData.summaryFailed.length}   Double marginal: ${reviewData.summaryDoubleMarginal.length}   Marginal: ${reviewData.summaryMarginal.length}`, margin + 50, y + 14, 8);
       addText(`Current score average: ${reviewData.currentScoreAverage.toFixed(1)}`, margin + 50, y + 20, 8);
       addText(`Course rank by average score: ${reviewData.courseAverageRank.rank ? `${reviewData.courseAverageRank.rank}/${reviewData.courseAverageRank.total}` : "-"}`, margin + 50, y + 26, 8);
-      addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Most: ${reviewData.progress.mostProgress.toFixed(0)}%   Least: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin + 50, y + 32, 8);
+      addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Front runner: ${reviewData.progress.mostProgress.toFixed(0)}%   Back marker: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin + 50, y + 32, 8);
       y += 42;
     };
     doc.setFillColor(15, 24, 36);
@@ -22285,7 +22296,7 @@ const TraineeProfileFlyout = ({
     addSection("Course Progress");
     drawProgressGraph();
     addText(`Progress: ${reviewData.progress.completedCount}/${reviewData.progress.totalCount} events (${reviewData.progress.progressPercent.toFixed(0)}%)`, margin, y);
-    addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Most: ${reviewData.progress.mostProgress.toFixed(0)}%   Least: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin, y + 5);
+    addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Front runner: ${reviewData.progress.mostProgress.toFixed(0)}%   Back marker: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin, y + 5);
     y += 12;
     addSection("Performance Summary");
     const addSummaryLines = (label, items) => {
@@ -23098,10 +23109,12 @@ ${errorText || `HTTP ${response.status}`}`);
                 const progressAngle = (value) => -90 + Math.max(0, Math.min(100, value)) / 100 * 360;
                 const lineForProgress = (value, colour, label) => {
                   const angle = progressAngle(value) * Math.PI / 180;
-                  const x2 = 70 + Math.cos(angle) * 50;
-                  const y2 = 70 + Math.sin(angle) * 50;
+                  const x1 = 70 + Math.cos(angle) * 43;
+                  const y1 = 70 + Math.sin(angle) * 43;
+                  const x2 = 70 + Math.cos(angle) * 62;
+                  const y2 = 70 + Math.sin(angle) * 62;
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "70", y1: "70", x2, y2, stroke: colour, strokeWidth: "1.4", strokeOpacity: "0.45", strokeLinecap: "round" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1, y1, x2, y2, stroke: colour, strokeWidth: "1.4", strokeOpacity: "0.45", strokeLinecap: "round" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("title", { children: `${label}: ${value.toFixed(0)}%` })
                   ] }, label);
                 };
@@ -23195,8 +23208,8 @@ ${errorText || `HTTP ${response.status}`}`);
                             /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "70", cy: "70", r: "52", fill: "rgba(15,23,42,0.9)", stroke: "rgba(148,163,184,0.25)", strokeWidth: "14" }),
                             /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "70", cy: "70", r: "52", fill: "none", stroke: "#22c55e", strokeWidth: "14", strokeDasharray: progressDash, pathLength: "100", transform: "rotate(-90 70 70)", strokeLinecap: "round" }),
                             lineForProgress(reviewData.progress.averageProgress, "#facc15", "Course average"),
-                            lineForProgress(reviewData.progress.mostProgress, "#38bdf8", "Most progressed"),
-                            lineForProgress(reviewData.progress.leastProgress, "#f87171", "Least progressed"),
+                            lineForProgress(reviewData.progress.mostProgress, "#38bdf8", "Front runner"),
+                            lineForProgress(reviewData.progress.leastProgress, "#f87171", "Back marker"),
                             /* @__PURE__ */ jsxRuntimeExports.jsxs("text", { x: "70", y: "68", fill: "#f8fafc", fontSize: "18", fontWeight: "800", textAnchor: "middle", children: [
                               reviewData.progress.progressPercent.toFixed(0),
                               "%"
@@ -23216,14 +23229,14 @@ ${errorText || `HTTP ${response.status}`}`);
                               ] })
                             ] }),
                             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-200/75", children: "Most progressed" }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-200/75", children: "Front runner" }),
                               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                                 reviewData.progress.mostProgress.toFixed(0),
                                 "%"
                               ] })
                             ] }),
                             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-200/75", children: "Least progressed" }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-200/75", children: "Back marker" }),
                               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                                 reviewData.progress.leastProgress.toFixed(0),
                                 "%"
