@@ -21885,7 +21885,22 @@ const reviewIsCountableLmpEvent = (item) => {
 };
 const reviewIsCourseProgressLmpEvent = (item) => {
   const lmpSource = String(item.lmpSource || "master").toLowerCase();
-  return Boolean(reviewEventCode(item.code)) && !item.isRemedial && lmpSource === "master";
+  return Boolean(reviewEventCode(item.code)) && !item.isRemedial && item.type !== "Academics" && lmpSource !== "remedial" && lmpSource !== "custom";
+};
+const reviewUniqueByEventCode = (items) => {
+  const seen = /* @__PURE__ */ new Set();
+  return items.filter((item) => {
+    const code = reviewEventCode(item.code || item.masterEventId || item.id);
+    if (!code || seen.has(code)) return false;
+    seen.add(code);
+    return true;
+  });
+};
+const reviewItemBelongsToLmpType = (item, lmpType) => {
+  const courses = Array.isArray(item.courses) ? item.courses.map(reviewEventCode) : [];
+  const normalisedLmpType = reviewEventCode(lmpType || "BPC+IPC");
+  if (normalisedLmpType === "BPC+IPC") return courses.length === 0 || courses.includes("BPC+IPC");
+  return courses.includes(normalisedLmpType);
 };
 const reviewFormatHours = (value) => reviewNumber(value).toFixed(1);
 const TraineeProfileFlyout = ({
@@ -22073,12 +22088,21 @@ const TraineeProfileFlyout = ({
       return refs;
     };
     const isMarkedCompleteInLmp = (item) => Boolean(item.completedAt);
+    const activeLmpType = String(trainee.lmpType || "BPC+IPC");
+    const masterCourseProgressItems = reviewUniqueByEventCode(
+      syllabusDetails.filter(reviewIsCourseProgressLmpEvent).filter((item) => reviewItemBelongsToLmpType(item, activeLmpType))
+    );
+    const ownCourseProgressFallback = reviewUniqueByEventCode(currentIndividualLMP.filter(reviewIsCourseProgressLmpEvent));
+    const courseProgressItems = masterCourseProgressItems.length > 0 ? masterCourseProgressItems : ownCourseProgressFallback;
     const getProgressForTrainee = (name2, lmpItems) => {
-      const countableItems = lmpItems.filter(reviewIsCourseProgressLmpEvent);
+      const countableItems = courseProgressItems;
       const refs = getCompletionRefsForTrainee(name2);
-      const hasIndividualLmpCompletion = countableItems.some(isMarkedCompleteInLmp);
+      const completedLmpRefs = new Set(
+        lmpItems.filter(isMarkedCompleteInLmp).flatMap(reviewLmpRefs)
+      );
+      const hasIndividualLmpCompletion = completedLmpRefs.size > 0;
       const furthestCompletedIndex = countableItems.reduce((furthest, item, index) => {
-        const completedByLmp = isMarkedCompleteInLmp(item);
+        const completedByLmp = reviewLmpRefs(item).some((ref) => completedLmpRefs.has(ref));
         const completedByRefs = !hasIndividualLmpCompletion && reviewLmpRefs(item).some((ref) => refs.has(ref));
         return completedByLmp || completedByRefs ? Math.max(furthest, index) : furthest;
       }, -1);
@@ -22170,7 +22194,7 @@ const TraineeProfileFlyout = ({
       summaryDoubleMarginal,
       summaryMarginal
     };
-  }, [currentIndividualLMP, pt051Assessments, reviewLogbookEntries, scores, trainee.course, trainee.fullName, traineeLMPs, traineesData]);
+  }, [currentIndividualLMP, pt051Assessments, reviewLogbookEntries, scores, syllabusDetails, trainee.course, trainee.fullName, trainee.lmpType, traineeLMPs, traineesData]);
   const exportTraineeReviewPdf = () => {
     const doc = new E({ orientation: "portrait", unit: "mm", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
