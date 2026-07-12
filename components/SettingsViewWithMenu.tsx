@@ -3,11 +3,7 @@ import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { SettingsView } from './SettingsView';
 import { UserListSection } from './UserListSection';
 import StaffDatabaseTable from "./StaffDatabaseTable";
-import StaffMockDataTable from "./StaffMockDataTable";
-import StaffCombinedDataTable from "./StaffCombinedDataTable";
 import TraineeDatabaseTable from "./TraineeDatabaseTable";
-import TraineeMockDataTable from "./TraineeMockDataTable";
-import DataSourcesSettings from "./DataSourcesSettings";
 import AuditButton from './AuditButton';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import OrganisationSettings from './OrganisationSettings';
@@ -161,12 +157,6 @@ interface SettingsViewWithMenuProps {
             enabled?: boolean;
         }>;
     }) => void;
-    onDataSourceSettingsChange?: (settings: {
-        staff: boolean;
-        trainee: boolean;
-        staffDb: boolean;
-        traineeDb: boolean;
-    }) => void;
     onDatabaseDataChanged?: () => void;  // Called when staff/trainee database is modified
     neoBuildCourse?: string;
     onUpdateNeoBuildCourse?: (course: string) => void;
@@ -194,13 +184,9 @@ type SettingsSection =
     | 'business-rules'
     | 'permissions'
     | 'data-loaders'
-    | 'data-sources'
     | 'user-list'
     | 'staff-database'
     | 'trainee-database'
-    | 'staff-mockdata'
-    | 'trainee-mockdata'
-    | 'staff-combined-data'
     | 'validation'
     | 'historical-data'
     | 'timezone'
@@ -267,13 +253,9 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'business-rules': 'Business Rules',
     'permissions': 'Permissions',
     'data-loaders': 'Data Import',
-    'data-sources': 'Data Sources',
     'user-list': 'User List',
     'staff-database': 'Staff Database',
     'trainee-database': 'Trainee Database',
-    'staff-mockdata': 'Staff MockData',
-    'trainee-mockdata': 'Trainee MockData',
-    'staff-combined-data': 'Staff Combined Data',
     'validation': 'Cancellation Codes',
     'historical-data': 'Historical Data',
     'locale-settings': 'Locations & Timezones',
@@ -315,13 +297,9 @@ const allSections: SettingsSection[] = [
     'business-rules',
     'permissions',
     'data-loaders',
-    'data-sources',
     'user-list',
     'staff-database',
     'trainee-database',
-    'staff-mockdata',
-    'trainee-mockdata',
-    'staff-combined-data',
     'validation',
     'historical-data',
     'timezone',
@@ -415,14 +393,6 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
       <line x1="12" y1="3" x2="12" y2="15"/>
     </svg>
   ),
-  'data-sources': (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-      <ellipse cx="12" cy="5" rx="9" ry="3"/>
-      <path d="M3 5v4c0 1.657 4.03 3 9 3s9-1.343 9-3V5"/>
-      <path d="M3 9v4c0 1.657 4.03 3 9 3s9-1.343 9-3V9"/>
-      <path d="M3 13v4c0 1.657 4.03 3 9 3s9-1.343 9-3v-4"/>
-    </svg>
-  ),
   'user-list': (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
@@ -443,31 +413,6 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
       <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-    </svg>
-  ),
-  'staff-mockdata': (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-      <rect x="2" y="3" width="20" height="14" rx="2"/>
-      <path d="M8 21h8M12 17v4"/>
-      <path d="M7 8h.01M10 8h4"/>
-      <path d="M7 11h.01M10 11h4"/>
-    </svg>
-  ),
-  'trainee-mockdata': (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-      <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
-      <line x1="9" y1="7" x2="15" y2="7"/>
-      <line x1="9" y1="11" x2="15" y2="11"/>
-    </svg>
-  ),
-  'staff-combined-data': (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-      <circle cx="18" cy="5" r="3"/>
-      <circle cx="6" cy="12" r="3"/>
-      <circle cx="18" cy="19" r="3"/>
-      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
     </svg>
   ),
   'validation': (
@@ -567,13 +512,9 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'business-rules': 'System logic and automation',
   'permissions': 'Manage system access and roles',
   'data-loaders': 'Import operational data files',
-  'data-sources': 'Connect external datasets',
   'user-list': 'View and manage user accounts',
   'staff-database': 'Staff records and details',
   'trainee-database': 'Trainee records and details',
-  'staff-mockdata': 'Staff test data view',
-  'trainee-mockdata': 'Trainee test data view',
-  'staff-combined-data': 'Combined staff data overview',
   'validation': 'Master cancellation code table used by cancellation records and analytics',
   'historical-data': 'Seed & refresh historical training records',
   'locale-settings': 'Manage bases, unit assignment, timezones and training areas',
@@ -607,7 +548,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
 // SYSTEM CONFIGURATION: scoring-matrix, currencies, sct-events (sky blue)
 // OPERATIONS RULES: event-limits, duty-turnaround, business-rules (amber)
 // ACCESS & SECURITY: permissions, user-list (violet)
-// DATA MANAGEMENT: data-loaders, data-sources, staff-database, trainee-database, staff-combined-data, staff-mockdata, trainee-mockdata (emerald)
+// DATA MANAGEMENT: data-loaders, staff-database, trainee-database (emerald)
 // HISTORICAL & ANALYSIS: validation (rose)
 // SYSTEM SETTINGS: timezone, location, units, organisation (cyan)
 const sectionColors: Record<SettingsMenuSection, string> = {
@@ -627,12 +568,8 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'user-list':         'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
   // DATA MANAGEMENT - emerald icons
   'data-loaders':      'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
-  'data-sources':      'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
   'staff-database':    'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
   'trainee-database':  'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
-  'staff-mockdata':    'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
-  'trainee-mockdata':  'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
-  'staff-combined-data':'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
   // HISTORICAL & ANALYSIS - amber icons
   'validation':        'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   'historical-data':   'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
@@ -1307,8 +1244,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         } catch (e) { /* ignore */ }
         return 'platform-configuration-health';
     });
-    const [filteredMockdata, setFilteredMockdata] = useState<Instructor[]>([]);
-    const [filteredTraineeMockdata, setFilteredTraineeMockdata] = useState<Trainee[]>([]);
     const { isFrozen } = useSystemFreeze();
     const [scoringMatrixTab, setScoringMatrixTab] = useState<ScoringMatrixTab>(() => {
         try {
@@ -1368,26 +1303,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             clearTimeout(settingsGroupOpenTimerRef.current);
         }
     }, []);
-
-    // Initialize filtered mockdata with instructorsData
-    React.useEffect(() => {
-        setFilteredMockdata(props.instructorsData);
-    }, [props.instructorsData]);
-
-    // Initialize filtered trainee mockdata
-    React.useEffect(() => {
-        setFilteredTraineeMockdata(props.traineesData);
-    }, [props.traineesData]);
-
-    const handleDeleteFromMockdata = (idNumber: number) => {
-        setFilteredMockdata(prev => prev.filter(instructor => instructor.idNumber !== idNumber));
-        props.onShowSuccess(`Staff member removed from mockdata display`);
-    };
-
-    const handleDeleteTraineeFromMockdata = (idNumber: number) => {
-        setFilteredTraineeMockdata(prev => prev.filter(trainee => trainee.idNumber !== idNumber));
-        props.onShowSuccess(`Trainee removed from mockdata display`);
-    };
 
     const matchesSettingsSearch = (section: SettingsMenuSection, groupLabel: string) => {
         const query = settingsSearch.trim().toLowerCase();
@@ -1879,11 +1794,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      activeSection !== 'currency-profiles' &&
                      activeSection !== 'user-list' &&
                      activeSection !== 'staff-database' &&
-                     activeSection !== 'staff-mockdata' &&
-                     activeSection !== 'staff-combined-data' &&
                      activeSection !== 'trainee-database' &&
-                     activeSection !== 'trainee-mockdata' &&
-                     activeSection !== 'data-sources' &&
                      activeSection !== 'organisation' &&
                      !isPlatformConfigurationActive &&
                      activeSection !== 'appearance' &&
@@ -1907,41 +1818,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             onNavigateToProfile={props.onNavigateToProfile}
                         />
                     )}
-                    {activeSection === 'staff-mockdata' && (
-                        <StaffMockDataTable
-                            instructorsData={filteredMockdata}
-                            onDeleteFromMockdata={handleDeleteFromMockdata}
-                        />
-                    )}
-                    {activeSection === 'staff-combined-data' && (
-                        <StaffCombinedDataTable
-                            instructorsData={props.instructorsData}
-                            instructorLabel={props.instructorLabel}
-                            personnelDisplaySettings={props.personnelDisplaySettings}
-                        />
-                    )}
                     {activeSection === 'trainee-database' && (
                         <TraineeDatabaseTable 
                             currentUserPermission={props.currentUserPermission}
                             onShowSuccess={props.onShowSuccess}
                             onDataChanged={props.onDatabaseDataChanged}
                             onNavigateToProfile={props.onNavigateToProfile}
-                        />
-                    )}
-                    {activeSection === 'trainee-mockdata' && (
-                        <TraineeMockDataTable
-                            traineesData={filteredTraineeMockdata}
-                            onDeleteFromMockdata={handleDeleteTraineeFromMockdata}
-                        />
-                    )}
-                    {activeSection === 'data-sources' && (
-                        <DataSourcesSettings
-                            onShowSuccess={props.onShowSuccess}
-                            onSettingsChanged={(newSettings) => {
-                                if (props.onDataSourceSettingsChange) {
-                                    props.onDataSourceSettingsChange(newSettings);
-                                }
-                            }}
                         />
                     )}
                     {activeSection === 'organisation' && (

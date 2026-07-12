@@ -22321,7 +22321,8 @@ const App: React.FC = () => {
         }
     }, [activePlatformResourcePool, activeOperationalModel, activeRuntimeAircraftTypeCode, activeUnitCode, platformConfigLoaded, school]);
 
-    // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled.
+    // Filtered instructors/trainees based on legacy dataSourceSettings.
+    // Defaults are commercial-safe DB-only; legacy mock flags are migrated off on startup.
     // Location matching is alias-aware so YMES/ESL/East Sale and YPEA/PEA/Pearce remain equivalent.
     const instructorsData = useMemo(() => {
         const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
@@ -41690,7 +41691,6 @@ appliedUpdates.forEach(update => {
                     onUpdateLocationOpAreas={setLocationOpAreas}
                     instructorsData={instructorsData}
                     traineesData={traineesData}
-                    onDataSourceSettingsChange={(newSettings) => setDataSourceSettings(newSettings)}
                     onDatabaseDataChanged={handleDatabaseDataChanged}
                     syllabusDetails={syllabusDetails}
                     onBulkUpdateInstructors={handleBulkUpdateInstructors}

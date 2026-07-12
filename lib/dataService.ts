@@ -234,11 +234,8 @@ export async function initializeData() {
   pushDataServiceDiag('startup:data-service:start');
   
     // PERMANENT FIX: Mock data is NEVER loaded at startup regardless of localStorage settings.
-    // The UI DataSourcesSettings toggles only affect the instructorsData/traineesData useMemo
-    // filters in App.tsx which run AFTER data is loaded. Loading mock data here caused
-    // contamination of allInstructorsData with fake staff that persisted across sessions.
-    // If mock data is needed for testing, it must be explicitly re-enabled in the UI toggles
-    // which filter the already-loaded data - but it will never be in allInstructorsData by default.
+    // Commercial runtime data is DB-first; the defensive filters in App.tsx keep any legacy
+    // localStorage mock-data flags from contaminating live staff or trainee lists.
     
   let instructors: any[] = [];
   let trainees: any[] = [];
@@ -267,7 +264,7 @@ export async function initializeData() {
          });
 
          // DB-only: tag all personnel with _dataSource: 'database'
-         // Mock data is never merged here - UI toggles in DataSourcesSettings handle filtering
+         // Mock data is never merged here.
          instructors = instructors.map((i: any) => ({ ...i, _dataSource: 'database' as const }));
          console.log('🔄 Loaded staff from DB only:', instructors.length, 'records (mock data excluded at load time)');
    
@@ -284,7 +281,7 @@ export async function initializeData() {
          console.log('✅ Trainee DB loaded:', trainees.length);
 
          // DB-only: tag all trainees with _dataSource: 'database'
-         // Mock data is never merged here - UI toggles in DataSourcesSettings handle filtering
+         // Mock data is never merged here.
          trainees = trainees.map((t: any) => ({ ...t, _dataSource: 'database' as const }));
          console.log('🔄 Loaded trainees from DB only:', trainees.length, 'records (mock data excluded at load time)');
        

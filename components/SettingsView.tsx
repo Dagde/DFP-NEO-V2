@@ -47,7 +47,7 @@ const TEMPLATE_OVERRIDE_FOLDER_ID = 'template_overrides';
 
 interface SettingsViewProps {
     hideHeader?: boolean;
-    activeSection?: 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions' | 'validation' | 'timezone' | 'data-sources' | 'trainee-database' | 'trainee-mockdata' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data' | 'organisation' | 'appearance' | 'emergency';
+    activeSection?: 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions' | 'validation' | 'timezone' | 'trainee-database' | 'user-list' | 'staff-database' | 'organisation' | 'appearance' | 'emergency';
     locations: string[];
     onUpdateLocations: (locations: string[]) => void;
     locationAbbreviations?: Record<string, string>;
