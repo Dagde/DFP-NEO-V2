@@ -1847,6 +1847,7 @@ app.get('/api/platform-config', async (req, res) => {
   const requestStartedAt = Date.now();
   try {
     const db = await getPrisma();
+    await seedCommercialConfigIfEmpty(db);
 
     const [
       organisations,
@@ -2354,21 +2355,43 @@ app.get('/api/platform-deployment/manifest', async (req, res) => {
 app.post('/api/platform-config', async (req, res) => {
   try {
     const db = await getPrisma();
+    const payload = req.body || {};
     const {
-      organisations = [],
-      locations = [],
-      units = [],
-      aircraftTypes = [],
-      resourcePools = [],
-      unitModules = [],
-      licenses = [],
-      schedulingRuleSets = [],
-      userAccess = [],
-    } = req.body || {};
+      organisations: rawOrganisations = [],
+      locations: rawLocations = [],
+      units: rawUnits = [],
+      aircraftTypes: rawAircraftTypes = [],
+      resourcePools: rawResourcePools = [],
+      unitModules: rawUnitModules = [],
+      licenses: rawLicenses = [],
+      schedulingRuleSets: rawSchedulingRuleSets = [],
+      userAccess: rawUserAccess = [],
+    } = payload;
 
     const now = new Date().toISOString();
     const toJson = (value) => JSON.stringify(value || {});
     const toArray = (value) => Array.isArray(value) ? value : [];
+    const organisations = toArray(rawOrganisations);
+    const locations = toArray(rawLocations);
+    const units = toArray(rawUnits);
+    const aircraftTypes = toArray(rawAircraftTypes);
+    const resourcePools = toArray(rawResourcePools);
+    const unitModules = toArray(rawUnitModules);
+    const licenses = toArray(rawLicenses);
+    const schedulingRuleSets = toArray(rawSchedulingRuleSets);
+    const userAccess = toArray(rawUserAccess);
+    const hasActiveRecords = (records) => records.some((record) => String(record?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
+    const structuralBlocker =
+      !hasActiveRecords(organisations) ? 'At least one active organisation is required.' :
+      !hasActiveRecords(locations) ? 'At least one active location is required.' :
+      !hasActiveRecords(units) ? 'At least one active unit is required.' :
+      '';
+    if (structuralBlocker) {
+      return res.status(400).json({
+        error: 'Unsafe platform configuration save blocked',
+        details: structuralBlocker,
+      });
+    }
     const toNullableDate = (value) => value ? String(value).slice(0, 10) : null;
     const toNullableNumber = (value) => (
       value === null || value === undefined || value === '' ? null : Number(value)
@@ -8429,8 +8452,16 @@ async function seedCommercialUserAccessIfEmpty(db) {
 }
 
 async function seedCommercialConfigIfEmpty(db) {
-  const existing = await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialOrganisation"`);
-  if (existing?.[0]?.count > 0) return;
+  const [existingOrganisations, existingLocations, existingUnits] = await Promise.all([
+    db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialOrganisation"`),
+    db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialLocation"`),
+    db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialUnit"`),
+  ]);
+  if (
+    existingOrganisations?.[0]?.count > 0
+    && existingLocations?.[0]?.count > 0
+    && existingUnits?.[0]?.count > 0
+  ) return;
 
   const settingsRows = await db.$queryRawUnsafe(`SELECT data FROM "AppSettings" WHERE "orgId" = 'default' LIMIT 1`);
   const settings = settingsRows?.[0]?.data || {};

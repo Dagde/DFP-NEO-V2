@@ -9,6 +9,7 @@ import {
   getLocationResourcePool,
   isFixedCrewLikeOperationalModel,
   normaliseOperationalModel,
+  normalisePlatformConfig,
   normaliseMasterLmpAccessRules,
   normaliseMasterLmpCatalogue,
   type PlatformMasterLmpAccessRule,
@@ -515,6 +516,21 @@ const applyDefaultUnitTraineeAvailability = (config: PlatformConfig): PlatformCo
     };
   });
   return changed ? { ...config, units } : config;
+};
+
+const normaliseSettingsPlatformConfig = (source?: Partial<PlatformConfig> | null): PlatformConfig => (
+  applyDefaultUnitTraineeAvailability(normalisePlatformConfig(source))
+);
+
+const hasActivePlatformRecords = (records: Array<{ status?: string }>): boolean => (
+  records.some((record) => String(record?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+);
+
+const getPlatformConfigSaveBlocker = (config: PlatformConfig): string => {
+  if (!hasActivePlatformRecords(config.organisations)) return 'Platform configuration save blocked: at least one active organisation is required.';
+  if (!hasActivePlatformRecords(config.locations)) return 'Platform configuration save blocked: at least one active location is required.';
+  if (!hasActivePlatformRecords(config.units)) return 'Platform configuration save blocked: at least one active unit is required.';
+  return '';
 };
 
 const notifyPlatformConfigUpdated = (config: PlatformConfig) => {
@@ -1780,7 +1796,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       setError('');
       try {
         if (isSetupTestMode()) {
-          const nextConfig = applyDefaultUnitTraineeAvailability({ ...emptyConfig, ...readSetupTestPlatformConfig() });
+          const nextConfig = normaliseSettingsPlatformConfig(readSetupTestPlatformConfig());
           if (!cancelled) {
             setConfig(nextConfig);
             loadedConfigRef.current = nextConfig;
@@ -1797,7 +1813,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         const data = await res.json();
         const nextLicenseStatus = licenseRes.ok ? await licenseRes.json() : null;
         if (!cancelled) {
-          const nextConfig = applyDefaultUnitTraineeAvailability({ ...emptyConfig, ...data });
+          const nextConfig = normaliseSettingsPlatformConfig(data);
           setConfig(nextConfig);
           loadedConfigRef.current = nextConfig;
           if (nextLicenseStatus) setLicenseStatus(nextLicenseStatus);
@@ -4169,13 +4185,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     restoreSection?: string,
     options?: { reloadPage?: boolean; successMessage?: string },
   ) => {
-    const configToSave = buildSeparationReadyConfig(
+    const configToSave = buildSeparationReadyConfig(normaliseSettingsPlatformConfig(
       configOverride && Array.isArray(configOverride.locations)
         ? configOverride
         : config
-    );
+    ));
     const reloadPage = options?.reloadPage ?? true;
     if (!canEdit) return false;
+    const saveBlocker = getPlatformConfigSaveBlocker(configToSave);
+    if (saveBlocker) {
+      setError(saveBlocker);
+      return false;
+    }
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
       setError(solarValidationError);
@@ -4452,7 +4473,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const reloadPlatformConfig = async () => {
     if (isSetupTestMode()) {
-      const nextConfig = { ...emptyConfig, ...readSetupTestPlatformConfig() };
+      const nextConfig = normaliseSettingsPlatformConfig(readSetupTestPlatformConfig());
       setConfig(nextConfig);
       loadedConfigRef.current = nextConfig;
       return;
@@ -4460,7 +4481,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const res = await fetch(`${getApiBase()}/platform-config`);
     if (!res.ok) throw new Error(`Configuration reload failed (${res.status})`);
     const data = await res.json();
-    const nextConfig = { ...emptyConfig, ...data };
+    const nextConfig = normaliseSettingsPlatformConfig(data);
     setConfig(nextConfig);
     loadedConfigRef.current = nextConfig;
   };

@@ -30,6 +30,7 @@ import {
     normaliseMasterLmpAccessRules,
     normaliseMasterLmpCatalogue,
     normaliseOperationalModel,
+    normalisePlatformConfig,
     PlatformConfig,
 } from './utils/platformConfigService';
 import { DEFAULT_TASK_PROFILE_CONFIG, getTaskProfileAbbreviationsForUnit, getTaskProfilesForModel } from './utils/taskProfiles';
@@ -21307,7 +21308,7 @@ const App: React.FC = () => {
             });
             try {
                 const config = applyDefaultUnitTraineeAvailability(
-                    setupTestProfile ? readSetupTestPlatformConfig() : await loadPlatformConfigFromDB()
+                    setupTestProfile ? normalisePlatformConfig(readSetupTestPlatformConfig()) : await loadPlatformConfigFromDB()
                 );
                 if (cancelled) return;
                 setPlatformConfig(config);
@@ -21344,7 +21345,8 @@ const App: React.FC = () => {
 
     useEffect(() => {
         const handlePlatformConfigUpdated = (event: Event) => {
-            const nextConfig = applyDefaultUnitTraineeAvailability((event as CustomEvent<{ config?: PlatformConfig }>).detail?.config || null);
+            const rawConfig = (event as CustomEvent<{ config?: PlatformConfig }>).detail?.config || null;
+            const nextConfig = rawConfig ? applyDefaultUnitTraineeAvailability(normalisePlatformConfig(rawConfig)) : null;
             if (!nextConfig || !Array.isArray(nextConfig.units)) return;
             setPlatformConfig(nextConfig);
             setPlatformConfigLoaded(true);

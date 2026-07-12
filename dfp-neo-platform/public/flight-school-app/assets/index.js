@@ -2439,9 +2439,28 @@ const emptyPlatformConfig = {
   resourcePools: [],
   modules: [],
   unitModules: [],
+  licenses: [],
   userAccess: [],
   platformUsers: [],
   schedulingRuleSets: []
+};
+const normalisePlatformConfig = (source) => {
+  const raw = source && typeof source === "object" ? source : {};
+  return {
+    ...emptyPlatformConfig,
+    ...raw,
+    organisations: Array.isArray(raw.organisations) ? raw.organisations : [],
+    locations: Array.isArray(raw.locations) ? raw.locations : [],
+    units: Array.isArray(raw.units) ? raw.units : [],
+    aircraftTypes: Array.isArray(raw.aircraftTypes) ? raw.aircraftTypes : [],
+    resourcePools: Array.isArray(raw.resourcePools) ? raw.resourcePools : [],
+    modules: Array.isArray(raw.modules) ? raw.modules : [],
+    unitModules: Array.isArray(raw.unitModules) ? raw.unitModules : [],
+    licenses: Array.isArray(raw.licenses) ? raw.licenses : [],
+    userAccess: Array.isArray(raw.userAccess) ? raw.userAccess : [],
+    platformUsers: Array.isArray(raw.platformUsers) ? raw.platformUsers : [],
+    schedulingRuleSets: Array.isArray(raw.schedulingRuleSets) ? raw.schedulingRuleSets : []
+  };
 };
 const getApiBase$2 = () => getAppApiBase();
 const normaliseLocationIdentifier = (value) => String(value || "").trim().toLowerCase();
@@ -2504,7 +2523,7 @@ const loadPlatformConfigFromDB = async () => {
       return null;
     }
     const data = await res.json();
-    return { ...emptyPlatformConfig, ...data };
+    return normalisePlatformConfig(data);
   } catch (error) {
     console.error("[PlatformConfig] Error loading platform configuration:", error);
     return null;
@@ -66649,6 +66668,14 @@ const applyDefaultUnitTraineeAvailability$1 = (config) => {
   });
   return changed ? { ...config, units } : config;
 };
+const normaliseSettingsPlatformConfig = (source) => applyDefaultUnitTraineeAvailability$1(normalisePlatformConfig(source));
+const hasActivePlatformRecords = (records) => records.some((record) => String(record?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+const getPlatformConfigSaveBlocker = (config) => {
+  if (!hasActivePlatformRecords(config.organisations)) return "Platform configuration save blocked: at least one active organisation is required.";
+  if (!hasActivePlatformRecords(config.locations)) return "Platform configuration save blocked: at least one active location is required.";
+  if (!hasActivePlatformRecords(config.units)) return "Platform configuration save blocked: at least one active unit is required.";
+  return "";
+};
 const notifyPlatformConfigUpdated = (config) => {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT$1, { detail: { config } }));
@@ -67661,7 +67688,7 @@ const PlatformConfigurationSettings = ({
       setError("");
       try {
         if (isSetupTestMode()) {
-          const nextConfig = applyDefaultUnitTraineeAvailability$1({ ...emptyConfig, ...readSetupTestPlatformConfig() });
+          const nextConfig = normaliseSettingsPlatformConfig(readSetupTestPlatformConfig());
           if (!cancelled) {
             setConfig(nextConfig);
             loadedConfigRef.current = nextConfig;
@@ -67678,7 +67705,7 @@ const PlatformConfigurationSettings = ({
         const data = await res.json();
         const nextLicenseStatus = licenseRes.ok ? await licenseRes.json() : null;
         if (!cancelled) {
-          const nextConfig = applyDefaultUnitTraineeAvailability$1({ ...emptyConfig, ...data });
+          const nextConfig = normaliseSettingsPlatformConfig(data);
           setConfig(nextConfig);
           loadedConfigRef.current = nextConfig;
           if (nextLicenseStatus) setLicenseStatus(nextLicenseStatus);
@@ -69586,11 +69613,16 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     onShowSuccess(`Resource pool "${selectedResourcePoolDeleteOption.name}" removed. Click Save to apply the deletion.`);
   };
   const save = async (configOverride, restoreSection, options) => {
-    const configToSave = buildSeparationReadyConfig(
+    const configToSave = buildSeparationReadyConfig(normaliseSettingsPlatformConfig(
       configOverride && Array.isArray(configOverride.locations) ? configOverride : config
-    );
+    ));
     const reloadPage = options?.reloadPage ?? true;
     if (!canEdit) return false;
+    const saveBlocker = getPlatformConfigSaveBlocker(configToSave);
+    if (saveBlocker) {
+      setError(saveBlocker);
+      return false;
+    }
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
       setError(solarValidationError);
@@ -69833,7 +69865,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   };
   const reloadPlatformConfig = async () => {
     if (isSetupTestMode()) {
-      const nextConfig2 = { ...emptyConfig, ...readSetupTestPlatformConfig() };
+      const nextConfig2 = normaliseSettingsPlatformConfig(readSetupTestPlatformConfig());
       setConfig(nextConfig2);
       loadedConfigRef.current = nextConfig2;
       return;
@@ -69841,7 +69873,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     const res = await fetch(`${getApiBase()}/platform-config`);
     if (!res.ok) throw new Error(`Configuration reload failed (${res.status})`);
     const data = await res.json();
-    const nextConfig = { ...emptyConfig, ...data };
+    const nextConfig = normaliseSettingsPlatformConfig(data);
     setConfig(nextConfig);
     loadedConfigRef.current = nextConfig;
   };
@@ -101516,7 +101548,7 @@ const App = () => {
       });
       try {
         const config = applyDefaultUnitTraineeAvailability(
-          setupTestProfile ? readSetupTestPlatformConfig() : await loadPlatformConfigFromDB()
+          setupTestProfile ? normalisePlatformConfig(readSetupTestPlatformConfig()) : await loadPlatformConfigFromDB()
         );
         if (cancelled) return;
         setPlatformConfig(config);
@@ -101554,7 +101586,8 @@ const App = () => {
   }, [setupTestProfile]);
   reactExports.useEffect(() => {
     const handlePlatformConfigUpdated = (event) => {
-      const nextConfig = applyDefaultUnitTraineeAvailability(event.detail?.config || null);
+      const rawConfig = event.detail?.config || null;
+      const nextConfig = rawConfig ? applyDefaultUnitTraineeAvailability(normalisePlatformConfig(rawConfig)) : null;
       if (!nextConfig || !Array.isArray(nextConfig.units)) return;
       setPlatformConfig(nextConfig);
       setPlatformConfigLoaded(true);

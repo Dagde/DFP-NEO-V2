@@ -62,6 +62,7 @@ export interface PlatformConfig {
   resourcePools: PlatformResourcePool[];
   modules: any[];
   unitModules: any[];
+  licenses: any[];
   userAccess: any[];
   platformUsers: any[];
   schedulingRuleSets: any[];
@@ -308,9 +309,29 @@ const emptyPlatformConfig: PlatformConfig = {
   resourcePools: [],
   modules: [],
   unitModules: [],
+  licenses: [],
   userAccess: [],
   platformUsers: [],
   schedulingRuleSets: [],
+};
+
+export const normalisePlatformConfig = (source?: Partial<PlatformConfig> | null): PlatformConfig => {
+  const raw = source && typeof source === 'object' ? source : {};
+  return {
+    ...emptyPlatformConfig,
+    ...raw,
+    organisations: Array.isArray(raw.organisations) ? raw.organisations : [],
+    locations: Array.isArray(raw.locations) ? raw.locations : [],
+    units: Array.isArray(raw.units) ? raw.units : [],
+    aircraftTypes: Array.isArray(raw.aircraftTypes) ? raw.aircraftTypes : [],
+    resourcePools: Array.isArray(raw.resourcePools) ? raw.resourcePools : [],
+    modules: Array.isArray(raw.modules) ? raw.modules : [],
+    unitModules: Array.isArray(raw.unitModules) ? raw.unitModules : [],
+    licenses: Array.isArray(raw.licenses) ? raw.licenses : [],
+    userAccess: Array.isArray(raw.userAccess) ? raw.userAccess : [],
+    platformUsers: Array.isArray(raw.platformUsers) ? raw.platformUsers : [],
+    schedulingRuleSets: Array.isArray(raw.schedulingRuleSets) ? raw.schedulingRuleSets : [],
+  };
 };
 
 const getApiBase = (): string => getAppApiBase();
@@ -394,7 +415,7 @@ export const loadPlatformConfigFromDB = async (): Promise<PlatformConfig | null>
     }
 
     const data = await res.json();
-    return { ...emptyPlatformConfig, ...data };
+    return normalisePlatformConfig(data);
   } catch (error) {
     console.error('[PlatformConfig] Error loading platform configuration:', error);
     return null;
