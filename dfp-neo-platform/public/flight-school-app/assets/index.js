@@ -75552,7 +75552,7 @@ const SettingsViewWithMenu = (props) => {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "mt-[15px] flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
         const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
         const showSubmenu = isSearchActive || (expandedGroups[group.label] ?? groupActive);
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[175px]", children: [

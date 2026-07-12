@@ -1494,7 +1494,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                     />
                 </div>
-                <nav className="flex flex-col items-center gap-[1px]">
+                <nav className="mt-[15px] flex flex-col items-center gap-[1px]">
                     {visibleSettingGroups.map(group => {
                         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection);
                         const showSubmenu = isSearchActive || (expandedGroups[group.label] ?? groupActive);
