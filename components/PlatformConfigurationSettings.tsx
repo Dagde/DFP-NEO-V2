@@ -7684,7 +7684,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           value={option.label}
                           disabled={!canEditTrainingReportTemplate}
                           maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                          onKeyDownCapture={stopEditableKeyPropagation}
+                          onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateTrainingReportGrade(option.value, { label: value }), TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)}
+                          onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateTrainingReportGrade(option.value, { label: value }), TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)}
                           onKeyDown={stopEditableKeyPropagation}
                           onChange={(event) => updateTrainingReportGrade(option.value, { label: event.target.value })}
                         />
@@ -8568,6 +8569,53 @@ const FieldLabel = ({ label, info, noWrap = false }: { label: string; info?: str
   </span>
 );
 
+const insertEditableTextAtCursor = (
+  field: HTMLInputElement | HTMLTextAreaElement,
+  text: string,
+  onChange: (value: string) => void,
+  maxLength?: number,
+): boolean => {
+  if (field.disabled || field.readOnly) return false;
+  const currentValue = field.value || '';
+  const selectionStart = field.selectionStart ?? currentValue.length;
+  const selectionEnd = field.selectionEnd ?? selectionStart;
+  const nextValue = `${currentValue.slice(0, selectionStart)}${text}${currentValue.slice(selectionEnd)}`;
+  const limitedValue = typeof maxLength === 'number' ? nextValue.slice(0, maxLength) : nextValue;
+  const nextCursor = Math.min(selectionStart + text.length, limitedValue.length);
+  if (limitedValue === currentValue && selectionStart === selectionEnd) return false;
+  onChange(limitedValue);
+  window.requestAnimationFrame(() => {
+    field.setSelectionRange(nextCursor, nextCursor);
+  });
+  return true;
+};
+
+const handleEditableTextKeyDownCapture = (
+  event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+  onChange: (value: string) => void,
+  maxLength?: number,
+) => {
+  if ((event.key === ' ' || event.code === 'Space' || event.key === 'Spacebar') && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    event.preventDefault();
+    event.stopPropagation();
+    insertEditableTextAtCursor(event.currentTarget, ' ', onChange, maxLength);
+    return;
+  }
+  stopEditableKeyPropagation(event);
+};
+
+const handleEditableTextBeforeInput = (
+  event: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>,
+  onChange: (value: string) => void,
+  maxLength?: number,
+) => {
+  const inputEvent = event.nativeEvent as InputEvent;
+  if (inputEvent.inputType !== 'insertText' || inputEvent.data !== ' ') return;
+  event.preventDefault();
+  event.stopPropagation();
+  insertEditableTextAtCursor(event.currentTarget, ' ', onChange, maxLength);
+};
+
 const Field = ({ label, labelNoWrap = false, value, disabled, onChange, info, maxLength }: { label: string; labelNoWrap?: boolean; value: string; disabled: boolean; onChange: (value: string) => void; info?: string; maxLength?: number }) => (
   <label>
     <FieldLabel label={label} info={info} noWrap={labelNoWrap} />
@@ -8576,7 +8624,8 @@ const Field = ({ label, labelNoWrap = false, value, disabled, onChange, info, ma
       value={value || ''}
       disabled={disabled}
       maxLength={maxLength}
-      onKeyDownCapture={stopEditableKeyPropagation}
+      onBeforeInput={(event) => handleEditableTextBeforeInput(event, onChange, maxLength)}
+      onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, onChange, maxLength)}
       onKeyDown={stopEditableKeyPropagation}
       onChange={(event) => onChange(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value)}
     />
@@ -8598,7 +8647,8 @@ const OffsetField = ({ label, value, disabled, onChange, listId, options = [], m
         disabled={disabled}
         list={listId}
         maxLength={maxLength}
-        onKeyDownCapture={stopEditableKeyPropagation}
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, onChange, maxLength)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, onChange, maxLength)}
         onKeyDown={stopEditableKeyPropagation}
         onChange={(event) => onChange(event.target.value)}
       />
