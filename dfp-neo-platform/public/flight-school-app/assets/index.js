@@ -22287,8 +22287,8 @@ const TraineeProfileFlyout = ({
       addText(`${percent.toFixed(0)}%`, cx - 5, cy + 1, 7, "bold");
       const drawBenchmark = (value, r, g, b) => {
         const angle = (-90 + Math.max(0, Math.min(100, value)) / 100 * 360) * Math.PI / 180;
-        const innerRadius = radius - 4;
-        const outerRadius = radius + 3;
+        const innerRadius = radius - 1.5;
+        const outerRadius = radius + 3.5;
         doc.setDrawColor(r, g, b);
         doc.setLineWidth(0.55);
         doc.line(
@@ -22301,11 +22301,15 @@ const TraineeProfileFlyout = ({
       drawBenchmark(reviewData.progress.averageProgress, 255, 170, 0);
       drawBenchmark(reviewData.progress.mostProgress, 0, 210, 255);
       drawBenchmark(reviewData.progress.leastProgress, 255, 64, 64);
-      addText(`Events completed: ${reviewData.progress.completedCount}/${reviewData.progress.totalCount}`, margin + 50, y + 8, 8);
-      addText(`Failed: ${reviewData.summaryFailed.length}   Double marginal: ${reviewData.summaryDoubleMarginal.length}   Marginal: ${reviewData.summaryMarginal.length}`, margin + 50, y + 14, 8);
-      addText(`Current score average: ${reviewData.currentScoreAverage.toFixed(1)}`, margin + 50, y + 20, 8);
-      addText(`Course rank by average score: ${reviewData.courseAverageRank.rank ? `${reviewData.courseAverageRank.rank}/${reviewData.courseAverageRank.total}` : "-"}`, margin + 50, y + 26, 8);
-      addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Front runner: ${reviewData.progress.mostProgress.toFixed(0)}%   Back marker: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin + 50, y + 32, 8);
+      const textX = margin + 50;
+      const metricRows = [
+        `Progress: ${reviewData.progress.completedCount}/${reviewData.progress.totalCount} events (${reviewData.progress.progressPercent.toFixed(0)}%)`,
+        `Failed: ${reviewData.summaryFailed.length}   Double marginal: ${reviewData.summaryDoubleMarginal.length}   Marginal: ${reviewData.summaryMarginal.length}`,
+        `Current score average: ${reviewData.currentScoreAverage.toFixed(1)}`,
+        `Course rank by average score: ${reviewData.courseAverageRank.rank ? `${reviewData.courseAverageRank.rank}/${reviewData.courseAverageRank.total}` : "-"}`,
+        `Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Front runner: ${reviewData.progress.mostProgress.toFixed(0)}%   Back marker: ${reviewData.progress.leastProgress.toFixed(0)}%`
+      ];
+      metricRows.forEach((row, index) => addText(row, textX, y + 7 + index * 6, 8));
       y += 42;
     };
     doc.setFillColor(15, 24, 36);
@@ -22319,9 +22323,7 @@ const TraineeProfileFlyout = ({
     drawScoreGraph();
     addSection("Course Progress");
     drawProgressGraph();
-    addText(`Progress: ${reviewData.progress.completedCount}/${reviewData.progress.totalCount} events (${reviewData.progress.progressPercent.toFixed(0)}%)`, margin, y);
-    addText(`Course avg: ${reviewData.progress.averageProgress.toFixed(0)}%   Front runner: ${reviewData.progress.mostProgress.toFixed(0)}%   Back marker: ${reviewData.progress.leastProgress.toFixed(0)}%`, margin, y + 5);
-    y += 12;
+    y += 2;
     addSection("Performance Summary");
     const addSummaryLines = (label, items) => {
       ensureSpace(8);
