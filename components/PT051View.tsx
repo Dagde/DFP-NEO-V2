@@ -1406,8 +1406,8 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                     </dl>
                     
                     <div className="lg:col-span-2 space-y-4">
-                        <fieldset className="p-4 border border-gray-600 rounded-lg lg:-ml-[44px] lg:-mt-[2px] lg:w-[calc(100%+44px)]">
-                            <legend className="px-2 text-sm font-semibold text-gray-300">{reportTemplate.modules.overallAssessment.title}</legend>
+                        <div className="relative p-4 border border-gray-600 rounded-lg lg:-ml-[44px] lg:w-[calc(100%+44px)]">
+                            <div className="absolute -top-3 left-6 bg-gray-900 px-2 text-sm font-semibold text-gray-300">{reportTemplate.modules.overallAssessment.title}</div>
                             {/* DCO/DPCO/DNCO Radio Buttons - Always available for PT-051 assessments */}
                             <div className="mt-2 mb-4">
                                 <div className="grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]">
@@ -1675,7 +1675,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     </div>
                                 </div>
                             </div>
-                        </fieldset>
+                        </div>
                         {showDoubleMarginalWarning && (
                             <div className="p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-sm text-red-300">
                                 <strong>Warning:</strong> This grade matches the configured repeat rule for this training report. A review may be required.
