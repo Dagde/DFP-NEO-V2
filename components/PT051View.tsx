@@ -1587,7 +1587,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                             <label
                                                 key={grade}
                                                 title={formatGradeOption(grade)}
-                                                className={`flex ${reportTemplate.grades.showNumbers ? 'justify-between py-2' : 'justify-start pb-2 pt-[15px]'} h-[75px] w-[82px] cursor-pointer flex-col items-center rounded border px-1 text-center transition ${
+                                                className={`relative flex ${reportTemplate.grades.showNumbers ? 'justify-between py-2' : 'justify-start pb-2 pt-[15px]'} h-[75px] w-[82px] cursor-pointer flex-col items-center rounded border px-1 text-center transition ${
                                                     overallGrade === grade
                                                         ? 'border-sky-400 bg-sky-500/15 text-white'
                                                         : 'border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500'
@@ -1605,7 +1605,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                         <span key={`${word}-${index}`}>{word}</span>
                                                     ))}
                                                 </span>
-                                                <input type="radio" name="overall-grade" value={grade} checked={overallGrade === grade} onChange={() => setOverallGrade(grade)} className={`h-4 w-4 ${getOverallRadioAccentColor(grade)} bg-gray-600`} />
+                                                <input type="radio" name="overall-grade" value={grade} checked={overallGrade === grade} onChange={() => setOverallGrade(grade)} className={`h-4 w-4 ${!reportTemplate.grades.showNumbers ? 'absolute bottom-[15px]' : ''} ${getOverallRadioAccentColor(grade)} bg-gray-600`} />
                                             </label>
                                         ))}
                                     </div>
