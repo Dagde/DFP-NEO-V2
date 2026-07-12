@@ -69680,7 +69680,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     const configToSave = buildSeparationReadyConfig(normaliseSettingsPlatformConfig(
       configOverride && Array.isArray(configOverride.locations) ? configOverride : config
     ));
-    const reloadPage = options?.reloadPage ?? true;
+    const reloadPage = options?.reloadPage ?? false;
     if (!canEdit) return false;
     const saveBlocker = getPlatformConfigSaveBlocker(configToSave);
     if (saveBlocker) {
@@ -69932,6 +69932,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
       const nextConfig2 = normaliseSettingsPlatformConfig(readSetupTestPlatformConfig());
       setConfig(nextConfig2);
       loadedConfigRef.current = nextConfig2;
+      notifyPlatformConfigUpdated(nextConfig2);
       return;
     }
     const res = await fetch(`${getApiBase()}/platform-config`);
@@ -69940,6 +69941,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     const nextConfig = normaliseSettingsPlatformConfig(data);
     setConfig(nextConfig);
     loadedConfigRef.current = nextConfig;
+    notifyPlatformConfigUpdated(nextConfig);
   };
   const verifySignedLicense = async () => {
     if (!licenseImportText.trim()) {
@@ -70190,7 +70192,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: stopEditableKeyPropagation, children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-cyan-100", children: "One moment while we apply your changes" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-300", children: "The page will refresh automatically so the updated platform settings are active everywhere." })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-300", children: "The updated platform settings are being applied across the running app." })
     ] }) }),
     sectionOnly ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/80 px-4 py-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [

@@ -4293,7 +4293,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ? configOverride
         : config
     ));
-    const reloadPage = options?.reloadPage ?? true;
+    const reloadPage = options?.reloadPage ?? false;
     if (!canEdit) return false;
     const saveBlocker = getPlatformConfigSaveBlocker(configToSave);
     if (saveBlocker) {
@@ -4579,6 +4579,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const nextConfig = normaliseSettingsPlatformConfig(readSetupTestPlatformConfig());
       setConfig(nextConfig);
       loadedConfigRef.current = nextConfig;
+      notifyPlatformConfigUpdated(nextConfig);
       return;
     }
     const res = await fetch(`${getApiBase()}/platform-config`);
@@ -4587,6 +4588,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const nextConfig = normaliseSettingsPlatformConfig(data);
     setConfig(nextConfig);
     loadedConfigRef.current = nextConfig;
+    notifyPlatformConfigUpdated(nextConfig);
   };
 
   const verifySignedLicense = async () => {
@@ -4912,7 +4914,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm">
           <div className="rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl">
             <div className="text-lg font-bold text-cyan-100">One moment while we apply your changes</div>
-            <p className="mt-2 text-sm text-gray-300">The page will refresh automatically so the updated platform settings are active everywhere.</p>
+            <p className="mt-2 text-sm text-gray-300">The updated platform settings are being applied across the running app.</p>
           </div>
         </div>
       )}

@@ -2371,6 +2371,18 @@ app.post('/api/platform-config', async (req, res) => {
     const now = new Date().toISOString();
     const toJson = (value) => JSON.stringify(value || {});
     const toArray = (value) => Array.isArray(value) ? value : [];
+    const deleteRowsNotInPayload = async (tableName, keyExpression, keepKeys) => {
+      const uniqueKeys = Array.from(new Set(keepKeys.map((key) => String(key || '').trim()).filter(Boolean)));
+      if (uniqueKeys.length === 0) {
+        await db.$executeRawUnsafe(`DELETE FROM "${tableName}"`);
+        return;
+      }
+      const keepPlaceholders = uniqueKeys.map((_, index) => `$${index + 1}`).join(', ');
+      await db.$executeRawUnsafe(
+        `DELETE FROM "${tableName}" WHERE ${keyExpression} NOT IN (${keepPlaceholders})`,
+        ...uniqueKeys
+      );
+    };
     const organisations = toArray(rawOrganisations);
     const locations = toArray(rawLocations);
     const units = toArray(rawUnits);
@@ -2429,6 +2441,22 @@ app.post('/api/platform-config', async (req, res) => {
         ...organisationCodesToKeep
       );
     }
+    await deleteRowsNotInPayload('CommercialLocation', `"code"`, locations.map((location) => location.code));
+    await deleteRowsNotInPayload('CommercialUnit', `"code"`, units.map((unit) => unit.code));
+    await deleteRowsNotInPayload('CommercialAircraftType', `"code"`, aircraftTypes.map((aircraftType) => aircraftType.code));
+    await deleteRowsNotInPayload('CommercialResourcePool', `"code"`, resourcePools.map((pool) => pool.code));
+    await deleteRowsNotInPayload('CommercialUnitModule', `("unitCode" || '|' || "moduleCode")`, unitModules.map((unitModule) => (
+      unitModule.unitCode && unitModule.moduleCode ? `${unitModule.unitCode}|${unitModule.moduleCode}` : ''
+    )));
+    await deleteRowsNotInPayload('CommercialLicense', `"licenseKey"`, licenses.map((license) => license.licenseKey));
+    await deleteRowsNotInPayload('CommercialSchedulingRuleSet', `"id"`, schedulingRuleSets.map((ruleSet) => ruleSet.id));
+    await deleteRowsNotInPayload('CommercialUserAccess', `"scopeKey"`, userAccess.map((access) => ([
+      access.userId,
+      access.organisationCode || 'DEFAULT',
+      access.locationCode || '',
+      access.unitCode || '',
+      access.moduleCode || '',
+    ].join('|'))));
 
     for (const org of organisations) {
       if (!org.code || !org.name) continue;
