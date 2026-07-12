@@ -69648,22 +69648,37 @@ This permanently removes the organisation record from platform configuration and
     return fullName || user.displayName || user.username || user.userId || "Unknown User";
   };
   const userOptions = reactExports.useMemo(
-    () => config.platformUsers.map((user) => ({
-      id: user.userId || user.username,
-      name: displayUserName(user),
-      username: user.username || user.userId || "",
-      email: user.email || ""
-    })).filter((user) => user.id).sort((a, b) => a.name.localeCompare(b.name)),
-    [config.platformUsers]
+    () => {
+      const platformOptions = config.platformUsers.map((user) => ({
+        id: user.userId || user.username,
+        name: displayUserName(user),
+        username: user.username || user.userId || "",
+        email: user.email || ""
+      })).filter((user) => user.id);
+      const platformUserIds = new Set(platformOptions.flatMap((user) => uniqueValues([user.id, user.username].map(toIdentifier))));
+      const orphanOptions = config.userAccess.filter((access) => {
+        const accessUserId = toIdentifier(access.userId);
+        const accessUsername = toIdentifier(access.username);
+        return (accessUserId || accessUsername) && !platformUserIds.has(accessUserId) && !platformUserIds.has(accessUsername);
+      }).map((access) => ({
+        id: access.userId || access.username,
+        name: `${access.displayName || access.username || access.userId || "Unknown user"} (missing user record)`,
+        username: access.username || access.userId || "",
+        email: ""
+      })).filter((user, index, rows) => user.id && rows.findIndex((candidate) => candidate.id === user.id) === index);
+      return [...platformOptions, ...orphanOptions].sort((a, b) => a.name.localeCompare(b.name));
+    },
+    [config.platformUsers, config.userAccess]
   );
   const selectedAccessUser = reactExports.useMemo(
     () => config.platformUsers.find((user) => (user.userId || user.username) === selectedAccessUserId),
     [config.platformUsers, selectedAccessUserId]
   );
   const selectedAccessRows = reactExports.useMemo(
-    () => config.userAccess.map((access, index) => ({ access, index })).filter(({ access }) => access.userId === selectedAccessUserId),
+    () => config.userAccess.map((access, index) => ({ access, index })).filter(({ access }) => [access.userId, access.username].map((value) => String(value || "").trim()).some((value) => value === selectedAccessUserId)),
     [config.userAccess, selectedAccessUserId]
   );
+  const selectedAccessDisplayName = selectedAccessUser ? `${selectedAccessUser.firstName || ""} ${selectedAccessUser.lastName || ""}`.trim() || selectedAccessUser.username || selectedAccessUser.userId : selectedAccessRows[0]?.access.displayName ? `${selectedAccessRows[0].access.displayName} (missing platform user record)` : selectedAccessUserId ? `${selectedAccessUserId} (missing platform user record)` : "No user selected";
   const selectedUserProfileIds = reactExports.useMemo(() => {
     const activeRows = selectedAccessRows.filter(({ access }) => String(access.status || "").toUpperCase() !== "INACTIVE");
     const sourceRows = activeRows.length > 0 ? activeRows : selectedAccessRows;
@@ -73624,7 +73639,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Display Name" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: selectedAccessUser ? `${selectedAccessUser.firstName || ""} ${selectedAccessUser.lastName || ""}`.trim() || selectedAccessUser.username || selectedAccessUser.userId : "No user selected" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: selectedAccessDisplayName })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Access Scopes" }),

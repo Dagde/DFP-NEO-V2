@@ -135,6 +135,11 @@ export async function POST(request: NextRequest) {
       await tx.session.deleteMany({
         where: { userId: targetUser.id },
       });
+      await tx.$executeRawUnsafe(
+        `DELETE FROM "CommercialUserAccess" WHERE "userId" = $1 OR username = $1 OR "userId" = $2 OR username = $2`,
+        targetUser.userId,
+        targetUser.username || ''
+      );
       await tx.user.updateMany({
         where: { createdById: targetUser.id },
         data: { createdById: null },

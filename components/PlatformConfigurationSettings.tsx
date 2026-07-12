@@ -4088,16 +4088,30 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const userOptions = useMemo(
-    () => config.platformUsers
-      .map((user) => ({
+    () => {
+      const platformOptions = config.platformUsers.map((user) => ({
         id: user.userId || user.username,
         name: displayUserName(user),
         username: user.username || user.userId || '',
         email: user.email || '',
-      }))
-      .filter((user) => user.id)
-      .sort((a, b) => a.name.localeCompare(b.name)),
-    [config.platformUsers],
+      })).filter((user) => user.id);
+      const platformUserIds = new Set(platformOptions.flatMap((user) => uniqueValues([user.id, user.username].map(toIdentifier))));
+      const orphanOptions = config.userAccess
+        .filter((access) => {
+          const accessUserId = toIdentifier(access.userId);
+          const accessUsername = toIdentifier(access.username);
+          return (accessUserId || accessUsername) && !platformUserIds.has(accessUserId) && !platformUserIds.has(accessUsername);
+        })
+        .map((access) => ({
+          id: access.userId || access.username,
+          name: `${access.displayName || access.username || access.userId || 'Unknown user'} (missing user record)`,
+          username: access.username || access.userId || '',
+          email: '',
+        }))
+        .filter((user, index, rows) => user.id && rows.findIndex((candidate) => candidate.id === user.id) === index);
+      return [...platformOptions, ...orphanOptions].sort((a, b) => a.name.localeCompare(b.name));
+    },
+    [config.platformUsers, config.userAccess],
   );
 
   const selectedAccessUser = useMemo(
@@ -4108,9 +4122,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const selectedAccessRows = useMemo(
     () => config.userAccess
       .map((access, index) => ({ access, index }))
-      .filter(({ access }) => access.userId === selectedAccessUserId),
+      .filter(({ access }) => (
+        [access.userId, access.username]
+          .map((value) => String(value || '').trim())
+          .some((value) => value === selectedAccessUserId)
+      )),
     [config.userAccess, selectedAccessUserId],
   );
+
+  const selectedAccessDisplayName = selectedAccessUser
+    ? `${selectedAccessUser.firstName || ''} ${selectedAccessUser.lastName || ''}`.trim() || selectedAccessUser.username || selectedAccessUser.userId
+    : selectedAccessRows[0]?.access.displayName
+      ? `${selectedAccessRows[0].access.displayName} (missing platform user record)`
+      : selectedAccessUserId
+        ? `${selectedAccessUserId} (missing platform user record)`
+        : 'No user selected';
 
   const selectedUserProfileIds = useMemo(() => {
     const activeRows = selectedAccessRows.filter(({ access }) => String(access.status || '').toUpperCase() !== 'INACTIVE');
@@ -8342,9 +8368,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div>
                 <span className={labelClass}>Display Name</span>
                 <div className="rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100">
-                  {selectedAccessUser
-                    ? `${selectedAccessUser.firstName || ''} ${selectedAccessUser.lastName || ''}`.trim() || selectedAccessUser.username || selectedAccessUser.userId
-                    : 'No user selected'}
+                  {selectedAccessDisplayName}
                 </div>
               </div>
               <div>
