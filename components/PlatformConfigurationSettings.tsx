@@ -980,6 +980,8 @@ type ConfigurationHealthItem = {
   title: string;
   detail: string;
   remediation?: string;
+  settingsSection?: string;
+  settingsSectionLabel?: string;
 };
 
 const isActiveRecord = (item: any): boolean => String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE';
@@ -1189,6 +1191,46 @@ const getPlatformLocationAuditLabel = (location: any): string => {
 
 const uniqueValues = (values: string[]): string[] => Array.from(new Set(values.filter(Boolean)));
 
+const getConfigurationHealthSettingsLink = (area: string, title: string): { section: string; label: string } | null => {
+  const lowerTitle = title.toLowerCase();
+  if (area === 'Organisation' || area === 'Locations') {
+    return { section: 'platform-organisation-locations', label: 'Organisation, Bases & Areas' };
+  }
+  if (area === 'Units') {
+    return { section: 'platform-units', label: 'Units & Ownership' };
+  }
+  if (area === 'Modules') {
+    return { section: 'platform-unit-modules', label: 'Unit Features & Modules' };
+  }
+  if (area === 'Resource Pools') {
+    return { section: 'platform-resource-pools', label: 'Aircraft & Resource Pools' };
+  }
+  if (area === 'User Access') {
+    return { section: 'platform-user-access', label: 'User Access' };
+  }
+  if (area === 'Permission Profiles') {
+    return { section: 'platform-permission-profiles', label: 'Permission Profiles' };
+  }
+  if (area === 'Licensing') {
+    return { section: 'platform-licensing', label: 'Licensing & Deployment' };
+  }
+  if (area === 'Deployment Readiness') {
+    return { section: 'platform-deployment-readiness', label: 'Deployment Readiness' };
+  }
+  if (area === 'Operational Runbook') {
+    return { section: 'platform-operational-runbook', label: 'Operational Runbook' };
+  }
+  if (area === 'Unit Separation') {
+    if (lowerTitle.includes('resource')) {
+      return { section: 'platform-resource-pools', label: 'Aircraft & Resource Pools' };
+    }
+    if (lowerTitle.includes('profiles')) {
+      return { section: 'crew-composition', label: 'Crew Composition' };
+    }
+  }
+  return null;
+};
+
 const getDefaultConfigurationHealthRemediation = (area: string, title: string): string => {
   const lowerTitle = title.toLowerCase();
   if (area === 'Organisation') {
@@ -1257,6 +1299,7 @@ const buildConfigurationHealth = (
     idSuffix = `${area}-${title}-${items.length}`,
     remediation?: string,
   ) => {
+    const settingsLink = severity === 'OK' ? null : getConfigurationHealthSettingsLink(area, title);
     items.push({
       id: `${severity}-${idSuffix}`.replace(/\s+/g, '-').toLowerCase(),
       severity,
@@ -1264,6 +1307,8 @@ const buildConfigurationHealth = (
       title,
       detail,
       remediation: severity === 'OK' ? undefined : remediation || getDefaultConfigurationHealthRemediation(area, title),
+      settingsSection: settingsLink?.section,
+      settingsSectionLabel: settingsLink?.label,
     });
   };
 
@@ -1593,6 +1638,7 @@ interface PlatformConfigurationSettingsProps {
   focusResourcePoolCode?: string;
   focusAircraftTypeCode?: string;
   focusSubsectionId?: string;
+  onNavigateToSettingsSection?: (section: string) => void;
   phraseBank?: Record<string, any>;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
@@ -1618,6 +1664,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   focusResourcePoolCode = '',
   focusAircraftTypeCode = '',
   focusSubsectionId = '',
+  onNavigateToSettingsSection,
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
@@ -4927,6 +4974,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <span className="font-bold text-cyan-100">Fix: </span>
                           {item.remediation}
                         </p>
+                      )}
+                      {item.settingsSection && onNavigateToSettingsSection && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateToSettingsSection(item.settingsSection!)}
+                          className="mt-2 text-sm font-bold text-cyan-200 underline decoration-cyan-300/60 underline-offset-4 hover:text-cyan-100"
+                        >
+                          Open {item.settingsSectionLabel || 'settings page'}
+                        </button>
                       )}
                     </div>
                   </div>

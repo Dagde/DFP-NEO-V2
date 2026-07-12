@@ -67173,6 +67173,45 @@ const getPlatformLocationAuditLabel = (location) => {
   return code || name || "Unnamed location";
 };
 const uniqueValues = (values) => Array.from(new Set(values.filter(Boolean)));
+const getConfigurationHealthSettingsLink = (area, title) => {
+  const lowerTitle = title.toLowerCase();
+  if (area === "Organisation" || area === "Locations") {
+    return { section: "platform-organisation-locations", label: "Organisation, Bases & Areas" };
+  }
+  if (area === "Units") {
+    return { section: "platform-units", label: "Units & Ownership" };
+  }
+  if (area === "Modules") {
+    return { section: "platform-unit-modules", label: "Unit Features & Modules" };
+  }
+  if (area === "Resource Pools") {
+    return { section: "platform-resource-pools", label: "Aircraft & Resource Pools" };
+  }
+  if (area === "User Access") {
+    return { section: "platform-user-access", label: "User Access" };
+  }
+  if (area === "Permission Profiles") {
+    return { section: "platform-permission-profiles", label: "Permission Profiles" };
+  }
+  if (area === "Licensing") {
+    return { section: "platform-licensing", label: "Licensing & Deployment" };
+  }
+  if (area === "Deployment Readiness") {
+    return { section: "platform-deployment-readiness", label: "Deployment Readiness" };
+  }
+  if (area === "Operational Runbook") {
+    return { section: "platform-operational-runbook", label: "Operational Runbook" };
+  }
+  if (area === "Unit Separation") {
+    if (lowerTitle.includes("resource")) {
+      return { section: "platform-resource-pools", label: "Aircraft & Resource Pools" };
+    }
+    if (lowerTitle.includes("profiles")) {
+      return { section: "crew-composition", label: "Crew Composition" };
+    }
+  }
+  return null;
+};
 const getDefaultConfigurationHealthRemediation = (area, title) => {
   const lowerTitle = title.toLowerCase();
   if (area === "Organisation") {
@@ -67228,13 +67267,16 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
 const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, operationalReadinessPercent) => {
   const items = [];
   const add = (severity, area, title, detail, idSuffix = `${area}-${title}-${items.length}`, remediation) => {
+    const settingsLink = severity === "OK" ? null : getConfigurationHealthSettingsLink(area, title);
     items.push({
       id: `${severity}-${idSuffix}`.replace(/\s+/g, "-").toLowerCase(),
       severity,
       area,
       title,
       detail,
-      remediation: severity === "OK" ? void 0 : remediation || getDefaultConfigurationHealthRemediation(area, title)
+      remediation: severity === "OK" ? void 0 : remediation || getDefaultConfigurationHealthRemediation(area, title),
+      settingsSection: settingsLink?.section,
+      settingsSectionLabel: settingsLink?.label
     });
   };
   const activeOrganisations = config.organisations.filter(isActiveRecord);
@@ -67518,6 +67560,7 @@ const PlatformConfigurationSettings = ({
   focusResourcePoolCode = "",
   focusAircraftTypeCode = "",
   focusSubsectionId = "",
+  onNavigateToSettingsSection,
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
@@ -70193,7 +70236,19 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               item.remediation && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-2 rounded border border-gray-600 bg-gray-950/60 px-3 py-2 text-sm leading-relaxed text-gray-200", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-cyan-100", children: "Fix: " }),
                 item.remediation
-              ] })
+              ] }),
+              item.settingsSection && onNavigateToSettingsSection && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => onNavigateToSettingsSection(item.settingsSection),
+                  className: "mt-2 text-sm font-bold text-cyan-200 underline decoration-cyan-300/60 underline-offset-4 hover:text-cyan-100",
+                  children: [
+                    "Open ",
+                    item.settingsSectionLabel || "settings page"
+                  ]
+                }
+              )
             ] })
           ] }) }, item.id);
         }) })
@@ -75490,6 +75545,12 @@ const SettingsViewWithMenu = (props) => {
   const activePlatformTarget = activeSection !== "home" && isPlatformConfigurationMenuSection(activeSection) ? platformSectionTargets[activeSection] : void 0;
   const isPlatformConfigurationActive = Boolean(activePlatformTarget);
   const isSearchActive = settingsSearch.trim().length > 0;
+  const navigateToSettingsSection = (section) => {
+    if (!Object.prototype.hasOwnProperty.call(sectionLabels, section)) return;
+    setSettingsFocusTarget(null);
+    setExpandedGroups({});
+    setActiveSection(section);
+  };
   const openSettingsGroup = (group) => {
     if (settingsGroupOpenTimerRef.current) {
       clearTimeout(settingsGroupOpenTimerRef.current);
@@ -75719,6 +75780,7 @@ const SettingsViewWithMenu = (props) => {
               focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
               focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
               focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
+              onNavigateToSettingsSection: navigateToSettingsSection,
               activeUnitCodes: props.activeUnitCodes,
               activeCompositeUnitCode: props.activeCompositeUnitCode,
               phraseBank: props.phraseBank,
@@ -75743,6 +75805,7 @@ const SettingsViewWithMenu = (props) => {
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
             focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
+            onNavigateToSettingsSection: navigateToSettingsSection,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             phraseBank: props.phraseBank,
@@ -75766,6 +75829,7 @@ const SettingsViewWithMenu = (props) => {
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
             focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
+            onNavigateToSettingsSection: navigateToSettingsSection,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
@@ -75790,6 +75854,7 @@ const SettingsViewWithMenu = (props) => {
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
             focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
+            onNavigateToSettingsSection: navigateToSettingsSection,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
@@ -75814,6 +75879,7 @@ const SettingsViewWithMenu = (props) => {
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
             focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
+            onNavigateToSettingsSection: navigateToSettingsSection,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
@@ -75909,6 +75975,7 @@ const SettingsViewWithMenu = (props) => {
             focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
             focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
             focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
+            onNavigateToSettingsSection: navigateToSettingsSection,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             phraseBank: props.phraseBank,

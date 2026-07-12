@@ -1438,6 +1438,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             : undefined;
     const isPlatformConfigurationActive = Boolean(activePlatformTarget);
     const isSearchActive = settingsSearch.trim().length > 0;
+    const navigateToSettingsSection = (section: string) => {
+        if (!Object.prototype.hasOwnProperty.call(sectionLabels, section)) return;
+        setSettingsFocusTarget(null);
+        setExpandedGroups({});
+        setActiveSection(section as ActiveSection);
+    };
     const openSettingsGroup = (group: typeof visibleSettingGroups[number]) => {
         if (settingsGroupOpenTimerRef.current) {
             clearTimeout(settingsGroupOpenTimerRef.current);
@@ -1730,6 +1736,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
                                 focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
+                                onNavigateToSettingsSection={navigateToSettingsSection}
                                 activeUnitCodes={props.activeUnitCodes}
                                 activeCompositeUnitCode={props.activeCompositeUnitCode}
                                 phraseBank={props.phraseBank}
@@ -1754,6 +1761,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
                                 focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
+                            onNavigateToSettingsSection={navigateToSettingsSection}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             phraseBank={props.phraseBank}
@@ -1777,6 +1785,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
                                 focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
+                            onNavigateToSettingsSection={navigateToSettingsSection}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
@@ -1801,6 +1810,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
                                 focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
+                            onNavigateToSettingsSection={navigateToSettingsSection}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
@@ -1825,6 +1835,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
                                 focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
+                            onNavigateToSettingsSection={navigateToSettingsSection}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
@@ -1934,6 +1945,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
                                 focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
+                            onNavigateToSettingsSection={navigateToSettingsSection}
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             phraseBank={props.phraseBank}
