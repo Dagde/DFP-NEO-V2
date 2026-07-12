@@ -879,8 +879,10 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                       <div className="flex items-center space-x-1">
                         <label className="text-xs font-medium text-gray-400">{overallFields.result}:</label>
                         <div className="relative">
-                          <input type="number" min="0" max="100" value={groundSchoolAssessment.isAssessment ? groundSchoolAssessment.result : ''} onChange={(event) => { setGroundSchoolAssessment(prev => ({ ...prev, result: String(Math.min(100, Math.max(0, Number(event.target.value) || 0))) })); setSaveStatus('Unsaved'); }} disabled={!groundSchoolAssessment.isAssessment} className={`w-16 rounded-md border px-2 py-1 text-center text-xs font-semibold ${groundSchoolAssessment.isAssessment ? 'border-gray-600 bg-gray-700 text-white focus:ring-2 focus:ring-sky-500' : 'cursor-not-allowed border-gray-600 bg-gray-600/50 text-gray-500'}`} placeholder="%" />
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                          <input type="text" inputMode="numeric" value={groundSchoolAssessment.isAssessment ? groundSchoolAssessment.result : ''} onChange={(event) => { const rawValue = event.target.value.trim(); if (rawValue !== '' && !/^\d{0,3}$/.test(rawValue)) return; setGroundSchoolAssessment(prev => ({ ...prev, result: rawValue === '' ? '' : String(Math.min(100, Math.max(0, Number(rawValue) || 0))) })); setSaveStatus('Unsaved'); }} disabled={!groundSchoolAssessment.isAssessment} className={`w-16 rounded-md border px-2 py-1 text-center text-xs font-semibold ${groundSchoolAssessment.isAssessment ? 'border-gray-600 bg-gray-700 text-white focus:ring-2 focus:ring-sky-500' : 'cursor-not-allowed border-gray-600 bg-gray-600/50 text-gray-500'}`} />
+                          {groundSchoolAssessment.isAssessment && (
+                            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                          )}
                         </div>
                       </div>
                     </div>

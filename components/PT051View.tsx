@@ -1656,15 +1656,16 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                         <label className="text-xs font-medium text-gray-400">{overallFields.result}:</label>
                                         <div className="relative">
                                             <input
-                                                type="number"
-                                                min="0"
-                                                max="100"
+                                                type="text"
+                                                inputMode="numeric"
                                                 value={groundSchoolAssessment.isAssessment ? (groundSchoolAssessment.result ?? '') : ''}
                                                 onChange={(e) => {
-                                                    const value = parseInt(e.target.value) || 0;
+                                                    const rawValue = e.target.value.trim();
+                                                    if (rawValue !== '' && !/^\d{0,3}$/.test(rawValue)) return;
+                                                    const value = rawValue === '' ? undefined : Math.min(100, Math.max(0, parseInt(rawValue, 10) || 0));
                                                     setGroundSchoolAssessment({
                                                         ...groundSchoolAssessment,
-                                                        result: Math.min(100, Math.max(0, value))
+                                                        result: value
                                                     });
                                                 }}
                                                 disabled={!groundSchoolAssessment.isAssessment}
@@ -1673,9 +1674,10 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                         ? 'bg-gray-700 text-white border-gray-600 focus:ring-2 focus:ring-sky-500'
                                                         : 'bg-gray-600/50 text-gray-500 cursor-not-allowed border-gray-600'
                                                     } border`}
-                                                placeholder="%"
                                             />
-                                            <span className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 text-xs">%</span>
+                                            {groundSchoolAssessment.isAssessment && (
+                                                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
