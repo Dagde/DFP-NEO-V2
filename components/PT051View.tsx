@@ -1397,7 +1397,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                  <select
                                      value={assessment.instructorName || ''}
                                      onChange={(e) => handleInstructorNameChange(e.target.value)}
-                                     className="text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-[calc(100%-25px)] focus:ring-1 focus:ring-sky-500"
+                                     className="text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-[calc(100%-10px)] focus:ring-1 focus:ring-sky-500"
                                  >
                                      <option value="">Select instructor...</option>
                                      {unitInstructors.map(instructor => (
