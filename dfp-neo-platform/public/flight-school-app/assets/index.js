@@ -75553,20 +75553,18 @@ const SettingsViewWithMenu = (props) => {
         )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
-        const accent = getAccentClasses(group.accent);
         const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
         const showSubmenu = isSearchActive || (expandedGroups[group.label] ?? groupActive);
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[200px]", children: [
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[150px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
               type: "button",
               onClick: () => openSettingsGroup(group),
-              className: `btn-aluminium-brushed flex h-[55px] w-[200px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${groupActive ? "ring-1 ring-cyan-400/55" : ""}`,
+              className: `btn-aluminium-brushed flex h-[45px] w-[150px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${groupActive ? "ring-1 ring-gray-500/60" : ""}`,
               "aria-expanded": showSubmenu,
               "aria-controls": getGroupId(group.label),
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-2 flex-shrink-0 rounded-full ${accent.rail}` }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 flex-1 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words", children: group.label }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "svg",
@@ -75587,16 +75585,12 @@ const SettingsViewWithMenu = (props) => {
               id: getGroupId(group.label),
               className: `grid transition-[grid-template-rows,opacity] duration-200 ease-out ${showSubmenu ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`,
               children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
-                const sectionAccent = getSectionAccent(section, group.accent);
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                return /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
                     onClick: () => setActiveSection(section),
-                    className: `flex min-h-[34px] w-[200px] items-center gap-2 rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${activeSection === section ? `${sectionAccent.badge} ${sectionAccent.text}` : section === "emergency" ? "border-red-500/20 bg-gray-950/50 text-red-300 hover:bg-red-500/10 hover:text-red-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-1.5 w-1.5 flex-shrink-0 rounded-full ${sectionAccent.rail}` }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: sectionLabels[section] }) })
-                    ]
+                    className: `flex min-h-[32px] w-[150px] items-center rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${activeSection === section ? "border-gray-500 bg-gray-800 text-gray-100" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: sectionLabels[section] }) })
                   },
                   section
                 );
