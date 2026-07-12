@@ -982,6 +982,12 @@ type ConfigurationHealthItem = {
   remediation?: string;
   settingsSection?: string;
   settingsSectionLabel?: string;
+  focusUnitCode?: string;
+  focusLocationCode?: string;
+  focusResourcePoolCode?: string;
+  focusAircraftTypeCode?: string;
+  focusUserId?: string;
+  focusSubsectionId?: string;
 };
 
 const isActiveRecord = (item: any): boolean => String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE';
@@ -1190,8 +1196,20 @@ const getPlatformLocationAuditLabel = (location: any): string => {
 };
 
 const uniqueValues = (values: string[]): string[] => Array.from(new Set(values.filter(Boolean)));
+const getConfigurationHealthFocusAnchor = (value: any) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
 
-const getConfigurationHealthSettingsLink = (area: string, title: string): { section: string; label: string } | null => {
+type ConfigurationHealthSettingsTarget = {
+  section: string;
+  label: string;
+  focusUnitCode?: string;
+  focusLocationCode?: string;
+  focusResourcePoolCode?: string;
+  focusAircraftTypeCode?: string;
+  focusUserId?: string;
+  focusSubsectionId?: string;
+};
+
+const getConfigurationHealthSettingsLink = (area: string, title: string): ConfigurationHealthSettingsTarget | null => {
   const lowerTitle = title.toLowerCase();
   if (area === 'Organisation' || area === 'Locations') {
     return { section: 'platform-organisation-locations', label: 'Organisation, Bases & Areas' };
@@ -1298,6 +1316,7 @@ const buildConfigurationHealth = (
     detail: string,
     idSuffix = `${area}-${title}-${items.length}`,
     remediation?: string,
+    focusTarget?: Partial<ConfigurationHealthSettingsTarget>,
   ) => {
     const settingsLink = severity === 'OK' ? null : getConfigurationHealthSettingsLink(area, title);
     items.push({
@@ -1307,8 +1326,14 @@ const buildConfigurationHealth = (
       title,
       detail,
       remediation: severity === 'OK' ? undefined : remediation || getDefaultConfigurationHealthRemediation(area, title),
-      settingsSection: settingsLink?.section,
-      settingsSectionLabel: settingsLink?.label,
+      settingsSection: focusTarget?.section || settingsLink?.section,
+      settingsSectionLabel: focusTarget?.label || settingsLink?.label,
+      focusUnitCode: focusTarget?.focusUnitCode,
+      focusLocationCode: focusTarget?.focusLocationCode,
+      focusResourcePoolCode: focusTarget?.focusResourcePoolCode,
+      focusAircraftTypeCode: focusTarget?.focusAircraftTypeCode,
+      focusUserId: focusTarget?.focusUserId,
+      focusSubsectionId: focusTarget?.focusSubsectionId,
     });
   };
 
@@ -1333,13 +1358,13 @@ const buildConfigurationHealth = (
   const profileIds = new Set(permissionProfiles.map((profile) => toIdentifier(profile.id)));
 
   if (activeOrganisations.length === 0) {
-    add('CRITICAL', 'Organisation', 'No active organisation', 'At least one active organisation is required before the platform can be managed as a commercial deployment.', 'organisation-none');
+    add('CRITICAL', 'Organisation', 'No active organisation', 'At least one active organisation is required before the platform can be managed as a commercial deployment.', 'organisation-none', undefined, { focusSubsectionId: 'platform-organisation' });
   } else {
     add('OK', 'Organisation', 'Active organisation exists', `${activeOrganisations.length} active organisation${activeOrganisations.length === 1 ? '' : 's'} available for configuration.`, 'organisation-active');
   }
 
   if (activeLocations.length === 0) {
-    add('CRITICAL', 'Locations', 'No active locations', 'The location selector, staff lists and DFP schedule need at least one active location.', 'locations-none');
+    add('CRITICAL', 'Locations', 'No active locations', 'The location selector, staff lists and DFP schedule need at least one active location.', 'locations-none', undefined, { focusSubsectionId: 'platform-locations' });
   } else {
     add('OK', 'Locations', 'Active locations exist', `${activeLocations.length} active location${activeLocations.length === 1 ? '' : 's'} available.`, 'locations-active');
   }
@@ -1348,7 +1373,7 @@ const buildConfigurationHealth = (
     const locationCode = toIdentifier(location.code);
     const organisationCode = toIdentifier(location.organisationCode);
     if (organisationCode && !activeOrganisationCodes.has(organisationCode)) {
-      add('WARNING', 'Locations', `${locationCode} references inactive organisation`, `${locationCode} points to ${organisationCode}, which is not an active organisation.`, `location-${locationCode}-org`);
+      add('WARNING', 'Locations', `${locationCode} references inactive organisation`, `${locationCode} points to ${organisationCode}, which is not an active organisation.`, `location-${locationCode}-org`, undefined, { focusLocationCode: locationCode });
     }
     if (!hasUsableSolarLocation(location)) {
       const defaultProfile = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
@@ -1359,24 +1384,26 @@ const buildConfigurationHealth = (
         defaultProfile
           ? 'The app can currently fall back to a built-in Australian base profile, but this location should store its own latitude, longitude and IANA timezone for offline daylight calculations.'
           : 'Offline FL/LL calculation needs latitude, longitude and an IANA timezone for this location.',
-        `location-${locationCode}-solar`
+        `location-${locationCode}-solar`,
+        undefined,
+        { focusLocationCode: locationCode }
       );
     }
     const unitsAtLocation = activeUnits.filter((unit) => toIdentifier(unit.locationCode) === locationCode);
     if (unitsAtLocation.length === 0) {
-      add('WARNING', 'Locations', `${locationCode} has no active units`, 'Users may be able to select the location, but unit-aware scheduling and access scoping will be incomplete.', `location-${locationCode}-units`);
+      add('WARNING', 'Locations', `${locationCode} has no active units`, 'Users may be able to select the location, but unit-aware scheduling and access scoping will be incomplete.', `location-${locationCode}-units`, undefined, { focusLocationCode: locationCode });
     }
   });
 
   if (activeUnits.length === 0) {
-    add('CRITICAL', 'Units', 'No active units', 'At least one active unit is needed for commercial unit-based configuration.', 'units-none');
+    add('CRITICAL', 'Units', 'No active units', 'At least one active unit is needed for commercial unit-based configuration.', 'units-none', undefined, { focusSubsectionId: 'platform-units' });
   }
 
   activeUnits.forEach((unit) => {
     const unitCode = toIdentifier(unit.code);
     const locationCode = toIdentifier(unit.locationCode);
     if (!locationCode || !activeLocationCodes.has(locationCode)) {
-      add('CRITICAL', 'Units', `${unitCode} has invalid location`, `The unit is assigned to "${locationCode || 'blank'}", which is not an active location.`, `unit-${unitCode}-location`);
+      add('CRITICAL', 'Units', `${unitCode} has invalid location`, `The unit is assigned to "${locationCode || 'blank'}", which is not an active location.`, `unit-${unitCode}-location`, undefined, { focusUnitCode: unitCode });
     }
 
     const enabledModules = activeModules.filter((module) => {
@@ -1384,7 +1411,7 @@ const buildConfigurationHealth = (
       return unitModule?.isEnabled !== false;
     });
     if (enabledModules.length === 0) {
-      add('WARNING', 'Modules', `${unitCode} has no enabled modules`, 'The unit exists, but no active app areas are enabled for it.', `unit-${unitCode}-modules`);
+      add('WARNING', 'Modules', `${unitCode} has no enabled modules`, 'The unit exists, but no active app areas are enabled for it.', `unit-${unitCode}-modules`, undefined, { focusSubsectionId: `platform-unit-modules-${getConfigurationHealthFocusAnchor(unitCode)}` });
     }
 
     const matchingPools = activeResourcePools.filter((pool) => (
@@ -1392,7 +1419,7 @@ const buildConfigurationHealth = (
       || (!toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode)
     ));
     if (matchingPools.length === 0) {
-      add('WARNING', 'Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource counts may fall back to legacy defaults until a matching pool is configured.', `unit-${unitCode}-pools`);
+      add('WARNING', 'Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource counts may fall back to legacy defaults until a matching pool is configured.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
     }
 
     const operationalModel = getUnitOperationalModel(unit);
@@ -1413,7 +1440,8 @@ const buildConfigurationHealth = (
           `${unitCode} will use shared resource capacity`,
           `${unitCode} is a Fixed Crew unit without its own runtime resource pool. It can still schedule by falling back to shared/location capacity, but separated-unit builds may not reflect a dedicated unit allocation.`,
           `unit-${unitCode}-separation-resource-pool`,
-          'Open Aircraft & Resource Pools and add or enable a unit-specific runtime pool if this unit needs independent aircraft, FTD or CPT capacity after separation.'
+          'Open Aircraft & Resource Pools and add or enable a unit-specific runtime pool if this unit needs independent aircraft, FTD or CPT capacity after separation.',
+          { focusSubsectionId: 'platform-resource-pools' }
         );
       }
     }
@@ -1430,26 +1458,26 @@ const buildConfigurationHealth = (
     const aircraftTypeCode = toIdentifier(pool.aircraftTypeCode);
 
     if (locationCode && !activeLocationCodes.has(locationCode)) {
-      add('CRITICAL', 'Resource Pools', `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`);
+      add('CRITICAL', 'Resource Pools', `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     if (unitCode && !activeUnitCodes.has(unitCode)) {
-      add('CRITICAL', 'Resource Pools', `${poolName} has invalid unit`, `${poolName} points to ${unitCode}, which is not an active unit.`, `pool-${poolName}-unit`);
+      add('CRITICAL', 'Resource Pools', `${poolName} has invalid unit`, `${poolName} points to ${unitCode}, which is not an active unit.`, `pool-${poolName}-unit`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     if (aircraftTypeCode && !activeAircraftTypeCodes.has(aircraftTypeCode)) {
-      add('WARNING', 'Resource Pools', `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`);
+      add('WARNING', 'Resource Pools', `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     if (pool.settings?.applyToV2Runtime === true) {
       const totalResources = ['aircraft', 'ftd', 'cpt', 'standby', 'ground']
         .reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
       if (totalResources <= 0) {
-        add('CRITICAL', 'Resource Pools', `${poolName} has no usable resources`, 'This pool is wired into the V2 runtime, but all resource counts are zero or blank.', `pool-${poolName}-empty`);
+        add('CRITICAL', 'Resource Pools', `${poolName} has no usable resources`, 'This pool is wired into the V2 runtime, but all resource counts are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
       }
     }
   });
 
   const runtimePools = activeResourcePools.filter((pool) => pool.settings?.applyToV2Runtime === true);
   if (runtimePools.length === 0) {
-    add('WARNING', 'Resource Pools', 'No pool is wired to the live DFP', 'At least one resource pool should have "Apply to V2 runtime" enabled so the DFP uses platform configuration rather than legacy defaults.', 'runtime-pool-none');
+    add('WARNING', 'Resource Pools', 'No pool is wired to the live DFP', 'At least one resource pool should have "Apply to V2 runtime" enabled so the DFP uses platform configuration rather than legacy defaults.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-resource-pools' });
   } else if (!items.some((item) => item.area === 'Resource Pools' && item.severity === 'CRITICAL')) {
     add('OK', 'Resource Pools', 'Runtime resource pools are configured', `${runtimePools.length} active resource pool${runtimePools.length === 1 ? '' : 's'} feed the live DFP runtime.`, 'runtime-pool-active');
   }
@@ -1465,7 +1493,8 @@ const buildConfigurationHealth = (
       'Combined-unit profiles need per-unit copies',
       `${missingCompositeClones} Standard Mission, Alternate Crew or Currency Profile unit record${missingCompositeClones === 1 ? '' : 's'} will be backfilled on the next platform save so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      'Click Save on any Platform & Deployment or Crew Composition settings page. The save process creates missing per-unit copies while preserving the combined-unit profile group.'
+      'Click Save on any Platform & Deployment or Crew Composition settings page. The save process creates missing per-unit copies while preserving the combined-unit profile group.',
+      { section: 'crew-composition', label: 'Crew Composition', focusSubsectionId: 'platform-crew-composition' }
     );
   } else {
     add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Combined Standard Missions, Alternate Crew profiles and Currency Profiles have per-unit records where needed.', 'unit-separation-profiles-ok');
@@ -1492,41 +1521,41 @@ const buildConfigurationHealth = (
     const assignedProfiles = Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds.map(toIdentifier).filter(Boolean) : [];
 
     if (!userId || !userIds.has(userId)) {
-      add('CRITICAL', 'User Access', `${userLabel} has invalid user record`, 'The access scope points to a user that is not present in the platform user list.', `access-${userId || userLabel}-user`);
+      add('CRITICAL', 'User Access', `${userLabel} has invalid user record`, 'The access scope points to a user that is not present in the platform user list.', `access-${userId || userLabel}-user`, undefined, { focusUserId: userId, focusSubsectionId: 'platform-user-access-records' });
     }
     if (locationCode && !activeLocationCodes.has(locationCode)) {
-      add('CRITICAL', 'User Access', `${userLabel} has invalid location scope`, `${locationCode} is not an active location.`, `access-${userId}-${locationCode}`);
+      add('CRITICAL', 'User Access', `${userLabel} has invalid location scope`, `${locationCode} is not an active location.`, `access-${userId}-${locationCode}`, undefined, { focusUserId: userId, focusLocationCode: locationCode, focusSubsectionId: `platform-user-access-location-${getConfigurationHealthFocusAnchor(locationCode)}` });
     }
     if (unitCode && !activeUnitCodes.has(unitCode)) {
-      add('CRITICAL', 'User Access', `${userLabel} has invalid unit scope`, `${unitCode} is not an active unit.`, `access-${userId}-${unitCode}`);
+      add('CRITICAL', 'User Access', `${userLabel} has invalid unit scope`, `${unitCode} is not an active unit.`, `access-${userId}-${unitCode}`, undefined, { focusUserId: userId, focusSubsectionId: 'platform-user-access-records' });
     }
     const unit = unitCode ? config.units.find((item) => toIdentifier(item.code) === unitCode) : null;
     if (unit && locationCode && toIdentifier(unit.locationCode) !== locationCode) {
-      add('CRITICAL', 'User Access', `${userLabel} has mismatched scope`, `${unitCode} belongs to ${toIdentifier(unit.locationCode)}, but the access scope is set to ${locationCode}.`, `access-${userId}-${unitCode}-mismatch`);
+      add('CRITICAL', 'User Access', `${userLabel} has mismatched scope`, `${unitCode} belongs to ${toIdentifier(unit.locationCode)}, but the access scope is set to ${locationCode}.`, `access-${userId}-${unitCode}-mismatch`, undefined, { focusUserId: userId, focusLocationCode: locationCode, focusSubsectionId: `platform-user-access-location-${getConfigurationHealthFocusAnchor(locationCode)}` });
     }
     if (moduleCode && !activeModuleCodes.has(moduleCode)) {
-      add('WARNING', 'User Access', `${userLabel} has inactive feature-area scope`, `${moduleCode} is not an active module. Use "All Enabled Features" unless a deliberate one-area restriction is required.`, `access-${userId}-${moduleCode}`);
+      add('WARNING', 'User Access', `${userLabel} has inactive feature-area scope`, `${moduleCode} is not an active module. Use "All Enabled Features" unless a deliberate one-area restriction is required.`, `access-${userId}-${moduleCode}`, undefined, { focusUserId: userId, focusSubsectionId: 'platform-user-access-records' });
     }
     if (assignedProfiles.length === 0) {
-      add('WARNING', 'User Access', `${userLabel} has no permission profile`, 'The scope defines where the user can work, but no profile defines what they can do there.', `access-${userId}-profiles-none`);
+      add('WARNING', 'User Access', `${userLabel} has no permission profile`, 'The scope defines where the user can work, but no profile defines what they can do there.', `access-${userId}-profiles-none`, undefined, { focusUserId: userId, focusSubsectionId: 'platform-user-access-records' });
     }
     assignedProfiles.forEach((profileId) => {
       if (!profileIds.has(profileId)) {
-        add('WARNING', 'User Access', `${userLabel} has unknown permission profile`, `${profileId} is assigned but does not exist in Permission Profiles.`, `access-${userId}-profile-${profileId}`);
+        add('WARNING', 'User Access', `${userLabel} has unknown permission profile`, `${profileId} is assigned but does not exist in Permission Profiles.`, `access-${userId}-profile-${profileId}`, undefined, { focusUserId: userId, focusSubsectionId: 'platform-user-access-records' });
       }
     });
   });
 
   const activeUsersWithAccess = uniqueValues(activeUserAccess.map((access) => toIdentifier(access.userId)));
   if (activeUsersWithAccess.length === 0) {
-    add('CRITICAL', 'User Access', 'No users have active access', 'No active user access scopes exist. Administrators may be locked out after enforcement is tightened.', 'access-none');
+    add('CRITICAL', 'User Access', 'No users have active access', 'No active user access scopes exist. Administrators may be locked out after enforcement is tightened.', 'access-none', undefined, { focusSubsectionId: 'platform-user-access-records' });
   } else if (!items.some((item) => item.area === 'User Access' && item.severity === 'CRITICAL')) {
     add('OK', 'User Access', 'User scopes are structurally valid', `${activeUsersWithAccess.length} user${activeUsersWithAccess.length === 1 ? '' : 's'} have active access scopes without invalid location or unit references.`, 'access-valid');
   }
 
   permissionProfiles.forEach((profile) => {
     if (!Array.isArray(profile.permissions) || profile.permissions.length === 0) {
-      add('WARNING', 'Permission Profiles', `${profile.name || profile.id} has no permissions`, 'Users assigned this profile will not gain any capability from it.', `profile-${profile.id}-empty`);
+      add('WARNING', 'Permission Profiles', `${profile.name || profile.id} has no permissions`, 'Users assigned this profile will not gain any capability from it.', `profile-${profile.id}-empty`, undefined, { focusSubsectionId: 'platform-permission-profiles' });
     }
   });
   if (permissionProfiles.length > 0 && !items.some((item) => item.area === 'Permission Profiles' && item.severity !== 'OK')) {
@@ -1540,22 +1569,22 @@ const buildConfigurationHealth = (
       return unitModule?.isEnabled !== false;
     });
     if (!enabledSomewhere) {
-      add('WARNING', 'Modules', `${moduleCode} is active but unused`, 'The module is active globally but is not enabled for any active unit.', `module-${moduleCode}-unused`);
+      add('WARNING', 'Modules', `${moduleCode} is active but unused`, 'The module is active globally but is not enabled for any active unit.', `module-${moduleCode}-unused`, undefined, { focusSubsectionId: 'platform-unit-modules' });
     }
   });
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (activeLicences.length === 0) {
-    add('WARNING', 'Licensing', 'No active licence record', 'Commercial installs should have at least one active licence record, even while enforcement remains Monitor Only.', 'licence-none');
+    add('WARNING', 'Licensing', 'No active licence record', 'Commercial installs should have at least one active licence record, even while enforcement remains Monitor Only.', 'licence-none', undefined, { focusSubsectionId: 'platform-license-records' });
   } else {
     activeLicences.forEach((license) => {
       const licenseName = license.licenseName || license.licenseKey || 'Licence';
       const validUntil = parseDateOnly(license.validUntil);
       if (validUntil && validUntil < today) {
-        add('CRITICAL', 'Licensing', `${licenseName} is expired`, `Expired on ${formatDateLabel(validUntil)}.`, `licence-${licenseName}-expired`);
+        add('CRITICAL', 'Licensing', `${licenseName} is expired`, `Expired on ${formatDateLabel(validUntil)}.`, `licence-${licenseName}-expired`, undefined, { focusSubsectionId: 'platform-license-records' });
       } else if (!validUntil) {
-        add('WARNING', 'Licensing', `${licenseName} has no expiry date`, 'This may be acceptable for a perpetual licence, but it should be deliberate and recorded.', `licence-${licenseName}-no-expiry`);
+        add('WARNING', 'Licensing', `${licenseName} has no expiry date`, 'This may be acceptable for a perpetual licence, but it should be deliberate and recorded.', `licence-${licenseName}-no-expiry`, undefined, { focusSubsectionId: 'platform-license-records' });
       }
     });
     if (!items.some((item) => item.area === 'Licensing' && item.severity === 'CRITICAL')) {
@@ -1564,13 +1593,13 @@ const buildConfigurationHealth = (
   }
 
   if (readinessPercent < 100) {
-    add('WARNING', 'Deployment Readiness', 'Deployment checklist incomplete', `Offline and private-network readiness is ${readinessPercent}% complete.`, 'deployment-readiness');
+    add('WARNING', 'Deployment Readiness', 'Deployment checklist incomplete', `Offline and private-network readiness is ${readinessPercent}% complete.`, 'deployment-readiness', undefined, { focusSubsectionId: 'platform-deployment-profile' });
   } else {
     add('OK', 'Deployment Readiness', 'Deployment checklist complete', 'All deployment readiness checks are recorded.', 'deployment-readiness-ok');
   }
 
   if (operationalReadinessPercent < 100) {
-    add('WARNING', 'Operational Runbook', 'Operational runbook incomplete', `Support, backup, restore, update and evidence readiness is ${operationalReadinessPercent}% complete.`, 'runbook-readiness');
+    add('WARNING', 'Operational Runbook', 'Operational runbook incomplete', `Support, backup, restore, update and evidence readiness is ${operationalReadinessPercent}% complete.`, 'runbook-readiness', undefined, { focusSubsectionId: 'platform-operational-runbook-identity' });
   } else {
     add('OK', 'Operational Runbook', 'Operational runbook complete', 'Support, backup, restore, update and evidence records are complete.', 'runbook-readiness-ok');
   }
@@ -1637,8 +1666,9 @@ interface PlatformConfigurationSettingsProps {
   focusLocationCode?: string;
   focusResourcePoolCode?: string;
   focusAircraftTypeCode?: string;
+  focusUserId?: string;
   focusSubsectionId?: string;
-  onNavigateToSettingsSection?: (section: string) => void;
+  onNavigateToSettingsSection?: (target: ConfigurationHealthSettingsTarget) => void;
   phraseBank?: Record<string, any>;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
@@ -1663,6 +1693,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   focusLocationCode = '',
   focusResourcePoolCode = '',
   focusAircraftTypeCode = '',
+  focusUserId = '',
   focusSubsectionId = '',
   onNavigateToSettingsSection,
   phraseBank = {},
@@ -2034,6 +2065,23 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
     return () => window.cancelAnimationFrame(frame);
   }, [crewCompositionAircraftTypes, focusAircraftTypeCode, loading, scrollTarget]);
+
+  useEffect(() => {
+    const cleanFocusUserId = String(focusUserId || '').trim();
+    if (loading || scrollTarget !== 'platform-user-access' || !cleanFocusUserId) return;
+    const matchingUser = config.platformUsers.find((user) => (
+      [user.userId, user.username]
+        .map((value) => String(value || '').trim())
+        .some((value) => value === cleanFocusUserId)
+    ));
+    setSelectedAccessUserId(matchingUser?.userId || matchingUser?.username || cleanFocusUserId);
+    const frame = window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        document.getElementById('platform-user-access-records')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 120);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [config.platformUsers, focusUserId, loading, scrollTarget]);
 
   useEffect(() => {
     const cleanLocationCode = String(focusLocationCode || '').trim().toUpperCase();
@@ -4978,7 +5026,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       {item.settingsSection && onNavigateToSettingsSection && (
                         <button
                           type="button"
-                          onClick={() => onNavigateToSettingsSection(item.settingsSection!)}
+                          onClick={() => onNavigateToSettingsSection({
+                            section: item.settingsSection!,
+                            label: item.settingsSectionLabel || 'settings page',
+                            focusUnitCode: item.focusUnitCode,
+                            focusLocationCode: item.focusLocationCode,
+                            focusResourcePoolCode: item.focusResourcePoolCode,
+                            focusAircraftTypeCode: item.focusAircraftTypeCode,
+                            focusUserId: item.focusUserId,
+                            focusSubsectionId: item.focusSubsectionId,
+                          })}
                           className="mt-2 text-sm font-bold text-cyan-200 underline decoration-cyan-300/60 underline-offset-4 hover:text-cyan-100"
                         >
                           Open {item.settingsSectionLabel || 'settings page'}

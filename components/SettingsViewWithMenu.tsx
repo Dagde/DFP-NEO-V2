@@ -1329,6 +1329,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         locationCode?: string;
         resourcePoolCode?: string;
         aircraftTypeCode?: string;
+        userId?: string;
         focusSubsectionId?: string;
     } | null>(null);
 
@@ -1438,11 +1439,28 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             : undefined;
     const isPlatformConfigurationActive = Boolean(activePlatformTarget);
     const isSearchActive = settingsSearch.trim().length > 0;
-    const navigateToSettingsSection = (section: string) => {
-        if (!Object.prototype.hasOwnProperty.call(sectionLabels, section)) return;
-        setSettingsFocusTarget(null);
+    const navigateToSettingsSection = (section: string | {
+        section: string;
+        focusUnitCode?: string;
+        focusLocationCode?: string;
+        focusResourcePoolCode?: string;
+        focusAircraftTypeCode?: string;
+        focusUserId?: string;
+        focusSubsectionId?: string;
+    }) => {
+        const target = typeof section === 'string' ? { section } : section;
+        const targetSection = String(target.section || '');
+        if (!Object.prototype.hasOwnProperty.call(sectionLabels, targetSection)) return;
+        setSettingsFocusTarget({
+            unitCode: target.focusUnitCode,
+            locationCode: target.focusLocationCode,
+            resourcePoolCode: target.focusResourcePoolCode,
+            aircraftTypeCode: target.focusAircraftTypeCode,
+            userId: target.focusUserId,
+            focusSubsectionId: target.focusSubsectionId,
+        });
         setExpandedGroups({});
-        setActiveSection(section as ActiveSection);
+        setActiveSection(targetSection as ActiveSection);
     };
     const openSettingsGroup = (group: typeof visibleSettingGroups[number]) => {
         if (settingsGroupOpenTimerRef.current) {
@@ -1735,6 +1753,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusLocationCode={settingsFocusTarget?.locationCode}
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
+                                focusUserId={settingsFocusTarget?.userId}
                                 focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
                                 onNavigateToSettingsSection={navigateToSettingsSection}
                                 activeUnitCodes={props.activeUnitCodes}
@@ -1760,6 +1779,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusLocationCode={settingsFocusTarget?.locationCode}
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
+                                focusUserId={settingsFocusTarget?.userId}
                                 focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
                             onNavigateToSettingsSection={navigateToSettingsSection}
                             activeUnitCodes={props.activeUnitCodes}
@@ -1784,6 +1804,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusLocationCode={settingsFocusTarget?.locationCode}
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
+                                focusUserId={settingsFocusTarget?.userId}
                                 focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
                             onNavigateToSettingsSection={navigateToSettingsSection}
                             activeUnitCodes={props.activeUnitCodes}
@@ -1809,6 +1830,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusLocationCode={settingsFocusTarget?.locationCode}
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
+                                focusUserId={settingsFocusTarget?.userId}
                                 focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
                             onNavigateToSettingsSection={navigateToSettingsSection}
                             activeUnitCodes={props.activeUnitCodes}
@@ -1834,6 +1856,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusLocationCode={settingsFocusTarget?.locationCode}
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
+                                focusUserId={settingsFocusTarget?.userId}
                                 focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
                             onNavigateToSettingsSection={navigateToSettingsSection}
                             activeUnitCodes={props.activeUnitCodes}
@@ -1944,6 +1967,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusLocationCode={settingsFocusTarget?.locationCode}
                                 focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
                                 focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
+                                focusUserId={settingsFocusTarget?.userId}
                                 focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
                             onNavigateToSettingsSection={navigateToSettingsSection}
                             activeUnitCodes={props.activeUnitCodes}
