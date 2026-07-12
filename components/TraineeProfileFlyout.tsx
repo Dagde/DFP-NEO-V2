@@ -839,7 +839,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 const innerRadius = radius - 4;
                 const outerRadius = radius + 3;
                 doc.setDrawColor(r, g, b);
-                doc.setLineWidth(0.35);
+                doc.setLineWidth(0.55);
                 doc.line(
                     cx + Math.cos(angle) * innerRadius,
                     cy + Math.sin(angle) * innerRadius,
@@ -847,9 +847,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     cy + Math.sin(angle) * outerRadius
                 );
             };
-            drawBenchmark(reviewData.progress.averageProgress, 180, 137, 36);
-            drawBenchmark(reviewData.progress.mostProgress, 14, 116, 144);
-            drawBenchmark(reviewData.progress.leastProgress, 185, 28, 28);
+            drawBenchmark(reviewData.progress.averageProgress, 255, 170, 0);
+            drawBenchmark(reviewData.progress.mostProgress, 0, 210, 255);
+            drawBenchmark(reviewData.progress.leastProgress, 255, 64, 64);
             addText(`Events completed: ${reviewData.progress.completedCount}/${reviewData.progress.totalCount}`, margin + 50, y + 8, 8);
             addText(`Failed: ${reviewData.summaryFailed.length}   Double marginal: ${reviewData.summaryDoubleMarginal.length}   Marginal: ${reviewData.summaryMarginal.length}`, margin + 50, y + 14, 8);
             addText(`Current score average: ${reviewData.currentScoreAverage.toFixed(1)}`, margin + 50, y + 20, 8);
@@ -1867,7 +1867,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         const y2 = 70 + Math.sin(angle) * 62;
                         return (
                           <g key={label}>
-                            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={colour} strokeWidth="1.4" strokeOpacity="0.45" strokeLinecap="round" />
+                            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={colour} strokeWidth="1.8" strokeOpacity="0.82" strokeLinecap="round" />
                             <title>{`${label}: ${value.toFixed(0)}%`}</title>
                           </g>
                         );
@@ -1979,9 +1979,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 <svg viewBox="0 0 140 140" className={reviewProgressExpanded ? 'h-80 w-80' : 'h-36 w-36'}>
                                   <circle cx="70" cy="70" r="52" fill="rgba(15,23,42,0.9)" stroke="rgba(148,163,184,0.25)" strokeWidth="14" />
                                   <circle cx="70" cy="70" r="52" fill="none" stroke="#22c55e" strokeWidth="14" strokeDasharray={progressDash} pathLength="100" transform="rotate(-90 70 70)" strokeLinecap="round" />
-                                  {lineForProgress(reviewData.progress.averageProgress, '#facc15', 'Course average')}
-                                  {lineForProgress(reviewData.progress.mostProgress, '#38bdf8', 'Front runner')}
-                                  {lineForProgress(reviewData.progress.leastProgress, '#f87171', 'Back marker')}
+                                  {lineForProgress(reviewData.progress.averageProgress, '#ffb000', 'Course average')}
+                                  {lineForProgress(reviewData.progress.mostProgress, '#00d9ff', 'Front runner')}
+                                  {lineForProgress(reviewData.progress.leastProgress, '#ff4040', 'Back marker')}
                                   <text x="70" y="68" fill="#f8fafc" fontSize="18" fontWeight="800" textAnchor="middle">{reviewData.progress.progressPercent.toFixed(0)}%</text>
                                   <text x="70" y="84" fill="#94a3b8" fontSize="9" textAnchor="middle">{reviewData.progress.completedCount}/{reviewData.progress.totalCount}</text>
                                 </svg>
