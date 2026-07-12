@@ -1422,17 +1422,6 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                 <span className="text-white font-medium">{option.label}</span>
                                             </label>
                                         ))}
-                                        <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded">
-                                            <input
-                                                type="radio"
-                                                name="dco-result"
-                                                value=""
-                                                checked={dcoResult === ''}
-                                                onChange={(e) => setDcoResult(e.target.value as any)}
-                                                className="h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
-                                            />
-                                            <span className="text-gray-400 font-medium">None</span>
-                                        </label>
                                         </div>
                                     </div>
                                     {dcoResult === 'DPCO' && (

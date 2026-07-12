@@ -662,10 +662,6 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                           <span className="font-medium text-white">{option.label}</span>
                         </label>
                       ))}
-                      <label className="flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30">
-                        <input type="radio" name="training-report-dco-result" value="" checked={dcoResult === ''} onChange={() => { setDcoResult(''); setSaveStatus('Unsaved'); }} className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" />
-                        <span className="font-medium text-gray-400">None</span>
-                      </label>
                       </div>
                     </div>
                     {dcoResult === 'DPCO' && (

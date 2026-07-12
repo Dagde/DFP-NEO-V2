@@ -21258,36 +21258,20 @@ This action cannot be undone.`;
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px]", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.result }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col space-y-2", children: [
-                      enabledCompletionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "input",
-                          {
-                            type: "radio",
-                            name: "dco-result",
-                            value: option.code,
-                            checked: dcoResult === option.code,
-                            onChange: (e) => setDcoResult(e.target.value),
-                            className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
-                          }
-                        ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: option.label })
-                      ] }, option.code)),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "input",
-                          {
-                            type: "radio",
-                            name: "dco-result",
-                            value: "",
-                            checked: dcoResult === "",
-                            onChange: (e) => setDcoResult(e.target.value),
-                            className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
-                          }
-                        ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 font-medium", children: "None" })
-                      ] })
-                    ] })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col space-y-2", children: enabledCompletionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "dco-result",
+                          value: option.code,
+                          checked: dcoResult === option.code,
+                          onChange: (e) => setDcoResult(e.target.value),
+                          className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: option.label })
+                    ] }, option.code)) })
                   ] }),
                   dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DPCO action" }),
@@ -55972,22 +55956,13 @@ const AirCombatTrainingReportModal = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-sm font-medium text-gray-400", children: overallFields.result }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col space-y-2", children: [
-                  enabledCompletionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-dco-result", value: option.code, checked: dcoResult === option.code, onChange: (event) => {
-                      setDcoResult(event.target.value);
-                      setSaveStatus("Unsaved");
-                    }, className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-white", children: option.label })
-                  ] }, option.code)),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-dco-result", value: "", checked: dcoResult === "", onChange: () => {
-                      setDcoResult("");
-                      setSaveStatus("Unsaved");
-                    }, className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-gray-400", children: "None" })
-                  ] })
-                ] })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col space-y-2", children: enabledCompletionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-dco-result", value: option.code, checked: dcoResult === option.code, onChange: (event) => {
+                    setDcoResult(event.target.value);
+                    setSaveStatus("Unsaved");
+                  }, className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-white", children: option.label })
+                ] }, option.code)) })
               ] }),
               dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DPCO action" }),
