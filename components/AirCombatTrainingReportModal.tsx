@@ -155,6 +155,9 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFields = reportTemplate.modules.comments.fields;
   const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
+  const missionStatusOptions = enabledCompletionResults.length > 0
+    ? enabledCompletionResults
+    : [{ code: 'Complete', label: 'Complete', enabled: true }];
   const gradeLabelMap = useMemo(() => (
     new Map(reportTemplate.grades.options.map((option) => [option.value, option.label]))
   ), [reportTemplate.grades.options]);
@@ -218,7 +221,9 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const [instructorName, setInstructorName] = useState(initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || '');
   const [overallGrade, setOverallGrade] = useState(initialReport?.overallGrade || '');
   const [overallResult, setOverallResult] = useState<'' | 'P' | 'F'>(initialReport?.overallResult || '');
-  const [dcoResult, setDcoResult] = useState<'' | 'DCO' | 'DPCO' | 'DNCO'>(initialReport?.dcoResult || '');
+  const [dcoResult, setDcoResult] = useState<string>(
+    initialReport?.dcoResult || (enabledCompletionResults.length === 0 ? 'Complete' : '')
+  );
   const [dpcoFollowUp, setDpcoFollowUp] = useState<{ action: DpcoFollowUpAction; extraEventHours?: number; extraHours?: number }>(() => ({
     action: (initialReport?.dpcoFollowUp?.action || '') as DpcoFollowUpAction,
     extraEventHours: initialReport?.dpcoFollowUp?.extraEventHours ?? undefined,
@@ -656,9 +661,9 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                     <div className="min-h-[168px]">
                       <label className="mb-2 block text-sm font-medium text-gray-400">{overallFields.result}</label>
                       <div className="flex flex-col space-y-2">
-                      {enabledCompletionResults.map((option) => (
+                      {missionStatusOptions.map((option) => (
                         <label key={option.code} className="flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30">
-                          <input type="radio" name="training-report-dco-result" value={option.code} checked={dcoResult === option.code} onChange={(event) => { setDcoResult(event.target.value as 'DCO' | 'DPCO' | 'DNCO'); setSaveStatus('Unsaved'); }} className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" />
+                          <input type="radio" name="training-report-dco-result" value={option.code} checked={dcoResult === option.code} onChange={(event) => { setDcoResult(event.target.value); setSaveStatus('Unsaved'); }} className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500" />
                           <span className="font-medium text-white">{option.label}</span>
                         </label>
                       ))}

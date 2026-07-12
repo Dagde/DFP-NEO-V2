@@ -132,7 +132,7 @@ export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
     overallAssessment: {
       title: 'Overall Assessment',
       fields: {
-        result: 'Result',
+        result: 'Mission Status',
         overallGrade: 'Overall Grade',
         overallResult: 'Overall Result',
         groundSchoolAssessment: 'Ground School Assessment',
@@ -294,7 +294,12 @@ export const normaliseTrainingReportTemplate = (
       },
       overallAssessment: {
         title: cleanLabel(source.modules?.overallAssessment?.title, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.title, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
-        fields: mergeFields(DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.fields, source.modules?.overallAssessment?.fields),
+        fields: {
+          ...mergeFields(DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.fields, source.modules?.overallAssessment?.fields),
+          result: cleanLabel(source.modules?.overallAssessment?.fields?.result, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.fields.result, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH) === 'Result'
+            ? DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.fields.result
+            : cleanLabel(source.modules?.overallAssessment?.fields?.result, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.fields.result, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
+        },
       },
       comments: {
         title: cleanLabel(source.modules?.comments?.title, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.comments.title, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),

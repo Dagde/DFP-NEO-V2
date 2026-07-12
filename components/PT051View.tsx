@@ -315,6 +315,9 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const overallFields = reportTemplate.modules.overallAssessment.fields;
     const commentFieldsConfig = reportTemplate.modules.comments.fields;
     const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
+    const missionStatusOptions = enabledCompletionResults.length > 0
+        ? enabledCompletionResults
+        : [{ code: 'Complete', label: 'Complete', enabled: true }];
     const gradeOptions = reportTemplate.grades.options;
     const assessmentGradeOptions = useMemo<(Pt051Grade | 'DEMO')[]>(() => [
         ...(reportTemplate.grades.includeDemo ? ['DEMO' as const] : []),
@@ -525,7 +528,9 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const [groundSchoolAssessment, setGroundSchoolAssessment] = useState(
         initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: undefined }
     );
-    const [dcoResult, setDcoResult] = useState<'DCO' | 'DPCO' | 'DNCO' | ''>(initialAssessment?.dcoResult || '');
+    const [dcoResult, setDcoResult] = useState<string>(
+        initialAssessment?.dcoResult || (enabledCompletionResults.length === 0 ? 'Complete' : '')
+    );
     const [dpcoFollowUp, setDpcoFollowUp] = useState<{ action: DpcoFollowUpAction; extraEventHours?: number; extraHours?: number }>(() => ({
         action: (initialAssessment?.dpcoFollowUp?.action || '') as DpcoFollowUpAction,
         extraEventHours: initialAssessment?.dpcoFollowUp?.extraEventHours ?? undefined,
@@ -1409,14 +1414,14 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     <div className="min-h-[168px]">
                                         <label className="block text-sm font-medium text-gray-400 mb-2">{overallFields.result}</label>
                                         <div className="flex flex-col space-y-2">
-                                        {enabledCompletionResults.map((option) => (
+                                        {missionStatusOptions.map((option) => (
                                             <label key={option.code} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded">
                                                 <input
                                                     type="radio"
                                                     name="dco-result"
                                                     value={option.code}
                                                     checked={dcoResult === option.code}
-                                                    onChange={(e) => setDcoResult(e.target.value as any)}
+                                                    onChange={(e) => setDcoResult(e.target.value)}
                                                     className="h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
                                                 />
                                                 <span className="text-white font-medium">{option.label}</span>

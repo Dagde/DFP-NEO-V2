@@ -3932,7 +3932,7 @@ const DEFAULT_TRAINING_REPORT_TEMPLATE = {
     overallAssessment: {
       title: "Overall Assessment",
       fields: {
-        result: "Result",
+        result: "Mission Status",
         overallGrade: "Overall Grade",
         overallResult: "Overall Result",
         groundSchoolAssessment: "Ground School Assessment"
@@ -4064,7 +4064,10 @@ const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
       },
       overallAssessment: {
         title: cleanLabel$1(source.modules?.overallAssessment?.title, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.title, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
-        fields: mergeFields(DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.fields, source.modules?.overallAssessment?.fields)
+        fields: {
+          ...mergeFields(DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.fields, source.modules?.overallAssessment?.fields),
+          result: cleanLabel$1(source.modules?.overallAssessment?.fields?.result, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.fields.result, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH) === "Result" ? DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.fields.result : cleanLabel$1(source.modules?.overallAssessment?.fields?.result, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.fields.result, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)
+        }
       },
       comments: {
         title: cleanLabel$1(source.modules?.comments?.title, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.comments.title, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
@@ -20297,6 +20300,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFieldsConfig = reportTemplate.modules.comments.fields;
   const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
+  const missionStatusOptions = enabledCompletionResults.length > 0 ? enabledCompletionResults : [{ code: "Complete", label: "Complete", enabled: true }];
   const gradeOptions = reportTemplate.grades.options;
   const assessmentGradeOptions = reactExports.useMemo(() => [
     ...reportTemplate.grades.includeDemo ? ["DEMO"] : [],
@@ -20476,7 +20480,9 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   const [groundSchoolAssessment, setGroundSchoolAssessment] = reactExports.useState(
     initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: void 0 }
   );
-  const [dcoResult, setDcoResult] = reactExports.useState(initialAssessment?.dcoResult || "");
+  const [dcoResult, setDcoResult] = reactExports.useState(
+    initialAssessment?.dcoResult || (enabledCompletionResults.length === 0 ? "Complete" : "")
+  );
   const [dpcoFollowUp, setDpcoFollowUp] = reactExports.useState(() => ({
     action: initialAssessment?.dpcoFollowUp?.action || "",
     extraEventHours: initialAssessment?.dpcoFollowUp?.extraEventHours ?? void 0,
@@ -21258,7 +21264,7 @@ This action cannot be undone.`;
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px]", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.result }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col space-y-2", children: enabledCompletionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col space-y-2", children: missionStatusOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "input",
                         {
@@ -55493,6 +55499,7 @@ const AirCombatTrainingReportModal = ({
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFields = reportTemplate.modules.comments.fields;
   const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
+  const missionStatusOptions = enabledCompletionResults.length > 0 ? enabledCompletionResults : [{ code: "Complete", label: "Complete", enabled: true }];
   const gradeLabelMap = reactExports.useMemo(() => new Map(reportTemplate.grades.options.map((option) => [option.value, option.label])), [reportTemplate.grades.options]);
   const formatGradeOption = (value) => {
     if (String(value).toUpperCase() === "DEMO") return "DEMO";
@@ -55539,7 +55546,9 @@ const AirCombatTrainingReportModal = ({
   const [instructorName, setInstructorName] = reactExports.useState(initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || "");
   const [overallGrade, setOverallGrade] = reactExports.useState(initialReport?.overallGrade || "");
   const [overallResult, setOverallResult] = reactExports.useState(initialReport?.overallResult || "");
-  const [dcoResult, setDcoResult] = reactExports.useState(initialReport?.dcoResult || "");
+  const [dcoResult, setDcoResult] = reactExports.useState(
+    initialReport?.dcoResult || (enabledCompletionResults.length === 0 ? "Complete" : "")
+  );
   const [dpcoFollowUp, setDpcoFollowUp] = reactExports.useState(() => ({
     action: initialReport?.dpcoFollowUp?.action || "",
     extraEventHours: initialReport?.dpcoFollowUp?.extraEventHours ?? void 0,
@@ -55956,7 +55965,7 @@ const AirCombatTrainingReportModal = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-sm font-medium text-gray-400", children: overallFields.result }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col space-y-2", children: enabledCompletionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col space-y-2", children: missionStatusOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-dco-result", value: option.code, checked: dcoResult === option.code, onChange: (event) => {
                     setDcoResult(event.target.value);
                     setSaveStatus("Unsaved");
@@ -67471,7 +67480,7 @@ const TRAINING_REPORT_OVERVIEW_FIELD_INFO = {
   assessor: "The label for the person completing or signing the report. Organisations may call this QFI, instructor, assessor, supervisor, check pilot or another local term."
 };
 const TRAINING_REPORT_OVERALL_FIELD_INFO = {
-  result: "The label for the mission completion outcome. The wording can be customised, but the system still treats DCO as mission completed, DPCO as mission partially completed and DNCO as mission not completed.",
+  result: "The label for the mission status outcome. If no mission status options are enabled, reports default to Complete. If options are enabled, only those configured options are shown.",
   overallGrade: "The label for the assessor’s whole-mission grade. This is the single grade used for progression, repeat-rule checks and historical trend analysis.",
   overallResult: "The label for the final satisfactory/unsatisfactory style outcome. The organisation can rename the visible text while the system keeps the underlying success/unsuccessful function intact.",
   groundSchoolAssessment: "The label for an optional ground-school assessment result. This is used when an event also records a separate academic or ground assessment percentage."
@@ -72639,7 +72648,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 key
               )) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportModulePreview, { title: trainingReportTemplate.modules.overallAssessment.title, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.result, value: trainingReportTemplate.completionResults.filter((option) => option.enabled !== false).map((option) => option.label).join(" / ") || "None" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.result, value: trainingReportTemplate.completionResults.filter((option) => option.enabled !== false).map((option) => option.label).join(" / ") || "Complete" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.overallGrade, value: trainingReportTemplate.grades.showNumbers ? "7 - Very Good" : "Very Good" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.overallResult, value: `${trainingReportTemplate.overallResults.passLabel} / ${trainingReportTemplate.overallResults.failLabel}` }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.groundSchoolAssessment, value: "Assessment / 85%" })

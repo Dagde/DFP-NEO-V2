@@ -1559,7 +1559,7 @@ const TRAINING_REPORT_OVERVIEW_FIELD_INFO: Record<string, string> = {
 };
 
 const TRAINING_REPORT_OVERALL_FIELD_INFO: Record<string, string> = {
-  result: 'The label for the mission completion outcome. The wording can be customised, but the system still treats DCO as mission completed, DPCO as mission partially completed and DNCO as mission not completed.',
+  result: 'The label for the mission status outcome. If no mission status options are enabled, reports default to Complete. If options are enabled, only those configured options are shown.',
   overallGrade: 'The label for the assessor’s whole-mission grade. This is the single grade used for progression, repeat-rule checks and historical trend analysis.',
   overallResult: 'The label for the final satisfactory/unsatisfactory style outcome. The organisation can rename the visible text while the system keeps the underlying success/unsuccessful function intact.',
   groundSchoolAssessment: 'The label for an optional ground-school assessment result. This is used when an event also records a separate academic or ground assessment percentage.',
@@ -7472,7 +7472,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
                 <TrainingReportModulePreview title={trainingReportTemplate.modules.overallAssessment.title}>
                   <div className="grid gap-3 md:grid-cols-4">
-                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.result} value={trainingReportTemplate.completionResults.filter((option) => option.enabled !== false).map((option) => option.label).join(' / ') || 'None'} />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.result} value={trainingReportTemplate.completionResults.filter((option) => option.enabled !== false).map((option) => option.label).join(' / ') || 'Complete'} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.overallGrade} value={trainingReportTemplate.grades.showNumbers ? '7 - Very Good' : 'Very Good'} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.overallResult} value={`${trainingReportTemplate.overallResults.passLabel} / ${trainingReportTemplate.overallResults.failLabel}`} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.groundSchoolAssessment} value="Assessment / 85%" />
