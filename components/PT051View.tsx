@@ -1587,7 +1587,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                             <label
                                                 key={grade}
                                                 title={formatGradeOption(grade)}
-                                                className={`flex ${reportTemplate.grades.showNumbers ? 'h-[75px] justify-between py-2' : 'h-[190px] justify-start pb-2 pt-[150px]'} w-[82px] cursor-pointer flex-col items-center rounded border px-1 text-center transition ${
+                                                className={`flex ${reportTemplate.grades.showNumbers ? 'justify-between py-2' : 'justify-start pb-2 pt-[15px]'} h-[75px] w-[82px] cursor-pointer flex-col items-center rounded border px-1 text-center transition ${
                                                     overallGrade === grade
                                                         ? 'border-sky-400 bg-sky-500/15 text-white'
                                                         : 'border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500'
