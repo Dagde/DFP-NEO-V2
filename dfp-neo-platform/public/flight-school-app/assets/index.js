@@ -21253,7 +21253,7 @@ This action cannot be undone.`;
                   {
                     value: assessment.instructorName || "",
                     onChange: (e) => handleInstructorNameChange(e.target.value),
-                    className: "text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-[calc(100%+5px)] focus:ring-1 focus:ring-sky-500",
+                    className: "text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-[calc(100%+20px)] focus:ring-1 focus:ring-sky-500",
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select instructor..." }),
                       unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: instructor.name, children: [
@@ -55962,7 +55962,7 @@ const AirCombatTrainingReportModal = ({
                     setInstructorName(event.target.value);
                     updateCommentSection("assessor", event.target.value);
                     setSaveStatus("Unsaved");
-                  }, className: "w-[calc(100%+5px)] rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" }) })
+                  }, className: "w-[calc(100%+20px)] rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" }) })
                 ] })
               ]
             }
