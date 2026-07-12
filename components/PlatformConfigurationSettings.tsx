@@ -7642,6 +7642,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
               <Field
                 label="Repeated Low-performance"
+                labelNoWrap
                 value={trainingReportTemplate.overallResults.doubleRepeatLabel}
                 disabled={!canEditTrainingReportTemplate}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
@@ -8560,16 +8561,16 @@ const InfoHint = ({ text }: { text: string }) => {
   );
 };
 
-const FieldLabel = ({ label, info }: { label: string; info?: string }) => (
+const FieldLabel = ({ label, info, noWrap = false }: { label: string; info?: string; noWrap?: boolean }) => (
   <span className="mb-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
-    <span>{label}</span>
+    <span className={noWrap ? 'whitespace-nowrap' : undefined}>{label}</span>
     {info ? <InfoHint text={info} /> : null}
   </span>
 );
 
-const Field = ({ label, value, disabled, onChange, info, maxLength }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string; maxLength?: number }) => (
+const Field = ({ label, labelNoWrap = false, value, disabled, onChange, info, maxLength }: { label: string; labelNoWrap?: boolean; value: string; disabled: boolean; onChange: (value: string) => void; info?: string; maxLength?: number }) => (
   <label>
-    <FieldLabel label={label} info={info} />
+    <FieldLabel label={label} info={info} noWrap={labelNoWrap} />
     <input
       className={fieldClass}
       value={value || ''}

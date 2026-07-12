@@ -72813,6 +72813,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               Field,
               {
                 label: "Repeated Low-performance",
+                labelNoWrap: true,
                 value: trainingReportTemplate.overallResults.doubleRepeatLabel,
                 disabled: !canEditTrainingReportTemplate,
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
@@ -73714,12 +73715,12 @@ const InfoHint = ({ text }) => {
     }
   );
 };
-const FieldLabel = ({ label, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: label }),
+const FieldLabel = ({ label, info, noWrap = false }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: noWrap ? "whitespace-nowrap" : void 0, children: label }),
   info ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: info }) : null
 ] });
-const Field = ({ label, value, disabled, onChange, info, maxLength }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
+const Field = ({ label, labelNoWrap = false, value, disabled, onChange, info, maxLength }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info, noWrap: labelNoWrap }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
     "input",
     {
