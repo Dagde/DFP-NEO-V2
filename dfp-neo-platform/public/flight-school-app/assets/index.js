@@ -21259,7 +21259,7 @@ This action cannot be undone.`;
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "lg:col-span-2 space-y-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg lg:-ml-[44px] lg:w-[calc(100%+44px)]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg lg:-ml-[44px] lg:-mt-[2px] lg:w-[calc(100%+44px)]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.overallAssessment.title }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px]", children: [
@@ -55960,7 +55960,7 @@ const AirCombatTrainingReportModal = ({
               ]
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "rounded-lg border border-gray-600 p-4 lg:col-span-2 lg:-ml-[44px] lg:w-[calc(100%+44px)]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "rounded-lg border border-gray-600 p-4 lg:col-span-2 lg:-ml-[44px] lg:-mt-[2px] lg:w-[calc(100%+44px)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.overallAssessment.title }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[168px]", children: [

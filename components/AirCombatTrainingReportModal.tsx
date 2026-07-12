@@ -654,7 +654,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                 <div><dt className="text-sm font-medium text-gray-400">{overviewFields.assessor}</dt><dd className="mt-1"><input value={instructorName} onChange={(event) => { setInstructorName(event.target.value); updateCommentSection('assessor', event.target.value); setSaveStatus('Unsaved'); }} className="w-[calc(100%-25px)] rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" /></dd></div>
               </dl>
 
-              <fieldset className="rounded-lg border border-gray-600 p-4 lg:col-span-2 lg:-ml-[44px] lg:w-[calc(100%+44px)]">
+              <fieldset className="rounded-lg border border-gray-600 p-4 lg:col-span-2 lg:-ml-[44px] lg:-mt-[2px] lg:w-[calc(100%+44px)]">
                 <legend className="px-2 text-sm font-semibold text-gray-300">{reportTemplate.modules.overallAssessment.title}</legend>
                 <div className="mb-4 mt-2">
                   <div className="grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]">
