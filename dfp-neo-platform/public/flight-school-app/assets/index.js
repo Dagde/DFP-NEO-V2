@@ -70384,7 +70384,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             {
               type: "button",
               onClick: exportConfigurationHealthReport,
-              className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 shadow hover:bg-gray-200",
+              className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-[10px] font-bold text-gray-900 shadow hover:bg-gray-200",
               children: "Export Configuration Report"
             }
           )
