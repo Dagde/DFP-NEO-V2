@@ -101385,6 +101385,8 @@ const App = () => {
     }
     return "Program Schedule";
   });
+  const [programScheduleViewKey, setProgramScheduleViewKey] = reactExports.useState(0);
+  const lastProgramScheduleMountKeyRef = reactExports.useRef("");
   const [requestedSettingsSection, setRequestedSettingsSection] = reactExports.useState(null);
   const [previousView, setPreviousView] = reactExports.useState("Program Schedule");
   const [date, setDate] = reactExports.useState(() => {
@@ -104466,6 +104468,25 @@ const App = () => {
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     void loadSnapshotForDate(date, { useCache: true });
   }, [activeUnitCode, date, school, loadSnapshotForDate, isInitialSetupWizardActive, setupTestProfile]);
+  reactExports.useEffect(() => {
+    if (activeView !== "Program Schedule") {
+      lastProgramScheduleMountKeyRef.current = "";
+      return;
+    }
+    const mountKey = `${date}|${school}|${activeUnitCode}`;
+    const shouldRefreshOnEntry = lastProgramScheduleMountKeyRef.current !== mountKey;
+    if (lastProgramScheduleMountKeyRef.current !== mountKey) {
+      lastProgramScheduleMountKeyRef.current = mountKey;
+      setProgramScheduleViewKey((value) => value + 1);
+    }
+    if (!shouldRefreshOnEntry) return;
+    if (setupTestProfile || isInitialSetupWizardActive || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    const currentEvents = publishedSchedulesRef.current[date] || [];
+    if (currentEvents.length > 0) return;
+    const snapshotKey = getDailySnapshotKey(date, school, activeUnitCode);
+    loadedSnapshotDates.current.delete(snapshotKey);
+    void loadSnapshotForDate(date, { force: true, replace: true, useCache: true });
+  }, [activeUnitCode, activeView, date, isInitialSetupWizardActive, loadSnapshotForDate, school, setupTestProfile]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
     const newUser = instructorsData.find((inst) => inst.name === userName);
@@ -116620,7 +116641,8 @@ ${error instanceof Error ? error.message : String(error)}`,
                 });
               }
             }
-          }
+          },
+          programScheduleViewKey
         );
       case "TraineeSchedule":
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
