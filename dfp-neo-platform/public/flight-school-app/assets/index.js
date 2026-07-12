@@ -72771,7 +72771,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 info: "Text displayed when the assessment outcome is unsatisfactory. Organisations may use wording such as Unsatisfactory, Not Yet Competent, Not Achieved or Fail."
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col lg:row-span-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 FieldLabel,
                 {
@@ -72779,13 +72779,13 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   info: "Choose whether report grade tiles show the numeric grade with its descriptor, or descriptor text only."
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid grid-cols-2 gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid flex-1 grid-cols-1 gap-2 rounded border border-gray-700 bg-gray-900/50 p-2", children: [
                 { label: "Number & Descriptor", showNumbers: true },
                 { label: "Descriptor Only", showNumbers: false }
               ].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "label",
                 {
-                  className: `flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded border px-3 py-2 text-center text-xs font-bold uppercase tracking-wide transition ${trainingReportTemplate.grades.showNumbers === option.showNumbers ? "border-cyan-400 bg-cyan-500/15 text-cyan-100" : "border-gray-700 bg-gray-950/70 text-gray-400 hover:border-gray-500"} ${!canEditTrainingReportTemplate ? "cursor-not-allowed opacity-60" : ""}`,
+                  className: `flex min-h-[42px] cursor-pointer items-center justify-start gap-2 rounded border px-3 py-2 text-left text-xs font-bold uppercase tracking-wide transition ${trainingReportTemplate.grades.showNumbers === option.showNumbers ? "border-cyan-400 bg-cyan-500/15 text-cyan-100" : "border-gray-700 bg-gray-950/70 text-gray-400 hover:border-gray-500"} ${!canEditTrainingReportTemplate ? "cursor-not-allowed opacity-60" : ""}`,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "input",
