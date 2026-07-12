@@ -69130,6 +69130,16 @@ This permanently removes the organisation record from platform configuration and
       return nextConfig;
     });
   };
+  const removeUserAccessScope = (index) => {
+    setConfig((prev) => {
+      const nextConfig = {
+        ...prev,
+        userAccess: prev.userAccess.filter((_, itemIndex) => itemIndex !== index)
+      };
+      notifyPlatformConfigUpdatedSoon(nextConfig);
+      return nextConfig;
+    });
+  };
   const updateAircraftCrewCount = (aircraftIndex, crewCount) => {
     const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
     const nextCount = Math.max(1, Math.min(12, Math.round(Number(crewCount) || 1)));
@@ -73703,7 +73713,16 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                     access.unitCode || "All units",
                     " / ",
                     appliesToAllFeatures ? "All enabled features" : access.moduleCode
-                  ] })
+                  ] }),
+                  canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => removeUserAccessScope(index),
+                      className: "rounded border border-red-700/50 bg-red-950/40 px-2 py-1 text-xs font-bold text-red-200 hover:bg-red-900/60",
+                      children: "Delete Scope"
+                    }
+                  )
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3 xl:grid-cols-[1.1fr_1fr_1fr_1fr_0.75fr_0.85fr]", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEdit, options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),

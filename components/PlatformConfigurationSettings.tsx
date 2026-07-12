@@ -3458,6 +3458,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
+  const removeUserAccessScope = (index: number) => {
+    setConfig((prev) => {
+      const nextConfig = {
+        ...prev,
+        userAccess: prev.userAccess.filter((_, itemIndex) => itemIndex !== index),
+      };
+      notifyPlatformConfigUpdatedSoon(nextConfig);
+      return nextConfig;
+    });
+  };
+
   const updateAircraftCrewCount = (aircraftIndex: number, crewCount: number) => {
     const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
     const nextCount = Math.max(1, Math.min(12, Math.round(Number(crewCount) || 1)));
@@ -8446,6 +8457,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <span className="ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300">
                     {access.locationCode || 'All locations'} / {access.unitCode || 'All units'} / {appliesToAllFeatures ? 'All enabled features' : access.moduleCode}
                   </span>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => removeUserAccessScope(index)}
+                      className="rounded border border-red-700/50 bg-red-950/40 px-2 py-1 text-xs font-bold text-red-200 hover:bg-red-900/60"
+                    >
+                      Delete Scope
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-[1.1fr_1fr_1fr_1fr_0.75fr_0.85fr]">
