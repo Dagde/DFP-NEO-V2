@@ -75518,20 +75518,6 @@ const SettingsViewWithMenu = (props) => {
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-settings-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", onKeyDownCapture: stopEditableKeyPropagation, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "button",
-        {
-          onClick: () => {
-            setActiveSection("home");
-            setExpandedGroups({});
-          },
-          className: `mb-4 w-full rounded-lg border px-3 py-3 text-left transition-colors ${activeSection === "home" ? "border-sky-500/50 bg-sky-500/10 text-white" : "border-gray-800 bg-gray-900/50 text-gray-300 hover:border-gray-700 hover:bg-gray-900"}`,
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-bold", children: "Settings Home" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-500", children: "All configuration areas" })
-          ]
-        }
-      ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500", children: "Find Setting" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(

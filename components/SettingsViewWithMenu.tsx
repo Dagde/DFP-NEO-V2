@@ -1455,20 +1455,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     return (
         <div data-settings-view="true" className="flex-1 flex overflow-hidden bg-gray-900" onKeyDownCapture={stopEditableKeyPropagation}>
             <aside className="hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block">
-                <button
-                    onClick={() => {
-                        setActiveSection('home');
-                        setExpandedGroups({});
-                    }}
-                    className={`mb-4 w-full rounded-lg border px-3 py-3 text-left transition-colors ${
-                        activeSection === 'home'
-                            ? 'border-sky-500/50 bg-sky-500/10 text-white'
-                            : 'border-gray-800 bg-gray-900/50 text-gray-300 hover:border-gray-700 hover:bg-gray-900'
-                    }`}
-                >
-                    <span className="block text-sm font-bold">Settings Home</span>
-                    <span className="mt-1 block text-xs text-gray-500">All configuration areas</span>
-                </button>
                 <div className="mb-4">
                     <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500">Find Setting</label>
                     <input
