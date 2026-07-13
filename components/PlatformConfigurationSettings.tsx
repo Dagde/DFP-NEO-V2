@@ -1753,6 +1753,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = useState(false);
   const [taskProfilesUnlocked, setTaskProfilesUnlocked] = useState(false);
+  const [taskProfileDrafts, setTaskProfileDrafts] = useState<Record<string, string>>({});
+  const [taskProfileAbbreviationDrafts, setTaskProfileAbbreviationDrafts] = useState<Record<string, string>>({});
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = useState<'aircraftTypes' | 'resourcePools'>('aircraftTypes');
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = useState(false);
@@ -3270,24 +3272,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   };
 
-  const updateTaskProfilesForModel = (model: string, text: string) => {
-    updatePrimaryOrganisationSettings((settings) => ({
-      ...settings,
-      taskProfiles: {
-        ...normaliseTaskProfileConfig(settings.taskProfiles || null),
-        [model]: parseTaskProfileText(text),
-      },
-    }));
-  };
+  const getTaskProfileUnitDraftKey = (unit: any, unitIndex: number) => String(unit?.code || unit?.id || `unit-${unitIndex}`);
 
-  const updateTaskProfileAbbreviationsForUnit = (unitIndex: number, text: string) => {
-    const unit = config.units[unitIndex];
-    updateRow('units', unitIndex, {
-      settings: {
-        ...(unit?.settings || {}),
-        taskProfileAbbreviations: parseTaskProfileAbbreviationText(text),
-      },
-    });
+  const startTaskProfilesEdit = () => {
+    setTaskProfileDrafts(Object.fromEntries(
+      OPERATIONAL_MODEL_OPTIONS.map((option) => [
+        option.value,
+        formatTaskProfileText(taskProfiles[option.value] || []),
+      ]),
+    ));
+    setTaskProfileAbbreviationDrafts(Object.fromEntries(
+      config.units.map((unit, unitIndex) => [
+        getTaskProfileUnitDraftKey(unit, unitIndex),
+        formatTaskProfileAbbreviationText(unit.settings?.taskProfileAbbreviations || {}),
+      ]),
+    ));
+    setTaskProfilesUnlocked(true);
   };
 
   const updateMasterLmpAccessRules = (rules: PlatformMasterLmpAccessRule[]) => {
@@ -4430,8 +4430,32 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const saveTaskProfilesAndExitEdit = async () => {
-    const saved = await save(undefined, 'platform-task-profiles');
-    if (saved) setTaskProfilesUnlocked(false);
+    const taskProfilesFromDrafts = OPERATIONAL_MODEL_OPTIONS.reduce((profiles, option) => ({
+      ...profiles,
+      [option.value]: parseTaskProfileText(taskProfileDrafts[option.value] || ''),
+    }), {} as Record<string, string[]>);
+    const nextConfigWithProfiles = buildConfigWithPrimaryOrganisationSettings(config, (settings) => ({
+      ...settings,
+      taskProfiles: taskProfilesFromDrafts,
+    }));
+    const nextConfig = {
+      ...nextConfigWithProfiles,
+      units: nextConfigWithProfiles.units.map((unit, unitIndex) => ({
+        ...unit,
+        settings: {
+          ...(unit.settings || {}),
+          taskProfileAbbreviations: parseTaskProfileAbbreviationText(
+            taskProfileAbbreviationDrafts[getTaskProfileUnitDraftKey(unit, unitIndex)] || '',
+          ),
+        },
+      })),
+    };
+    const saved = await save(nextConfig, 'platform-task-profiles');
+    if (saved) {
+      setTaskProfilesUnlocked(false);
+      setTaskProfileDrafts({});
+      setTaskProfileAbbreviationDrafts({});
+    }
   };
 
   const saveCurrencyProfilesAndKeepPosition = async () => {
@@ -5547,7 +5571,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     void saveTaskProfilesAndExitEdit();
                     return;
                   }
-                  setTaskProfilesUnlocked(true);
+                  startTaskProfilesEdit();
                 }}
                 disabled={taskProfilesUnlocked && (saving || applyingChanges)}
                 className={platformActionButtonClass}
@@ -5585,9 +5609,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </div>
                   <TextAreaField
                     label="Profiles"
-                    value={formatTaskProfileText(profiles)}
+                    value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
-                    onChange={(value) => updateTaskProfilesForModel(option.value, value)}
+                    onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}
                     info="One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
                 </div>
@@ -5600,6 +5624,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               {config.units.filter(isActiveRecord).map((unit) => {
                 const unitIndex = config.units.findIndex((candidate) => candidate === unit);
                 const abbreviations = unit.settings?.taskProfileAbbreviations || {};
+                const unitDraftKey = getTaskProfileUnitDraftKey(unit, unitIndex);
                 return (
                   <div id={`platform-task-tile-abbreviations-${getSettingsFocusAnchor(unit.code)}`} key={unit.code} className="rounded-lg border border-gray-700 bg-gray-900 p-3">
                     <div className="mb-3 flex items-start justify-between gap-3">
@@ -5615,9 +5640,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </div>
                     <TextAreaField
                       label="Tile Abbreviations"
-                      value={formatTaskProfileAbbreviationText(abbreviations)}
+                      value={taskProfilesUnlocked ? (taskProfileAbbreviationDrafts[unitDraftKey] ?? formatTaskProfileAbbreviationText(abbreviations)) : formatTaskProfileAbbreviationText(abbreviations)}
                       disabled={!canEditTaskProfiles}
-                      onChange={(value) => updateTaskProfileAbbreviationsForUnit(unitIndex, value)}
+                      onChange={(value) => setTaskProfileAbbreviationDrafts((drafts) => ({ ...drafts, [unitDraftKey]: value }))}
                       info="One abbreviation per line, for example Close Air Support - CAS. Equals signs are also accepted."
                     />
                   </div>

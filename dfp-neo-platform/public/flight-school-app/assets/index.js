@@ -63480,6 +63480,8 @@ const PlatformConfigurationSettings = ({
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = reactExports.useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = reactExports.useState(false);
   const [taskProfilesUnlocked, setTaskProfilesUnlocked] = reactExports.useState(false);
+  const [taskProfileDrafts, setTaskProfileDrafts] = reactExports.useState({});
+  const [taskProfileAbbreviationDrafts, setTaskProfileAbbreviationDrafts] = reactExports.useState({});
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = reactExports.useState("");
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = reactExports.useState("aircraftTypes");
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = reactExports.useState(false);
@@ -64698,23 +64700,21 @@ This permanently removes the organisation record from platform configuration and
       insertEventTypes: normaliseInsertEventTypes(nextEventTypes)
     }));
   };
-  const updateTaskProfilesForModel = (model, text) => {
-    updatePrimaryOrganisationSettings((settings) => ({
-      ...settings,
-      taskProfiles: {
-        ...normaliseTaskProfileConfig(settings.taskProfiles || null),
-        [model]: parseTaskProfileText(text)
-      }
-    }));
-  };
-  const updateTaskProfileAbbreviationsForUnit = (unitIndex, text) => {
-    const unit = config.units[unitIndex];
-    updateRow("units", unitIndex, {
-      settings: {
-        ...unit?.settings || {},
-        taskProfileAbbreviations: parseTaskProfileAbbreviationText(text)
-      }
-    });
+  const getTaskProfileUnitDraftKey = (unit, unitIndex) => String(unit?.code || unit?.id || `unit-${unitIndex}`);
+  const startTaskProfilesEdit = () => {
+    setTaskProfileDrafts(Object.fromEntries(
+      OPERATIONAL_MODEL_OPTIONS.map((option) => [
+        option.value,
+        formatTaskProfileText(taskProfiles[option.value] || [])
+      ])
+    ));
+    setTaskProfileAbbreviationDrafts(Object.fromEntries(
+      config.units.map((unit, unitIndex) => [
+        getTaskProfileUnitDraftKey(unit, unitIndex),
+        formatTaskProfileAbbreviationText(unit.settings?.taskProfileAbbreviations || {})
+      ])
+    ));
+    setTaskProfilesUnlocked(true);
   };
   const updateMasterLmpAccessRules = (rules) => {
     updatePrimaryOrganisationSettings((settings) => ({
@@ -65654,8 +65654,32 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     await save(void 0, "platform-crew-composition");
   };
   const saveTaskProfilesAndExitEdit = async () => {
-    const saved = await save(void 0, "platform-task-profiles");
-    if (saved) setTaskProfilesUnlocked(false);
+    const taskProfilesFromDrafts = OPERATIONAL_MODEL_OPTIONS.reduce((profiles, option) => ({
+      ...profiles,
+      [option.value]: parseTaskProfileText(taskProfileDrafts[option.value] || "")
+    }), {});
+    const nextConfigWithProfiles = buildConfigWithPrimaryOrganisationSettings(config, (settings) => ({
+      ...settings,
+      taskProfiles: taskProfilesFromDrafts
+    }));
+    const nextConfig = {
+      ...nextConfigWithProfiles,
+      units: nextConfigWithProfiles.units.map((unit, unitIndex) => ({
+        ...unit,
+        settings: {
+          ...unit.settings || {},
+          taskProfileAbbreviations: parseTaskProfileAbbreviationText(
+            taskProfileAbbreviationDrafts[getTaskProfileUnitDraftKey(unit, unitIndex)] || ""
+          )
+        }
+      }))
+    };
+    const saved = await save(nextConfig, "platform-task-profiles");
+    if (saved) {
+      setTaskProfilesUnlocked(false);
+      setTaskProfileDrafts({});
+      setTaskProfileAbbreviationDrafts({});
+    }
   };
   const saveCurrencyProfilesAndKeepPosition = async () => {
     await save(void 0, "platform-currency-profiles");
@@ -66593,7 +66617,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   void saveTaskProfilesAndExitEdit();
                   return;
                 }
-                setTaskProfilesUnlocked(true);
+                startTaskProfilesEdit();
               },
               disabled: taskProfilesUnlocked && (saving || applyingChanges),
               className: platformActionButtonClass,
@@ -66625,9 +66649,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               TextAreaField,
               {
                 label: "Profiles",
-                value: formatTaskProfileText(profiles),
+                value: taskProfilesUnlocked ? taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles) : formatTaskProfileText(profiles),
                 disabled: !canEditTaskProfiles,
-                onChange: (value) => updateTaskProfilesForModel(option.value, value),
+                onChange: (value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value })),
                 info: "One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
               }
             )
@@ -66638,6 +66662,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: config.units.filter(isActiveRecord).map((unit) => {
             const unitIndex = config.units.findIndex((candidate) => candidate === unit);
             const abbreviations = unit.settings?.taskProfileAbbreviations || {};
+            const unitDraftKey = getTaskProfileUnitDraftKey(unit, unitIndex);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: `platform-task-tile-abbreviations-${getSettingsFocusAnchor(unit.code)}`, className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -66657,9 +66682,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 TextAreaField,
                 {
                   label: "Tile Abbreviations",
-                  value: formatTaskProfileAbbreviationText(abbreviations),
+                  value: taskProfilesUnlocked ? taskProfileAbbreviationDrafts[unitDraftKey] ?? formatTaskProfileAbbreviationText(abbreviations) : formatTaskProfileAbbreviationText(abbreviations),
                   disabled: !canEditTaskProfiles,
-                  onChange: (value) => updateTaskProfileAbbreviationsForUnit(unitIndex, value),
+                  onChange: (value) => setTaskProfileAbbreviationDrafts((drafts) => ({ ...drafts, [unitDraftKey]: value })),
                   info: "One abbreviation per line, for example Close Air Support - CAS. Equals signs are also accepted."
                 }
               )
