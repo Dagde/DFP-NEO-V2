@@ -8,6 +8,8 @@ interface FormationCallsignsSectionProps {
     units: string[];
     locations: string[];
     canEditSettings: boolean;
+    isSettingsUnlocked?: boolean;
+    onRequestUnlock?: () => Promise<boolean>;
     onAuditLog?: (entry: any) => void;
 }
 
@@ -17,6 +19,8 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
     units,
     locations,
     canEditSettings,
+    isSettingsUnlocked = canEditSettings,
+    onRequestUnlock,
     onAuditLog
 }) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -30,7 +34,12 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
         locationCode: ''
     });
 
-    const handleEdit = () => {
+    const handleEdit = async () => {
+        if (!canEditSettings) return;
+        if (!isSettingsUnlocked) {
+            const unlocked = await onRequestUnlock?.();
+            if (!unlocked) return;
+        }
         setTempCallsigns([...callsigns]);
         setIsEditing(true);
     };

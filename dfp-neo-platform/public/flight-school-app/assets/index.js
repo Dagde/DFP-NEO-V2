@@ -58593,6 +58593,8 @@ const FormationCallsignsSection = ({
   units,
   locations,
   canEditSettings,
+  isSettingsUnlocked = canEditSettings,
+  onRequestUnlock,
   onAuditLog
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(false);
@@ -58605,7 +58607,12 @@ const FormationCallsignsSection = ({
     location: "",
     locationCode: ""
   });
-  const handleEdit = () => {
+  const handleEdit = async () => {
+    if (!canEditSettings) return;
+    if (!isSettingsUnlocked) {
+      const unlocked = await onRequestUnlock?.();
+      if (!unlocked) return;
+    }
     setTempCallsigns([...callsigns]);
     setIsEditing(true);
   };
@@ -65081,7 +65088,7 @@ const PlatformConfigurationSettings = ({
   const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = reactExports.useState({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = reactExports.useState(false);
-  const [rankTerminologyDirty, setRankTerminologyDirty] = reactExports.useState(false);
+  const [, setRankTerminologyDirty] = reactExports.useState(false);
   const [trainingReportTemplateUnlocked, setTrainingReportTemplateUnlocked] = reactExports.useState(false);
   const [licenseStatus, setLicenseStatus] = reactExports.useState(null);
   const [licenseImportText, setLicenseImportText] = reactExports.useState("");
@@ -65136,7 +65143,7 @@ const PlatformConfigurationSettings = ({
   }), [config.resourcePools]);
   const selectedResourcePoolDeleteOption = resourcePoolDeleteOptions.find((option) => option.key === selectedResourcePoolDeleteKey);
   const unlockRankTerminology = async () => {
-    if (!canUnlockRankTerminology) return;
+    if (!canUnlockRankTerminology) return false;
     const password = await showDarkPrompt({
       title: "Edit Rank, Terminology & Labels",
       message: "Enter your password to edit Rank, Terminology & Labels.",
@@ -65147,7 +65154,7 @@ const PlatformConfigurationSettings = ({
       cancelText: "Cancel",
       variant: "warning"
     });
-    if (!password) return;
+    if (!password) return false;
     setError("");
     try {
       const sessionToken = localStorage.getItem("dfp_session_token") || "";
@@ -65163,27 +65170,15 @@ const PlatformConfigurationSettings = ({
       const verifyData = await verifyResp.json().catch(() => ({}));
       if (!verifyResp.ok || !verifyData.valid) {
         setError("Rank, Terminology & Labels editing was not unlocked. The password was not accepted.");
-        return;
+        return false;
       }
       setRankTerminologyUnlocked(true);
       onShowSuccess("Rank, Terminology & Labels editing unlocked.");
+      return true;
     } catch (err) {
       setError(err?.message || "Could not verify password for Rank, Terminology & Labels editing.");
+      return false;
     }
-  };
-  const lockRankTerminology = async () => {
-    if (rankTerminologyDirty) {
-      const shouldSave = await showDarkConfirm(
-        "You have unsaved Rank, Terminology & Labels changes.\n\nSelect OK to save and apply the changes now. Select Cancel to keep editing without locking.",
-        "Unsaved Terminology Changes",
-        "warning"
-      );
-      if (shouldSave) {
-        await save();
-      }
-      return;
-    }
-    setRankTerminologyUnlocked(false);
   };
   const saveRankTerminology = async () => {
     await save(void 0, "platform-rank-terminology");
@@ -70597,23 +70592,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         {
           title: "Rank, Terminology & Labels",
           subtitle: "Configure personnel display order, local role terminology and customer-facing report labels without changing internal codes.",
-          action: canUnlockRankTerminology ? rankTerminologyUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: lockRankTerminology,
-              className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200",
-              children: "Lock"
-            }
-          ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: unlockRankTerminology,
-              className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200",
-              children: "Edit"
-            }
-          ) : null
+          action: renderRankTerminologySectionAction()
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
@@ -70942,7 +70921,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             onUpdateCallsigns: onUpdateFormationCallsigns,
             units: config.units.map((unit) => unit.code).filter(Boolean),
             locations: config.locations.map((location) => location.name || location.code).filter(Boolean),
-            canEditSettings: canEditRankTerminology,
+            canEditSettings: canUnlockRankTerminology,
+            isSettingsUnlocked: canEditRankTerminology,
+            onRequestUnlock: unlockRankTerminology,
             onAuditLog: logAudit
           }
         ) }),

@@ -1732,7 +1732,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = useState<Record<string, boolean>>({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = useState(false);
-  const [rankTerminologyDirty, setRankTerminologyDirty] = useState(false);
+  const [, setRankTerminologyDirty] = useState(false);
   const [trainingReportTemplateUnlocked, setTrainingReportTemplateUnlocked] = useState(false);
   const [licenseStatus, setLicenseStatus] = useState<LicenseRuntimeStatus | null>(null);
   const [licenseImportText, setLicenseImportText] = useState('');
@@ -1795,7 +1795,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const selectedResourcePoolDeleteOption = resourcePoolDeleteOptions.find((option) => option.key === selectedResourcePoolDeleteKey);
 
   const unlockRankTerminology = async () => {
-    if (!canUnlockRankTerminology) return;
+    if (!canUnlockRankTerminology) return false;
     const password = await showDarkPrompt({
       title: 'Edit Rank, Terminology & Labels',
       message: 'Enter your password to edit Rank, Terminology & Labels.',
@@ -1806,7 +1806,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       cancelText: 'Cancel',
       variant: 'warning',
     });
-    if (!password) return;
+    if (!password) return false;
     setError('');
     try {
       const sessionToken = localStorage.getItem('dfp_session_token') || '';
@@ -1822,28 +1822,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const verifyData = await verifyResp.json().catch(() => ({}));
       if (!verifyResp.ok || !verifyData.valid) {
         setError('Rank, Terminology & Labels editing was not unlocked. The password was not accepted.');
-        return;
+        return false;
       }
       setRankTerminologyUnlocked(true);
       onShowSuccess('Rank, Terminology & Labels editing unlocked.');
+      return true;
     } catch (err: any) {
       setError(err?.message || 'Could not verify password for Rank, Terminology & Labels editing.');
+      return false;
     }
-  };
-
-  const lockRankTerminology = async () => {
-    if (rankTerminologyDirty) {
-      const shouldSave = await showDarkConfirm(
-        'You have unsaved Rank, Terminology & Labels changes.\n\nSelect OK to save and apply the changes now. Select Cancel to keep editing without locking.',
-        'Unsaved Terminology Changes',
-        'warning',
-      );
-      if (shouldSave) {
-        await save();
-      }
-      return;
-    }
-    setRankTerminologyUnlocked(false);
   };
 
   const saveRankTerminology = async () => {
@@ -7970,25 +7957,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Rank, Terminology & Labels"
           subtitle="Configure personnel display order, local role terminology and customer-facing report labels without changing internal codes."
-          action={canUnlockRankTerminology ? (
-            rankTerminologyUnlocked ? (
-              <button
-                type="button"
-                onClick={lockRankTerminology}
-                className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200"
-              >
-                Lock
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={unlockRankTerminology}
-                className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200"
-              >
-                Edit
-              </button>
-            )
-          ) : null}
+          action={renderRankTerminologySectionAction()}
         />
         <div className="space-y-4 p-4">
           {!hasRankTerminologyEditPermission ? (
@@ -8327,7 +8296,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 onUpdateCallsigns={onUpdateFormationCallsigns}
                 units={config.units.map((unit: any) => unit.code).filter(Boolean)}
                 locations={config.locations.map((location: any) => location.name || location.code).filter(Boolean)}
-                canEditSettings={canEditRankTerminology}
+                canEditSettings={canUnlockRankTerminology}
+                isSettingsUnlocked={canEditRankTerminology}
+                onRequestUnlock={unlockRankTerminology}
                 onAuditLog={logAudit}
               />
             </div>
