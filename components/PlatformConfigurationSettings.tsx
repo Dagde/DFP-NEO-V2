@@ -6000,7 +6000,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                   <span className="text-sm font-semibold text-gray-200">Formation mission</span>
                                 </label>
                               </div>
-                              <NumberField label="No. Aircraft" value={profile.formationAircraft} disabled={!canEdit || !profile.isFormation} onChange={(value) => updateStandardMissionProfile(profile.id, { formationAircraft: clampWholeNumber(value, 2, 2, 24) })} />
+                              <NumberField label="No. Aircraft" value={profile.formationAircraft} disabled={!canEditSection('platform-standard-missions') || !profile.isFormation} onChange={(value) => updateStandardMissionProfile(profile.id, { formationAircraft: clampWholeNumber(value, 2, 2, 24) })} />
                             </div>
                           </div>
                         </div>
@@ -6078,17 +6078,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 <div className={resourceSectionPanelTitleClass}>Required Roles</div>
                                 <div className={resourceSectionPanelHintClass}>{crewMode === 'CUSTOM' ? 'Manual role requirements are stored with the mission profile for later scheduling use.' : 'Only used when Custom Crew is selected.'}</div>
                               </div>
-                              <button type="button" onClick={() => addStandardMissionRoleRequirement(profile)} disabled={!canEdit || crewMode !== 'CUSTOM'} className={platformActionButtonClass}>Add Role</button>
+                              <button type="button" onClick={() => addStandardMissionRoleRequirement(profile)} disabled={!canEditSection('platform-standard-missions') || crewMode !== 'CUSTOM'} className={platformActionButtonClass}>Add Role</button>
                             </div>
                             <div className="space-y-2">
                               {profile.roleRequirements.length === 0 ? (
                                 <div className="rounded border border-dashed border-gray-700 bg-gray-950/70 p-3 text-xs text-gray-400">No manual role requirements configured.</div>
                               ) : profile.roleRequirements.map((requirement, roleIndex) => (
                                 <div key={`${profile.id}-role-${roleIndex}`} className="grid gap-2 md:grid-cols-[1fr_110px_auto]">
-                                  <SelectField label="Role" value={requirement.role} disabled={!canEdit || crewMode !== 'CUSTOM'} options={crewCompositionRoleOptions} optionLabels={crewPositionLabelMap} onChange={(value) => updateStandardMissionRoleRequirement(profile, roleIndex, { role: value })} />
-                                  <NumberField label="Number" value={requirement.count} disabled={!canEdit || crewMode !== 'CUSTOM'} onChange={(value) => updateStandardMissionRoleRequirement(profile, roleIndex, { count: value })} />
+                                  <SelectField label="Role" value={requirement.role} disabled={!canEditSection('platform-standard-missions') || crewMode !== 'CUSTOM'} options={crewCompositionRoleOptions} optionLabels={crewPositionLabelMap} onChange={(value) => updateStandardMissionRoleRequirement(profile, roleIndex, { role: value })} />
+                                  <NumberField label="Number" value={requirement.count} disabled={!canEditSection('platform-standard-missions') || crewMode !== 'CUSTOM'} onChange={(value) => updateStandardMissionRoleRequirement(profile, roleIndex, { count: value })} />
                                   <div className="flex items-end">
-                                    <button type="button" onClick={() => removeStandardMissionRoleRequirement(profile, roleIndex)} disabled={!canEdit || crewMode !== 'CUSTOM'} className={platformActionButtonClass}>
+                                    <button type="button" onClick={() => removeStandardMissionRoleRequirement(profile, roleIndex)} disabled={!canEditSection('platform-standard-missions') || crewMode !== 'CUSTOM'} className={platformActionButtonClass}>
                                       <span className="text-[9px] leading-tight">Remove</span>
                                     </button>
                                   </div>

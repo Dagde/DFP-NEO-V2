@@ -67258,7 +67258,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-gray-200", children: "Formation mission" })
                       ] })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "No. Aircraft", value: profile.formationAircraft, disabled: !canEdit || !profile.isFormation, onChange: (value) => updateStandardMissionProfile(profile.id, { formationAircraft: clampWholeNumber(value, 2, 2, 24) }) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "No. Aircraft", value: profile.formationAircraft, disabled: !canEditSection("platform-standard-missions") || !profile.isFormation, onChange: (value) => updateStandardMissionProfile(profile.id, { formationAircraft: clampWholeNumber(value, 2, 2, 24) }) })
                   ] })
                 ] })
               ] }),
@@ -67317,12 +67317,12 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Required Roles" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: crewMode === "CUSTOM" ? "Manual role requirements are stored with the mission profile for later scheduling use." : "Only used when Custom Crew is selected." })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addStandardMissionRoleRequirement(profile), disabled: !canEdit || crewMode !== "CUSTOM", className: platformActionButtonClass, children: "Add Role" })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addStandardMissionRoleRequirement(profile), disabled: !canEditSection("platform-standard-missions") || crewMode !== "CUSTOM", className: platformActionButtonClass, children: "Add Role" })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: profile.roleRequirements.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950/70 p-3 text-xs text-gray-400", children: "No manual role requirements configured." }) : profile.roleRequirements.map((requirement, roleIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-[1fr_110px_auto]", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Role", value: requirement.role, disabled: !canEdit || crewMode !== "CUSTOM", options: crewCompositionRoleOptions, optionLabels: crewPositionLabelMap, onChange: (value) => updateStandardMissionRoleRequirement(profile, roleIndex, { role: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Number", value: requirement.count, disabled: !canEdit || crewMode !== "CUSTOM", onChange: (value) => updateStandardMissionRoleRequirement(profile, roleIndex, { count: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeStandardMissionRoleRequirement(profile, roleIndex), disabled: !canEdit || crewMode !== "CUSTOM", className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight", children: "Remove" }) }) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Role", value: requirement.role, disabled: !canEditSection("platform-standard-missions") || crewMode !== "CUSTOM", options: crewCompositionRoleOptions, optionLabels: crewPositionLabelMap, onChange: (value) => updateStandardMissionRoleRequirement(profile, roleIndex, { role: value }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Number", value: requirement.count, disabled: !canEditSection("platform-standard-missions") || crewMode !== "CUSTOM", onChange: (value) => updateStandardMissionRoleRequirement(profile, roleIndex, { count: value }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeStandardMissionRoleRequirement(profile, roleIndex), disabled: !canEditSection("platform-standard-missions") || crewMode !== "CUSTOM", className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight", children: "Remove" }) }) })
                   ] }, `${profile.id}-role-${roleIndex}`)) })
                 ] })
               ] })
