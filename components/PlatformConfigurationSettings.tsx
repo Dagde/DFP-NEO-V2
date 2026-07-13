@@ -5069,7 +5069,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   Commercial operating model. Resource pools can now be wired into V2 runtime by exception, while existing V2 behaviour remains the default.
                 </p>
               </div>
-              {saveButton}
             </div>
             {!canEdit && (
               <div className="mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100">
