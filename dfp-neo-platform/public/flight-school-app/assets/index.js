@@ -65877,8 +65877,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     const saved = await save(void 0, "platform-resource-pools");
     if (saved) setResourcePoolsUnlocked(false);
   };
-  const saveCrewCompositionAndKeepPosition = async () => {
-    await save(void 0, "platform-crew-composition");
+  const saveCrewCompositionAndExitEdit = async () => {
+    const saved = await save(void 0, "platform-crew-composition");
+    if (saved) setCrewCompositionUnlocked(false);
   };
   const saveTaskProfilesAndExitEdit = async () => {
     const taskProfilesFromDrafts = OPERATIONAL_MODEL_OPTIONS.reduce((profiles, option) => ({
@@ -65908,8 +65909,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
       setTaskProfileAbbreviationDrafts({});
     }
   };
-  const saveCurrencyProfilesAndKeepPosition = async () => {
-    await save(void 0, "platform-currency-profiles");
+  const saveCurrencyProfilesAndExitEdit = async () => {
+    const saved = await save(void 0, "platform-currency-profiles");
+    if (saved) setCrewCompositionUnlocked(false);
   };
   const isSectionEditActive = (sectionId) => !sectionOnly || sectionEditUnlocked[sectionId] === true;
   const canEditSection = (sectionId) => canEdit && isSectionEditActive(sectionId);
@@ -67336,10 +67338,22 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         {
           title: "Crew Composition",
           subtitle: "Aircraft-specific role labels, standard crew and alternate tasking crew makeups for Air Combat, Fixed Crew and Pooled Crew.",
-          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", children: crewCompositionUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: saveCrewCompositionAndKeepPosition, disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setCrewCompositionUnlocked(false), disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Exit" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setCrewCompositionUnlocked(true), className: platformActionButtonClass, children: "Edit" }) }) : null
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                if (crewCompositionUnlocked) {
+                  void saveCrewCompositionAndExitEdit();
+                  return;
+                }
+                setCrewCompositionUnlocked(true);
+              },
+              disabled: crewCompositionUnlocked && (saving || applyingChanges),
+              className: platformActionButtonClass,
+              children: crewCompositionUnlocked ? "Save" : "Edit"
+            }
+          ) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
@@ -67430,17 +67444,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: standardCrewCompositionRef, className: resourceSectionPanelClass, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Standard Crew Composition" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
-                "This standard composition is stored against ",
-                activeCrewCompositionAircraftCode || "the selected aircraft type",
-                "."
-              ] })
-            ] }),
-            crewCompositionUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: saveCrewCompositionAndKeepPosition, disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Save" }) : null
-          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Standard Crew Composition" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
+              "This standard composition is stored against ",
+              activeCrewCompositionAircraftCode || "the selected aircraft type",
+              "."
+            ] })
+          ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -67553,15 +67564,11 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 "."
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
-              crewCompositionUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: saveCrewCompositionAndKeepPosition, disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Save" }) : null,
-              !crewCompositionUnlocked && canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setCrewCompositionUnlocked(true), className: platformActionButtonClass, children: "Edit" }) : null,
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewComposition(activeCrewCompositionAircraftCode), disabled: !canEditCrewComposition || !activeCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                "Add Alt",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                "Crew"
-              ] }) })
-            ] })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewComposition(activeCrewCompositionAircraftCode), disabled: !canEditCrewComposition || !activeCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+              "Add Alt",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Crew"
+            ] }) }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeAircraftAlternateCompositions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No alternate crew compositions configured." }) : activeAircraftAlternateCompositions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -67618,10 +67625,22 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         {
           title: "Currency Profiles",
           subtitle: "Currency profile presets for Specific Currency Requests. Profiles store crew, CONFIG and currency against the selected aircraft.",
-          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", children: crewCompositionUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: saveCurrencyProfilesAndKeepPosition, disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setCrewCompositionUnlocked(false), disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Exit" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setCrewCompositionUnlocked(true), className: platformActionButtonClass, children: "Edit" }) }) : null
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                if (crewCompositionUnlocked) {
+                  void saveCurrencyProfilesAndExitEdit();
+                  return;
+                }
+                setCrewCompositionUnlocked(true);
+              },
+              disabled: crewCompositionUnlocked && (saving || applyingChanges),
+              className: platformActionButtonClass,
+              children: crewCompositionUnlocked ? "Save" : "Edit"
+            }
+          ) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
@@ -67652,15 +67671,11 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 "."
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
-              crewCompositionUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: saveCurrencyProfilesAndKeepPosition, disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Save" }) : null,
-              !crewCompositionUnlocked && canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setCrewCompositionUnlocked(true), className: platformActionButtonClass, children: "Edit" }) : null,
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addCurrencyProfile, disabled: !canEditCrewComposition || !activeCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                "Add",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                "Profile"
-              ] }) })
-            ] })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addCurrencyProfile, disabled: !canEditCrewComposition || !activeCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+              "Add",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Profile"
+            ] }) }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No currency profiles configured." }) : activeCurrencyProfiles.map((profile) => {
             const crewOptions = Array.from(new Set([

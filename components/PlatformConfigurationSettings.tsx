@@ -4427,8 +4427,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (saved) setResourcePoolsUnlocked(false);
   };
 
-  const saveCrewCompositionAndKeepPosition = async () => {
-    await save(undefined, 'platform-crew-composition');
+  const saveCrewCompositionAndExitEdit = async () => {
+    const saved = await save(undefined, 'platform-crew-composition');
+    if (saved) setCrewCompositionUnlocked(false);
   };
 
   const saveTaskProfilesAndExitEdit = async () => {
@@ -4460,8 +4461,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }
   };
 
-  const saveCurrencyProfilesAndKeepPosition = async () => {
-    await save(undefined, 'platform-currency-profiles');
+  const saveCurrencyProfilesAndExitEdit = async () => {
+    const saved = await save(undefined, 'platform-currency-profiles');
+    if (saved) setCrewCompositionUnlocked(false);
   };
 
   const isSectionEditActive = (sectionId: string): boolean => (
@@ -6112,16 +6114,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           title="Crew Composition"
           subtitle="Aircraft-specific role labels, standard crew and alternate tasking crew makeups for Air Combat, Fixed Crew and Pooled Crew."
           action={canEdit ? (
-            <div className="flex gap-2">
-              {crewCompositionUnlocked ? (
-                <>
-                  <button type="button" onClick={saveCrewCompositionAndKeepPosition} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
-                  <button type="button" onClick={() => setCrewCompositionUnlocked(false)} disabled={saving || applyingChanges} className={platformActionButtonClass}>Exit</button>
-                </>
-              ) : (
-                <button type="button" onClick={() => setCrewCompositionUnlocked(true)} className={platformActionButtonClass}>Edit</button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (crewCompositionUnlocked) {
+                  void saveCrewCompositionAndExitEdit();
+                  return;
+                }
+                setCrewCompositionUnlocked(true);
+              }}
+              disabled={crewCompositionUnlocked && (saving || applyingChanges)}
+              className={platformActionButtonClass}
+            >
+              {crewCompositionUnlocked ? 'Save' : 'Edit'}
+            </button>
           ) : null}
         />
         <div className="space-y-4 p-4">
@@ -6221,9 +6227,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Standard Crew Composition</h4>
                 <p className={resourceSectionPanelHintClass}>This standard composition is stored against {activeCrewCompositionAircraftCode || 'the selected aircraft type'}.</p>
               </div>
-              {crewCompositionUnlocked ? (
-                <button type="button" onClick={saveCrewCompositionAndKeepPosition} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
-              ) : null}
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
               <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -6331,12 +6334,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <p className={resourceSectionPanelHintClass}>Alternate profiles shown here are only for {activeCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
               </div>
               <div className="flex flex-wrap justify-end gap-[1px]">
-                {crewCompositionUnlocked ? (
-                  <button type="button" onClick={saveCrewCompositionAndKeepPosition} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
-                ) : null}
-                {!crewCompositionUnlocked && canEdit ? (
-                  <button type="button" onClick={() => setCrewCompositionUnlocked(true)} className={platformActionButtonClass}>Edit</button>
-                ) : null}
                 <button type="button" onClick={() => addAlternateCrewComposition(activeCrewCompositionAircraftCode)} disabled={!canEditCrewComposition || !activeCrewCompositionAircraftCode} className={platformActionButtonClass}>
                   <span className="text-[9px] leading-tight">Add Alt<br />Crew</span>
                 </button>
@@ -6416,16 +6413,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           title="Currency Profiles"
           subtitle="Currency profile presets for Specific Currency Requests. Profiles store crew, CONFIG and currency against the selected aircraft."
           action={canEdit ? (
-            <div className="flex gap-2">
-              {crewCompositionUnlocked ? (
-                <>
-                  <button type="button" onClick={saveCurrencyProfilesAndKeepPosition} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
-                  <button type="button" onClick={() => setCrewCompositionUnlocked(false)} disabled={saving || applyingChanges} className={platformActionButtonClass}>Exit</button>
-                </>
-              ) : (
-                <button type="button" onClick={() => setCrewCompositionUnlocked(true)} className={platformActionButtonClass}>Edit</button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (crewCompositionUnlocked) {
+                  void saveCurrencyProfilesAndExitEdit();
+                  return;
+                }
+                setCrewCompositionUnlocked(true);
+              }}
+              disabled={crewCompositionUnlocked && (saving || applyingChanges)}
+              className={platformActionButtonClass}
+            >
+              {crewCompositionUnlocked ? 'Save' : 'Edit'}
+            </button>
           ) : null}
         />
         <div className="space-y-4 p-4">
@@ -6458,12 +6459,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <p className={resourceSectionPanelHintClass}>Profiles prefill Specific Currency Requests with crew, aircraft CONFIG and currency for {activeCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
               </div>
               <div className="flex flex-wrap justify-end gap-[1px]">
-                {crewCompositionUnlocked ? (
-                  <button type="button" onClick={saveCurrencyProfilesAndKeepPosition} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
-                ) : null}
-                {!crewCompositionUnlocked && canEdit ? (
-                  <button type="button" onClick={() => setCrewCompositionUnlocked(true)} className={platformActionButtonClass}>Edit</button>
-                ) : null}
                 <button type="button" onClick={addCurrencyProfile} disabled={!canEditCrewComposition || !activeCrewCompositionAircraftCode} className={platformActionButtonClass}>
                   <span className="text-[9px] leading-tight">Add<br />Profile</span>
                 </button>
