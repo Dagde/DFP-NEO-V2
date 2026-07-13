@@ -9,13 +9,16 @@ import OrganisationSettings from './OrganisationSettings';
 import AppearanceSettings from './AppearanceSettings';
 import PlatformConfigurationSettings from './PlatformConfigurationSettings';
 import PeopleProfilePage from './PeopleProfilePage';
-import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
+import CurrencyBuilderView from './CurrencyBuilderView';
+import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CurrencyDefinition, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import type { TileStatusSettings } from '../utils/tileStatusSettings';
 import type { FixedCrewTileColourMode } from '../utils/fixedCrewTileColours';
 import type { DispatchStaggerSettings } from '../utils/dispatchStagger';
+import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 
 interface SettingsViewWithMenuProps {
@@ -45,6 +48,19 @@ interface SettingsViewWithMenuProps {
     onNavigate: (view: string) => void;
     masterCurrencies: MasterCurrency[];
     currencyRequirements: CurrencyRequirement[];
+    activeCurrencyUnitCode?: string;
+    currencyImportUnitOptions?: Array<{
+        unitCode: string;
+        label: string;
+        currencyCount: number;
+        recencyCount: number;
+        usesFallback?: boolean;
+    }>;
+    onSaveCurrencies?: (allCurrencies: CurrencyDefinition[]) => void;
+    onDeleteCurrency?: (id: string) => void;
+    onImportCurrenciesFromUnit?: (unitCode: string) => void;
+    aircraftCrewComposition?: AircraftCrewComposition;
+    crewPositionTerminology?: CrewPositionTerminology;
     unitCurrencyDefinitions?: Record<string, {
         masterCurrencies: MasterCurrency[];
         currencyRequirements: CurrencyRequirement[];
@@ -632,6 +648,14 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         userId?: string;
         focusSubsectionId?: string;
     } | null>(null);
+    const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = useState(false);
+
+    const changeActiveSection = (section: ActiveSection) => {
+        if (section !== 'currencies') {
+            setEmbeddedCurrencyBuilderOpen(false);
+        }
+        setActiveSection(section);
+    };
 
     useEffect(() => {
         const request = props.requestedSettingsSection;
@@ -645,7 +669,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 aircraftTypeCode: request.aircraftTypeCode,
                 focusSubsectionId: request.focusSubsectionId,
             });
-            setActiveSection(requestedSection as ActiveSection);
+            changeActiveSection(requestedSection as ActiveSection);
             props.onSettingsSectionRequestHandled?.();
         }
     }, [props.requestedSettingsSection]);
@@ -740,7 +764,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             focusSubsectionId: target.focusSubsectionId,
         });
         setExpandedGroups({});
-        setActiveSection(targetSection as ActiveSection);
+        changeActiveSection(targetSection as ActiveSection);
     };
     const openSettingsGroup = (group: typeof visibleSettingGroups[number]) => {
         if (settingsGroupOpenTimerRef.current) {
@@ -758,7 +782,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         const openSelectedGroup = () => {
             setExpandedGroups({ [group.label]: true });
             if (!groupActive) {
-                setActiveSection(getDefaultSectionForGroup(group));
+                changeActiveSection(getDefaultSectionForGroup(group));
             }
             settingsGroupOpenTimerRef.current = null;
         };
@@ -831,7 +855,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                 return (
                                                     <button
                                                         key={section}
-                                                        onClick={() => setActiveSection(section)}
+                                                        onClick={() => changeActiveSection(section)}
                                                         className={`flex min-h-[32px] w-[175px] items-center rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${
                                                             activeSection === section
                                                                 ? 'border-gray-500 bg-gray-800 text-gray-100'
@@ -923,7 +947,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         {/* Section Header with back button */}
                         <div className="mb-6 flex flex-wrap items-center gap-3">
                             <button
-                                onClick={() => setActiveSection('home')}
+                                onClick={() => changeActiveSection('home')}
                                 className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 hover:text-white transition-colors"
                             >
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1140,7 +1164,29 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      !isPlatformConfigurationActive &&
                      activeSection !== 'appearance' &&
                      activeSection !== 'people-profile' && (
-                        <SettingsView {...props} activeSection={activeSection as SettingsSection} />
+                        activeSection === 'currencies' && embeddedCurrencyBuilderOpen ? (
+                            <div className="h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900">
+                                <CurrencyBuilderView
+                                    onBack={() => setEmbeddedCurrencyBuilderOpen(false)}
+                                    masterCurrencies={props.masterCurrencies}
+                                    currencyRequirements={props.currencyRequirements}
+                                    activeUnitCode={props.activeCurrencyUnitCode || props.activeUnitCode}
+                                    importUnitOptions={props.currencyImportUnitOptions || []}
+                                    onSave={props.onSaveCurrencies || (() => {})}
+                                    onDelete={props.onDeleteCurrency || (() => {})}
+                                    onImportFromUnit={props.onImportCurrenciesFromUnit}
+                                    aircraftCrewComposition={props.aircraftCrewComposition}
+                                    crewPositionTerminology={props.crewPositionTerminology}
+                                    operationalModel={props.activeOperationalModel}
+                                />
+                            </div>
+                        ) : (
+                            <SettingsView
+                                {...props}
+                                activeSection={activeSection as SettingsSection}
+                                onOpenCurrencyBuilder={() => setEmbeddedCurrencyBuilderOpen(true)}
+                            />
+                        )
                     )}
 
                     {/* Sections rendered directly (not via SettingsView) */}

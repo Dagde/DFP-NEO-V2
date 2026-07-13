@@ -59794,7 +59794,7 @@ const SettingsView = ({
               c.id
             )) })
           ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700 shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onNavigate("CurrencyBuilder"), className: "w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Currency Builder" }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700 shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onOpenCurrencyBuilder ? onOpenCurrencyBuilder() : onNavigate("CurrencyBuilder"), className: "w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Currency Builder" }) })
         ] }),
         selectedCurrency && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit flex flex-col", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center shrink-0 border-b border-gray-700", children: [
@@ -71047,6 +71047,13 @@ const SettingsViewWithMenu = (props) => {
   const [expandedGroups, setExpandedGroups] = reactExports.useState({});
   const settingsGroupOpenTimerRef = reactExports.useRef(null);
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
+  const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
+  const changeActiveSection = (section) => {
+    if (section !== "currencies") {
+      setEmbeddedCurrencyBuilderOpen(false);
+    }
+    setActiveSection(section);
+  };
   reactExports.useEffect(() => {
     const request = props.requestedSettingsSection;
     if (!request?.sectionId) return;
@@ -71059,7 +71066,7 @@ const SettingsViewWithMenu = (props) => {
         aircraftTypeCode: request.aircraftTypeCode,
         focusSubsectionId: request.focusSubsectionId
       });
-      setActiveSection(requestedSection);
+      changeActiveSection(requestedSection);
       props.onSettingsSectionRequestHandled?.();
     }
   }, [props.requestedSettingsSection]);
@@ -71118,7 +71125,7 @@ const SettingsViewWithMenu = (props) => {
       focusSubsectionId: target.focusSubsectionId
     });
     setExpandedGroups({});
-    setActiveSection(targetSection);
+    changeActiveSection(targetSection);
   };
   const openSettingsGroup = (group) => {
     if (settingsGroupOpenTimerRef.current) {
@@ -71134,7 +71141,7 @@ const SettingsViewWithMenu = (props) => {
     const openSelectedGroup = () => {
       setExpandedGroups({ [group.label]: true });
       if (!groupActive) {
-        setActiveSection(getDefaultSectionForGroup(group));
+        changeActiveSection(getDefaultSectionForGroup(group));
       }
       settingsGroupOpenTimerRef.current = null;
     };
@@ -71200,7 +71207,7 @@ const SettingsViewWithMenu = (props) => {
                 return /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
-                    onClick: () => setActiveSection(section),
+                    onClick: () => changeActiveSection(section),
                     className: `flex min-h-[32px] w-[175px] items-center rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${activeSection === section ? "border-gray-500 bg-gray-800 text-gray-100" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
                     children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: sectionLabels[section] }) })
                   },
@@ -71265,7 +71272,7 @@ const SettingsViewWithMenu = (props) => {
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
-              onClick: () => setActiveSection("home"),
+              onClick: () => changeActiveSection("home"),
               className: "flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 hover:text-white transition-colors",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 19l-7-7 7-7" }) }),
@@ -71440,7 +71447,31 @@ const SettingsViewWithMenu = (props) => {
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
-        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, activeSection }),
+        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && (activeSection === "currencies" && embeddedCurrencyBuilderOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          CurrencyBuilderView,
+          {
+            onBack: () => setEmbeddedCurrencyBuilderOpen(false),
+            masterCurrencies: props.masterCurrencies,
+            currencyRequirements: props.currencyRequirements,
+            activeUnitCode: props.activeCurrencyUnitCode || props.activeUnitCode,
+            importUnitOptions: props.currencyImportUnitOptions || [],
+            onSave: props.onSaveCurrencies || (() => {
+            }),
+            onDelete: props.onDeleteCurrency || (() => {
+            }),
+            onImportFromUnit: props.onImportCurrenciesFromUnit,
+            aircraftCrewComposition: props.aircraftCrewComposition,
+            crewPositionTerminology: props.crewPositionTerminology,
+            operationalModel: props.activeOperationalModel
+          }
+        ) }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+          SettingsView,
+          {
+            ...props,
+            activeSection,
+            onOpenCurrencyBuilder: () => setEmbeddedCurrencyBuilderOpen(true)
+          }
+        )),
         activeSection === "user-list" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           UserListSection,
           {
@@ -115881,6 +115912,13 @@ ${error instanceof Error ? error.message : String(error)}`,
             onNavigate: handleNavigation,
             masterCurrencies,
             currencyRequirements,
+            activeCurrencyUnitCode: activeCurrencyUnitKey,
+            currencyImportUnitOptions: unitCurrencyImportOptions,
+            onSaveCurrencies: handleSaveCurrencies,
+            onDeleteCurrency: handleDeleteCurrency,
+            onImportCurrenciesFromUnit: importCurrencyDefinitionsFromUnit,
+            aircraftCrewComposition: activeAircraftCrewComposition,
+            crewPositionTerminology: activeCrewPositionTerminology,
             unitCurrencyDefinitions,
             sctEvents,
             onUpdateSctEvents: setSctEvents,

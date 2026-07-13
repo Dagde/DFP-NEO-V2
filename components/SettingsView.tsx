@@ -38,6 +38,7 @@ interface SettingsViewProps {
     phraseBank: PhraseBank;
     onUpdatePhraseBank: (newBank: PhraseBank) => void;
     onNavigate: (view: string) => void;
+    onOpenCurrencyBuilder?: () => void;
     masterCurrencies: MasterCurrency[];
     currencyRequirements: CurrencyRequirement[];
     sctEvents: string[];
@@ -1081,7 +1082,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 </table>
                             </div>
                             <div className="p-4 border-t border-gray-700 shrink-0">
-                                <button onClick={() => onNavigate('CurrencyBuilder')} className="w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold">
+                                <button onClick={() => onOpenCurrencyBuilder ? onOpenCurrencyBuilder() : onNavigate('CurrencyBuilder')} className="w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold">
                                     Currency Builder
                                 </button>
                             </div>
