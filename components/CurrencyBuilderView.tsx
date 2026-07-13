@@ -5,6 +5,8 @@ import AuditButton from './AuditButton';
 import CrewRequirementEditor from './CrewRequirementEditor';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 
 interface CurrencyBuilderViewProps {
     onBack: () => void;
@@ -73,7 +75,9 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
     const [selectedCurrencyId, setSelectedCurrencyId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isDirty, setIsDirty] = useState(false);
+    const [isEditUnlocked, setIsEditUnlocked] = useState(false);
     const [importSourceUnit, setImportSourceUnit] = useState('');
+    const standardActionButtonClass = 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed disabled:cursor-not-allowed disabled:opacity-50';
 
     useEffect(() => {
         const combined = [...masterCurrencies, ...currencyRequirements];
@@ -95,11 +99,13 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
     }, [selectedCurrencyId, allCurrencies]);
 
     const handleUpdateCurrency = (updatedCurrency: CurrencyDefinition) => {
+        if (!isEditUnlocked) return;
         setAllCurrencies(prev => prev.map(c => c.id === updatedCurrency.id ? updatedCurrency : c));
         setIsDirty(true);
     };
 
     const handleAddCurrency = (type: 'primitive' | 'composite') => {
+        if (!isEditUnlocked) return;
         const newCurrency = type === 'primitive' ? getNewPrimitive() : getNewComposite();
         setAllCurrencies(prev => [...prev, newCurrency]);
         setSelectedCurrencyId(newCurrency.id);
@@ -107,7 +113,7 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
     };
 
     const handleDeleteCurrency = () => {
-        if (!selectedCurrencyId) return;
+        if (!isEditUnlocked || !selectedCurrencyId) return;
 
         // Check for dependencies
         const isInUse = allCurrencies.some(c => {
@@ -137,18 +143,53 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
     };
     
     const handleSave = () => {
-        onSave(allCurrencies);
+        if (isDirty) {
+            onSave(allCurrencies);
+        }
         setIsDirty(false);
+        setIsEditUnlocked(false);
     };
 
     const handleImportFromUnit = () => {
-        if (!importSourceUnit || !onImportFromUnit) return;
+        if (!isEditUnlocked || !importSourceUnit || !onImportFromUnit) return;
         const sourceLabel = importUnitOptions.find(option => option.unitCode === importSourceUnit)?.label || importSourceUnit;
         const targetLabel = activeUnitCode || 'this unit';
         if (!window.confirm(`Import currency and recency definitions from ${sourceLabel} into ${targetLabel}?\n\nThis replaces the current ${targetLabel} currency/recency list.`)) return;
         onImportFromUnit(importSourceUnit);
         setSelectedCurrencyId(null);
         setIsDirty(false);
+    };
+
+    const unlockForEdit = async () => {
+        const password = await showDarkPrompt({
+            title: 'Edit Currency Builder',
+            message: 'Enter your password to edit currency profiles.',
+            inputLabel: 'Password',
+            inputType: 'password',
+            inputPlaceholder: 'Enter password',
+            confirmText: 'Unlock',
+            cancelText: 'Cancel',
+            variant: 'warning',
+        });
+        if (!password) return;
+        try {
+            const isValid = await verifyCurrentUserPassword(password);
+            if (!isValid) {
+                await showDarkAlert('The password was not accepted.', 'Currency Builder Locked', 'warning');
+                return;
+            }
+            setIsEditUnlocked(true);
+        } catch (error) {
+            await showDarkAlert('The app could not verify your password.', 'Password Check Failed', 'error');
+        }
+    };
+
+    const handleEditSaveClick = () => {
+        if (isEditUnlocked) {
+            handleSave();
+            return;
+        }
+        void unlockForEdit();
     };
 
     return (
@@ -161,21 +202,19 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
                     </p>
                 </div>
                 <div className="flex items-center" style={{ gap: '1px' }}>
-                    {isDirty && (
-                        <button
-                            onClick={handleSave}
-                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
-                            style={{ borderRadius: '6px 0 0 6px', borderRightWidth: '1px', borderRightColor: '#6b7280' }}
-                        >
-                            Save
-                        </button>
-                    )}
+                    <button
+                        onClick={handleEditSaveClick}
+                        className={standardActionButtonClass}
+                        style={{ borderRadius: '6px 0 0 6px', borderRightWidth: '1px', borderRightColor: '#6b7280' }}
+                    >
+                        {isEditUnlocked ? 'Save' : 'Edit'}
+                    </button>
                     <button
                         onClick={onBack}
-                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                        className={standardActionButtonClass}
                         style={{
-                            borderRadius: isDirty ? '0' : '6px 0 0 6px',
-                            borderLeftWidth: isDirty ? '0' : undefined,
+                            borderRadius: '0',
+                            borderLeftWidth: '0',
                             borderRightWidth: '1px',
                             borderRightColor: '#6b7280',
                         }}
@@ -201,8 +240,8 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
                             className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"
                         />
                          <div className="flex mt-2 space-x-2">
-                            <button onClick={() => handleAddCurrency('primitive')} className="flex-1 text-center py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-semibold">+ Primitive</button>
-                            <button onClick={() => handleAddCurrency('composite')} className="flex-1 text-center py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs font-semibold">+ Composite</button>
+                            <button onClick={() => handleAddCurrency('primitive')} disabled={!isEditUnlocked} className="flex-1 text-center py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-semibold disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400">+ Primitive</button>
+                            <button onClick={() => handleAddCurrency('composite')} disabled={!isEditUnlocked} className="flex-1 text-center py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs font-semibold disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400">+ Composite</button>
                          </div>
                          {activeUnitCode && (
                             <div className="mt-3 rounded border border-sky-500/30 bg-sky-950/20 p-2">
@@ -225,7 +264,7 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
                                 <button
                                     type="button"
                                     onClick={handleImportFromUnit}
-                                    disabled={!importSourceUnit || !onImportFromUnit}
+                                    disabled={!isEditUnlocked || !importSourceUnit || !onImportFromUnit}
                                     className="mt-2 w-full rounded bg-sky-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400"
                                 >
                                     Import List
@@ -255,19 +294,21 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
                 </div>
 
                 {/* Right Pane: Editor */}
-                <div className="w-2/3 overflow-y-auto p-6">
+                <div className={`w-2/3 overflow-y-auto p-6 ${isEditUnlocked ? '' : 'opacity-80'}`}>
                     {selectedCurrency ? (
                         <div className="space-y-6">
-                            {selectedCurrency.type === 'primitive' 
-                                ? <PrimitiveEditor currency={selectedCurrency as CurrencyRequirement} onUpdate={handleUpdateCurrency} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} />
-                                : <CompositeEditor currency={selectedCurrency as MasterCurrency} onUpdate={handleUpdateCurrency} allCurrencies={allCurrencies} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} />
-                            }
+                            <div className={isEditUnlocked ? '' : 'pointer-events-none'}>
+                                {selectedCurrency.type === 'primitive'
+                                    ? <PrimitiveEditor currency={selectedCurrency as CurrencyRequirement} onUpdate={handleUpdateCurrency} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} />
+                                    : <CompositeEditor currency={selectedCurrency as MasterCurrency} onUpdate={handleUpdateCurrency} allCurrencies={allCurrencies} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} />
+                                }
+                            </div>
 
                              {/* Used In Section */}
                             <UsedInSection currencyId={selectedCurrency.id} allCurrencies={allCurrencies} />
 
                             <div className="pt-6 border-t border-gray-700">
-                                <button onClick={handleDeleteCurrency} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold">
+                                <button onClick={handleDeleteCurrency} disabled={!isEditUnlocked} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400">
                                     Delete Currency
                                 </button>
                             </div>

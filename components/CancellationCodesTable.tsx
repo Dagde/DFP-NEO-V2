@@ -28,6 +28,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [deletingCode, setDeletingCode] = useState<string | null>(null);
+  const [isEditUnlocked, setIsEditUnlocked] = useState(false);
   const [formData, setFormData] = useState<Partial<CancellationCode>>({
     code: '',
     category: 'Aircraft',
@@ -35,8 +36,10 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
     appliesTo: 'Both',
     isActive: true,
   });
+  const standardActionButtonClass = 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50';
 
   const handleStartAdd = () => {
+    if (!isEditUnlocked) return;
     setFormData({
       code: '',
       category: 'Aircraft',
@@ -49,6 +52,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
   };
 
   const handleStartEdit = (code: CancellationCode) => {
+    if (!isEditUnlocked) return;
     setFormData(code);
     setEditingCode(code.code);
     setIsAddingNew(false);
@@ -67,6 +71,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
   };
 
   const handleDelete = (code: string) => {
+    if (!isEditUnlocked) return;
     setDeletingCode(code);
   };
 
@@ -82,6 +87,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
   };
 
   const handleSave = () => {
+    if (!isEditUnlocked) return;
     if (!formData.code || !formData.description) {
       return;
     }
@@ -103,6 +109,16 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
     }
 
     handleCancel();
+  };
+
+  const handleToggleEditUnlocked = () => {
+    if (isEditUnlocked) {
+      handleCancel();
+      setDeletingCode(null);
+      setIsEditUnlocked(false);
+      return;
+    }
+    setIsEditUnlocked(true);
   };
 
   const sortedCodes = [...codes].sort((a, b) => {
@@ -189,13 +205,23 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-white">Cancellation Codes (Master Table)</h2>
         {canEdit && (
-          <button
-            onClick={handleStartAdd}
-            disabled={isAddingNew || editingCode !== null}
-            className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed"
-          >
-            + Add Code
-          </button>
+          <div className="flex items-center gap-[1px]">
+            <button
+              type="button"
+              onClick={handleToggleEditUnlocked}
+              className={standardActionButtonClass}
+            >
+              {isEditUnlocked ? 'Lock' : 'Edit'}
+            </button>
+            <button
+              type="button"
+              onClick={handleStartAdd}
+              disabled={!isEditUnlocked || isAddingNew || editingCode !== null}
+              className={standardActionButtonClass}
+            >
+              Add
+            </button>
+          </div>
         )}
       </div>
 
@@ -376,14 +402,14 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                       <div className="flex justify-center space-x-2">
                         <button
                           onClick={() => handleStartEdit(code)}
-                          disabled={isAddingNew || editingCode !== null}
+                          disabled={!isEditUnlocked || isAddingNew || editingCode !== null}
                           className="px-3 py-1 bg-sky-600 text-white rounded text-xs font-semibold hover:bg-sky-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => onToggleActive(code.code)}
-                          disabled={isAddingNew || editingCode !== null}
+                          disabled={!isEditUnlocked || isAddingNew || editingCode !== null}
                           className={`px-3 py-1 rounded text-xs font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed ${
                             code.isActive
                               ? 'bg-amber-600 text-white hover:bg-amber-700'
@@ -394,7 +420,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                         </button>
                         <button
                           onClick={() => handleDelete(code.code)}
-                          disabled={isAddingNew || editingCode !== null || isUsed}
+                          disabled={!isEditUnlocked || isAddingNew || editingCode !== null || isUsed}
                           className="px-3 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
                           title={isUsed ? "Cannot delete code that has been used" : "Delete code"}
                         >

@@ -5644,6 +5644,263 @@ const CrewRequirementEditor = ({
     ] })
   ] });
 };
+const verifyCurrentUserPassword = async (password) => {
+  const sessionToken = localStorage.getItem("dfp_session_token") || "";
+  const response = await fetch("/api/auth/verify-password", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+    },
+    body: JSON.stringify({ password })
+  });
+  const data = await response.json().catch(() => ({}));
+  return response.ok && data.valid === true;
+};
+const DarkMessageModal = ({
+  type,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmText = "OK",
+  cancelText = "Cancel",
+  variant = "info",
+  autoCloseDelay,
+  inputLabel,
+  inputType = "text",
+  inputPlaceholder = "",
+  inputDefaultValue = ""
+}) => {
+  const [inputValue, setInputValue] = reactExports.useState(inputDefaultValue);
+  const getVariantStyles = () => {
+    switch (variant) {
+      case "error":
+        return {
+          borderColor: "border-red-500/50",
+          headerBg: "bg-red-900/20",
+          titleColor: "text-red-400",
+          iconColor: "text-red-400",
+          confirmBg: "bg-red-600 hover:bg-red-700"
+        };
+      case "warning":
+        return {
+          borderColor: "border-amber-500/50",
+          headerBg: "bg-amber-900/20",
+          titleColor: "text-amber-400",
+          iconColor: "text-amber-400",
+          confirmBg: "bg-amber-600 hover:bg-amber-700"
+        };
+      case "success":
+        return {
+          borderColor: "border-green-500/50",
+          headerBg: "bg-green-900/20",
+          titleColor: "text-green-400",
+          iconColor: "text-green-400",
+          confirmBg: "bg-green-600 hover:bg-green-700"
+        };
+      default:
+        return {
+          borderColor: "border-sky-500/50",
+          headerBg: "bg-sky-900/20",
+          titleColor: "text-sky-400",
+          iconColor: "text-sky-400",
+          confirmBg: "bg-sky-600 hover:bg-sky-700"
+        };
+    }
+  };
+  const styles = getVariantStyles();
+  const getIcon = () => {
+    switch (variant) {
+      case "error":
+        return /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }) });
+      case "warning":
+        return /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) });
+      case "success":
+        return /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" }) });
+      default:
+        return /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }) });
+    }
+  };
+  const handleConfirm = () => {
+    onConfirm?.(type === "prompt" ? inputValue : void 0);
+  };
+  reactExports.useEffect(() => {
+    if (autoCloseDelay && autoCloseDelay > 0) {
+      const timer = setTimeout(() => {
+        handleConfirm();
+      }, autoCloseDelay);
+      return () => clearTimeout(timer);
+    }
+  }, [autoCloseDelay]);
+  const handleCancel = () => {
+    onCancel?.();
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: handleCancel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-800 rounded-lg shadow-xl w-full max-w-md border ${styles.borderColor}`, onClick: (e) => e.stopPropagation(), children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-4 border-b border-gray-700 ${styles.headerBg} flex items-center space-x-3`, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: styles.iconColor, children: getIcon() }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: `text-xl font-bold ${styles.titleColor}`, children: title })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 whitespace-pre-line", children: message }),
+      type === "prompt" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
+        inputLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: inputLabel }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            autoFocus: true,
+            type: inputType,
+            value: inputValue,
+            placeholder: inputPlaceholder,
+            onChange: (event) => setInputValue(event.target.value),
+            onKeyDown: (event) => {
+              if (event.key === "Enter") handleConfirm();
+              if (event.key === "Escape") handleCancel();
+            },
+            className: "w-full rounded-md border border-cyan-500/50 bg-gray-950 px-3 py-2 text-white outline-none transition placeholder:text-gray-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-500/30"
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
+      (type === "confirm" || type === "prompt") && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: handleCancel,
+          className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold",
+          children: cancelText
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: handleConfirm,
+          className: `px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold ${styles.confirmBg}`,
+          children: confirmText
+        }
+      )
+    ] })
+  ] }) });
+};
+const mountModal = (renderModal) => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root2 = clientExports.createRoot(host);
+  const cleanup = () => {
+    setTimeout(() => {
+      root2.unmount();
+      host.remove();
+    }, 300);
+  };
+  root2.render(renderModal(cleanup));
+};
+const showDarkAlert = (message, title = "Notice", variant = "info") => {
+  return new Promise((resolve) => {
+    mountModal((cleanup) => {
+      const Modal = () => {
+        const [isVisible, setIsVisible] = reactExports.useState(true);
+        const handleConfirm = () => {
+          setIsVisible(false);
+          cleanup();
+          setTimeout(resolve, 300);
+        };
+        if (!isVisible) return null;
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DarkMessageModal,
+          {
+            type: "alert",
+            title,
+            message,
+            onConfirm: handleConfirm,
+            variant
+          }
+        );
+      };
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(Modal, {});
+    });
+  });
+};
+const showDarkConfirm = (message, title = "Confirm Action", variant = "info") => {
+  return new Promise((resolve) => {
+    mountModal((cleanup) => {
+      const Modal = () => {
+        const [isVisible, setIsVisible] = reactExports.useState(true);
+        const handleConfirm = () => {
+          setIsVisible(false);
+          cleanup();
+          setTimeout(() => resolve(true), 300);
+        };
+        const handleCancel = () => {
+          setIsVisible(false);
+          cleanup();
+          setTimeout(() => resolve(false), 300);
+        };
+        if (!isVisible) return null;
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DarkMessageModal,
+          {
+            type: "confirm",
+            title,
+            message,
+            onConfirm: handleConfirm,
+            onCancel: handleCancel,
+            variant
+          }
+        );
+      };
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(Modal, {});
+    });
+  });
+};
+const showDarkPrompt = ({
+  title = "Input Required",
+  message,
+  variant = "info",
+  confirmText = "OK",
+  cancelText = "Cancel",
+  inputLabel,
+  inputType = "text",
+  inputPlaceholder = "",
+  inputDefaultValue = ""
+}) => {
+  return new Promise((resolve) => {
+    mountModal((cleanup) => {
+      const Modal = () => {
+        const [isVisible, setIsVisible] = reactExports.useState(true);
+        const handleConfirm = (value) => {
+          setIsVisible(false);
+          cleanup();
+          setTimeout(() => resolve(value ?? ""), 300);
+        };
+        const handleCancel = () => {
+          setIsVisible(false);
+          cleanup();
+          setTimeout(() => resolve(null), 300);
+        };
+        if (!isVisible) return null;
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DarkMessageModal,
+          {
+            type: "prompt",
+            title,
+            message,
+            onConfirm: handleConfirm,
+            onCancel: handleCancel,
+            confirmText,
+            cancelText,
+            variant,
+            inputLabel,
+            inputType,
+            inputPlaceholder,
+            inputDefaultValue
+          }
+        );
+      };
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(Modal, {});
+    });
+  });
+};
 const getNewPrimitive = () => ({
   id: v4(),
   name: "New Primitive Currency",
@@ -5689,7 +5946,9 @@ const CurrencyBuilderView = ({
   const [selectedCurrencyId, setSelectedCurrencyId] = reactExports.useState(null);
   const [searchTerm, setSearchTerm] = reactExports.useState("");
   const [isDirty, setIsDirty] = reactExports.useState(false);
+  const [isEditUnlocked, setIsEditUnlocked] = reactExports.useState(false);
   const [importSourceUnit, setImportSourceUnit] = reactExports.useState("");
+  const standardActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed disabled:cursor-not-allowed disabled:opacity-50";
   reactExports.useEffect(() => {
     const combined = [...masterCurrencies, ...currencyRequirements];
     setAllCurrencies(combined);
@@ -5702,17 +5961,19 @@ const CurrencyBuilderView = ({
     return allCurrencies.find((c) => c.id === selectedCurrencyId) || null;
   }, [selectedCurrencyId, allCurrencies]);
   const handleUpdateCurrency = (updatedCurrency) => {
+    if (!isEditUnlocked) return;
     setAllCurrencies((prev) => prev.map((c) => c.id === updatedCurrency.id ? updatedCurrency : c));
     setIsDirty(true);
   };
   const handleAddCurrency = (type) => {
+    if (!isEditUnlocked) return;
     const newCurrency = type === "primitive" ? getNewPrimitive() : getNewComposite();
     setAllCurrencies((prev) => [...prev, newCurrency]);
     setSelectedCurrencyId(newCurrency.id);
     setIsDirty(true);
   };
   const handleDeleteCurrency = () => {
-    if (!selectedCurrencyId) return;
+    if (!isEditUnlocked || !selectedCurrencyId) return;
     const isInUse = allCurrencies.some((c) => {
       if (c.type === "composite") {
         const checkNode = (node) => {
@@ -5737,11 +5998,14 @@ const CurrencyBuilderView = ({
     }
   };
   const handleSave = () => {
-    onSave(allCurrencies);
+    if (isDirty) {
+      onSave(allCurrencies);
+    }
     setIsDirty(false);
+    setIsEditUnlocked(false);
   };
   const handleImportFromUnit = () => {
-    if (!importSourceUnit || !onImportFromUnit) return;
+    if (!isEditUnlocked || !importSourceUnit || !onImportFromUnit) return;
     const sourceLabel = importUnitOptions.find((option) => option.unitCode === importSourceUnit)?.label || importSourceUnit;
     const targetLabel = activeUnitCode || "this unit";
     if (!window.confirm(`Import currency and recency definitions from ${sourceLabel} into ${targetLabel}?
@@ -5750,6 +6014,36 @@ This replaces the current ${targetLabel} currency/recency list.`)) return;
     onImportFromUnit(importSourceUnit);
     setSelectedCurrencyId(null);
     setIsDirty(false);
+  };
+  const unlockForEdit = async () => {
+    const password = await showDarkPrompt({
+      title: "Edit Currency Builder",
+      message: "Enter your password to edit currency profiles.",
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Unlock",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", "Currency Builder Locked", "warning");
+        return;
+      }
+      setIsEditUnlocked(true);
+    } catch (error) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
+    }
+  };
+  const handleEditSaveClick = () => {
+    if (isEditUnlocked) {
+      handleSave();
+      return;
+    }
+    void unlockForEdit();
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
@@ -5762,23 +6056,23 @@ This replaces the current ${targetLabel} currency/recency list.`)) return;
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center", style: { gap: "1px" }, children: [
-        isDirty && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: handleSave,
-            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+            onClick: handleEditSaveClick,
+            className: standardActionButtonClass,
             style: { borderRadius: "6px 0 0 6px", borderRightWidth: "1px", borderRightColor: "#6b7280" },
-            children: "Save"
+            children: isEditUnlocked ? "Save" : "Edit"
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
             onClick: onBack,
-            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+            className: standardActionButtonClass,
             style: {
-              borderRadius: isDirty ? "0" : "6px 0 0 6px",
-              borderLeftWidth: isDirty ? "0" : void 0,
+              borderRadius: "0",
+              borderLeftWidth: "0",
               borderRightWidth: "1px",
               borderRightColor: "#6b7280"
             },
@@ -5808,8 +6102,8 @@ This replaces the current ${targetLabel} currency/recency list.`)) return;
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex mt-2 space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleAddCurrency("primitive"), className: "flex-1 text-center py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-semibold", children: "+ Primitive" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleAddCurrency("composite"), className: "flex-1 text-center py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs font-semibold", children: "+ Composite" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleAddCurrency("primitive"), disabled: !isEditUnlocked, className: "flex-1 text-center py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-semibold disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400", children: "+ Primitive" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleAddCurrency("composite"), disabled: !isEditUnlocked, className: "flex-1 text-center py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs font-semibold disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400", children: "+ Composite" })
           ] }),
           activeUnitCode && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-sky-500/30 bg-sky-950/20 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-wide text-sky-300", children: [
@@ -5842,7 +6136,7 @@ This replaces the current ${targetLabel} currency/recency list.`)) return;
               {
                 type: "button",
                 onClick: handleImportFromUnit,
-                disabled: !importSourceUnit || !onImportFromUnit,
+                disabled: !isEditUnlocked || !importSourceUnit || !onImportFromUnit,
                 className: "mt-2 w-full rounded bg-sky-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400",
                 children: "Import List"
               }
@@ -5867,10 +6161,10 @@ This replaces the current ${targetLabel} currency/recency list.`)) return;
           c.id
         )) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-2/3 overflow-y-auto p-6", children: selectedCurrency ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-        selectedCurrency.type === "primitive" ? /* @__PURE__ */ jsxRuntimeExports.jsx(PrimitiveEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, aircraftCrewComposition, crewPositionTerminology }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CompositeEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, allCurrencies, aircraftCrewComposition, crewPositionTerminology }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-2/3 overflow-y-auto p-6 ${isEditUnlocked ? "" : "opacity-80"}`, children: selectedCurrency ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: isEditUnlocked ? "" : "pointer-events-none", children: selectedCurrency.type === "primitive" ? /* @__PURE__ */ jsxRuntimeExports.jsx(PrimitiveEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, aircraftCrewComposition, crewPositionTerminology }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CompositeEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, allCurrencies, aircraftCrewComposition, crewPositionTerminology }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UsedInSection, { currencyId: selectedCurrency.id, allCurrencies }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-6 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDeleteCurrency, className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold", children: "Delete Currency" }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-6 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDeleteCurrency, disabled: !isEditUnlocked, className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400", children: "Delete Currency" }) })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full text-gray-500 italic", children: "Select a currency to edit, or add a new one." }) })
     ] })
   ] });
@@ -6142,249 +6436,6 @@ const DropdownField = ({ label, value, onChange, children }) => /* @__PURE__ */ 
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value, onChange: (e) => onChange(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500", children })
 ] });
-const DarkMessageModal = ({
-  type,
-  title,
-  message,
-  onConfirm,
-  onCancel,
-  confirmText = "OK",
-  cancelText = "Cancel",
-  variant = "info",
-  autoCloseDelay,
-  inputLabel,
-  inputType = "text",
-  inputPlaceholder = "",
-  inputDefaultValue = ""
-}) => {
-  const [inputValue, setInputValue] = reactExports.useState(inputDefaultValue);
-  const getVariantStyles = () => {
-    switch (variant) {
-      case "error":
-        return {
-          borderColor: "border-red-500/50",
-          headerBg: "bg-red-900/20",
-          titleColor: "text-red-400",
-          iconColor: "text-red-400",
-          confirmBg: "bg-red-600 hover:bg-red-700"
-        };
-      case "warning":
-        return {
-          borderColor: "border-amber-500/50",
-          headerBg: "bg-amber-900/20",
-          titleColor: "text-amber-400",
-          iconColor: "text-amber-400",
-          confirmBg: "bg-amber-600 hover:bg-amber-700"
-        };
-      case "success":
-        return {
-          borderColor: "border-green-500/50",
-          headerBg: "bg-green-900/20",
-          titleColor: "text-green-400",
-          iconColor: "text-green-400",
-          confirmBg: "bg-green-600 hover:bg-green-700"
-        };
-      default:
-        return {
-          borderColor: "border-sky-500/50",
-          headerBg: "bg-sky-900/20",
-          titleColor: "text-sky-400",
-          iconColor: "text-sky-400",
-          confirmBg: "bg-sky-600 hover:bg-sky-700"
-        };
-    }
-  };
-  const styles = getVariantStyles();
-  const getIcon = () => {
-    switch (variant) {
-      case "error":
-        return /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }) });
-      case "warning":
-        return /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) });
-      case "success":
-        return /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" }) });
-      default:
-        return /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }) });
-    }
-  };
-  const handleConfirm = () => {
-    onConfirm?.(type === "prompt" ? inputValue : void 0);
-  };
-  reactExports.useEffect(() => {
-    if (autoCloseDelay && autoCloseDelay > 0) {
-      const timer = setTimeout(() => {
-        handleConfirm();
-      }, autoCloseDelay);
-      return () => clearTimeout(timer);
-    }
-  }, [autoCloseDelay]);
-  const handleCancel = () => {
-    onCancel?.();
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: handleCancel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-800 rounded-lg shadow-xl w-full max-w-md border ${styles.borderColor}`, onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-4 border-b border-gray-700 ${styles.headerBg} flex items-center space-x-3`, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: styles.iconColor, children: getIcon() }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: `text-xl font-bold ${styles.titleColor}`, children: title })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 whitespace-pre-line", children: message }),
-      type === "prompt" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
-        inputLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: inputLabel }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            autoFocus: true,
-            type: inputType,
-            value: inputValue,
-            placeholder: inputPlaceholder,
-            onChange: (event) => setInputValue(event.target.value),
-            onKeyDown: (event) => {
-              if (event.key === "Enter") handleConfirm();
-              if (event.key === "Escape") handleCancel();
-            },
-            className: "w-full rounded-md border border-cyan-500/50 bg-gray-950 px-3 py-2 text-white outline-none transition placeholder:text-gray-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-500/30"
-          }
-        )
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      (type === "confirm" || type === "prompt") && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: handleCancel,
-          className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold",
-          children: cancelText
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: handleConfirm,
-          className: `px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold ${styles.confirmBg}`,
-          children: confirmText
-        }
-      )
-    ] })
-  ] }) });
-};
-const mountModal = (renderModal) => {
-  const host = document.createElement("div");
-  document.body.appendChild(host);
-  const root2 = clientExports.createRoot(host);
-  const cleanup = () => {
-    setTimeout(() => {
-      root2.unmount();
-      host.remove();
-    }, 300);
-  };
-  root2.render(renderModal(cleanup));
-};
-const showDarkAlert = (message, title = "Notice", variant = "info") => {
-  return new Promise((resolve) => {
-    mountModal((cleanup) => {
-      const Modal = () => {
-        const [isVisible, setIsVisible] = reactExports.useState(true);
-        const handleConfirm = () => {
-          setIsVisible(false);
-          cleanup();
-          setTimeout(resolve, 300);
-        };
-        if (!isVisible) return null;
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(
-          DarkMessageModal,
-          {
-            type: "alert",
-            title,
-            message,
-            onConfirm: handleConfirm,
-            variant
-          }
-        );
-      };
-      return /* @__PURE__ */ jsxRuntimeExports.jsx(Modal, {});
-    });
-  });
-};
-const showDarkConfirm = (message, title = "Confirm Action", variant = "info") => {
-  return new Promise((resolve) => {
-    mountModal((cleanup) => {
-      const Modal = () => {
-        const [isVisible, setIsVisible] = reactExports.useState(true);
-        const handleConfirm = () => {
-          setIsVisible(false);
-          cleanup();
-          setTimeout(() => resolve(true), 300);
-        };
-        const handleCancel = () => {
-          setIsVisible(false);
-          cleanup();
-          setTimeout(() => resolve(false), 300);
-        };
-        if (!isVisible) return null;
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(
-          DarkMessageModal,
-          {
-            type: "confirm",
-            title,
-            message,
-            onConfirm: handleConfirm,
-            onCancel: handleCancel,
-            variant
-          }
-        );
-      };
-      return /* @__PURE__ */ jsxRuntimeExports.jsx(Modal, {});
-    });
-  });
-};
-const showDarkPrompt = ({
-  title = "Input Required",
-  message,
-  variant = "info",
-  confirmText = "OK",
-  cancelText = "Cancel",
-  inputLabel,
-  inputType = "text",
-  inputPlaceholder = "",
-  inputDefaultValue = ""
-}) => {
-  return new Promise((resolve) => {
-    mountModal((cleanup) => {
-      const Modal = () => {
-        const [isVisible, setIsVisible] = reactExports.useState(true);
-        const handleConfirm = (value) => {
-          setIsVisible(false);
-          cleanup();
-          setTimeout(() => resolve(value ?? ""), 300);
-        };
-        const handleCancel = () => {
-          setIsVisible(false);
-          cleanup();
-          setTimeout(() => resolve(null), 300);
-        };
-        if (!isVisible) return null;
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(
-          DarkMessageModal,
-          {
-            type: "prompt",
-            title,
-            message,
-            onConfirm: handleConfirm,
-            onCancel: handleCancel,
-            confirmText,
-            cancelText,
-            variant,
-            inputLabel,
-            inputType,
-            inputPlaceholder,
-            inputDefaultValue
-          }
-        );
-      };
-      return /* @__PURE__ */ jsxRuntimeExports.jsx(Modal, {});
-    });
-  });
-};
 const SystemFreezeBanner = () => {
   const { freezeState, unfreezeSystem } = useSystemFreeze$1();
   if (!freezeState.isFrozen) return null;
@@ -45143,20 +45194,6 @@ const initialCancellationCodes = [
     createdAt: (/* @__PURE__ */ new Date()).toISOString()
   }
 ];
-const verifyCurrentUserPassword = async (password) => {
-  const sessionToken = localStorage.getItem("dfp_session_token") || "";
-  const response = await fetch("/api/auth/verify-password", {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
-    },
-    body: JSON.stringify({ password })
-  });
-  const data = await response.json().catch(() => ({}));
-  return response.ok && data.valid === true;
-};
 const isStaffMetricKey = (key) => key === "staffFlight" || key === "staffSimulator" || key === "staffTotal";
 const isUnitScopedMetricKey = (key) => key === "availability" || key === "flight" || key === "flightHours" || key === "simulator" || key === "simulatorHours" || key === "total";
 const metricStrokeColor = (color) => {
@@ -57994,6 +58031,7 @@ const CancellationCodesTable = ({
   const [isAddingNew, setIsAddingNew] = reactExports.useState(false);
   const [editingCode, setEditingCode] = reactExports.useState(null);
   const [deletingCode, setDeletingCode] = reactExports.useState(null);
+  const [isEditUnlocked, setIsEditUnlocked] = reactExports.useState(false);
   const [formData, setFormData] = reactExports.useState({
     code: "",
     category: "Aircraft",
@@ -58001,7 +58039,9 @@ const CancellationCodesTable = ({
     appliesTo: "Both",
     isActive: true
   });
+  const standardActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
   const handleStartAdd = () => {
+    if (!isEditUnlocked) return;
     setFormData({
       code: "",
       category: "Aircraft",
@@ -58013,6 +58053,7 @@ const CancellationCodesTable = ({
     setEditingCode(null);
   };
   const handleStartEdit = (code) => {
+    if (!isEditUnlocked) return;
     setFormData(code);
     setEditingCode(code.code);
     setIsAddingNew(false);
@@ -58029,6 +58070,7 @@ const CancellationCodesTable = ({
     });
   };
   const handleDelete = (code) => {
+    if (!isEditUnlocked) return;
     setDeletingCode(code);
   };
   const confirmDelete = () => {
@@ -58041,6 +58083,7 @@ const CancellationCodesTable = ({
     setDeletingCode(null);
   };
   const handleSave = () => {
+    if (!isEditUnlocked) return;
     if (!formData.code || !formData.description) {
       return;
     }
@@ -58059,6 +58102,15 @@ const CancellationCodesTable = ({
       onEditCode(editingCode, newCode);
     }
     handleCancel();
+  };
+  const handleToggleEditUnlocked = () => {
+    if (isEditUnlocked) {
+      handleCancel();
+      setDeletingCode(null);
+      setIsEditUnlocked(false);
+      return;
+    }
+    setIsEditUnlocked(true);
   };
   const sortedCodes = [...codes].sort((a, b) => {
     if (a.category !== b.category) {
@@ -58111,15 +58163,27 @@ const CancellationCodesTable = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Cancellation Codes (Master Table)" }),
-      canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: handleStartAdd,
-          disabled: isAddingNew || editingCode !== null,
-          className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed",
-          children: "+ Add Code"
-        }
-      )
+      canEdit && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: handleToggleEditUnlocked,
+            className: standardActionButtonClass,
+            children: isEditUnlocked ? "Lock" : "Edit"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: handleStartAdd,
+            disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
+            className: standardActionButtonClass,
+            children: "Add"
+          }
+        )
+      ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
@@ -58290,7 +58354,7 @@ const CancellationCodesTable = ({
                   "button",
                   {
                     onClick: () => handleStartEdit(code),
-                    disabled: isAddingNew || editingCode !== null,
+                    disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
                     className: "px-3 py-1 bg-sky-600 text-white rounded text-xs font-semibold hover:bg-sky-700 disabled:bg-gray-600 disabled:cursor-not-allowed",
                     children: "Edit"
                   }
@@ -58299,7 +58363,7 @@ const CancellationCodesTable = ({
                   "button",
                   {
                     onClick: () => onToggleActive(code.code),
-                    disabled: isAddingNew || editingCode !== null,
+                    disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
                     className: `px-3 py-1 rounded text-xs font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed ${code.isActive ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-green-600 text-white hover:bg-green-700"}`,
                     children: code.isActive ? "Deactivate" : "Activate"
                   }
@@ -58308,7 +58372,7 @@ const CancellationCodesTable = ({
                   "button",
                   {
                     onClick: () => handleDelete(code.code),
-                    disabled: isAddingNew || editingCode !== null || isUsed,
+                    disabled: !isEditUnlocked || isAddingNew || editingCode !== null || isUsed,
                     className: "px-3 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed",
                     title: isUsed ? "Cannot delete code that has been used" : "Delete code",
                     children: "Delete"
@@ -59351,6 +59415,7 @@ const SettingsView = ({
   const [repoFiles, setRepoFiles] = reactExports.useState([]);
   const [pendingTemplateOverride, setPendingTemplateOverride] = reactExports.useState(null);
   const templateOverrideInputRef = reactExports.useRef(null);
+  const standardSettingsButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
   const safeNameSort = (a, b) => {
     const nameA = a.name || "";
     const nameB = b.name || "";
@@ -59406,7 +59471,32 @@ const SettingsView = ({
     link.click();
     document.body.removeChild(link);
   };
-  const handleChangeTemplateClick = (template) => {
+  const verifySettingsEditPassword = async (message) => {
+    const password = await showDarkPrompt({
+      title: "Password Required",
+      message,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Unlock",
+      cancelText: "Cancel"
+    });
+    if (!password) return false;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", "Password Required", "warning");
+        return false;
+      }
+      return true;
+    } catch (error) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
+      return false;
+    }
+  };
+  const handleChangeTemplateClick = async (template) => {
+    const unlocked = await verifySettingsEditPassword(`Enter your password to change the ${template.label} download template.`);
+    if (!unlocked) return;
     setPendingTemplateOverride(template);
     if (templateOverrideInputRef.current) templateOverrideInputRef.current.value = "";
     templateOverrideInputRef.current?.click();
@@ -59427,6 +59517,8 @@ const SettingsView = ({
     setPendingTemplateOverride(null);
   };
   const handleResetTemplateOverride = async (template) => {
+    const unlocked = await verifySettingsEditPassword(`Enter your password to reset the ${template.label} download template.`);
+    if (!unlocked) return;
     const existingOverrides = repoFiles.filter((existingFile) => existingFile.folderId === TEMPLATE_OVERRIDE_FOLDER_ID && existingFile.name.startsWith(`${template.key}::`));
     await Promise.all(existingOverrides.map((existingFile) => deleteFile(existingFile.id)));
     await refreshFiles();
@@ -59644,14 +59736,14 @@ const SettingsView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "SCT Events" }),
           isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveSctEvents, className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelSctEvents, className: "px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold", children: "Cancel" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveSctEvents, className: standardSettingsButtonClass, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelSctEvents, className: standardSettingsButtonClass, children: "Cancel" })
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: handleEditSctEvents,
               disabled: !canEditSettings,
-              className: `px-3 py-1 rounded-md text-xs font-semibold ${canEditSettings ? "bg-gray-600 text-white hover:bg-gray-700 cursor-pointer" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
+              className: standardSettingsButtonClass,
               children: "Edit"
             }
           )
@@ -59942,7 +60034,7 @@ const SettingsView = ({
                     "button",
                     {
                       type: "button",
-                      onClick: () => handleChangeTemplateClick(template),
+                      onClick: () => void handleChangeTemplateClick(template),
                       className: "shrink-0 whitespace-nowrap rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20",
                       children: "Change"
                     }
@@ -59966,12 +60058,12 @@ const SettingsView = ({
       shouldShowSection("event-limits") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-2xl h-fit", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Events Limits" }),
-          isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveLimits, className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Save" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+          isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveLimits, className: standardSettingsButtonClass, children: "Save" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: handleEditLimits,
               disabled: !canEditSettings,
-              className: `px-3 py-1 rounded-md text-xs font-semibold ${canEditSettings ? "bg-gray-600 text-white hover:bg-gray-700 cursor-pointer" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
+              className: standardSettingsButtonClass,
               children: "Edit"
             }
           )
@@ -60148,7 +60240,33 @@ const UserListSection = ({
       setLoading(false);
     }
   };
-  const handleEditProfile = (user) => {
+  const verifyEditPassword = async (userName) => {
+    const password = await showDarkPrompt({
+      title: "Edit User Record",
+      message: `Enter your password to edit ${userName}.`,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Unlock",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return false;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", "User List Locked", "warning");
+        return false;
+      }
+      return true;
+    } catch (error) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
+      return false;
+    }
+  };
+  const handleEditProfile = async (user) => {
+    const unlocked = await verifyEditPassword(user.name);
+    if (!unlocked) return;
     console.log("Navigate to Profile:", user);
     if (onNavigateToProfile) {
       onNavigateToProfile(user);
@@ -60265,7 +60383,7 @@ const UserListSection = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
-              onClick: () => handleEditProfile(user),
+              onClick: () => void handleEditProfile(user),
               className: "text-sky-400 hover:text-sky-300 mr-3",
               title: "View Profile",
               children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$3, { className: "h-5 w-5" })
@@ -60453,6 +60571,29 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
       setShowDeleteConfirm(null);
     }
   };
+  const handleEditStaff = async (staff) => {
+    const password = await showDarkPrompt({
+      title: "Edit Staff Record",
+      message: `Enter your password to edit ${staff.name}.`,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Unlock",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", "Staff Database Locked", "warning");
+        return;
+      }
+      onNavigateToProfile?.({ ...staff, _dataSource: "database" });
+    } catch (error2) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
+    }
+  };
   const getType = (staff) => {
     if (staff.category && ["UnCat", "D", "C"].includes(staff.category)) {
       return "TRAINEE";
@@ -60615,7 +60756,7 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
-                    onClick: () => onNavigateToProfile?.({ ...staff, _dataSource: "database" }),
+                    onClick: () => void handleEditStaff(staff),
                     className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-blue-400 transition-colors",
                     title: "Edit this staff record",
                     children: "Edit"
@@ -60749,6 +60890,29 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
     } finally {
       setDeletingId(null);
       setShowDeleteConfirm(null);
+    }
+  };
+  const handleEditTrainee = async (trainee) => {
+    const password = await showDarkPrompt({
+      title: "Edit Trainee Record",
+      message: `Enter your password to edit ${trainee.name}.`,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Unlock",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", "Trainee Database Locked", "warning");
+        return;
+      }
+      onNavigateToProfile?.({ ...trainee, _dataSource: "database" });
+    } catch (error2) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
     }
   };
   const handleSort = (field) => {
@@ -60902,7 +61066,7 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
-                    onClick: () => onNavigateToProfile?.({ ...trainee, _dataSource: "database" }),
+                    onClick: () => void handleEditTrainee(trainee),
                     className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-blue-400 transition-colors",
                     title: "Edit this trainee record",
                     children: "Edit"
@@ -61360,6 +61524,29 @@ const OrganisationSettings = ({
   const isUnitReadOnly = (unitCode) => {
     return allocationMode === "fixed" && isRemainderUnit(unitCode);
   };
+  const unlockSharingSettings = async () => {
+    const password = await showDarkPrompt({
+      title: "Edit Resource Sharing",
+      message: "Enter your password to edit staff and resource sharing settings.",
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Unlock",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", "Resource Sharing Locked", "warning");
+        return;
+      }
+      setIsEditingSharingSettings(true);
+    } catch (error) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
+    }
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", onKeyDownCapture: stopEditableKeyPropagation, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-sky-500/10 border border-sky-500/30 rounded-lg p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -61375,7 +61562,7 @@ const OrganisationSettings = ({
               saveSharingSettings();
               return;
             }
-            setIsEditingSharingSettings(true);
+            void unlockSharingSettings();
           },
           className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
           children: isEditingSharingSettings ? "Save" : "Edit"
@@ -66159,7 +66346,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     const matchedKey = childMap[normalisedPreviousParent]?.length ? normalisedPreviousParent : childMapKeys.find((key) => normaliseOrganisationParentKey(key) === normalisedPreviousParent);
     return matchedKey ? childMap[matchedKey] || [] : [];
   };
-  const showSectionOnlySaveButton = !(sectionOnly && (scrollTarget === "platform-rank-terminology" || scrollTarget === "platform-task-profiles" || scrollTarget === "platform-organisation-locations" || scrollTarget === "platform-units" || scrollTarget === "platform-master-lmp-access" || scrollTarget === "platform-standard-missions" || scrollTarget === "platform-resource-pools" || scrollTarget === "platform-crew-composition" || scrollTarget === "platform-currency-profiles" || scrollTarget === "platform-unit-modules" || scrollTarget === "platform-deployment-readiness" || scrollTarget === "platform-operational-runbook" || scrollTarget === "platform-licensing" || scrollTarget === "platform-permission-profiles" || scrollTarget === "platform-user-access" || scrollTarget === "platform-scheduling-rule-sets"));
+  const showSectionOnlySaveButton = !(sectionOnly && (scrollTarget === "platform-rank-terminology" || scrollTarget === "platform-configuration-health" || scrollTarget === "platform-task-profiles" || scrollTarget === "platform-organisation-locations" || scrollTarget === "platform-units" || scrollTarget === "platform-master-lmp-access" || scrollTarget === "platform-standard-missions" || scrollTarget === "platform-resource-pools" || scrollTarget === "platform-crew-composition" || scrollTarget === "platform-currency-profiles" || scrollTarget === "platform-unit-modules" || scrollTarget === "platform-deployment-readiness" || scrollTarget === "platform-operational-runbook" || scrollTarget === "platform-licensing" || scrollTarget === "platform-permission-profiles" || scrollTarget === "platform-user-access" || scrollTarget === "platform-scheduling-rule-sets" || scrollTarget === "platform-training-report-template"));
   const showSectionOnlyStatusPanel = showSectionOnlySaveButton || !canEdit || Boolean(error);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: stopEditableKeyPropagation, children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
@@ -66267,10 +66454,22 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         {
           title: "Organisation",
           subtitle: "The top-level customer or operating organisation for this deployment.",
-          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: startOrganisationStructureEdit, disabled: organisationStructureUnlocked, className: platformActionButtonClass, children: "EDIT" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => void saveOrganisationStructure(), disabled: !organisationStructureUnlocked || saving || applyingChanges, className: platformActionButtonClass, children: "Save" })
-          ] }) : null
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                if (organisationStructureUnlocked) {
+                  void saveOrganisationStructure();
+                  return;
+                }
+                startOrganisationStructureEdit();
+              },
+              disabled: organisationStructureUnlocked && (saving || applyingChanges),
+              className: platformActionButtonClass,
+              children: organisationStructureUnlocked ? "Save" : "Edit"
+            }
+          ) }) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
@@ -66506,19 +66705,22 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           title: "Units",
           subtitle: "Unit is the centre of configuration: model, type, location, enabled modules and future UI behaviour. Select and highlight a unit row first, then press EDIT to change that unit.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: editSelectedUnit, disabled: config.units.length === 0, className: platformActionButtonClass, children: "EDIT" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
                 onClick: () => {
-                  void save(void 0, "platform-units").then((saved) => {
-                    if (saved) setEditingUnitIndex(null);
-                  });
+                  if (editingUnitIndex !== null) {
+                    void save(void 0, "platform-units").then((saved) => {
+                      if (saved) setEditingUnitIndex(null);
+                    });
+                    return;
+                  }
+                  editSelectedUnit();
                 },
-                disabled: editingUnitIndex === null || saving || applyingChanges,
+                disabled: config.units.length === 0 || editingUnitIndex !== null && (saving || applyingChanges),
                 className: platformActionButtonClass,
-                children: "Save"
+                children: editingUnitIndex !== null ? "Save" : "Edit"
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: deleteSelectedUnit, disabled: config.units.length === 0, className: platformActionButtonClass, children: "Delete" }),
@@ -70241,6 +70443,11 @@ const PeopleProfilePage = ({
   courseColors = {}
 }) => {
   const [pendingCourse, setPendingCourse] = reactExports.useState(neoBuildCourse);
+  const [isEditUnlocked, setIsEditUnlocked] = reactExports.useState(false);
+  const standardActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
+  reactExports.useEffect(() => {
+    if (!isEditUnlocked) setPendingCourse(neoBuildCourse);
+  }, [isEditUnlocked, neoBuildCourse]);
   const availableLmpTypes = reactExports.useMemo(() => {
     const lmpTypeSet = /* @__PURE__ */ new Set();
     syllabusDetails.forEach((item) => {
@@ -70282,13 +70489,47 @@ const PeopleProfilePage = ({
   }, [traineesData]);
   const isReadOnly = !["Super Admin", "Admin"].includes(currentUserPermission);
   const handleSave = () => {
-    if (!pendingCourse) return;
-    onUpdateNeoBuildCourse(pendingCourse);
-    onShowSuccess(`Master LMP basis for Individual LMP generation set to "${pendingCourse}"`);
+    if (hasChanges) {
+      if (!pendingCourse) return;
+      onUpdateNeoBuildCourse(pendingCourse);
+      onShowSuccess(`Master LMP basis for Individual LMP generation set to "${pendingCourse}"`);
+    }
+    setIsEditUnlocked(false);
   };
   const hasChanges = pendingCourse !== neoBuildCourse;
-  const handleToggleCourseExclusion = (course) => {
+  const unlockForEdit = async () => {
     if (isReadOnly) return;
+    const password = await showDarkPrompt({
+      title: "Edit NEO Build People Profile",
+      message: "Enter your password to edit NEO Build people profile settings.",
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Unlock",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", "NEO Build People Profile Locked", "warning");
+        return;
+      }
+      setIsEditUnlocked(true);
+    } catch (error) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
+    }
+  };
+  const handleEditSaveClick = () => {
+    if (isEditUnlocked) {
+      handleSave();
+      return;
+    }
+    void unlockForEdit();
+  };
+  const handleToggleCourseExclusion = (course) => {
+    if (isReadOnly || !isEditUnlocked) return;
     const isCurrentlyExcluded = excludedCourses.includes(course);
     const newExcluded = isCurrentlyExcluded ? excludedCourses.filter((c) => c !== course) : [...excludedCourses, course];
     onUpdateExcludedCourses(newExcluded);
@@ -70299,6 +70540,16 @@ const PeopleProfilePage = ({
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6 max-w-2xl", children: [
+    !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        type: "button",
+        onClick: handleEditSaveClick,
+        disabled: isEditUnlocked && hasChanges && !pendingCourse,
+        className: standardActionButtonClass,
+        children: isEditUnlocked ? "Save" : "Edit"
+      }
+    ) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-teal-900/30 border border-teal-600/40 rounded-xl p-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-teal-300 mb-1", children: "Master LMP Selection" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-teal-200/80 leading-relaxed", children: "Select which Master LMP will be used by NEO Build to generate Individual LMPs for trainees. This determines which flight and simulator events trainees are assigned." }),
@@ -70330,7 +70581,7 @@ const PeopleProfilePage = ({
             value: pendingCourse,
             onChange: (e) => setPendingCourse(e.target.value),
             className: "w-full bg-gray-700 border border-teal-600/50 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500",
-            disabled: isReadOnly,
+            disabled: isReadOnly || !isEditUnlocked,
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select one Master LMP —" }),
               availableLmpTypes.map((lmpType) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmpType, children: lmpType }, lmpType))
@@ -70347,15 +70598,6 @@ const PeopleProfilePage = ({
         ] })
       ] }) }),
       !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 pt-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: handleSave,
-            disabled: !pendingCourse || !hasChanges,
-            className: `px-5 py-2 rounded-lg text-sm font-semibold transition-all ${pendingCourse && hasChanges ? "bg-teal-600 hover:bg-teal-500 text-white cursor-pointer" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
-            children: "Save Master LMP Selection"
-          }
-        ),
         hasChanges && pendingCourse && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-amber-300", children: [
           "Unsaved — will change to: ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: pendingCourse })
@@ -70413,7 +70655,7 @@ const PeopleProfilePage = ({
                     type: "checkbox",
                     checked: isExcluded,
                     onChange: () => handleToggleCourseExclusion(course),
-                    disabled: isReadOnly,
+                    disabled: isReadOnly || !isEditUnlocked,
                     className: "w-4 h-4 rounded accent-orange-500 flex-shrink-0"
                   }
                 ),
@@ -70436,7 +70678,7 @@ const PeopleProfilePage = ({
         })
       ] }),
       isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-yellow-400/70", children: "Read-only mode — Super Admin or Admin access required to change exclusions." }),
-      !isReadOnly && availableCourses.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-1", children: "Changes take effect immediately — no Save required." })
+      !isReadOnly && availableCourses.length > 0 && isEditUnlocked && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-1", children: "Changes take effect immediately — no Save required." })
     ] })
   ] });
 };

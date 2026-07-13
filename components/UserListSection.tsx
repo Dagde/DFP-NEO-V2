@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 
 interface User {
     id: string;
@@ -83,7 +85,34 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
         }
     };
 
-    const handleEditProfile = (user: User) => {
+    const verifyEditPassword = async (userName: string) => {
+        const password = await showDarkPrompt({
+            title: 'Edit User Record',
+            message: `Enter your password to edit ${userName}.`,
+            inputLabel: 'Password',
+            inputType: 'password',
+            inputPlaceholder: 'Enter password',
+            confirmText: 'Unlock',
+            cancelText: 'Cancel',
+            variant: 'warning',
+        });
+        if (!password) return false;
+        try {
+            const isValid = await verifyCurrentUserPassword(password);
+            if (!isValid) {
+                await showDarkAlert('The password was not accepted.', 'User List Locked', 'warning');
+                return false;
+            }
+            return true;
+        } catch (error) {
+            await showDarkAlert('The app could not verify your password.', 'Password Check Failed', 'error');
+            return false;
+        }
+    };
+
+    const handleEditProfile = async (user: User) => {
+        const unlocked = await verifyEditPassword(user.name);
+        if (!unlocked) return;
         // Navigate to Staff or Trainee profile page
         console.log('Navigate to Profile:', user);
         
@@ -259,7 +288,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button
-                                            onClick={() => handleEditProfile(user)}
+                                            onClick={() => void handleEditProfile(user)}
                                             className="text-sky-400 hover:text-sky-300 mr-3"
                                             title="View Profile"
                                         >

@@ -2,6 +2,8 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState, useEffect, useMemo } from 'react';
 import { logAudit } from '../utils/auditLogger';
 import { getTraineeStatusLabel } from '../utils/traineeStatus';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 
 interface TraineeDatabaseTableProps {
   currentUserPermission?: string;
@@ -149,6 +151,30 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
     } finally {
       setDeletingId(null);
       setShowDeleteConfirm(null);
+    }
+  };
+
+  const handleEditTrainee = async (trainee: DatabaseTrainee) => {
+    const password = await showDarkPrompt({
+      title: 'Edit Trainee Record',
+      message: `Enter your password to edit ${trainee.name}.`,
+      inputLabel: 'Password',
+      inputType: 'password',
+      inputPlaceholder: 'Enter password',
+      confirmText: 'Unlock',
+      cancelText: 'Cancel',
+      variant: 'warning',
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert('The password was not accepted.', 'Trainee Database Locked', 'warning');
+        return;
+      }
+      onNavigateToProfile?.({ ...trainee, _dataSource: 'database' });
+    } catch (error) {
+      await showDarkAlert('The app could not verify your password.', 'Password Check Failed', 'error');
     }
   };
 
@@ -380,7 +406,7 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
                       <div className="flex items-center gap-1">
                         {/* Edit Button */}
                         <button
-                          onClick={() => onNavigateToProfile?.({ ...trainee, _dataSource: 'database' })}
+                          onClick={() => void handleEditTrainee(trainee)}
                           className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-blue-400 transition-colors"
                           title="Edit this trainee record"
                         >

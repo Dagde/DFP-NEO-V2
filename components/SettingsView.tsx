@@ -22,6 +22,8 @@ import {
     type DispatchStaggerSettings,
 } from '../utils/dispatchStagger';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 
 
 declare var XLSX: any;
@@ -597,6 +599,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const [repoFiles, setRepoFiles] = useState<{ id: string; name: string; folderId: string }[]>([]);
     const [pendingTemplateOverride, setPendingTemplateOverride] = useState<{ key: string; label: string } | null>(null);
     const templateOverrideInputRef = useRef<HTMLInputElement>(null);
+    const standardSettingsButtonClass = 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50';
 
     // --- COMPUTED / MEMOIZED ---
     // Helper function for safe name sorting
@@ -675,7 +678,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         document.body.removeChild(link);
     };
 
-    const handleChangeTemplateClick = (template: { key: string; label: string }) => {
+    const verifySettingsEditPassword = async (message: string): Promise<boolean> => {
+        const password = await showDarkPrompt({
+            title: 'Password Required',
+            message,
+            inputLabel: 'Password',
+            inputType: 'password',
+            inputPlaceholder: 'Enter password',
+            confirmText: 'Unlock',
+            cancelText: 'Cancel',
+        });
+        if (!password) return false;
+        try {
+            const isValid = await verifyCurrentUserPassword(password);
+            if (!isValid) {
+                await showDarkAlert('The password was not accepted.', 'Password Required', 'warning');
+                return false;
+            }
+            return true;
+        } catch (error) {
+            await showDarkAlert('The app could not verify your password.', 'Password Check Failed', 'error');
+            return false;
+        }
+    };
+
+    const handleChangeTemplateClick = async (template: { key: string; label: string }) => {
+        const unlocked = await verifySettingsEditPassword(`Enter your password to change the ${template.label} download template.`);
+        if (!unlocked) return;
         setPendingTemplateOverride(template);
         if (templateOverrideInputRef.current) templateOverrideInputRef.current.value = '';
         templateOverrideInputRef.current?.click();
@@ -701,6 +730,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     const handleResetTemplateOverride = async (template: { key: string; label: string }) => {
+        const unlocked = await verifySettingsEditPassword(`Enter your password to reset the ${template.label} download template.`);
+        if (!unlocked) return;
         const existingOverrides = repoFiles.filter(existingFile => (
             existingFile.folderId === TEMPLATE_OVERRIDE_FOLDER_ID
             && existingFile.name.startsWith(`${template.key}::`)
@@ -961,18 +992,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                <h2 className="text-lg font-semibold text-gray-200">SCT Events</h2>
                                {isEditingSctEvents ? (
                                    <div className="flex space-x-2">
-                                       <button onClick={handleSaveSctEvents} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">Save</button>
-                                       <button onClick={handleCancelSctEvents} className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold">Cancel</button>
+                                       <button onClick={handleSaveSctEvents} className={standardSettingsButtonClass}>Save</button>
+                                       <button onClick={handleCancelSctEvents} className={standardSettingsButtonClass}>Cancel</button>
                                    </div>
                                ) : (
                                    <button 
                                    onClick={handleEditSctEvents} 
                                    disabled={!canEditSettings}
-                                   className={`px-3 py-1 rounded-md text-xs font-semibold ${
-                                       canEditSettings 
-                                           ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer' 
-                                           : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                                   }`}
+                                   className={standardSettingsButtonClass}
                                >
                                    Edit
                                </button>
@@ -1337,7 +1364,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleChangeTemplateClick(template)}
+                                                        onClick={() => void handleChangeTemplateClick(template)}
                                                         className="shrink-0 whitespace-nowrap rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20"
                                                     >
                                                         Change
@@ -1370,16 +1397,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <div className="p-4 flex justify-between items-center border-b border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-200">Events Limits</h2>
                             {isEditingLimits ? (
-                                <button onClick={handleSaveLimits} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">Save</button>
+                                <button onClick={handleSaveLimits} className={standardSettingsButtonClass}>Save</button>
                             ) : (
                                 <button 
                                 onClick={handleEditLimits} 
                                 disabled={!canEditSettings}
-                                className={`px-3 py-1 rounded-md text-xs font-semibold ${
-                                    canEditSettings 
-                                        ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer' 
-                                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                                }`}
+                                className={standardSettingsButtonClass}
                             >
                                 Edit
                             </button>

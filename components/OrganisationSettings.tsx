@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { logAudit } from '../utils/auditLogger';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 
 interface UnitDesiredAllocation {
   unitCode: string;
@@ -597,6 +599,30 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     return allocationMode === 'fixed' && isRemainderUnit(unitCode);
   };
 
+  const unlockSharingSettings = async () => {
+    const password = await showDarkPrompt({
+      title: 'Edit Resource Sharing',
+      message: 'Enter your password to edit staff and resource sharing settings.',
+      inputLabel: 'Password',
+      inputType: 'password',
+      inputPlaceholder: 'Enter password',
+      confirmText: 'Unlock',
+      cancelText: 'Cancel',
+      variant: 'warning',
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert('The password was not accepted.', 'Resource Sharing Locked', 'warning');
+        return;
+      }
+      setIsEditingSharingSettings(true);
+    } catch (error) {
+      await showDarkAlert('The app could not verify your password.', 'Password Check Failed', 'error');
+    }
+  };
+
   return (
     <div className="space-y-4" onKeyDownCapture={stopEditableKeyPropagation}>
       <div className="bg-sky-500/10 border border-sky-500/30 rounded-lg p-4">
@@ -614,7 +640,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                 saveSharingSettings();
                 return;
               }
-              setIsEditingSharingSettings(true);
+              void unlockSharingSettings();
             }}
             className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
           >

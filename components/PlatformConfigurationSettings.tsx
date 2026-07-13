@@ -5005,6 +5005,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const showSectionOnlySaveButton = !(sectionOnly && (
     scrollTarget === 'platform-rank-terminology'
+    || scrollTarget === 'platform-configuration-health'
     || scrollTarget === 'platform-task-profiles'
     || scrollTarget === 'platform-organisation-locations'
     || scrollTarget === 'platform-units'
@@ -5020,6 +5021,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     || scrollTarget === 'platform-permission-profiles'
     || scrollTarget === 'platform-user-access'
     || scrollTarget === 'platform-scheduling-rule-sets'
+    || scrollTarget === 'platform-training-report-template'
   ));
   const showSectionOnlyStatusPanel = showSectionOnlySaveButton || !canEdit || Boolean(error);
 
@@ -5175,8 +5177,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           subtitle="The top-level customer or operating organisation for this deployment."
           action={canEdit ? (
             <div className="flex items-center gap-[1px]">
-              <button type="button" onClick={startOrganisationStructureEdit} disabled={organisationStructureUnlocked} className={platformActionButtonClass}>EDIT</button>
-              <button type="button" onClick={() => void saveOrganisationStructure()} disabled={!organisationStructureUnlocked || saving || applyingChanges} className={platformActionButtonClass}>Save</button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (organisationStructureUnlocked) {
+                    void saveOrganisationStructure();
+                    return;
+                  }
+                  startOrganisationStructureEdit();
+                }}
+                disabled={organisationStructureUnlocked && (saving || applyingChanges)}
+                className={platformActionButtonClass}
+              >
+                {organisationStructureUnlocked ? 'Save' : 'Edit'}
+              </button>
             </div>
           ) : null}
         />
@@ -5422,18 +5436,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           subtitle="Unit is the centre of configuration: model, type, location, enabled modules and future UI behaviour. Select and highlight a unit row first, then press EDIT to change that unit."
           action={canEdit ? (
             <div className="flex items-center gap-[1px]">
-              <button type="button" onClick={editSelectedUnit} disabled={config.units.length === 0} className={platformActionButtonClass}>EDIT</button>
               <button
                 type="button"
                 onClick={() => {
-                  void save(undefined, 'platform-units').then((saved) => {
-                    if (saved) setEditingUnitIndex(null);
-                  });
+                  if (editingUnitIndex !== null) {
+                    void save(undefined, 'platform-units').then((saved) => {
+                      if (saved) setEditingUnitIndex(null);
+                    });
+                    return;
+                  }
+                  editSelectedUnit();
                 }}
-                disabled={editingUnitIndex === null || saving || applyingChanges}
+                disabled={config.units.length === 0 || (editingUnitIndex !== null && (saving || applyingChanges))}
                 className={platformActionButtonClass}
               >
-                Save
+                {editingUnitIndex !== null ? 'Save' : 'Edit'}
               </button>
               <button type="button" onClick={deleteSelectedUnit} disabled={config.units.length === 0} className={platformActionButtonClass}>Delete</button>
               <button type="button" onClick={addUnit} className={platformActionButtonClass}>

@@ -1,5 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Trainee, SyllabusItemDetail } from '../types';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 
 interface PeopleProfilePageProps {
     traineesData: Trainee[];
@@ -27,6 +29,12 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
     courseColors = {},
 }) => {
     const [pendingCourse, setPendingCourse] = useState<string>(neoBuildCourse);
+    const [isEditUnlocked, setIsEditUnlocked] = useState(false);
+    const standardActionButtonClass = 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50';
+
+    useEffect(() => {
+        if (!isEditUnlocked) setPendingCourse(neoBuildCourse);
+    }, [isEditUnlocked, neoBuildCourse]);
 
     // Derive unique Master LMP types from syllabus (BPC+IPC, FIC, etc.)
     const availableLmpTypes = useMemo(() => {
@@ -79,15 +87,51 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
     const isReadOnly = !['Super Admin', 'Admin'].includes(currentUserPermission);
 
     const handleSave = () => {
-        if (!pendingCourse) return;
-        onUpdateNeoBuildCourse(pendingCourse);
-        onShowSuccess(`Master LMP basis for Individual LMP generation set to "${pendingCourse}"`);
+        if (hasChanges) {
+            if (!pendingCourse) return;
+            onUpdateNeoBuildCourse(pendingCourse);
+            onShowSuccess(`Master LMP basis for Individual LMP generation set to "${pendingCourse}"`);
+        }
+        setIsEditUnlocked(false);
     };
 
     const hasChanges = pendingCourse !== neoBuildCourse;
 
-    const handleToggleCourseExclusion = (course: string) => {
+    const unlockForEdit = async () => {
         if (isReadOnly) return;
+        const password = await showDarkPrompt({
+            title: 'Edit NEO Build People Profile',
+            message: 'Enter your password to edit NEO Build people profile settings.',
+            inputLabel: 'Password',
+            inputType: 'password',
+            inputPlaceholder: 'Enter password',
+            confirmText: 'Unlock',
+            cancelText: 'Cancel',
+            variant: 'warning',
+        });
+        if (!password) return;
+        try {
+            const isValid = await verifyCurrentUserPassword(password);
+            if (!isValid) {
+                await showDarkAlert('The password was not accepted.', 'NEO Build People Profile Locked', 'warning');
+                return;
+            }
+            setIsEditUnlocked(true);
+        } catch (error) {
+            await showDarkAlert('The app could not verify your password.', 'Password Check Failed', 'error');
+        }
+    };
+
+    const handleEditSaveClick = () => {
+        if (isEditUnlocked) {
+            handleSave();
+            return;
+        }
+        void unlockForEdit();
+    };
+
+    const handleToggleCourseExclusion = (course: string) => {
+        if (isReadOnly || !isEditUnlocked) return;
         const isCurrentlyExcluded = excludedCourses.includes(course);
         const newExcluded = isCurrentlyExcluded
             ? excludedCourses.filter(c => c !== course)
@@ -102,6 +146,18 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
 
     return (
         <div className="space-y-6 max-w-2xl">
+            {!isReadOnly && (
+                <div className="flex justify-end">
+                    <button
+                        type="button"
+                        onClick={handleEditSaveClick}
+                        disabled={isEditUnlocked && hasChanges && !pendingCourse}
+                        className={standardActionButtonClass}
+                    >
+                        {isEditUnlocked ? 'Save' : 'Edit'}
+                    </button>
+                </div>
+            )}
             {/* ── Master LMP Section ───────────────────────────────────── */}
             <div className="bg-teal-900/30 border border-teal-600/40 rounded-xl p-4">
                 <p className="text-sm font-semibold text-teal-300 mb-1">Master LMP Selection</p>
@@ -147,7 +203,7 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
                         value={pendingCourse}
                         onChange={e => setPendingCourse(e.target.value)}
                         className="w-full bg-gray-700 border border-teal-600/50 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500"
-                        disabled={isReadOnly}
+                        disabled={isReadOnly || !isEditUnlocked}
                     >
                         <option value="">— Select one Master LMP —</option>
                         {availableLmpTypes.map(lmpType => (
@@ -173,17 +229,6 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
 
                 {!isReadOnly && (
                     <div className="flex items-center gap-3 pt-2">
-                        <button
-                            onClick={handleSave}
-                            disabled={!pendingCourse || !hasChanges}
-                            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
-                                pendingCourse && hasChanges
-                                    ? 'bg-teal-600 hover:bg-teal-500 text-white cursor-pointer'
-                                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                            }`}
-                        >
-                            Save Master LMP Selection
-                        </button>
                         {hasChanges && pendingCourse && (
                             <span className="text-xs text-amber-300">
                                 Unsaved — will change to: <strong>{pendingCourse}</strong>
@@ -266,11 +311,11 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
                                             : 'bg-gray-700/40 border-gray-600/40 hover:bg-gray-700/60'
                                     }`}
                                 >
-                                    <input
+                                        <input
                                         type="checkbox"
                                         checked={isExcluded}
                                         onChange={() => handleToggleCourseExclusion(course)}
-                                        disabled={isReadOnly}
+                                        disabled={isReadOnly || !isEditUnlocked}
                                         className="w-4 h-4 rounded accent-orange-500 flex-shrink-0"
                                     />
                                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -299,7 +344,7 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
                     <p className="text-xs text-yellow-400/70">Read-only mode — Super Admin or Admin access required to change exclusions.</p>
                 )}
 
-                {!isReadOnly && availableCourses.length > 0 && (
+                {!isReadOnly && availableCourses.length > 0 && isEditUnlocked && (
                     <p className="text-xs text-gray-500 mt-1">
                         Changes take effect immediately — no Save required.
                     </p>
