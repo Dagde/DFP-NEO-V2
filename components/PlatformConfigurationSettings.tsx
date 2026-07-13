@@ -5287,7 +5287,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
                   />
                 </div>
-                <div className="md:col-span-5">
+                <div className="md:col-span-4">
                   <AirfieldLookupField
                     label="Location Name"
                     value={location.name}
@@ -5297,7 +5297,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
                   />
                 </div>
-                <div className="md:col-span-1">
+                <div className="md:col-span-2">
                   <NumberField label="UTC Offset" value={location.timezoneOffset ?? 10} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezoneOffset: value })} />
                 </div>
                 <div className="md:col-span-2">

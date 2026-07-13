@@ -67494,7 +67494,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                     onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
                   }
                 ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   AirfieldLookupField,
                   {
                     label: "Location Name",
@@ -67505,7 +67505,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                     onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
                   }
                 ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "UTC Offset", value: location.timezoneOffset ?? 10, disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezoneOffset: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "UTC Offset", value: location.timezoneOffset ?? 10, disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezoneOffset: value }) }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Latitude", value: toNullableNumber(location.latitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { latitude: value }), info: "Decimal degrees. South is negative." }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Longitude", value: toNullableNumber(location.longitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { longitude: value }), info: "Decimal degrees. West is negative." }) }),
