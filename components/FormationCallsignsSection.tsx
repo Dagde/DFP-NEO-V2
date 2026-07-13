@@ -77,25 +77,22 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
     const filteredCallsigns = isEditing
         ? (selectedUnit === 'ALL' ? tempCallsigns : tempCallsigns.filter(c => c.unit === selectedUnit))
         : (selectedUnit === 'ALL' ? callsigns : callsigns.filter(c => c.unit === selectedUnit));
+    const sectionButtonClass = 'min-w-[56px] rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50';
 
     return (
         <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[800px] h-fit" onKeyDownCapture={stopEditableKeyPropagation}>
             <div className="p-4 flex justify-between items-center border-b border-gray-700">
                 <h2 className="text-lg font-semibold text-gray-200">Formation Callsigns</h2>
                 {isEditing ? (
-                    <div className="flex space-x-2">
-                        <button onClick={handleSave} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">Save</button>
-                        <button onClick={handleCancel} className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold">Cancel</button>
+                    <div className="flex gap-px">
+                        <button onClick={handleSave} className={sectionButtonClass}>Save</button>
+                        <button onClick={handleCancel} className={sectionButtonClass}>Cancel</button>
                     </div>
                 ) : (
                     <button 
                         onClick={handleEdit} 
                         disabled={!canEditSettings}
-                        className={`px-3 py-1 rounded-md text-xs font-semibold ${
-                            canEditSettings 
-                                ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer' 
-                                : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                        }`}
+                        className={sectionButtonClass}
                     >
                         Edit
                     </button>
@@ -258,7 +255,7 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
                                 />
                                 <button 
                                     onClick={handleAdd} 
-                                    className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-semibold"
+                                    className={sectionButtonClass}
                                 >
                                     Add
                                 </button>

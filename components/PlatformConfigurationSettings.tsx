@@ -1850,6 +1850,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     await save(undefined, 'platform-rank-terminology');
   };
 
+  const rankTerminologyButtonClass = 'rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50';
+  const rankTerminologyDangerButtonClass = 'w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40';
+
   const renderRankTerminologySectionAction = () => {
     if (!canUnlockRankTerminology) return null;
     return rankTerminologyUnlocked ? (
@@ -1857,7 +1860,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         type="button"
         onClick={saveRankTerminology}
         disabled={saving}
-        className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+        className={rankTerminologyButtonClass}
       >
         Save
       </button>
@@ -1865,7 +1868,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <button
         type="button"
         onClick={unlockRankTerminology}
-        className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-900 hover:bg-gray-200"
+        className={rankTerminologyButtonClass}
       >
         Edit
       </button>
@@ -8068,7 +8071,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   type="button"
                   onClick={addCrewPositionEntry}
                   disabled={!canEditRankTerminology}
-                  className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={rankTerminologyButtonClass}
                 >
                   Add Position
                 </button>
@@ -8133,7 +8136,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         type="button"
                         onClick={() => removeCrewPositionEntry(entry.id)}
                         disabled={!canEditRankTerminology}
-                        className="w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                        className={rankTerminologyDangerButtonClass}
                         title="Remove crew position"
                       >
                         Delete
@@ -8158,7 +8161,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   type="button"
                   onClick={addStaffQualificationEntry}
                   disabled={!canEditRankTerminology}
-                  className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={rankTerminologyButtonClass}
                 >
                   Add Qualification
                 </button>
@@ -8232,7 +8235,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       type="button"
                       onClick={() => removeStaffQualificationEntry(entry.id)}
                       disabled={!canEditRankTerminology}
-                      className="w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                      className={rankTerminologyDangerButtonClass}
                       title="Remove qualification"
                     >
                       Delete
@@ -8256,7 +8259,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   type="button"
                   onClick={addUnitCallsignEntry}
                   disabled={!canEditRankTerminology || config.units.length === 0}
-                  className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={rankTerminologyButtonClass}
                 >
                   Add Callsign
                 </button>
@@ -8294,7 +8297,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         type="button"
                         onClick={() => setDefaultUnitCallsignEntry(entry.id)}
                         disabled={!canEditRankTerminology}
-                        className={`w-full rounded border px-3 py-2 text-xs font-bold ${
+                        className={`w-full rounded border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide ${
                           entry.isDefault
                             ? 'border-green-400/50 bg-green-500/20 text-green-100'
                             : 'border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700'
@@ -8308,7 +8311,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         type="button"
                         onClick={() => removeUnitCallsignEntry(entry.id)}
                         disabled={!canEditRankTerminology}
-                        className="w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                        className={rankTerminologyDangerButtonClass}
                       >
                         Delete
                       </button>

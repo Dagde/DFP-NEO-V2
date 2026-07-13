@@ -58642,18 +58642,19 @@ const FormationCallsignsSection = ({
     setTempCallsigns(updated);
   };
   const filteredCallsigns = isEditing ? selectedUnit === "ALL" ? tempCallsigns : tempCallsigns.filter((c) => c.unit === selectedUnit) : selectedUnit === "ALL" ? callsigns : callsigns.filter((c) => c.unit === selectedUnit);
+  const sectionButtonClass = "min-w-[56px] rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[800px] h-fit", onKeyDownCapture: stopEditableKeyPropagation, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Formation Callsigns" }),
-      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Save" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: "px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold", children: "Cancel" })
+      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-px", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: sectionButtonClass, children: "Save" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: sectionButtonClass, children: "Cancel" })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           onClick: handleEdit,
           disabled: !canEditSettings,
-          className: `px-3 py-1 rounded-md text-xs font-semibold ${canEditSettings ? "bg-gray-600 text-white hover:bg-gray-700 cursor-pointer" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
+          className: sectionButtonClass,
           children: "Edit"
         }
       )
@@ -58815,7 +58816,7 @@ const FormationCallsignsSection = ({
               "button",
               {
                 onClick: handleAdd,
-                className: "px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-semibold",
+                className: sectionButtonClass,
                 children: "Add"
               }
             )
@@ -65187,6 +65188,8 @@ const PlatformConfigurationSettings = ({
   const saveRankTerminology = async () => {
     await save(void 0, "platform-rank-terminology");
   };
+  const rankTerminologyButtonClass = "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50";
+  const rankTerminologyDangerButtonClass = "w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40";
   const renderRankTerminologySectionAction = () => {
     if (!canUnlockRankTerminology) return null;
     return rankTerminologyUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -65195,7 +65198,7 @@ const PlatformConfigurationSettings = ({
         type: "button",
         onClick: saveRankTerminology,
         disabled: saving,
-        className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+        className: rankTerminologyButtonClass,
         children: "Save"
       }
     ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -65203,7 +65206,7 @@ const PlatformConfigurationSettings = ({
       {
         type: "button",
         onClick: unlockRankTerminology,
-        className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-900 hover:bg-gray-200",
+        className: rankTerminologyButtonClass,
         children: "Edit"
       }
     );
@@ -70697,7 +70700,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   type: "button",
                   onClick: addCrewPositionEntry,
                   disabled: !canEditRankTerminology,
-                  className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                  className: rankTerminologyButtonClass,
                   children: "Add Position"
                 }
               )
@@ -70762,7 +70765,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   type: "button",
                   onClick: () => removeCrewPositionEntry(entry.id),
                   disabled: !canEditRankTerminology,
-                  className: "w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40",
+                  className: rankTerminologyDangerButtonClass,
                   title: "Remove crew position",
                   children: "Delete"
                 }
@@ -70784,7 +70787,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   type: "button",
                   onClick: addStaffQualificationEntry,
                   disabled: !canEditRankTerminology,
-                  className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                  className: rankTerminologyButtonClass,
                   children: "Add Qualification"
                 }
               )
@@ -70859,7 +70862,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 type: "button",
                 onClick: () => removeStaffQualificationEntry(entry.id),
                 disabled: !canEditRankTerminology,
-                className: "w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40",
+                className: rankTerminologyDangerButtonClass,
                 title: "Remove qualification",
                 children: "Delete"
               }
@@ -70880,7 +70883,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   type: "button",
                   onClick: addUnitCallsignEntry,
                   disabled: !canEditRankTerminology || config.units.length === 0,
-                  className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                  className: rankTerminologyButtonClass,
                   children: "Add Callsign"
                 }
               )
@@ -70915,7 +70918,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   type: "button",
                   onClick: () => setDefaultUnitCallsignEntry(entry.id),
                   disabled: !canEditRankTerminology,
-                  className: `w-full rounded border px-3 py-2 text-xs font-bold ${entry.isDefault ? "border-green-400/50 bg-green-500/20 text-green-100" : "border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700"} disabled:cursor-not-allowed disabled:opacity-40`,
+                  className: `w-full rounded border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide ${entry.isDefault ? "border-green-400/50 bg-green-500/20 text-green-100" : "border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700"} disabled:cursor-not-allowed disabled:opacity-40`,
                   children: entry.isDefault ? "Default" : "Set Default"
                 }
               ) }),
@@ -70925,7 +70928,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   type: "button",
                   onClick: () => removeUnitCallsignEntry(entry.id),
                   disabled: !canEditRankTerminology,
-                  className: "w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40",
+                  className: rankTerminologyDangerButtonClass,
                   children: "Delete"
                 }
               ) })
