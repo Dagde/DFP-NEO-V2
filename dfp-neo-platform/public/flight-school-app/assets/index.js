@@ -63785,6 +63785,7 @@ const PlatformConfigurationSettings = ({
     await save(void 0, "platform-rank-terminology");
   };
   const rankTerminologyButtonClass = "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50";
+  const rankTerminologySectionActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
   const rankTerminologyDangerButtonClass = "w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40";
   const renderRankTerminologySectionAction = () => {
     if (!canUnlockRankTerminology) return null;
@@ -63794,7 +63795,7 @@ const PlatformConfigurationSettings = ({
         type: "button",
         onClick: saveRankTerminology,
         disabled: saving,
-        className: rankTerminologyButtonClass,
+        className: rankTerminologySectionActionButtonClass,
         children: "Save"
       }
     ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -63802,7 +63803,7 @@ const PlatformConfigurationSettings = ({
       {
         type: "button",
         onClick: unlockRankTerminology,
-        className: rankTerminologyButtonClass,
+        className: rankTerminologySectionActionButtonClass,
         children: "Edit"
       }
     );
