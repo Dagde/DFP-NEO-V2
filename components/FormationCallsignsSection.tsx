@@ -86,7 +86,7 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
     const filteredCallsigns = isEditing
         ? (selectedUnit === 'ALL' ? tempCallsigns : tempCallsigns.filter(c => c.unit === selectedUnit))
         : (selectedUnit === 'ALL' ? callsigns : callsigns.filter(c => c.unit === selectedUnit));
-    const sectionButtonClass = 'min-w-[56px] rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50';
+    const sectionButtonClass = 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50';
 
     return (
         <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[800px] h-fit" onKeyDownCapture={stopEditableKeyPropagation}>
