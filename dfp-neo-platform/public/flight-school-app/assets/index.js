@@ -59271,7 +59271,6 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
   ] });
 };
 const SettingsView = ({
-  hideHeader = false,
   onShowSuccess,
   eventLimits,
   onUpdateEventLimits,
@@ -70861,7 +70860,6 @@ const SettingsViewWithMenu = (props) => {
             SettingsView,
             {
               ...props,
-              hideHeader: true,
               activeSection: "scoring-matrix",
               scoringMatrixActiveTab: scoringMatrixTab,
               scoringMatrixReadOnly: !["Super Admin", "Admin"].includes(props.currentUserPermission)
@@ -70873,9 +70871,9 @@ const SettingsViewWithMenu = (props) => {
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-amber-200", children: "Scheduling Rules" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-amber-100/70", children: "Event limits, duty and turnaround rules, and dispatch constraints in one place." })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "event-limits" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "duty-turnaround" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "business-rules" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, activeSection: "event-limits" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, activeSection: "duty-turnaround" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, activeSection: "business-rules" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             PlatformConfigurationSettings,
             {
@@ -71005,7 +71003,7 @@ const SettingsViewWithMenu = (props) => {
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
-        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
+        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, activeSection }),
         activeSection === "user-list" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           UserListSection,
           {

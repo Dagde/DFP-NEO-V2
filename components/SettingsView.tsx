@@ -5,7 +5,6 @@ import { initDB, getAllFiles, addFile, getFile, deleteFile } from '../utils/db';
 import ScoringMatrixFlyout from './ScoringMatrixFlyout';
 import { EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CancellationRecord, CancellationCode } from '../types';
 import ACHistoryPage from './ACHistoryPage';
-import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { debouncedAuditLog } from '../utils/auditDebounce';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
@@ -30,7 +29,6 @@ declare var XLSX: any;
 const TEMPLATE_OVERRIDE_FOLDER_ID = 'template_overrides';
 
 interface SettingsViewProps {
-    hideHeader?: boolean;
     activeSection?: 'scoring-matrix' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'validation' | 'trainee-database' | 'user-list' | 'staff-database' | 'organisation' | 'appearance' | 'emergency';
     onShowSuccess: (message: string) => void;
     eventLimits: EventLimits;
@@ -515,7 +513,6 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
 
 // FIX: Export the component to make it available for import.
 export const SettingsView: React.FC<SettingsViewProps> = ({ 
-    hideHeader = false,
     onShowSuccess,
     eventLimits, onUpdateEventLimits,
     phraseBank, onUpdatePhraseBank,

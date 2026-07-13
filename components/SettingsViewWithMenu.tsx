@@ -983,7 +983,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             <div className="p-4">
                                 <SettingsView
                                     {...props}
-                                    hideHeader={true}
                                     activeSection="scoring-matrix"
                                     scoringMatrixActiveTab={scoringMatrixTab}
                                     scoringMatrixReadOnly={!['Super Admin', 'Admin'].includes(props.currentUserPermission)}
@@ -998,9 +997,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 <h3 className="text-lg font-bold text-amber-200">Scheduling Rules</h3>
                                 <p className="mt-1 text-sm text-amber-100/70">Event limits, duty and turnaround rules, and dispatch constraints in one place.</p>
                             </div>
-                            <SettingsView {...props} hideHeader={true} activeSection="event-limits" />
-                            <SettingsView {...props} hideHeader={true} activeSection="duty-turnaround" />
-                            <SettingsView {...props} hideHeader={true} activeSection="business-rules" />
+                            <SettingsView {...props} activeSection="event-limits" />
+                            <SettingsView {...props} activeSection="duty-turnaround" />
+                            <SettingsView {...props} activeSection="business-rules" />
                             <PlatformConfigurationSettings
                                 currentUserPermission={props.currentUserPermission}
                                 onShowSuccess={props.onShowSuccess}
@@ -1143,7 +1142,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      !isPlatformConfigurationActive &&
                      activeSection !== 'appearance' &&
                      activeSection !== 'people-profile' && (
-                        <SettingsView {...props} hideHeader={true} activeSection={activeSection as SettingsSection} />
+                        <SettingsView {...props} activeSection={activeSection as SettingsSection} />
                     )}
 
                     {/* Sections rendered directly (not via SettingsView) */}
