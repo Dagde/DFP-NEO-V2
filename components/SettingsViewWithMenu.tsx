@@ -423,7 +423,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'event-limits': 'Define operational thresholds',
   'duty-turnaround': 'Crew duty limits & rest times',
   'business-rules': 'System logic and automation',
-  'data-loaders': 'Import operational data files',
+  'data-loaders': 'Download and manage import templates',
   'user-list': 'View and manage user accounts',
   'staff-database': 'Staff records and details',
   'trainee-database': 'Trainee records and details',
@@ -579,7 +579,7 @@ const sectionGroups: {
   {
     label: 'Records & Data',
     shortLabel: 'Data',
-    description: 'Operational runbook, evidence, cancellation code governance, imports and enduring historical records.',
+    description: 'Operational runbook, evidence, cancellation code governance, templates and enduring historical records.',
     accent: 'emerald',
     defaultSection: 'platform-operational-runbook',
     sections: ['platform-operational-runbook', 'validation', 'data-loaders'],

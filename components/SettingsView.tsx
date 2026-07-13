@@ -691,7 +691,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         await addFile(file, TEMPLATE_OVERRIDE_FOLDER_ID, `${pendingTemplateOverride.key}::${file.name}`);
         await refreshFiles();
         logAudit({
-            page: 'Settings - Data Loaders',
+            page: 'Settings - Data Import',
             action: 'update',
             description: `Changed ${pendingTemplateOverride.label} download template`,
             changes: `Template file: ${file.name}`,
@@ -708,7 +708,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         await Promise.all(existingOverrides.map(existingFile => deleteFile(existingFile.id)));
         await refreshFiles();
         logAudit({
-            page: 'Settings - Data Loaders',
+            page: 'Settings - Data Import',
             action: 'update',
             description: `Reset ${template.label} download template`,
             changes: 'Restored built-in template download.',
@@ -1309,17 +1309,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                    )}
-                    {/* Data Loaders Window */}
+                    {/* Data Import Window */}
                    {shouldShowSection('data-loaders') && (
                     <div className="w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
                         <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                            <h2 className="text-lg font-semibold text-gray-200">Data Loaders</h2>
+                            <h2 className="text-lg font-semibold text-gray-200">Data Import</h2>
                         </div>
                         <div className="p-4 space-y-4">
                             <fieldset className="overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3">
-                                <legend className="px-2 text-sm font-semibold text-gray-300">Templates</legend>
+                                <legend className="px-2 text-sm font-semibold text-gray-300">Download Templates</legend>
                                 <div className="mt-2 space-y-2">
-                                    <p className="text-xs text-gray-400">Download templates to ensure correct formatting for bulk uploads.</p>
+                                    <p className="text-xs text-gray-400">Download templates for bulk uploads in the relevant Staff, Trainee, Syllabus and Organisation pages.</p>
                                     <input
                                         ref={templateOverrideInputRef}
                                         type="file"
