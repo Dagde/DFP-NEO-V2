@@ -1272,7 +1272,7 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
       return 'Open the Resource Pools section, enter non-zero counts for the live resources such as aircraft, simulator, procedural trainer, STBY or Ground, then save.';
     }
     if (lowerTitle.includes('live dfp')) {
-      return 'Open Resource Pools and enable Apply to V2 runtime on the pool that should drive the active DFP resource rows.';
+      return 'Open Resource Pools and enable Apply to Live DFP on the pool that should drive the active DFP resource rows.';
     }
     return 'Open Resource Pools and correct the pool location, unit, aircraft type and resource counts so they match active platform records.';
   }
@@ -1420,7 +1420,7 @@ const buildConfigurationHealth = (
       || (!toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode)
     ));
     if (matchingPools.length === 0) {
-      add('WARNING', 'Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource counts may fall back to legacy defaults until a matching pool is configured.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
+      add('WARNING', 'Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource counts may use the current app defaults until a matching pool is configured.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
     }
 
     const operationalModel = getUnitOperationalModel(unit);
@@ -1471,16 +1471,16 @@ const buildConfigurationHealth = (
       const totalResources = ['aircraft', 'ftd', 'cpt', 'standby', 'ground']
         .reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
       if (totalResources <= 0) {
-        add('CRITICAL', 'Resource Pools', `${poolName} has no usable resources`, 'This pool is wired into the V2 runtime, but all resource counts are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+        add('CRITICAL', 'Resource Pools', `${poolName} has no usable resources`, 'This pool is applied to the live DFP, but all resource counts are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
       }
     }
   });
 
   const runtimePools = activeResourcePools.filter((pool) => pool.settings?.applyToV2Runtime === true);
   if (runtimePools.length === 0) {
-    add('WARNING', 'Resource Pools', 'No pool is wired to the live DFP', 'At least one resource pool should have "Apply to V2 runtime" enabled so the DFP uses platform configuration rather than legacy defaults.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-resource-pools' });
+    add('WARNING', 'Resource Pools', 'No pool is applied to the live DFP', 'At least one resource pool should have "Apply to Live DFP" enabled so the DFP uses platform configuration rather than current app defaults.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-resource-pools' });
   } else if (!items.some((item) => item.area === 'Resource Pools' && item.severity === 'CRITICAL')) {
-    add('OK', 'Resource Pools', 'Runtime resource pools are configured', `${runtimePools.length} active resource pool${runtimePools.length === 1 ? '' : 's'} feed the live DFP runtime.`, 'runtime-pool-active');
+    add('OK', 'Resource Pools', 'Live DFP resource pools are configured', `${runtimePools.length} active resource pool${runtimePools.length === 1 ? '' : 's'} feed the live DFP.`, 'runtime-pool-active');
   }
 
   const missingAlternateClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.alternateCompositions);
@@ -5020,7 +5020,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div>
                 <h3 className="text-lg font-bold text-cyan-100">Platform Configuration</h3>
                 <p className="mt-1 text-sm text-cyan-100/70">
-                  Commercial operating model. Resource pools can now be wired into V2 runtime by exception, while existing V2 behaviour remains the default.
+                  Commercial operating model. Resource pools can be applied to the live DFP when ready, while existing operating behaviour remains stable.
                 </p>
               </div>
             </div>
@@ -6937,10 +6937,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className={resourceSectionPanelHeaderClass}>
                         <div>
                           <div className={resourceSectionPanelTitleClass}>Live DFP Rows</div>
-                          <div className={resourceSectionPanelHintClass}>Turn runtime on when these row counts should drive the active DFP.</div>
+                          <div className={resourceSectionPanelHintClass}>Turn this on when these row counts should drive the active DFP.</div>
                         </div>
                         <ToggleField
-                          label="Apply to V2 runtime"
+                          label="Apply to Live DFP"
                           info="Turn this on when you want the DFP to use this pool's aircraft, simulator, trainer, standby and ground row numbers. Leave it off if you are only setting up the pool and do not want it to affect the live schedule yet."
                           checked={runtimeEnabled}
                           disabled={!canEditResourcePools}
@@ -7562,7 +7562,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="min-w-[220px] flex-1">
                 <FieldLabel
                   label="Active Unit Training Report"
-                  info="Training Report settings are saved against this unit. If the unit has no custom settings yet, it uses the organisation default as a fallback."
+                  info="Training Report settings are saved against this unit. If the unit has no custom settings yet, it uses the organisation template."
                 />
                 <div className="rounded border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-sm font-bold text-cyan-50">
                   {activeTrainingReportUnitLabel}
