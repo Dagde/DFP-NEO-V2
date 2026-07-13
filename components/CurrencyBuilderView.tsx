@@ -299,8 +299,8 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
                         <div className="space-y-6">
                             <div className={isEditUnlocked ? '' : 'pointer-events-none'}>
                                 {selectedCurrency.type === 'primitive'
-                                    ? <PrimitiveEditor currency={selectedCurrency as CurrencyRequirement} onUpdate={handleUpdateCurrency} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} />
-                                    : <CompositeEditor currency={selectedCurrency as MasterCurrency} onUpdate={handleUpdateCurrency} allCurrencies={allCurrencies} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} />
+                                    ? <PrimitiveEditor currency={selectedCurrency as CurrencyRequirement} onUpdate={handleUpdateCurrency} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} operationalModel={operationalModel} />
+                                    : <CompositeEditor currency={selectedCurrency as MasterCurrency} onUpdate={handleUpdateCurrency} allCurrencies={allCurrencies} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} operationalModel={operationalModel} />
                                 }
                             </div>
 
@@ -331,7 +331,8 @@ const PrimitiveEditor: React.FC<{
     onUpdate: (c: CurrencyRequirement) => void;
     aircraftCrewComposition?: AircraftCrewComposition;
     crewPositionTerminology?: CrewPositionTerminology;
-}> = ({ currency, onUpdate, aircraftCrewComposition, crewPositionTerminology }) => {
+    operationalModel?: string;
+}> = ({ currency, onUpdate, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
     const handleChange = (field: keyof CurrencyRequirement, value: any) => {
         onUpdate({ ...currency, [field]: value });
     };
@@ -427,7 +428,8 @@ const CompositeEditor: React.FC<{
     allCurrencies: CurrencyDefinition[];
     aircraftCrewComposition?: AircraftCrewComposition;
     crewPositionTerminology?: CrewPositionTerminology;
-}> = ({ currency, onUpdate, allCurrencies, aircraftCrewComposition, crewPositionTerminology }) => {
+    operationalModel?: string;
+}> = ({ currency, onUpdate, allCurrencies, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
     const handleChange = (field: keyof MasterCurrency, value: any) => {
         onUpdate({ ...currency, [field]: value });
     };
