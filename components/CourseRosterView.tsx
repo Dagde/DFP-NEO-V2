@@ -10,6 +10,7 @@ import FlightInfoFlyout from './FlightInfoFlyout';
 import AuditButton from './AuditButton';
 import DeleteTraineeConfirmation from './DeleteTraineeConfirmation';
 import CourseEditFlyout from './CourseEditFlyout';
+import TraineeBulkUploadFlyout from './TraineeBulkUploadFlyout';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import type { TrainingReportTemplate, TrainingReportTerminology } from '../utils/trainingReportTerminology';
@@ -28,6 +29,9 @@ interface CourseRosterViewProps {
     onRestoreCourse: (courseNumber: string) => void;
     onUpdateTrainee: (data: Trainee) => void;
     onAddTrainee: (data: Trainee) => void;
+    onBulkUpdateTrainees?: (trainees: Trainee[]) => void;
+    onReplaceTrainees?: (trainees: Trainee[]) => void;
+    onUpdateTraineeLMPs?: (updater: (prevLMPs: Map<string, SyllabusItemDetail[]>) => Map<string, SyllabusItemDetail[]>) => void;
     school: 'ESL' | 'PEA';
     scores: Map<string, Score[]>;
     syllabusDetails: SyllabusItemDetail[];
@@ -118,6 +122,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onRestoreCourse,
     onUpdateTrainee,
     onAddTrainee,
+    onBulkUpdateTrainees,
+    onReplaceTrainees,
+    onUpdateTraineeLMPs,
     school,
     scores,
     syllabusDetails,
@@ -185,6 +192,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 
     // Course Edit state
     const [courseToEdit, setCourseToEdit] = useState<string | null>(null);
+    const [showBulkUpload, setShowBulkUpload] = useState(false);
 
     useEffect(() => {
         if (selectedPersonForProfile) {
@@ -364,6 +372,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                             className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
                         >
                             Add Trainee
+                        </button>
+                        <button
+                            onClick={() => setShowBulkUpload(true)}
+                            disabled={!onBulkUpdateTrainees || !onReplaceTrainees}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Upload
                         </button>
                         <button
                             onClick={() => setShowDeleteConfirmation(true)}
@@ -599,6 +614,17 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                         setCourseToEdit(null);
                     }}
                     courseColors={courseColors}
+                />
+            )}
+            {showBulkUpload && onBulkUpdateTrainees && onReplaceTrainees && (
+                <TraineeBulkUploadFlyout
+                    onClose={() => setShowBulkUpload(false)}
+                    traineesData={traineesData}
+                    syllabusDetails={syllabusDetails}
+                    courseColors={courseColors}
+                    onBulkUpdateTrainees={onBulkUpdateTrainees}
+                    onReplaceTrainees={onReplaceTrainees}
+                    onUpdateTraineeLMPs={onUpdateTraineeLMPs}
                 />
             )}
         </>

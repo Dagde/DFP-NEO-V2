@@ -40295,6 +40295,9 @@ appliedUpdates.forEach(update => {
                             onRestoreCourse={() => {}}
                             onUpdateTrainee={handleUpdateTrainee}
                             onAddTrainee={handleAddTrainee}
+                            onBulkUpdateTrainees={handleBulkUpdateTrainees}
+                            onReplaceTrainees={handleReplaceTrainees}
+                            onUpdateTraineeLMPs={setTraineeLMPs}
                             school={school}
                             scores={scores}
                             syllabusDetails={syllabusDetails}
@@ -40458,6 +40461,9 @@ appliedUpdates.forEach(update => {
                             onRestoreCourse={() => {}}
                             onUpdateTrainee={handleUpdateTrainee}
                             onAddTrainee={handleAddTrainee}
+                            onBulkUpdateTrainees={handleBulkUpdateTrainees}
+                            onReplaceTrainees={handleReplaceTrainees}
+                            onUpdateTraineeLMPs={setTraineeLMPs}
                             school={school}
                             scores={scores}
                             syllabusDetails={syllabusDetails}

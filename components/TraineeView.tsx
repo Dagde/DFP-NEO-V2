@@ -21,6 +21,9 @@ interface TraineeViewProps {
   onRestoreCourse: () => void;
   onUpdateTrainee: (data: any) => void;
   onAddTrainee: (data: any) => void;
+  onBulkUpdateTrainees?: (trainees: any[]) => void;
+  onReplaceTrainees?: (trainees: any[]) => void;
+  onUpdateTraineeLMPs?: (updater: (prevLMPs: Map<string, any[]>) => Map<string, any[]>) => void;
   school: string;
   scores: Map<string, any[]>;
   syllabusDetails: any[];
@@ -142,6 +145,9 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onRestoreCourse={props.onRestoreCourse}
             onUpdateTrainee={props.onUpdateTrainee}
             onAddTrainee={props.onAddTrainee}
+            onBulkUpdateTrainees={props.onBulkUpdateTrainees}
+            onReplaceTrainees={props.onReplaceTrainees}
+            onUpdateTraineeLMPs={props.onUpdateTraineeLMPs}
             school={props.school}
             scores={props.scores}
             syllabusDetails={props.syllabusDetails}

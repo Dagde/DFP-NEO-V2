@@ -2246,27 +2246,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                     })}
                                 </div>
                             </fieldset>
-                            <fieldset className="overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3">
-                                <legend className="px-2 text-sm font-semibold text-gray-300">Upload Data</legend>
-                                <div className="mt-2 space-y-3">
-                                    <p className="text-xs text-gray-400">Upload directly from this computer. Files are processed immediately after confirmation and are not stored in a staging repository.</p>
-                                    <DirectDataUploadCard
-                                        id="instructor_loads"
-                                        title="Staff Data"
-                                        description="Create or update staff records from the staff bulk upload template."
-                                    />
-                                    <DirectDataUploadCard
-                                        id="trainee_loads"
-                                        title="Trainee Data"
-                                        description="Create or update trainee records, then choose the course to apply the upload to."
-                                    />
-                                    <DirectDataUploadCard
-                                        id="lmp_loads"
-                                        title="LMP Data"
-                                        description="Create or update master LMP event data from the LMP template."
-                                    />
-                                </div>
-                            </fieldset>
                         </div>
                     </div>
 
@@ -2429,8 +2408,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    )}
                </div>
                {showScoringMatrix && <ScoringMatrixFlyout onClose={() => setShowScoringMatrix(false)} phraseBank={phraseBank} onUpdatePhraseBank={handleUpdatePhraseBank} initialTab={scoringMatrixTab} />}
-            {showUpdateConfirmation && fileToProcess && <UpdateConfirmationFlyout fileName={fileToProcess.name} onConfirm={handleUpdateConfirm} onClose={() => setShowUpdateConfirmation(false)} />}
-            {showCourseSelection && <CourseSelectionFlyout courses={coursesFromFile.length > 0 ? coursesFromFile : activeCourses} onConfirm={handleCourseSelection} onClose={() => setShowCourseSelection(false)} updateType={selectedUpdateType} />}
             {showNewRecordConfirm && unmatchedRowData && <NewRecordConfirmationFlyout rowData={unmatchedRowData} onConfirm={handleConfirmNewRecord} onCancel={handleRejectNewRecord} />}
             {showUpdateError && <UpdateErrorFlyout message={updateErrorMessage} onClose={() => setShowUpdateError(false)} />}
             {showUpdateSummary && <UpdateSummaryFlyout summary={updateSummary} onClose={() => setShowUpdateSummary(false)} />}

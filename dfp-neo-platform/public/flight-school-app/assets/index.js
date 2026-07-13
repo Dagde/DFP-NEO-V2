@@ -24319,6 +24319,504 @@ const CourseEditFlyout = ({
     ) })
   ] });
 };
+const UpdateConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
+  const [pin, setPin] = reactExports.useState("");
+  const [updateType, setUpdateType] = reactExports.useState("minor");
+  const [error, setError] = reactExports.useState("");
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (pin.length < 4) {
+      setError("PIN must be 4 digits.");
+      return;
+    }
+    onConfirm(pin, updateType);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Confirm Update" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400", children: [
+        "Enter your PIN to apply updates from ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-gray-200", children: fileName }),
+        "."
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "pin-input", className: "block text-sm font-medium text-gray-400", children: "PIN" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            id: "pin-input",
+            type: "password",
+            value: pin,
+            onChange: (e) => {
+              setPin(e.target.value.replace(/\D/g, ""));
+              setError("");
+            },
+            maxLength: 4,
+            autoFocus: true,
+            className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white text-center text-2xl tracking-[.5em] focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+          }
+        ),
+        error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 text-sm text-center mt-1", children: error })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "text-sm font-medium text-gray-400 mb-2", children: "Select Update Type" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start space-x-3 p-3 rounded-md bg-gray-700/50 hover:bg-gray-700 cursor-pointer", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "radio",
+                name: "update-type",
+                value: "minor",
+                checked: updateType === "minor",
+                onChange: () => setUpdateType("minor"),
+                className: "h-5 w-5 mt-0.5 accent-sky-500 bg-gray-600 border-gray-500 flex-shrink-0"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "Minor Update" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Update existing records and add new ones. You will be prompted to confirm new entries." })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start space-x-3 p-3 rounded-md bg-gray-700/50 hover:bg-gray-700 cursor-pointer", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "radio",
+                name: "update-type",
+                value: "bulk",
+                checked: updateType === "bulk",
+                onChange: () => setUpdateType("bulk"),
+                className: "h-5 w-5 mt-0.5 accent-sky-500 bg-gray-600 border-gray-500 flex-shrink-0"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "Bulk Update" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Warning: This will delete all existing data and replace it with the contents of the file." })
+            ] })
+          ] })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Confirm Update" })
+    ] })
+  ] }) });
+};
+const CourseSelectionFlyout = ({
+  courses,
+  onConfirm,
+  onClose,
+  updateType
+}) => {
+  const [selectedCourse, setSelectedCourse] = reactExports.useState("");
+  const [error, setError] = reactExports.useState("");
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!selectedCourse) {
+      setError("Please select a course.");
+      return;
+    }
+    onConfirm(selectedCourse);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Select Course" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: updateType === "minor" ? "Select the course to update. Existing trainees will be updated and new trainees will be added." : "Select the course to update. WARNING: All existing trainees in this course will be replaced with the uploaded data." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "course-select", className: "block text-sm font-medium text-gray-400 mb-2", children: "Course" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "select",
+          {
+            id: "course-select",
+            value: selectedCourse,
+            onChange: (e) => {
+              setSelectedCourse(e.target.value);
+              setError("");
+            },
+            autoFocus: true,
+            className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "-- Select a Course --" }),
+              courses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course, children: course }, course))
+            ]
+          }
+        ),
+        error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 text-sm mt-1", children: error })
+      ] }),
+      updateType === "bulk" && selectedCourse && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-red-900/20 border border-red-700 rounded-md p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-red-400 mt-0.5 flex-shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 font-medium text-sm", children: "Warning" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-red-300 text-xs mt-1", children: [
+            "This will permanently delete all trainees currently in ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: selectedCourse }),
+            " and replace them with the uploaded data."
+          ] })
+        ] })
+      ] }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: onClose,
+          className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold",
+          children: "Cancel"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "submit",
+          className: `px-4 py-2 rounded-md transition-colors text-sm font-semibold ${updateType === "bulk" ? "bg-red-600 hover:bg-red-700 text-white" : "bg-sky-600 hover:bg-sky-700 text-white"}`,
+          children: updateType === "bulk" ? "Replace Course Data" : "Update Course"
+        }
+      )
+    ] })
+  ] }) });
+};
+const UpdateSummaryFlyout = ({ summary, onClose }) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20 flex items-center space-x-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-sky-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-sky-400", children: "Update Complete" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300", children: [
+        "The ",
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
+          summary.type,
+          " Update"
+        ] }),
+        " process has finished."
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-3 rounded-md grid grid-cols-2 gap-2 text-sm", children: [
+        summary.type === "Bulk" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Records Replaced:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-white float-right", children: summary.replaced })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Records Updated:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-white float-right", children: summary.updated })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "New Records Added:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-green-400 float-right", children: summary.added })
+          ] }),
+          summary.unaltered !== void 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Records Unaltered:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-blue-400 float-right", children: summary.unaltered })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Rows Skipped:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-amber-400 float-right", children: summary.skipped })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "OK" }) })
+  ] }) });
+};
+const getValueFromRow$1 = (row, possibleKeys) => {
+  for (const key of possibleKeys) {
+    if (row[key] !== void 0) return row[key];
+  }
+  const rowKeys = Object.keys(row);
+  for (const key of possibleKeys) {
+    const normalisedKey = key.toLowerCase().replace(/[\s/]/g, "");
+    for (const rowKey of rowKeys) {
+      if (rowKey.toLowerCase().replace(/[\s/]/g, "") === normalisedKey) {
+        return row[rowKey];
+      }
+    }
+  }
+  return void 0;
+};
+const getStr = (row, keys) => {
+  const val = getValueFromRow$1(row, keys);
+  return val !== void 0 && val !== null ? String(val).trim() : void 0;
+};
+const getNum = (row, keys) => {
+  const val = getValueFromRow$1(row, keys);
+  if (val === void 0 || val === null || String(val).trim() === "") return void 0;
+  const num = parseFloat(String(val).replace(/[A-Za-z]/g, "").trim());
+  return Number.isFinite(num) ? num : void 0;
+};
+const parseBoolean = (value) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value.trim().toLowerCase() === "true";
+  return Boolean(value);
+};
+const parseTraineeRow = (row) => {
+  const idValue = getNum(row, ["PMKeys/ID", "idNumber"]);
+  if (idValue === void 0) return null;
+  const parsed = { idNumber: idValue };
+  const nameField = getStr(row, [
+    "Name\n [Surname, Firstname]",
+    "Name [Surname, Firstname]",
+    "Name",
+    "Full Name",
+    "FullName"
+  ]);
+  if (nameField) {
+    parsed.name = nameField;
+  } else {
+    const surname = getStr(row, ["Surname", "Last Name"]);
+    const firstname = getStr(row, ["First Name", "Firstname", "Given Name"]);
+    if (surname && firstname) parsed.name = `${surname}, ${firstname}`;
+  }
+  const coursePrefix = getStr(row, ["Course Prefix", "coursePrefix"]);
+  const courseNumber = getStr(row, ["Course Number", "courseNumber"]);
+  if (coursePrefix && courseNumber) {
+    parsed.course = `${coursePrefix}${courseNumber}`;
+  } else {
+    const course = getStr(row, ["Course"]);
+    if (course) parsed.course = course;
+  }
+  const lmpType = getStr(row, ["LMP", "lmpType"]);
+  if (lmpType) parsed.lmpType = lmpType;
+  const rank = getStr(row, ["Rank"]);
+  if (rank) parsed.rank = rank;
+  const callsign = getStr(row, ["Callsign", "callsign"]);
+  if (callsign) parsed.callsignNumber = parseInt(callsign, 10) || void 0;
+  const serviceRaw = getStr(row, ["Service"]);
+  if (serviceRaw) {
+    const svc = serviceRaw.trim().toLowerCase();
+    if (["raaf", "air force", "airforce", "royal australian air force"].includes(svc)) parsed.service = "RAAF";
+    else if (["ran", "navy", "royal australian navy"].includes(svc)) parsed.service = "RAN";
+    else if (["ara", "army", "australian army"].includes(svc)) parsed.service = "ARA";
+    else parsed.service = serviceRaw;
+  }
+  const unit = getStr(row, ["Unit"]);
+  if (unit) parsed.unit = unit;
+  const flight = getStr(row, ["Flight", "flight"]);
+  if (flight) parsed.flight = flight;
+  const location = getStr(row, ["Location"]);
+  if (location) parsed.location = location;
+  const seatConfigRaw = getStr(row, ["Seat Config", "seatConfig", "Seat config"]);
+  if (seatConfigRaw) {
+    const sc = seatConfigRaw.trim().toLowerCase();
+    if (["normal", "norm"].includes(sc)) parsed.seatConfig = "Normal";
+    else if (["fwd/short", "forward/short", "fwd", "front"].includes(sc)) parsed.seatConfig = "FWD/SHORT";
+    else if (["rear/short", "rear"].includes(sc)) parsed.seatConfig = "REAR/SHORT";
+    else if (["fwd/long", "forward/long", "long"].includes(sc)) parsed.seatConfig = "FWD/LONG";
+    else parsed.seatConfig = seatConfigRaw;
+  }
+  const phone = getStr(row, ["Phone Number", "phoneNumber"]);
+  if (phone) parsed.phoneNumber = phone;
+  const email = getStr(row, ["Email"]);
+  if (email) parsed.email = email;
+  const primary = getStr(row, ["Primary Instructor", "primaryInstructor"]);
+  if (primary) parsed.primaryInstructor = primary.split(",").map((s) => s.trim()).filter(Boolean);
+  const secondary = getStr(row, ["Secondary Instructor", "secondaryInstructor"]);
+  if (secondary) parsed.secondaryInstructor = secondary.split(",").map((s) => s.trim()).filter(Boolean);
+  const permissions = getStr(row, ["Permissions", "permissions"]);
+  if (permissions) parsed.permissions = permissions.split(/\r?\n/).map((p) => p.trim()).filter(Boolean);
+  const isPaused = getValueFromRow$1(row, ["Is Paused", "isPaused"]);
+  if (isPaused !== void 0) parsed.isPaused = parseBoolean(isPaused);
+  if (!parsed.isPaused) parsed.isPaused = false;
+  if (!parsed.unit) parsed.unit = "";
+  if (!parsed.rank) parsed.rank = "FLGOFF";
+  if (!parsed.seatConfig) parsed.seatConfig = "Normal";
+  if (!parsed.unavailability) parsed.unavailability = [];
+  if (parsed.name && parsed.course) parsed.fullName = `${parsed.name} – ${parsed.course}`;
+  else if (parsed.name) parsed.fullName = parsed.name;
+  return parsed;
+};
+const readWorkbookRows = async (file) => {
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data, { type: "buffer" });
+  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(worksheet);
+};
+const TraineeBulkUploadFlyout = ({
+  onClose,
+  traineesData,
+  syllabusDetails,
+  courseColors,
+  onBulkUpdateTrainees,
+  onReplaceTrainees,
+  onUpdateTraineeLMPs
+}) => {
+  const inputRef = reactExports.useRef(null);
+  const [file, setFile] = reactExports.useState(null);
+  const [isDragActive, setIsDragActive] = reactExports.useState(false);
+  const [status, setStatus] = reactExports.useState("");
+  const [showConfirm, setShowConfirm] = reactExports.useState(false);
+  const [showCourseSelection, setShowCourseSelection] = reactExports.useState(false);
+  const [updateType, setUpdateType] = reactExports.useState("minor");
+  const [rows, setRows] = reactExports.useState([]);
+  const [coursesFromFile, setCoursesFromFile] = reactExports.useState([]);
+  const [summary, setSummary] = reactExports.useState(null);
+  const activeCourses = reactExports.useMemo(() => Object.keys(courseColors).sort((a, b) => a.localeCompare(b)), [courseColors]);
+  const handleFile = (selectedFile) => {
+    if (!selectedFile) return;
+    if (!/\.(xlsx|xls|csv)$/i.test(selectedFile.name)) {
+      setStatus("Please select an .xlsx, .xls or .csv file.");
+      setFile(null);
+      return;
+    }
+    setFile(selectedFile);
+    setStatus("");
+  };
+  const extractCourses = (jsonRows) => {
+    const courses = /* @__PURE__ */ new Set();
+    jsonRows.forEach((row) => {
+      const coursePrefix = getStr(row, ["Course Prefix", "coursePrefix"]);
+      const courseNumber = getStr(row, ["Course Number", "courseNumber"]);
+      if (coursePrefix && courseNumber) courses.add(`${coursePrefix}${courseNumber}`);
+      else {
+        const course = getStr(row, ["Course"]);
+        if (course) courses.add(course);
+      }
+    });
+    return Array.from(courses);
+  };
+  const handleConfirm = async (pin, selectedUpdateType) => {
+    if (pin !== "1111") {
+      setStatus("Incorrect PIN.");
+      return;
+    }
+    if (!file) return;
+    try {
+      const jsonRows = await readWorkbookRows(file);
+      setRows(jsonRows);
+      setCoursesFromFile(extractCourses(jsonRows));
+      setUpdateType(selectedUpdateType);
+      setShowConfirm(false);
+      setShowCourseSelection(true);
+    } catch (error) {
+      setStatus(`Error reading file: ${error.message}`);
+    }
+  };
+  const initialiseLmpForNewTrainees = (newTrainees) => {
+    if (!onUpdateTraineeLMPs || newTrainees.length === 0) return;
+    onUpdateTraineeLMPs((prevLMPs) => {
+      const nextLMPs = new Map(prevLMPs);
+      newTrainees.forEach((trainee) => {
+        if (!trainee.fullName || !trainee.lmpType || nextLMPs.has(trainee.fullName)) return;
+        const masterLMP = syllabusDetails.filter((item) => item.courses?.includes(trainee.lmpType));
+        if (masterLMP.length > 0) nextLMPs.set(trainee.fullName, [...masterLMP]);
+      });
+      return nextLMPs;
+    });
+  };
+  const processRows = (course) => {
+    const parsedRows = rows.map(parseTraineeRow);
+    const validRows = parsedRows.filter((trainee) => Boolean(trainee && trainee.idNumber && trainee.name));
+    const skipped = rows.length - validRows.length;
+    const newTrainees = validRows.map((trainee) => ({ ...trainee, course, fullName: `${trainee.name} – ${course}` }));
+    if (updateType === "bulk") {
+      const otherCourseTrainees = traineesData.filter((trainee) => trainee.course !== course);
+      onReplaceTrainees([...otherCourseTrainees, ...newTrainees]);
+      initialiseLmpForNewTrainees(newTrainees.filter((trainee) => !traineesData.some((existing) => existing.idNumber === trainee.idNumber)));
+      setSummary({ type: "Bulk", replaced: newTrainees.length, added: 0, updated: 0, skipped });
+    } else {
+      const existingIds = new Set(traineesData.map((trainee) => trainee.idNumber));
+      const added = newTrainees.filter((trainee) => !existingIds.has(trainee.idNumber));
+      const updated = newTrainees.filter((trainee) => existingIds.has(trainee.idNumber));
+      onBulkUpdateTrainees(newTrainees);
+      initialiseLmpForNewTrainees(added);
+      setSummary({ type: "Minor", replaced: 0, added: added.length, updated: updated.length, skipped });
+    }
+    logAudit({
+      page: "Trainee Roster",
+      action: "update",
+      description: `${updateType === "bulk" ? "Bulk" : "Minor"} trainee upload for ${course}`,
+      changes: `Processed ${newTrainees.length} trainees from ${file?.name || "local file"}`
+    });
+    setShowCourseSelection(false);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[70] flex items-center justify-center bg-black/60 animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-lg rounded-lg border border-gray-700 bg-gray-800 shadow-xl", onClick: (event) => event.stopPropagation(), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700 bg-gray-900/50 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Upload Trainee Data" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: "x" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Upload the trainee template from this computer. The file is processed directly and is not stored in Data Import." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            ref: inputRef,
+            type: "file",
+            accept: ".xlsx,.xls,.csv",
+            className: "hidden",
+            onChange: (event) => handleFile(event.target.files?.[0])
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            onDragEnter: (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setIsDragActive(true);
+            },
+            onDragOver: (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              event.dataTransfer.dropEffect = "copy";
+              setIsDragActive(true);
+            },
+            onDragLeave: (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setIsDragActive(false);
+            },
+            onDrop: (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setIsDragActive(false);
+              handleFile(event.dataTransfer.files?.[0]);
+            },
+            className: `rounded-lg border border-dashed p-5 text-center transition-colors ${isDragActive ? "border-sky-300 bg-sky-500/15" : file ? "border-emerald-400/70 bg-emerald-500/10" : "border-gray-500 bg-gray-900/40"}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-white", children: file ? file.name : "Drag and drop a trainee spreadsheet here" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Accepted formats: .xlsx, .xls, .csv" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => inputRef.current?.click(), className: "mt-4 rounded-md bg-gray-100 px-4 py-2 font-semibold text-gray-900 hover:bg-white", children: "Select File" })
+            ]
+          }
+        ),
+        status && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-amber-300", children: status })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-3 border-t border-gray-700 bg-gray-800/50 px-6 py-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "rounded-md bg-gray-600 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700", children: "Cancel" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowConfirm(true), disabled: !file, className: "rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-gray-500", children: "Upload" })
+      ] })
+    ] }) }),
+    showConfirm && file && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      UpdateConfirmationFlyout,
+      {
+        fileName: file.name,
+        onConfirm: handleConfirm,
+        onClose: () => setShowConfirm(false)
+      }
+    ),
+    showCourseSelection && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CourseSelectionFlyout,
+      {
+        courses: coursesFromFile.length > 0 ? coursesFromFile : activeCourses,
+        updateType,
+        onConfirm: processRows,
+        onClose: () => setShowCourseSelection(false)
+      }
+    ),
+    summary && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      UpdateSummaryFlyout,
+      {
+        summary,
+        onClose: () => {
+          setSummary(null);
+          onClose();
+        }
+      }
+    )
+  ] });
+};
 const generateNewTraineeTemplate = () => ({
   idNumber: Math.floor(Math.random() * (9999999 - 1e6 + 1)) + 1e6,
   fullName: "",
@@ -24356,6 +24854,9 @@ const CourseRosterView = ({
   onRestoreCourse,
   onUpdateTrainee,
   onAddTrainee,
+  onBulkUpdateTrainees,
+  onReplaceTrainees,
+  onUpdateTraineeLMPs,
   school,
   scores,
   syllabusDetails,
@@ -24419,6 +24920,7 @@ const CourseRosterView = ({
   const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = reactExports.useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = reactExports.useState(false);
   const [courseToEdit, setCourseToEdit] = reactExports.useState(null);
+  const [showBulkUpload, setShowBulkUpload] = reactExports.useState(false);
   reactExports.useEffect(() => {
     if (selectedPersonForProfile) {
       if (!canViewTraineeProfile(selectedPersonForProfile)) {
@@ -24541,6 +25043,15 @@ const CourseRosterView = ({
               onClick: handleAddTraineeClick,
               className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500",
               children: "Add Trainee"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => setShowBulkUpload(true),
+              disabled: !onBulkUpdateTrainees || !onReplaceTrainees,
+              className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed",
+              children: "Upload"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24769,6 +25280,18 @@ const CourseRosterView = ({
           setCourseToEdit(null);
         },
         courseColors
+      }
+    ),
+    showBulkUpload && onBulkUpdateTrainees && onReplaceTrainees && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      TraineeBulkUploadFlyout,
+      {
+        onClose: () => setShowBulkUpload(false),
+        traineesData,
+        syllabusDetails,
+        courseColors,
+        onBulkUpdateTrainees,
+        onReplaceTrainees,
+        onUpdateTraineeLMPs
       }
     )
   ] });
@@ -51625,6 +52148,9 @@ const TraineeView = (props) => {
           onRestoreCourse: props.onRestoreCourse,
           onUpdateTrainee: props.onUpdateTrainee,
           onAddTrainee: props.onAddTrainee,
+          onBulkUpdateTrainees: props.onBulkUpdateTrainees,
+          onReplaceTrainees: props.onReplaceTrainees,
+          onUpdateTraineeLMPs: props.onUpdateTraineeLMPs,
           school: props.school,
           scores: props.scores,
           syllabusDetails: props.syllabusDetails,
@@ -57002,91 +57528,6 @@ const AuthorisationFlyout = ({
     showClearConfirmation && /* @__PURE__ */ jsxRuntimeExports.jsx(ClearAuthConfirmation, { onConfirm: handleProceedToPinForClear, onCancel: () => setShowClearConfirmation(false) })
   ] });
 };
-const UpdateConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
-  const [pin, setPin] = reactExports.useState("");
-  const [updateType, setUpdateType] = reactExports.useState("minor");
-  const [error, setError] = reactExports.useState("");
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (pin.length < 4) {
-      setError("PIN must be 4 digits.");
-      return;
-    }
-    onConfirm(pin, updateType);
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Confirm Update" }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400", children: [
-        "Enter your PIN to apply updates from ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-gray-200", children: fileName }),
-        "."
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "pin-input", className: "block text-sm font-medium text-gray-400", children: "PIN" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            id: "pin-input",
-            type: "password",
-            value: pin,
-            onChange: (e) => {
-              setPin(e.target.value.replace(/\D/g, ""));
-              setError("");
-            },
-            maxLength: 4,
-            autoFocus: true,
-            className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white text-center text-2xl tracking-[.5em] focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
-          }
-        ),
-        error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 text-sm text-center mt-1", children: error })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "text-sm font-medium text-gray-400 mb-2", children: "Select Update Type" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start space-x-3 p-3 rounded-md bg-gray-700/50 hover:bg-gray-700 cursor-pointer", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "radio",
-                name: "update-type",
-                value: "minor",
-                checked: updateType === "minor",
-                onChange: () => setUpdateType("minor"),
-                className: "h-5 w-5 mt-0.5 accent-sky-500 bg-gray-600 border-gray-500 flex-shrink-0"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "Minor Update" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Update existing records and add new ones. You will be prompted to confirm new entries." })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start space-x-3 p-3 rounded-md bg-gray-700/50 hover:bg-gray-700 cursor-pointer", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "radio",
-                name: "update-type",
-                value: "bulk",
-                checked: updateType === "bulk",
-                onChange: () => setUpdateType("bulk"),
-                className: "h-5 w-5 mt-0.5 accent-sky-500 bg-gray-600 border-gray-500 flex-shrink-0"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "Bulk Update" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Warning: This will delete all existing data and replace it with the contents of the file." })
-            ] })
-          ] })
-        ] })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Confirm Update" })
-    ] })
-  ] }) });
-};
 const NewRecordConfirmationFlyout = ({ rowData, onConfirm, onCancel }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: onCancel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20 flex items-center space-x-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-sky-400", children: "New Record Found" }) }),
@@ -57108,48 +57549,6 @@ const UpdateErrorFlyout = ({ message, onClose }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-amber-400", children: "Update Notice" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300", children: message }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "OK" }) })
-  ] }) });
-};
-const UpdateSummaryFlyout = ({ summary, onClose }) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20 flex items-center space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-sky-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-sky-400", children: "Update Complete" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300", children: [
-        "The ",
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
-          summary.type,
-          " Update"
-        ] }),
-        " process has finished."
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-3 rounded-md grid grid-cols-2 gap-2 text-sm", children: [
-        summary.type === "Bulk" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Records Replaced:" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-white float-right", children: summary.replaced })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Records Updated:" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-white float-right", children: summary.updated })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "New Records Added:" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-green-400 float-right", children: summary.added })
-          ] }),
-          summary.unaltered !== void 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Records Unaltered:" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-blue-400 float-right", children: summary.unaltered })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Rows Skipped:" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-amber-400 float-right", children: summary.skipped })
-        ] })
-      ] })
-    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "OK" }) })
   ] }) });
 };
@@ -57595,80 +57994,6 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
         flightElements
       }
     )
-  ] }) });
-};
-const CourseSelectionFlyout = ({
-  courses,
-  onConfirm,
-  onClose,
-  updateType
-}) => {
-  const [selectedCourse, setSelectedCourse] = reactExports.useState("");
-  const [error, setError] = reactExports.useState("");
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!selectedCourse) {
-      setError("Please select a course.");
-      return;
-    }
-    onConfirm(selectedCourse);
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Select Course" }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: updateType === "minor" ? "Select the course to update. Existing trainees will be updated and new trainees will be added." : "Select the course to update. WARNING: All existing trainees in this course will be replaced with the uploaded data." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "course-select", className: "block text-sm font-medium text-gray-400 mb-2", children: "Course" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "select",
-          {
-            id: "course-select",
-            value: selectedCourse,
-            onChange: (e) => {
-              setSelectedCourse(e.target.value);
-              setError("");
-            },
-            autoFocus: true,
-            className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "-- Select a Course --" }),
-              courses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course, children: course }, course))
-            ]
-          }
-        ),
-        error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 text-sm mt-1", children: error })
-      ] }),
-      updateType === "bulk" && selectedCourse && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-red-900/20 border border-red-700 rounded-md p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-red-400 mt-0.5 flex-shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 font-medium text-sm", children: "Warning" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-red-300 text-xs mt-1", children: [
-            "This will permanently delete all trainees currently in ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: selectedCourse }),
-            " and replace them with the uploaded data."
-          ] })
-        ] })
-      ] }) })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: onClose,
-          className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold",
-          children: "Cancel"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "submit",
-          className: `px-4 py-2 rounded-md transition-colors text-sm font-semibold ${updateType === "bulk" ? "bg-red-600 hover:bg-red-700 text-white" : "bg-sky-600 hover:bg-sky-700 text-white"}`,
-          children: updateType === "bulk" ? "Replace Course Data" : "Update Course"
-        }
-      )
-    ] })
   ] }) });
 };
 const CancellationCodesTable = ({
@@ -59054,7 +59379,7 @@ const SettingsView = ({
   const [repoFiles, setRepoFiles] = reactExports.useState([]);
   const [pendingTemplateOverride, setPendingTemplateOverride] = reactExports.useState(null);
   const templateOverrideInputRef = reactExports.useRef(null);
-  const directUploadInputRefs = reactExports.useRef({});
+  reactExports.useRef({});
   const [dragUploadType, setDragUploadType] = reactExports.useState(null);
   const [fileToProcess, setFileToProcess] = reactExports.useState(null);
   const [showUpdateConfirmation, setShowUpdateConfirmation] = reactExports.useState(false);
@@ -59073,7 +59398,7 @@ const SettingsView = ({
   const [updatedRecords, setUpdatedRecords] = reactExports.useState([]);
   const [newRecords, setNewRecords] = reactExports.useState([]);
   const [skippedCount, setSkippedCount] = reactExports.useState(0);
-  const activeCourses = reactExports.useMemo(() => {
+  reactExports.useMemo(() => {
     return Object.keys(courseColors).sort((a, b) => a.localeCompare(b));
   }, [courseColors]);
   const safeNameSort = (a, b) => {
@@ -59272,18 +59597,6 @@ const SettingsView = ({
       (page, action, description, changes) => logAudit({ page, action, description, changes })
     );
   };
-  const isSupportedDataUploadFile = (file) => /\.(xlsx|xls|csv)$/i.test(file.name);
-  const handleDirectDataUpload = (folderId, file) => {
-    if (!file) return;
-    if (!isSupportedDataUploadFile(file)) {
-      onShowSuccess("Please select an .xlsx, .xls or .csv file.");
-      return;
-    }
-    setCoursesFromFile([]);
-    setFileToProcess({ name: file.name, folderId, file });
-    setSelectedUpdateType("minor");
-    setShowUpdateConfirmation(true);
-  };
   const handleDownloadInstructorTemplate = async () => {
     if (await downloadStoredTemplate("staff")) return;
     downloadPublicTemplate("/Staff_Bulk_Update_Template.xlsx", "Staff_Bulk_Update_Template.xlsx");
@@ -59343,67 +59656,6 @@ const SettingsView = ({
     { key: "logbook", label: "Logbook", downloadLabel: "Logbook Template (.xlsx)", onDownload: handleDownloadLogbookTemplate },
     { key: "organisation-structure", label: "Organisational Structure", downloadLabel: "Organisational Structure Template (.xlsx)", onDownload: handleDownloadOrganisationStructureTemplate }
   ];
-  const handleUpdateConfirm = async (pin, updateType) => {
-    if (pin !== "1111") {
-      onShowSuccess("Incorrect PIN.");
-      return;
-    }
-    setShowUpdateConfirmation(false);
-    setSelectedUpdateType(updateType);
-    if (fileToProcess?.folderId === "trainee_loads") {
-      await extractCoursesFromFile();
-      setShowCourseSelection(true);
-    } else {
-      processFileUpdate(updateType, "");
-    }
-  };
-  const extractCoursesFromFile = async () => {
-    if (!fileToProcess) return;
-    try {
-      const data = await fileToProcess.file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: "buffer" });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonRows = XLSX.utils.sheet_to_json(worksheet);
-      const coursesInFile = /* @__PURE__ */ new Set();
-      jsonRows.forEach((row) => {
-        const coursePrefix = getStr(row, ["Course Prefix", "coursePrefix"]);
-        const courseNumber = getStr(row, ["Course Number", "courseNumber"]);
-        if (coursePrefix && courseNumber) {
-          coursesInFile.add(`${coursePrefix}${courseNumber}`);
-        } else {
-          const course = getStr(row, ["Course"]);
-          if (course) coursesInFile.add(course);
-        }
-      });
-      setCoursesFromFile(Array.from(coursesInFile));
-    } catch (error) {
-      console.error("Error extracting courses from file:", error);
-    }
-  };
-  const handleCourseSelection = (course) => {
-    setSelectedCourse(course);
-    setShowCourseSelection(false);
-    processFileUpdate(selectedUpdateType, course);
-  };
-  const processFileUpdate = async (updateType, course) => {
-    if (!fileToProcess) return;
-    try {
-      const data = await fileToProcess.file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: "buffer" });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonRows = XLSX.utils.sheet_to_json(worksheet);
-      if (updateType === "bulk") {
-        handleBulkUpdate(jsonRows, course);
-      } else {
-        startMinorUpdate(jsonRows, course);
-      }
-    } catch (error) {
-      console.error("File processing error:", error);
-      onShowSuccess(`Error processing file: ${error.message}`);
-    }
-  };
   const getValueFromRow2 = (row, possibleKeys) => {
     for (const pKey of possibleKeys) {
       if (row[pKey] !== void 0) return row[pKey];
@@ -59419,16 +59671,16 @@ const SettingsView = ({
     }
     return void 0;
   };
-  const parseBoolean = (value) => {
+  const parseBoolean2 = (value) => {
     if (typeof value === "boolean") return value;
     if (typeof value === "string") return value.trim().toLowerCase() === "true";
     return !!value;
   };
-  const getStr = (row, keys) => {
+  const getStr2 = (row, keys) => {
     const val = getValueFromRow2(row, keys);
     return val !== void 0 ? String(val).trim() : void 0;
   };
-  const getNum = (row, keys) => {
+  const getNum2 = (row, keys) => {
     const val = getValueFromRow2(row, keys);
     if (val === void 0 || val === null || String(val).trim() === "") return void 0;
     const num = parseFloat(String(val).replace(/[A-Za-z]/g, "").trim());
@@ -59485,15 +59737,15 @@ const SettingsView = ({
     }
   };
   const parseInstructorRow = (row) => {
-    const idValue = getNum(row, ["PMKeys/ID", "idNumber"]);
+    const idValue = getNum2(row, ["PMKeys/ID", "idNumber"]);
     if (idValue === void 0) return null;
     const parsed = { idNumber: idValue };
-    const surname = getStr(row, ["Srname", "Surname", "Last Name"]);
-    const firstname = getStr(row, ["First name", "Firstname", "Given Name"]);
+    const surname = getStr2(row, ["Srname", "Surname", "Last Name"]);
+    const firstname = getStr2(row, ["First name", "Firstname", "Given Name"]);
     if (surname && firstname) {
       parsed.name = `${surname}, ${firstname}`;
     } else {
-      const fullName = getStr(row, [
+      const fullName = getStr2(row, [
         "Name",
         "Full Name",
         "Name (Surname, FirstName)",
@@ -59502,40 +59754,40 @@ const SettingsView = ({
       ]);
       if (fullName) parsed.name = fullName;
     }
-    const rank = getStr(row, ["Rank"]);
+    const rank = getStr2(row, ["Rank"]);
     if (rank) parsed.rank = rank;
-    const role = getStr(row, ["Role"]);
+    const role = getStr2(row, ["Role"]);
     if (role) parsed.role = role;
-    const callsign = getNum(row, ["callsign number", "callsignnumber", "Callsign No", "Callsign Number", "Callsign"]);
+    const callsign = getNum2(row, ["callsign number", "callsignnumber", "Callsign No", "Callsign Number", "Callsign"]);
     if (callsign !== void 0) parsed.callsignNumber = callsign;
-    const service = getStr(row, ["Service"]);
+    const service = getStr2(row, ["Service"]);
     const normalisedService = service ? normaliseImportedService(service) : void 0;
     if (normalisedService) parsed.service = normalisedService;
-    const category = getStr(row, ["Category"]);
+    const category = getStr2(row, ["Category"]);
     const normalisedCategory = category ? normaliseImportedCategory(category) : void 0;
     if (normalisedCategory) parsed.category = normalisedCategory;
-    const location = getStr(row, ["Location", "Base", "Location Code"]);
+    const location = getStr2(row, ["Location", "Base", "Location Code"]);
     if (location) parsed.location = location;
-    const unit = getStr(row, ["Unit", "Unit Code"]);
+    const unit = getStr2(row, ["Unit", "Unit Code"]);
     if (unit) parsed.unit = unit;
-    const flight = getStr(row, ["Flight", "flight", "Flight/Sqn", "Section"]);
+    const flight = getStr2(row, ["Flight", "flight", "Flight/Sqn", "Section"]);
     if (flight) parsed.flight = flight;
-    const seatConfig = getStr(row, ["Seat config", "seatConfig", "Seat Configuration"]);
+    const seatConfig = getStr2(row, ["Seat config", "seatConfig", "Seat Configuration"]);
     const normalisedSeatConfig = seatConfig ? normaliseImportedSeatConfig(seatConfig) : void 0;
     if (normalisedSeatConfig) parsed.seatConfig = normalisedSeatConfig;
-    const phone = getStr(row, ["Phone Number", "phoneNumber", "Phone", "Mobile"]);
+    const phone = getStr2(row, ["Phone Number", "phoneNumber", "Phone", "Mobile"]);
     if (phone) parsed.phoneNumber = phone;
-    const email = getStr(row, ["Email", "Email Address"]);
+    const email = getStr2(row, ["Email", "Email Address"]);
     if (email) parsed.email = email;
-    const permissions = getStr(row, ["Permissions", "permissions", "Permission"]);
+    const permissions = getStr2(row, ["Permissions", "permissions", "Permission"]);
     if (permissions) parsed.permissions = splitImportList(permissions);
-    const rolesStr = getStr(row, ["Roles", "Qualifications and Roles", "Qualifications & Roles", "Qualifications"]);
+    const rolesStr = getStr2(row, ["Roles", "Qualifications and Roles", "Qualifications & Roles", "Qualifications"]);
     applyImportedQualifications(parsed, rolesStr);
     return parsed;
   };
-  const parseTraineeRow = (row) => {
+  const parseTraineeRow2 = (row) => {
     const rowKeys = Object.keys(row);
-    const idValue = getNum(row, ["PMKeys/ID", "idNumber"]);
+    const idValue = getNum2(row, ["PMKeys/ID", "idNumber"]);
     if (idValue === void 0) {
       const idRelatedKeys = rowKeys.filter((k) => k.toLowerCase().includes("id") || k.toLowerCase().includes("pm") || k.toLowerCase().includes("key"));
       console.warn("🔴 [PARSE] Row missing idNumber. Row keys:", rowKeys.join(", "));
@@ -59544,7 +59796,7 @@ const SettingsView = ({
       return null;
     }
     const parsed = { idNumber: idValue };
-    const nameField = getStr(row, [
+    const nameField = getStr2(row, [
       "Name\n [Surname, Firstname]",
       "Name [Surname, Firstname]",
       "Name  [Surname, Firstname]",
@@ -59556,8 +59808,8 @@ const SettingsView = ({
       parsed.name = nameField;
       console.log(`✅ [PARSE] ID=${idValue} name from combined field: "${nameField}"`);
     } else {
-      const surname = getStr(row, ["Surname", "Last Name"]);
-      const firstname = getStr(row, ["First Name", "Firstname", "Given Name"]);
+      const surname = getStr2(row, ["Surname", "Last Name"]);
+      const firstname = getStr2(row, ["First Name", "Firstname", "Given Name"]);
       if (surname && firstname) {
         parsed.name = `${surname}, ${firstname}`;
         console.log(`✅ [PARSE] ID=${idValue} name from Surname+Firstname: "${parsed.name}"`);
@@ -59572,21 +59824,21 @@ const SettingsView = ({
         }
       }
     }
-    const coursePrefix = getStr(row, ["Course Prefix", "coursePrefix"]);
-    const courseNumber = getStr(row, ["Course Number", "courseNumber"]);
+    const coursePrefix = getStr2(row, ["Course Prefix", "coursePrefix"]);
+    const courseNumber = getStr2(row, ["Course Number", "courseNumber"]);
     if (coursePrefix && courseNumber) {
       parsed.course = `${coursePrefix}${courseNumber}`;
     } else {
-      const course = getStr(row, ["Course"]);
+      const course = getStr2(row, ["Course"]);
       if (course) parsed.course = course;
     }
-    const lmpType = getStr(row, ["LMP", "lmpType"]);
+    const lmpType = getStr2(row, ["LMP", "lmpType"]);
     if (lmpType) parsed.lmpType = lmpType;
-    const rank = getStr(row, ["Rank"]);
+    const rank = getStr2(row, ["Rank"]);
     if (rank) parsed.rank = rank;
-    const callsign = getStr(row, ["Callsign", "callsign"]);
+    const callsign = getStr2(row, ["Callsign", "callsign"]);
     if (callsign) parsed.callsignNumber = parseInt(callsign) || void 0;
-    const serviceRaw = getStr(row, ["Service"]);
+    const serviceRaw = getStr2(row, ["Service"]);
     if (serviceRaw) {
       const svc = serviceRaw.trim().toLowerCase();
       if (svc === "raaf" || svc === "air force" || svc === "airforce" || svc === "royal australian air force") {
@@ -59599,13 +59851,13 @@ const SettingsView = ({
         parsed.service = serviceRaw;
       }
     }
-    const unit = getStr(row, ["Unit"]);
+    const unit = getStr2(row, ["Unit"]);
     if (unit) parsed.unit = unit;
-    const flight = getStr(row, ["Flight", "flight"]);
+    const flight = getStr2(row, ["Flight", "flight"]);
     if (flight) parsed.flight = flight;
-    const location = getStr(row, ["Location"]);
+    const location = getStr2(row, ["Location"]);
     if (location) parsed.location = location;
-    const seatConfigRaw = getStr(row, ["Seat Config", "seatConfig", "Seat config"]);
+    const seatConfigRaw = getStr2(row, ["Seat Config", "seatConfig", "Seat config"]);
     if (seatConfigRaw) {
       const sc = seatConfigRaw.trim().toLowerCase();
       if (sc === "normal" || sc === "norm") {
@@ -59620,20 +59872,20 @@ const SettingsView = ({
         parsed.seatConfig = seatConfigRaw;
       }
     }
-    const phone = getStr(row, ["Phone Number", "phoneNumber"]);
+    const phone = getStr2(row, ["Phone Number", "phoneNumber"]);
     if (phone) parsed.phoneNumber = phone;
-    const email = getStr(row, ["Email"]);
+    const email = getStr2(row, ["Email"]);
     if (email) parsed.email = email;
-    const primary = getStr(row, ["Primary Instructor", "primaryInstructor"]);
+    const primary = getStr2(row, ["Primary Instructor", "primaryInstructor"]);
     if (primary) parsed.primaryInstructor = primary.split(",").map((s) => s.trim()).filter(Boolean);
-    const secondary = getStr(row, ["Secondary Instructor", "secondaryInstructor"]);
+    const secondary = getStr2(row, ["Secondary Instructor", "secondaryInstructor"]);
     if (secondary) parsed.secondaryInstructor = secondary.split(",").map((s) => s.trim()).filter(Boolean);
-    const permissionsStr = getStr(row, ["Permissions", "permissions"]);
+    const permissionsStr = getStr2(row, ["Permissions", "permissions"]);
     if (permissionsStr) {
       parsed.permissions = permissionsStr.split(/\r?\n/).map((p) => p.trim()).filter(Boolean);
     }
     const isPaused = getValueFromRow2(row, ["Is Paused", "isPaused"]);
-    if (isPaused !== void 0) parsed.isPaused = parseBoolean(isPaused);
+    if (isPaused !== void 0) parsed.isPaused = parseBoolean2(isPaused);
     if (!parsed.isPaused) parsed.isPaused = false;
     if (!parsed.unit) parsed.unit = "";
     if (!parsed.rank) parsed.rank = "FLGOFF";
@@ -59647,7 +59899,7 @@ const SettingsView = ({
     return parsed;
   };
   const parseLmpRow = (row) => {
-    const code = getStr(row, ["Code"]);
+    const code = getStr2(row, ["Code"]);
     if (!code) return null;
     const parsed = { code };
     const parseCrewRequirement = (value) => {
@@ -59662,11 +59914,11 @@ const SettingsView = ({
       }).filter((item) => Boolean(item));
       return roles.length > 0 ? { mode: "custom", roles } : void 0;
     };
-    const phase = getStr(row, ["Phase"]);
+    const phase = getStr2(row, ["Phase"]);
     if (phase) parsed.phase = phase;
-    const module = getStr(row, ["Module"]);
+    const module = getStr2(row, ["Module"]);
     if (module) parsed.module = module;
-    const desc = getStr(row, ["Event description", "eventDescription"]);
+    const desc = getStr2(row, ["Event description", "eventDescription"]);
     if (desc) parsed.eventDescription = desc;
     const prereqGround = getStrArray(row, ["Pre-requisite Events (Ground School)", "prerequisitesGround"]);
     if (prereqGround) parsed.prerequisitesGround = prereqGround;
@@ -59677,9 +59929,9 @@ const SettingsView = ({
     if (detailsCommon) parsed.eventDetailsCommon = detailsCommon;
     const detailsSortie = getStrArray(row, ["Event Details - Sortie", "eventDetailsSortie"]);
     if (detailsSortie) parsed.eventDetailsSortie = detailsSortie;
-    const totalHours = getNum(row, ["Total Event Hours", "totalEventHours"]);
+    const totalHours = getNum2(row, ["Total Event Hours", "totalEventHours"]);
     if (totalHours !== void 0) parsed.totalEventHours = totalHours;
-    const flightSimHours = getNum(row, ["Flight or Sim Hours", "flightOrSimHours"]);
+    const flightSimHours = getNum2(row, ["Flight or Sim Hours", "flightOrSimHours"]);
     if (flightSimHours !== void 0) {
       parsed.flightOrSimHours = flightSimHours;
       parsed.duration = flightSimHours;
@@ -59690,82 +59942,14 @@ const SettingsView = ({
     if (assessment) parsed.methodOfAssessment = assessment;
     const resourcesPhy = getStrArray(row, ["Resources Required (physical)", "resourcesPhysical"]);
     if (resourcesPhy) parsed.resourcesPhysical = resourcesPhy;
-    const resourceNumber = getNum(row, ["Resource Number", "resourceNumber", "Resources Required Number"]);
+    const resourceNumber = getNum2(row, ["Resource Number", "resourceNumber", "Resources Required Number"]);
     if (resourceNumber !== void 0) parsed.resourceNumber = Math.max(0, Math.round(resourceNumber));
     const resourcesHum = getStrArray(row, ["Resources Required (Human)", "resourcesHuman"]);
     if (resourcesHum) parsed.resourcesHuman = resourcesHum;
-    const crewRequirementText = getStr(row, ["Crew Required", "Crew Requirement", "Crew Composition", "crewRequirement"]);
+    const crewRequirementText = getStr2(row, ["Crew Required", "Crew Requirement", "Crew Composition", "crewRequirement"]);
     const crewRequirement = parseCrewRequirement(crewRequirementText);
     if (crewRequirement) parsed.crewRequirement = crewRequirement;
     return parsed;
-  };
-  const handleBulkUpdate = (rows, course) => {
-    if (!fileToProcess) return;
-    let processedCount = 0;
-    let finalRows = [];
-    switch (fileToProcess.folderId) {
-      case "instructor_loads":
-        finalRows = rows.map(parseInstructorRow).filter((i) => i && i.idNumber);
-        onReplaceInstructors(finalRows);
-        break;
-      case "trainee_loads":
-        if (course) {
-          const parsedRows = rows.map(parseTraineeRow);
-          console.log("🔵 [BULK] Raw Excel rows:", rows.length);
-          console.log("🔵 [BULK] First raw row keys:", rows[0] ? Object.keys(rows[0]) : "NO ROWS");
-          console.log("🔵 [BULK] First raw row values:", rows[0]);
-          console.log("🔵 [BULK] Parsed rows:", parsedRows.length);
-          console.log("🔵 [BULK] First parsed row:", JSON.stringify(parsedRows[0]));
-          console.log("🔵 [BULK] Rows with null result:", parsedRows.filter((r) => r === null).length);
-          console.log("🔵 [BULK] Rows missing idNumber:", parsedRows.filter((r) => r && !r.idNumber).length);
-          console.log("🔵 [BULK] Rows missing name:", parsedRows.filter((r) => r && r.idNumber && !r.name).length);
-          finalRows = parsedRows.filter((t) => t && t.idNumber && t.name);
-          console.log("🔵 [BULK] Filtered rows (with ID and name):", finalRows.length);
-          if (finalRows.length === 0) {
-            console.error("🔴 [BULK] NO ROWS PASSED FILTER!");
-            console.error("🔴 [BULK] All parsed rows:", JSON.stringify(parsedRows.slice(0, 3)));
-            console.error("🔴 [BULK] All raw rows:", JSON.stringify(rows.slice(0, 3)));
-          }
-          const otherCourseTrainees = traineesData.filter((t) => t.course !== course);
-          console.log("🔵 [BULK] Other course trainees (kept):", otherCourseTrainees.length);
-          const newTrainees = finalRows.map((t) => ({ ...t, course }));
-          console.log("🔵 [BULK] New trainees to add:", newTrainees.length);
-          console.log("🔵 [BULK] Sample new trainee:", JSON.stringify(newTrainees[0]));
-          console.log("🔵 [BULK] Total trainees after update:", otherCourseTrainees.length + newTrainees.length);
-          console.log("🔵 [BULK] Calling onReplaceTrainees with", [...otherCourseTrainees, ...newTrainees].length, "total trainees");
-          onReplaceTrainees([...otherCourseTrainees, ...newTrainees]);
-        } else {
-          console.warn("🟡 [BULK] No course selected — replacing ALL trainees");
-          finalRows = rows.map(parseTraineeRow).filter((t) => t && t.idNumber && t.name);
-          console.log("🔵 [BULK] Legacy replace — rows:", finalRows.length);
-          onReplaceTrainees(finalRows);
-        }
-        break;
-      case "lmp_loads":
-        finalRows = rows.map(parseLmpRow).filter((s) => s && s.code);
-        onUpdateSyllabus(finalRows);
-        break;
-    }
-    processedCount = finalRows.length;
-    setUpdateSummary({ type: "Bulk", replaced: processedCount, added: 0, updated: 0, skipped: rows.length - processedCount });
-    setShowUpdateSummary(true);
-    const dataType = fileToProcess.folderId === "instructor_loads" ? "Instructors" : fileToProcess.folderId === "trainee_loads" ? "Trainees" : "LMP Data";
-    const courseInfo = course ? ` for course: ${course}` : "";
-    logAudit({
-      page: "Settings - Data Loaders",
-      action: "update",
-      description: `Bulk update: ${dataType}${courseInfo}`,
-      changes: `Replaced ${processedCount} records from file: ${fileToProcess.name}`
-    });
-    setFileToProcess(null);
-  };
-  const startMinorUpdate = (rows, course) => {
-    setRowsToProcess(rows);
-    setUpdatedRecords([]);
-    setNewRecords([]);
-    setSkippedCount(0);
-    setSelectedCourse(course);
-    setIsMinorUpdateInProgress(true);
   };
   const processNextRow = () => {
     if (!fileToProcess) {
@@ -59786,7 +59970,7 @@ const SettingsView = ({
         existingRecord = instructorsData.find((i) => i.idNumber === parsedData.idNumber);
         break;
       case "trainee_loads":
-        parsedData = parseTraineeRow(row);
+        parsedData = parseTraineeRow2(row);
         if (!parsedData?.idNumber) {
           setSkippedCount((prev) => prev + 1);
           return;
@@ -59934,69 +60118,6 @@ const SettingsView = ({
     setUnmatchedRowData(null);
     setIsMinorUpdateInProgress(true);
   };
-  const DirectDataUploadCard = ({ id, title, description }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-    "div",
-    {
-      onDragEnter: (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (canEditSettings) setDragUploadType(id);
-      },
-      onDragOver: (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        event.dataTransfer.dropEffect = canEditSettings ? "copy" : "none";
-        if (canEditSettings) setDragUploadType(id);
-      },
-      onDragLeave: (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        setDragUploadType((current) => current === id ? null : current);
-      },
-      onDrop: (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        setDragUploadType(null);
-        if (canEditSettings) handleDirectDataUpload(id, event.dataTransfer.files?.[0]);
-      },
-      className: `rounded-lg border border-dashed p-4 transition-colors ${dragUploadType === id ? "border-cyan-300 bg-cyan-500/15" : "border-gray-600 bg-gray-950/40"} ${canEditSettings ? "" : "opacity-60"}`,
-      children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            ref: (element) => {
-              directUploadInputRefs.current[id] = element;
-            },
-            type: "file",
-            accept: ".xlsx,.xls,.csv",
-            className: "hidden",
-            disabled: !canEditSettings,
-            onChange: (event) => {
-              handleDirectDataUpload(id, event.target.files?.[0]);
-              event.currentTarget.value = "";
-            }
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-gray-100", children: title }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: description })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              disabled: !canEditSettings,
-              onClick: () => directUploadInputRefs.current[id]?.click(),
-              className: `shrink-0 rounded-md px-3 py-2 text-xs font-bold ${canEditSettings ? "bg-gray-100 text-gray-900 hover:bg-white" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
-              children: "Select File"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-[11px] font-semibold uppercase tracking-wide text-gray-500", children: "Drag and drop .xlsx, .xls or .csv" })
-      ]
-    }
-  );
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { onKeyDownCapture: stopEditableKeyPropagation, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
       shouldShowSection("validation") && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -60317,81 +60438,49 @@ const SettingsView = ({
       ] }),
       shouldShowSection("data-loaders") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Data Loaders" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Templates" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Download templates to ensure correct formatting for bulk uploads." }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  ref: templateOverrideInputRef,
-                  type: "file",
-                  accept: ".xlsx,.xls,.csv",
-                  className: "hidden",
-                  onChange: (event) => void handleTemplateOverrideSelected(event.target.files?.[0])
-                }
-              ),
-              dataLoaderTemplateRows.map((template) => {
-                const overrideName = getTemplateOverrideDisplayName(template.key);
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/40 p-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => void template.onDownload(), className: "w-[45%] min-w-0 shrink-0 truncate whitespace-nowrap rounded-md bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-sky-700", children: template.downloadLabel }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        type: "button",
-                        onClick: () => handleChangeTemplateClick(template),
-                        className: "shrink-0 whitespace-nowrap rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20",
-                        children: "Change"
-                      }
-                    ),
-                    overrideName ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        type: "button",
-                        onClick: () => void handleResetTemplateOverride(template),
-                        className: "shrink-0 whitespace-nowrap rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20",
-                        children: "Reset"
-                      }
-                    ) : null
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500", title: overrideName || "Built-in default template", children: overrideName ? `Custom: ${overrideName}` : "Built-in default" })
-                ] }, template.key);
-              })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Upload Data" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Upload directly from this computer. Files are processed immediately after confirmation and are not stored in a staging repository." }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                DirectDataUploadCard,
-                {
-                  id: "instructor_loads",
-                  title: "Staff Data",
-                  description: "Create or update staff records from the staff bulk upload template."
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                DirectDataUploadCard,
-                {
-                  id: "trainee_loads",
-                  title: "Trainee Data",
-                  description: "Create or update trainee records, then choose the course to apply the upload to."
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                DirectDataUploadCard,
-                {
-                  id: "lmp_loads",
-                  title: "LMP Data",
-                  description: "Create or update master LMP event data from the LMP template."
-                }
-              )
-            ] })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Templates" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Download templates to ensure correct formatting for bulk uploads." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                ref: templateOverrideInputRef,
+                type: "file",
+                accept: ".xlsx,.xls,.csv",
+                className: "hidden",
+                onChange: (event) => void handleTemplateOverrideSelected(event.target.files?.[0])
+              }
+            ),
+            dataLoaderTemplateRows.map((template) => {
+              const overrideName = getTemplateOverrideDisplayName(template.key);
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/40 p-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => void template.onDownload(), className: "w-[45%] min-w-0 shrink-0 truncate whitespace-nowrap rounded-md bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-sky-700", children: template.downloadLabel }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => handleChangeTemplateClick(template),
+                      className: "shrink-0 whitespace-nowrap rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20",
+                      children: "Change"
+                    }
+                  ),
+                  overrideName ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => void handleResetTemplateOverride(template),
+                      className: "shrink-0 whitespace-nowrap rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20",
+                      children: "Reset"
+                    }
+                  ) : null
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500", title: overrideName || "Built-in default template", children: overrideName ? `Custom: ${overrideName}` : "Built-in default" })
+              ] }, template.key);
+            })
           ] })
-        ] })
+        ] }) })
       ] }),
       shouldShowSection("event-limits") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-2xl h-fit", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
@@ -60524,8 +60613,6 @@ const SettingsView = ({
       )
     ] }),
     showScoringMatrix && /* @__PURE__ */ jsxRuntimeExports.jsx(ScoringMatrixFlyout, { onClose: () => setShowScoringMatrix(false), phraseBank, onUpdatePhraseBank: handleUpdatePhraseBank, initialTab: scoringMatrixTab }),
-    showUpdateConfirmation && fileToProcess && /* @__PURE__ */ jsxRuntimeExports.jsx(UpdateConfirmationFlyout, { fileName: fileToProcess.name, onConfirm: handleUpdateConfirm, onClose: () => setShowUpdateConfirmation(false) }),
-    showCourseSelection && /* @__PURE__ */ jsxRuntimeExports.jsx(CourseSelectionFlyout, { courses: coursesFromFile.length > 0 ? coursesFromFile : activeCourses, onConfirm: handleCourseSelection, onClose: () => setShowCourseSelection(false), updateType: selectedUpdateType }),
     showNewRecordConfirm && unmatchedRowData && /* @__PURE__ */ jsxRuntimeExports.jsx(NewRecordConfirmationFlyout, { rowData: unmatchedRowData, onConfirm: handleConfirmNewRecord, onCancel: handleRejectNewRecord }),
     showUpdateError && /* @__PURE__ */ jsxRuntimeExports.jsx(UpdateErrorFlyout, { message: updateErrorMessage, onClose: () => setShowUpdateError(false) }),
     showUpdateSummary && /* @__PURE__ */ jsxRuntimeExports.jsx(UpdateSummaryFlyout, { summary: updateSummary, onClose: () => setShowUpdateSummary(false) })
@@ -114533,6 +114620,9 @@ ${error instanceof Error ? error.message : String(error)}`,
             },
             onUpdateTrainee: handleUpdateTrainee,
             onAddTrainee: handleAddTrainee,
+            onBulkUpdateTrainees: handleBulkUpdateTrainees,
+            onReplaceTrainees: handleReplaceTrainees,
+            onUpdateTraineeLMPs: setTraineeLMPs,
             school,
             scores,
             syllabusDetails,
@@ -114687,6 +114777,9 @@ ${error instanceof Error ? error.message : String(error)}`,
             },
             onUpdateTrainee: handleUpdateTrainee,
             onAddTrainee: handleAddTrainee,
+            onBulkUpdateTrainees: handleBulkUpdateTrainees,
+            onReplaceTrainees: handleReplaceTrainees,
+            onUpdateTraineeLMPs: setTraineeLMPs,
             school,
             scores,
             syllabusDetails,
