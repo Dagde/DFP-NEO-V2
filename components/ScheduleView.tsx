@@ -9,7 +9,7 @@ import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings, normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { DEFAULT_PLATFORM_PERMISSION_PROFILES, getOperationalModelLabel, getUnitOperationalModel, normaliseOperationalModel, OPERATIONAL_MODEL_OPTIONS } from '../utils/platformConfigService';
-import { getTaskProfilesForModel } from '../utils/taskProfiles';
+import { getTaskProfileAbbreviationsForUnit, getTaskProfilesForModel } from '../utils/taskProfiles';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { AIRCRAFT_CREW_RESOURCE_KINDS, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import { normaliseCrewCompositionSettings } from '../utils/crewCompositionProfiles';
@@ -1464,10 +1464,11 @@ const OrganisationMyUnitSettings: React.FC<{
     const operationalModel = getUnitOperationalModel(unit);
     const modelOptionLabels = Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
     const taskAbbreviations = unit?.settings?.taskProfileAbbreviations || {};
+    const validTaskAbbreviations = getTaskProfileAbbreviationsForUnit(platformConfig, unit?.code);
     const taskProfilesForUnit = getTaskProfilesForModel(platformConfig, operationalModel);
     const taskTileLabelProfiles = Array.from(new Set([
         ...taskProfilesForUnit,
-        ...Object.keys(taskAbbreviations || {}),
+        ...Object.keys(validTaskAbbreviations || {}),
     ].map((profile) => String(profile || '').trim()).filter(Boolean)));
     const activeOrganisation = getActiveOrganisation(platformConfig);
     const organisationSettings = activeOrganisation?.settings || {};

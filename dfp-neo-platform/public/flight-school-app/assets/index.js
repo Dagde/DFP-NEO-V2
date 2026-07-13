@@ -2837,15 +2837,22 @@ const parseTaskProfileAbbreviationText = (text) => {
     if (!trimmed) return;
     const separator = trimmed.includes("=") ? "=" : "-";
     const separatorIndex = trimmed.indexOf(separator);
-    if (separatorIndex < 0) return;
+    if (separatorIndex < 0) {
+      abbreviations[trimmed] = "";
+      return;
+    }
     const profile = trimmed.slice(0, separatorIndex).trim();
     const abbreviation = trimmed.slice(separatorIndex + 1).trim();
-    if (!profile || !abbreviation) return;
+    if (!profile) return;
     abbreviations[profile] = abbreviation;
   });
   return abbreviations;
 };
-const formatTaskProfileAbbreviationText = (abbreviations) => Object.entries(abbreviations || {}).filter(([profile, abbreviation]) => String(profile || "").trim() && String(abbreviation || "").trim()).map(([profile, abbreviation]) => `${profile} - ${abbreviation}`).join("\n");
+const formatTaskProfileAbbreviationText = (abbreviations) => Object.entries(abbreviations || {}).filter(([profile]) => String(profile || "").trim()).map(([profile, abbreviation]) => {
+  const cleanProfile = String(profile || "").trim();
+  const cleanAbbreviation = String(abbreviation || "").trim();
+  return cleanAbbreviation ? `${cleanProfile} - ${cleanAbbreviation}` : cleanProfile;
+}).join("\n");
 const normaliseTaskProfileConfig = (value) => {
   const source = value && typeof value === "object" ? value : {};
   return OPERATIONAL_MODEL_OPTIONS.reduce((config, option) => {
@@ -10197,10 +10204,11 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const operationalModel2 = getUnitOperationalModel(unit);
   const modelOptionLabels = Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
   const taskAbbreviations = unit?.settings?.taskProfileAbbreviations || {};
+  const validTaskAbbreviations = getTaskProfileAbbreviationsForUnit(platformConfig, unit?.code);
   const taskProfilesForUnit = getTaskProfilesForModel(platformConfig, operationalModel2);
   const taskTileLabelProfiles = Array.from(new Set([
     ...taskProfilesForUnit,
-    ...Object.keys(taskAbbreviations || {})
+    ...Object.keys(validTaskAbbreviations || {})
   ].map((profile) => String(profile || "").trim()).filter(Boolean)));
   const activeOrganisation = getActiveOrganisation(platformConfig);
   const organisationSettings = activeOrganisation?.settings || {};

@@ -104,10 +104,13 @@ export const parseTaskProfileAbbreviationText = (text: string): Record<string, s
     if (!trimmed) return;
     const separator = trimmed.includes('=') ? '=' : '-';
     const separatorIndex = trimmed.indexOf(separator);
-    if (separatorIndex < 0) return;
+    if (separatorIndex < 0) {
+      abbreviations[trimmed] = '';
+      return;
+    }
     const profile = trimmed.slice(0, separatorIndex).trim();
     const abbreviation = trimmed.slice(separatorIndex + 1).trim();
-    if (!profile || !abbreviation) return;
+    if (!profile) return;
     abbreviations[profile] = abbreviation;
   });
   return abbreviations;
@@ -115,8 +118,12 @@ export const parseTaskProfileAbbreviationText = (text: string): Record<string, s
 
 export const formatTaskProfileAbbreviationText = (abbreviations: Record<string, string>): string => (
   Object.entries(abbreviations || {})
-    .filter(([profile, abbreviation]) => String(profile || '').trim() && String(abbreviation || '').trim())
-    .map(([profile, abbreviation]) => `${profile} - ${abbreviation}`)
+    .filter(([profile]) => String(profile || '').trim())
+    .map(([profile, abbreviation]) => {
+      const cleanProfile = String(profile || '').trim();
+      const cleanAbbreviation = String(abbreviation || '').trim();
+      return cleanAbbreviation ? `${cleanProfile} - ${cleanAbbreviation}` : cleanProfile;
+    })
     .join('\n')
 );
 
