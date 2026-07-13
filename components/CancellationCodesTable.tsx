@@ -128,6 +128,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
     }
     return a.code.localeCompare(b.code);
   });
+  const deletingCodeHasHistory = deletingCode ? usedCodes.has(deletingCode) : false;
 
   const formatAppliesToLabel = (value?: CancellationCodeAppliesTo) => {
     if (value === 'FTD') return resourceDisplayNames.ftd;
@@ -429,16 +430,13 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                         </button>
                         <button
                           onClick={() => handleDelete(code.code)}
-                          disabled={!isEditUnlocked || isAddingNew || editingCode !== null || isUsed}
+                          disabled={!isEditUnlocked || isAddingNew || editingCode !== null}
                           className="px-3 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
-                          title={isUsed ? "Cannot delete code that has been used" : "Delete code"}
+                          title={isUsed ? "Delete code with usage warning" : "Delete code"}
                         >
                           Delete
                         </button>
                       </div>
-                      {isUsed && (
-                        <p className="text-xs text-gray-500 text-center mt-1">Used in history</p>
-                      )}
                     </td>
                   )}
                 </tr>
@@ -463,7 +461,6 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
       </div>
 
       <div className="mt-4 text-sm text-gray-400">
-        <p>Used codes are retained for historical records and cannot be deleted.</p>
         <p>Inactive codes remain visible in historical records.</p>
       </div>
 
@@ -477,6 +474,14 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
               <span className="font-mono font-bold text-red-400">{deletingCode}</span>?
               This action cannot be undone.
             </p>
+            {deletingCodeHasHistory && (
+              <div className="mb-6 rounded-lg border border-amber-500/50 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+                <p className="font-semibold text-amber-200">This code has been used in cancellation history.</p>
+                <p className="mt-2">
+                  Deleting it may affect historical reporting, filters, or audit interpretation. Confirm only if this code was created in error or has been replaced.
+                </p>
+              </div>
+            )}
             <div className="flex justify-end space-x-3">
               <button
                 onClick={cancelDelete}

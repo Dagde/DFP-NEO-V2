@@ -58118,6 +58118,7 @@ const CancellationCodesTable = ({
     }
     return a.code.localeCompare(b.code);
   });
+  const deletingCodeHasHistory = deletingCode ? usedCodes.has(deletingCode) : false;
   const formatAppliesToLabel = (value) => {
     if (value === "FTD") return resourceDisplayNames.ftd;
     if (value === "Both") return `Flight + ${resourceDisplayNames.ftd}`;
@@ -58356,39 +58357,36 @@ const CancellationCodesTable = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: code.description }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: formatAppliesToLabel(code.appliesTo) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-block px-2 py-1 rounded text-xs font-semibold ${code.isActive ? "bg-green-900/50 text-green-400" : "bg-red-900/50 text-red-400"}`, children: code.isActive ? "Active" : "Inactive" }) }),
-            canEdit && /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-3 px-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: () => handleStartEdit(code),
-                    disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
-                    className: "px-3 py-1 bg-sky-600 text-white rounded text-xs font-semibold hover:bg-sky-700 disabled:bg-gray-600 disabled:cursor-not-allowed",
-                    children: "Edit"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: () => onToggleActive(code.code),
-                    disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
-                    className: `px-3 py-1 rounded text-xs font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed ${code.isActive ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-green-600 text-white hover:bg-green-700"}`,
-                    children: code.isActive ? "Deactivate" : "Activate"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: () => handleDelete(code.code),
-                    disabled: !isEditUnlocked || isAddingNew || editingCode !== null || isUsed,
-                    className: "px-3 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed",
-                    title: isUsed ? "Cannot delete code that has been used" : "Delete code",
-                    children: "Delete"
-                  }
-                )
-              ] }),
-              isUsed && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 text-center mt-1", children: "Used in history" })
-            ] })
+            canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => handleStartEdit(code),
+                  disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
+                  className: "px-3 py-1 bg-sky-600 text-white rounded text-xs font-semibold hover:bg-sky-700 disabled:bg-gray-600 disabled:cursor-not-allowed",
+                  children: "Edit"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => onToggleActive(code.code),
+                  disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
+                  className: `px-3 py-1 rounded text-xs font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed ${code.isActive ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-green-600 text-white hover:bg-green-700"}`,
+                  children: code.isActive ? "Deactivate" : "Activate"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => handleDelete(code.code),
+                  disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
+                  className: "px-3 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed",
+                  title: isUsed ? "Delete code with usage warning" : "Delete code",
+                  children: "Delete"
+                }
+              )
+            ] }) })
           ] }, code.code);
         }),
         sortedCodes.length === 0 && !isAddingNew && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { colSpan: canEdit ? 6 : 5, className: "py-8 text-center text-gray-500", children: [
@@ -58401,10 +58399,7 @@ const CancellationCodesTable = ({
         ] }) })
       ] })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 text-sm text-gray-400", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Used codes are retained for historical records and cannot be deleted." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Inactive codes remain visible in historical records." })
-    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 text-sm text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Inactive codes remain visible in historical records." }) }),
     deletingCode && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6 max-w-md", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold text-white mb-4", children: "Confirm Delete" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-6", children: [
@@ -58412,6 +58407,10 @@ const CancellationCodesTable = ({
         " ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-red-400", children: deletingCode }),
         "? This action cannot be undone."
+      ] }),
+      deletingCodeHasHistory && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 rounded-lg border border-amber-500/50 bg-amber-950/40 px-4 py-3 text-sm text-amber-100", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-amber-200", children: "This code has been used in cancellation history." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2", children: "Deleting it may affect historical reporting, filters, or audit interpretation. Confirm only if this code was created in error or has been replaced." })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end space-x-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
