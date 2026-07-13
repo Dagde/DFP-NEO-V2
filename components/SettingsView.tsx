@@ -29,7 +29,7 @@ declare var XLSX: any;
 const TEMPLATE_OVERRIDE_FOLDER_ID = 'template_overrides';
 
 interface SettingsViewProps {
-    activeSection?: 'scoring-matrix' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'validation' | 'trainee-database' | 'user-list' | 'staff-database' | 'organisation' | 'appearance' | 'emergency';
+    activeSection?: 'scoring-matrix' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'validation' | 'emergency';
     onShowSuccess: (message: string) => void;
     eventLimits: EventLimits;
     onUpdateEventLimits: (limits: EventLimits) => void;
