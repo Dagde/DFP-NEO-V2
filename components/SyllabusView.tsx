@@ -1179,6 +1179,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   // Bulk Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isUploadDragActive, setIsUploadDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMode, setUploadMode] = useState<'update' | 'replace' | 'create'>('update');
   const [newUploadPackageName, setNewUploadPackageName] = useState('');
@@ -2796,10 +2797,41 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     </div>
                 )}
 
-                <div style={{ marginBottom: 16 }}>
+                <div
+                    onDragEnter={event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setIsUploadDragActive(true);
+                    }}
+                    onDragOver={event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        event.dataTransfer.dropEffect = 'copy';
+                        setIsUploadDragActive(true);
+                    }}
+                    onDragLeave={event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setIsUploadDragActive(false);
+                    }}
+                    onDrop={event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setIsUploadDragActive(false);
+                        setUploadFile(event.dataTransfer.files?.[0] || null);
+                        setUploadResult(null);
+                    }}
+                    style={{
+                        marginBottom: 16,
+                        border: `1px dashed ${isUploadDragActive ? '#67e8f9' : '#374151'}`,
+                        borderRadius: 8,
+                        padding: 12,
+                        backgroundColor: isUploadDragActive ? 'rgba(14, 116, 144, 0.22)' : '#0f172a',
+                    }}
+                >
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
                         textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                        Select Excel File (.xlsx)
+                        Select or drop Excel File (.xlsx)
                     </label>
                     <input
                         type="file"
@@ -2808,6 +2840,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         style={{ display: 'block', width: '100%', fontSize: 13, color: '#f9fafb',
                             backgroundColor: '#111827', border: '1px solid #374151', borderRadius: 6, padding: '8px 12px' }}
                     />
+                    <p style={{ marginTop: 8, fontSize: 11, color: '#6b7280' }}>Drag and drop .xlsx, .xls or .csv here.</p>
                 </div>
 
                 {uploadFile && !uploadResult && (

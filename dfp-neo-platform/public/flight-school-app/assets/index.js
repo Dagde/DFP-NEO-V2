@@ -1258,231 +1258,6 @@ const deleteFile = (id) => {
     };
   });
 };
-const seedDefaultTemplates = async () => {
-  await initDB();
-  const files = await getAllFiles();
-  const folderId = "logbook_templates";
-  const miscFolderId = "miscellaneous";
-  const oldXlsx = files.find((f) => f.name === "ADF_Logbook_Template.xlsx" && f.folderId === folderId);
-  if (oldXlsx) await deleteFile(oldXlsx.id);
-  const oldPdf = files.find((f) => f.name === "ADF_Logbook_Template.pdf" && f.folderId === folderId);
-  if (oldPdf) await deleteFile(oldPdf.id);
-  const oldNeoLogo = files.find((f) => f.name === "NEO_Logo.pdf" && f.folderId === miscFolderId);
-  if (oldNeoLogo) await deleteFile(oldNeoLogo.id);
-  if (window.XLSX) {
-    const XLSX2 = window.XLSX;
-    const ws_data = [
-      [
-        "Year",
-        "Date",
-        "Type",
-        "Tail (Mark)",
-        "Captain",
-        "Co-Pilot / 2nd Pilot / Crew",
-        "Duty",
-        "Day Flying",
-        "",
-        "",
-        "Night Flying",
-        "",
-        "",
-        "TOTAL",
-        "Captain",
-        "Instructor",
-        "Sim",
-        "Actual",
-        "2D App",
-        "3D App",
-        "Simulator",
-        "",
-        "",
-        ""
-      ],
-      [
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "P1",
-        "P2",
-        "Dual",
-        "P1",
-        "P2",
-        "Dual",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "P1",
-        "P2",
-        "Dual",
-        "TOTAL"
-      ],
-      [
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "Totals brought Forward",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-      ]
-    ];
-    const ws = XLSX2.utils.aoa_to_sheet(ws_data);
-    if (!ws["!merges"]) ws["!merges"] = [];
-    [0, 1, 2, 3, 4, 5, 6, 13, 14, 15, 16, 17, 18, 19].forEach((c) => {
-      ws["!merges"].push({ s: { r: 0, c }, e: { r: 1, c } });
-    });
-    ws["!merges"].push({ s: { r: 0, c: 7 }, e: { r: 0, c: 9 } });
-    ws["!merges"].push({ s: { r: 0, c: 10 }, e: { r: 0, c: 12 } });
-    ws["!merges"].push({ s: { r: 0, c: 20 }, e: { r: 0, c: 23 } });
-    const wb = XLSX2.utils.book_new();
-    XLSX2.utils.book_append_sheet(wb, ws, "Logbook");
-    const wbout = XLSX2.write(wb, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const file = new File([blob], "ADF_Logbook_Template.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    await addFile(file, folderId, "ADF_Logbook_Template.xlsx");
-    console.log("Seeded Logbook Template (XLSX)");
-  }
-  if (window.jspdf) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-    doc.setFontSize(18);
-    doc.text("ADF Logbook Template", 14, 15);
-    const bfRow = [
-      { content: "Totals brought Forward", colSpan: 7, styles: { fontStyle: "bold", halign: "right" } },
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      ""
-    ];
-    doc.autoTable({
-      startY: 20,
-      head: [
-        [
-          { content: "Year", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "Date", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "Type", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "Tail\n(Mark)", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "Captain", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "Co-Pilot /\n2nd Pilot /\nCrew", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "Duty", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "Day Flying", colSpan: 3, styles: { halign: "center" } },
-          { content: "Night Flying", colSpan: 3, styles: { halign: "center" } },
-          { content: "TOTAL", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "Captain", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "Instructor", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "Sim", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "Actual", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "2D App", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "3D App", rowSpan: 2, styles: { valign: "middle" } },
-          { content: "Simulator", colSpan: 4, styles: { halign: "center" } }
-        ],
-        [
-          "P1",
-          "P2",
-          "Dual",
-          // Day
-          "P1",
-          "P2",
-          "Dual",
-          // Night
-          "P1",
-          "P2",
-          "Dual",
-          "TOTAL"
-          // Simulator
-        ]
-      ],
-      body: [
-        bfRow,
-        ...Array(20).fill(["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""])
-      ],
-      theme: "grid",
-      styles: { fontSize: 7, cellPadding: 1, lineColor: [150, 150, 150], lineWidth: 0.1 },
-      headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: "bold" },
-      columnStyles: {
-        0: { cellWidth: 10 },
-        1: { cellWidth: 12 },
-        2: { cellWidth: 12 },
-        3: { cellWidth: 15 },
-        4: { cellWidth: 20 },
-        5: { cellWidth: 20 },
-        6: { cellWidth: 25 }
-      }
-    });
-    const pdfBlob = doc.output("blob");
-    const file = new File([pdfBlob], "ADF_Logbook_Template.pdf", { type: "application/pdf" });
-    await addFile(file, folderId, "ADF_Logbook_Template.pdf");
-    console.log("Seeded Logbook Template (PDF)");
-    const logoDoc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageWidth = logoDoc.internal.pageSize.getWidth();
-    const pageHeight = logoDoc.internal.pageSize.getHeight();
-    const cx = pageWidth / 2;
-    const cy = pageHeight / 2;
-    const scale = 2;
-    logoDoc.setFillColor(0, 0, 0);
-    logoDoc.setDrawColor(0, 0, 0);
-    logoDoc.line(cx - 30 * scale, cy - 35 * scale, cx + 30 * scale, cy - 35 * scale);
-    logoDoc.line(cx + 30 * scale, cy - 35 * scale, cx + 30 * scale, cy - 5 * scale);
-    logoDoc.line(cx - 30 * scale, cy - 35 * scale, cx - 30 * scale, cy - 5 * scale);
-    logoDoc.line(cx + 30 * scale, cy - 5 * scale, cx, cy + 55 * scale);
-    logoDoc.line(cx - 30 * scale, cy - 5 * scale, cx, cy + 55 * scale);
-    logoDoc.rect(cx - 30 * scale, cy - 35 * scale, 60 * scale, 30 * scale, "F");
-    logoDoc.triangle(cx - 30 * scale, cy - 5 * scale, cx + 30 * scale, cy - 5 * scale, cx, cy + 55 * scale, "F");
-    logoDoc.setFillColor(255, 255, 255);
-    logoDoc.roundedRect(cx - 20 * scale, cy - 25 * scale, 40 * scale, 50 * scale, 8 * scale, 8 * scale, "F");
-    logoDoc.setFillColor(0, 0, 0);
-    logoDoc.roundedRect(cx - 20 * scale, cy - 15 * scale, 40 * scale, 12 * scale, 2 * scale, 2 * scale, "F");
-    logoDoc.setFillColor(200, 200, 200);
-    logoDoc.triangle(cx - 3 * scale, cy + 2 * scale, cx + 3 * scale, cy + 2 * scale, cx, cy + 6 * scale, "F");
-    logoDoc.setDrawColor(100, 100, 100);
-    logoDoc.setLineWidth(1.5 * scale);
-    logoDoc.line(cx - 6 * scale, cy + 15 * scale, cx + 6 * scale, cy + 15 * scale);
-    logoDoc.setFillColor(0, 0, 0);
-    logoDoc.triangle(cx - 15 * scale, cy + 50 * scale, cx + 15 * scale, cy + 50 * scale, cx, cy + 25 * scale, "F");
-    const logoBlob = logoDoc.output("blob");
-    const logoFile = new File([logoBlob], "NEO_Logo.pdf", { type: "application/pdf" });
-    await addFile(logoFile, miscFolderId, "NEO_Logo.pdf");
-    console.log("Seeded NEO Logo PDF");
-  }
-};
 const AUDIT_STORAGE_KEY = "dfp_audit_logs";
 let currentUser = "Unknown User";
 const setCurrentUser = (user) => {
@@ -22838,15 +22613,6 @@ const TraineeProfileFlyout = ({
       }
     }
     onUpdateTrainee(updatedTrainee);
-    try {
-      const cleanName = name.replace(/,\s/g, "_");
-      const fileName = `Logbook_${cleanName}_${idNumber}.json`;
-      const fileContent = JSON.stringify(priorExperience, null, 2);
-      const file = new File([fileContent], fileName, { type: "application/json" });
-      await addFile(file, "trainee_logbook", fileName);
-    } catch (error) {
-      console.error("Failed to save logbook data to storage:", error);
-    }
     setIsEditing(false);
     if (isCreating) {
       onClose();
@@ -48945,14 +48711,6 @@ const InstructorProfileFlyout = ({
       logAudit({ action: "Edit", description: `Edited staff profile for ${rank} ${name}`, changes: changesStr, page: "Staff" });
     }
     onUpdateInstructor(updatedInstructor);
-    try {
-      const cleanName = name.replace(/,\s/g, "_");
-      const fileName = `Logbook_${cleanName}_${idNumber}.json`;
-      const file = new File([JSON.stringify(priorExperience, null, 2)], fileName, { type: "application/json" });
-      await addFile(file, "staff_logbook", fileName);
-    } catch (error) {
-      console.error("Failed to save logbook data:", error);
-    }
     setIsEditing(false);
     if (isCreating) onClose();
   };
@@ -50378,24 +50136,11 @@ const BulkUpdateFlyout = ({
   crewPositionTerminology,
   staffQualificationCatalogue
 }) => {
-  const [repoFiles, setRepoFiles] = reactExports.useState([]);
-  const [selectedFileId, setSelectedFileId] = reactExports.useState("");
   const [selectedLocalFile, setSelectedLocalFile] = reactExports.useState(null);
   const [isDragActive, setIsDragActive] = reactExports.useState(false);
   const [isLoading, setIsLoading] = reactExports.useState(false);
   const [statusMessage, setStatusMessage] = reactExports.useState("");
   const fileInputRef = reactExports.useRef(null);
-  reactExports.useEffect(() => {
-    const fetchFiles = async () => {
-      const files = await getAllFiles();
-      const spreadsheetFiles = files.filter((f) => f.name.endsWith(".xlsx") || f.name.endsWith(".xls") || f.name.endsWith(".csv"));
-      setRepoFiles(spreadsheetFiles);
-      if (spreadsheetFiles.length > 0) {
-        setSelectedFileId(spreadsheetFiles[0].id);
-      }
-    };
-    fetchFiles();
-  }, []);
   const isSpreadsheetFile = (file) => /\.(xlsx|xls|csv)$/i.test(file.name);
   const handleLocalFile = (file) => {
     if (!file) return;
@@ -50405,7 +50150,6 @@ const BulkUpdateFlyout = ({
       return;
     }
     setSelectedLocalFile(file);
-    setSelectedFileId("");
     setStatusMessage("");
   };
   const handleDrop = (event) => {
@@ -50415,24 +50159,15 @@ const BulkUpdateFlyout = ({
     handleLocalFile(event.dataTransfer.files?.[0]);
   };
   const handleConfirm = async () => {
-    if (!selectedLocalFile && !selectedFileId) {
+    if (!selectedLocalFile) {
       setStatusMessage("Please select a file.");
       return;
     }
     setIsLoading(true);
-    setStatusMessage(selectedLocalFile ? "Reading selected file..." : "Reading file from repository...");
+    setStatusMessage("Reading selected file...");
     let completedSuccessfully = false;
     try {
-      let data;
-      if (selectedLocalFile) {
-        data = await selectedLocalFile.arrayBuffer();
-      } else {
-        const fileRecord = await getFile(selectedFileId);
-        if (!fileRecord) {
-          throw new Error("File not found in the repository.");
-        }
-        data = await fileRecord.content.arrayBuffer();
-      }
+      const data = await selectedLocalFile.arrayBuffer();
       setStatusMessage("Parsing spreadsheet...");
       const workbook = XLSX.read(data, { type: "buffer" });
       const sheetName = workbook.SheetNames[0];
@@ -50616,25 +50351,12 @@ const BulkUpdateFlyout = ({
           ]
         }
       ),
-      !selectedLocalFile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "repo-file", className: "block text-sm font-medium text-gray-400", children: "File from Repository" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "select",
-          {
-            id: "repo-file",
-            value: selectedFileId,
-            onChange: (e) => setSelectedFileId(e.target.value),
-            className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm",
-            children: repoFiles.length > 0 ? repoFiles.map((file) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: file.id, children: file.name }, file.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { disabled: true, children: "No spreadsheet files found in repository." })
-          }
-        )
-      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Expected columns: PMKeys/ID, Srname, First name, Service, Rank, callsign number, Roles, Category, Seat config." }),
       statusMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-amber-300", children: statusMessage })
     ] }) }),
     !isLoading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleConfirm, disabled: !selectedLocalFile && !selectedFileId, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Upload" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleConfirm, disabled: !selectedLocalFile, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Upload" })
     ] })
   ] }) });
 };
@@ -53229,6 +52951,7 @@ const SyllabusView = ({
   const [deleteError, setDeleteError] = reactExports.useState("");
   const [showUploadModal, setShowUploadModal] = reactExports.useState(false);
   const [uploadFile, setUploadFile] = reactExports.useState(null);
+  const [isUploadDragActive, setIsUploadDragActive] = reactExports.useState(false);
   const [isUploading, setIsUploading] = reactExports.useState(false);
   const [uploadMode, setUploadMode] = reactExports.useState("update");
   const [newUploadPackageName, setNewUploadPackageName] = reactExports.useState("");
@@ -54879,38 +54602,74 @@ const SyllabusView = ({
                   ] })
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16 }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
-                  display: "block",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "#9ca3af",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  marginBottom: 8
-                }, children: "Select Excel File (.xlsx)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "file",
-                    accept: ".xlsx,.xls,.csv",
-                    onChange: (e) => {
-                      setUploadFile(e.target.files?.[0] || null);
-                      setUploadResult(null);
-                    },
-                    style: {
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "div",
+                {
+                  onDragEnter: (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setIsUploadDragActive(true);
+                  },
+                  onDragOver: (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.dataTransfer.dropEffect = "copy";
+                    setIsUploadDragActive(true);
+                  },
+                  onDragLeave: (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setIsUploadDragActive(false);
+                  },
+                  onDrop: (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setIsUploadDragActive(false);
+                    setUploadFile(event.dataTransfer.files?.[0] || null);
+                    setUploadResult(null);
+                  },
+                  style: {
+                    marginBottom: 16,
+                    border: `1px dashed ${isUploadDragActive ? "#67e8f9" : "#374151"}`,
+                    borderRadius: 8,
+                    padding: 12,
+                    backgroundColor: isUploadDragActive ? "rgba(14, 116, 144, 0.22)" : "#0f172a"
+                  },
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
                       display: "block",
-                      width: "100%",
-                      fontSize: 13,
-                      color: "#f9fafb",
-                      backgroundColor: "#111827",
-                      border: "1px solid #374151",
-                      borderRadius: 6,
-                      padding: "8px 12px"
-                    }
-                  }
-                )
-              ] }),
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#9ca3af",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      marginBottom: 8
+                    }, children: "Select or drop Excel File (.xlsx)" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "file",
+                        accept: ".xlsx,.xls,.csv",
+                        onChange: (e) => {
+                          setUploadFile(e.target.files?.[0] || null);
+                          setUploadResult(null);
+                        },
+                        style: {
+                          display: "block",
+                          width: "100%",
+                          fontSize: 13,
+                          color: "#f9fafb",
+                          backgroundColor: "#111827",
+                          border: "1px solid #374151",
+                          borderRadius: 6,
+                          padding: "8px 12px"
+                        }
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { marginTop: 8, fontSize: 11, color: "#6b7280" }, children: "Drag and drop .xlsx, .xls or .csv here." })
+                  ]
+                }
+              ),
               uploadFile && !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 12, color: "#6b7280", marginBottom: 12 }, children: [
                 "Selected: ",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: uploadFile.name }),
@@ -57243,131 +57002,6 @@ const AuthorisationFlyout = ({
     showClearConfirmation && /* @__PURE__ */ jsxRuntimeExports.jsx(ClearAuthConfirmation, { onConfirm: handleProceedToPinForClear, onCancel: () => setShowClearConfirmation(false) })
   ] });
 };
-const UploadFileFlyout = ({ onClose, onConfirm }) => {
-  const [selectedFile, setSelectedFile] = reactExports.useState(null);
-  const fileInputRef = reactExports.useRef(null);
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
-  const handleSelectClick = () => {
-    fileInputRef.current?.click();
-  };
-  const handleConfirm = () => {
-    if (selectedFile) {
-      onConfirm(selectedFile);
-    }
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Upload a File" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Select a file from your local machine to upload to the repository." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "div",
-        {
-          className: "border-2 border-dashed border-gray-600 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-sky-500 transition-colors",
-          onClick: handleSelectClick,
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "file",
-                ref: fileInputRef,
-                onChange: handleFileChange,
-                className: "hidden"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-10 w-10 text-gray-500 mb-2", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" }) }),
-            selectedFile ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-white font-semibold", children: selectedFile.name }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "Click to select a file" })
-          ]
-        }
-      )
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleConfirm, disabled: !selectedFile, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "OK" })
-    ] })
-  ] }) });
-};
-const SelectDestinationFlyout = ({ onClose, onConfirm, fileName, folders }) => {
-  const [selectedFolder, setSelectedFolder] = reactExports.useState(folders[0]?.id || "");
-  const handleConfirm = () => {
-    if (selectedFolder) {
-      onConfirm(selectedFolder);
-    } else {
-      alert("Please select a destination folder.");
-    }
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Select Destination" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm", children: [
-        "Select a destination folder for the file: ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-gray-200", children: fileName })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: folders.map((folder) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 p-3 rounded-md bg-gray-700/50 hover:bg-gray-700 cursor-pointer", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            type: "radio",
-            name: "destination-folder",
-            value: folder.id,
-            checked: selectedFolder === folder.id,
-            onChange: () => setSelectedFolder(folder.id),
-            className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 text-sky-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: folder.name })
-      ] }, folder.id)) })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleConfirm, disabled: !selectedFolder, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Confirm & Upload" })
-    ] })
-  ] }) });
-};
-const DownloadConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Download File" }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300", children: [
-      "Do you want to download ",
-      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-sky-400", children: fileName }),
-      " to your computer?"
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onConfirm, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "OK" })
-    ] })
-  ] }) });
-};
-const DeleteFileConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-amber-500/50", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-amber-900/20 flex items-center space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-amber-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-amber-400", children: "Confirm Deletion" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300", children: [
-        "Are you sure you want to permanently delete ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: fileName }),
-        "?"
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 mt-2 text-sm", children: "This action cannot be undone." })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onConfirm, className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold", children: "Yes, Delete" })
-    ] })
-  ] }) });
-};
 const UpdateConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
   const [pin, setPin] = reactExports.useState("");
   const [updateType, setUpdateType] = reactExports.useState("minor");
@@ -59335,9 +58969,6 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     ] }) })
   ] });
 };
-const FolderIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 text-sky-400 mr-2 flex-shrink-0", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" }) });
-const FileIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-gray-400 mr-2 flex-shrink-0", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z", clipRule: "evenodd" }) });
-const UpdateIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z", clipRule: "evenodd" }) });
 const SettingsView = ({
   hideHeader = false,
   instructorsData,
@@ -59421,25 +59052,10 @@ const SettingsView = ({
   const [showScoringMatrix, setShowScoringMatrix] = reactExports.useState(false);
   const [scoringMatrixTab, setScoringMatrixTab] = reactExports.useState("Airmanship");
   const [repoFiles, setRepoFiles] = reactExports.useState([]);
-  const [folders] = reactExports.useState([
-    { id: "instructor_loads", name: "Instructor Loads" },
-    { id: "trainee_loads", name: "Trainee Loads" },
-    { id: "lmp_loads", name: "LMP Loads" },
-    { id: "logbook_templates", name: "Logbook Template" },
-    { id: "miscellaneous", name: "Miscellaneous" },
-    { id: "trainee_data", name: "Trainee Data" },
-    { id: "trainee_logbook", name: "Logbook", isSub: true },
-    { id: "staff_data", name: "Staff Data" },
-    { id: "staff_logbook", name: "Logbook", isSub: true },
-    { id: TEMPLATE_OVERRIDE_FOLDER_ID, name: "Template Overrides" }
-  ]);
-  const [showUpload, setShowUpload] = reactExports.useState(false);
-  const [fileToUpload, setFileToUpload] = reactExports.useState(null);
   const [pendingTemplateOverride, setPendingTemplateOverride] = reactExports.useState(null);
   const templateOverrideInputRef = reactExports.useRef(null);
-  const [showSelectDestination, setShowSelectDestination] = reactExports.useState(false);
-  const [fileToDownload, setFileToDownload] = reactExports.useState(null);
-  const [fileToDelete, setFileToDelete] = reactExports.useState(null);
+  const directUploadInputRefs = reactExports.useRef({});
+  const [dragUploadType, setDragUploadType] = reactExports.useState(null);
   const [fileToProcess, setFileToProcess] = reactExports.useState(null);
   const [showUpdateConfirmation, setShowUpdateConfirmation] = reactExports.useState(false);
   const [showCourseSelection, setShowCourseSelection] = reactExports.useState(false);
@@ -59457,8 +59073,6 @@ const SettingsView = ({
   const [updatedRecords, setUpdatedRecords] = reactExports.useState([]);
   const [newRecords, setNewRecords] = reactExports.useState([]);
   const [skippedCount, setSkippedCount] = reactExports.useState(0);
-  const folderIds = reactExports.useMemo(() => new Set(folders.map((f) => f.id)), [folders]);
-  const uncategorizedFiles = reactExports.useMemo(() => repoFiles.filter((file) => !folderIds.has(file.folderId)), [repoFiles, folderIds]);
   const activeCourses = reactExports.useMemo(() => {
     return Object.keys(courseColors).sort((a, b) => a.localeCompare(b));
   }, [courseColors]);
@@ -59658,71 +59272,17 @@ const SettingsView = ({
       (page, action, description, changes) => logAudit({ page, action, description, changes })
     );
   };
-  const handleUploadClick = () => {
-    setShowUpload(true);
-  };
-  const handleUploadConfirm = (file) => {
-    setFileToUpload(file);
-    setShowUpload(false);
-    setShowSelectDestination(true);
-  };
-  const handleDestinationConfirm = async (folderId) => {
-    if (fileToUpload) {
-      const now = /* @__PURE__ */ new Date();
-      const year = now.getFullYear().toString().slice(-2);
-      const month = (now.getMonth() + 1).toString().padStart(2, "0");
-      const day = now.getDate().toString().padStart(2, "0");
-      const formattedDate = `${year}${month}${day}`;
-      const folder = folders.find((f) => f.id === folderId);
-      const folderName = folder ? folder.name.replace(/\s+/g, "_") : "Uncategorized";
-      const originalFileName = fileToUpload.name;
-      const newFileName = `${formattedDate}_${folderName}_${originalFileName}`;
-      await addFile(fileToUpload, folderId, newFileName);
-      refreshFiles();
-      logAudit({
-        page: "Settings - Data Loaders",
-        action: "create",
-        description: `Uploaded file to ${folderName}`,
-        changes: `File: ${newFileName}`
-      });
+  const isSupportedDataUploadFile = (file) => /\.(xlsx|xls|csv)$/i.test(file.name);
+  const handleDirectDataUpload = (folderId, file) => {
+    if (!file) return;
+    if (!isSupportedDataUploadFile(file)) {
+      onShowSuccess("Please select an .xlsx, .xls or .csv file.");
+      return;
     }
-    setShowSelectDestination(false);
-    setFileToUpload(null);
-  };
-  const handleDownloadClick = (file) => {
-    setFileToDownload(file);
-  };
-  const handleDownloadConfirm = async () => {
-    if (fileToDownload) {
-      const record = await getFile(fileToDownload.id);
-      if (record) {
-        const url = URL.createObjectURL(record.content);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = record.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-      setFileToDownload(null);
-    }
-  };
-  const handleDeleteClick = (file) => {
-    setFileToDelete(file);
-  };
-  const handleDeleteConfirm = async () => {
-    if (fileToDelete) {
-      await deleteFile(fileToDelete.id);
-      refreshFiles();
-      logAudit({
-        page: "Settings - Data Loaders",
-        action: "delete",
-        description: "Deleted file from data loaders",
-        changes: `File: ${fileToDelete.name}`
-      });
-      setFileToDelete(null);
-    }
+    setCoursesFromFile([]);
+    setFileToProcess({ name: file.name, folderId, file });
+    setSelectedUpdateType("minor");
+    setShowUpdateConfirmation(true);
   };
   const handleDownloadInstructorTemplate = async () => {
     if (await downloadStoredTemplate("staff")) return;
@@ -59783,10 +59343,6 @@ const SettingsView = ({
     { key: "logbook", label: "Logbook", downloadLabel: "Logbook Template (.xlsx)", onDownload: handleDownloadLogbookTemplate },
     { key: "organisation-structure", label: "Organisational Structure", downloadLabel: "Organisational Structure Template (.xlsx)", onDownload: handleDownloadOrganisationStructureTemplate }
   ];
-  const handleUpdateIconClick = (file) => {
-    setFileToProcess(file);
-    setShowUpdateConfirmation(true);
-  };
   const handleUpdateConfirm = async (pin, updateType) => {
     if (pin !== "1111") {
       onShowSuccess("Incorrect PIN.");
@@ -59804,9 +59360,7 @@ const SettingsView = ({
   const extractCoursesFromFile = async () => {
     if (!fileToProcess) return;
     try {
-      const fileRecord = await getFile(fileToProcess.id);
-      if (!fileRecord) return;
-      const data = await fileRecord.content.arrayBuffer();
+      const data = await fileToProcess.file.arrayBuffer();
       const workbook = XLSX.read(data, { type: "buffer" });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
@@ -59835,9 +59389,7 @@ const SettingsView = ({
   const processFileUpdate = async (updateType, course) => {
     if (!fileToProcess) return;
     try {
-      const fileRecord = await getFile(fileToProcess.id);
-      if (!fileRecord) throw new Error("File not found");
-      const data = await fileRecord.content.arrayBuffer();
+      const data = await fileToProcess.file.arrayBuffer();
       const workbook = XLSX.read(data, { type: "buffer" });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
@@ -60382,17 +59934,69 @@ const SettingsView = ({
     setUnmatchedRowData(null);
     setIsMinorUpdateInProgress(true);
   };
-  const FileListItem = ({ file }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-2 bg-gray-700/50 rounded text-sm group", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center truncate", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(FileIcon, {}),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-white", title: file.name, children: file.name })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleUpdateIconClick(file), className: "p-1 text-gray-400 hover:text-green-400", "aria-label": "Update from file", children: /* @__PURE__ */ jsxRuntimeExports.jsx(UpdateIcon, {}) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleDownloadClick(file), className: "p-1 text-gray-400 hover:text-sky-400", "aria-label": "Download file", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z", clipRule: "evenodd" }) }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleDeleteClick(file), className: "p-1 text-gray-400 hover:text-red-400", "aria-label": "Delete file", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z", clipRule: "evenodd" }) }) })
-    ] })
-  ] }, file.id);
+  const DirectDataUploadCard = ({ id, title, description }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      onDragEnter: (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (canEditSettings) setDragUploadType(id);
+      },
+      onDragOver: (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = canEditSettings ? "copy" : "none";
+        if (canEditSettings) setDragUploadType(id);
+      },
+      onDragLeave: (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setDragUploadType((current) => current === id ? null : current);
+      },
+      onDrop: (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setDragUploadType(null);
+        if (canEditSettings) handleDirectDataUpload(id, event.dataTransfer.files?.[0]);
+      },
+      className: `rounded-lg border border-dashed p-4 transition-colors ${dragUploadType === id ? "border-cyan-300 bg-cyan-500/15" : "border-gray-600 bg-gray-950/40"} ${canEditSettings ? "" : "opacity-60"}`,
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            ref: (element) => {
+              directUploadInputRefs.current[id] = element;
+            },
+            type: "file",
+            accept: ".xlsx,.xls,.csv",
+            className: "hidden",
+            disabled: !canEditSettings,
+            onChange: (event) => {
+              handleDirectDataUpload(id, event.target.files?.[0]);
+              event.currentTarget.value = "";
+            }
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-gray-100", children: title }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: description })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              disabled: !canEditSettings,
+              onClick: () => directUploadInputRefs.current[id]?.click(),
+              className: `shrink-0 rounded-md px-3 py-2 text-xs font-bold ${canEditSettings ? "bg-gray-100 text-gray-900 hover:bg-white" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
+              children: "Select File"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-[11px] font-semibold uppercase tracking-wide text-gray-500", children: "Drag and drop .xlsx, .xls or .csv" })
+      ]
+    }
+  );
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { onKeyDownCapture: stopEditableKeyPropagation, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
       shouldShowSection("validation") && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -60757,31 +60361,34 @@ const SettingsView = ({
               })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Data Storage" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Upload Data" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Manage files stored in the local browser repository for bulk updates or other operations." }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-60 overflow-y-auto pr-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-                folders.map((folder) => {
-                  const filesInFolder = repoFiles.filter((file) => file.folderId === folder.id);
-                  const isSub = folder.isSub;
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: isSub ? "ml-8" : "", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center mb-1", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(FolderIcon, {}),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-gray-300", children: folder.name })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pl-4 border-l-2 border-gray-600 ml-2.5", children: filesInFolder.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 pt-2", children: filesInFolder.sort((a, b) => a.name.localeCompare(b.name)).map((file) => /* @__PURE__ */ jsxRuntimeExports.jsx(FileListItem, { file }, file.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 italic pl-3 pt-1", children: "Empty" }) })
-                  ] }, folder.id);
-                }),
-                uncategorizedFiles.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center mb-1", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(FolderIcon, {}),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-gray-300", children: "Uncategorized" })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pl-4 border-l-2 border-gray-600 ml-2.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 pt-2", children: uncategorizedFiles.sort((a, b) => a.name.localeCompare(b.name)).map((file) => /* @__PURE__ */ jsxRuntimeExports.jsx(FileListItem, { file }, file.id)) }) })
-                ] }, "uncategorized")
-              ] }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleUploadClick, className: "w-full mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-semibold", children: "Upload File" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Upload directly from this computer. Files are processed immediately after confirmation and are not stored in a staging repository." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                DirectDataUploadCard,
+                {
+                  id: "instructor_loads",
+                  title: "Staff Data",
+                  description: "Create or update staff records from the staff bulk upload template."
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                DirectDataUploadCard,
+                {
+                  id: "trainee_loads",
+                  title: "Trainee Data",
+                  description: "Create or update trainee records, then choose the course to apply the upload to."
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                DirectDataUploadCard,
+                {
+                  id: "lmp_loads",
+                  title: "LMP Data",
+                  description: "Create or update master LMP event data from the LMP template."
+                }
+              )
             ] })
           ] })
         ] })
@@ -60917,12 +60524,8 @@ const SettingsView = ({
       )
     ] }),
     showScoringMatrix && /* @__PURE__ */ jsxRuntimeExports.jsx(ScoringMatrixFlyout, { onClose: () => setShowScoringMatrix(false), phraseBank, onUpdatePhraseBank: handleUpdatePhraseBank, initialTab: scoringMatrixTab }),
-    showUpload && /* @__PURE__ */ jsxRuntimeExports.jsx(UploadFileFlyout, { onClose: () => setShowUpload(false), onConfirm: handleUploadConfirm }),
-    showSelectDestination && fileToUpload && /* @__PURE__ */ jsxRuntimeExports.jsx(SelectDestinationFlyout, { onClose: () => setShowSelectDestination(false), onConfirm: handleDestinationConfirm, fileName: fileToUpload.name, folders: folders.filter((f) => !f.isSub) }),
-    fileToDownload && /* @__PURE__ */ jsxRuntimeExports.jsx(DownloadConfirmationFlyout, { fileName: fileToDownload.name, onConfirm: handleDownloadConfirm, onClose: () => setFileToDownload(null) }),
-    fileToDelete && /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteFileConfirmationFlyout, { fileName: fileToDelete.name, onConfirm: handleDeleteConfirm, onClose: () => setFileToDelete(null) }),
     showUpdateConfirmation && fileToProcess && /* @__PURE__ */ jsxRuntimeExports.jsx(UpdateConfirmationFlyout, { fileName: fileToProcess.name, onConfirm: handleUpdateConfirm, onClose: () => setShowUpdateConfirmation(false) }),
-    showCourseSelection && /* @__PURE__ */ jsxRuntimeExports.jsx(CourseSelectionFlyout, { courses: activeCourses, onConfirm: handleCourseSelection, onClose: () => setShowCourseSelection(false), updateType: selectedUpdateType }),
+    showCourseSelection && /* @__PURE__ */ jsxRuntimeExports.jsx(CourseSelectionFlyout, { courses: coursesFromFile.length > 0 ? coursesFromFile : activeCourses, onConfirm: handleCourseSelection, onClose: () => setShowCourseSelection(false), updateType: selectedUpdateType }),
     showNewRecordConfirm && unmatchedRowData && /* @__PURE__ */ jsxRuntimeExports.jsx(NewRecordConfirmationFlyout, { rowData: unmatchedRowData, onConfirm: handleConfirmNewRecord, onCancel: handleRejectNewRecord }),
     showUpdateError && /* @__PURE__ */ jsxRuntimeExports.jsx(UpdateErrorFlyout, { message: updateErrorMessage, onClose: () => setShowUpdateError(false) }),
     showUpdateSummary && /* @__PURE__ */ jsxRuntimeExports.jsx(UpdateSummaryFlyout, { summary: updateSummary, onClose: () => setShowUpdateSummary(false) })
@@ -72722,27 +72325,6 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
       }
     } catch (snapshotErr) {
       console.warn("[PostFlight] Could not save form snapshot:", snapshotErr);
-    }
-    let targetFolderId = "trainee_logbook";
-    let userName = event.student;
-    if (!userName || userName === "Multiple") {
-      if (event.pilot) {
-        userName = event.pilot;
-      } else if (event.instructor) {
-        userName = event.instructor;
-        targetFolderId = "staff_logbook";
-      }
-    }
-    if (userName) {
-      const cleanName = userName.split(" – ")[0].replace(/,\s/g, "_");
-      const fileName = `Entry_${event.date}_${event.flightNumber.replace(/\s/g, "")}_${cleanName}.json`;
-      try {
-        const fileContent = JSON.stringify(saveData, null, 2);
-        const file = new File([fileContent], fileName, { type: "application/json" });
-        await addFile(file, targetFolderId, fileName);
-      } catch (error) {
-        console.error("Failed to auto-save post-flight data to file:", error);
-      }
     }
     if (!isAutoSave) {
       setIsDirty(false);
@@ -104353,7 +103935,6 @@ ${"=".repeat(60)}`);
   reactExports.useEffect(() => {
     const init = async () => {
       await initDB();
-      await seedDefaultTemplates();
       const existingLogs = localStorage.getItem("dfp_audit_logs");
       if (!existingLogs) {
         seedTestAuditLogs();

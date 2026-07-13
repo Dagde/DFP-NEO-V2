@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { getAllFiles, getFile } from '../utils/db';
-import { Instructor, InstructorRank, InstructorCategory, SeatConfig } from '../types';
+import React, { useState, useRef } from 'react';
+import { Instructor, InstructorRank, InstructorCategory, SeatConfig, Trainee } from '../types';
 import {
     CrewPositionTerminology,
     findCrewPositionEntry,
@@ -22,12 +21,6 @@ interface BulkUpdateFlyoutProps {
   onBulkUpdateTrainees?: (trainees: Trainee[]) => void;
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
-}
-
-interface RepoFile {
-    id: string;
-    name: string;
-    folderId: string;
 }
 
 // Helper to get a value from a row with fuzzy key matching
@@ -153,26 +146,11 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
   crewPositionTerminology,
   staffQualificationCatalogue,
 }) => {
-    const [repoFiles, setRepoFiles] = useState<RepoFile[]>([]);
-    const [selectedFileId, setSelectedFileId] = useState<string>('');
     const [selectedLocalFile, setSelectedLocalFile] = useState<File | null>(null);
     const [isDragActive, setIsDragActive] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-    useEffect(() => {
-        const fetchFiles = async () => {
-            const files = await getAllFiles();
-            // Filter for spreadsheet files
-            const spreadsheetFiles = files.filter(f => f.name.endsWith('.xlsx') || f.name.endsWith('.xls') || f.name.endsWith('.csv'));
-            setRepoFiles(spreadsheetFiles);
-            if (spreadsheetFiles.length > 0) {
-                setSelectedFileId(spreadsheetFiles[0].id);
-            }
-        };
-        fetchFiles();
-    }, []);
 
     const isSpreadsheetFile = (file: File): boolean => (
         /\.(xlsx|xls|csv)$/i.test(file.name)
@@ -186,7 +164,6 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
             return;
         }
         setSelectedLocalFile(file);
-        setSelectedFileId('');
         setStatusMessage('');
     };
 
@@ -198,26 +175,17 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
     };
 
     const handleConfirm = async () => {
-        if (!selectedLocalFile && !selectedFileId) {
+        if (!selectedLocalFile) {
             setStatusMessage('Please select a file.');
             return;
         }
 
         setIsLoading(true);
-        setStatusMessage(selectedLocalFile ? 'Reading selected file...' : 'Reading file from repository...');
+        setStatusMessage('Reading selected file...');
         let completedSuccessfully = false;
 
         try {
-            let data: ArrayBuffer;
-            if (selectedLocalFile) {
-                data = await selectedLocalFile.arrayBuffer();
-            } else {
-                const fileRecord = await getFile(selectedFileId);
-                if (!fileRecord) {
-                    throw new Error('File not found in the repository.');
-                }
-                data = await fileRecord.content.arrayBuffer();
-            }
+            const data = await selectedLocalFile.arrayBuffer();
 
             setStatusMessage('Parsing spreadsheet...');
             const workbook = XLSX.read(data, { type: 'buffer' });
@@ -434,23 +402,6 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                                     Add File
                                 </button>
                             </div>
-                            {!selectedLocalFile && (
-                            <div>
-                                <label htmlFor="repo-file" className="block text-sm font-medium text-gray-400">File from Repository</label>
-                                <select 
-                                    id="repo-file"
-                                    value={selectedFileId}
-                                    onChange={e => setSelectedFileId(e.target.value)}
-                                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm"
-                                >
-                                    {repoFiles.length > 0 ? (
-                                        repoFiles.map(file => <option key={file.id} value={file.id}>{file.name}</option>)
-                                    ) : (
-                                        <option disabled>No spreadsheet files found in repository.</option>
-                                    )}
-                                </select>
-                            </div>
-                            )}
                             <p className="text-xs text-gray-500">Expected columns: PMKeys/ID, Srname, First name, Service, Rank, callsign number, Roles, Category, Seat config.</p>
                             {statusMessage && <p className="text-sm text-amber-300">{statusMessage}</p>}
                         </>
@@ -460,7 +411,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 {!isLoading && (
                     <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
                         <button onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Cancel</button>
-                        <button onClick={handleConfirm} disabled={!selectedLocalFile && !selectedFileId} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed">
+                        <button onClick={handleConfirm} disabled={!selectedLocalFile} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed">
                             Upload
                         </button>
                     </div>

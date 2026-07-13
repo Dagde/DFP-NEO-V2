@@ -5,7 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import AuditButton from './AuditButton';
 import { InsertEventModal, LmpEventEditModal, type InsertLmpEventRequest } from './TraineeLmpView';
-import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
@@ -849,12 +848,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     }
 
     onUpdateInstructor(updatedInstructor);
-    try {
-      const cleanName = name.replace(/,\s/g, '_');
-      const fileName = `Logbook_${cleanName}_${idNumber}.json`;
-      const file = new File([JSON.stringify(priorExperience, null, 2)], fileName, { type: "application/json" });
-      await addFile(file, 'staff_logbook', fileName);
-    } catch (error) { console.error("Failed to save logbook data:", error); }
     setIsEditing(false);
     if (isCreating) onClose();
   };

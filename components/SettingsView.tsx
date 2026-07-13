@@ -2,10 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { initDB, getAllFiles, addFile, getFile, deleteFile } from '../utils/db';
-import UploadFileFlyout from './UploadFileFlyout';
-import SelectDestinationFlyout from './SelectDestinationFlyout';
-import DownloadConfirmationFlyout from './DownloadConfirmationFlyout';
-import DeleteFileConfirmationFlyout from './DeleteFileConfirmationFlyout';
 import UpdateConfirmationFlyout from './UpdateConfirmationFlyout';
 import NewRecordConfirmationFlyout from './NewRecordConfirmationFlyout';
 import UpdateErrorFlyout from './UpdateErrorFlyout';
@@ -535,25 +531,6 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
-const FolderIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-sky-400 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-        <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-    </svg>
-);
-
-const FileIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-    </svg>
-);
-
-const UpdateIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-      <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-    </svg>
-);
-
-
 // FIX: Export the component to make it available for import.
 export const SettingsView: React.FC<SettingsViewProps> = ({ 
     hideHeader = false,
@@ -645,28 +622,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     // Data Loader State
     const [repoFiles, setRepoFiles] = useState<{ id: string; name: string; folderId: string }[]>([]);
-    const [folders] = useState([
-        { id: 'instructor_loads', name: 'Instructor Loads' },
-        { id: 'trainee_loads', name: 'Trainee Loads' },
-        { id: 'lmp_loads', name: 'LMP Loads' },
-        { id: 'logbook_templates', name: 'Logbook Template' },
-        { id: 'miscellaneous', name: 'Miscellaneous' },
-        { id: 'trainee_data', name: 'Trainee Data' },
-        { id: 'trainee_logbook', name: 'Logbook', isSub: true },
-        { id: 'staff_data', name: 'Staff Data' },
-        { id: 'staff_logbook', name: 'Logbook', isSub: true },
-        { id: TEMPLATE_OVERRIDE_FOLDER_ID, name: 'Template Overrides' },
-    ]);
-    const [showUpload, setShowUpload] = useState(false);
-    const [fileToUpload, setFileToUpload] = useState<File | null>(null);
     const [pendingTemplateOverride, setPendingTemplateOverride] = useState<{ key: string; label: string } | null>(null);
     const templateOverrideInputRef = useRef<HTMLInputElement>(null);
-    const [showSelectDestination, setShowSelectDestination] = useState(false);
-    const [fileToDownload, setFileToDownload] = useState<{ id: string; name: string } | null>(null);
-    const [fileToDelete, setFileToDelete] = useState<{ id: string; name: string } | null>(null);
+    const directUploadInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+    const [dragUploadType, setDragUploadType] = useState<string | null>(null);
 
     // Update process state
-    const [fileToProcess, setFileToProcess] = useState<{ id: string; name: string; folderId: string } | null>(null);
+    const [fileToProcess, setFileToProcess] = useState<{ name: string; folderId: string; file: File } | null>(null);
     const [showUpdateConfirmation, setShowUpdateConfirmation] = useState(false);
     const [showCourseSelection, setShowCourseSelection] = useState(false);
     const [selectedUpdateType, setSelectedUpdateType] = useState<'bulk' | 'minor'>('minor');
@@ -687,9 +649,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const [skippedCount, setSkippedCount] = useState(0);
 
     // --- COMPUTED / MEMOIZED ---
-    const folderIds = useMemo(() => new Set(folders.map(f => f.id)), [folders]);
-    const uncategorizedFiles = useMemo(() => repoFiles.filter(file => !folderIds.has(file.folderId)), [repoFiles, folderIds]);
-
     // Derive active courses from courseColors (same as CourseRosterView)
     const activeCourses = useMemo(() => {
         return Object.keys(courseColors).sort((a, b) => a.localeCompare(b));
@@ -949,80 +908,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     // Data Loader Handlers
-    const handleUploadClick = () => {
-        setShowUpload(true);
-    };
+    const isSupportedDataUploadFile = (file: File): boolean => (
+        /\.(xlsx|xls|csv)$/i.test(file.name)
+    );
 
-    const handleUploadConfirm = (file: File) => {
-        setFileToUpload(file);
-        setShowUpload(false);
-        setShowSelectDestination(true);
-    };
-    
-    const handleDestinationConfirm = async (folderId: string) => {
-        if (fileToUpload) {
-            const now = new Date();
-            const year = now.getFullYear().toString().slice(-2);
-            const month = (now.getMonth() + 1).toString().padStart(2, '0');
-            const day = now.getDate().toString().padStart(2, '0');
-            const formattedDate = `${year}${month}${day}`;
-
-            const folder = folders.find(f => f.id === folderId);
-            const folderName = folder ? folder.name.replace(/\s+/g, '_') : 'Uncategorized';
-
-            const originalFileName = fileToUpload.name;
-            const newFileName = `${formattedDate}_${folderName}_${originalFileName}`;
-
-            await addFile(fileToUpload, folderId, newFileName);
-            refreshFiles();
-            logAudit({
-                page: 'Settings - Data Loaders',
-                action: 'create',
-                description: `Uploaded file to ${folderName}`,
-                changes: `File: ${newFileName}`
-            });
+    const handleDirectDataUpload = (folderId: 'instructor_loads' | 'trainee_loads' | 'lmp_loads', file?: File | null) => {
+        if (!file) return;
+        if (!isSupportedDataUploadFile(file)) {
+            onShowSuccess('Please select an .xlsx, .xls or .csv file.');
+            return;
         }
-        setShowSelectDestination(false);
-        setFileToUpload(null);
-    };
-
-    const handleDownloadClick = (file: { id: string; name: string }) => {
-        setFileToDownload(file);
-    };
-
-    const handleDownloadConfirm = async () => {
-        if (fileToDownload) {
-            const record = await getFile(fileToDownload.id);
-            if (record) {
-                const url = URL.createObjectURL(record.content);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = record.name;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
-            setFileToDownload(null);
-        }
-    };
-
-    const handleDeleteClick = (file: { id: string; name: string }) => {
-        setFileToDelete(file);
-    };
-
-    const handleDeleteConfirm = async () => {
-        if (fileToDelete) {
-            await deleteFile(fileToDelete.id);
-            refreshFiles();
-            logAudit({
-                page: 'Settings - Data Loaders',
-                action: 'delete',
-                description: 'Deleted file from data loaders',
-                changes: `File: ${fileToDelete.name}`
-            });
-            setFileToDelete(null);
-        }
+        setCoursesFromFile([]);
+        setFileToProcess({ name: file.name, folderId, file });
+        setSelectedUpdateType('minor');
+        setShowUpdateConfirmation(true);
     };
 
     const handleDownloadInstructorTemplate = async () => {
@@ -1136,11 +1035,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     // --- Data Update Logic ---
-    const handleUpdateIconClick = (file: { id: string, name: string, folderId: string }) => {
-        setFileToProcess(file);
-        setShowUpdateConfirmation(true);
-    };
-
     const handleUpdateConfirm = async (pin: string, updateType: 'bulk' | 'minor') => {
         if (pin !== '1111') { 
             onShowSuccess('Incorrect PIN.');
@@ -1163,10 +1057,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         if (!fileToProcess) return;
         
         try {
-            const fileRecord = await getFile(fileToProcess.id);
-            if (!fileRecord) return;
-            
-            const data = await fileRecord.content.arrayBuffer();
+            const data = await fileToProcess.file.arrayBuffer();
             const workbook = XLSX.read(data, { type: 'buffer' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
@@ -1203,10 +1094,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         if (!fileToProcess) return;
 
         try {
-            const fileRecord = await getFile(fileToProcess.id);
-            if (!fileRecord) throw new Error('File not found');
-
-            const data = await fileRecord.content.arrayBuffer();
+            const data = await fileToProcess.file.arrayBuffer();
             const workbook = XLSX.read(data, { type: 'buffer' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
@@ -1837,20 +1725,73 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
 
-    const FileListItem: React.FC<{file: {id: string; name: string; folderId: string}}> = ({ file }) => (
-         <li key={file.id} className="flex items-center justify-between p-2 bg-gray-700/50 rounded text-sm group">
-            <div className="flex items-center truncate">
-                <FileIcon />
-                <span className="truncate text-white" title={file.name}>{file.name}</span>
-            </div>
-            <div className="flex space-x-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => handleUpdateIconClick(file)} className="p-1 text-gray-400 hover:text-green-400" aria-label="Update from file">
-                    <UpdateIcon />
+    const DirectDataUploadCard: React.FC<{
+        id: 'instructor_loads' | 'trainee_loads' | 'lmp_loads';
+        title: string;
+        description: string;
+    }> = ({ id, title, description }) => (
+        <div
+            onDragEnter={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (canEditSettings) setDragUploadType(id);
+            }}
+            onDragOver={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                event.dataTransfer.dropEffect = canEditSettings ? 'copy' : 'none';
+                if (canEditSettings) setDragUploadType(id);
+            }}
+            onDragLeave={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setDragUploadType(current => current === id ? null : current);
+            }}
+            onDrop={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setDragUploadType(null);
+                if (canEditSettings) handleDirectDataUpload(id, event.dataTransfer.files?.[0]);
+            }}
+            className={`rounded-lg border border-dashed p-4 transition-colors ${
+                dragUploadType === id
+                    ? 'border-cyan-300 bg-cyan-500/15'
+                    : 'border-gray-600 bg-gray-950/40'
+            } ${canEditSettings ? '' : 'opacity-60'}`}
+        >
+            <input
+                ref={(element) => { directUploadInputRefs.current[id] = element; }}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                disabled={!canEditSettings}
+                onChange={(event) => {
+                    handleDirectDataUpload(id, event.target.files?.[0]);
+                    event.currentTarget.value = '';
+                }}
+            />
+            <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                    <h4 className="text-sm font-semibold text-gray-100">{title}</h4>
+                    <p className="mt-1 text-xs text-gray-400">{description}</p>
+                </div>
+                <button
+                    type="button"
+                    disabled={!canEditSettings}
+                    onClick={() => directUploadInputRefs.current[id]?.click()}
+                    className={`shrink-0 rounded-md px-3 py-2 text-xs font-bold ${
+                        canEditSettings
+                            ? 'bg-gray-100 text-gray-900 hover:bg-white'
+                            : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                    }`}
+                >
+                    Select File
                 </button>
-                <button onClick={() => handleDownloadClick(file)} className="p-1 text-gray-400 hover:text-sky-400" aria-label="Download file"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg></button>
-                <button onClick={() => handleDeleteClick(file)} className="p-1 text-gray-400 hover:text-red-400" aria-label="Delete file"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg></button>
             </div>
-        </li>
+            <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Drag and drop .xlsx, .xls or .csv
+            </p>
+        </div>
     );
 
     return (
@@ -2305,55 +2246,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                     })}
                                 </div>
                             </fieldset>
-                            <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                <legend className="px-2 text-sm font-semibold text-gray-300">Data Storage</legend>
+                            <fieldset className="overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3">
+                                <legend className="px-2 text-sm font-semibold text-gray-300">Upload Data</legend>
                                 <div className="mt-2 space-y-3">
-                                    <p className="text-xs text-gray-400">Manage files stored in the local browser repository for bulk updates or other operations.</p>
-                                    <div className="max-h-60 overflow-y-auto pr-2">
-                                        <div className="space-y-4">
-                                            {folders.map(folder => {
-                                                const filesInFolder = repoFiles.filter(file => file.folderId === folder.id);
-                                                const isSub = (folder as any).isSub;
-                                                return (
-                                                    <div key={folder.id} className={isSub ? "ml-8" : ""}>
-                                                        <div className="flex items-center mb-1">
-                                                            <FolderIcon />
-                                                            <h4 className="text-sm font-semibold text-gray-300">{folder.name}</h4>
-                                                        </div>
-                                                        <div className="pl-4 border-l-2 border-gray-600 ml-2.5">
-                                                            {filesInFolder.length > 0 ? (
-                                                                <ul className="space-y-1 pt-2">
-                                                                    {filesInFolder.sort((a, b) => a.name.localeCompare(b.name)).map(file => (
-                                                                        <FileListItem key={file.id} file={file} />
-                                                                    ))}
-                                                                </ul>
-                                                            ) : (
-                                                                <p className="text-xs text-gray-500 italic pl-3 pt-1">Empty</p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                            {uncategorizedFiles.length > 0 && (
-                                                <div key="uncategorized">
-                                                    <div className="flex items-center mb-1">
-                                                        <FolderIcon />
-                                                        <h4 className="text-sm font-semibold text-gray-300">Uncategorized</h4>
-                                                    </div>
-                                                    <div className="pl-4 border-l-2 border-gray-600 ml-2.5">
-                                                        <ul className="space-y-1 pt-2">
-                                                            {uncategorizedFiles.sort((a,b) => a.name.localeCompare(b.name)).map(file => (
-                                                                <FileListItem key={file.id} file={file} />
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <button onClick={handleUploadClick} className="w-full mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-semibold">
-                                        Upload File
-                                    </button>
+                                    <p className="text-xs text-gray-400">Upload directly from this computer. Files are processed immediately after confirmation and are not stored in a staging repository.</p>
+                                    <DirectDataUploadCard
+                                        id="instructor_loads"
+                                        title="Staff Data"
+                                        description="Create or update staff records from the staff bulk upload template."
+                                    />
+                                    <DirectDataUploadCard
+                                        id="trainee_loads"
+                                        title="Trainee Data"
+                                        description="Create or update trainee records, then choose the course to apply the upload to."
+                                    />
+                                    <DirectDataUploadCard
+                                        id="lmp_loads"
+                                        title="LMP Data"
+                                        description="Create or update master LMP event data from the LMP template."
+                                    />
                                 </div>
                             </fieldset>
                         </div>
@@ -2518,12 +2429,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    )}
                </div>
                {showScoringMatrix && <ScoringMatrixFlyout onClose={() => setShowScoringMatrix(false)} phraseBank={phraseBank} onUpdatePhraseBank={handleUpdatePhraseBank} initialTab={scoringMatrixTab} />}
-            {showUpload && <UploadFileFlyout onClose={() => setShowUpload(false)} onConfirm={handleUploadConfirm} />}
-            {showSelectDestination && fileToUpload && <SelectDestinationFlyout onClose={() => setShowSelectDestination(false)} onConfirm={handleDestinationConfirm} fileName={fileToUpload.name} folders={folders.filter(f => !(f as any).isSub)} />}
-            {fileToDownload && <DownloadConfirmationFlyout fileName={fileToDownload.name} onConfirm={handleDownloadConfirm} onClose={() => setFileToDownload(null)} />}
-            {fileToDelete && <DeleteFileConfirmationFlyout fileName={fileToDelete.name} onConfirm={handleDeleteConfirm} onClose={() => setFileToDelete(null)} />}
             {showUpdateConfirmation && fileToProcess && <UpdateConfirmationFlyout fileName={fileToProcess.name} onConfirm={handleUpdateConfirm} onClose={() => setShowUpdateConfirmation(false)} />}
-            {showCourseSelection && <CourseSelectionFlyout courses={activeCourses} onConfirm={handleCourseSelection} onClose={() => setShowCourseSelection(false)} updateType={selectedUpdateType} />}
+            {showCourseSelection && <CourseSelectionFlyout courses={coursesFromFile.length > 0 ? coursesFromFile : activeCourses} onConfirm={handleCourseSelection} onClose={() => setShowCourseSelection(false)} updateType={selectedUpdateType} />}
             {showNewRecordConfirm && unmatchedRowData && <NewRecordConfirmationFlyout rowData={unmatchedRowData} onConfirm={handleConfirmNewRecord} onCancel={handleRejectNewRecord} />}
             {showUpdateError && <UpdateErrorFlyout message={updateErrorMessage} onClose={() => setShowUpdateError(false)} />}
             {showUpdateSummary && <UpdateSummaryFlyout summary={updateSummary} onClose={() => setShowUpdateSummary(false)} />}

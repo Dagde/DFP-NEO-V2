@@ -7,7 +7,6 @@ import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, 
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import PauseConfirmationFlyout from './PauseConfirmationFlyout';
 import ScheduleWarningFlyout from './ScheduleWarningFlyout';
-import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
 import CurrencyPanel from './CurrencyPanel';
@@ -1347,18 +1346,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         }
 
         onUpdateTrainee(updatedTrainee);
-
-        // Persist Logbook Data to Storage
-        try {
-            const cleanName = name.replace(/,\s/g, '_');
-            const fileName = `Logbook_${cleanName}_${idNumber}.json`;
-            const fileContent = JSON.stringify(priorExperience, null, 2);
-            const file = new File([fileContent], fileName, { type: "application/json" });
-            // 'trainee_logbook' is the ID for the Trainee Data -> Logbook folder
-            await addFile(file, 'trainee_logbook', fileName);
-        } catch (error) {
-            console.error("Failed to save logbook data to storage:", error);
-        }
 
         setIsEditing(false);
         if (isCreating) {

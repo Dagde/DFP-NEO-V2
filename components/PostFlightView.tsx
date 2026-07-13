@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ScheduleEvent, Trainee, Instructor, CurrencyRequirement, MasterCurrency, CurrencyDefinition, PostFlightInputType } from '../types';
 import AuditButton from './AuditButton';
 import UnsavedChangesWarning from './UnsavedChangesWarning';
-import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
@@ -917,35 +916,6 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             }
         } catch (snapshotErr) {
             console.warn('[PostFlight] Could not save form snapshot:', snapshotErr);
-        }
-
-        // 2. Persist to Data Storage (Auto-Save to File)
-        // Determine the "User File" location.
-        // Priority: Student (for dual/solo trainee events), then Instructor.
-        let targetFolderId = 'trainee_logbook';
-        let userName = event.student;
-
-        if (!userName || userName === 'Multiple') {
-             if (event.pilot) {
-                 userName = event.pilot; // Solo trainee or pilot
-             } else if (event.instructor) {
-                 userName = event.instructor; // Instructor only event
-                 targetFolderId = 'staff_logbook';
-             }
-        }
-
-        if (userName) {
-            const cleanName = userName.split(' – ')[0].replace(/,\s/g, '_');
-            // Deterministic filename to overwrite the same entry during edits
-            const fileName = `Entry_${event.date}_${event.flightNumber.replace(/\s/g, '')}_${cleanName}.json`;
-
-            try {
-                const fileContent = JSON.stringify(saveData, null, 2);
-                const file = new File([fileContent], fileName, { type: "application/json" });
-                await addFile(file, targetFolderId, fileName);
-            } catch (error) {
-                console.error("Failed to auto-save post-flight data to file:", error);
-            }
         }
 
         if (!isAutoSave) {

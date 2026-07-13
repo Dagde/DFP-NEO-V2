@@ -8,7 +8,7 @@ import LoginModal, { AuthUser, checkSession, logoutUser } from './components/Log
 import ChangePasswordModal from './components/ChangePasswordModal';
 import AdminPanel from './components/AdminPanel';
 import { v4 as uuidv4 } from 'uuid';
-import { initDB, seedDefaultTemplates } from './utils/db';
+import { initDB } from './utils/db';
 import { setCurrentUser, logAudit } from './utils/auditLogger';
 import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
 import {
@@ -27098,7 +27098,6 @@ const App: React.FC = () => {
     useEffect(() => {
         const init = async () => {
             await initDB();
-            await seedDefaultTemplates();
             // Seed test audit logs (only if none exist)
             const existingLogs = localStorage.getItem('dfp_audit_logs');
             if (!existingLogs) {
