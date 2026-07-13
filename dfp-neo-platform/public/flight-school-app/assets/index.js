@@ -63479,6 +63479,7 @@ const PlatformConfigurationSettings = ({
   const [parentOrgMenuPlacement, setParentOrgMenuPlacement] = reactExports.useState({ direction: "down", maxHeight: 340 });
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = reactExports.useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = reactExports.useState(false);
+  const [taskProfilesUnlocked, setTaskProfilesUnlocked] = reactExports.useState(false);
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = reactExports.useState("");
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = reactExports.useState("aircraftTypes");
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = reactExports.useState(false);
@@ -63499,6 +63500,7 @@ const PlatformConfigurationSettings = ({
   const canEditTrainingReportTemplate = canEdit && trainingReportTemplateUnlocked;
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
   const canEditCrewComposition = canEdit && crewCompositionUnlocked;
+  const canEditTaskProfiles = canEdit && taskProfilesUnlocked;
   const crewCompositionAircraftTypes = config.aircraftTypes.length > 0 ? config.aircraftTypes : [{ code: "AIRCRAFT", name: "Aircraft", crewComposition: DEFAULT_AIRCRAFT_CREW_COMPOSITION }];
   const resourcePoolsDirty = reactExports.useMemo(() => JSON.stringify({
     aircraftTypes: config.aircraftTypes,
@@ -65651,6 +65653,10 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   const saveCrewCompositionAndKeepPosition = async () => {
     await save(void 0, "platform-crew-composition");
   };
+  const saveTaskProfilesAndExitEdit = async () => {
+    const saved = await save(void 0, "platform-task-profiles");
+    if (saved) setTaskProfilesUnlocked(false);
+  };
   const saveCurrencyProfilesAndKeepPosition = async () => {
     await save(void 0, "platform-currency-profiles");
   };
@@ -66577,11 +66583,19 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Task Profiles",
-          subtitle: "Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed."
+          subtitle: "Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed.",
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: taskProfilesUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => void saveTaskProfilesAndExitEdit(), disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setTaskProfilesUnlocked(false), disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Exit" })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setTaskProfilesUnlocked(true), className: platformActionButtonClass, children: "Edit" }) }) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Configure model task profiles globally. Configure task tile abbreviations separately for each unit; blank unit abbreviations display tasking tiles as Task." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border px-3 py-2 ${taskProfilesUnlocked ? "border-cyan-400/40 bg-cyan-500/10" : "border-gray-700 bg-gray-950/60"}`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.2em] text-gray-500", children: "Edit state" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-1 text-sm font-bold ${taskProfilesUnlocked ? "text-cyan-100" : "text-gray-200"}`, children: taskProfilesUnlocked ? "Editing active" : "Locked" })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: OPERATIONAL_MODEL_OPTIONS.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
@@ -66600,7 +66614,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               {
                 label: "Profiles",
                 value: formatTaskProfileText(profiles),
-                disabled: !canEdit,
+                disabled: !canEditTaskProfiles,
                 onChange: (value) => updateTaskProfilesForModel(option.value, value),
                 info: "One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
               }
@@ -66632,7 +66646,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 {
                   label: "Tile Abbreviations",
                   value: formatTaskProfileAbbreviationText(abbreviations),
-                  disabled: !canEdit,
+                  disabled: !canEditTaskProfiles,
                   onChange: (value) => updateTaskProfileAbbreviationsForUnit(unitIndex, value),
                   info: "One abbreviation per line, for example Close Air Support - CAS. Equals signs are also accepted."
                 }
