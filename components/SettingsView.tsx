@@ -520,6 +520,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     eventLimits, onUpdateEventLimits,
     phraseBank, onUpdatePhraseBank,
     onNavigate,
+    onOpenCurrencyBuilder,
     masterCurrencies,
     currencyRequirements,
     sctEvents,

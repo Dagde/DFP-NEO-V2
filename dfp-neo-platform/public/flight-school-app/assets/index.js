@@ -59349,6 +59349,7 @@ const SettingsView = ({
   phraseBank,
   onUpdatePhraseBank,
   onNavigate,
+  onOpenCurrencyBuilder,
   masterCurrencies,
   currencyRequirements,
   sctEvents,
