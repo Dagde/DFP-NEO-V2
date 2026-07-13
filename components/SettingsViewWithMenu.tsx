@@ -35,11 +35,6 @@ interface SettingsViewWithMenuProps {
     instructorsData: Instructor[];
     traineesData: Trainee[];
     syllabusDetails: SyllabusItemDetail[];
-    onBulkUpdateInstructors: (instructors: Instructor[]) => void;
-    onReplaceInstructors: (instructors: Instructor[]) => void;
-    onBulkUpdateTrainees: (trainees: Trainee[]) => void;
-    onReplaceTrainees: (trainees: Trainee[]) => void;
-    onUpdateSyllabus: (syllabus: SyllabusItemDetail[]) => void;
     onShowSuccess: (message: string) => void;
     onScoringMatrixElementAdded?: (elementName: string) => void;
     onNavigateToProfile?: (user: any) => void;
@@ -77,9 +72,7 @@ interface SettingsViewWithMenuProps {
     onUpdateShowDepartureDensityOverlay: (value: boolean) => void;
     formationCallsigns: FormationCallsign[];
     courseColors: { [key: string]: string };
-    setCourseColors: (colors: { [key: string]: string }) => void;
     onUpdateFormationCallsigns: (callsigns: FormationCallsign[]) => void;
-    onUpdateTraineeLMPs: (lmpMap: Map<string, SyllabusItemDetail[]>) => void;
     cancellationRecords: CancellationRecord[];
     cancellationCodes: CancellationCode[];
     currentAircraftAvailable?: number;

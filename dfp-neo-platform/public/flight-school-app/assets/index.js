@@ -57528,30 +57528,6 @@ const AuthorisationFlyout = ({
     showClearConfirmation && /* @__PURE__ */ jsxRuntimeExports.jsx(ClearAuthConfirmation, { onConfirm: handleProceedToPinForClear, onCancel: () => setShowClearConfirmation(false) })
   ] });
 };
-const NewRecordConfirmationFlyout = ({ rowData, onConfirm, onCancel }) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: onCancel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20 flex items-center space-x-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-sky-400", children: "New Record Found" }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300", children: "A record from the file could not be matched to any existing data." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 bg-gray-900/50 p-3 rounded-md text-xs font-mono text-gray-400 max-h-40 overflow-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { children: JSON.stringify(rowData, null, 2) }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 mt-4", children: "Do you want to add this as a new person/event?" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onCancel, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "No, Skip" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onConfirm, className: "px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-semibold", children: "Yes, Add New" })
-    ] })
-  ] }) });
-};
-const UpdateErrorFlyout = ({ message, onClose }) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-amber-500/50", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-amber-900/20 flex items-center space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-amber-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-amber-400", children: "Update Notice" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300", children: message }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "OK" }) })
-  ] }) });
-};
 const INITIAL_ELEMENTS_LIST = [
   "Generic Flying Elements",
   "Pre-Post Flight",
@@ -59299,11 +59275,6 @@ const SettingsView = ({
   instructorsData,
   traineesData,
   syllabusDetails,
-  onBulkUpdateInstructors,
-  onReplaceInstructors,
-  onBulkUpdateTrainees,
-  onReplaceTrainees,
-  onUpdateSyllabus,
   onShowSuccess,
   eventLimits,
   onUpdateEventLimits,
@@ -59338,9 +59309,6 @@ const SettingsView = ({
   tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
   onUpdateTileStatusSettings,
   timezoneOffset,
-  courseColors,
-  setCourseColors,
-  onUpdateTraineeLMPs,
   cancellationRecords,
   cancellationCodes,
   currentAircraftAvailable,
@@ -59379,28 +59347,6 @@ const SettingsView = ({
   const [repoFiles, setRepoFiles] = reactExports.useState([]);
   const [pendingTemplateOverride, setPendingTemplateOverride] = reactExports.useState(null);
   const templateOverrideInputRef = reactExports.useRef(null);
-  reactExports.useRef({});
-  const [dragUploadType, setDragUploadType] = reactExports.useState(null);
-  const [fileToProcess, setFileToProcess] = reactExports.useState(null);
-  const [showUpdateConfirmation, setShowUpdateConfirmation] = reactExports.useState(false);
-  const [showCourseSelection, setShowCourseSelection] = reactExports.useState(false);
-  const [selectedUpdateType, setSelectedUpdateType] = reactExports.useState("minor");
-  const [selectedCourse, setSelectedCourse] = reactExports.useState("");
-  const [coursesFromFile, setCoursesFromFile] = reactExports.useState([]);
-  const [showNewRecordConfirm, setShowNewRecordConfirm] = reactExports.useState(false);
-  const [unmatchedRowData, setUnmatchedRowData] = reactExports.useState(null);
-  const [showUpdateError, setShowUpdateError] = reactExports.useState(false);
-  const [updateErrorMessage, setUpdateErrorMessage] = reactExports.useState("");
-  const [showUpdateSummary, setShowUpdateSummary] = reactExports.useState(false);
-  const [updateSummary, setUpdateSummary] = reactExports.useState({ added: 0, updated: 0, replaced: 0, skipped: 0, type: "" });
-  const [isMinorUpdateInProgress, setIsMinorUpdateInProgress] = reactExports.useState(false);
-  const [rowsToProcess, setRowsToProcess] = reactExports.useState([]);
-  const [updatedRecords, setUpdatedRecords] = reactExports.useState([]);
-  const [newRecords, setNewRecords] = reactExports.useState([]);
-  const [skippedCount, setSkippedCount] = reactExports.useState(0);
-  reactExports.useMemo(() => {
-    return Object.keys(courseColors).sort((a, b) => a.localeCompare(b));
-  }, [courseColors]);
   const safeNameSort = (a, b) => {
     const nameA = a.name || "";
     const nameB = b.name || "";
@@ -59420,13 +59366,6 @@ const SettingsView = ({
     };
     initAndFetch();
   }, []);
-  reactExports.useEffect(() => {
-    if (isMinorUpdateInProgress && rowsToProcess.length > 0) {
-      processNextRow();
-    } else if (isMinorUpdateInProgress && rowsToProcess.length === 0) {
-      finishMinorUpdate();
-    }
-  }, [isMinorUpdateInProgress, rowsToProcess]);
   const shouldShowSection = (sectionName) => {
     if (!activeSection) return true;
     return activeSection === sectionName;
@@ -59656,468 +59595,6 @@ const SettingsView = ({
     { key: "logbook", label: "Logbook", downloadLabel: "Logbook Template (.xlsx)", onDownload: handleDownloadLogbookTemplate },
     { key: "organisation-structure", label: "Organisational Structure", downloadLabel: "Organisational Structure Template (.xlsx)", onDownload: handleDownloadOrganisationStructureTemplate }
   ];
-  const getValueFromRow2 = (row, possibleKeys) => {
-    for (const pKey of possibleKeys) {
-      if (row[pKey] !== void 0) return row[pKey];
-    }
-    const rowKeys = Object.keys(row);
-    for (const pKey of possibleKeys) {
-      const lowerPKey = pKey.toLowerCase().replace(/[\s/]/g, "");
-      for (const rowKey of rowKeys) {
-        if (rowKey.toLowerCase().replace(/[\s/]/g, "") === lowerPKey) {
-          return row[rowKey];
-        }
-      }
-    }
-    return void 0;
-  };
-  const parseBoolean2 = (value) => {
-    if (typeof value === "boolean") return value;
-    if (typeof value === "string") return value.trim().toLowerCase() === "true";
-    return !!value;
-  };
-  const getStr2 = (row, keys) => {
-    const val = getValueFromRow2(row, keys);
-    return val !== void 0 ? String(val).trim() : void 0;
-  };
-  const getNum2 = (row, keys) => {
-    const val = getValueFromRow2(row, keys);
-    if (val === void 0 || val === null || String(val).trim() === "") return void 0;
-    const num = parseFloat(String(val).replace(/[A-Za-z]/g, "").trim());
-    return isNaN(num) ? void 0 : num;
-  };
-  const getStrArray = (row, keys) => {
-    const val = getValueFromRow2(row, keys);
-    if (val === void 0 || val === null) return void 0;
-    return String(val).split(";").map((s) => s.trim()).filter(Boolean);
-  };
-  const splitImportList = (value) => value.split(/\r?\n|;|,/).map((item) => item.trim()).filter(Boolean);
-  const normaliseImportedService = (value) => {
-    const cleanValue = value.trim().toLowerCase();
-    if (!cleanValue) return void 0;
-    if (["raaf", "air force", "airforce", "royal australian air force"].includes(cleanValue)) return "RAAF";
-    if (["ran", "navy", "royal australian navy"].includes(cleanValue)) return "RAN";
-    if (["ara", "army", "australian army"].includes(cleanValue)) return "ARA";
-    return value;
-  };
-  const normaliseImportedCategory = (value) => {
-    const cleanValue = value.trim().toLowerCase();
-    if (!cleanValue) return void 0;
-    if (["u", "uncat", "un cat", "uncategorised", "uncategorized"].includes(cleanValue)) return "UnCat";
-    const upperValue = value.trim().toUpperCase();
-    if (["A", "B", "C", "D"].includes(upperValue)) return upperValue;
-    return value;
-  };
-  const normaliseImportedSeatConfig = (value) => {
-    const cleanValue = value.trim().toLowerCase();
-    if (!cleanValue) return void 0;
-    if (["n", "normal", "norm"].includes(cleanValue)) return "Normal";
-    if (["fwd/short", "forward/short", "fwd short", "forward short", "fwd", "front"].includes(cleanValue)) return "FWD/SHORT";
-    if (["rear/short", "rear short", "rear"].includes(cleanValue)) return "REAR/SHORT";
-    if (["fwd/long", "forward/long", "fwd long", "forward long", "long"].includes(cleanValue)) return "FWD/LONG";
-    return value;
-  };
-  const applyImportedQualifications = (parsed, value) => {
-    if (!value) return;
-    const rolesLower = splitImportList(value).join(" ").toLowerCase();
-    parsed.isExecutive = rolesLower.includes("exec") || rolesLower.includes("executive");
-    parsed.isFlyingSupervisor = rolesLower.includes("fly sup") || rolesLower.includes("flying supervisor") || rolesLower.includes("supervisor");
-    parsed.isTestingOfficer = rolesLower.includes("testing") || rolesLower.includes("test officer");
-    parsed.isIRE = rolesLower.includes("ire");
-    parsed.isCFI = rolesLower.includes("cfi");
-    parsed.isOFI = rolesLower.includes("ofi");
-    parsed.isQFI = rolesLower.includes("qfi") || rolesLower.includes("instructor");
-    parsed.isAdminStaff = rolesLower.includes("admin");
-    if (rolesLower.includes("sim ip")) {
-      parsed.role = "SIM IP";
-    } else if (rolesLower.includes("pilot")) {
-      parsed.role = "Pilot";
-    } else if (rolesLower.includes("qfi") || rolesLower.includes("instructor")) {
-      parsed.role = "QFI";
-    }
-  };
-  const parseInstructorRow = (row) => {
-    const idValue = getNum2(row, ["PMKeys/ID", "idNumber"]);
-    if (idValue === void 0) return null;
-    const parsed = { idNumber: idValue };
-    const surname = getStr2(row, ["Srname", "Surname", "Last Name"]);
-    const firstname = getStr2(row, ["First name", "Firstname", "Given Name"]);
-    if (surname && firstname) {
-      parsed.name = `${surname}, ${firstname}`;
-    } else {
-      const fullName = getStr2(row, [
-        "Name",
-        "Full Name",
-        "Name (Surname, FirstName)",
-        "Name (Surname. FirstName)",
-        "Name [Surname, Firstname]"
-      ]);
-      if (fullName) parsed.name = fullName;
-    }
-    const rank = getStr2(row, ["Rank"]);
-    if (rank) parsed.rank = rank;
-    const role = getStr2(row, ["Role"]);
-    if (role) parsed.role = role;
-    const callsign = getNum2(row, ["callsign number", "callsignnumber", "Callsign No", "Callsign Number", "Callsign"]);
-    if (callsign !== void 0) parsed.callsignNumber = callsign;
-    const service = getStr2(row, ["Service"]);
-    const normalisedService = service ? normaliseImportedService(service) : void 0;
-    if (normalisedService) parsed.service = normalisedService;
-    const category = getStr2(row, ["Category"]);
-    const normalisedCategory = category ? normaliseImportedCategory(category) : void 0;
-    if (normalisedCategory) parsed.category = normalisedCategory;
-    const location = getStr2(row, ["Location", "Base", "Location Code"]);
-    if (location) parsed.location = location;
-    const unit = getStr2(row, ["Unit", "Unit Code"]);
-    if (unit) parsed.unit = unit;
-    const flight = getStr2(row, ["Flight", "flight", "Flight/Sqn", "Section"]);
-    if (flight) parsed.flight = flight;
-    const seatConfig = getStr2(row, ["Seat config", "seatConfig", "Seat Configuration"]);
-    const normalisedSeatConfig = seatConfig ? normaliseImportedSeatConfig(seatConfig) : void 0;
-    if (normalisedSeatConfig) parsed.seatConfig = normalisedSeatConfig;
-    const phone = getStr2(row, ["Phone Number", "phoneNumber", "Phone", "Mobile"]);
-    if (phone) parsed.phoneNumber = phone;
-    const email = getStr2(row, ["Email", "Email Address"]);
-    if (email) parsed.email = email;
-    const permissions = getStr2(row, ["Permissions", "permissions", "Permission"]);
-    if (permissions) parsed.permissions = splitImportList(permissions);
-    const rolesStr = getStr2(row, ["Roles", "Qualifications and Roles", "Qualifications & Roles", "Qualifications"]);
-    applyImportedQualifications(parsed, rolesStr);
-    return parsed;
-  };
-  const parseTraineeRow2 = (row) => {
-    const rowKeys = Object.keys(row);
-    const idValue = getNum2(row, ["PMKeys/ID", "idNumber"]);
-    if (idValue === void 0) {
-      const idRelatedKeys = rowKeys.filter((k) => k.toLowerCase().includes("id") || k.toLowerCase().includes("pm") || k.toLowerCase().includes("key"));
-      console.warn("🔴 [PARSE] Row missing idNumber. Row keys:", rowKeys.join(", "));
-      console.warn("🔴 [PARSE] ID-related keys found:", idRelatedKeys.join(", "));
-      console.warn("🔴 [PARSE] Full row:", JSON.stringify(row));
-      return null;
-    }
-    const parsed = { idNumber: idValue };
-    const nameField = getStr2(row, [
-      "Name\n [Surname, Firstname]",
-      "Name [Surname, Firstname]",
-      "Name  [Surname, Firstname]",
-      "Name",
-      "Full Name",
-      "FullName"
-    ]);
-    if (nameField) {
-      parsed.name = nameField;
-      console.log(`✅ [PARSE] ID=${idValue} name from combined field: "${nameField}"`);
-    } else {
-      const surname = getStr2(row, ["Surname", "Last Name"]);
-      const firstname = getStr2(row, ["First Name", "Firstname", "Given Name"]);
-      if (surname && firstname) {
-        parsed.name = `${surname}, ${firstname}`;
-        console.log(`✅ [PARSE] ID=${idValue} name from Surname+Firstname: "${parsed.name}"`);
-      } else {
-        const nameKey = rowKeys.find((k) => k.toLowerCase().includes("name") || k.toLowerCase().includes("surname"));
-        if (nameKey && row[nameKey]) {
-          parsed.name = String(row[nameKey]);
-          console.warn(`🟡 [PARSE] ID=${idValue} name from fallback key "${nameKey}": "${parsed.name}"`);
-        } else {
-          console.error(`🔴 [PARSE] ID=${idValue} — NO NAME FOUND. Row keys: ${rowKeys.join(", ")}`);
-          console.error(`🔴 [PARSE] Row values:`, JSON.stringify(row));
-        }
-      }
-    }
-    const coursePrefix = getStr2(row, ["Course Prefix", "coursePrefix"]);
-    const courseNumber = getStr2(row, ["Course Number", "courseNumber"]);
-    if (coursePrefix && courseNumber) {
-      parsed.course = `${coursePrefix}${courseNumber}`;
-    } else {
-      const course = getStr2(row, ["Course"]);
-      if (course) parsed.course = course;
-    }
-    const lmpType = getStr2(row, ["LMP", "lmpType"]);
-    if (lmpType) parsed.lmpType = lmpType;
-    const rank = getStr2(row, ["Rank"]);
-    if (rank) parsed.rank = rank;
-    const callsign = getStr2(row, ["Callsign", "callsign"]);
-    if (callsign) parsed.callsignNumber = parseInt(callsign) || void 0;
-    const serviceRaw = getStr2(row, ["Service"]);
-    if (serviceRaw) {
-      const svc = serviceRaw.trim().toLowerCase();
-      if (svc === "raaf" || svc === "air force" || svc === "airforce" || svc === "royal australian air force") {
-        parsed.service = "RAAF";
-      } else if (svc === "ran" || svc === "navy" || svc === "royal australian navy") {
-        parsed.service = "RAN";
-      } else if (svc === "ara" || svc === "army" || svc === "australian army") {
-        parsed.service = "ARA";
-      } else {
-        parsed.service = serviceRaw;
-      }
-    }
-    const unit = getStr2(row, ["Unit"]);
-    if (unit) parsed.unit = unit;
-    const flight = getStr2(row, ["Flight", "flight"]);
-    if (flight) parsed.flight = flight;
-    const location = getStr2(row, ["Location"]);
-    if (location) parsed.location = location;
-    const seatConfigRaw = getStr2(row, ["Seat Config", "seatConfig", "Seat config"]);
-    if (seatConfigRaw) {
-      const sc = seatConfigRaw.trim().toLowerCase();
-      if (sc === "normal" || sc === "norm") {
-        parsed.seatConfig = "Normal";
-      } else if (sc === "fwd/short" || sc === "forward/short" || sc === "fwd" || sc === "front") {
-        parsed.seatConfig = "FWD/SHORT";
-      } else if (sc === "rear/short" || sc === "rear") {
-        parsed.seatConfig = "REAR/SHORT";
-      } else if (sc === "fwd/long" || sc === "forward/long" || sc === "long") {
-        parsed.seatConfig = "FWD/LONG";
-      } else {
-        parsed.seatConfig = seatConfigRaw;
-      }
-    }
-    const phone = getStr2(row, ["Phone Number", "phoneNumber"]);
-    if (phone) parsed.phoneNumber = phone;
-    const email = getStr2(row, ["Email"]);
-    if (email) parsed.email = email;
-    const primary = getStr2(row, ["Primary Instructor", "primaryInstructor"]);
-    if (primary) parsed.primaryInstructor = primary.split(",").map((s) => s.trim()).filter(Boolean);
-    const secondary = getStr2(row, ["Secondary Instructor", "secondaryInstructor"]);
-    if (secondary) parsed.secondaryInstructor = secondary.split(",").map((s) => s.trim()).filter(Boolean);
-    const permissionsStr = getStr2(row, ["Permissions", "permissions"]);
-    if (permissionsStr) {
-      parsed.permissions = permissionsStr.split(/\r?\n/).map((p) => p.trim()).filter(Boolean);
-    }
-    const isPaused = getValueFromRow2(row, ["Is Paused", "isPaused"]);
-    if (isPaused !== void 0) parsed.isPaused = parseBoolean2(isPaused);
-    if (!parsed.isPaused) parsed.isPaused = false;
-    if (!parsed.unit) parsed.unit = "";
-    if (!parsed.rank) parsed.rank = "FLGOFF";
-    if (!parsed.seatConfig) parsed.seatConfig = "Normal";
-    if (!parsed.unavailability) parsed.unavailability = [];
-    if (parsed.name && parsed.course) {
-      parsed.fullName = `${parsed.name} – ${parsed.course}`;
-    } else if (parsed.name) {
-      parsed.fullName = parsed.name;
-    }
-    return parsed;
-  };
-  const parseLmpRow = (row) => {
-    const code = getStr2(row, ["Code"]);
-    if (!code) return null;
-    const parsed = { code };
-    const parseCrewRequirement = (value) => {
-      const text = String(value || "").trim();
-      if (!text) return void 0;
-      if (/^(aircraft\s*)?default$/i.test(text)) return { mode: "aircraft_default" };
-      const roles = text.split(/\r?\n|;|,/).map((part) => part.trim()).filter(Boolean).map((part) => {
-        const match = part.match(/^(.+?)(?:\s*[:=x]\s*|\s+)(\d+)$/i);
-        const role = (match ? match[1] : part).trim();
-        const count = match ? Math.max(0, Math.round(Number(match[2]) || 0)) : 1;
-        return role && count > 0 ? { role, count } : null;
-      }).filter((item) => Boolean(item));
-      return roles.length > 0 ? { mode: "custom", roles } : void 0;
-    };
-    const phase = getStr2(row, ["Phase"]);
-    if (phase) parsed.phase = phase;
-    const module = getStr2(row, ["Module"]);
-    if (module) parsed.module = module;
-    const desc = getStr2(row, ["Event description", "eventDescription"]);
-    if (desc) parsed.eventDescription = desc;
-    const prereqGround = getStrArray(row, ["Pre-requisite Events (Ground School)", "prerequisitesGround"]);
-    if (prereqGround) parsed.prerequisitesGround = prereqGround;
-    const prereqFlying = getStrArray(row, ["Pre-requisite Events (Sim/Flying)", "prerequisitesFlying"]);
-    if (prereqFlying) parsed.prerequisitesFlying = prereqFlying;
-    if (prereqGround || prereqFlying) parsed.prerequisites = [...prereqGround || [], ...prereqFlying || []];
-    const detailsCommon = getStrArray(row, ["Event Details - Common", "eventDetailsCommon"]);
-    if (detailsCommon) parsed.eventDetailsCommon = detailsCommon;
-    const detailsSortie = getStrArray(row, ["Event Details - Sortie", "eventDetailsSortie"]);
-    if (detailsSortie) parsed.eventDetailsSortie = detailsSortie;
-    const totalHours = getNum2(row, ["Total Event Hours", "totalEventHours"]);
-    if (totalHours !== void 0) parsed.totalEventHours = totalHours;
-    const flightSimHours = getNum2(row, ["Flight or Sim Hours", "flightOrSimHours"]);
-    if (flightSimHours !== void 0) {
-      parsed.flightOrSimHours = flightSimHours;
-      parsed.duration = flightSimHours;
-    }
-    const delivery = getStrArray(row, ["Method/s of Delivery", "methodOfDelivery"]);
-    if (delivery) parsed.methodOfDelivery = delivery;
-    const assessment = getStrArray(row, ["Type/s and Method/s of Assessment", "methodOfAssessment"]);
-    if (assessment) parsed.methodOfAssessment = assessment;
-    const resourcesPhy = getStrArray(row, ["Resources Required (physical)", "resourcesPhysical"]);
-    if (resourcesPhy) parsed.resourcesPhysical = resourcesPhy;
-    const resourceNumber = getNum2(row, ["Resource Number", "resourceNumber", "Resources Required Number"]);
-    if (resourceNumber !== void 0) parsed.resourceNumber = Math.max(0, Math.round(resourceNumber));
-    const resourcesHum = getStrArray(row, ["Resources Required (Human)", "resourcesHuman"]);
-    if (resourcesHum) parsed.resourcesHuman = resourcesHum;
-    const crewRequirementText = getStr2(row, ["Crew Required", "Crew Requirement", "Crew Composition", "crewRequirement"]);
-    const crewRequirement = parseCrewRequirement(crewRequirementText);
-    if (crewRequirement) parsed.crewRequirement = crewRequirement;
-    return parsed;
-  };
-  const processNextRow = () => {
-    if (!fileToProcess) {
-      setIsMinorUpdateInProgress(false);
-      return;
-    }
-    const [row, ...remainingRows] = rowsToProcess;
-    setRowsToProcess(remainingRows);
-    let parsedData;
-    let existingRecord;
-    switch (fileToProcess.folderId) {
-      case "instructor_loads":
-        parsedData = parseInstructorRow(row);
-        if (!parsedData?.idNumber) {
-          setSkippedCount((prev) => prev + 1);
-          return;
-        }
-        existingRecord = instructorsData.find((i) => i.idNumber === parsedData.idNumber);
-        break;
-      case "trainee_loads":
-        parsedData = parseTraineeRow2(row);
-        if (!parsedData?.idNumber) {
-          setSkippedCount((prev) => prev + 1);
-          return;
-        }
-        if (selectedCourse) {
-          existingRecord = traineesData.find((t) => t.idNumber === parsedData.idNumber && t.course === selectedCourse);
-          parsedData.course = selectedCourse;
-        } else {
-          existingRecord = traineesData.find((t) => t.idNumber === parsedData.idNumber);
-        }
-        break;
-      case "lmp_loads":
-        parsedData = parseLmpRow(row);
-        if (!parsedData?.code) {
-          setSkippedCount((prev) => prev + 1);
-          return;
-        }
-        existingRecord = syllabusDetails.find(
-          (s) => s.code.trim().replace(/\s/g, "").toLowerCase() === String(parsedData.code).trim().replace(/\s/g, "").toLowerCase()
-        );
-        break;
-      default:
-        setSkippedCount((prev) => prev + 1);
-        return;
-    }
-    if (existingRecord) {
-      const updated = { ...existingRecord, ...parsedData };
-      if (fileToProcess.folderId === "trainee_loads") {
-        if (!parsedData.primaryInstructor && existingRecord.primaryInstructor) {
-          updated.primaryInstructor = existingRecord.primaryInstructor;
-        }
-        if (!parsedData.secondaryInstructor && existingRecord.secondaryInstructor) {
-          updated.secondaryInstructor = existingRecord.secondaryInstructor;
-        }
-      }
-      setUpdatedRecords((prev) => [...prev, updated]);
-    } else {
-      setNewRecords((prev) => [...prev, parsedData]);
-    }
-  };
-  const finishMinorUpdate = () => {
-    setIsMinorUpdateInProgress(false);
-    if (!fileToProcess) return;
-    let finalUpdatedList = [];
-    switch (fileToProcess.folderId) {
-      case "instructor_loads":
-        finalUpdatedList = [...instructorsData];
-        updatedRecords.forEach((ur) => {
-          const index = finalUpdatedList.findIndex((i) => i.idNumber === ur.idNumber);
-          if (index !== -1) finalUpdatedList[index] = ur;
-        });
-        const filteredFinalList = finalUpdatedList.filter((existing) => !newRecords.some((nr) => nr.idNumber === existing.idNumber));
-        console.log(`[DEBUG] Filtered out ${finalUpdatedList.length - filteredFinalList.length} duplicate records`);
-        onBulkUpdateInstructors([...filteredFinalList, ...newRecords]);
-        break;
-      case "trainee_loads":
-        finalUpdatedList = [...traineesData];
-        if (selectedCourse) {
-          updatedRecords.forEach((ur) => {
-            const index = finalUpdatedList.findIndex((t) => t.idNumber === ur.idNumber && t.course === selectedCourse);
-            if (index !== -1) finalUpdatedList[index] = ur;
-          });
-          const newRecordsWithCourse = newRecords.map((nr) => ({ ...nr, course: selectedCourse }));
-          onBulkUpdateTrainees([...finalUpdatedList, ...newRecordsWithCourse]);
-          console.log(`[DEBUG] About to initialize LMP for ${newRecordsWithCourse.length} new trainees`);
-          console.log(`[DEBUG] onUpdateTraineeLMPs function available:`, typeof onUpdateTraineeLMPs);
-          console.log(`[DEBUG] New trainees:`, newRecordsWithCourse.map((t) => ({ name: t.fullName, lmpType: t.lmpType, course: t.course })));
-          onUpdateTraineeLMPs && onUpdateTraineeLMPs((prevLMPs) => {
-            console.log(`[DEBUG] LMP initialization started. Previous LMPs count: ${prevLMPs.size}`);
-            const newLMPs = new Map(prevLMPs);
-            newRecordsWithCourse.forEach((trainee) => {
-              console.log(`[DEBUG] Processing trainee: ${trainee.fullName}, LMP Type: ${trainee.lmpType}`);
-              if (trainee.fullName && trainee.lmpType) {
-                const masterLMP = syllabusDetails.filter((item) => {
-                  return item.courses.includes(trainee.lmpType);
-                });
-                console.log(`[DEBUG] Found ${masterLMP.length} master LMP items for ${trainee.lmpType}`);
-                if (masterLMP.length > 0) {
-                  newLMPs.set(trainee.fullName, [...masterLMP]);
-                  console.log(`[Individual LMP] Initialized ${trainee.fullName}'s Individual LMP with ${trainee.lmpType} (${masterLMP.length} events)`);
-                } else {
-                  console.warn(`[Individual LMP] No Master LMP found for LMP type: ${trainee.lmpType}`);
-                }
-              } else {
-                console.warn(`[DEBUG] Skipping trainee ${trainee.fullName} - missing fullName or lmpType`);
-              }
-            });
-            console.log(`[DEBUG] LMP initialization complete. New LMPs count: ${newLMPs.size}`);
-            return newLMPs;
-          });
-          if (selectedCourse && !courseColors[selectedCourse]) {
-            const defaultColors = ["#e74c3c", "#3498db", "#9b59b6", "#1abc9c", "#f39c12", "#34495e", "#16a085", "#27ae60", "#2980b9"];
-            const colorIndex = Object.keys(courseColors).length % defaultColors.length;
-            const newCourseColors = {
-              ...courseColors,
-              [selectedCourse]: defaultColors[colorIndex]
-            };
-            setCourseColors(newCourseColors);
-            console.log(`🎨 Added color for course ${selectedCourse}: ${defaultColors[colorIndex]}`);
-          }
-        } else {
-          updatedRecords.forEach((ur) => {
-            const index = finalUpdatedList.findIndex((t) => t.idNumber === ur.idNumber);
-            if (index !== -1) finalUpdatedList[index] = ur;
-          });
-          onBulkUpdateTrainees([...finalUpdatedList, ...newRecords]);
-        }
-        break;
-      case "lmp_loads":
-        const updatedMap = new Map(updatedRecords.map((s) => [s.code.trim().replace(/\s/g, "").toLowerCase(), s]));
-        const finalSyllabus = syllabusDetails.map((s) => {
-          const key = s.code.trim().replace(/\s/g, "").toLowerCase();
-          return updatedMap.get(key) || s;
-        });
-        onUpdateSyllabus([...finalSyllabus, ...newRecords]);
-        break;
-    }
-    setUpdateSummary({ type: "Minor", added: newRecords.length, updated: updatedRecords.length, skipped: skippedCount, replaced: 0 });
-    setShowUpdateSummary(true);
-    const dataType = fileToProcess.folderId === "instructor_loads" ? "Instructors" : fileToProcess.folderId === "trainee_loads" ? "Trainees" : "LMP Data";
-    const courseInfo = selectedCourse ? ` for course: ${selectedCourse}` : "";
-    logAudit({
-      page: "Settings - Data Loaders",
-      action: "update",
-      description: `Minor update: ${dataType}${courseInfo}`,
-      changes: `Added ${newRecords.length}, Updated ${updatedRecords.length}, Skipped ${skippedCount} from file: ${fileToProcess.name}`
-    });
-    setFileToProcess(null);
-    setRowsToProcess([]);
-    setNewRecords([]);
-    setUpdatedRecords([]);
-    setSkippedCount(0);
-  };
-  const handleConfirmNewRecord = () => {
-    if (unmatchedRowData) {
-      setNewRecords((prev) => [...prev, unmatchedRowData]);
-    }
-    setShowNewRecordConfirm(false);
-    setUnmatchedRowData(null);
-    setIsMinorUpdateInProgress(true);
-  };
-  const handleRejectNewRecord = () => {
-    setSkippedCount((prev) => prev + 1);
-    setShowNewRecordConfirm(false);
-    setUnmatchedRowData(null);
-    setIsMinorUpdateInProgress(true);
-  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { onKeyDownCapture: stopEditableKeyPropagation, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
       shouldShowSection("validation") && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -60612,10 +60089,7 @@ const SettingsView = ({
         }
       )
     ] }),
-    showScoringMatrix && /* @__PURE__ */ jsxRuntimeExports.jsx(ScoringMatrixFlyout, { onClose: () => setShowScoringMatrix(false), phraseBank, onUpdatePhraseBank: handleUpdatePhraseBank, initialTab: scoringMatrixTab }),
-    showNewRecordConfirm && unmatchedRowData && /* @__PURE__ */ jsxRuntimeExports.jsx(NewRecordConfirmationFlyout, { rowData: unmatchedRowData, onConfirm: handleConfirmNewRecord, onCancel: handleRejectNewRecord }),
-    showUpdateError && /* @__PURE__ */ jsxRuntimeExports.jsx(UpdateErrorFlyout, { message: updateErrorMessage, onClose: () => setShowUpdateError(false) }),
-    showUpdateSummary && /* @__PURE__ */ jsxRuntimeExports.jsx(UpdateSummaryFlyout, { summary: updateSummary, onClose: () => setShowUpdateSummary(false) })
+    showScoringMatrix && /* @__PURE__ */ jsxRuntimeExports.jsx(ScoringMatrixFlyout, { onClose: () => setShowScoringMatrix(false), phraseBank, onUpdatePhraseBank: handleUpdatePhraseBank, initialTab: scoringMatrixTab })
   ] });
 };
 const UserListSection = ({
@@ -112189,7 +111663,7 @@ ${conflictLines.join("\n")}${moreText}`,
       return prev;
     });
   }, []);
-  const handleReplaceInstructors = reactExports.useCallback((newInstructors) => {
+  reactExports.useCallback((newInstructors) => {
     setInstructorsData(newInstructors.map(normalisePersonnelRecord));
     setSuccessMessage("Instructors successfully replaced!");
   }, []);
@@ -112531,7 +112005,7 @@ ${conflictLines.join("\n")}${moreText}`,
       setIsManualSyncing(false);
     }
   }, [isManualSyncing, syncAlertsForCurrentDate, syncUnavailabilityFromDatabase]);
-  const handleUpdateSyllabus = reactExports.useCallback((newSyllabus) => {
+  reactExports.useCallback((newSyllabus) => {
     const updatedMap = new Map(newSyllabus.map((s) => [s.code.trim().replace(/\s/g, "").toLowerCase(), s]));
     setSyllabusDetails((prevSyllabus) => {
       const finalSyllabus = prevSyllabus.map((s) => {
@@ -115953,11 +115427,6 @@ ${error instanceof Error ? error.message : String(error)}`,
             traineesData,
             onDatabaseDataChanged: handleDatabaseDataChanged,
             syllabusDetails,
-            onBulkUpdateInstructors: handleBulkUpdateInstructors,
-            onReplaceInstructors: handleReplaceInstructors,
-            onBulkUpdateTrainees: handleBulkUpdateTrainees,
-            onReplaceTrainees: handleReplaceTrainees,
-            onUpdateSyllabus: handleUpdateSyllabus,
             onShowSuccess: setSuccessMessage,
             eventLimits,
             onUpdateEventLimits: setEventLimits,
@@ -116007,8 +115476,6 @@ ${error instanceof Error ? error.message : String(error)}`,
             formationCallsigns,
             onUpdateFormationCallsigns: setFormationCallsigns,
             courseColors,
-            setCourseColors,
-            onUpdateTraineeLMPs: setTraineeLMPs,
             cancellationRecords,
             cancellationCodes,
             dayFlyingStart: `${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round(flyingStartTime % 1 * 60).toString().padStart(2, "0")}`,
