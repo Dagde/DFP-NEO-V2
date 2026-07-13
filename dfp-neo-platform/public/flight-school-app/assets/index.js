@@ -65629,7 +65629,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         const settingsScrollContainer = document.querySelector('[data-settings-content-scroll="true"]');
         const restoreScrollTop = settingsScrollContainer?.scrollTop ?? window.scrollY ?? 0;
         sessionStorage.setItem("dfp_restore_view_after_reload", "Settings");
-        sessionStorage.setItem("dfp_restore_settings_section_after_reload", restoreSection || scrollTarget || "platform-configuration");
+        sessionStorage.setItem("dfp_restore_settings_section_after_reload", restoreSection || scrollTarget || "platform-configuration-health");
         sessionStorage.setItem("dfp_restore_settings_scroll_top_after_reload", String(Math.max(0, Math.round(restoreScrollTop))));
       } catch {
       }
@@ -70263,7 +70263,6 @@ const PeopleProfilePage = ({
   ] });
 };
 const platformSectionTargets = {
-  "platform-configuration": "platform-configuration-health",
   "platform-configuration-health": "platform-configuration-health",
   "platform-organisation-locations": "platform-organisation-locations",
   "platform-units": "platform-units",
@@ -70299,7 +70298,6 @@ const sectionLabels = {
   "crew-composition": "Crew Composition",
   "standard-missions": "Standard Missions",
   "currency-profiles": "Currency Profiles",
-  "platform-configuration": "Platform Configuration",
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
@@ -70395,7 +70393,6 @@ const sectionIcons = {
   "crew-composition": platformConfigurationIcon,
   "standard-missions": platformConfigurationIcon,
   "currency-profiles": platformConfigurationIcon,
-  "platform-configuration": platformConfigurationIcon,
   "platform-configuration-health": platformConfigurationIcon,
   "platform-organisation-locations": platformConfigurationIcon,
   "platform-units": platformConfigurationIcon,
@@ -70435,7 +70432,6 @@ const sectionDescriptions = {
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
   "standard-missions": "Fixed Crew mission profiles for regular unit flights",
   "currency-profiles": "Currency profile presets for specific currency requests",
-  "platform-configuration": "Commercial hierarchy, modules, resource pools and rule sets",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
@@ -70478,7 +70474,6 @@ const sectionColors = {
   "crew-composition": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "standard-missions": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "currency-profiles": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
-  "platform-configuration": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-configuration-health": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-organisation-locations": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-units": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
@@ -70581,13 +70576,15 @@ const sectionGroups = [
 ];
 const SettingsViewWithMenu = (props) => {
   const contentScrollRef = reactExports.useRef(null);
+  const normaliseLegacySettingsSection = (section) => section === "platform-configuration" ? "platform-configuration-health" : section;
   const [activeSection, setActiveSection] = reactExports.useState(() => {
     try {
       const restoreSection = sessionStorage.getItem("dfp_restore_settings_section_after_reload");
       if (restoreSection) {
         sessionStorage.removeItem("dfp_restore_settings_section_after_reload");
-        if (restoreSection === "home" || Object.prototype.hasOwnProperty.call(sectionLabels, restoreSection)) {
-          return restoreSection;
+        const normalisedSection = normaliseLegacySettingsSection(restoreSection);
+        if (normalisedSection === "home" || Object.prototype.hasOwnProperty.call(sectionLabels, normalisedSection)) {
+          return normalisedSection;
         }
       }
     } catch (e) {
@@ -70613,7 +70610,7 @@ const SettingsViewWithMenu = (props) => {
   reactExports.useEffect(() => {
     const request = props.requestedSettingsSection;
     if (!request?.sectionId) return;
-    const requestedSection = request.sectionId;
+    const requestedSection = normaliseLegacySettingsSection(request.sectionId);
     if (requestedSection === "home" || Object.prototype.hasOwnProperty.call(sectionLabels, requestedSection)) {
       setSettingsFocusTarget({
         unitCode: request.unitCode,
@@ -70670,7 +70667,7 @@ const SettingsViewWithMenu = (props) => {
   const isSearchActive = settingsSearch.trim().length > 0;
   const navigateToSettingsSection = (section) => {
     const target = typeof section === "string" ? { section } : section;
-    const targetSection = String(target.section || "");
+    const targetSection = normaliseLegacySettingsSection(String(target.section || ""));
     if (!Object.prototype.hasOwnProperty.call(sectionLabels, targetSection)) return;
     setSettingsFocusTarget({
       unitCode: target.focusUnitCode,

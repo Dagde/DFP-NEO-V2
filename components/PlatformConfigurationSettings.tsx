@@ -4401,7 +4401,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         const settingsScrollContainer = document.querySelector('[data-settings-content-scroll="true"]') as HTMLElement | null;
         const restoreScrollTop = settingsScrollContainer?.scrollTop ?? window.scrollY ?? 0;
         sessionStorage.setItem('dfp_restore_view_after_reload', 'Settings');
-        sessionStorage.setItem('dfp_restore_settings_section_after_reload', restoreSection || scrollTarget || 'platform-configuration');
+        sessionStorage.setItem('dfp_restore_settings_section_after_reload', restoreSection || scrollTarget || 'platform-configuration-health');
         sessionStorage.setItem('dfp_restore_settings_scroll_top_after_reload', String(Math.max(0, Math.round(restoreScrollTop))));
       } catch {
         // Non-critical: the configuration still saves if session storage is unavailable.

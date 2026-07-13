@@ -179,7 +179,6 @@ type SettingsSection =
     | 'crew-composition'
     | 'standard-missions'
     | 'currency-profiles'
-    | 'platform-configuration'
     | 'appearance'
     | 'emergency';
 
@@ -203,8 +202,7 @@ const platformConfigurationSections = [
 type PlatformConfigurationMenuSection = typeof platformConfigurationSections[number];
 type SettingsMenuSection = SettingsSection | 'scheduling-rules' | PlatformConfigurationMenuSection;
 
-const platformSectionTargets: Record<'platform-configuration' | PlatformConfigurationMenuSection, string> = {
-    'platform-configuration': 'platform-configuration-health',
+const platformSectionTargets: Record<PlatformConfigurationMenuSection, string> = {
     'platform-configuration-health': 'platform-configuration-health',
     'platform-organisation-locations': 'platform-organisation-locations',
     'platform-units': 'platform-units',
@@ -221,7 +219,7 @@ const platformSectionTargets: Record<'platform-configuration' | PlatformConfigur
     'platform-scheduling-rule-sets': 'platform-scheduling-rule-sets',
 };
 
-const isPlatformConfigurationMenuSection = (section: SettingsMenuSection): section is 'platform-configuration' | PlatformConfigurationMenuSection =>
+const isPlatformConfigurationMenuSection = (section: SettingsMenuSection): section is PlatformConfigurationMenuSection =>
     Object.prototype.hasOwnProperty.call(platformSectionTargets, section);
 
 const sectionLabels: Record<SettingsMenuSection, string> = {
@@ -243,7 +241,6 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'crew-composition': 'Crew Composition',
     'standard-missions': 'Standard Missions',
     'currency-profiles': 'Currency Profiles',
-    'platform-configuration': 'Platform Configuration',
     'platform-configuration-health': 'Configuration Health',
     'platform-organisation-locations': 'Organisation, Bases & Areas',
     'platform-units': 'Units & Ownership',
@@ -378,7 +375,6 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
   'crew-composition': platformConfigurationIcon,
   'standard-missions': platformConfigurationIcon,
   'currency-profiles': platformConfigurationIcon,
-  'platform-configuration': platformConfigurationIcon,
   'platform-configuration-health': platformConfigurationIcon,
   'platform-organisation-locations': platformConfigurationIcon,
   'platform-units': platformConfigurationIcon,
@@ -432,7 +428,6 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'crew-composition': 'Aircraft-specific crew roles and composition profiles',
   'standard-missions': 'Fixed Crew mission profiles for regular unit flights',
   'currency-profiles': 'Currency profile presets for specific currency requests',
-  'platform-configuration': 'Commercial hierarchy, modules, resource pools and rule sets',
   'platform-configuration-health': 'Configuration warnings, risks and remediation guidance',
   'platform-organisation-locations': 'Customer organisation, bases, timezones and training areas',
   'platform-units': 'Unit type, base ownership and operating status',
@@ -483,7 +478,6 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'crew-composition':  'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'standard-missions': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'currency-profiles': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
-  'platform-configuration': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-configuration-health': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-organisation-locations': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-units': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
@@ -600,13 +594,17 @@ const isHighlightedCrewPageSection = (section: SettingsMenuSection) => highlight
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     type ActiveSection = SettingsMenuSection | 'home';
     const contentScrollRef = useRef<HTMLDivElement | null>(null);
+    const normaliseLegacySettingsSection = (section: string) => (
+        section === 'platform-configuration' ? 'platform-configuration-health' : section
+    );
     const [activeSection, setActiveSection] = useState<ActiveSection>(() => {
         try {
             const restoreSection = sessionStorage.getItem('dfp_restore_settings_section_after_reload');
             if (restoreSection) {
                 sessionStorage.removeItem('dfp_restore_settings_section_after_reload');
-                if (restoreSection === 'home' || Object.prototype.hasOwnProperty.call(sectionLabels, restoreSection)) {
-                    return restoreSection as ActiveSection;
+                const normalisedSection = normaliseLegacySettingsSection(restoreSection);
+                if (normalisedSection === 'home' || Object.prototype.hasOwnProperty.call(sectionLabels, normalisedSection)) {
+                    return normalisedSection as ActiveSection;
                 }
             }
         } catch (e) { /* ignore */ }
@@ -638,7 +636,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     useEffect(() => {
         const request = props.requestedSettingsSection;
         if (!request?.sectionId) return;
-        const requestedSection = request.sectionId;
+        const requestedSection = normaliseLegacySettingsSection(request.sectionId);
         if (requestedSection === 'home' || Object.prototype.hasOwnProperty.call(sectionLabels, requestedSection)) {
             setSettingsFocusTarget({
                 unitCode: request.unitCode,
@@ -731,7 +729,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         focusSubsectionId?: string;
     }) => {
         const target = typeof section === 'string' ? { section } : section;
-        const targetSection = String(target.section || '');
+        const targetSection = normaliseLegacySettingsSection(String(target.section || ''));
         if (!Object.prototype.hasOwnProperty.call(sectionLabels, targetSection)) return;
         setSettingsFocusTarget({
             unitCode: target.focusUnitCode,
