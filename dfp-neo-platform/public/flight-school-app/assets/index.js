@@ -70591,8 +70591,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Rank, Terminology & Labels",
-          subtitle: "Configure personnel display order, local role terminology and customer-facing report labels without changing internal codes.",
-          action: renderRankTerminologySectionAction()
+          subtitle: "Configure personnel display order, local role terminology and customer-facing report labels without changing internal codes."
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
