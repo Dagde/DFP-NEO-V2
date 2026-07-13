@@ -4947,7 +4947,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     return matchedKey ? childMap[matchedKey] || [] : [];
   };
 
-  const showSectionOnlySaveButton = !(sectionOnly && scrollTarget === 'platform-rank-terminology');
+  const showSectionOnlySaveButton = !(sectionOnly && (
+    scrollTarget === 'platform-rank-terminology'
+    || scrollTarget === 'platform-task-profiles'
+  ));
 
   return (
     <div className="relative space-y-8" onKeyDownCapture={stopEditableKeyPropagation}>

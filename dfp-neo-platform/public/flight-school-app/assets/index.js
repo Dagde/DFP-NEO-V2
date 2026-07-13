@@ -66068,7 +66068,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     const matchedKey = childMap[normalisedPreviousParent]?.length ? normalisedPreviousParent : childMapKeys.find((key) => normaliseOrganisationParentKey(key) === normalisedPreviousParent);
     return matchedKey ? childMap[matchedKey] || [] : [];
   };
-  const showSectionOnlySaveButton = !(sectionOnly && scrollTarget === "platform-rank-terminology");
+  const showSectionOnlySaveButton = !(sectionOnly && (scrollTarget === "platform-rank-terminology" || scrollTarget === "platform-task-profiles"));
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: stopEditableKeyPropagation, children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-cyan-100", children: "One moment while we apply your changes" }),
