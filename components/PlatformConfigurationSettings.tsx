@@ -5537,14 +5537,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           subtitle="Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
-              {taskProfilesUnlocked ? (
-                <>
-                  <button type="button" onClick={() => void saveTaskProfilesAndExitEdit()} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
-                  <button type="button" onClick={() => setTaskProfilesUnlocked(false)} disabled={saving || applyingChanges} className={platformActionButtonClass}>Exit</button>
-                </>
-              ) : (
-                <button type="button" onClick={() => setTaskProfilesUnlocked(true)} className={platformActionButtonClass}>Edit</button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (taskProfilesUnlocked) {
+                    void saveTaskProfilesAndExitEdit();
+                    return;
+                  }
+                  setTaskProfilesUnlocked(true);
+                }}
+                disabled={taskProfilesUnlocked && (saving || applyingChanges)}
+                className={platformActionButtonClass}
+              >
+                {taskProfilesUnlocked ? 'Save' : 'Edit'}
+              </button>
             </div>
           ) : null}
         />

@@ -66584,10 +66584,22 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         {
           title: "Task Profiles",
           subtitle: "Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed.",
-          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: taskProfilesUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => void saveTaskProfilesAndExitEdit(), disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setTaskProfilesUnlocked(false), disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Exit" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setTaskProfilesUnlocked(true), className: platformActionButtonClass, children: "Edit" }) }) : null
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                if (taskProfilesUnlocked) {
+                  void saveTaskProfilesAndExitEdit();
+                  return;
+                }
+                setTaskProfilesUnlocked(true);
+              },
+              disabled: taskProfilesUnlocked && (saving || applyingChanges),
+              className: platformActionButtonClass,
+              children: taskProfilesUnlocked ? "Save" : "Edit"
+            }
+          ) }) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
