@@ -4940,6 +4940,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     return matchedKey ? childMap[matchedKey] || [] : [];
   };
 
+  const showSectionOnlySaveButton = !(sectionOnly && scrollTarget === 'platform-rank-terminology');
+
   return (
     <div className="relative space-y-8" onKeyDownCapture={stopEditableKeyPropagation}>
       {applyingChanges && (
@@ -4956,7 +4958,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <p className="text-sm leading-relaxed text-gray-300">
               Changes on this settings page are saved into the platform configuration.
             </p>
-            {saveButton}
+            {showSectionOnlySaveButton && saveButton}
           </div>
           {!canEdit && (
             <div className="mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100">
