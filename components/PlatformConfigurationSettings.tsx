@@ -1753,6 +1753,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = useState(false);
   const [taskProfilesUnlocked, setTaskProfilesUnlocked] = useState(false);
+  const [sectionEditUnlocked, setSectionEditUnlocked] = useState<Record<string, boolean>>({});
   const [taskProfileDrafts, setTaskProfileDrafts] = useState<Record<string, string>>({});
   const [taskProfileAbbreviationDrafts, setTaskProfileAbbreviationDrafts] = useState<Record<string, string>>({});
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
@@ -4462,6 +4463,37 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     await save(undefined, 'platform-currency-profiles');
   };
 
+  const isSectionEditActive = (sectionId: string): boolean => (
+    !sectionOnly || sectionEditUnlocked[sectionId] === true
+  );
+  const canEditSection = (sectionId: string): boolean => canEdit && isSectionEditActive(sectionId);
+  const saveSectionAndExitEdit = async (sectionId: string) => {
+    const saved = await save(undefined, sectionId);
+    if (saved) {
+      setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: false }));
+    }
+  };
+  const renderSectionEditSaveButton = (sectionId: string) => {
+    if (!canEdit) return null;
+    const isEditing = isSectionEditActive(sectionId);
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          if (isEditing) {
+            void saveSectionAndExitEdit(sectionId);
+            return;
+          }
+          setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: true }));
+        }}
+        disabled={isEditing && (saving || applyingChanges)}
+        className={platformActionButtonClass}
+      >
+        {isEditing ? 'Save' : 'Edit'}
+      </button>
+    );
+  };
+
   const updateStandardMissionProfiles = (profiles: StandardMissionProfile[]) => {
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
@@ -4974,6 +5006,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const showSectionOnlySaveButton = !(sectionOnly && (
     scrollTarget === 'platform-rank-terminology'
     || scrollTarget === 'platform-task-profiles'
+    || scrollTarget === 'platform-organisation-locations'
+    || scrollTarget === 'platform-units'
+    || scrollTarget === 'platform-master-lmp-access'
+    || scrollTarget === 'platform-standard-missions'
+    || scrollTarget === 'platform-resource-pools'
+    || scrollTarget === 'platform-crew-composition'
+    || scrollTarget === 'platform-currency-profiles'
+    || scrollTarget === 'platform-unit-modules'
+    || scrollTarget === 'platform-deployment-readiness'
+    || scrollTarget === 'platform-operational-runbook'
+    || scrollTarget === 'platform-licensing'
+    || scrollTarget === 'platform-permission-profiles'
+    || scrollTarget === 'platform-user-access'
+    || scrollTarget === 'platform-scheduling-rule-sets'
   ));
   const showSectionOnlyStatusPanel = showSectionOnlySaveButton || !canEdit || Boolean(error);
 
@@ -5263,7 +5309,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Locations"
           subtitle="Bases, airfields, timezone data and local training areas used by units and scheduling."
-          action={canEdit ? <button type="button" onClick={addLocation} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Location</button> : null}
+          action={canEdit ? (
+            <div className="flex flex-wrap justify-end gap-[1px]">
+              {renderSectionEditSaveButton('platform-locations')}
+              <button type="button" onClick={addLocation} disabled={!canEditSection('platform-locations')} className={platformActionButtonClass}>
+                <span className="text-[9px] leading-tight">Add<br />Location</span>
+              </button>
+            </div>
+          ) : null}
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
@@ -5291,7 +5344,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   boxShadow: `inset 4px 0 0 ${platformLocationRowTone.accent}, 0 12px 24px rgba(0,0,0,0.22)`,
                 }}
               >
-                {canEdit ? (
+                {canEditSection('platform-locations') ? (
                   <button
                     type="button"
                     className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded border border-gray-600/70 bg-gray-950/60 text-xs font-bold text-gray-400 transition-colors hover:border-red-400/60 hover:bg-red-500/10 hover:text-red-100"
@@ -5306,7 +5359,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <AirfieldLookupField
                     label="ICAO Code"
                     value={location.code}
-                    disabled={!canEdit}
+                    disabled={!canEditSection('platform-locations')}
                     maxLength={4}
                     suggestions={codeSuggestions}
                     onChange={(value) => updateLocationIdentity(index, 'code', value)}
@@ -5317,7 +5370,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <AirfieldLookupField
                     label="IATA Code"
                     value={location.iataCode || ''}
-                    disabled={!canEdit}
+                    disabled={!canEditSection('platform-locations')}
                     maxLength={3}
                     suggestions={iataSuggestions}
                     onChange={(value) => updateLocationIdentity(index, 'iataCode', value)}
@@ -5328,32 +5381,32 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <AirfieldLookupField
                     label="Location Name"
                     value={location.name}
-                    disabled={!canEdit}
+                    disabled={!canEditSection('platform-locations')}
                     suggestions={nameSuggestions}
                     onChange={(value) => updateLocationIdentity(index, 'name', value)}
                     onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <NumberField label="UTC Offset" value={location.timezoneOffset ?? 10} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezoneOffset: value })} />
+                  <NumberField label="UTC Offset" value={location.timezoneOffset ?? 10} disabled={!canEditSection('platform-locations')} onChange={(value) => updateRow('locations', index, { timezoneOffset: value })} />
                 </div>
                 <div className="md:col-span-2">
-                  <SelectField label="Status" value={location.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('locations', index, { status: value })} />
+                  <SelectField label="Status" value={location.status || 'ACTIVE'} disabled={!canEditSection('platform-locations')} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('locations', index, { status: value })} />
                 </div>
                 <div className="md:col-span-2">
-                  <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />
+                  <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEditSection('platform-locations')} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />
                 </div>
                 <div className="md:col-span-2">
-                  <OptionalNumberField label="Longitude" value={toNullableNumber(location.longitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { longitude: value })} info="Decimal degrees. West is negative." />
+                  <OptionalNumberField label="Longitude" value={toNullableNumber(location.longitude)} disabled={!canEditSection('platform-locations')} onChange={(value) => updateRow('locations', index, { longitude: value })} info="Decimal degrees. West is negative." />
                 </div>
                 <div className="md:col-span-3">
-                  <TimeZoneField label="IANA Timezone" value={location.timezone || ''} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezone: value })} info="Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." />
+                  <TimeZoneField label="IANA Timezone" value={location.timezone || ''} disabled={!canEditSection('platform-locations')} onChange={(value) => updateRow('locations', index, { timezone: value })} info="Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." />
                 </div>
                 <div className="md:col-span-5">
                   <CommaListField
                     label="Training Areas"
                     value={location.trainingAreas || []}
-                    disabled={!canEdit}
+                    disabled={!canEditSection('platform-locations')}
                     onChange={(trainingAreas) => updateRow('locations', index, { trainingAreas })}
                   />
                 </div>
@@ -5370,6 +5423,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           action={canEdit ? (
             <div className="flex items-center gap-[1px]">
               <button type="button" onClick={editSelectedUnit} disabled={config.units.length === 0} className={platformActionButtonClass}>EDIT</button>
+              <button
+                type="button"
+                onClick={() => {
+                  void save(undefined, 'platform-units').then((saved) => {
+                    if (saved) setEditingUnitIndex(null);
+                  });
+                }}
+                disabled={editingUnitIndex === null || saving || applyingChanges}
+                className={platformActionButtonClass}
+              >
+                Save
+              </button>
               <button type="button" onClick={deleteSelectedUnit} disabled={config.units.length === 0} className={platformActionButtonClass}>Delete</button>
               <button type="button" onClick={addUnit} className={platformActionButtonClass}>
                 <span className="leading-tight">Add<br />Unit</span>
@@ -5662,8 +5727,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           subtitle="Restrict which locations and units can view, assign or manage each Master LMP. Empty location or unit values apply broadly."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
-              <button type="button" onClick={addMasterLmpCatalogueEntry} className={platformActionButtonClass}>Add Master LMP</button>
-              <button type="button" onClick={addMasterLmpAccessRule} className={platformActionButtonClass}>Add Access</button>
+              {renderSectionEditSaveButton('platform-master-lmp-access')}
+              <button type="button" onClick={addMasterLmpCatalogueEntry} disabled={!canEditSection('platform-master-lmp-access')} className={platformActionButtonClass}>Add Master LMP</button>
+              <button type="button" onClick={addMasterLmpAccessRule} disabled={!canEditSection('platform-master-lmp-access')} className={platformActionButtonClass}>Add Access</button>
             </div>
           ) : null}
         />
@@ -5688,20 +5754,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <Field
                         label="Code"
                         value={entry.code}
-                        disabled={!canEdit}
+                        disabled={!canEditSection('platform-master-lmp-access')}
                         onChange={(value) => updateMasterLmpCatalogueEntry(index, { code: value, name: entry.name || value })}
                         info="Stable selectable value used by Master LMP Access and trainee/course assignment."
                       />
                       <Field
                         label="Name"
                         value={entry.name || entry.code}
-                        disabled={!canEdit}
+                        disabled={!canEditSection('platform-master-lmp-access')}
                         onChange={(value) => updateMasterLmpCatalogueEntry(index, { name: value })}
                       />
                       <Field
                         label="Description"
                         value={entry.description || ''}
-                        disabled={!canEdit}
+                        disabled={!canEditSection('platform-master-lmp-access')}
                         onChange={(value) => updateMasterLmpCatalogueEntry(index, { description: value })}
                       />
                       <div>
@@ -5713,7 +5779,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <SelectField
                         label="Status"
                         value={entry.status || 'ACTIVE'}
-                        disabled={!canEdit}
+                        disabled={!canEditSection('platform-master-lmp-access')}
                         options={['ACTIVE', 'INACTIVE']}
                         onChange={(value) => updateMasterLmpCatalogueEntry(index, { status: value })}
                       />
@@ -5722,7 +5788,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <button
                           type="button"
                           onClick={() => void deleteMasterLmpCatalogueEntry(index)}
-                          disabled={!canEdit}
+                          disabled={!canEditSection('platform-master-lmp-access')}
                           title={`Delete ${entry.name || entry.code || 'Master LMP'}`}
                           className="flex min-h-[38px] w-full items-center justify-center rounded bg-transparent text-sm font-bold text-red-200 transition hover:bg-red-900/35 disabled:cursor-not-allowed disabled:opacity-45"
                         >
@@ -5745,14 +5811,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <SelectField
                 label="Master LMP"
                 value={rule.lmpCode}
-                disabled={!canEdit}
+                disabled={!canEditSection('platform-master-lmp-access')}
                 options={masterLmpOptions}
                 onChange={(value) => updateMasterLmpAccessRule(index, { lmpCode: value })}
               />
               <SelectField
                 label="Location"
                 value={rule.locationCode || ''}
-                disabled={!canEdit}
+                disabled={!canEditSection('platform-master-lmp-access')}
                 options={['', ...config.locations.map((location) => location.code)]}
                 emptyLabel="All Locations"
                 onChange={(value) => updateMasterLmpAccessRule(index, { locationCode: value || null })}
@@ -5760,7 +5826,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <SelectField
                 label="Unit"
                 value={rule.unitCode || ''}
-                disabled={!canEdit}
+                disabled={!canEditSection('platform-master-lmp-access')}
                 options={['', ...config.units.map((unit) => unit.code)]}
                 emptyLabel="All Units"
                 onChange={(value) => updateMasterLmpAccessRule(index, { unitCode: value || null })}
@@ -5768,7 +5834,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <SelectField
                 label="Model"
                 value={rule.operationalModel || ''}
-                disabled={!canEdit}
+                disabled={!canEditSection('platform-master-lmp-access')}
                 options={['', ...OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)]}
                 emptyLabel="Any Model"
                 onChange={(value) => updateMasterLmpAccessRule(index, { operationalModel: value || null })}
@@ -5776,21 +5842,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <SelectField
                 label="Access"
                 value={rule.accessLevel || 'View'}
-                disabled={!canEdit}
+                disabled={!canEditSection('platform-master-lmp-access')}
                 options={['View', 'Assign', 'Manage']}
                 onChange={(value) => updateMasterLmpAccessRule(index, { accessLevel: value })}
               />
               <SelectField
                 label="Status"
                 value={rule.status || 'ACTIVE'}
-                disabled={!canEdit}
+                disabled={!canEditSection('platform-master-lmp-access')}
                 options={['ACTIVE', 'INACTIVE']}
                 onChange={(value) => updateMasterLmpAccessRule(index, { status: value })}
               />
               <div className="flex items-end justify-end">
                 <button
                   type="button"
-                  disabled={!canEdit}
+                  disabled={!canEditSection('platform-master-lmp-access')}
                   onClick={() => removeMasterLmpAccessRule(index)}
                   className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -5809,8 +5875,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           subtitle="Fixed Crew mission profiles for regular unit flights. These profiles are configuration only for now and are not yet wired into NEO Build."
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
-              <button type="button" onClick={addStandardMissionProfile} disabled={saving || applyingChanges} className={platformActionButtonClass}>Add Mission</button>
-              <button type="button" onClick={() => save(undefined, 'platform-standard-missions')} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
+              {renderSectionEditSaveButton('platform-standard-missions')}
+              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Mission</button>
             </div>
           ) : null}
         />
@@ -5852,8 +5918,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <p className="mt-1 text-xs text-gray-500">{profile.description || 'No description entered.'}</p>
                         </div>
                         <div className="flex flex-wrap justify-end gap-[1px]">
-                          <SelectField label="Status" value={profile.status} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateStandardMissionProfile(profile.id, { status: value === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE' })} />
-                          <button type="button" onClick={() => removeStandardMissionProfile(profile.id)} disabled={!canEdit} className={platformActionButtonClass}>
+                          <SelectField label="Status" value={profile.status} disabled={!canEditSection('platform-standard-missions')} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateStandardMissionProfile(profile.id, { status: value === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE' })} />
+                          <button type="button" onClick={() => removeStandardMissionProfile(profile.id)} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>
                             <span className="text-[9px] leading-tight text-red-600">Delete</span>
                           </button>
                         </div>
@@ -5869,11 +5935,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               </div>
                             </div>
                             <div className="grid gap-3 md:grid-cols-[1fr_150px]">
-                              <Field label="Mission Name" value={profile.missionName} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
-                              <Field label="Short Title" value={profile.shortTitle} disabled={!canEdit} maxLength={8} onChange={(value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() })} />
+                              <Field label="Mission Name" value={profile.missionName} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
+                              <Field label="Short Title" value={profile.shortTitle} disabled={!canEditSection('platform-standard-missions')} maxLength={8} onChange={(value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() })} />
                             </div>
                             <div className="mt-3">
-                              <TextAreaField label="Description" value={profile.description} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { description: value })} />
+                              <TextAreaField label="Description" value={profile.description} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { description: value })} />
                             </div>
                           </div>
 
@@ -5892,14 +5958,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 onChange={() => undefined}
                                 info="Standard Missions are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                               />
-                              <Field label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." />
-                              <SelectField label="Type" value={profile.resourceType} disabled={!canEdit} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />
-                              <SelectField label="Dep" value={profile.departureLocationCode || activeHomeLocationCode} disabled={!canEdit} options={config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() })} />
-                              <SelectField label="Arr" value={profile.arrivalLocationCode || activeHomeLocationCode} disabled={!canEdit} options={config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() })} />
-                              <NumberField label="Duration (min)" value={profile.durationMinutes} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { durationMinutes: clampWholeNumber(value, 240, 1, 1440) })} />
-                              <NumberField label="Pre-Flight (min)" value={profile.preFlightMinutes} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { preFlightMinutes: clampWholeNumber(value, 90, 0, 1440) })} />
-                              <NumberField label="Post-Flight (min)" value={profile.postFlightMinutes} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { postFlightMinutes: clampWholeNumber(value, 60, 0, 1440) })} />
-                              <SelectField label="CONFIG" value={profile.config || 'ANY'} disabled={!canEdit} options={aircraftConfigOptions} onChange={(value) => updateStandardMissionProfile(profile.id, { config: value || 'ANY' })} />
+                              <Field label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." />
+                              <SelectField label="Type" value={profile.resourceType} disabled={!canEditSection('platform-standard-missions')} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />
+                              <SelectField label="Dep" value={profile.departureLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() })} />
+                              <SelectField label="Arr" value={profile.arrivalLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() })} />
+                              <NumberField label="Duration (min)" value={profile.durationMinutes} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { durationMinutes: clampWholeNumber(value, 240, 1, 1440) })} />
+                              <NumberField label="Pre-Flight (min)" value={profile.preFlightMinutes} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { preFlightMinutes: clampWholeNumber(value, 90, 0, 1440) })} />
+                              <NumberField label="Post-Flight (min)" value={profile.postFlightMinutes} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { postFlightMinutes: clampWholeNumber(value, 60, 0, 1440) })} />
+                              <SelectField label="CONFIG" value={profile.config || 'ANY'} disabled={!canEditSection('platform-standard-missions')} options={aircraftConfigOptions} onChange={(value) => updateStandardMissionProfile(profile.id, { config: value || 'ANY' })} />
                             </div>
                             <div className="mt-3 grid items-start gap-3 md:grid-cols-[1fr_160px]">
                               <div>
@@ -5909,7 +5975,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                     type="checkbox"
                                     className="h-5 w-5 rounded border-gray-500 accent-cyan-500"
                                     checked={profile.isFormation}
-                                    disabled={!canEdit}
+                                    disabled={!canEditSection('platform-standard-missions')}
                                     onChange={(event) => updateStandardMissionProfile(profile.id, { isFormation: event.target.checked })}
                                   />
                                   <span className="text-sm font-semibold text-gray-200">Formation mission</span>
@@ -5928,7 +5994,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 <div className={resourceSectionPanelHintClass}>Select acceptable crew compositions and any explicit role requirements.</div>
                               </div>
                             </div>
-                            <Field label="Default Callsign Prefix" value={profile.defaultCallsignPrefix || defaultMissionCallsign} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { defaultCallsignPrefix: value })} info="Defaults from the unit callsign settings. This is the prefix only; sortie number selection comes later when scheduled." />
+                            <Field label="Default Callsign Prefix" value={profile.defaultCallsignPrefix || defaultMissionCallsign} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { defaultCallsignPrefix: value })} info="Defaults from the unit callsign settings. This is the prefix only; sortie number selection comes later when scheduled." />
                             <div className="mt-3 rounded border border-gray-800 bg-gray-950/70 p-3">
                               <div className="mb-2 text-xs font-black uppercase tracking-wide text-cyan-100">Crew Composition</div>
                               <div className="grid gap-2 sm:grid-cols-3">
@@ -5944,7 +6010,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                     <button
                                       key={`${profile.id}-${mode}`}
                                       type="button"
-                                      disabled={!canEdit}
+                                      disabled={!canEditSection('platform-standard-missions')}
                                       onClick={() => updateStandardMissionCrewMode(profile, mode)}
                                       className={`rounded border px-3 py-2 text-left transition-colors ${
                                         selected
@@ -5967,7 +6033,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                   <SelectField
                                     label="Alternate Crew"
                                     value={selectedCrewCompositionId}
-                                    disabled={!canEdit}
+                                    disabled={!canEditSection('platform-standard-missions')}
                                     options={['', ...missionCrewOptions.filter((option) => option.mode === 'ALTERNATE').map((option) => option.id)]}
                                     optionLabels={Object.fromEntries(missionCrewOptions.filter((option) => option.mode === 'ALTERNATE').map((option) => [option.id, option.label]))}
                                     onChange={(value) => updateStandardMissionCrewSelection(profile, value, true)}
@@ -6931,7 +6997,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       </section>
 
       <section id="platform-unit-modules" className={getSectionClass('platform-unit-modules')}>
-        <SectionHeader title="Unit Modules" subtitle="Controls which functional modules each unit can use. This is the future licensing and role-aware UI switchboard." />
+        <SectionHeader
+          title="Unit Modules"
+          subtitle="Controls which functional modules each unit can use. This is the future licensing and role-aware UI switchboard."
+          action={renderSectionEditSaveButton('platform-unit-modules')}
+        />
         <div className="overflow-x-auto p-4">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-gray-950 text-xs uppercase tracking-wide text-gray-400">
@@ -6952,7 +7022,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <input
                           type="checkbox"
                           checked={unitModule?.isEnabled !== false}
-                          disabled={!canEdit}
+                          disabled={!canEditSection('platform-unit-modules')}
                           onChange={(event) => {
                             if (unitModuleIndex >= 0) {
                               updateRow('unitModules', unitModuleIndex, { isEnabled: event.target.checked });
@@ -6979,6 +7049,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Deployment Readiness"
           subtitle="Commercial deployment posture for SaaS, defence networks, fully offline installs and hybrid sync. These settings are admin-editable and do not hard-block operations yet."
+          action={renderSectionEditSaveButton('platform-deployment-readiness')}
         />
         <div className="space-y-4 p-4">
           <div className="grid gap-3 lg:grid-cols-4">
@@ -7019,15 +7090,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </span>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-              <SelectField label="Operating Model" value={deploymentProfile.mode} disabled={!canEdit} options={DEPLOYMENT_MODE_OPTIONS} onChange={(value) => updateDeploymentProfile({ mode: value })} />
-              <SelectField label="Licence Validation Method" value={deploymentProfile.validationMethod} disabled={!canEdit} options={LICENSE_VALIDATION_OPTIONS} onChange={(value) => updateDeploymentProfile({ validationMethod: value })} />
-              <SelectField label="Licence Enforcement Mode" value={deploymentProfile.enforcementMode} disabled={!canEdit} options={LICENSE_ENFORCEMENT_OPTIONS} onChange={(value) => updateDeploymentProfile({ enforcementMode: value })} />
-              <NumberField label="Offline Grace Days" value={Number(deploymentProfile.offlineGraceDays ?? 30)} disabled={!canEdit} onChange={(value) => updateDeploymentProfile({ offlineGraceDays: value })} />
-              <NumberField label="Licence Check Interval Hours" value={Number(deploymentProfile.checkIntervalHours ?? 24)} disabled={!canEdit} onChange={(value) => updateDeploymentProfile({ checkIntervalHours: value })} />
-              <SelectField label="Authentication Model" value={deploymentProfile.authModel} disabled={!canEdit} options={AUTH_MODEL_OPTIONS} onChange={(value) => updateDeploymentProfile({ authModel: value })} />
-              <Field label="Data Residence" value={deploymentProfile.dataResidence || ''} disabled={!canEdit} onChange={(value) => updateDeploymentProfile({ dataResidence: value })} />
-              <Field label="Network Posture" value={deploymentProfile.networkPosture || ''} disabled={!canEdit} onChange={(value) => updateDeploymentProfile({ networkPosture: value })} />
-              <TextAreaField label="Deployment Notes" value={deploymentProfile.notes || ''} disabled={!canEdit} onChange={(value) => updateDeploymentProfile({ notes: value })} />
+              <SelectField label="Operating Model" value={deploymentProfile.mode} disabled={!canEditSection('platform-deployment-readiness')} options={DEPLOYMENT_MODE_OPTIONS} onChange={(value) => updateDeploymentProfile({ mode: value })} />
+              <SelectField label="Licence Validation Method" value={deploymentProfile.validationMethod} disabled={!canEditSection('platform-deployment-readiness')} options={LICENSE_VALIDATION_OPTIONS} onChange={(value) => updateDeploymentProfile({ validationMethod: value })} />
+              <SelectField label="Licence Enforcement Mode" value={deploymentProfile.enforcementMode} disabled={!canEditSection('platform-deployment-readiness')} options={LICENSE_ENFORCEMENT_OPTIONS} onChange={(value) => updateDeploymentProfile({ enforcementMode: value })} />
+              <NumberField label="Offline Grace Days" value={Number(deploymentProfile.offlineGraceDays ?? 30)} disabled={!canEditSection('platform-deployment-readiness')} onChange={(value) => updateDeploymentProfile({ offlineGraceDays: value })} />
+              <NumberField label="Licence Check Interval Hours" value={Number(deploymentProfile.checkIntervalHours ?? 24)} disabled={!canEditSection('platform-deployment-readiness')} onChange={(value) => updateDeploymentProfile({ checkIntervalHours: value })} />
+              <SelectField label="Authentication Model" value={deploymentProfile.authModel} disabled={!canEditSection('platform-deployment-readiness')} options={AUTH_MODEL_OPTIONS} onChange={(value) => updateDeploymentProfile({ authModel: value })} />
+              <Field label="Data Residence" value={deploymentProfile.dataResidence || ''} disabled={!canEditSection('platform-deployment-readiness')} onChange={(value) => updateDeploymentProfile({ dataResidence: value })} />
+              <Field label="Network Posture" value={deploymentProfile.networkPosture || ''} disabled={!canEditSection('platform-deployment-readiness')} onChange={(value) => updateDeploymentProfile({ networkPosture: value })} />
+              <TextAreaField label="Deployment Notes" value={deploymentProfile.notes || ''} disabled={!canEditSection('platform-deployment-readiness')} onChange={(value) => updateDeploymentProfile({ notes: value })} />
             </div>
           </div>
 
@@ -7046,7 +7117,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     type="checkbox"
                     className="mt-1 h-4 w-4 rounded border-gray-500 accent-cyan-500"
                     checked={deploymentReadiness[item.id] === true}
-                    disabled={!canEdit}
+                    disabled={!canEditSection('platform-deployment-readiness')}
                     onChange={(event) => toggleDeploymentReadiness(item.id, event.target.checked)}
                   />
                   <span>
@@ -7064,6 +7135,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Operational Runbook"
           subtitle="Deployment evidence for support, backups, restore testing, updates and accreditation. This gives an on-prem or offline customer a clear administration record without exposing secrets."
+          action={renderSectionEditSaveButton('platform-operational-runbook')}
         />
         <div className="space-y-4 p-4">
           <div className="grid gap-3 lg:grid-cols-4">
@@ -7110,12 +7182,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </span>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-              <Field label="Environment Name" value={operationalRunbook.environmentName || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ environmentName: value })} />
-              <Field label="Deployment Identifier" value={operationalRunbook.deploymentIdentifier || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ deploymentIdentifier: value })} />
-              <SelectField label="Release Channel" value={operationalRunbook.releaseChannel || 'Production'} disabled={!canEdit} options={RELEASE_CHANNEL_OPTIONS} onChange={(value) => updateOperationalRunbook({ releaseChannel: value })} />
-              <Field label="Support Owner" value={operationalRunbook.supportOwner || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ supportOwner: value })} />
-              <Field label="Support Contact" value={operationalRunbook.supportContact || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ supportContact: value })} />
-              <Field label="Approving Authority" value={operationalRunbook.approvingAuthority || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ approvingAuthority: value })} />
+              <Field label="Environment Name" value={operationalRunbook.environmentName || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ environmentName: value })} />
+              <Field label="Deployment Identifier" value={operationalRunbook.deploymentIdentifier || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ deploymentIdentifier: value })} />
+              <SelectField label="Release Channel" value={operationalRunbook.releaseChannel || 'Production'} disabled={!canEditSection('platform-operational-runbook')} options={RELEASE_CHANNEL_OPTIONS} onChange={(value) => updateOperationalRunbook({ releaseChannel: value })} />
+              <Field label="Support Owner" value={operationalRunbook.supportOwner || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ supportOwner: value })} />
+              <Field label="Support Contact" value={operationalRunbook.supportContact || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ supportContact: value })} />
+              <Field label="Approving Authority" value={operationalRunbook.approvingAuthority || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ approvingAuthority: value })} />
             </div>
           </div>
 
@@ -7130,14 +7202,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </p>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-              <SelectField label="Backup Frequency" value={operationalRunbook.backupFrequency || 'Daily'} disabled={!canEdit} options={BACKUP_FREQUENCY_OPTIONS} onChange={(value) => updateOperationalRunbook({ backupFrequency: value })} />
-              <NumberField label="Backup Retention Days" value={Number(operationalRunbook.backupRetentionDays ?? 30)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ backupRetentionDays: value })} />
-              <Field label="Backup Storage Location" value={operationalRunbook.backupStorageLocation || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ backupStorageLocation: value })} />
-              <DateField label="Last Backup Date" value={operationalRunbook.lastBackupDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastBackupDate: value })} />
-              <DateField label="Last Restore Test Date" value={operationalRunbook.lastRestoreTestDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastRestoreTestDate: value })} />
+              <SelectField label="Backup Frequency" value={operationalRunbook.backupFrequency || 'Daily'} disabled={!canEditSection('platform-operational-runbook')} options={BACKUP_FREQUENCY_OPTIONS} onChange={(value) => updateOperationalRunbook({ backupFrequency: value })} />
+              <NumberField label="Backup Retention Days" value={Number(operationalRunbook.backupRetentionDays ?? 30)} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ backupRetentionDays: value })} />
+              <Field label="Backup Storage Location" value={operationalRunbook.backupStorageLocation || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ backupStorageLocation: value })} />
+              <DateField label="Last Backup Date" value={operationalRunbook.lastBackupDate || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ lastBackupDate: value })} />
+              <DateField label="Last Restore Test Date" value={operationalRunbook.lastRestoreTestDate || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ lastRestoreTestDate: value })} />
               <div className="grid grid-cols-2 gap-3">
-                <NumberField label="RTO Hours" value={Number(operationalRunbook.restoreTimeObjectiveHours ?? 24)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value })} />
-                <NumberField label="RPO Hours" value={Number(operationalRunbook.restorePointObjectiveHours ?? 24)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ restorePointObjectiveHours: value })} />
+                <NumberField label="RTO Hours" value={Number(operationalRunbook.restoreTimeObjectiveHours ?? 24)} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value })} />
+                <NumberField label="RPO Hours" value={Number(operationalRunbook.restorePointObjectiveHours ?? 24)} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ restorePointObjectiveHours: value })} />
               </div>
             </div>
           </div>
@@ -7153,13 +7225,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </p>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-              <Field label="Maintenance Window" value={operationalRunbook.maintenanceWindow || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ maintenanceWindow: value })} />
-              <Field label="Update Approval Process" value={operationalRunbook.updateApprovalProcess || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ updateApprovalProcess: value })} />
-              <DateField label="Last Update Date" value={operationalRunbook.lastUpdateDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastUpdateDate: value })} />
-              <Field label="Evidence Export Path" value={operationalRunbook.evidenceExportPath || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ evidenceExportPath: value })} />
-              <NumberField label="Audit Retention Years" value={Number(operationalRunbook.auditRetentionYears ?? 7)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ auditRetentionYears: value })} />
-              <SelectField label="Accreditation Status" value={operationalRunbook.accreditationStatus || 'Not started'} disabled={!canEdit} options={ACCREDITATION_STATUS_OPTIONS} onChange={(value) => updateOperationalRunbook({ accreditationStatus: value })} />
-              <TextAreaField label="Operational Notes" value={operationalRunbook.notes || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ notes: value })} />
+              <Field label="Maintenance Window" value={operationalRunbook.maintenanceWindow || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ maintenanceWindow: value })} />
+              <Field label="Update Approval Process" value={operationalRunbook.updateApprovalProcess || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ updateApprovalProcess: value })} />
+              <DateField label="Last Update Date" value={operationalRunbook.lastUpdateDate || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ lastUpdateDate: value })} />
+              <Field label="Evidence Export Path" value={operationalRunbook.evidenceExportPath || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ evidenceExportPath: value })} />
+              <NumberField label="Audit Retention Years" value={Number(operationalRunbook.auditRetentionYears ?? 7)} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ auditRetentionYears: value })} />
+              <SelectField label="Accreditation Status" value={operationalRunbook.accreditationStatus || 'Not started'} disabled={!canEditSection('platform-operational-runbook')} options={ACCREDITATION_STATUS_OPTIONS} onChange={(value) => updateOperationalRunbook({ accreditationStatus: value })} />
+              <TextAreaField label="Operational Notes" value={operationalRunbook.notes || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ notes: value })} />
             </div>
           </div>
 
@@ -7197,7 +7269,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Licensing & Deployment"
           subtitle="Commercial licensing for online SaaS, private defence networks, hybrid sync and fully offline deployments. Development mode remains non-blocking while signed licence files can be tested end to end."
-          action={canEdit ? <button type="button" onClick={addLicense} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Licence</button> : null}
+          action={canEdit ? (
+            <div className="flex flex-wrap justify-end gap-[1px]">
+              {renderSectionEditSaveButton('platform-licensing')}
+              <button type="button" onClick={addLicense} disabled={!canEditSection('platform-licensing')} className={platformActionButtonClass}>
+                <span className="text-[9px] leading-tight">Add<br />Licence</span>
+              </button>
+            </div>
+          ) : null}
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
@@ -7244,7 +7323,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <button
                   type="button"
                   onClick={importSignedLicense}
-                  disabled={!canEdit || licenseActionLoading || !licenseImportText.trim()}
+                  disabled={!canEditSection('platform-licensing') || licenseActionLoading || !licenseImportText.trim()}
                   className="rounded border border-cyan-500 bg-cyan-500 px-4 py-2 text-sm font-bold text-gray-950 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Import
@@ -7260,7 +7339,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 setLicenseImportError('');
               }}
               placeholder='Paste signed licence JSON, for example {"schema":"dfp-neo-license/v1",...}'
-              disabled={!canEdit && !licenseImportText}
+              disabled={!canEditSection('platform-licensing') && !licenseImportText}
             />
             {licenseImportMessage && (
               <div className="mt-3 rounded border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-100">{licenseImportMessage}</div>
@@ -7322,18 +7401,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
 
                 <div className="grid gap-3 lg:grid-cols-3">
-                  <Field label="Licence Name" value={license.licenseName || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { licenseName: value })} />
-                  <Field label="Licence Key" value={license.licenseKey || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { licenseKey: value })} />
-                  <SelectField label="Organisation" value={license.organisationCode || config.organisations[0]?.code || 'DEFAULT'} disabled={!canEdit} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('licenses', index, { organisationCode: value })} />
-                  <SelectField label="Deployment Model" value={license.deploymentMode || 'Online SaaS'} disabled={!canEdit} options={['Online SaaS', 'Private Defence Network', 'Fully Offline', 'Hybrid Offline Sync']} onChange={(value) => updateRow('licenses', index, { deploymentMode: value })} />
-                  <SelectField label="Status" value={license.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'SUSPENDED', 'EXPIRED', 'INACTIVE']} onChange={(value) => updateRow('licenses', index, { status: value })} />
-                  <Field label="Offline Fingerprint" value={license.offlineFingerprint || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { offlineFingerprint: value })} />
-                  <DateField label="Valid From" value={license.validFrom || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { validFrom: value })} />
-                  <DateField label="Valid Until" value={license.validUntil || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { validUntil: value })} />
-                  <OptionalNumberField label="Max Users" value={license.maxUsers ?? null} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { maxUsers: value })} />
-                  <OptionalNumberField label="Max Units" value={license.maxUnits ?? null} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { maxUnits: value })} />
-                  <OptionalNumberField label="Max Aircraft Types" value={license.maxAircraftTypes ?? null} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { maxAircraftTypes: value })} />
-                  <TextAreaField label="Notes" value={license.notes || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { notes: value })} />
+                  <Field label="Licence Name" value={license.licenseName || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { licenseName: value })} />
+                  <Field label="Licence Key" value={license.licenseKey || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { licenseKey: value })} />
+                  <SelectField label="Organisation" value={license.organisationCode || config.organisations[0]?.code || 'DEFAULT'} disabled={!canEditSection('platform-licensing')} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('licenses', index, { organisationCode: value })} />
+                  <SelectField label="Deployment Model" value={license.deploymentMode || 'Online SaaS'} disabled={!canEditSection('platform-licensing')} options={['Online SaaS', 'Private Defence Network', 'Fully Offline', 'Hybrid Offline Sync']} onChange={(value) => updateRow('licenses', index, { deploymentMode: value })} />
+                  <SelectField label="Status" value={license.status || 'ACTIVE'} disabled={!canEditSection('platform-licensing')} options={['ACTIVE', 'SUSPENDED', 'EXPIRED', 'INACTIVE']} onChange={(value) => updateRow('licenses', index, { status: value })} />
+                  <Field label="Offline Fingerprint" value={license.offlineFingerprint || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { offlineFingerprint: value })} />
+                  <DateField label="Valid From" value={license.validFrom || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { validFrom: value })} />
+                  <DateField label="Valid Until" value={license.validUntil || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { validUntil: value })} />
+                  <OptionalNumberField label="Max Users" value={license.maxUsers ?? null} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { maxUsers: value })} />
+                  <OptionalNumberField label="Max Units" value={license.maxUnits ?? null} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { maxUnits: value })} />
+                  <OptionalNumberField label="Max Aircraft Types" value={license.maxAircraftTypes ?? null} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { maxAircraftTypes: value })} />
+                  <TextAreaField label="Notes" value={license.notes || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { notes: value })} />
                 </div>
 
                 <div className="mt-4 rounded border border-cyan-500/25 bg-cyan-500/10 p-3">
@@ -7345,27 +7424,27 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <SelectField
                       label="Validation Method"
                       value={licenceFeatures.validationMethod || deploymentProfile.validationMethod}
-                      disabled={!canEdit}
+                      disabled={!canEditSection('platform-licensing')}
                       options={LICENSE_VALIDATION_OPTIONS}
                       onChange={(value) => updateLicenseFeatures(index, { validationMethod: value })}
                     />
                     <SelectField
                       label="Enforcement Mode"
                       value={normaliseEnforcementMode(licenceFeatures.enforcementMode || deploymentProfile.enforcementMode)}
-                      disabled={!canEdit}
+                      disabled={!canEditSection('platform-licensing')}
                       options={LICENSE_ENFORCEMENT_OPTIONS}
                       onChange={(value) => updateLicenseFeatures(index, { enforcementMode: value })}
                     />
                     <NumberField
                       label="Offline Grace Days"
                       value={Number(licenceFeatures.offlineGraceDays ?? deploymentProfile.offlineGraceDays ?? 30)}
-                      disabled={!canEdit}
+                      disabled={!canEditSection('platform-licensing')}
                       onChange={(value) => updateLicenseFeatures(index, { offlineGraceDays: value })}
                     />
                     <ToggleField
                       label="Allow offline operation"
                       checked={licenceFeatures.allowOfflineOperation === true}
-                      disabled={!canEdit}
+                      disabled={!canEditSection('platform-licensing')}
                       onChange={(checked) => updateLicenseFeatures(index, { allowOfflineOperation: checked })}
                     />
                   </div>
@@ -7384,7 +7463,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           type="checkbox"
                           className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
                           checked={moduleCodes.includes(module.code)}
-                          disabled={!canEdit}
+                          disabled={!canEditSection('platform-licensing')}
                           onChange={(event) => toggleLicenseModule(index, module.code, event.target.checked)}
                         />
                         <span>
@@ -7406,7 +7485,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Permission Profiles"
           subtitle="Build reusable role profiles. Profiles define what a user can do; access scopes define where they can do it."
-          action={canEdit ? <button type="button" onClick={addPermissionProfile} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Profile</button> : null}
+          action={canEdit ? (
+            <div className="flex flex-wrap justify-end gap-[1px]">
+              {renderSectionEditSaveButton('platform-permission-profiles')}
+              <button type="button" onClick={addPermissionProfile} disabled={!canEditSection('platform-permission-profiles')} className={platformActionButtonClass}>
+                <span className="text-[9px] leading-tight">Add<br />Profile</span>
+              </button>
+            </div>
+          ) : null}
         />
         <div className="grid gap-4 p-4 xl:grid-cols-[340px,1fr]">
           <div className="space-y-2">
@@ -7425,8 +7511,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           {selectedPermissionProfile && (
             <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
               <div className="grid gap-3 md:grid-cols-2">
-                <Field label="Profile Name" value={selectedPermissionProfile.name} disabled={!canEdit} onChange={(value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value })} />
-                <Field label="Description" value={selectedPermissionProfile.description} disabled={!canEdit} onChange={(value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value })} />
+                <Field label="Profile Name" value={selectedPermissionProfile.name} disabled={!canEditSection('platform-permission-profiles')} onChange={(value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value })} />
+                <Field label="Description" value={selectedPermissionProfile.description} disabled={!canEditSection('platform-permission-profiles')} onChange={(value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value })} />
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 {PERMISSION_CATALOG.map((group) => (
@@ -7441,7 +7527,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               type="checkbox"
                               className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
                               checked={checked}
-                              disabled={!canEdit}
+                              disabled={!canEditSection('platform-permission-profiles')}
                               onChange={(event) => {
                                 const permissions = event.target.checked
                                   ? Array.from(new Set([...selectedPermissionProfile.permissions, permissionId]))
@@ -8411,7 +8497,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="User Access Context"
           subtitle="Search by user name, assign permission profiles, then define where those profiles apply."
-          action={canEdit ? <button type="button" onClick={addUserAccess} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Scope</button> : null}
+          action={canEdit ? (
+            <div className="flex flex-wrap justify-end gap-[1px]">
+              {renderSectionEditSaveButton('platform-user-access')}
+              <button type="button" onClick={addUserAccess} disabled={!canEditSection('platform-user-access')} className={platformActionButtonClass}>
+                <span className="text-[9px] leading-tight">Add<br />Scope</span>
+              </button>
+            </div>
+          ) : null}
         />
         <div id="platform-user-access-records" className="space-y-3 p-4">
           <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
@@ -8419,7 +8512,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <UserSearchSelect
                 label="User"
                 value={selectedAccessUserId}
-                disabled={!canEdit}
+                disabled={!canEditSection('platform-user-access')}
                 users={userOptions}
                 search={userSearch}
                 onSearchChange={setUserSearch}
@@ -8460,7 +8553,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       type="checkbox"
                       className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
                       checked={checked}
-                      disabled={!canEdit || selectedAccessRows.length === 0}
+                      disabled={!canEditSection('platform-user-access') || selectedAccessRows.length === 0}
                       onChange={(event) => {
                         const profileIds = event.target.checked
                           ? Array.from(new Set([...selectedUserProfileIds, profile.id]))
@@ -8509,7 +8602,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <span className="ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300">
                     {access.locationCode || 'All locations'} / {access.unitCode || 'All units'} / {appliesToAllFeatures ? 'All enabled features' : access.moduleCode}
                   </span>
-                  {canEdit && (
+                  {canEditSection('platform-user-access') && (
                     <button
                       type="button"
                       onClick={() => removeUserAccessScope(index)}
@@ -8521,12 +8614,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-[1.1fr_1fr_1fr_1fr_0.75fr_0.85fr]">
-                  <SelectField label="Organisation" value={access.organisationCode || 'DEFAULT'} disabled={!canEdit} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('userAccess', index, { organisationCode: value })} />
-                  <SelectField label="Location" value={access.locationCode || ''} disabled={!canEdit} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('userAccess', index, { locationCode: value || null })} emptyLabel="All Locations" />
-                  <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEdit} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} emptyLabel="All Units" />
-                  <SelectField label="Administration Level" value={access.role || 'Viewer'} disabled={!canEdit} options={['Viewer', 'Scheduler', 'Supervisor', 'Unit Admin', 'Platform Admin', 'Super Admin']} onChange={(value) => updateRow('userAccess', index, { role: value })} />
-                  <SelectField label="Access" value={access.accessLevel || 'Read'} disabled={!canEdit} options={['Read', 'Write', 'Admin']} onChange={(value) => updateRow('userAccess', index, { accessLevel: value })} />
-                  <SelectField label="Status" value={access.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('userAccess', index, { status: value })} />
+                  <SelectField label="Organisation" value={access.organisationCode || 'DEFAULT'} disabled={!canEditSection('platform-user-access')} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('userAccess', index, { organisationCode: value })} />
+                  <SelectField label="Location" value={access.locationCode || ''} disabled={!canEditSection('platform-user-access')} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('userAccess', index, { locationCode: value || null })} emptyLabel="All Locations" />
+                  <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEditSection('platform-user-access')} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} emptyLabel="All Units" />
+                  <SelectField label="Administration Level" value={access.role || 'Viewer'} disabled={!canEditSection('platform-user-access')} options={['Viewer', 'Scheduler', 'Supervisor', 'Unit Admin', 'Platform Admin', 'Super Admin']} onChange={(value) => updateRow('userAccess', index, { role: value })} />
+                  <SelectField label="Access" value={access.accessLevel || 'Read'} disabled={!canEditSection('platform-user-access')} options={['Read', 'Write', 'Admin']} onChange={(value) => updateRow('userAccess', index, { accessLevel: value })} />
+                  <SelectField label="Status" value={access.status || 'ACTIVE'} disabled={!canEditSection('platform-user-access')} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('userAccess', index, { status: value })} />
                 </div>
 
                 <div
@@ -8539,7 +8632,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         type="checkbox"
                         className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
                         checked={appliesToAllFeatures}
-                        disabled={!canEdit}
+                        disabled={!canEditSection('platform-user-access')}
                         onChange={(event) => updateRow('userAccess', index, { moduleCode: event.target.checked ? null : (config.modules[0]?.code || '') })}
                       />
                       <span>
@@ -8567,7 +8660,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <h6 className="text-xs font-bold uppercase tracking-wide text-gray-300">Limit This Scope To One Feature Area</h6>
                         <InfoHint text="Use this only when a user should administer one area but not another. Example: ESL + 1FTS + NEO_BUILD lets the user work with NEO Build for 1FTS, but not training records or reporting." />
                       </div>
-                      <SelectField label="Feature Area" value={access.moduleCode || ''} disabled={!canEdit || appliesToAllFeatures} options={['', ...config.modules.map((module) => module.code)]} onChange={(value) => updateRow('userAccess', index, { moduleCode: value || null })} emptyLabel="All Enabled Features" />
+                      <SelectField label="Feature Area" value={access.moduleCode || ''} disabled={!canEditSection('platform-user-access') || appliesToAllFeatures} options={['', ...config.modules.map((module) => module.code)]} onChange={(value) => updateRow('userAccess', index, { moduleCode: value || null })} emptyLabel="All Enabled Features" />
                       <p className="mt-2 text-xs text-gray-400">
                         Leave this as all enabled features unless you deliberately want to restrict this scope to a single app area such as DFP, NEO Build, Training, or Reporting.
                       </p>
@@ -8581,7 +8674,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       </section>
 
       <section id="platform-scheduling-rule-sets" className={getSectionClass('platform-scheduling-rule-sets')}>
-        <SectionHeader title="Scheduling Rule Sets" subtitle="Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." />
+        <SectionHeader
+          title="Scheduling Rule Sets"
+          subtitle="Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types."
+          action={renderSectionEditSaveButton('platform-scheduling-rule-sets')}
+        />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3">
             <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -8592,7 +8689,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </p>
               </div>
               {canEdit && (
-                <button type="button" onClick={addInsertEventType} className="ml-auto rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200">
+                <button type="button" onClick={addInsertEventType} disabled={!canEditSection('platform-scheduling-rule-sets')} className="ml-auto rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">
                   Add Event Type
                 </button>
               )}
@@ -8603,34 +8700,34 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <Field
                     label="Label"
                     value={eventType.label}
-                    disabled={!canEdit}
+                    disabled={!canEditSection('platform-scheduling-rule-sets')}
                     maxLength={INSERT_EVENT_LABEL_MAX_LENGTH}
                     onChange={(value) => updateInsertEventType(eventTypeIndex, { label: value })}
                   />
                   <SelectField
                     label="Build Type"
                     value={eventType.syllabusType}
-                    disabled={!canEdit}
+                    disabled={!canEditSection('platform-scheduling-rule-sets')}
                     options={['Flight', 'FTD', 'Ground School', 'Academics']}
                     onChange={(value) => updateInsertEventType(eventTypeIndex, { syllabusType: value as InsertEventSyllabusType })}
                   />
                   <SelectField
                     label="Day/Night"
                     value={eventType.dayNight}
-                    disabled={!canEdit}
+                    disabled={!canEditSection('platform-scheduling-rule-sets')}
                     options={['Day', 'Night', 'Day/Night']}
                     onChange={(value) => updateInsertEventType(eventTypeIndex, { dayNight: value as InsertEventDayNight })}
                   />
-                  <NumberField label="Duration" value={eventType.duration} disabled={!canEdit} onChange={(value) => updateInsertEventType(eventTypeIndex, { duration: value })} />
-                  <NumberField label="Flt/Sim Hrs" value={eventType.flightOrSimHours} disabled={!canEdit} onChange={(value) => updateInsertEventType(eventTypeIndex, { flightOrSimHours: value })} />
-                  <NumberField label="Resources" value={eventType.resourceCount} disabled={!canEdit} onChange={(value) => updateInsertEventType(eventTypeIndex, { resourceCount: Math.max(0, Math.round(value)) })} />
-                  <NumberField label="Total Hrs" value={eventType.totalEventHours} disabled={!canEdit} onChange={(value) => updateInsertEventType(eventTypeIndex, { totalEventHours: value })} />
-                  <NumberField label="Pre Time" value={eventType.preFlightTime} disabled={!canEdit} onChange={(value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value })} />
-                  <NumberField label="Post Time" value={eventType.postFlightTime} disabled={!canEdit} onChange={(value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value })} />
+                  <NumberField label="Duration" value={eventType.duration} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { duration: value })} />
+                  <NumberField label="Flt/Sim Hrs" value={eventType.flightOrSimHours} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { flightOrSimHours: value })} />
+                  <NumberField label="Resources" value={eventType.resourceCount} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { resourceCount: Math.max(0, Math.round(value)) })} />
+                  <NumberField label="Total Hrs" value={eventType.totalEventHours} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { totalEventHours: value })} />
+                  <NumberField label="Pre Time" value={eventType.preFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value })} />
+                  <NumberField label="Post Time" value={eventType.postFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value })} />
                   <div className="flex items-end">
                     <button
                       type="button"
-                      disabled={!canEdit || insertEventTypes.length <= 1}
+                      disabled={!canEditSection('platform-scheduling-rule-sets') || insertEventTypes.length <= 1}
                       onClick={() => removeInsertEventType(eventTypeIndex)}
                       className="h-[38px] rounded border border-gray-600 bg-gray-900 px-3 text-xs font-bold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -8644,11 +8741,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div id="platform-scheduling-rule-records" className="space-y-3">
           {config.schedulingRuleSets.map((ruleSet, index) => (
             <div key={ruleSet.id || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5">
-              <Field label="Name" value={ruleSet.name} disabled={!canEdit} onChange={(value) => updateRow('schedulingRuleSets', index, { name: value })} />
-              <SelectField label="Unit" value={ruleSet.unitCode || ''} disabled={!canEdit} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('schedulingRuleSets', index, { unitCode: value || null })} />
-              <SelectField label="Aircraft Type" value={ruleSet.aircraftTypeCode || ''} disabled={!canEdit} options={['', ...config.aircraftTypes.map((aircraft) => aircraft.code)]} onChange={(value) => updateRow('schedulingRuleSets', index, { aircraftTypeCode: value || null })} />
-              <SelectField label="Scope" value={ruleSet.scope || 'Unit'} disabled={!canEdit} options={['Organisation', 'Location', 'Unit', 'AircraftType']} onChange={(value) => updateRow('schedulingRuleSets', index, { scope: value })} />
-              <SelectField label="Active" value={ruleSet.isActive === false ? 'No' : 'Yes'} disabled={!canEdit} options={['Yes', 'No']} onChange={(value) => updateRow('schedulingRuleSets', index, { isActive: value === 'Yes' })} />
+              <Field label="Name" value={ruleSet.name} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateRow('schedulingRuleSets', index, { name: value })} />
+              <SelectField label="Unit" value={ruleSet.unitCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('schedulingRuleSets', index, { unitCode: value || null })} />
+              <SelectField label="Aircraft Type" value={ruleSet.aircraftTypeCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...config.aircraftTypes.map((aircraft) => aircraft.code)]} onChange={(value) => updateRow('schedulingRuleSets', index, { aircraftTypeCode: value || null })} />
+              <SelectField label="Scope" value={ruleSet.scope || 'Unit'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Organisation', 'Location', 'Unit', 'AircraftType']} onChange={(value) => updateRow('schedulingRuleSets', index, { scope: value })} />
+              <SelectField label="Active" value={ruleSet.isActive === false ? 'No' : 'Yes'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Yes', 'No']} onChange={(value) => updateRow('schedulingRuleSets', index, { isActive: value === 'Yes' })} />
             </div>
           ))}
           </div>

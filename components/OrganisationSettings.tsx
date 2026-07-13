@@ -186,6 +186,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   
   // Which unit is the auto-calculated remainder unit (index in selectedUnits array)
   const [remainderUnitIndex, setRemainderUnitIndex] = useState<number>(initialActiveResourceSharingGroup.remainderUnitIndex);
+  const [isEditingSharingSettings, setIsEditingSharingSettings] = useState(false);
 
   // Ref to ensure we only sync from DB data once (prevent re-syncing on parent re-renders)
   const hasInitializedFromDB = useRef(false);
@@ -282,27 +283,30 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     ));
   }, [activeResourceSharingGroupId, selectedUnits, allocationMode, desiredAllocations, remainderUnitIndex]);
 
-  // Notify parent of changes for persistence (skip before DB has loaded)
-  useEffect(() => {
+  const buildCurrentSettings = (): OrganisationSettingsSavedState => ({
+    staffSharingEnabled,
+    staffSharingUnits: allStaffSharingUnits,
+    activeStaffSharingGroupId,
+    staffSharingGroups: persistedStaffSharingGroups,
+    fleetSharingEnabled,
+    allocationMode,
+    selectedUnits,
+    desiredAllocations,
+    remainderUnitIndex,
+    activeResourceSharingGroupId,
+    resourceSharingGroups: persistedResourceSharingGroups,
+  });
+
+  const saveSharingSettings = () => {
     if (!settingsLoaded && !hasInitializedFromDB.current) {
       return;
     }
     if (onSettingsChange) {
-      onSettingsChange({
-        staffSharingEnabled,
-        staffSharingUnits: allStaffSharingUnits,
-        activeStaffSharingGroupId,
-        staffSharingGroups: persistedStaffSharingGroups,
-        fleetSharingEnabled,
-        allocationMode,
-        selectedUnits,
-        desiredAllocations,
-        remainderUnitIndex,
-        activeResourceSharingGroupId,
-        resourceSharingGroups: persistedResourceSharingGroups,
-      });
+      onSettingsChange(buildCurrentSettings());
     }
-  }, [staffSharingEnabled, allStaffSharingUnits, activeStaffSharingGroupId, persistedStaffSharingGroups, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex, activeResourceSharingGroupId, persistedResourceSharingGroups]);
+    setIsEditingSharingSettings(false);
+    logAudit('Settings - Organisation', 'Edit', 'Resource sharing settings saved');
+  };
   
   // Actual allocations (after pro-rata adjustment if needed)
   const [actualAllocations, setActualAllocations] = useState<Record<string, number>>({});
@@ -596,11 +600,33 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   return (
     <div className="space-y-4" onKeyDownCapture={stopEditableKeyPropagation}>
       <div className="bg-sky-500/10 border border-sky-500/30 rounded-lg p-4">
-        <h3 className="text-lg font-semibold text-sky-200 mb-2">Operational Sharing Controls</h3>
-        <p className="text-sm text-gray-300">
-          Fleet sharing controls whether selected units schedule against the same aircraft/resource pool on one shared DFP context. Staff sharing is separate: it controls whether instructors may be allocated across unit boundaries.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-sky-200 mb-2">Operational Sharing Controls</h3>
+            <p className="text-sm text-gray-300">
+              Fleet sharing controls whether selected units schedule against the same aircraft/resource pool on one shared DFP context. Staff sharing is separate: it controls whether instructors may be allocated across unit boundaries.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (isEditingSharingSettings) {
+                saveSharingSettings();
+                return;
+              }
+              setIsEditingSharingSettings(true);
+            }}
+            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+          >
+            {isEditingSharingSettings ? 'Save' : 'Edit'}
+          </button>
+        </div>
       </div>
+
+      <div
+        className={isEditingSharingSettings ? 'space-y-4' : 'pointer-events-none space-y-4 opacity-80'}
+        aria-disabled={!isEditingSharingSettings}
+      >
 
       {/* Staff Sharing Section */}
       <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-5">
@@ -1206,6 +1232,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
             )}
           </>
         )}
+      </div>
       </div>
     </div>
   );

@@ -61050,6 +61050,7 @@ const OrganisationSettings = ({
   const [allocationMode, setAllocationMode] = reactExports.useState(initialActiveResourceSharingGroup.allocationMode);
   const [desiredAllocations, setDesiredAllocations] = reactExports.useState(initialActiveResourceSharingGroup.desiredAllocations);
   const [remainderUnitIndex, setRemainderUnitIndex] = reactExports.useState(initialActiveResourceSharingGroup.remainderUnitIndex);
+  const [isEditingSharingSettings, setIsEditingSharingSettings] = reactExports.useState(false);
   const hasInitializedFromDB = reactExports.useRef(false);
   reactExports.useEffect(() => {
     if (settingsLoaded && !hasInitializedFromDB.current && savedSettings) {
@@ -61118,26 +61119,29 @@ const OrganisationSettings = ({
       } : group
     ));
   }, [activeResourceSharingGroupId, selectedUnits, allocationMode, desiredAllocations, remainderUnitIndex]);
-  reactExports.useEffect(() => {
+  const buildCurrentSettings = () => ({
+    staffSharingEnabled,
+    staffSharingUnits: allStaffSharingUnits,
+    activeStaffSharingGroupId,
+    staffSharingGroups: persistedStaffSharingGroups,
+    fleetSharingEnabled,
+    allocationMode,
+    selectedUnits,
+    desiredAllocations,
+    remainderUnitIndex,
+    activeResourceSharingGroupId,
+    resourceSharingGroups: persistedResourceSharingGroups
+  });
+  const saveSharingSettings = () => {
     if (!settingsLoaded && !hasInitializedFromDB.current) {
       return;
     }
     if (onSettingsChange) {
-      onSettingsChange({
-        staffSharingEnabled,
-        staffSharingUnits: allStaffSharingUnits,
-        activeStaffSharingGroupId,
-        staffSharingGroups: persistedStaffSharingGroups,
-        fleetSharingEnabled,
-        allocationMode,
-        selectedUnits,
-        desiredAllocations,
-        remainderUnitIndex,
-        activeResourceSharingGroupId,
-        resourceSharingGroups: persistedResourceSharingGroups
-      });
+      onSettingsChange(buildCurrentSettings());
     }
-  }, [staffSharingEnabled, allStaffSharingUnits, activeStaffSharingGroupId, persistedStaffSharingGroups, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex, activeResourceSharingGroupId, persistedResourceSharingGroups]);
+    setIsEditingSharingSettings(false);
+    logAudit("Settings - Organisation", "Edit", "Resource sharing settings saved");
+  };
   const [actualAllocations, setActualAllocations] = reactExports.useState({});
   const [validationMessage, setValidationMessage] = reactExports.useState(null);
   const [validationType, setValidationType] = reactExports.useState("info");
@@ -61357,452 +61361,478 @@ const OrganisationSettings = ({
     return allocationMode === "fixed" && isRemainderUnit(unitCode);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", onKeyDownCapture: stopEditableKeyPropagation, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-sky-500/10 border border-sky-500/30 rounded-lg p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-sky-200 mb-2", children: "Operational Sharing Controls" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300", children: "Fleet sharing controls whether selected units schedule against the same aircraft/resource pool on one shared DFP context. Staff sharing is separate: it controls whether instructors may be allocated across unit boundaries." })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800/50 rounded-lg border border-gray-700 p-5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-white mb-4", children: "Staff Sharing" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-4", children: "Controls instructor eligibility between units. Enable this only when staff from the selected units may be used across those units during NEO Build." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative inline-flex items-center cursor-pointer", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: staffSharingEnabled,
-                onChange: (e) => {
-                  const newVal = e.target.checked;
-                  setStaffSharingEnabled(newVal);
-                  if (!newVal) {
-                    setStaffSharingUnits([]);
-                    setStaffSharingGroups((previous) => previous.map((group) => ({ ...group, selectedUnits: [] })));
-                  }
-                  logAudit("Settings - Organisation", "Edit", `Staff Sharing ${newVal ? "enabled" : "disabled"}`);
-                },
-                className: "sr-only peer"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-3 text-sm font-medium text-white", children: "Enable Staff Sharing" })
-          ] }) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between h-full", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-1", children: "Units Sharing Staff" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Total units participating across all staff-sharing arrangements" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-sky-400", children: staffSharingEnabled ? allStaffSharingUnits.length : 0 }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "Units" })
-          ] })
-        ] }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-sky-500/10 border border-sky-500/30 rounded-lg p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-sky-200 mb-2", children: "Operational Sharing Controls" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300", children: "Fleet sharing controls whether selected units schedule against the same aircraft/resource pool on one shared DFP context. Staff sharing is separate: it controls whether instructors may be allocated across unit boundaries." })
       ] }),
-      staffSharingEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-sky-500/10 rounded-lg border border-sky-500/30 p-4 mb-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 lg:flex-row lg:items-end", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Staff Sharing Arrangement" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "select",
-                {
-                  value: activeStaffSharingGroupId,
-                  onChange: (event) => handleSelectStaffSharingGroup(event.target.value),
-                  className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500",
-                  children: persistedStaffSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group.id, children: [
-                    group.name || "Unnamed arrangement",
-                    group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join("+")})` : ""
-                  ] }, group.id))
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Arrangement Name" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: activeStaffSharingGroup.name || "",
-                  onChange: (event) => handleRenameStaffSharingGroup(event.target.value),
-                  placeholder: "e.g. YMES 1FTS/CFS staff sharing",
-                  className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: handleAddStaffSharingGroup,
-                  className: "rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500",
-                  children: "Add Arrangement"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: handleDeleteStaffSharingGroup,
-                  disabled: staffSharingGroups.length <= 1,
-                  className: `rounded-md px-3 py-2 text-xs font-semibold ${staffSharingGroups.length <= 1 ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-red-600/80 text-white hover:bg-red-600"}`,
-                  children: "Delete"
-                }
-              )
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-gray-300", children: "Create one arrangement for each authorised staff-sharing group. NEO Build will only treat units as sharing staff when both the trainee and instructor belong to the same staff-sharing arrangement." }),
-          persistedStaffSharingGroups.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid grid-cols-1 gap-2 md:grid-cols-2", children: persistedStaffSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "div",
-            {
-              className: `rounded border px-3 py-2 text-xs ${group.id === activeStaffSharingGroupId ? "border-sky-500/50 bg-sky-500/10 text-sky-100" : "border-gray-700 bg-gray-900/60 text-gray-400"}`,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold", children: [
-                  group.name || "Unnamed arrangement",
-                  ":"
-                ] }),
-                " ",
-                group.selectedUnits.length > 0 ? group.selectedUnits.join(", ") : "No units selected"
-              ]
-            },
-            group.id
-          )) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Select Units Sharing Staff" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "These units may use staff from each other. This does not control aircraft/resource sharing." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "div",
-            {
-              onClick: () => handleToggleStaffSharingUnit(unit),
-              className: `cursor-pointer rounded-lg border-2 p-3 transition-all ${staffSharingUnits.includes(unit) ? "border-sky-500 bg-sky-500/10" : "border-gray-600 bg-gray-700/30 hover:border-gray-500"}`,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center space-y-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-medium ${staffSharingUnits.includes(unit) ? "text-sky-400" : "text-gray-300"}`, children: unit }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-4 h-4 rounded-full border-2 flex items-center justify-center ${staffSharingUnits.includes(unit) ? "border-sky-500 bg-sky-500" : "border-gray-500"}`, children: staffSharingUnits.includes(unit) && /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-2.5 h-2.5 text-white", fill: "currentColor", viewBox: "0 0 20 20", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z", clipRule: "evenodd" }) }) })
-              ] })
-            },
-            unit
-          )) }),
-          staffSharingUnits.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2 italic", children: "No units selected. Click on units above to add them." })
-        ] }),
-        allStaffSharingUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sky-400 font-semibold text-sm mb-2", children: "Staff Sharing Summary" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-300 space-y-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Total Units:" }),
-              " ",
-              allStaffSharingUnits.length
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Active Arrangement:" }),
-              " ",
-              activeStaffSharingGroup.name || "Unnamed arrangement",
-              " (",
-              staffSharingUnits.length,
-              " units)"
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "All Participating Units:" }),
-              " ",
-              allStaffSharingUnits.join(", ")
-            ] }) })
-          ] })
-        ] })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800/50 rounded-lg border border-gray-700 p-5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-white mb-4", children: "Aircraft & Resource Sharing" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-4", children: "Controls whether selected units operate from one shared aircraft/resource pool and one shared DFP context. This does not share staff unless Staff Sharing is also enabled." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative inline-flex items-center cursor-pointer", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: fleetSharingEnabled,
-                onChange: (e) => {
-                  const newVal = e.target.checked;
-                  setFleetSharingEnabled(newVal);
-                  logAudit("Settings - Organisation", "Edit", `Fleet Sharing ${newVal ? "enabled" : "disabled"}`);
-                },
-                className: "sr-only peer"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-3 text-sm font-medium text-white", children: "Enable Aircraft & Resource Sharing" })
-          ] }) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full items-center justify-between gap-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-1", children: "Configured Resource Pool" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Aircraft rows defined in Aircraft & Resource Pools. Daily aircraft availability is entered in Build Priorities." })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-sky-400", children: totalAircraft }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "Aircraft rows" })
-          ] })
-        ] }) })
-      ] }),
-      fleetSharingEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-sky-500/10 rounded-lg border border-sky-500/30 p-4 mb-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 lg:flex-row lg:items-end", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Aircraft Sharing Arrangement" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "select",
-                {
-                  value: activeResourceSharingGroupId,
-                  onChange: (event) => handleSelectResourceSharingGroup(event.target.value),
-                  className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500",
-                  children: persistedResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group.id, children: [
-                    group.name || "Unnamed arrangement",
-                    group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join("+")})` : ""
-                  ] }, group.id))
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Arrangement Name" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: activeResourceSharingGroup.name || "",
-                  onChange: (event) => handleRenameResourceSharingGroup(event.target.value),
-                  placeholder: "e.g. YMES 1FTS/CFS shared PC-21 pool",
-                  className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: handleAddResourceSharingGroup,
-                  className: "rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500",
-                  children: "Add Arrangement"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: handleDeleteResourceSharingGroup,
-                  disabled: resourceSharingGroups.length <= 1,
-                  className: `rounded-md px-3 py-2 text-xs font-semibold ${resourceSharingGroups.length <= 1 ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-red-600/80 text-white hover:bg-red-600"}`,
-                  children: "Delete"
-                }
-              )
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-gray-300", children: "Create one arrangement for each shared resource pool in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled." }),
-          persistedResourceSharingGroups.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid grid-cols-1 gap-2 md:grid-cols-2", children: persistedResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "div",
-            {
-              className: `rounded border px-3 py-2 text-xs ${group.id === activeResourceSharingGroupId ? "border-sky-500/50 bg-sky-500/10 text-sky-100" : "border-gray-700 bg-gray-900/60 text-gray-400"}`,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold", children: [
-                  group.name || "Unnamed arrangement",
-                  ":"
-                ] }),
-                " ",
-                group.selectedUnits.length > 0 ? group.selectedUnits.join(", ") : "No units selected"
-              ]
-            },
-            group.id
-          )) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Select Units Sharing Aircraft / Resources" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Choose units that will schedule aircraft/resources together. Selecting units here creates a shared fleet context in the top-left Location/Unit selector, e.g. 1FTS+CFS." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "div",
-              {
-                onClick: () => handleToggleUnit(unit),
-                className: `cursor-pointer rounded-lg border-2 p-3 transition-all ${selectedUnits.includes(unit) ? "border-sky-500 bg-sky-500/10" : "border-gray-600 bg-gray-700/30 hover:border-gray-500"}`,
-                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center space-y-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-medium ${selectedUnits.includes(unit) ? "text-sky-400" : "text-gray-300"}`, children: unit }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-4 h-4 rounded-full border-2 flex items-center justify-center ${selectedUnits.includes(unit) ? "border-sky-500 bg-sky-500" : "border-gray-500"}`, children: selectedUnits.includes(unit) && /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-2.5 h-2.5 text-white", fill: "currentColor", viewBox: "0 0 20 20", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z", clipRule: "evenodd" }) }) })
-                ] })
-              },
-              unit
-            )) }),
-            selectedUnits.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2 italic", children: "No units selected. Click on units above to add them." })
-          ] }),
-          selectedUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4 flex flex-col", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Allocation Mode" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Choose how aircraft are allocated between participating units." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col space-y-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "button",
-                {
-                  onClick: () => handleAllocationModeChange("combined"),
-                  className: `flex-1 p-3 rounded-lg text-left transition-all ${allocationMode === "combined" ? "bg-sky-600 border-2 border-sky-500" : "bg-gray-700 border-2 border-gray-600 hover:border-gray-500"}`,
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 mb-1", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M13 10V3L4 14h7v7l9-11h-7z" }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white text-sm", children: "Combined Pool Mode" })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-300", children: "Selected units schedule against one aircraft/resource pool and one shared DFP. Staff still remains unit-restricted unless Staff Sharing is enabled." })
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "button",
-                {
-                  onClick: () => handleAllocationModeChange("fixed"),
-                  className: `flex-1 p-3 rounded-lg text-left transition-all ${allocationMode === "fixed" ? "bg-sky-600 border-2 border-sky-500" : "bg-gray-700 border-2 border-gray-600 hover:border-gray-500"}`,
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 mb-1", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white text-sm", children: "Fixed Allocation Mode" })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-300", children: "Selected units share one DFP, but each unit has a planning allocation from the daily available aircraft. One unit is auto-calculated as remainder." })
-                  ]
-                }
-              )
-            ] })
-          ] })
-        ] }),
-        selectedUnits.length > 0 && allocationMode === "fixed" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Fixed Allocation Configuration" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Enter desired aircraft allocation for each unit. One unit is auto-calculated." }),
-          validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mb-3 p-3 rounded-lg border ${validationType === "error" ? "bg-red-500/10 border-red-500/30" : validationType === "warning" ? "bg-amber-500/10 border-amber-500/30" : "bg-sky-500/10 border-sky-500/30"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2", children: [
-            validationType === "error" && /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-red-400 mt-0.5 flex-shrink-0", fill: "currentColor", viewBox: "0 0 20 20", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z", clipRule: "evenodd" }) }),
-            validationType === "warning" && /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0", fill: "currentColor", viewBox: "0 0 20 20", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 102 0V6a1 1 0 00-1-1z", clipRule: "evenodd" }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xs ${validationType === "error" ? "text-red-300" : validationType === "warning" ? "text-amber-300" : "text-sky-300"}`, children: validationMessage })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 mb-3", children: selectedUnits.map((unitCode, index) => {
-            const isRemainder = index === remainderUnitIndex;
-            const desired = isRemainder ? remainderDesiredAllocation : desiredAllocations[unitCode] || 0;
-            const actual = actualAllocations[unitCode] || 0;
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-white font-semibold text-sm", children: unitCode }),
-                  isRemainder && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full border border-sky-500/30", children: "Auto-calculated" })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: () => handleToggleUnit(unitCode),
-                    className: "text-red-400 hover:text-red-300 text-xs",
-                    children: "Remove"
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "Remainder Unit" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => {
+            if (isEditingSharingSettings) {
+              saveSharingSettings();
+              return;
+            }
+            setIsEditingSharingSettings(true);
+          },
+          className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+          children: isEditingSharingSettings ? "Save" : "Edit"
+        }
+      )
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: isEditingSharingSettings ? "space-y-4" : "pointer-events-none space-y-4 opacity-80",
+        "aria-disabled": !isEditingSharingSettings,
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800/50 rounded-lg border border-gray-700 p-5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-white mb-4", children: "Staff Sharing" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-4", children: "Controls instructor eligibility between units. Enable this only when staff from the selected units may be used across those units during NEO Build." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative inline-flex items-center cursor-pointer", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
                     {
-                      value: isRemainder ? index : -1,
+                      type: "checkbox",
+                      checked: staffSharingEnabled,
                       onChange: (e) => {
-                        const newIndex = parseInt(e.target.value);
-                        if (newIndex !== -1) {
-                          handleRemainderUnitChange(newIndex);
+                        const newVal = e.target.checked;
+                        setStaffSharingEnabled(newVal);
+                        if (!newVal) {
+                          setStaffSharingUnits([]);
+                          setStaffSharingGroups((previous) => previous.map((group) => ({ ...group, selectedUnits: [] })));
                         }
+                        logAudit("Settings - Organisation", "Edit", `Staff Sharing ${newVal ? "enabled" : "disabled"}`);
                       },
-                      className: "w-full bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-sky-500",
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-1", children: "Select remainder unit" }),
-                        selectedUnits.map((u, i) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: i, children: u }, u))
-                      ]
+                      className: "sr-only peer"
                     }
-                  )
-                ] }),
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-3 text-sm font-medium text-white", children: "Enable Staff Sharing" })
+                ] }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between h-full", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "Desired Allocation" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-1", children: "Units Sharing Staff" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Total units participating across all staff-sharing arrangements" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-sky-400", children: staffSharingEnabled ? allStaffSharingUnits.length : 0 }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "Units" })
+                ] })
+              ] }) })
+            ] }),
+            staffSharingEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-sky-500/10 rounded-lg border border-sky-500/30 p-4 mb-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 lg:flex-row lg:items-end", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Staff Sharing Arrangement" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
+                      "select",
                       {
-                        onClick: () => !isUnitReadOnly(unitCode) && handleDesiredAllocationChange(unitCode, Math.max(0, desired - 1)),
-                        disabled: isUnitReadOnly(unitCode),
-                        className: `w-7 h-7 rounded-md flex items-center justify-center font-medium text-sm transition-all ${isUnitReadOnly(unitCode) ? "bg-gray-600 text-gray-500 cursor-not-allowed" : "bg-gray-600 text-white hover:bg-gray-500"}`,
-                        children: "-"
+                        value: activeStaffSharingGroupId,
+                        onChange: (event) => handleSelectStaffSharingGroup(event.target.value),
+                        className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500",
+                        children: persistedStaffSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group.id, children: [
+                          group.name || "Unnamed arrangement",
+                          group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join("+")})` : ""
+                        ] }, group.id))
                       }
-                    ),
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Arrangement Name" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "input",
                       {
-                        type: "number",
-                        min: "0",
-                        value: desired,
-                        disabled: isUnitReadOnly(unitCode),
-                        onChange: (e) => !isUnitReadOnly(unitCode) && handleDesiredAllocationChange(unitCode, Math.max(0, parseInt(e.target.value) || 0)),
-                        className: `flex-1 bg-gray-700 border rounded-md py-1.5 px-2 text-white text-center text-sm focus:outline-none focus:ring-2 transition-all ${isUnitReadOnly(unitCode) ? "border-gray-600 text-gray-500 cursor-not-allowed" : "border-gray-600 focus:ring-sky-500"}`
+                        type: "text",
+                        value: activeStaffSharingGroup.name || "",
+                        onChange: (event) => handleRenameStaffSharingGroup(event.target.value),
+                        placeholder: "e.g. YMES 1FTS/CFS staff sharing",
+                        className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: handleAddStaffSharingGroup,
+                        className: "rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500",
+                        children: "Add Arrangement"
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "button",
                       {
-                        onClick: () => !isUnitReadOnly(unitCode) && handleDesiredAllocationChange(unitCode, desired + 1),
-                        disabled: isUnitReadOnly(unitCode),
-                        className: `w-7 h-7 rounded-md flex items-center justify-center font-medium text-sm transition-all ${isUnitReadOnly(unitCode) ? "bg-gray-600 text-gray-500 cursor-not-allowed" : "bg-gray-600 text-white hover:bg-gray-500"}`,
-                        children: "+"
+                        type: "button",
+                        onClick: handleDeleteStaffSharingGroup,
+                        disabled: staffSharingGroups.length <= 1,
+                        className: `rounded-md px-3 py-2 text-xs font-semibold ${staffSharingGroups.length <= 1 ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-red-600/80 text-white hover:bg-red-600"}`,
+                        children: "Delete"
                       }
                     )
                   ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-0.5", children: "Actual" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xl font-bold ${desiredExceedsAvailable ? "text-amber-400" : "text-sky-400"}`, children: actual })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-gray-300", children: "Create one arrangement for each authorised staff-sharing group. NEO Build will only treat units as sharing staff when both the trainee and instructor belong to the same staff-sharing arrangement." }),
+                persistedStaffSharingGroups.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid grid-cols-1 gap-2 md:grid-cols-2", children: persistedStaffSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: `rounded border px-3 py-2 text-xs ${group.id === activeStaffSharingGroupId ? "border-sky-500/50 bg-sky-500/10 text-sky-100" : "border-gray-700 bg-gray-900/60 text-gray-400"}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold", children: [
+                        group.name || "Unnamed arrangement",
+                        ":"
+                      ] }),
+                      " ",
+                      group.selectedUnits.length > 0 ? group.selectedUnits.join(", ") : "No units selected"
+                    ]
+                  },
+                  group.id
+                )) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Select Units Sharing Staff" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "These units may use staff from each other. This does not control aircraft/resource sharing." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    onClick: () => handleToggleStaffSharingUnit(unit),
+                    className: `cursor-pointer rounded-lg border-2 p-3 transition-all ${staffSharingUnits.includes(unit) ? "border-sky-500 bg-sky-500/10" : "border-gray-600 bg-gray-700/30 hover:border-gray-500"}`,
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center space-y-1", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-medium ${staffSharingUnits.includes(unit) ? "text-sky-400" : "text-gray-300"}`, children: unit }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-4 h-4 rounded-full border-2 flex items-center justify-center ${staffSharingUnits.includes(unit) ? "border-sky-500 bg-sky-500" : "border-gray-500"}`, children: staffSharingUnits.includes(unit) && /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-2.5 h-2.5 text-white", fill: "currentColor", viewBox: "0 0 20 20", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z", clipRule: "evenodd" }) }) })
+                    ] })
+                  },
+                  unit
+                )) }),
+                staffSharingUnits.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2 italic", children: "No units selected. Click on units above to add them." })
+              ] }),
+              allStaffSharingUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sky-400 font-semibold text-sm mb-2", children: "Staff Sharing Summary" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-300 space-y-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Total Units:" }),
+                    " ",
+                    allStaffSharingUnits.length
+                  ] }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Active Arrangement:" }),
+                    " ",
+                    activeStaffSharingGroup.name || "Unnamed arrangement",
+                    " (",
+                    staffSharingUnits.length,
+                    " units)"
+                  ] }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "All Participating Units:" }),
+                    " ",
+                    allStaffSharingUnits.join(", ")
+                  ] }) })
+                ] })
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800/50 rounded-lg border border-gray-700 p-5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-white mb-4", children: "Aircraft & Resource Sharing" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-4", children: "Controls whether selected units operate from one shared aircraft/resource pool and one shared DFP context. This does not share staff unless Staff Sharing is also enabled." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative inline-flex items-center cursor-pointer", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      checked: fleetSharingEnabled,
+                      onChange: (e) => {
+                        const newVal = e.target.checked;
+                        setFleetSharingEnabled(newVal);
+                        logAudit("Settings - Organisation", "Edit", `Fleet Sharing ${newVal ? "enabled" : "disabled"}`);
+                      },
+                      className: "sr-only peer"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-3 text-sm font-medium text-white", children: "Enable Aircraft & Resource Sharing" })
                 ] }) })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-xs", children: isRemainder ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Auto-calculated:" }),
-                " Receives remaining aircraft after manual allocations. Desired: ",
-                desired,
-                ", Actual: ",
-                actual
-              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Manual allocation:" }),
-                " Guaranteed ",
-                desired,
-                " aircraft from shared pool. Actual: ",
-                actual
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full items-center justify-between gap-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-1", children: "Configured Resource Pool" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Aircraft rows defined in Aircraft & Resource Pools. Daily aircraft availability is entered in Build Priorities." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-sky-400", children: totalAircraft }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "Aircraft rows" })
+                ] })
               ] }) })
-            ] }, unitCode);
-          }) })
-        ] }),
-        selectedUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sky-400 font-semibold text-sm mb-2", children: "Fleet Sharing Summary" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-300 space-y-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Active Units:" }),
-              " ",
-              selectedUnits.length
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Allocation Mode:" }),
-              " ",
-              allocationMode === "combined" ? "Combined Pool" : "Fixed Allocation"
-            ] }) }),
-            allocationMode === "fixed" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${desiredExceedsAvailable ? "text-amber-400" : ""}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Total Desired:" }),
-                " ",
-                totalDesiredAllocation,
-                " / ",
-                currentAircraftAvailable
-              ] }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Total Actual:" }),
-                " ",
-                Object.values(actualAllocations).reduce((sum, val) => sum + val, 0)
-              ] }) }),
-              desiredExceedsAvailable && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-400 text-xs mt-1", children: "⚠️ Desired allocation exceeds available. Pro-rata reduction applied." })
+            ] }),
+            fleetSharingEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-sky-500/10 rounded-lg border border-sky-500/30 p-4 mb-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 lg:flex-row lg:items-end", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Aircraft Sharing Arrangement" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "select",
+                      {
+                        value: activeResourceSharingGroupId,
+                        onChange: (event) => handleSelectResourceSharingGroup(event.target.value),
+                        className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500",
+                        children: persistedResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group.id, children: [
+                          group.name || "Unnamed arrangement",
+                          group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join("+")})` : ""
+                        ] }, group.id))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Arrangement Name" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "text",
+                        value: activeResourceSharingGroup.name || "",
+                        onChange: (event) => handleRenameResourceSharingGroup(event.target.value),
+                        placeholder: "e.g. YMES 1FTS/CFS shared PC-21 pool",
+                        className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: handleAddResourceSharingGroup,
+                        className: "rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500",
+                        children: "Add Arrangement"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: handleDeleteResourceSharingGroup,
+                        disabled: resourceSharingGroups.length <= 1,
+                        className: `rounded-md px-3 py-2 text-xs font-semibold ${resourceSharingGroups.length <= 1 ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-red-600/80 text-white hover:bg-red-600"}`,
+                        children: "Delete"
+                      }
+                    )
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-gray-300", children: "Create one arrangement for each shared resource pool in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled." }),
+                persistedResourceSharingGroups.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid grid-cols-1 gap-2 md:grid-cols-2", children: persistedResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: `rounded border px-3 py-2 text-xs ${group.id === activeResourceSharingGroupId ? "border-sky-500/50 bg-sky-500/10 text-sky-100" : "border-gray-700 bg-gray-900/60 text-gray-400"}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold", children: [
+                        group.name || "Unnamed arrangement",
+                        ":"
+                      ] }),
+                      " ",
+                      group.selectedUnits.length > 0 ? group.selectedUnits.join(", ") : "No units selected"
+                    ]
+                  },
+                  group.id
+                )) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Select Units Sharing Aircraft / Resources" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Choose units that will schedule aircraft/resources together. Selecting units here creates a shared fleet context in the top-left Location/Unit selector, e.g. 1FTS+CFS." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "div",
+                    {
+                      onClick: () => handleToggleUnit(unit),
+                      className: `cursor-pointer rounded-lg border-2 p-3 transition-all ${selectedUnits.includes(unit) ? "border-sky-500 bg-sky-500/10" : "border-gray-600 bg-gray-700/30 hover:border-gray-500"}`,
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center space-y-1", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-medium ${selectedUnits.includes(unit) ? "text-sky-400" : "text-gray-300"}`, children: unit }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-4 h-4 rounded-full border-2 flex items-center justify-center ${selectedUnits.includes(unit) ? "border-sky-500 bg-sky-500" : "border-gray-500"}`, children: selectedUnits.includes(unit) && /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-2.5 h-2.5 text-white", fill: "currentColor", viewBox: "0 0 20 20", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z", clipRule: "evenodd" }) }) })
+                      ] })
+                    },
+                    unit
+                  )) }),
+                  selectedUnits.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2 italic", children: "No units selected. Click on units above to add them." })
+                ] }),
+                selectedUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4 flex flex-col", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Allocation Mode" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Choose how aircraft are allocated between participating units." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col space-y-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "button",
+                      {
+                        onClick: () => handleAllocationModeChange("combined"),
+                        className: `flex-1 p-3 rounded-lg text-left transition-all ${allocationMode === "combined" ? "bg-sky-600 border-2 border-sky-500" : "bg-gray-700 border-2 border-gray-600 hover:border-gray-500"}`,
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 mb-1", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M13 10V3L4 14h7v7l9-11h-7z" }) }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white text-sm", children: "Combined Pool Mode" })
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-300", children: "Selected units schedule against one aircraft/resource pool and one shared DFP. Staff still remains unit-restricted unless Staff Sharing is enabled." })
+                        ]
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "button",
+                      {
+                        onClick: () => handleAllocationModeChange("fixed"),
+                        className: `flex-1 p-3 rounded-lg text-left transition-all ${allocationMode === "fixed" ? "bg-sky-600 border-2 border-sky-500" : "bg-gray-700 border-2 border-gray-600 hover:border-gray-500"}`,
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 mb-1", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" }) }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white text-sm", children: "Fixed Allocation Mode" })
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-300", children: "Selected units share one DFP, but each unit has a planning allocation from the daily available aircraft. One unit is auto-calculated as remainder." })
+                        ]
+                      }
+                    )
+                  ] })
+                ] })
+              ] }),
+              selectedUnits.length > 0 && allocationMode === "fixed" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Fixed Allocation Configuration" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Enter desired aircraft allocation for each unit. One unit is auto-calculated." }),
+                validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mb-3 p-3 rounded-lg border ${validationType === "error" ? "bg-red-500/10 border-red-500/30" : validationType === "warning" ? "bg-amber-500/10 border-amber-500/30" : "bg-sky-500/10 border-sky-500/30"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2", children: [
+                  validationType === "error" && /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-red-400 mt-0.5 flex-shrink-0", fill: "currentColor", viewBox: "0 0 20 20", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z", clipRule: "evenodd" }) }),
+                  validationType === "warning" && /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0", fill: "currentColor", viewBox: "0 0 20 20", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 102 0V6a1 1 0 00-1-1z", clipRule: "evenodd" }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xs ${validationType === "error" ? "text-red-300" : validationType === "warning" ? "text-amber-300" : "text-sky-300"}`, children: validationMessage })
+                ] }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 mb-3", children: selectedUnits.map((unitCode, index) => {
+                  const isRemainder = index === remainderUnitIndex;
+                  const desired = isRemainder ? remainderDesiredAllocation : desiredAllocations[unitCode] || 0;
+                  const actual = actualAllocations[unitCode] || 0;
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-white font-semibold text-sm", children: unitCode }),
+                        isRemainder && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full border border-sky-500/30", children: "Auto-calculated" })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          onClick: () => handleToggleUnit(unitCode),
+                          className: "text-red-400 hover:text-red-300 text-xs",
+                          children: "Remove"
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "Remainder Unit" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                          "select",
+                          {
+                            value: isRemainder ? index : -1,
+                            onChange: (e) => {
+                              const newIndex = parseInt(e.target.value);
+                              if (newIndex !== -1) {
+                                handleRemainderUnitChange(newIndex);
+                              }
+                            },
+                            className: "w-full bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-sky-500",
+                            children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-1", children: "Select remainder unit" }),
+                              selectedUnits.map((u, i) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: i, children: u }, u))
+                            ]
+                          }
+                        )
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "Desired Allocation" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              onClick: () => !isUnitReadOnly(unitCode) && handleDesiredAllocationChange(unitCode, Math.max(0, desired - 1)),
+                              disabled: isUnitReadOnly(unitCode),
+                              className: `w-7 h-7 rounded-md flex items-center justify-center font-medium text-sm transition-all ${isUnitReadOnly(unitCode) ? "bg-gray-600 text-gray-500 cursor-not-allowed" : "bg-gray-600 text-white hover:bg-gray-500"}`,
+                              children: "-"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "number",
+                              min: "0",
+                              value: desired,
+                              disabled: isUnitReadOnly(unitCode),
+                              onChange: (e) => !isUnitReadOnly(unitCode) && handleDesiredAllocationChange(unitCode, Math.max(0, parseInt(e.target.value) || 0)),
+                              className: `flex-1 bg-gray-700 border rounded-md py-1.5 px-2 text-white text-center text-sm focus:outline-none focus:ring-2 transition-all ${isUnitReadOnly(unitCode) ? "border-gray-600 text-gray-500 cursor-not-allowed" : "border-gray-600 focus:ring-sky-500"}`
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              onClick: () => !isUnitReadOnly(unitCode) && handleDesiredAllocationChange(unitCode, desired + 1),
+                              disabled: isUnitReadOnly(unitCode),
+                              className: `w-7 h-7 rounded-md flex items-center justify-center font-medium text-sm transition-all ${isUnitReadOnly(unitCode) ? "bg-gray-600 text-gray-500 cursor-not-allowed" : "bg-gray-600 text-white hover:bg-gray-500"}`,
+                              children: "+"
+                            }
+                          )
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-0.5", children: "Actual" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xl font-bold ${desiredExceedsAvailable ? "text-amber-400" : "text-sky-400"}`, children: actual })
+                      ] }) })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-xs", children: isRemainder ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Auto-calculated:" }),
+                      " Receives remaining aircraft after manual allocations. Desired: ",
+                      desired,
+                      ", Actual: ",
+                      actual
+                    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Manual allocation:" }),
+                      " Guaranteed ",
+                      desired,
+                      " aircraft from shared pool. Actual: ",
+                      actual
+                    ] }) })
+                  ] }, unitCode);
+                }) })
+              ] }),
+              selectedUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sky-400 font-semibold text-sm mb-2", children: "Fleet Sharing Summary" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-300 space-y-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Active Units:" }),
+                    " ",
+                    selectedUnits.length
+                  ] }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Allocation Mode:" }),
+                    " ",
+                    allocationMode === "combined" ? "Combined Pool" : "Fixed Allocation"
+                  ] }) }),
+                  allocationMode === "fixed" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${desiredExceedsAvailable ? "text-amber-400" : ""}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Total Desired:" }),
+                      " ",
+                      totalDesiredAllocation,
+                      " / ",
+                      currentAircraftAvailable
+                    ] }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Total Actual:" }),
+                      " ",
+                      Object.values(actualAllocations).reduce((sum, val) => sum + val, 0)
+                    ] }) }),
+                    desiredExceedsAvailable && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-400 text-xs mt-1", children: "⚠️ Desired allocation exceeds available. Pro-rata reduction applied." })
+                  ] })
+                ] })
+              ] })
             ] })
           ] })
-        ] })
-      ] })
-    ] })
+        ]
+      }
+    )
   ] });
 };
 const AppearanceSettings = ({
@@ -63488,6 +63518,7 @@ const PlatformConfigurationSettings = ({
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = reactExports.useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = reactExports.useState(false);
   const [taskProfilesUnlocked, setTaskProfilesUnlocked] = reactExports.useState(false);
+  const [sectionEditUnlocked, setSectionEditUnlocked] = reactExports.useState({});
   const [taskProfileDrafts, setTaskProfileDrafts] = reactExports.useState({});
   const [taskProfileAbbreviationDrafts, setTaskProfileAbbreviationDrafts] = reactExports.useState({});
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = reactExports.useState("");
@@ -65692,6 +65723,34 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   const saveCurrencyProfilesAndKeepPosition = async () => {
     await save(void 0, "platform-currency-profiles");
   };
+  const isSectionEditActive = (sectionId) => !sectionOnly || sectionEditUnlocked[sectionId] === true;
+  const canEditSection = (sectionId) => canEdit && isSectionEditActive(sectionId);
+  const saveSectionAndExitEdit = async (sectionId) => {
+    const saved = await save(void 0, sectionId);
+    if (saved) {
+      setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: false }));
+    }
+  };
+  const renderSectionEditSaveButton = (sectionId) => {
+    if (!canEdit) return null;
+    const isEditing = isSectionEditActive(sectionId);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        type: "button",
+        onClick: () => {
+          if (isEditing) {
+            void saveSectionAndExitEdit(sectionId);
+            return;
+          }
+          setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: true }));
+        },
+        disabled: isEditing && (saving || applyingChanges),
+        className: platformActionButtonClass,
+        children: isEditing ? "Save" : "Edit"
+      }
+    );
+  };
   const updateStandardMissionProfiles = (profiles) => {
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
@@ -66100,7 +66159,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     const matchedKey = childMap[normalisedPreviousParent]?.length ? normalisedPreviousParent : childMapKeys.find((key) => normaliseOrganisationParentKey(key) === normalisedPreviousParent);
     return matchedKey ? childMap[matchedKey] || [] : [];
   };
-  const showSectionOnlySaveButton = !(sectionOnly && (scrollTarget === "platform-rank-terminology" || scrollTarget === "platform-task-profiles"));
+  const showSectionOnlySaveButton = !(sectionOnly && (scrollTarget === "platform-rank-terminology" || scrollTarget === "platform-task-profiles" || scrollTarget === "platform-organisation-locations" || scrollTarget === "platform-units" || scrollTarget === "platform-master-lmp-access" || scrollTarget === "platform-standard-missions" || scrollTarget === "platform-resource-pools" || scrollTarget === "platform-crew-composition" || scrollTarget === "platform-currency-profiles" || scrollTarget === "platform-unit-modules" || scrollTarget === "platform-deployment-readiness" || scrollTarget === "platform-operational-runbook" || scrollTarget === "platform-licensing" || scrollTarget === "platform-permission-profiles" || scrollTarget === "platform-user-access" || scrollTarget === "platform-scheduling-rule-sets"));
   const showSectionOnlyStatusPanel = showSectionOnlySaveButton || !canEdit || Boolean(error);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: stopEditableKeyPropagation, children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
@@ -66340,7 +66399,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         {
           title: "Locations",
           subtitle: "Bases, airfields, timezone data and local training areas used by units and scheduling.",
-          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLocation, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Location" }) : null
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+            renderSectionEditSaveButton("platform-locations"),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLocation, disabled: !canEditSection("platform-locations"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+              "Add",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Location"
+            ] }) })
+          ] }) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
@@ -66366,7 +66432,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 boxShadow: `inset 4px 0 0 ${platformLocationRowTone.accent}, 0 12px 24px rgba(0,0,0,0.22)`
               },
               children: [
-                canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                canEditSection("platform-locations") ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
                     type: "button",
@@ -66382,7 +66448,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   {
                     label: "ICAO Code",
                     value: location.code,
-                    disabled: !canEdit,
+                    disabled: !canEditSection("platform-locations"),
                     maxLength: 4,
                     suggestions: codeSuggestions,
                     onChange: (value) => updateLocationIdentity(index, "code", value),
@@ -66394,7 +66460,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   {
                     label: "IATA Code",
                     value: location.iataCode || "",
-                    disabled: !canEdit,
+                    disabled: !canEditSection("platform-locations"),
                     maxLength: 3,
                     suggestions: iataSuggestions,
                     onChange: (value) => updateLocationIdentity(index, "iataCode", value),
@@ -66406,23 +66472,23 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   {
                     label: "Location Name",
                     value: location.name,
-                    disabled: !canEdit,
+                    disabled: !canEditSection("platform-locations"),
                     suggestions: nameSuggestions,
                     onChange: (value) => updateLocationIdentity(index, "name", value),
                     onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
                   }
                 ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "UTC Offset", value: location.timezoneOffset ?? 10, disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezoneOffset: value }) }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Latitude", value: toNullableNumber(location.latitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { latitude: value }), info: "Decimal degrees. South is negative." }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Longitude", value: toNullableNumber(location.longitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { longitude: value }), info: "Decimal degrees. West is negative." }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TimeZoneField, { label: "IANA Timezone", value: location.timezone || "", disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezone: value }), info: "Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "UTC Offset", value: location.timezoneOffset ?? 10, disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { timezoneOffset: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEditSection("platform-locations"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Latitude", value: toNullableNumber(location.latitude), disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { latitude: value }), info: "Decimal degrees. South is negative." }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Longitude", value: toNullableNumber(location.longitude), disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { longitude: value }), info: "Decimal degrees. West is negative." }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TimeZoneField, { label: "IANA Timezone", value: location.timezone || "", disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { timezone: value }), info: "Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   CommaListField,
                   {
                     label: "Training Areas",
                     value: location.trainingAreas || [],
-                    disabled: !canEdit,
+                    disabled: !canEditSection("platform-locations"),
                     onChange: (trainingAreas) => updateRow("locations", index, { trainingAreas })
                   }
                 ) })
@@ -66441,6 +66507,20 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           subtitle: "Unit is the centre of configuration: model, type, location, enabled modules and future UI behaviour. Select and highlight a unit row first, then press EDIT to change that unit.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: editSelectedUnit, disabled: config.units.length === 0, className: platformActionButtonClass, children: "EDIT" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  void save(void 0, "platform-units").then((saved) => {
+                    if (saved) setEditingUnitIndex(null);
+                  });
+                },
+                disabled: editingUnitIndex === null || saving || applyingChanges,
+                className: platformActionButtonClass,
+                children: "Save"
+              }
+            ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: deleteSelectedUnit, disabled: config.units.length === 0, className: platformActionButtonClass, children: "Delete" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUnit, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
               "Add",
@@ -66709,8 +66789,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           title: "Master LMP Access",
           subtitle: "Restrict which locations and units can view, assign or manage each Master LMP. Empty location or unit values apply broadly.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addMasterLmpCatalogueEntry, className: platformActionButtonClass, children: "Add Master LMP" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addMasterLmpAccessRule, className: platformActionButtonClass, children: "Add Access" })
+            renderSectionEditSaveButton("platform-master-lmp-access"),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addMasterLmpCatalogueEntry, disabled: !canEditSection("platform-master-lmp-access"), className: platformActionButtonClass, children: "Add Master LMP" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addMasterLmpAccessRule, disabled: !canEditSection("platform-master-lmp-access"), className: platformActionButtonClass, children: "Add Access" })
           ] }) : null
         }
       ),
@@ -66735,7 +66816,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 {
                   label: "Code",
                   value: entry.code,
-                  disabled: !canEdit,
+                  disabled: !canEditSection("platform-master-lmp-access"),
                   onChange: (value) => updateMasterLmpCatalogueEntry(index, { code: value, name: entry.name || value }),
                   info: "Stable selectable value used by Master LMP Access and trainee/course assignment."
                 }
@@ -66745,7 +66826,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 {
                   label: "Name",
                   value: entry.name || entry.code,
-                  disabled: !canEdit,
+                  disabled: !canEditSection("platform-master-lmp-access"),
                   onChange: (value) => updateMasterLmpCatalogueEntry(index, { name: value })
                 }
               ),
@@ -66754,7 +66835,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 {
                   label: "Description",
                   value: entry.description || "",
-                  disabled: !canEdit,
+                  disabled: !canEditSection("platform-master-lmp-access"),
                   onChange: (value) => updateMasterLmpCatalogueEntry(index, { description: value })
                 }
               ),
@@ -66771,7 +66852,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 {
                   label: "Status",
                   value: entry.status || "ACTIVE",
-                  disabled: !canEdit,
+                  disabled: !canEditSection("platform-master-lmp-access"),
                   options: ["ACTIVE", "INACTIVE"],
                   onChange: (value) => updateMasterLmpCatalogueEntry(index, { status: value })
                 }
@@ -66783,7 +66864,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   {
                     type: "button",
                     onClick: () => void deleteMasterLmpCatalogueEntry(index),
-                    disabled: !canEdit,
+                    disabled: !canEditSection("platform-master-lmp-access"),
                     title: `Delete ${entry.name || entry.code || "Master LMP"}`,
                     className: "flex min-h-[38px] w-full items-center justify-center rounded bg-transparent text-sm font-bold text-red-200 transition hover:bg-red-900/35 disabled:cursor-not-allowed disabled:opacity-45",
                     children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
@@ -66804,7 +66885,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               {
                 label: "Master LMP",
                 value: rule.lmpCode,
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-master-lmp-access"),
                 options: masterLmpOptions,
                 onChange: (value) => updateMasterLmpAccessRule(index, { lmpCode: value })
               }
@@ -66814,7 +66895,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               {
                 label: "Location",
                 value: rule.locationCode || "",
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-master-lmp-access"),
                 options: ["", ...config.locations.map((location) => location.code)],
                 emptyLabel: "All Locations",
                 onChange: (value) => updateMasterLmpAccessRule(index, { locationCode: value || null })
@@ -66825,7 +66906,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               {
                 label: "Unit",
                 value: rule.unitCode || "",
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-master-lmp-access"),
                 options: ["", ...config.units.map((unit) => unit.code)],
                 emptyLabel: "All Units",
                 onChange: (value) => updateMasterLmpAccessRule(index, { unitCode: value || null })
@@ -66836,7 +66917,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               {
                 label: "Model",
                 value: rule.operationalModel || "",
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-master-lmp-access"),
                 options: ["", ...OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)],
                 emptyLabel: "Any Model",
                 onChange: (value) => updateMasterLmpAccessRule(index, { operationalModel: value || null })
@@ -66847,7 +66928,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               {
                 label: "Access",
                 value: rule.accessLevel || "View",
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-master-lmp-access"),
                 options: ["View", "Assign", "Manage"],
                 onChange: (value) => updateMasterLmpAccessRule(index, { accessLevel: value })
               }
@@ -66857,7 +66938,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               {
                 label: "Status",
                 value: rule.status || "ACTIVE",
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-master-lmp-access"),
                 options: ["ACTIVE", "INACTIVE"],
                 onChange: (value) => updateMasterLmpAccessRule(index, { status: value })
               }
@@ -66866,7 +66947,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               "button",
               {
                 type: "button",
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-master-lmp-access"),
                 onClick: () => removeMasterLmpAccessRule(index),
                 className: "rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 disabled:cursor-not-allowed disabled:opacity-50",
                 children: "Remove"
@@ -66883,8 +66964,8 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           title: "Standard Missions",
           subtitle: "Fixed Crew mission profiles for regular unit flights. These profiles are configuration only for now and are not yet wired into NEO Build.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Add Mission" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => save(void 0, "platform-standard-missions"), disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Save" })
+            renderSectionEditSaveButton("platform-standard-missions"),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Mission" })
           ] }) : null
         }
       ),
@@ -66914,8 +66995,8 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: profile.description || "No description entered." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: profile.status, disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateStandardMissionProfile(profile.id, { status: value === "INACTIVE" ? "INACTIVE" : "ACTIVE" }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeStandardMissionProfile(profile.id), disabled: !canEdit, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: profile.status, disabled: !canEditSection("platform-standard-missions"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateStandardMissionProfile(profile.id, { status: value === "INACTIVE" ? "INACTIVE" : "ACTIVE" }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeStandardMissionProfile(profile.id), disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) })
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 xl:grid-cols-[1.1fr_0.9fr]", children: [
@@ -66926,10 +67007,10 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Name, short tile title and mission notes." })
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_150px]", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Mission Name", value: profile.missionName, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Short Title", value: profile.shortTitle, disabled: !canEdit, maxLength: 8, onChange: (value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() }) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Mission Name", value: profile.missionName, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Short Title", value: profile.shortTitle, disabled: !canEditSection("platform-standard-missions"), maxLength: 8, onChange: (value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() }) })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Description", value: profile.description, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { description: value }) }) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Description", value: profile.description, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { description: value }) }) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -66947,14 +67028,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                         info: "Standard Missions are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                       }
                     ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Type", value: profile.resourceType, disabled: !canEdit, options: STANDARD_MISSION_RESOURCE_TYPES, onChange: (value) => updateStandardMissionProfile(profile.id, { resourceType: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Dep", value: profile.departureLocationCode || activeHomeLocationCode, disabled: !canEdit, options: config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Arr", value: profile.arrivalLocationCode || activeHomeLocationCode, disabled: !canEdit, options: config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Duration (min)", value: profile.durationMinutes, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { durationMinutes: clampWholeNumber(value, 240, 1, 1440) }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Pre-Flight (min)", value: profile.preFlightMinutes, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { preFlightMinutes: clampWholeNumber(value, 90, 0, 1440) }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Post-Flight (min)", value: profile.postFlightMinutes, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { postFlightMinutes: clampWholeNumber(value, 60, 0, 1440) }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "CONFIG", value: profile.config || "ANY", disabled: !canEdit, options: aircraftConfigOptions, onChange: (value) => updateStandardMissionProfile(profile.id, { config: value || "ANY" }) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Type", value: profile.resourceType, disabled: !canEditSection("platform-standard-missions"), options: STANDARD_MISSION_RESOURCE_TYPES, onChange: (value) => updateStandardMissionProfile(profile.id, { resourceType: value }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Dep", value: profile.departureLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Arr", value: profile.arrivalLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Duration (min)", value: profile.durationMinutes, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { durationMinutes: clampWholeNumber(value, 240, 1, 1440) }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Pre-Flight (min)", value: profile.preFlightMinutes, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { preFlightMinutes: clampWholeNumber(value, 90, 0, 1440) }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Post-Flight (min)", value: profile.postFlightMinutes, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { postFlightMinutes: clampWholeNumber(value, 60, 0, 1440) }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "CONFIG", value: profile.config || "ANY", disabled: !canEditSection("platform-standard-missions"), options: aircraftConfigOptions, onChange: (value) => updateStandardMissionProfile(profile.id, { config: value || "ANY" }) })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid items-start gap-3 md:grid-cols-[1fr_160px]", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -66966,7 +67047,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                             type: "checkbox",
                             className: "h-5 w-5 rounded border-gray-500 accent-cyan-500",
                             checked: profile.isFormation,
-                            disabled: !canEdit,
+                            disabled: !canEditSection("platform-standard-missions"),
                             onChange: (event) => updateStandardMissionProfile(profile.id, { isFormation: event.target.checked })
                           }
                         ),
@@ -66983,7 +67064,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Crew & Callsign" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Select acceptable crew compositions and any explicit role requirements." })
                   ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Default Callsign Prefix", value: profile.defaultCallsignPrefix || defaultMissionCallsign, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { defaultCallsignPrefix: value }), info: "Defaults from the unit callsign settings. This is the prefix only; sortie number selection comes later when scheduled." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Default Callsign Prefix", value: profile.defaultCallsignPrefix || defaultMissionCallsign, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { defaultCallsignPrefix: value }), info: "Defaults from the unit callsign settings. This is the prefix only; sortie number selection comes later when scheduled." }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-gray-800 bg-gray-950/70 p-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-black uppercase tracking-wide text-cyan-100", children: "Crew Composition" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-3", children: ["STANDARD", "ALTERNATE", "CUSTOM"].map((mode) => {
@@ -66994,7 +67075,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                         "button",
                         {
                           type: "button",
-                          disabled: !canEdit,
+                          disabled: !canEditSection("platform-standard-missions"),
                           onClick: () => updateStandardMissionCrewMode(profile, mode),
                           className: `rounded border px-3 py-2 text-left transition-colors ${selected ? "border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]" : "border-gray-800 bg-gray-900 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
                           children: [
@@ -67011,7 +67092,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                         {
                           label: "Alternate Crew",
                           value: selectedCrewCompositionId,
-                          disabled: !canEdit,
+                          disabled: !canEditSection("platform-standard-missions"),
                           options: ["", ...missionCrewOptions.filter((option) => option.mode === "ALTERNATE").map((option) => option.id)],
                           optionLabels: Object.fromEntries(missionCrewOptions.filter((option) => option.mode === "ALTERNATE").map((option) => [option.id, option.label])),
                           onChange: (value) => updateStandardMissionCrewSelection(profile, value),
@@ -67929,7 +68010,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-unit-modules", className: getSectionClass("platform-unit-modules"), children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Unit Modules", subtitle: "Controls which functional modules each unit can use. This is the future licensing and role-aware UI switchboard." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Unit Modules",
+          subtitle: "Controls which functional modules each unit can use. This is the future licensing and role-aware UI switchboard.",
+          action: renderSectionEditSaveButton("platform-unit-modules")
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-sm", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-950 text-xs uppercase tracking-wide text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Unit" }),
@@ -67945,7 +68033,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               {
                 type: "checkbox",
                 checked: unitModule?.isEnabled !== false,
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-unit-modules"),
                 onChange: (event) => {
                   if (unitModuleIndex >= 0) {
                     updateRow("unitModules", unitModuleIndex, { isEnabled: event.target.checked });
@@ -67968,7 +68056,8 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Deployment Readiness",
-          subtitle: "Commercial deployment posture for SaaS, defence networks, fully offline installs and hybrid sync. These settings are admin-editable and do not hard-block operations yet."
+          subtitle: "Commercial deployment posture for SaaS, defence networks, fully offline installs and hybrid sync. These settings are admin-editable and do not hard-block operations yet.",
+          action: renderSectionEditSaveButton("platform-deployment-readiness")
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
@@ -68009,15 +68098,15 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-100", children: "Runtime-safe: monitor-first" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Operating Model", value: deploymentProfile.mode, disabled: !canEdit, options: DEPLOYMENT_MODE_OPTIONS, onChange: (value) => updateDeploymentProfile({ mode: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Licence Validation Method", value: deploymentProfile.validationMethod, disabled: !canEdit, options: LICENSE_VALIDATION_OPTIONS, onChange: (value) => updateDeploymentProfile({ validationMethod: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Licence Enforcement Mode", value: deploymentProfile.enforcementMode, disabled: !canEdit, options: LICENSE_ENFORCEMENT_OPTIONS, onChange: (value) => updateDeploymentProfile({ enforcementMode: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Offline Grace Days", value: Number(deploymentProfile.offlineGraceDays ?? 30), disabled: !canEdit, onChange: (value) => updateDeploymentProfile({ offlineGraceDays: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Licence Check Interval Hours", value: Number(deploymentProfile.checkIntervalHours ?? 24), disabled: !canEdit, onChange: (value) => updateDeploymentProfile({ checkIntervalHours: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Authentication Model", value: deploymentProfile.authModel, disabled: !canEdit, options: AUTH_MODEL_OPTIONS, onChange: (value) => updateDeploymentProfile({ authModel: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Data Residence", value: deploymentProfile.dataResidence || "", disabled: !canEdit, onChange: (value) => updateDeploymentProfile({ dataResidence: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Network Posture", value: deploymentProfile.networkPosture || "", disabled: !canEdit, onChange: (value) => updateDeploymentProfile({ networkPosture: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Deployment Notes", value: deploymentProfile.notes || "", disabled: !canEdit, onChange: (value) => updateDeploymentProfile({ notes: value }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Operating Model", value: deploymentProfile.mode, disabled: !canEditSection("platform-deployment-readiness"), options: DEPLOYMENT_MODE_OPTIONS, onChange: (value) => updateDeploymentProfile({ mode: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Licence Validation Method", value: deploymentProfile.validationMethod, disabled: !canEditSection("platform-deployment-readiness"), options: LICENSE_VALIDATION_OPTIONS, onChange: (value) => updateDeploymentProfile({ validationMethod: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Licence Enforcement Mode", value: deploymentProfile.enforcementMode, disabled: !canEditSection("platform-deployment-readiness"), options: LICENSE_ENFORCEMENT_OPTIONS, onChange: (value) => updateDeploymentProfile({ enforcementMode: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Offline Grace Days", value: Number(deploymentProfile.offlineGraceDays ?? 30), disabled: !canEditSection("platform-deployment-readiness"), onChange: (value) => updateDeploymentProfile({ offlineGraceDays: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Licence Check Interval Hours", value: Number(deploymentProfile.checkIntervalHours ?? 24), disabled: !canEditSection("platform-deployment-readiness"), onChange: (value) => updateDeploymentProfile({ checkIntervalHours: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Authentication Model", value: deploymentProfile.authModel, disabled: !canEditSection("platform-deployment-readiness"), options: AUTH_MODEL_OPTIONS, onChange: (value) => updateDeploymentProfile({ authModel: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Data Residence", value: deploymentProfile.dataResidence || "", disabled: !canEditSection("platform-deployment-readiness"), onChange: (value) => updateDeploymentProfile({ dataResidence: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Network Posture", value: deploymentProfile.networkPosture || "", disabled: !canEditSection("platform-deployment-readiness"), onChange: (value) => updateDeploymentProfile({ networkPosture: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Deployment Notes", value: deploymentProfile.notes || "", disabled: !canEditSection("platform-deployment-readiness"), onChange: (value) => updateDeploymentProfile({ notes: value }) })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
@@ -68038,7 +68127,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 type: "checkbox",
                 className: "mt-1 h-4 w-4 rounded border-gray-500 accent-cyan-500",
                 checked: deploymentReadiness[item.id] === true,
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-deployment-readiness"),
                 onChange: (event) => toggleDeploymentReadiness(item.id, event.target.checked)
               }
             ),
@@ -68055,7 +68144,8 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Operational Runbook",
-          subtitle: "Deployment evidence for support, backups, restore testing, updates and accreditation. This gives an on-prem or offline customer a clear administration record without exposing secrets."
+          subtitle: "Deployment evidence for support, backups, restore testing, updates and accreditation. This gives an on-prem or offline customer a clear administration record without exposing secrets.",
+          action: renderSectionEditSaveButton("platform-operational-runbook")
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
@@ -68108,12 +68198,12 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-100", children: "Non-secret admin record" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Environment Name", value: operationalRunbook.environmentName || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ environmentName: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Deployment Identifier", value: operationalRunbook.deploymentIdentifier || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ deploymentIdentifier: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Release Channel", value: operationalRunbook.releaseChannel || "Production", disabled: !canEdit, options: RELEASE_CHANNEL_OPTIONS, onChange: (value) => updateOperationalRunbook({ releaseChannel: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Support Owner", value: operationalRunbook.supportOwner || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ supportOwner: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Support Contact", value: operationalRunbook.supportContact || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ supportContact: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Approving Authority", value: operationalRunbook.approvingAuthority || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ approvingAuthority: value }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Environment Name", value: operationalRunbook.environmentName || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ environmentName: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Deployment Identifier", value: operationalRunbook.deploymentIdentifier || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ deploymentIdentifier: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Release Channel", value: operationalRunbook.releaseChannel || "Production", disabled: !canEditSection("platform-operational-runbook"), options: RELEASE_CHANNEL_OPTIONS, onChange: (value) => updateOperationalRunbook({ releaseChannel: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Support Owner", value: operationalRunbook.supportOwner || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ supportOwner: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Support Contact", value: operationalRunbook.supportContact || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ supportContact: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Approving Authority", value: operationalRunbook.approvingAuthority || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ approvingAuthority: value }) })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
@@ -68125,14 +68215,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Record where backups live, how long they are retained, and when a restore was last proven." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Backup Frequency", value: operationalRunbook.backupFrequency || "Daily", disabled: !canEdit, options: BACKUP_FREQUENCY_OPTIONS, onChange: (value) => updateOperationalRunbook({ backupFrequency: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Backup Retention Days", value: Number(operationalRunbook.backupRetentionDays ?? 30), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ backupRetentionDays: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Backup Storage Location", value: operationalRunbook.backupStorageLocation || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ backupStorageLocation: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Backup Date", value: operationalRunbook.lastBackupDate || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ lastBackupDate: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Restore Test Date", value: operationalRunbook.lastRestoreTestDate || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ lastRestoreTestDate: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Backup Frequency", value: operationalRunbook.backupFrequency || "Daily", disabled: !canEditSection("platform-operational-runbook"), options: BACKUP_FREQUENCY_OPTIONS, onChange: (value) => updateOperationalRunbook({ backupFrequency: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Backup Retention Days", value: Number(operationalRunbook.backupRetentionDays ?? 30), disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ backupRetentionDays: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Backup Storage Location", value: operationalRunbook.backupStorageLocation || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ backupStorageLocation: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Backup Date", value: operationalRunbook.lastBackupDate || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ lastBackupDate: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Restore Test Date", value: operationalRunbook.lastRestoreTestDate || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ lastRestoreTestDate: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "RTO Hours", value: Number(operationalRunbook.restoreTimeObjectiveHours ?? 24), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "RPO Hours", value: Number(operationalRunbook.restorePointObjectiveHours ?? 24), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ restorePointObjectiveHours: value }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "RTO Hours", value: Number(operationalRunbook.restoreTimeObjectiveHours ?? 24), disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "RPO Hours", value: Number(operationalRunbook.restorePointObjectiveHours ?? 24), disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ restorePointObjectiveHours: value }) })
             ] })
           ] })
         ] }),
@@ -68145,13 +68235,13 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Record when updates may be applied, who approves them, where evidence exports are stored, and the current accreditation posture." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Maintenance Window", value: operationalRunbook.maintenanceWindow || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ maintenanceWindow: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Update Approval Process", value: operationalRunbook.updateApprovalProcess || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ updateApprovalProcess: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Update Date", value: operationalRunbook.lastUpdateDate || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ lastUpdateDate: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Evidence Export Path", value: operationalRunbook.evidenceExportPath || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ evidenceExportPath: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Audit Retention Years", value: Number(operationalRunbook.auditRetentionYears ?? 7), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ auditRetentionYears: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Accreditation Status", value: operationalRunbook.accreditationStatus || "Not started", disabled: !canEdit, options: ACCREDITATION_STATUS_OPTIONS, onChange: (value) => updateOperationalRunbook({ accreditationStatus: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Operational Notes", value: operationalRunbook.notes || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ notes: value }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Maintenance Window", value: operationalRunbook.maintenanceWindow || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ maintenanceWindow: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Update Approval Process", value: operationalRunbook.updateApprovalProcess || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ updateApprovalProcess: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Update Date", value: operationalRunbook.lastUpdateDate || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ lastUpdateDate: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Evidence Export Path", value: operationalRunbook.evidenceExportPath || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ evidenceExportPath: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Audit Retention Years", value: Number(operationalRunbook.auditRetentionYears ?? 7), disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ auditRetentionYears: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Accreditation Status", value: operationalRunbook.accreditationStatus || "Not started", disabled: !canEditSection("platform-operational-runbook"), options: ACCREDITATION_STATUS_OPTIONS, onChange: (value) => updateOperationalRunbook({ accreditationStatus: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Operational Notes", value: operationalRunbook.notes || "", disabled: !canEditSection("platform-operational-runbook"), onChange: (value) => updateOperationalRunbook({ notes: value }) })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
@@ -68189,7 +68279,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         {
           title: "Licensing & Deployment",
           subtitle: "Commercial licensing for online SaaS, private defence networks, hybrid sync and fully offline deployments. Development mode remains non-blocking while signed licence files can be tested end to end.",
-          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLicense, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Licence" }) : null
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+            renderSectionEditSaveButton("platform-licensing"),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLicense, disabled: !canEditSection("platform-licensing"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+              "Add",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Licence"
+            ] }) })
+          ] }) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
@@ -68235,7 +68332,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 {
                   type: "button",
                   onClick: importSignedLicense,
-                  disabled: !canEdit || licenseActionLoading || !licenseImportText.trim(),
+                  disabled: !canEditSection("platform-licensing") || licenseActionLoading || !licenseImportText.trim(),
                   className: "rounded border border-cyan-500 bg-cyan-500 px-4 py-2 text-sm font-bold text-gray-950 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50",
                   children: "Import"
                 }
@@ -68253,7 +68350,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 setLicenseImportError("");
               },
               placeholder: 'Paste signed licence JSON, for example {"schema":"dfp-neo-license/v1",...}',
-              disabled: !canEdit && !licenseImportText
+              disabled: !canEditSection("platform-licensing") && !licenseImportText
             }
           ),
           licenseImportMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-100", children: licenseImportMessage }),
@@ -68298,18 +68395,18 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Licence Name", value: license.licenseName || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { licenseName: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Licence Key", value: license.licenseKey || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { licenseKey: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: license.organisationCode || config.organisations[0]?.code || "DEFAULT", disabled: !canEdit, options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("licenses", index, { organisationCode: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Deployment Model", value: license.deploymentMode || "Online SaaS", disabled: !canEdit, options: ["Online SaaS", "Private Defence Network", "Fully Offline", "Hybrid Offline Sync"], onChange: (value) => updateRow("licenses", index, { deploymentMode: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: license.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "SUSPENDED", "EXPIRED", "INACTIVE"], onChange: (value) => updateRow("licenses", index, { status: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Offline Fingerprint", value: license.offlineFingerprint || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { offlineFingerprint: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Valid From", value: license.validFrom || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { validFrom: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Valid Until", value: license.validUntil || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { validUntil: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Users", value: license.maxUsers ?? null, disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { maxUsers: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Units", value: license.maxUnits ?? null, disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { maxUnits: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Aircraft Types", value: license.maxAircraftTypes ?? null, disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { maxAircraftTypes: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Notes", value: license.notes || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { notes: value }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Licence Name", value: license.licenseName || "", disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { licenseName: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Licence Key", value: license.licenseKey || "", disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { licenseKey: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: license.organisationCode || config.organisations[0]?.code || "DEFAULT", disabled: !canEditSection("platform-licensing"), options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("licenses", index, { organisationCode: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Deployment Model", value: license.deploymentMode || "Online SaaS", disabled: !canEditSection("platform-licensing"), options: ["Online SaaS", "Private Defence Network", "Fully Offline", "Hybrid Offline Sync"], onChange: (value) => updateRow("licenses", index, { deploymentMode: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: license.status || "ACTIVE", disabled: !canEditSection("platform-licensing"), options: ["ACTIVE", "SUSPENDED", "EXPIRED", "INACTIVE"], onChange: (value) => updateRow("licenses", index, { status: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Offline Fingerprint", value: license.offlineFingerprint || "", disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { offlineFingerprint: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Valid From", value: license.validFrom || "", disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { validFrom: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Valid Until", value: license.validUntil || "", disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { validUntil: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Users", value: license.maxUsers ?? null, disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { maxUsers: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Units", value: license.maxUnits ?? null, disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { maxUnits: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Aircraft Types", value: license.maxAircraftTypes ?? null, disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { maxAircraftTypes: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Notes", value: license.notes || "", disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { notes: value }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded border border-cyan-500/25 bg-cyan-500/10 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center gap-2", children: [
@@ -68322,7 +68419,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   {
                     label: "Validation Method",
                     value: licenceFeatures.validationMethod || deploymentProfile.validationMethod,
-                    disabled: !canEdit,
+                    disabled: !canEditSection("platform-licensing"),
                     options: LICENSE_VALIDATION_OPTIONS,
                     onChange: (value) => updateLicenseFeatures(index, { validationMethod: value })
                   }
@@ -68332,7 +68429,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   {
                     label: "Enforcement Mode",
                     value: normaliseEnforcementMode(licenceFeatures.enforcementMode || deploymentProfile.enforcementMode),
-                    disabled: !canEdit,
+                    disabled: !canEditSection("platform-licensing"),
                     options: LICENSE_ENFORCEMENT_OPTIONS,
                     onChange: (value) => updateLicenseFeatures(index, { enforcementMode: value })
                   }
@@ -68342,7 +68439,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   {
                     label: "Offline Grace Days",
                     value: Number(licenceFeatures.offlineGraceDays ?? deploymentProfile.offlineGraceDays ?? 30),
-                    disabled: !canEdit,
+                    disabled: !canEditSection("platform-licensing"),
                     onChange: (value) => updateLicenseFeatures(index, { offlineGraceDays: value })
                   }
                 ),
@@ -68351,7 +68448,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   {
                     label: "Allow offline operation",
                     checked: licenceFeatures.allowOfflineOperation === true,
-                    disabled: !canEdit,
+                    disabled: !canEditSection("platform-licensing"),
                     onChange: (checked) => updateLicenseFeatures(index, { allowOfflineOperation: checked })
                   }
                 )
@@ -68373,7 +68470,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                     type: "checkbox",
                     className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
                     checked: moduleCodes.includes(module.code),
-                    disabled: !canEdit,
+                    disabled: !canEditSection("platform-licensing"),
                     onChange: (event) => toggleLicenseModule(index, module.code, event.target.checked)
                   }
                 ),
@@ -68393,7 +68490,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         {
           title: "Permission Profiles",
           subtitle: "Build reusable role profiles. Profiles define what a user can do; access scopes define where they can do it.",
-          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addPermissionProfile, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Profile" }) : null
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+            renderSectionEditSaveButton("platform-permission-profiles"),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addPermissionProfile, disabled: !canEditSection("platform-permission-profiles"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+              "Add",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Profile"
+            ] }) })
+          ] }) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 xl:grid-cols-[340px,1fr]", children: [
@@ -68415,8 +68519,8 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         )) }),
         selectedPermissionProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Profile Name", value: selectedPermissionProfile.name, disabled: !canEdit, onChange: (value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Description", value: selectedPermissionProfile.description, disabled: !canEdit, onChange: (value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Profile Name", value: selectedPermissionProfile.name, disabled: !canEditSection("platform-permission-profiles"), onChange: (value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Description", value: selectedPermissionProfile.description, disabled: !canEditSection("platform-permission-profiles"), onChange: (value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 grid gap-4 lg:grid-cols-2", children: PERMISSION_CATALOG.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: group.group }),
@@ -68429,7 +68533,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                     type: "checkbox",
                     className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
                     checked,
-                    disabled: !canEdit,
+                    disabled: !canEditSection("platform-permission-profiles"),
                     onChange: (event) => {
                       const permissions = event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedPermissionProfile.permissions, permissionId])) : selectedPermissionProfile.permissions.filter((id) => id !== permissionId);
                       updatePermissionProfile(selectedPermissionProfile.id, { permissions });
@@ -69404,7 +69508,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         {
           title: "User Access Context",
           subtitle: "Search by user name, assign permission profiles, then define where those profiles apply.",
-          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Scope" }) : null
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+            renderSectionEditSaveButton("platform-user-access"),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+              "Add",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Scope"
+            ] }) })
+          ] }) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-user-access-records", className: "space-y-3 p-4", children: [
@@ -69415,7 +69526,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               {
                 label: "User",
                 value: selectedAccessUserId,
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-user-access"),
                 users: userOptions,
                 search: userSearch,
                 onSearchChange: setUserSearch,
@@ -69450,7 +69561,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   type: "checkbox",
                   className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
                   checked,
-                  disabled: !canEdit || selectedAccessRows.length === 0,
+                  disabled: !canEditSection("platform-user-access") || selectedAccessRows.length === 0,
                   onChange: (event) => {
                     const profileIds = event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedUserProfileIds, profile.id])) : selectedUserProfileIds.filter((id) => id !== profile.id);
                     setSelectedUserProfileIds(profileIds);
@@ -69492,7 +69603,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                     " / ",
                     appliesToAllFeatures ? "All enabled features" : access.moduleCode
                   ] }),
-                  canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  canEditSection("platform-user-access") && /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
                       type: "button",
@@ -69503,12 +69614,12 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   )
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3 xl:grid-cols-[1.1fr_1fr_1fr_1fr_0.75fr_0.85fr]", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEdit, options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || "", disabled: !canEdit, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("userAccess", index, { locationCode: value || null }), emptyLabel: "All Locations" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: access.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("userAccess", index, { unitCode: value || null }), emptyLabel: "All Units" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Administration Level", value: access.role || "Viewer", disabled: !canEdit, options: ["Viewer", "Scheduler", "Supervisor", "Unit Admin", "Platform Admin", "Super Admin"], onChange: (value) => updateRow("userAccess", index, { role: value }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Access", value: access.accessLevel || "Read", disabled: !canEdit, options: ["Read", "Write", "Admin"], onChange: (value) => updateRow("userAccess", index, { accessLevel: value }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: access.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("userAccess", index, { status: value }) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEditSection("platform-user-access"), options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || "", disabled: !canEditSection("platform-user-access"), options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("userAccess", index, { locationCode: value || null }), emptyLabel: "All Locations" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: access.unitCode || "", disabled: !canEditSection("platform-user-access"), options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("userAccess", index, { unitCode: value || null }), emptyLabel: "All Units" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Administration Level", value: access.role || "Viewer", disabled: !canEditSection("platform-user-access"), options: ["Viewer", "Scheduler", "Supervisor", "Unit Admin", "Platform Admin", "Super Admin"], onChange: (value) => updateRow("userAccess", index, { role: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Access", value: access.accessLevel || "Read", disabled: !canEditSection("platform-user-access"), options: ["Read", "Write", "Admin"], onChange: (value) => updateRow("userAccess", index, { accessLevel: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: access.status || "ACTIVE", disabled: !canEditSection("platform-user-access"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("userAccess", index, { status: value }) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "div",
@@ -69524,7 +69635,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                               type: "checkbox",
                               className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
                               checked: appliesToAllFeatures,
-                              disabled: !canEdit,
+                              disabled: !canEditSection("platform-user-access"),
                               onChange: (event) => updateRow("userAccess", index, { moduleCode: event.target.checked ? null : config.modules[0]?.code || "" })
                             }
                           ),
@@ -69551,7 +69662,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                           /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Limit This Scope To One Feature Area" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use this only when a user should administer one area but not another. Example: ESL + 1FTS + NEO_BUILD lets the user work with NEO Build for 1FTS, but not training records or reporting." })
                         ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEdit || appliesToAllFeatures, options: ["", ...config.modules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEditSection("platform-user-access") || appliesToAllFeatures, options: ["", ...config.modules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-400", children: "Leave this as all enabled features unless you deliberately want to restrict this scope to a single app area such as DFP, NEO Build, Training, or Reporting." })
                       ] })
                     ]
@@ -69565,7 +69676,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-scheduling-rule-sets", className: getSectionClass("platform-scheduling-rule-sets"), children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Scheduling Rule Sets", subtitle: "Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Scheduling Rule Sets",
+          subtitle: "Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types.",
+          action: renderSectionEditSaveButton("platform-scheduling-rule-sets")
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-3", children: [
@@ -69577,7 +69695,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 " characters because they are used on schedule tiles."
               ] })
             ] }),
-            canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addInsertEventType, className: "ml-auto rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200", children: "Add Event Type" })
+            canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addInsertEventType, disabled: !canEditSection("platform-scheduling-rule-sets"), className: "ml-auto rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50", children: "Add Event Type" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: insertEventTypes.map((eventType, eventTypeIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-6", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -69585,7 +69703,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               {
                 label: "Label",
                 value: eventType.label,
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-scheduling-rule-sets"),
                 maxLength: INSERT_EVENT_LABEL_MAX_LENGTH,
                 onChange: (value) => updateInsertEventType(eventTypeIndex, { label: value })
               }
@@ -69595,7 +69713,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               {
                 label: "Build Type",
                 value: eventType.syllabusType,
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-scheduling-rule-sets"),
                 options: ["Flight", "FTD", "Ground School", "Academics"],
                 onChange: (value) => updateInsertEventType(eventTypeIndex, { syllabusType: value })
               }
@@ -69605,22 +69723,22 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               {
                 label: "Day/Night",
                 value: eventType.dayNight,
-                disabled: !canEdit,
+                disabled: !canEditSection("platform-scheduling-rule-sets"),
                 options: ["Day", "Night", "Day/Night"],
                 onChange: (value) => updateInsertEventType(eventTypeIndex, { dayNight: value })
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Duration", value: eventType.duration, disabled: !canEdit, onChange: (value) => updateInsertEventType(eventTypeIndex, { duration: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Flt/Sim Hrs", value: eventType.flightOrSimHours, disabled: !canEdit, onChange: (value) => updateInsertEventType(eventTypeIndex, { flightOrSimHours: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Resources", value: eventType.resourceCount, disabled: !canEdit, onChange: (value) => updateInsertEventType(eventTypeIndex, { resourceCount: Math.max(0, Math.round(value)) }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Total Hrs", value: eventType.totalEventHours, disabled: !canEdit, onChange: (value) => updateInsertEventType(eventTypeIndex, { totalEventHours: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Pre Time", value: eventType.preFlightTime, disabled: !canEdit, onChange: (value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Post Time", value: eventType.postFlightTime, disabled: !canEdit, onChange: (value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Duration", value: eventType.duration, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { duration: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Flt/Sim Hrs", value: eventType.flightOrSimHours, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { flightOrSimHours: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Resources", value: eventType.resourceCount, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { resourceCount: Math.max(0, Math.round(value)) }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Total Hrs", value: eventType.totalEventHours, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { totalEventHours: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Pre Time", value: eventType.preFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Post Time", value: eventType.postFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
-                disabled: !canEdit || insertEventTypes.length <= 1,
+                disabled: !canEditSection("platform-scheduling-rule-sets") || insertEventTypes.length <= 1,
                 onClick: () => removeInsertEventType(eventTypeIndex),
                 className: "h-[38px] rounded border border-gray-600 bg-gray-900 px-3 text-xs font-bold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-50",
                 children: "Remove"
@@ -69629,11 +69747,11 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           ] }, `${eventType.label}-${eventTypeIndex}`)) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-scheduling-rule-records", className: "space-y-3", children: config.schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: ruleSet.name, disabled: !canEdit, onChange: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEdit, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Scope", value: ruleSet.scope || "Unit", disabled: !canEdit, options: ["Organisation", "Location", "Unit", "AircraftType"], onChange: (value) => updateRow("schedulingRuleSets", index, { scope: value }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Active", value: ruleSet.isActive === false ? "No" : "Yes", disabled: !canEdit, options: ["Yes", "No"], onChange: (value) => updateRow("schedulingRuleSets", index, { isActive: value === "Yes" }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: ruleSet.name, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Scope", value: ruleSet.scope || "Unit", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["Organisation", "Location", "Unit", "AircraftType"], onChange: (value) => updateRow("schedulingRuleSets", index, { scope: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Active", value: ruleSet.isActive === false ? "No" : "Yes", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["Yes", "No"], onChange: (value) => updateRow("schedulingRuleSets", index, { isActive: value === "Yes" }) })
         ] }, ruleSet.id || index)) })
       ] })
     ] })
