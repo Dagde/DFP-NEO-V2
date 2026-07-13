@@ -6177,7 +6177,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Crew Position Labels / Roles</h4>
                 <p className={resourceSectionPanelHintClass}>These are the role keys currently used by {activeCrewCompositionAircraftCode || 'this aircraft'}. Model applicability includes Flight School, Air Combat, Fixed Crew and Pooled Crew.</p>
               </div>
-              <button type="button" onClick={addCrewPositionEntry} disabled={!canEditCrewComposition} className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">Add Position</button>
+              <button type="button" onClick={addCrewPositionEntry} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
+                <span className="text-[10px] leading-tight">Add<br />Position</span>
+              </button>
             </div>
             <div className="space-y-3">
               {visibleCrewPositionEntries.map((entry) => {

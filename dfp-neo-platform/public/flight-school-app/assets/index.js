@@ -67409,7 +67409,11 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 ". Model applicability includes Flight School, Air Combat, Fixed Crew and Pooled Crew."
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addCrewPositionEntry, disabled: !canEditCrewComposition, className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50", children: "Add Position" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addCrewPositionEntry, disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] leading-tight", children: [
+              "Add",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Position"
+            ] }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: visibleCrewPositionEntries.map((entry) => {
             const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
