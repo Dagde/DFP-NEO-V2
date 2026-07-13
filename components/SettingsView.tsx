@@ -3,15 +3,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { initDB, getAllFiles, addFile, getFile, deleteFile } from '../utils/db';
 import ScoringMatrixFlyout from './ScoringMatrixFlyout';
-import { CourseSelectionDialog } from './CourseSelectionDialog';
-import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CancellationRecord, CancellationCode } from '../types';
+import { EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CancellationRecord, CancellationCode } from '../types';
 import ACHistoryPage from './ACHistoryPage';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { debouncedAuditLog } from '../utils/auditDebounce';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import DutyTurnaroundSection from './DutyTurnaroundSection';
-import AircraftAvailabilitySettings from './AircraftAvailabilitySettings';
 import EmergencyPage from './EmergencyPage';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
@@ -34,9 +32,6 @@ const TEMPLATE_OVERRIDE_FOLDER_ID = 'template_overrides';
 interface SettingsViewProps {
     hideHeader?: boolean;
     activeSection?: 'scoring-matrix' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'validation' | 'trainee-database' | 'user-list' | 'staff-database' | 'organisation' | 'appearance' | 'emergency';
-    instructorsData: Instructor[];
-    traineesData: Trainee[];
-    syllabusDetails: SyllabusItemDetail[];
     onShowSuccess: (message: string) => void;
     eventLimits: EventLimits;
     onUpdateEventLimits: (limits: EventLimits) => void;
@@ -521,7 +516,6 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
 // FIX: Export the component to make it available for import.
 export const SettingsView: React.FC<SettingsViewProps> = ({ 
     hideHeader = false,
-    instructorsData, traineesData, syllabusDetails,
     onShowSuccess,
     eventLimits, onUpdateEventLimits,
     phraseBank, onUpdatePhraseBank,
@@ -917,51 +911,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         { key: 'organisation-structure', label: 'Organisational Structure', downloadLabel: 'Organisational Structure Template (.xlsx)', onDownload: handleDownloadOrganisationStructureTemplate },
     ];
     
-    const handleDownloadManual = () => {
-        const manualHtml = `
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <title>Daily Flying Program (DFP) Scheduler - User Manual</title>
-                <style>
-                    body { font-family: Calibri, sans-serif; line-height: 1.6; color: #333; }
-                    h1, h2, h3, h4 { font-family: 'Cambria', serif; color: #2F5496; }
-                    h1 { font-size: 24pt; border-bottom: 2px solid #4472C4; padding-bottom: 5px; }
-                    h2 { font-size: 18pt; border-bottom: 1px solid #A9A9A9; padding-bottom: 3px; margin-top: 2em; }
-                    h3 { font-size: 14pt; color: #4472C4; margin-top: 1.5em; }
-                    p { margin: 0 0 1em 0; }
-                    ul { margin-bottom: 1em; }
-                    strong { color: #1F3864; }
-                    .image-placeholder {
-                        border: 2px dashed #A9A9A9;
-                        padding: 20px;
-                        margin: 20px 0;
-                        background-color: #F0F0F0;
-                        text-align: center;
-                        font-style: italic;
-                        color: #666;
-                    }
-                </style>
-            </head>
-            <body>
-                <h1>Daily Flying Program (DFP) Scheduler - User Manual</h1>
-                <p>...</p> 
-            </body>
-            </html>
-        `;
-
-        const blob = new Blob([manualHtml], { type: 'application/msword' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'DFP_User_Manual.doc';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
     return (
         <div onKeyDownCapture={stopEditableKeyPropagation}>
             <div className="space-y-6">

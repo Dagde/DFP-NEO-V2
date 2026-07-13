@@ -4873,7 +4873,6 @@ import DutyWarningFlyout from './components/DutyWarningFlyout';
 import SctRequestFlyout from './components/SctRequestFlyout';
 import NextDayInstructorScheduleView from './components/NextDayInstructorScheduleView';
 import { NextDayTraineeScheduleView } from './components/NextDayTraineeScheduleView';
-import AircraftAvailabilitySettings from './components/AircraftAvailabilitySettings';
 import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 import PauseFlightOpsPanel, { PausePhase, PauseBuildConfig } from './components/PauseFlightOpsPanel';
 import PropellerLoadingOverlay from './components/PropellerLoadingOverlay';

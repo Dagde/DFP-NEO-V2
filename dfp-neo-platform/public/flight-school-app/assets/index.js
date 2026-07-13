@@ -59272,9 +59272,6 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
 };
 const SettingsView = ({
   hideHeader = false,
-  instructorsData,
-  traineesData,
-  syllabusDetails,
   onShowSuccess,
   eventLimits,
   onUpdateEventLimits,
