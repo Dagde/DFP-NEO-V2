@@ -66114,7 +66114,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
       ] }),
       !canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Read-only. Super Admin or Admin permission is required to change platform configuration." }),
       error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100", children: error })
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    ] }) : !sectionOnly ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -66133,7 +66133,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Enabled Modules", value: enabledModuleCount }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Active Licences", value: activeLicenseCount })
       ] })
-    ] }),
+    ] }) : null,
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-configuration-health", className: getSectionClass("platform-configuration-health"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,

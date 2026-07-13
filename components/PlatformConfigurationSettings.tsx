@@ -5008,7 +5008,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           )}
         </div>
-      ) : (
+      ) : !sectionOnly ? (
         <>
           <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3">
             <div className="flex flex-wrap items-center gap-3">
@@ -5040,7 +5040,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <Metric label="Active Licences" value={activeLicenseCount} />
           </div>
         </>
-      )}
+      ) : null}
 
       <section id="platform-configuration-health" className={getSectionClass('platform-configuration-health')}>
         <SectionHeader
