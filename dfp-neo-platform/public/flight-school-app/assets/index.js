@@ -58587,270 +58587,6 @@ const ACHistoryPage = ({
     ] })
   ] });
 };
-const FormationCallsignsSection = ({
-  callsigns,
-  onUpdateCallsigns,
-  units,
-  locations,
-  canEditSettings,
-  isSettingsUnlocked = canEditSettings,
-  onRequestUnlock,
-  onAuditLog
-}) => {
-  const [isEditing, setIsEditing] = reactExports.useState(false);
-  const [tempCallsigns, setTempCallsigns] = reactExports.useState([]);
-  const [selectedUnit, setSelectedUnit] = reactExports.useState("ALL");
-  const [newCallsign, setNewCallsign] = reactExports.useState({
-    name: "",
-    code: "",
-    unit: "",
-    location: "",
-    locationCode: ""
-  });
-  const handleEdit = async () => {
-    if (!canEditSettings) return;
-    if (!isSettingsUnlocked) {
-      const unlocked = await onRequestUnlock?.();
-      if (!unlocked) return;
-    }
-    setTempCallsigns([...callsigns]);
-    setIsEditing(true);
-  };
-  const handleSave = () => {
-    const oldCallsigns = callsigns.map((c) => `${c.name} (${c.code})`).join(", ");
-    const newCallsignsStr = tempCallsigns.map((c) => `${c.name} (${c.code})`).join(", ");
-    onUpdateCallsigns(tempCallsigns);
-    setIsEditing(false);
-    if (onAuditLog) {
-      onAuditLog({
-        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-        page: "Settings - Location - Formation Callsigns",
-        action: "Updated Formation Callsigns",
-        changes: `From: [${oldCallsigns}] To: [${newCallsignsStr}]`
-      });
-    }
-  };
-  const handleCancel = () => {
-    setNewCallsign({ name: "", code: "", unit: "", location: "", locationCode: "" });
-    setIsEditing(false);
-  };
-  const handleAdd = () => {
-    if (newCallsign.name && newCallsign.code && newCallsign.unit && newCallsign.location && newCallsign.locationCode) {
-      setTempCallsigns([...tempCallsigns, { ...newCallsign }]);
-      setNewCallsign({ name: "", code: "", unit: "", location: "", locationCode: "" });
-    }
-  };
-  const handleRemove = (index) => {
-    setTempCallsigns(tempCallsigns.filter((_, i) => i !== index));
-  };
-  const handleUpdateCallsign = (index, field, value) => {
-    const updated = [...tempCallsigns];
-    updated[index] = { ...updated[index], [field]: value };
-    setTempCallsigns(updated);
-  };
-  const filteredCallsigns = isEditing ? selectedUnit === "ALL" ? tempCallsigns : tempCallsigns.filter((c) => c.unit === selectedUnit) : selectedUnit === "ALL" ? callsigns : callsigns.filter((c) => c.unit === selectedUnit);
-  const sectionButtonClass = "min-w-[56px] rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50";
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[800px] h-fit", onKeyDownCapture: stopEditableKeyPropagation, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Formation Callsigns" }),
-      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-px", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: sectionButtonClass, children: "Save" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: sectionButtonClass, children: "Cancel" })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: handleEdit,
-          disabled: !canEditSettings,
-          className: sectionButtonClass,
-          children: "Edit"
-        }
-      )
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm text-gray-400", children: "Filter by Unit:" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "select",
-          {
-            value: selectedUnit,
-            onChange: (e) => setSelectedUnit(e.target.value),
-            className: "bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ALL", children: "ALL" }),
-              units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
-            ]
-          }
-        )
-      ] }),
-      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage formation callsigns for units." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto max-h-96 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-700 sticky top-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Name" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Code" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Unit" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Location" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Loc Code" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-center text-gray-300 font-semibold", children: "Action" })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: filteredCallsigns.map((callsign, index) => {
-            const actualIndex = tempCallsigns.findIndex(
-              (c) => c.name === callsign.name && c.code === callsign.code && c.unit === callsign.unit
-            );
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 hover:bg-gray-700/30", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: callsign.name,
-                  onChange: (e) => handleUpdateCallsign(actualIndex, "name", e.target.value),
-                  className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: callsign.code,
-                  onChange: (e) => handleUpdateCallsign(actualIndex, "code", e.target.value.toUpperCase()),
-                  className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "select",
-                {
-                  value: callsign.unit,
-                  onChange: (e) => handleUpdateCallsign(actualIndex, "unit", e.target.value),
-                  className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
-                    units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
-                  ]
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "select",
-                {
-                  value: callsign.location,
-                  onChange: (e) => handleUpdateCallsign(actualIndex, "location", e.target.value),
-                  className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
-                    locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
-                  ]
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: callsign.locationCode,
-                  onChange: (e) => handleUpdateCallsign(actualIndex, "locationCode", e.target.value.toUpperCase()),
-                  className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
-                  maxLength: 3
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => handleRemove(actualIndex),
-                  className: "p-1 text-gray-400 hover:text-red-400",
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) })
-                }
-              ) })
-            ] }, index);
-          }) })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 pt-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-2", children: "Add New Callsign:" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-6 gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: newCallsign.name,
-                onChange: (e) => setNewCallsign({ ...newCallsign, name: e.target.value }),
-                placeholder: "Name",
-                className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: newCallsign.code,
-                onChange: (e) => setNewCallsign({ ...newCallsign, code: e.target.value.toUpperCase() }),
-                placeholder: "Code",
-                className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                value: newCallsign.unit,
-                onChange: (e) => setNewCallsign({ ...newCallsign, unit: e.target.value }),
-                className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Unit..." }),
-                  units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
-                ]
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                value: newCallsign.location,
-                onChange: (e) => setNewCallsign({ ...newCallsign, location: e.target.value }),
-                className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Location..." }),
-                  locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
-                ]
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: newCallsign.locationCode,
-                onChange: (e) => setNewCallsign({ ...newCallsign, locationCode: e.target.value.toUpperCase() }),
-                placeholder: "Code",
-                maxLength: 3,
-                className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: handleAdd,
-                className: sectionButtonClass,
-                children: "Add"
-              }
-            )
-          ] })
-        ] })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Configured formation callsigns." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto max-h-96 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-700 sticky top-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Name" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Code" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Unit" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Location" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Loc Code" })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: filteredCallsigns.map((callsign, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 hover:bg-gray-700/30", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-white", children: callsign.name }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-white", children: callsign.code }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-white", children: callsign.unit }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-white", children: callsign.location }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-white", children: callsign.locationCode })
-          ] }, index)) })
-        ] }) })
-      ] })
-    ] })
-  ] });
-};
 const PermissionsManagerWindow = ({
   instructors,
   trainees,
@@ -59858,22 +59594,6 @@ const FileIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "ht
 const UpdateIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z", clipRule: "evenodd" }) });
 const SettingsView = ({
   hideHeader = false,
-  locations,
-  onUpdateLocations,
-  locationAbbreviations = {},
-  onUpdateLocationAbbreviations,
-  serviceDefinitions = [
-    { longName: "Air Force", shortName: "RAAF" },
-    { longName: "Navy", shortName: "RAN" },
-    { longName: "Army", shortName: "ARA" }
-  ],
-  onUpdateServiceDefinitions,
-  units,
-  onUpdateUnits,
-  unitLocations,
-  onUpdateUnitLocations,
-  locationOpAreas = {},
-  onUpdateLocationOpAreas,
   instructorsData,
   traineesData,
   syllabusDetails,
@@ -59916,9 +59636,6 @@ const SettingsView = ({
   tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
   onUpdateTileStatusSettings,
   timezoneOffset,
-  onUpdateTimezoneOffset,
-  formationCallsigns,
-  onUpdateFormationCallsigns,
   courseColors,
   setCourseColors,
   onUpdateTraineeLMPs,
@@ -59948,22 +59665,6 @@ const SettingsView = ({
       [key]: value
     }));
   };
-  const [isEditingLocations, setIsEditingLocations] = reactExports.useState(false);
-  const [tempLocations, setTempLocations] = reactExports.useState([]);
-  const [newLocation, setNewLocation] = reactExports.useState("");
-  const [tempLocationAbbreviations, setTempLocationAbbreviations] = reactExports.useState({});
-  const [isEditingServices, setIsEditingServices] = reactExports.useState(false);
-  const [tempServiceDefs, setTempServiceDefs] = reactExports.useState([]);
-  const [newServiceLong, setNewServiceLong] = reactExports.useState("");
-  const [newServiceShort, setNewServiceShort] = reactExports.useState("");
-  const [isEditingOpAreas, setIsEditingOpAreas] = reactExports.useState(false);
-  const [selectedOpAreaLocation, setSelectedOpAreaLocation] = reactExports.useState("");
-  const [tempOpAreas, setTempOpAreas] = reactExports.useState({});
-  const [newOpArea, setNewOpArea] = reactExports.useState("");
-  const [isEditingUnits, setIsEditingUnits] = reactExports.useState(false);
-  const [tempUnits, setTempUnits] = reactExports.useState([]);
-  const [newUnit, setNewUnit] = reactExports.useState("");
-  const [tempUnitLocations, setTempUnitLocations] = reactExports.useState({});
   const [isEditingSctEvents, setIsEditingSctEvents] = reactExports.useState(false);
   const [showPermissionsManager, setShowPermissionsManager] = reactExports.useState(false);
   const [tempSctEvents, setTempSctEvents] = reactExports.useState([]);
@@ -60110,180 +59811,6 @@ const SettingsView = ({
     });
     onShowSuccess(`${template.label} template reset to built-in default.`);
   };
-  const handleEditOpAreas = () => {
-    setTempOpAreas({ ...locationOpAreas });
-    setSelectedOpAreaLocation(locations[0] || "");
-    setIsEditingOpAreas(true);
-  };
-  const handleSaveOpAreas = () => {
-    if (onUpdateLocationOpAreas) onUpdateLocationOpAreas(tempOpAreas);
-    setIsEditingOpAreas(false);
-    logAudit("Settings - Op Areas", "Update", "Updated operating areas per location");
-  };
-  const handleCancelOpAreas = () => {
-    setIsEditingOpAreas(false);
-    setNewOpArea("");
-  };
-  const handleAddOpArea = () => {
-    const val = newOpArea.trim().toUpperCase();
-    if (!val || !selectedOpAreaLocation) return;
-    const existing = tempOpAreas[selectedOpAreaLocation] || [];
-    if (existing.includes(val)) return;
-    setTempOpAreas({ ...tempOpAreas, [selectedOpAreaLocation]: [...existing, val].sort() });
-    setNewOpArea("");
-  };
-  const handleRemoveOpArea = (loc, area) => {
-    const existing = tempOpAreas[loc] || [];
-    setTempOpAreas({ ...tempOpAreas, [loc]: existing.filter((a) => a !== area) });
-  };
-  const handleEditLocations = () => {
-    setTempLocations([...locations]);
-    setTempLocationAbbreviations({ ...locationAbbreviations });
-    setIsEditingLocations(true);
-  };
-  const handleSaveLocations = () => {
-    const previousLocations = Array.from(new Set(locations.map((location) => location.trim()).filter(Boolean)));
-    const cleanLocations = Array.from(new Set(tempLocations.map((location) => location.trim()).filter(Boolean)));
-    const cleanAbbreviations = Object.fromEntries(
-      cleanLocations.map((location) => [location, (tempLocationAbbreviations[location] || "").trim().toUpperCase()])
-    );
-    const oldLocations = previousLocations.join(", ");
-    const newLocations = cleanLocations.join(", ");
-    onUpdateLocations(cleanLocations);
-    if (onUpdateLocationAbbreviations) onUpdateLocationAbbreviations(cleanAbbreviations);
-    setIsEditingLocations(false);
-    logAudit({
-      page: "Settings - Location",
-      action: "Edit",
-      description: "Updated operating locations",
-      changes: `From: [${oldLocations}] To: [${newLocations}]`
-    });
-    cleanLocations.filter((location) => !previousLocations.includes(location)).forEach((location) => logAudit({
-      page: "Settings - Location",
-      action: "Add",
-      description: `Added location ${location}`,
-      changes: `Location: ${location}; code: ${cleanAbbreviations[location] || "none"}`
-    }));
-    previousLocations.filter((location) => !cleanLocations.includes(location)).forEach((location) => logAudit({
-      page: "Settings - Location",
-      action: "Delete",
-      description: `Removed location ${location}`,
-      changes: `Remaining locations: ${cleanLocations.join(", ") || "none"}`
-    }));
-  };
-  const handleCancelLocations = () => {
-    setNewLocation("");
-    setIsEditingLocations(false);
-  };
-  const handleEditServices = () => {
-    setTempServiceDefs([...serviceDefinitions]);
-    setIsEditingServices(true);
-  };
-  const handleSaveServices = () => {
-    if (onUpdateServiceDefinitions) onUpdateServiceDefinitions(tempServiceDefs);
-    setIsEditingServices(false);
-    logAudit({
-      page: "Settings - Services",
-      action: "update",
-      description: "Updated service definitions",
-      changes: tempServiceDefs.map((s) => `${s.longName} (${s.shortName})`).join(", ")
-    });
-  };
-  const handleCancelServices = () => {
-    setNewServiceLong("");
-    setNewServiceShort("");
-    setIsEditingServices(false);
-  };
-  const handleAddService = () => {
-    const ln = newServiceLong.trim();
-    const sn = newServiceShort.trim().toUpperCase();
-    if (!ln || !sn) return;
-    if (tempServiceDefs.some((s) => s.shortName === sn)) return;
-    setTempServiceDefs([...tempServiceDefs, { longName: ln, shortName: sn }]);
-    setNewServiceLong("");
-    setNewServiceShort("");
-  };
-  const handleRemoveService = (shortName) => {
-    setTempServiceDefs(tempServiceDefs.filter((s) => s.shortName !== shortName));
-  };
-  const handleAddLocation = () => {
-    if (newLocation && !tempLocations.includes(newLocation)) {
-      setTempLocations([...tempLocations, newLocation]);
-      setNewLocation("");
-    }
-  };
-  const handleRemoveLocation = async (locationToRemove) => {
-    if (tempLocations.length <= 1) {
-      await showDarkAlert("At least one location must remain configured.", "Cannot Remove Location", "warning");
-      return;
-    }
-    const password = await showDarkPrompt({
-      title: "Remove Location",
-      message: `Enter your password to remove ${locationToRemove}.`,
-      inputLabel: "Password",
-      inputType: "password",
-      inputPlaceholder: "Enter password",
-      confirmText: "Remove",
-      cancelText: "Cancel",
-      variant: "warning"
-    });
-    if (!password) return;
-    try {
-      const isValid = await verifyCurrentUserPassword(password);
-      if (!isValid) {
-        await showDarkAlert("The password was not accepted. The location was not removed.", "Password Required", "warning");
-        return;
-      }
-    } catch {
-      await showDarkAlert("The app could not verify your password. The location was not removed.", "Password Check Failed", "error");
-      return;
-    }
-    setTempLocations(tempLocations.filter((loc) => loc !== locationToRemove));
-    setTempLocationAbbreviations((prev) => {
-      const next = { ...prev };
-      delete next[locationToRemove];
-      return next;
-    });
-  };
-  const handleEditUnits = () => {
-    setTempUnits([...units]);
-    setTempUnitLocations({ ...unitLocations });
-    setIsEditingUnits(true);
-  };
-  const handleSaveUnits = () => {
-    const oldUnits = units.join(", ");
-    const newUnits = tempUnits.join(", ");
-    onUpdateUnits(tempUnits);
-    const newUnitLocations = {};
-    for (const unit of tempUnits) {
-      newUnitLocations[unit] = tempUnitLocations[unit];
-    }
-    onUpdateUnitLocations(newUnitLocations);
-    setIsEditingUnits(false);
-    logAudit({
-      page: "Settings - Units",
-      action: "update",
-      description: "Updated organizational units and locations",
-      changes: `From: [${oldUnits}] To: [${newUnits}]`
-    });
-  };
-  const handleCancelUnits = () => {
-    setNewUnit("");
-    setIsEditingUnits(false);
-  };
-  const handleAddUnit = () => {
-    if (newUnit && !tempUnits.includes(newUnit)) {
-      setTempUnits([...tempUnits, newUnit]);
-      setTempUnitLocations((prev) => ({ ...prev, [newUnit]: locations[0] || "" }));
-      setNewUnit("");
-    }
-  };
-  const handleRemoveUnit = (unitToRemove) => {
-    setTempUnits(tempUnits.filter((unit) => unit !== unitToRemove));
-    const newTempLocations = { ...tempUnitLocations };
-    delete newTempLocations[unitToRemove];
-    setTempUnitLocations(newTempLocations);
-  };
   const handleEditSctEvents = () => {
     setTempSctEvents([...sctEvents]);
     setIsEditingSctEvents(true);
@@ -60312,12 +59839,6 @@ const SettingsView = ({
   };
   const handleRemoveSctEvent = (eventToRemove) => {
     setTempSctEvents(tempSctEvents.filter((evt) => evt !== eventToRemove));
-  };
-  const handleTempUnitLocationChange = (unit, location) => {
-    setTempUnitLocations((prev) => ({
-      ...prev,
-      [unit]: location
-    }));
   };
   const handleEditLimits = () => {
     setTempLimits(JSON.parse(JSON.stringify(eventLimits)));
@@ -61142,59 +60663,6 @@ const SettingsView = ({
           resourceDisplayNames
         }
       ) }),
-      shouldShowSection("timezone") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6 w-96", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Timezone Settings" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-300 mb-2", children: "Timezone Offset (UTC)" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: timezoneOffset,
-              onChange: (e) => onUpdateTimezoneOffset(parseFloat(e.target.value)),
-              className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-12", children: "UTC-12:00" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-11", children: "UTC-11:00" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-10", children: "UTC-10:00 (Hawaii)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-9", children: "UTC-09:00 (Alaska)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-8", children: "UTC-08:00 (Pacific)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-7", children: "UTC-07:00 (Mountain)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-6", children: "UTC-06:00 (Central)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-5", children: "UTC-05:00 (Eastern)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-4", children: "UTC-04:00" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-3", children: "UTC-03:00" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-2", children: "UTC-02:00" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "-1", children: "UTC-01:00" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "0", children: "UTC+00:00 (GMT/UTC)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "1", children: "UTC+01:00 (CET)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "2", children: "UTC+02:00" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "3", children: "UTC+03:00" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "4", children: "UTC+04:00" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "5", children: "UTC+05:00" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "5.5", children: "UTC+05:30 (India)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "6", children: "UTC+06:00" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "7", children: "UTC+07:00" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "8", children: "UTC+08:00 (Singapore/Perth)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "9", children: "UTC+09:00 (Japan/Korea)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "9.5", children: "UTC+09:30 (Adelaide)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "10", children: "UTC+10:00 (AEST Sydney/Brisbane)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "10.5", children: "UTC+10:30" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "11", children: "UTC+11:00 (AEDT Sydney)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "12", children: "UTC+12:00 (New Zealand)" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "13", children: "UTC+13:00 (NZDT)" })
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-2 text-xs text-gray-400", children: [
-            "Current server time: ",
-            (/* @__PURE__ */ new Date()).toUTCString()
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-gray-400", children: [
-            "Your local time: ",
-            new Date(Date.now() + timezoneOffset * 60 * 60 * 1e3).toUTCString()
-          ] })
-        ] }) })
-      ] }),
       shouldShowSection("scoring-matrix") && /* @__PURE__ */ jsxRuntimeExports.jsx(
         ScoringMatrixInline,
         {
@@ -61205,235 +60673,6 @@ const SettingsView = ({
           onElementAdded: onScoringMatrixElementAdded
         }
       ),
-      shouldShowSection("location") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Location" }),
-          isEditingLocations ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveLocations, className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelLocations, className: "px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold", children: "Cancel" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: handleEditLocations,
-              disabled: !canEditSettings,
-              className: `px-3 py-1 rounded-md text-xs font-semibold ${canEditSettings ? "bg-gray-600 text-white hover:bg-gray-700 cursor-pointer" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
-              children: "Edit"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: isEditingLocations ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage available operating locations and their abbreviation codes." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 max-h-48 overflow-y-auto", children: tempLocations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center gap-2 p-2 bg-gray-700/50 rounded", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white flex-1 text-sm", children: loc }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                maxLength: 5,
-                value: tempLocationAbbreviations[loc] || "",
-                onChange: (e) => setTempLocationAbbreviations((prev) => ({ ...prev, [loc]: e.target.value.toUpperCase() })),
-                placeholder: "Code",
-                title: "Short code (e.g. ESL)",
-                className: "w-16 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-yellow-300 text-xs font-mono font-bold uppercase text-center focus:outline-none focus:ring-1 focus:ring-sky-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => handleRemoveLocation(loc),
-                title: "Remove location",
-                className: "px-2 py-1 text-xs font-semibold text-red-300 hover:text-red-200 flex-shrink-0",
-                children: "Remove"
-              }
-            )
-          ] }, loc)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: newLocation, onChange: (e) => setNewLocation(e.target.value), placeholder: "New location name", className: "flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddLocation, className: "px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "Add" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Enter a short code (e.g. ESL) for each location so the app can match either name or code when filtering by locality." })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Configured operating locations." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 max-h-48 overflow-y-auto", children: locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-2 bg-gray-700/50 rounded text-white", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm", children: loc }),
-            locationAbbreviations[loc] && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono font-bold text-yellow-400 bg-gray-600 px-2 py-0.5 rounded", children: locationAbbreviations[loc] })
-          ] }, loc)) })
-        ] }) })
-      ] }),
-      shouldShowSection("location") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Services" }),
-          isEditingServices ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveServices, className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelServices, className: "px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold", children: "Cancel" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: handleEditServices,
-              disabled: !canEditSettings,
-              className: `px-3 py-1 rounded-md text-xs font-semibold ${canEditSettings ? "bg-gray-600 text-white hover:bg-gray-700 cursor-pointer" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
-              children: "Edit"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: isEditingServices ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Define service branches with long name and short code. Both are recognised when filtering by service." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 max-h-40 overflow-y-auto", children: tempServiceDefs.map((svc) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center gap-2 p-2 bg-gray-700/50 rounded", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono font-bold text-yellow-300 bg-gray-600 px-2 py-0.5 rounded w-14 text-center", children: svc.shortName }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm flex-1", children: svc.longName }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveService(svc.shortName), className: "p-1 text-gray-400 hover:text-red-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) })
-          ] }, svc.shortName)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: newServiceShort,
-                onChange: (e) => setNewServiceShort(e.target.value.toUpperCase()),
-                placeholder: "Code (e.g. RAAF)",
-                maxLength: 6,
-                className: "w-28 bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-yellow-300 text-sm font-mono uppercase focus:outline-none focus:ring-sky-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: newServiceLong,
-                onChange: (e) => setNewServiceLong(e.target.value),
-                placeholder: "Long name (e.g. Air Force)",
-                className: "flex-grow bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddService, className: "px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "Add" })
-          ] })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Configured service branches." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 max-h-40 overflow-y-auto", children: serviceDefinitions.map((svc) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center gap-3 p-2 bg-gray-700/50 rounded", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono font-bold text-yellow-400 bg-gray-600 px-2 py-0.5 rounded w-14 text-center", children: svc.shortName }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: svc.longName })
-          ] }, svc.shortName)) })
-        ] }) })
-      ] }),
-      shouldShowSection("location") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Op Areas" }),
-          isEditingOpAreas ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveOpAreas, className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelOpAreas, className: "px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold", children: "Cancel" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: handleEditOpAreas,
-              disabled: !canEditSettings,
-              className: `px-3 py-1 rounded-md text-xs font-semibold ${canEditSettings ? "bg-gray-600 text-white hover:bg-gray-700 cursor-pointer" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
-              children: "Edit"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-3", children: isEditingOpAreas ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Set training areas available for each location." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-1 flex-wrap", children: locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => setSelectedOpAreaLocation(loc),
-              className: `px-2 py-1 rounded text-xs font-semibold transition-colors ${selectedOpAreaLocation === loc ? "bg-sky-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
-              children: loc
-            },
-            loc
-          )) }),
-          selectedOpAreaLocation && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 font-semibold uppercase tracking-wider", children: selectedOpAreaLocation }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-1 max-h-32 overflow-y-auto", children: [
-              (tempOpAreas[selectedOpAreaLocation] || []).map((area) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1 px-2 py-1 bg-gray-700 rounded text-white text-xs", children: [
-                area,
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveOpArea(selectedOpAreaLocation, area), className: "text-gray-400 hover:text-red-400 ml-1", children: "×" })
-              ] }, area)),
-              (tempOpAreas[selectedOpAreaLocation] || []).length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-xs italic", children: "No areas configured" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: newOpArea,
-                  onChange: (e) => setNewOpArea(e.target.value.toUpperCase()),
-                  onKeyDown: (e) => e.key === "Enter" && handleAddOpArea(),
-                  maxLength: 4,
-                  placeholder: "Area (e.g. A)",
-                  className: "flex-grow bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500 uppercase"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddOpArea, className: "px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "Add" })
-            ] })
-          ] })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Configured operating areas per location." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 max-h-48 overflow-y-auto", children: locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-2 bg-gray-700/50 rounded", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 font-semibold uppercase mb-1", children: loc }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-1", children: [
-              (locationOpAreas[loc] || []).map((area) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-0.5 bg-gray-600 rounded text-white text-xs", children: area }, area)),
-              (locationOpAreas[loc] || []).length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-xs italic", children: "None" })
-            ] })
-          ] }, loc)) })
-        ] }) })
-      ] }),
-      shouldShowSection("location") && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        FormationCallsignsSection,
-        {
-          callsigns: formationCallsigns,
-          onUpdateCallsigns: onUpdateFormationCallsigns,
-          units,
-          locations,
-          canEditSettings,
-          onAuditLog: logAudit
-        }
-      ),
-      shouldShowSection("units") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Units" }),
-          isEditingUnits ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveUnits, className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelUnits, className: "px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold", children: "Cancel" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: handleEditUnits,
-              disabled: !canEditSettings,
-              className: `px-3 py-1 rounded-md text-xs font-semibold ${canEditSettings ? "bg-gray-600 text-white hover:bg-gray-700 cursor-pointer" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
-              children: "Edit"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: isEditingUnits ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage units and their primary locations." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 max-h-40 overflow-y-auto", children: tempUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "p-2 bg-gray-700/50 rounded", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: unit }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveUnit(unit), className: "p-1 text-gray-400 hover:text-red-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "select",
-              {
-                value: tempUnitLocations[unit] || "",
-                onChange: (e) => handleTempUnitLocationChange(unit, e.target.value),
-                className: "mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-xs",
-                children: locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
-              }
-            )
-          ] }, unit)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: newUnit, onChange: (e) => setNewUnit(e.target.value), placeholder: "New unit name", className: "flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddUnit, className: "px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "Add" })
-          ] })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Configured units and their locations." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 max-h-40 overflow-y-auto", children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "p-2 bg-gray-700/50 rounded text-white flex justify-between", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: unit }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: unitLocations[unit] })
-          ] }, unit)) })
-        ] }) })
-      ] }),
       shouldShowSection("duty-turnaround") && /* @__PURE__ */ jsxRuntimeExports.jsx(
         DutyTurnaroundSection,
         {
@@ -63903,6 +63142,270 @@ const AppearanceSettings = ({
         "Currently using ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-gray-200", children: theme === "dark" ? "Dark Mode" : "Light Mode" }),
         ". Your preference is saved in your browser."
+      ] })
+    ] })
+  ] });
+};
+const FormationCallsignsSection = ({
+  callsigns,
+  onUpdateCallsigns,
+  units,
+  locations,
+  canEditSettings,
+  isSettingsUnlocked = canEditSettings,
+  onRequestUnlock,
+  onAuditLog
+}) => {
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  const [tempCallsigns, setTempCallsigns] = reactExports.useState([]);
+  const [selectedUnit, setSelectedUnit] = reactExports.useState("ALL");
+  const [newCallsign, setNewCallsign] = reactExports.useState({
+    name: "",
+    code: "",
+    unit: "",
+    location: "",
+    locationCode: ""
+  });
+  const handleEdit = async () => {
+    if (!canEditSettings) return;
+    if (!isSettingsUnlocked) {
+      const unlocked = await onRequestUnlock?.();
+      if (!unlocked) return;
+    }
+    setTempCallsigns([...callsigns]);
+    setIsEditing(true);
+  };
+  const handleSave = () => {
+    const oldCallsigns = callsigns.map((c) => `${c.name} (${c.code})`).join(", ");
+    const newCallsignsStr = tempCallsigns.map((c) => `${c.name} (${c.code})`).join(", ");
+    onUpdateCallsigns(tempCallsigns);
+    setIsEditing(false);
+    if (onAuditLog) {
+      onAuditLog({
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        page: "Settings - Location - Formation Callsigns",
+        action: "Updated Formation Callsigns",
+        changes: `From: [${oldCallsigns}] To: [${newCallsignsStr}]`
+      });
+    }
+  };
+  const handleCancel = () => {
+    setNewCallsign({ name: "", code: "", unit: "", location: "", locationCode: "" });
+    setIsEditing(false);
+  };
+  const handleAdd = () => {
+    if (newCallsign.name && newCallsign.code && newCallsign.unit && newCallsign.location && newCallsign.locationCode) {
+      setTempCallsigns([...tempCallsigns, { ...newCallsign }]);
+      setNewCallsign({ name: "", code: "", unit: "", location: "", locationCode: "" });
+    }
+  };
+  const handleRemove = (index) => {
+    setTempCallsigns(tempCallsigns.filter((_, i) => i !== index));
+  };
+  const handleUpdateCallsign = (index, field, value) => {
+    const updated = [...tempCallsigns];
+    updated[index] = { ...updated[index], [field]: value };
+    setTempCallsigns(updated);
+  };
+  const filteredCallsigns = isEditing ? selectedUnit === "ALL" ? tempCallsigns : tempCallsigns.filter((c) => c.unit === selectedUnit) : selectedUnit === "ALL" ? callsigns : callsigns.filter((c) => c.unit === selectedUnit);
+  const sectionButtonClass = "min-w-[56px] rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50";
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[800px] h-fit", onKeyDownCapture: stopEditableKeyPropagation, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Formation Callsigns" }),
+      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-px", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: sectionButtonClass, children: "Save" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: sectionButtonClass, children: "Cancel" })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: handleEdit,
+          disabled: !canEditSettings,
+          className: sectionButtonClass,
+          children: "Edit"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm text-gray-400", children: "Filter by Unit:" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "select",
+          {
+            value: selectedUnit,
+            onChange: (e) => setSelectedUnit(e.target.value),
+            className: "bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ALL", children: "ALL" }),
+              units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
+            ]
+          }
+        )
+      ] }),
+      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage formation callsigns for units." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto max-h-96 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-700 sticky top-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Name" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Code" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Unit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Location" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Loc Code" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-center text-gray-300 font-semibold", children: "Action" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: filteredCallsigns.map((callsign, index) => {
+            const actualIndex = tempCallsigns.findIndex(
+              (c) => c.name === callsign.name && c.code === callsign.code && c.unit === callsign.unit
+            );
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 hover:bg-gray-700/30", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: callsign.name,
+                  onChange: (e) => handleUpdateCallsign(actualIndex, "name", e.target.value),
+                  className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: callsign.code,
+                  onChange: (e) => handleUpdateCallsign(actualIndex, "code", e.target.value.toUpperCase()),
+                  className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: callsign.unit,
+                  onChange: (e) => handleUpdateCallsign(actualIndex, "unit", e.target.value),
+                  className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
+                    units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
+                  ]
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: callsign.location,
+                  onChange: (e) => handleUpdateCallsign(actualIndex, "location", e.target.value),
+                  className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
+                    locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
+                  ]
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: callsign.locationCode,
+                  onChange: (e) => handleUpdateCallsign(actualIndex, "locationCode", e.target.value.toUpperCase()),
+                  className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
+                  maxLength: 3
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => handleRemove(actualIndex),
+                  className: "p-1 text-gray-400 hover:text-red-400",
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) })
+                }
+              ) })
+            ] }, index);
+          }) })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 pt-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-2", children: "Add New Callsign:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-6 gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                value: newCallsign.name,
+                onChange: (e) => setNewCallsign({ ...newCallsign, name: e.target.value }),
+                placeholder: "Name",
+                className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                value: newCallsign.code,
+                onChange: (e) => setNewCallsign({ ...newCallsign, code: e.target.value.toUpperCase() }),
+                placeholder: "Code",
+                className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: newCallsign.unit,
+                onChange: (e) => setNewCallsign({ ...newCallsign, unit: e.target.value }),
+                className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Unit..." }),
+                  units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: newCallsign.location,
+                onChange: (e) => setNewCallsign({ ...newCallsign, location: e.target.value }),
+                className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Location..." }),
+                  locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                value: newCallsign.locationCode,
+                onChange: (e) => setNewCallsign({ ...newCallsign, locationCode: e.target.value.toUpperCase() }),
+                placeholder: "Code",
+                maxLength: 3,
+                className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: handleAdd,
+                className: sectionButtonClass,
+                children: "Add"
+              }
+            )
+          ] })
+        ] })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Configured formation callsigns." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto max-h-96 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-700 sticky top-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Name" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Code" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Unit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Location" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-gray-300 font-semibold", children: "Loc Code" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: filteredCallsigns.map((callsign, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 hover:bg-gray-700/30", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-white", children: callsign.name }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-white", children: callsign.code }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-white", children: callsign.unit }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-white", children: callsign.location }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-white", children: callsign.locationCode })
+          ] }, index)) })
+        ] }) })
       ] })
     ] })
   ] });
@@ -72160,9 +71663,6 @@ const sectionLabels = {
   "trainee-database": "Trainee Database",
   "validation": "Cancellation Codes",
   "historical-data": "Historical Data",
-  "timezone": "Timezone",
-  "location": "Location",
-  "units": "Units",
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
   "standard-missions": "Standard Missions",
@@ -72263,16 +71763,6 @@ const sectionIcons = {
     /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: "12 6 12 12 16 14" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M3.05 11a9 9 0 011.4-3.7" })
   ] }),
-  "timezone": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "12", cy: "12", r: "10" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" })
-  ] }),
-  "location": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "12", cy: "10", r: "3" })
-  ] }),
-  "units": /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" }) }),
   "organisation": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: "2", y: "3", width: "20", height: "14", rx: "2", ry: "2" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "8", y1: "21", x2: "16", y2: "21" }),
@@ -72320,9 +71810,6 @@ const sectionDescriptions = {
   "trainee-database": "Trainee records and details",
   "validation": "Master cancellation code table used by cancellation records and analytics",
   "historical-data": "Seed & refresh historical training records",
-  "timezone": "Configure timezone settings",
-  "location": "Manage base locations",
-  "units": "Configure unit settings",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
   "standard-missions": "Fixed Crew mission profiles for regular unit flights",
@@ -72368,9 +71855,6 @@ const sectionColors = {
   "validation": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   "historical-data": "from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400",
   // SYSTEM SETTINGS - cyan icons
-  "timezone": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
-  "location": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
-  "units": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "organisation": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "crew-composition": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "standard-missions": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",

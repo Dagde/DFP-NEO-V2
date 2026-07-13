@@ -185,9 +185,6 @@ type SettingsSection =
     | 'trainee-database'
     | 'validation'
     | 'historical-data'
-    | 'timezone'
-    | 'location'
-    | 'units'
     | 'organisation'
     | 'crew-composition'
     | 'standard-missions'
@@ -254,9 +251,6 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'trainee-database': 'Trainee Database',
     'validation': 'Cancellation Codes',
     'historical-data': 'Historical Data',
-    'timezone': 'Timezone',
-    'location': 'Location',
-    'units': 'Units',
     'organisation': 'Resource Sharing',
     'crew-composition': 'Crew Composition',
     'standard-missions': 'Standard Missions',
@@ -297,9 +291,6 @@ const allSections: SettingsSection[] = [
     'trainee-database',
     'validation',
     'historical-data',
-    'timezone',
-    'location',
-    'units',
     'organisation',
     'platform-configuration',
     'appearance',
@@ -424,24 +415,6 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
       <path d="M3.05 11a9 9 0 011.4-3.7"/>
     </svg>
   ),
-  'timezone': (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-      <circle cx="12" cy="12" r="10"/>
-      <line x1="2" y1="12" x2="22" y2="12"/>
-      <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
-    </svg>
-  ),
-  'location': (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-      <circle cx="12" cy="10" r="3"/>
-    </svg>
-  ),
-  'units': (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-    </svg>
-  ),
   'organisation': (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
@@ -505,9 +478,6 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'trainee-database': 'Trainee records and details',
   'validation': 'Master cancellation code table used by cancellation records and analytics',
   'historical-data': 'Seed & refresh historical training records',
-  'timezone': 'Configure timezone settings',
-  'location': 'Manage base locations',
-  'units': 'Configure unit settings',
   'organisation': 'Fleet sharing and multi-unit configuration',
   'crew-composition': 'Aircraft-specific crew roles and composition profiles',
   'standard-missions': 'Fixed Crew mission profiles for regular unit flights',
@@ -537,7 +507,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
 // ACCESS & SECURITY: permissions, user-list (violet)
 // DATA MANAGEMENT: data-loaders, staff-database, trainee-database (emerald)
 // HISTORICAL & ANALYSIS: validation (rose)
-// SYSTEM SETTINGS: timezone, location, units, organisation (cyan)
+// SYSTEM SETTINGS: organisation and platform configuration (cyan)
 const sectionColors: Record<SettingsMenuSection, string> = {
   // SYSTEM CONFIGURATION - sky blue icons
   'scoring-matrix':    'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
@@ -561,9 +531,6 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'validation':        'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   'historical-data':   'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
   // SYSTEM SETTINGS - cyan icons
-  'timezone':          'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
-  'location':          'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
-  'units':             'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'organisation':      'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'crew-composition':  'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'standard-missions': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',

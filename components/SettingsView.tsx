@@ -14,10 +14,8 @@ import UpdateSummaryFlyout from './UpdateSummaryFlyout';
 import ScoringMatrixFlyout from './ScoringMatrixFlyout';
 import CourseSelectionFlyout from './CourseSelectionFlyout';
 import { CourseSelectionDialog } from './CourseSelectionDialog';
-import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
-import { Instructor, Trainee, SyllabusItemDetail, InstructorRank, InstructorCategory, SeatConfig, TraineeRank, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode, CrewRequirement } from '../types';
+import { Instructor, Trainee, SyllabusItemDetail, InstructorRank, InstructorCategory, SeatConfig, TraineeRank, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CancellationRecord, CancellationCode, CrewRequirement } from '../types';
 import ACHistoryPage from './ACHistoryPage';
-import FormationCallsignsSection from './FormationCallsignsSection';
 import PermissionsManagerWindow from './PermissionsManagerWindow';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
@@ -37,7 +35,6 @@ import {
     normaliseDispatchStaggerSettings,
     type DispatchStaggerSettings,
 } from '../utils/dispatchStagger';
-import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 
 
@@ -47,19 +44,7 @@ const TEMPLATE_OVERRIDE_FOLDER_ID = 'template_overrides';
 
 interface SettingsViewProps {
     hideHeader?: boolean;
-    activeSection?: 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions' | 'validation' | 'timezone' | 'trainee-database' | 'user-list' | 'staff-database' | 'organisation' | 'appearance' | 'emergency';
-    locations: string[];
-    onUpdateLocations: (locations: string[]) => void;
-    locationAbbreviations?: Record<string, string>;
-    onUpdateLocationAbbreviations?: (abbrevs: Record<string, string>) => void;
-    serviceDefinitions?: Array<{ longName: string; shortName: string }>;
-    onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
-    units: string[];
-    onUpdateUnits: (units: string[]) => void;
-    unitLocations: Record<string, string>;
-    onUpdateUnitLocations: (locations: Record<string, string>) => void;
-    locationOpAreas?: Record<string, string[]>;
-    onUpdateLocationOpAreas?: (areas: Record<string, string[]>) => void;
+    activeSection?: 'scoring-matrix' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions' | 'validation' | 'trainee-database' | 'user-list' | 'staff-database' | 'organisation' | 'appearance' | 'emergency';
     instructorsData: Instructor[];
     traineesData: Trainee[];
     syllabusDetails: SyllabusItemDetail[];
@@ -81,7 +66,6 @@ interface SettingsViewProps {
     preferredDutyPeriod: number;
     onUpdatePreferredDutyPeriod: (value: number) => void;
     timezoneOffset: number;
-    onUpdateTimezoneOffset: (offset: number) => void;
     maxCrewDutyPeriod: number;
     onUpdateMaxCrewDutyPeriod: (value: number) => void;
     
@@ -103,8 +87,6 @@ interface SettingsViewProps {
     onUpdateDispatchStaggerSettings?: (settings: DispatchStaggerSettings) => void;
     tileStatusSettings?: TileStatusSettings;
     onUpdateTileStatusSettings?: (settings: TileStatusSettings) => void;
-    formationCallsigns: FormationCallsign[];
-    onUpdateFormationCallsigns: (callsigns: FormationCallsign[]) => void;
     courseColors: { [key: string]: string };
     setCourseColors: (colors: { [key: string]: string }) => void;
     onUpdateTraineeLMPs: (lmpMap: Map<string, SyllabusItemDetail[]>) => void;
@@ -577,16 +559,6 @@ const UpdateIcon = () => (
 // FIX: Export the component to make it available for import.
 export const SettingsView: React.FC<SettingsViewProps> = ({ 
     hideHeader = false,
-    locations, onUpdateLocations,
-    locationAbbreviations = {}, onUpdateLocationAbbreviations,
-    serviceDefinitions = [
-        { longName: 'Air Force', shortName: 'RAAF' },
-        { longName: 'Navy',      shortName: 'RAN'  },
-        { longName: 'Army',      shortName: 'ARA'  },
-    ], onUpdateServiceDefinitions,
-    units, onUpdateUnits, 
-    unitLocations, onUpdateUnitLocations,
-    locationOpAreas = {}, onUpdateLocationOpAreas,
     instructorsData, traineesData, syllabusDetails,
     onBulkUpdateInstructors, onReplaceInstructors,
     onBulkUpdateTrainees, onReplaceTrainees,
@@ -622,10 +594,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
     onUpdateTileStatusSettings,
     timezoneOffset,
-    onUpdateTimezoneOffset,
-    
-    formationCallsigns,
-    onUpdateFormationCallsigns,
     courseColors,
     setCourseColors,
     onUpdateTraineeLMPs,
@@ -658,30 +626,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             [key]: value,
         }));
     };
-    
-    // Location State
-    const [isEditingLocations, setIsEditingLocations] = useState(false);
-    const [tempLocations, setTempLocations] = useState<string[]>([]);
-    const [newLocation, setNewLocation] = useState('');
-    const [tempLocationAbbreviations, setTempLocationAbbreviations] = useState<Record<string, string>>({});
-
-    // Services state
-    const [isEditingServices, setIsEditingServices] = useState(false);
-    const [tempServiceDefs, setTempServiceDefs] = useState<Array<{ longName: string; shortName: string }>>([]);
-    const [newServiceLong, setNewServiceLong] = useState('');
-    const [newServiceShort, setNewServiceShort] = useState('');
-
-    // Op Areas State
-    const [isEditingOpAreas, setIsEditingOpAreas] = useState(false);
-    const [selectedOpAreaLocation, setSelectedOpAreaLocation] = useState<string>('');
-    const [tempOpAreas, setTempOpAreas] = useState<Record<string, string[]>>({});
-    const [newOpArea, setNewOpArea] = useState('');
-
-    // Unit State
-    const [isEditingUnits, setIsEditingUnits] = useState(false);
-    const [tempUnits, setTempUnits] = useState<string[]>([]);
-    const [newUnit, setNewUnit] = useState('');
-    const [tempUnitLocations, setTempUnitLocations] = useState<Record<string, string>>({});
     
     // SCT Events State
     const [isEditingSctEvents, setIsEditingSctEvents] = useState(false);
@@ -882,209 +826,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         onShowSuccess(`${template.label} template reset to built-in default.`);
     };
 
-    // Op Areas Handlers
-    const handleEditOpAreas = () => {
-        setTempOpAreas({ ...locationOpAreas });
-        setSelectedOpAreaLocation(locations[0] || '');
-        setIsEditingOpAreas(true);
-    };
-    const handleSaveOpAreas = () => {
-        if (onUpdateLocationOpAreas) onUpdateLocationOpAreas(tempOpAreas);
-        setIsEditingOpAreas(false);
-        logAudit('Settings - Op Areas', 'Update', 'Updated operating areas per location');
-    };
-    const handleCancelOpAreas = () => {
-        setIsEditingOpAreas(false);
-        setNewOpArea('');
-    };
-    const handleAddOpArea = () => {
-        const val = newOpArea.trim().toUpperCase();
-        if (!val || !selectedOpAreaLocation) return;
-        const existing = tempOpAreas[selectedOpAreaLocation] || [];
-        if (existing.includes(val)) return;
-        setTempOpAreas({ ...tempOpAreas, [selectedOpAreaLocation]: [...existing, val].sort() });
-        setNewOpArea('');
-    };
-    const handleRemoveOpArea = (loc: string, area: string) => {
-        const existing = tempOpAreas[loc] || [];
-        setTempOpAreas({ ...tempOpAreas, [loc]: existing.filter(a => a !== area) });
-    };
-
-    // Location Handlers
-    const handleEditLocations = () => {
-        setTempLocations([...locations]);
-        setTempLocationAbbreviations({ ...locationAbbreviations });
-        setIsEditingLocations(true);
-    };
-
-    const handleSaveLocations = () => {
-        const previousLocations = Array.from(new Set(locations.map(location => location.trim()).filter(Boolean)));
-        const cleanLocations = Array.from(new Set(tempLocations.map(location => location.trim()).filter(Boolean)));
-        const cleanAbbreviations = Object.fromEntries(
-            cleanLocations.map(location => [location, (tempLocationAbbreviations[location] || '').trim().toUpperCase()])
-        );
-        const oldLocations = previousLocations.join(', ');
-        const newLocations = cleanLocations.join(', ');
-        onUpdateLocations(cleanLocations);
-        if (onUpdateLocationAbbreviations) onUpdateLocationAbbreviations(cleanAbbreviations);
-        setIsEditingLocations(false);
-        logAudit({
-            page: 'Settings - Location',
-            action: 'Edit',
-            description: 'Updated operating locations',
-            changes: `From: [${oldLocations}] To: [${newLocations}]`
-        });
-        cleanLocations
-            .filter(location => !previousLocations.includes(location))
-            .forEach(location => logAudit({
-                page: 'Settings - Location',
-                action: 'Add',
-                description: `Added location ${location}`,
-                changes: `Location: ${location}; code: ${cleanAbbreviations[location] || 'none'}`,
-            }));
-        previousLocations
-            .filter(location => !cleanLocations.includes(location))
-            .forEach(location => logAudit({
-                page: 'Settings - Location',
-                action: 'Delete',
-                description: `Removed location ${location}`,
-                changes: `Remaining locations: ${cleanLocations.join(', ') || 'none'}`,
-            }));
-    };
-
-    const handleCancelLocations = () => {
-        setNewLocation('');
-        setIsEditingLocations(false);
-    };
-
-    // Services Handlers
-    const handleEditServices = () => {
-        setTempServiceDefs([...serviceDefinitions]);
-        setIsEditingServices(true);
-    };
-
-    const handleSaveServices = () => {
-        if (onUpdateServiceDefinitions) onUpdateServiceDefinitions(tempServiceDefs);
-        setIsEditingServices(false);
-        logAudit({
-            page: 'Settings - Services',
-            action: 'update',
-            description: 'Updated service definitions',
-            changes: tempServiceDefs.map(s => `${s.longName} (${s.shortName})`).join(', ')
-        });
-    };
-
-    const handleCancelServices = () => {
-        setNewServiceLong('');
-        setNewServiceShort('');
-        setIsEditingServices(false);
-    };
-
-    const handleAddService = () => {
-        const ln = newServiceLong.trim();
-        const sn = newServiceShort.trim().toUpperCase();
-        if (!ln || !sn) return;
-        if (tempServiceDefs.some(s => s.shortName === sn)) return; // no duplicates
-        setTempServiceDefs([...tempServiceDefs, { longName: ln, shortName: sn }]);
-        setNewServiceLong('');
-        setNewServiceShort('');
-    };
-
-    const handleRemoveService = (shortName: string) => {
-        setTempServiceDefs(tempServiceDefs.filter(s => s.shortName !== shortName));
-    };
-    
-    const handleAddLocation = () => {
-        if (newLocation && !tempLocations.includes(newLocation)) {
-            setTempLocations([...tempLocations, newLocation]);
-            setNewLocation('');
-        }
-    };
-
-    const handleRemoveLocation = async (locationToRemove: string) => {
-        if (tempLocations.length <= 1) {
-            await showDarkAlert('At least one location must remain configured.', 'Cannot Remove Location', 'warning');
-            return;
-        }
-
-        const password = await showDarkPrompt({
-            title: 'Remove Location',
-            message: `Enter your password to remove ${locationToRemove}.`,
-            inputLabel: 'Password',
-            inputType: 'password',
-            inputPlaceholder: 'Enter password',
-            confirmText: 'Remove',
-            cancelText: 'Cancel',
-            variant: 'warning',
-        });
-        if (!password) return;
-
-        try {
-            const isValid = await verifyCurrentUserPassword(password);
-            if (!isValid) {
-                await showDarkAlert('The password was not accepted. The location was not removed.', 'Password Required', 'warning');
-                return;
-            }
-        } catch {
-            await showDarkAlert('The app could not verify your password. The location was not removed.', 'Password Check Failed', 'error');
-            return;
-        }
-
-        setTempLocations(tempLocations.filter(loc => loc !== locationToRemove));
-        setTempLocationAbbreviations(prev => {
-            const next = { ...prev };
-            delete next[locationToRemove];
-            return next;
-        });
-    };
-
-    // Unit Handlers
-    const handleEditUnits = () => {
-        setTempUnits([...units]);
-        setTempUnitLocations({...unitLocations});
-        setIsEditingUnits(true);
-    };
-    
-    const handleSaveUnits = () => {
-        const oldUnits = units.join(', ');
-        const newUnits = tempUnits.join(', ');
-        onUpdateUnits(tempUnits);
-        
-        const newUnitLocations: Record<string, string> = {};
-        for(const unit of tempUnits) {
-            newUnitLocations[unit] = tempUnitLocations[unit];
-        }
-        onUpdateUnitLocations(newUnitLocations);
-
-        setIsEditingUnits(false);
-        logAudit({
-            page: 'Settings - Units',
-            action: 'update',
-            description: 'Updated organizational units and locations',
-            changes: `From: [${oldUnits}] To: [${newUnits}]`
-        });
-    };
-
-    const handleCancelUnits = () => {
-        setNewUnit('');
-        setIsEditingUnits(false);
-    };
-
-    const handleAddUnit = () => {
-        if (newUnit && !tempUnits.includes(newUnit)) {
-            setTempUnits([...tempUnits, newUnit]);
-            setTempUnitLocations(prev => ({...prev, [newUnit]: locations[0] || ''}));
-            setNewUnit('');
-        }
-    };
-
-    const handleRemoveUnit = (unitToRemove: string) => {
-        setTempUnits(tempUnits.filter(unit => unit !== unitToRemove));
-        const newTempLocations = {...tempUnitLocations};
-        delete newTempLocations[unitToRemove];
-        setTempUnitLocations(newTempLocations);
-    };
-
     // SCT Events Handlers
     const handleEditSctEvents = () => {
         setTempSctEvents([...sctEvents]);
@@ -1118,13 +859,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     const handleRemoveSctEvent = (eventToRemove: string) => {
         setTempSctEvents(tempSctEvents.filter(evt => evt !== eventToRemove));
-    };
-
-    const handleTempUnitLocationChange = (unit: string, location: string) => {
-        setTempUnitLocations(prev => ({
-            ...prev,
-            [unit]: location
-        }));
     };
 
     // Event Limits Handlers
@@ -2141,63 +1875,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    />
                 </div>
                 )}
-                {/* Timezone Settings Window */}
-                {shouldShowSection('timezone') && (
-                <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6 w-96">
-                    <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                        <h2 className="text-lg font-semibold text-gray-200">Timezone Settings</h2>
-                    </div>
-                    <div className="p-4 space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Timezone Offset (UTC)
-                            </label>
-                            <select 
-                                value={timezoneOffset} 
-                                onChange={(e) => onUpdateTimezoneOffset(parseFloat(e.target.value))}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                            >
-                                <option value="-12">UTC-12:00</option>
-                                <option value="-11">UTC-11:00</option>
-                                <option value="-10">UTC-10:00 (Hawaii)</option>
-                                <option value="-9">UTC-09:00 (Alaska)</option>
-                                <option value="-8">UTC-08:00 (Pacific)</option>
-                                <option value="-7">UTC-07:00 (Mountain)</option>
-                                <option value="-6">UTC-06:00 (Central)</option>
-                                <option value="-5">UTC-05:00 (Eastern)</option>
-                                <option value="-4">UTC-04:00</option>
-                                <option value="-3">UTC-03:00</option>
-                                <option value="-2">UTC-02:00</option>
-                                <option value="-1">UTC-01:00</option>
-                                <option value="0">UTC+00:00 (GMT/UTC)</option>
-                                <option value="1">UTC+01:00 (CET)</option>
-                                <option value="2">UTC+02:00</option>
-                                <option value="3">UTC+03:00</option>
-                                <option value="4">UTC+04:00</option>
-                                <option value="5">UTC+05:00</option>
-                                <option value="5.5">UTC+05:30 (India)</option>
-                                <option value="6">UTC+06:00</option>
-                                <option value="7">UTC+07:00</option>
-                                <option value="8">UTC+08:00 (Singapore/Perth)</option>
-                                <option value="9">UTC+09:00 (Japan/Korea)</option>
-                                <option value="9.5">UTC+09:30 (Adelaide)</option>
-                                <option value="10">UTC+10:00 (AEST Sydney/Brisbane)</option>
-                                <option value="10.5">UTC+10:30</option>
-                                <option value="11">UTC+11:00 (AEDT Sydney)</option>
-                                <option value="12">UTC+12:00 (New Zealand)</option>
-                                <option value="13">UTC+13:00 (NZDT)</option>
-                            </select>
-                            <p className="mt-2 text-xs text-gray-400">
-                                Current server time: {new Date().toUTCString()}
-                            </p>
-                            <p className="mt-1 text-xs text-gray-400">
-                                Your local time: {new Date(Date.now() + timezoneOffset * 60 * 60 * 1000).toUTCString()}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                )}
-
                 {/* Scoring Matrix - Inline Content */}
                 {shouldShowSection('scoring-matrix') && (
                     <ScoringMatrixInline
@@ -2209,317 +1886,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     />
                 )}
 
-                    {/* Location Window */}
-                   {shouldShowSection('location') && (
-                    <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit">
-                        <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                            <h2 className="text-lg font-semibold text-gray-200">Location</h2>
-                            {isEditingLocations ? (
-                                <div className="flex space-x-2">
-                                    <button onClick={handleSaveLocations} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">Save</button>
-                                    <button onClick={handleCancelLocations} className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold">Cancel</button>
-                                </div>
-                            ) : (
-                                <button 
-                                   onClick={handleEditLocations} 
-                                   disabled={!canEditSettings}
-                                   className={`px-3 py-1 rounded-md text-xs font-semibold ${
-                                       canEditSettings 
-                                           ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer' 
-                                           : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                                   }`}
-                               >
-                                   Edit
-                               </button>
-                            )}
-                        </div>
-                        <div className="p-4 space-y-4">
-                            {isEditingLocations ? (
-                                <>
-                                    <p className="text-sm text-gray-400">Manage available operating locations and their abbreviation codes.</p>
-                                    <ul className="space-y-2 max-h-48 overflow-y-auto">
-                                        {tempLocations.map(loc => (
-                                            <li key={loc} className="flex items-center gap-2 p-2 bg-gray-700/50 rounded">
-                                                <span className="text-white flex-1 text-sm">{loc}</span>
-                                                <input
-                                                    type="text"
-                                                    maxLength={5}
-                                                    value={tempLocationAbbreviations[loc] || ''}
-                                                    onChange={e => setTempLocationAbbreviations(prev => ({ ...prev, [loc]: e.target.value.toUpperCase() }))}
-                                                    placeholder="Code"
-                                                    title="Short code (e.g. ESL)"
-                                                    className="w-16 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-yellow-300 text-xs font-mono font-bold uppercase text-center focus:outline-none focus:ring-1 focus:ring-sky-500"
-                                                />
-                                                <button
-                                                    onClick={() => handleRemoveLocation(loc)}
-                                                    title="Remove location"
-                                                    className="px-2 py-1 text-xs font-semibold text-red-300 hover:text-red-200 flex-shrink-0"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                    <div className="flex space-x-2">
-                                        <input type="text" value={newLocation} onChange={e => setNewLocation(e.target.value)} placeholder="New location name" className="flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        <button onClick={handleAddLocation} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add</button>
-                                    </div>
-                                    <p className="text-xs text-gray-500">Enter a short code (e.g. ESL) for each location so the app can match either name or code when filtering by locality.</p>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="text-sm text-gray-400">Configured operating locations.</p>
-                                    <ul className="space-y-2 max-h-48 overflow-y-auto">
-                                        {locations.map(loc => (
-                                            <li key={loc} className="flex items-center justify-between p-2 bg-gray-700/50 rounded text-white">
-                                                <span className="text-sm">{loc}</span>
-                                                {locationAbbreviations[loc] && (
-                                                    <span className="text-xs font-mono font-bold text-yellow-400 bg-gray-600 px-2 py-0.5 rounded">{locationAbbreviations[loc]}</span>
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                   )}
-
-                      {/* Services Window */}
-                      {shouldShowSection('location') && (
-                        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit">
-                            <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                                <h2 className="text-lg font-semibold text-gray-200">Services</h2>
-                                {isEditingServices ? (
-                                    <div className="flex space-x-2">
-                                        <button onClick={handleSaveServices} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">Save</button>
-                                        <button onClick={handleCancelServices} className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold">Cancel</button>
-                                    </div>
-                                ) : (
-                                    <button
-                                        onClick={handleEditServices}
-                                        disabled={!canEditSettings}
-                                        className={`px-3 py-1 rounded-md text-xs font-semibold ${canEditSettings ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
-                                    >
-                                        Edit
-                                    </button>
-                                )}
-                            </div>
-                            <div className="p-4 space-y-4">
-                                {isEditingServices ? (
-                                    <>
-                                        <p className="text-sm text-gray-400">Define service branches with long name and short code. Both are recognised when filtering by service.</p>
-                                        <ul className="space-y-2 max-h-40 overflow-y-auto">
-                                            {tempServiceDefs.map(svc => (
-                                                <li key={svc.shortName} className="flex items-center gap-2 p-2 bg-gray-700/50 rounded">
-                                                    <span className="text-xs font-mono font-bold text-yellow-300 bg-gray-600 px-2 py-0.5 rounded w-14 text-center">{svc.shortName}</span>
-                                                    <span className="text-white text-sm flex-1">{svc.longName}</span>
-                                                    <button onClick={() => handleRemoveService(svc.shortName)} className="p-1 text-gray-400 hover:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                value={newServiceShort}
-                                                onChange={e => setNewServiceShort(e.target.value.toUpperCase())}
-                                                placeholder="Code (e.g. RAAF)"
-                                                maxLength={6}
-                                                className="w-28 bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-yellow-300 text-sm font-mono uppercase focus:outline-none focus:ring-sky-500"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={newServiceLong}
-                                                onChange={e => setNewServiceLong(e.target.value)}
-                                                placeholder="Long name (e.g. Air Force)"
-                                                className="flex-grow bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500"
-                                            />
-                                            <button onClick={handleAddService} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add</button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <p className="text-sm text-gray-400">Configured service branches.</p>
-                                        <ul className="space-y-2 max-h-40 overflow-y-auto">
-                                            {serviceDefinitions.map(svc => (
-                                                <li key={svc.shortName} className="flex items-center gap-3 p-2 bg-gray-700/50 rounded">
-                                                    <span className="text-xs font-mono font-bold text-yellow-400 bg-gray-600 px-2 py-0.5 rounded w-14 text-center">{svc.shortName}</span>
-                                                    <span className="text-white text-sm">{svc.longName}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                      )}
-
-                      {/* Op Areas Window */}
-                      {shouldShowSection('location') && (
-                        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit">
-                            <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                                <h2 className="text-lg font-semibold text-gray-200">Op Areas</h2>
-                                {isEditingOpAreas ? (
-                                    <div className="flex space-x-2">
-                                        <button onClick={handleSaveOpAreas} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">Save</button>
-                                        <button onClick={handleCancelOpAreas} className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold">Cancel</button>
-                                    </div>
-                                ) : (
-                                    <button
-                                        onClick={handleEditOpAreas}
-                                        disabled={!canEditSettings}
-                                        className={`px-3 py-1 rounded-md text-xs font-semibold ${canEditSettings ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
-                                    >
-                                        Edit
-                                    </button>
-                                )}
-                            </div>
-                            <div className="p-4 space-y-3">
-                                {isEditingOpAreas ? (
-                                    <>
-                                        <p className="text-sm text-gray-400">Set training areas available for each location.</p>
-                                        <div className="flex gap-1 flex-wrap">
-                                            {locations.map(loc => (
-                                                <button
-                                                    key={loc}
-                                                    onClick={() => setSelectedOpAreaLocation(loc)}
-                                                    className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${selectedOpAreaLocation === loc ? 'bg-sky-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                                                >
-                                                    {loc}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        {selectedOpAreaLocation && (
-                                            <>
-                                                <div className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{selectedOpAreaLocation}</div>
-                                                <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
-                                                    {(tempOpAreas[selectedOpAreaLocation] || []).map(area => (
-                                                        <span key={area} className="flex items-center gap-1 px-2 py-1 bg-gray-700 rounded text-white text-xs">
-                                                            {area}
-                                                            <button onClick={() => handleRemoveOpArea(selectedOpAreaLocation, area)} className="text-gray-400 hover:text-red-400 ml-1">×</button>
-                                                        </span>
-                                                    ))}
-                                                    {(tempOpAreas[selectedOpAreaLocation] || []).length === 0 && (
-                                                        <span className="text-gray-500 text-xs italic">No areas configured</span>
-                                                    )}
-                                                </div>
-                                                <div className="flex space-x-2">
-                                                    <input
-                                                        type="text"
-                                                        value={newOpArea}
-                                                        onChange={e => setNewOpArea(e.target.value.toUpperCase())}
-                                                        onKeyDown={e => e.key === 'Enter' && handleAddOpArea()}
-                                                        maxLength={4}
-                                                        placeholder="Area (e.g. A)"
-                                                        className="flex-grow bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500 uppercase"
-                                                    />
-                                                    <button onClick={handleAddOpArea} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add</button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </>
-                                ) : (
-                                    <>
-                                        <p className="text-sm text-gray-400">Configured operating areas per location.</p>
-                                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                                            {locations.map(loc => (
-                                                <div key={loc} className="p-2 bg-gray-700/50 rounded">
-                                                    <div className="text-xs text-gray-400 font-semibold uppercase mb-1">{loc}</div>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {(locationOpAreas[loc] || []).map(area => (
-                                                            <span key={area} className="px-2 py-0.5 bg-gray-600 rounded text-white text-xs">{area}</span>
-                                                        ))}
-                                                        {(locationOpAreas[loc] || []).length === 0 && (
-                                                            <span className="text-gray-500 text-xs italic">None</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                      )}
-
-                      {/* Formation Callsigns Window */}
-                      {shouldShowSection('location') && (
-                          <FormationCallsignsSection
-                              callsigns={formationCallsigns}
-                              onUpdateCallsigns={onUpdateFormationCallsigns}
-                              units={units}
-                              locations={locations}
-                              canEditSettings={canEditSettings}
-                              onAuditLog={logAudit}
-                          />
-                      )}
-                    {/* Units Window */}
-                   {shouldShowSection('units') && (
-                    <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit">
-                        <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                            <h2 className="text-lg font-semibold text-gray-200">Units</h2>
-                            {isEditingUnits ? (
-                                <div className="flex space-x-2">
-                                    <button onClick={handleSaveUnits} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">Save</button>
-                                    <button onClick={handleCancelUnits} className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold">Cancel</button>
-                                </div>
-                            ) : (
-                                <button 
-                                onClick={handleEditUnits} 
-                                disabled={!canEditSettings}
-                                className={`px-3 py-1 rounded-md text-xs font-semibold ${
-                                    canEditSettings 
-                                        ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer' 
-                                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                                }`}
-                            >
-                                Edit
-                            </button>
-                            )}
-                        </div>
-                        <div className="p-4 space-y-4">
-                            {isEditingUnits ? (
-                                <>
-                                    <p className="text-sm text-gray-400">Manage units and their primary locations.</p>
-                                    <ul className="space-y-2 max-h-40 overflow-y-auto">
-                                        {tempUnits.map(unit => (
-                                            <li key={unit} className="p-2 bg-gray-700/50 rounded">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-white">{unit}</span>
-                                                    <button onClick={() => handleRemoveUnit(unit)} className="p-1 text-gray-400 hover:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
-                                                </div>
-                                                <select
-                                                    value={tempUnitLocations[unit] || ''}
-                                                    onChange={(e) => handleTempUnitLocationChange(unit, e.target.value)}
-                                                    className="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-xs"
-                                                >
-                                                    {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                                                </select>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                    <div className="flex space-x-2">
-                                        <input type="text" value={newUnit} onChange={e => setNewUnit(e.target.value)} placeholder="New unit name" className="flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        <button onClick={handleAddUnit} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add</button>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="text-sm text-gray-400">Configured units and their locations.</p>
-                                    <ul className="space-y-2 max-h-40 overflow-y-auto">
-                                        {units.map(unit => (
-                                            <li key={unit} className="p-2 bg-gray-700/50 rounded text-white flex justify-between">
-                                                <span>{unit}</span>
-                                                <span className="text-gray-400">{unitLocations[unit]}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                   )}
                        {/* Duty & Turnaround Window */}
                    {shouldShowSection('duty-turnaround') && (
                     <DutyTurnaroundSection
