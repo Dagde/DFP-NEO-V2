@@ -4754,29 +4754,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }
 
   const visibleSectionTarget = sectionOnly ? (scrollTarget || 'platform-configuration-health') : null;
-  const isResourcePoolsOnlyView = visibleSectionTarget === 'platform-resource-pools';
   const getSectionClass = (sectionId: string) => {
     const visibleWithLegacyTarget = visibleSectionTarget === 'platform-organisation-locations'
       && (sectionId === 'platform-organisation' || sectionId === 'platform-locations');
     return `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId && !visibleWithLegacyTarget ? ' hidden' : ''}`;
   };
-  const saveButton = (
-    <button
-      type="button"
-      onClick={() => {
-        if (isResourcePoolsOnlyView) {
-          void saveResourcePoolsAndExitEdit();
-          return;
-        }
-        void save();
-      }}
-      disabled={!canEdit || saving || applyingChanges}
-      className={`${platformActionButtonClass} ml-auto`}
-      title={applyingChanges ? 'Applying changes' : saving ? 'Saving platform configuration' : 'Save platform configuration'}
-    >
-      Save
-    </button>
-  );
   const resourceSectionPanelClass = 'rounded-lg border border-gray-700 bg-gray-950/55 p-3';
   const resourceSectionPanelHeaderClass = 'mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2';
   const resourceSectionPanelTitleClass = 'text-xs font-black uppercase tracking-wide text-gray-300';
@@ -5006,27 +4988,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     return matchedKey ? childMap[matchedKey] || [] : [];
   };
 
-  const showSectionOnlySaveButton = !(sectionOnly && (
-    scrollTarget === 'platform-rank-terminology'
-    || scrollTarget === 'platform-configuration-health'
-    || scrollTarget === 'platform-task-profiles'
-    || scrollTarget === 'platform-organisation-locations'
-    || scrollTarget === 'platform-units'
-    || scrollTarget === 'platform-master-lmp-access'
-    || scrollTarget === 'platform-standard-missions'
-    || scrollTarget === 'platform-resource-pools'
-    || scrollTarget === 'platform-crew-composition'
-    || scrollTarget === 'platform-currency-profiles'
-    || scrollTarget === 'platform-unit-modules'
-    || scrollTarget === 'platform-deployment-readiness'
-    || scrollTarget === 'platform-operational-runbook'
-    || scrollTarget === 'platform-licensing'
-    || scrollTarget === 'platform-permission-profiles'
-    || scrollTarget === 'platform-user-access'
-    || scrollTarget === 'platform-scheduling-rule-sets'
-    || scrollTarget === 'platform-training-report-template'
-  ));
-  const showSectionOnlyStatusPanel = showSectionOnlySaveButton || !canEdit || Boolean(error);
+  const showSectionOnlyStatusPanel = !canEdit || Boolean(error);
 
   return (
     <div className="relative space-y-8" onKeyDownCapture={stopEditableKeyPropagation}>
@@ -5040,14 +5002,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       )}
       {sectionOnly && showSectionOnlyStatusPanel ? (
         <div className="rounded-lg border border-gray-700 bg-gray-800/80 px-4 py-3">
-          {showSectionOnlySaveButton && (
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-sm leading-relaxed text-gray-300">
-                Changes on this settings page are saved into the platform configuration.
-              </p>
-              {saveButton}
-            </div>
-          )}
           {!canEdit && (
             <div className="mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100">
               Read-only. Super Admin or Admin permission is required to change platform configuration.

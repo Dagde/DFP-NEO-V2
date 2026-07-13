@@ -66163,28 +66163,10 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-6 text-gray-300", children: "Loading platform configuration..." });
   }
   const visibleSectionTarget = sectionOnly ? scrollTarget || "platform-configuration-health" : null;
-  const isResourcePoolsOnlyView = visibleSectionTarget === "platform-resource-pools";
   const getSectionClass = (sectionId) => {
     const visibleWithLegacyTarget = visibleSectionTarget === "platform-organisation-locations" && (sectionId === "platform-organisation" || sectionId === "platform-locations");
     return `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId && !visibleWithLegacyTarget ? " hidden" : ""}`;
   };
-  const saveButton = /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "button",
-    {
-      type: "button",
-      onClick: () => {
-        if (isResourcePoolsOnlyView) {
-          void saveResourcePoolsAndExitEdit();
-          return;
-        }
-        void save();
-      },
-      disabled: !canEdit || saving || applyingChanges,
-      className: `${platformActionButtonClass} ml-auto`,
-      title: applyingChanges ? "Applying changes" : saving ? "Saving platform configuration" : "Save platform configuration",
-      children: "Save"
-    }
-  );
   const resourceSectionPanelClass = "rounded-lg border border-gray-700 bg-gray-950/55 p-3";
   const resourceSectionPanelHeaderClass = "mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2";
   const resourceSectionPanelTitleClass = "text-xs font-black uppercase tracking-wide text-gray-300";
@@ -66351,18 +66333,13 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     const matchedKey = childMap[normalisedPreviousParent]?.length ? normalisedPreviousParent : childMapKeys.find((key) => normaliseOrganisationParentKey(key) === normalisedPreviousParent);
     return matchedKey ? childMap[matchedKey] || [] : [];
   };
-  const showSectionOnlySaveButton = !(sectionOnly && (scrollTarget === "platform-rank-terminology" || scrollTarget === "platform-configuration-health" || scrollTarget === "platform-task-profiles" || scrollTarget === "platform-organisation-locations" || scrollTarget === "platform-units" || scrollTarget === "platform-master-lmp-access" || scrollTarget === "platform-standard-missions" || scrollTarget === "platform-resource-pools" || scrollTarget === "platform-crew-composition" || scrollTarget === "platform-currency-profiles" || scrollTarget === "platform-unit-modules" || scrollTarget === "platform-deployment-readiness" || scrollTarget === "platform-operational-runbook" || scrollTarget === "platform-licensing" || scrollTarget === "platform-permission-profiles" || scrollTarget === "platform-user-access" || scrollTarget === "platform-scheduling-rule-sets" || scrollTarget === "platform-training-report-template"));
-  const showSectionOnlyStatusPanel = showSectionOnlySaveButton || !canEdit || Boolean(error);
+  const showSectionOnlyStatusPanel = !canEdit || Boolean(error);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: stopEditableKeyPropagation, children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-cyan-100", children: "One moment while we apply your changes" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-300", children: "The updated platform settings are being applied across the running app." })
     ] }) }),
     sectionOnly && showSectionOnlyStatusPanel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/80 px-4 py-3", children: [
-      showSectionOnlySaveButton && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-relaxed text-gray-300", children: "Changes on this settings page are saved into the platform configuration." }),
-        saveButton
-      ] }),
       !canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Read-only. Super Admin or Admin permission is required to change platform configuration." }),
       error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100", children: error })
     ] }) : !sectionOnly ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
