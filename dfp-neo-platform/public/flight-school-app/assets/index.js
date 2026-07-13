@@ -1945,8 +1945,8 @@ const loadSettingsFromDB = async () => {
     return readSetupTestSettings();
   }
   try {
-    const apiBase2 = getApiBase$3();
-    const url = `${apiBase2}/settings?orgId=${ORG_ID}`;
+    const apiBase = getApiBase$3();
+    const url = `${apiBase}/settings?orgId=${ORG_ID}`;
     console.log("[Settings] 🔍 Loading settings from DB — URL:", url);
     const res = await fetch(url, {
       method: "GET",
@@ -1986,8 +1986,8 @@ const saveSettingsNow = async (settings, userId) => {
   }
   isSaving = true;
   try {
-    const apiBase2 = getApiBase$3();
-    const url = `${apiBase2}/settings`;
+    const apiBase = getApiBase$3();
+    const url = `${apiBase}/settings`;
     const payload = {
       orgId: ORG_ID,
       settings: {
@@ -2122,8 +2122,8 @@ const saveCurrenciesToDB = async (masterCurrencies, currencyRequirements, userId
     return true;
   }
   try {
-    const apiBase2 = getApiBase$3();
-    const url = `${apiBase2}/currencies`;
+    const apiBase = getApiBase$3();
+    const url = `${apiBase}/currencies`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -9017,7 +9017,7 @@ const AircraftAvailabilityOverlay = ({
   onAvailabilityChange,
   onUserChange,
   initialAvailability = 15,
-  apiBase: apiBase2,
+  apiBase,
   locationCode,
   unitCode,
   showLiveAvailabilityLine,
@@ -9054,13 +9054,13 @@ const AircraftAvailabilityOverlay = ({
     }
     const loadFromDb = async () => {
       let seed = initialAvailability;
-      if (apiBase2) {
+      if (apiBase) {
         try {
           const params = new URLSearchParams();
           if (locationCode) params.set("locationCode", locationCode);
           if (unitCode) params.set("unitCode", unitCode);
           const query = params.toString();
-          const res = await fetch(`${apiBase2}/aircraft-availability-current${query ? `?${query}` : ""}`, { credentials: "include" });
+          const res = await fetch(`${apiBase}/aircraft-availability-current${query ? `?${query}` : ""}`, { credentials: "include" });
           if (res.ok) {
             const data = await res.json();
             if (data.success && !data.isDefault && typeof data.availableCount === "number") {
@@ -14751,7 +14751,7 @@ const ScheduleView = ({
   showDepartureDensityOverlay,
   showAircraftAvailability,
   initialAvailability,
-  apiBase: apiBase2,
+  apiBase,
   locationCode,
   unitCode,
   dayFlyingStart,
@@ -16369,7 +16369,7 @@ const ScheduleView = ({
                     dateString: date,
                     totalAircraft: airframeCount,
                     initialAvailability: initialAvailability ?? 15,
-                    apiBase: apiBase2,
+                    apiBase,
                     locationCode,
                     unitCode,
                     dayFlyingStart,
@@ -28913,8 +28913,8 @@ const getApiBase$1 = () => {
 const loadUserPreferences = async (userId) => {
   if (!userId) return {};
   try {
-    const apiBase2 = getApiBase$1();
-    const res = await fetch(`${apiBase2}/user-preferences?userId=${encodeURIComponent(userId)}`, {
+    const apiBase = getApiBase$1();
+    const res = await fetch(`${apiBase}/user-preferences?userId=${encodeURIComponent(userId)}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       credentials: "include"
@@ -28933,8 +28933,8 @@ const loadUserPreferences = async (userId) => {
 const saveUserPreference = async (userId, key, value) => {
   if (!userId || !key) return false;
   try {
-    const apiBase2 = getApiBase$1();
-    const res = await fetch(`${apiBase2}/user-preferences`, {
+    const apiBase = getApiBase$1();
+    const res = await fetch(`${apiBase}/user-preferences`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -70890,240 +70890,6 @@ const UserSearchSelect = ({
     )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-2 text-xs text-yellow-100", children: "No users match that name." }) })
   ] });
 };
-const apiBase = () => getAppApiBase();
-const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
-  const [status, setStatus] = reactExports.useState("idle");
-  const [metadata, setMetadata] = reactExports.useState(null);
-  const [result, setResult] = reactExports.useState(null);
-  const [error, setError] = reactExports.useState(null);
-  const [showConfirm, setShowConfirm] = reactExports.useState(false);
-  const [showClearConfirm, setShowClearConfirm] = reactExports.useState(false);
-  const [showRefreshConfirm, setShowRefreshConfirm] = reactExports.useState(false);
-  reactExports.useEffect(() => {
-    loadStatus();
-  }, []);
-  const loadStatus = async () => {
-    setStatus("loading");
-    setError(null);
-    try {
-      const res = await fetch(`${apiBase()}/historical-data`);
-      if (res.ok) {
-        const data = await res.json();
-        setMetadata(data.seedingMetadata || null);
-      }
-    } catch (e) {
-      console.warn("Could not load historical data status");
-    }
-    setStatus("idle");
-  };
-  const handleSeed = async (force = false) => {
-    setShowConfirm(false);
-    setStatus("seeding");
-    setError(null);
-    setResult(null);
-    try {
-      const res = await fetch(`${apiBase()}/historical-data/seed`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ force })
-      });
-      const data = await res.json();
-      if (data.alreadySeeded && !force) {
-        setMetadata(data);
-        setStatus("idle");
-        setError(`Data already seeded on ${new Date(data.seededAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}. Use "Force Reseed" to regenerate.`);
-        return;
-      }
-      if (!data.success) {
-        throw new Error(data.error || data.message || "Seeding failed");
-      }
-      setResult(data);
-      setMetadata(data);
-      setStatus("done");
-      if (onDataSeeded) {
-        setTimeout(() => window.location.reload(), 2e3);
-      }
-    } catch (e) {
-      setError(e.message || "Unknown error");
-      setStatus("error");
-    }
-  };
-  const handleRefreshDates = async () => {
-    setShowRefreshConfirm(false);
-    setStatus("refreshing");
-    setError(null);
-    setResult(null);
-    try {
-      const res = await fetch(`${apiBase()}/historical-data/refresh-dates`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-      });
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.error || "Refresh failed");
-      }
-      setResult(data);
-      setStatus("done");
-      setTimeout(() => window.location.reload(), 2e3);
-    } catch (e) {
-      setError(e.message || "Unknown error");
-      setStatus("error");
-    }
-  };
-  const handleClear = async () => {
-    setShowClearConfirm(false);
-    setStatus("clearing");
-    setError(null);
-    try {
-      const res = await fetch(`${apiBase()}/historical-data`, { method: "DELETE" });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || "Clear failed");
-      setMetadata(null);
-      setResult({ cleared: true, scoresDeleted: data.scoresDeleted });
-      setStatus("done");
-      setTimeout(() => window.location.reload(), 2e3);
-    } catch (e) {
-      setError(e.message || "Unknown error");
-      setStatus("error");
-    }
-  };
-  const isSeeded = !!metadata?.seededAt;
-  const isProcessing = ["seeding", "refreshing", "clearing", "loading"].includes(status);
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg p-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-white text-xl font-bold", children: "Historical Training Data" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm mt-0.5", children: "One-off seeding & date refresh controls" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded", children: "← Back" })
-    ] }),
-    isSeeded && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-green-900/40 border border-green-700 rounded-lg p-3 mb-4 flex items-start gap-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400 text-lg", children: "✓" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-green-300 font-medium", children: "Historical data is seeded" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-green-400/70 mt-0.5", children: [
-          "Seeded ",
-          new Date(metadata.seededAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }),
-          " · ",
-          metadata?.eventCount?.toLocaleString(),
-          " events · ",
-          metadata?.pt051Count?.toLocaleString(),
-          " PT-051s"
-        ] }),
-        metadata?.lastRefreshed && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-green-400/70", children: [
-          "Last refreshed: ",
-          new Date(metadata.lastRefreshed).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-green-400/60 text-xs mt-1", children: [
-          "Courses: ",
-          (metadata?.coursesSeeded || []).join(", ")
-        ] })
-      ] })
-    ] }),
-    !isSeeded && status !== "loading" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-amber-900/40 border border-amber-700 rounded-lg p-3 mb-4 flex items-start gap-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-400 text-lg", children: "⚠" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-300 font-medium", children: "No historical data seeded yet" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-400/70 mt-0.5", children: "Run the one-off seed to generate training history for all active trainees." })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-4 mb-4 text-sm text-gray-300 space-y-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "One-off Seed:" }),
-        " Generates completed training records, PT-051 assessments, and logbook entries for all active trainees across ADF301, ADF302, ADF303, FIC210, and FIC211 using real instructors and course start dates."
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "Refresh Dates:" }),
-        " Shifts all historical event dates forward to keep the training history current-looking relative to today. Run periodically."
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-300/70 text-xs", children: "⚠ Seeding affects real persistent data. Use with care." })
-    ] }),
-    error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-red-900/40 border border-red-700 rounded-lg p-3 mb-4 text-red-300 text-sm", children: error }),
-    result && status === "done" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-blue-900/40 border border-blue-700 rounded-lg p-3 mb-4 text-sm", children: result.cleared ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-blue-300", children: [
-      "✓ Historical data cleared. ",
-      result.scoresDeleted,
-      " scores deleted. Reloading…"
-    ] }) : result.daysDriftApplied !== void 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-blue-300", children: [
-      "✓ Dates shifted +",
-      result.daysDriftApplied,
-      " days. ",
-      result.datesUpdated,
-      " dates updated, ",
-      result.scoresUpdated,
-      " scores updated. Reloading…"
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-blue-300 space-y-1", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "✓ Seeding complete. Reloading…" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-blue-400/70 text-xs", children: [
-        result.eventCount?.toLocaleString(),
-        " events · ",
-        result.pt051Count?.toLocaleString(),
-        " PT-051s · ",
-        result.scoresInserted,
-        " scores saved"
-      ] })
-    ] }) }),
-    isProcessing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 text-blue-300 text-sm mb-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" }),
-      status === "seeding" ? "Generating historical data…" : status === "refreshing" ? "Refreshing dates…" : status === "clearing" ? "Clearing historical data…" : "Loading…"
-    ] }),
-    showConfirm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-amber-900/50 border border-amber-600 rounded-lg p-4 mb-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-200 text-sm font-medium mb-2", children: isSeeded ? "⚠ This will RESEED all historical data. Existing seeded records will be replaced." : "⚠ This will seed historical training records for all active trainees." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-300/70 text-xs mb-3", children: "This is a one-off action. Ensure no duplicate records exist before proceeding." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => handleSeed(isSeeded), className: "bg-amber-600 hover:bg-amber-500 text-white text-sm px-4 py-1.5 rounded font-medium", children: [
-          "Confirm ",
-          isSeeded ? "Reseed" : "Seed"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowConfirm(false), className: "bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm px-4 py-1.5 rounded", children: "Cancel" })
-      ] })
-    ] }),
-    showRefreshConfirm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-blue-900/50 border border-blue-600 rounded-lg p-4 mb-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-blue-200 text-sm font-medium mb-2", children: "Shift all historical event dates forward to keep the training history current?" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-blue-300/70 text-xs mb-3", children: "This preserves event sequence and spacing. Only past completed records are updated." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleRefreshDates, className: "bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-1.5 rounded font-medium", children: "Confirm Refresh" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowRefreshConfirm(false), className: "bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm px-4 py-1.5 rounded", children: "Cancel" })
-      ] })
-    ] }),
-    showClearConfirm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-red-900/50 border border-red-600 rounded-lg p-4 mb-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-200 text-sm font-medium mb-2", children: "⚠ This will permanently delete ALL seeded historical data including scores from the database." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleClear, className: "bg-red-700 hover:bg-red-600 text-white text-sm px-4 py-1.5 rounded font-medium", children: "Confirm Clear All" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowClearConfirm(false), className: "bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm px-4 py-1.5 rounded", children: "Cancel" })
-      ] })
-    ] }),
-    !isProcessing && !showConfirm && !showRefreshConfirm && !showClearConfirm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2 mt-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: () => setShowConfirm(true),
-          disabled: isProcessing,
-          className: "bg-green-700 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-lg font-medium disabled:opacity-50",
-          children: isSeeded ? "↺ Reseed Historical Data" : "▶ Seed Historical Data"
-        }
-      ),
-      isSeeded && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: () => setShowRefreshConfirm(true),
-          disabled: isProcessing,
-          className: "bg-blue-700 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-medium disabled:opacity-50",
-          children: "📅 Refresh Dates"
-        }
-      ),
-      isSeeded && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: () => setShowClearConfirm(true),
-          disabled: isProcessing,
-          className: "bg-red-800 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg font-medium disabled:opacity-50",
-          children: "🗑 Clear All"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "ml-auto bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm px-4 py-2 rounded-lg", children: "← Back" })
-    ] })
-  ] }) });
-};
 const PeopleProfilePage = ({
   traineesData,
   syllabusDetails,
@@ -71369,7 +71135,6 @@ const sectionLabels = {
   "staff-database": "Staff Database",
   "trainee-database": "Trainee Database",
   "validation": "Cancellation Codes",
-  "historical-data": "Historical Data",
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
   "standard-missions": "Standard Missions",
@@ -71461,11 +71226,6 @@ const sectionIcons = {
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M17 3.13A8 8 0 0112 2 8 8 0 015 6" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 17l3-8 3 8M10.5 14.5h3" })
   ] }),
-  "historical-data": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "12", cy: "12", r: "10" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: "12 6 12 12 16 14" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M3.05 11a9 9 0 011.4-3.7" })
-  ] }),
   "organisation": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: "2", y: "3", width: "20", height: "14", rx: "2", ry: "2" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "8", y1: "21", x2: "16", y2: "21" }),
@@ -71511,7 +71271,6 @@ const sectionDescriptions = {
   "staff-database": "Staff records and details",
   "trainee-database": "Trainee records and details",
   "validation": "Master cancellation code table used by cancellation records and analytics",
-  "historical-data": "Seed & refresh historical training records",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
   "standard-missions": "Fixed Crew mission profiles for regular unit flights",
@@ -71554,7 +71313,6 @@ const sectionColors = {
   "trainee-database": "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400",
   // HISTORICAL & ANALYSIS - amber icons
   "validation": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
-  "historical-data": "from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400",
   // SYSTEM SETTINGS - cyan icons
   "organisation": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "crew-composition": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
@@ -71650,7 +71408,7 @@ const sectionGroups = [
     description: "Operational runbook, evidence, cancellation code governance, imports and enduring historical records.",
     accent: "emerald",
     defaultSection: "platform-operational-runbook",
-    sections: ["platform-operational-runbook", "validation", "data-loaders", "historical-data"]
+    sections: ["platform-operational-runbook", "validation", "data-loaders"]
   },
   {
     label: "Emergency",
@@ -72175,14 +71933,6 @@ const SettingsViewWithMenu = (props) => {
             onShowSuccess: props.onShowSuccess,
             currentUserPermission: props.currentUserPermission,
             courseColors: props.courseColors
-          }
-        ),
-        activeSection === "historical-data" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          HistoricalDataSeeder,
-          {
-            onClose: () => setActiveSection("home"),
-            onDataSeeded: () => {
-            }
           }
         )
       ] })
@@ -101626,8 +101376,8 @@ const App = () => {
           });
           const lmpHydrateStartedAt = performance.now();
           try {
-            const apiBase2 = getAppApiBase();
-            const lmpRes = await fetch(`${apiBase2}/trainees/lmp-sync?includeEvents=true`, { credentials: "include" });
+            const apiBase = getAppApiBase();
+            const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync?includeEvents=true`, { credentials: "include" });
             pushDfpDataDiag("startup:lmp-hydrate:get-response", {
               durationMs: Math.round(performance.now() - lmpHydrateStartedAt),
               status: lmpRes.status,
@@ -101708,16 +101458,16 @@ const App = () => {
               "BPC+IPC": bpcIpcSyllabus,
               "FIC": ficSyllabus
             };
-            const apiBase2 = getAppApiBase();
+            const apiBase = getAppApiBase();
             pushDfpDataDiag("startup:lmp-sync:start", {
-              apiBase: apiBase2,
+              apiBase,
               syllabusItems: syllabusDetails.length,
               assignableSyllabusItems: assignableSyncSyllabus.length,
               bpcIpcItems: bpcIpcSyllabus.length,
               ficItems: ficSyllabus.length,
               trainees: data.trainees?.length || 0
             });
-            const syncRes = await fetch(`${apiBase2}/trainees/lmp-sync`, {
+            const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ syllabusData })
@@ -101735,7 +101485,7 @@ const App = () => {
                 durationMs: Math.round(performance.now() - lmpSyncStartedAt),
                 summary: syncData.summary || null
               });
-              const lmpRes = await fetch(`${apiBase2}/trainees/lmp-sync?includeEvents=true`);
+              const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync?includeEvents=true`);
               pushDfpDataDiag("startup:lmp-sync:get-response", {
                 durationMs: Math.round(performance.now() - lmpSyncStartedAt),
                 status: lmpRes.status,
@@ -101985,14 +101735,14 @@ const App = () => {
         };
         const missingDbCourseNamesFromLoad = activeOperationalModel === "flight_school" ? dbCourseNamesFromLoad.filter((courseName) => !existingCourseNamesFromLoad.has(courseName) && !existingCompactCourseNamesFromLoad.has(courseName.toUpperCase().replace(/\s+/g, ""))) : [];
         if (missingDbCourseNamesFromLoad.length > 0) {
-          const apiBase2 = getAppApiBase();
+          const apiBase = getAppApiBase();
           const recoveredCourses = [];
           for (let index = 0; index < missingDbCourseNamesFromLoad.length; index += 1) {
             const courseName = missingDbCourseNamesFromLoad[index];
             const fallbackColor = defaultColors[(Object.keys(courseColors).length + index) % defaultColors.length];
             const recoveredCourse = getRecoveredFlightSchoolCourse(courseName, fallbackColor);
             try {
-              const response = await fetch(`${apiBase2}/courses`, {
+              const response = await fetch(`${apiBase}/courses`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
@@ -102125,18 +101875,18 @@ const App = () => {
     const loadHistoricalData = async () => {
       const startedAt = performance.now();
       try {
-        const apiBase2 = getAppApiBase();
+        const apiBase = getAppApiBase();
         let legacySeedingMetadata = null;
         pushDfpDataDiag("history:load-start", {
           requestedSchool,
           requestedUnit,
-          apiBase: apiBase2,
+          apiBase,
           platformDataScopeQuery,
           existingPublishedDates: Object.keys(publishedSchedulesRef.current || {})
         });
         if (localStorage.getItem("neo_preload_recent_snapshots") === "true") {
           try {
-            const dailySnapshotUrl = `${apiBase2}/daily-snapshot?school=${requestedSchool}&unit=${encodeURIComponent(requestedUnit)}`;
+            const dailySnapshotUrl = `${apiBase}/daily-snapshot?school=${requestedSchool}&unit=${encodeURIComponent(requestedUnit)}`;
             const dailySnapshotStartedAt = performance.now();
             const snapRes = await fetch(dailySnapshotUrl, { signal: abortController.signal });
             if (cancelled) return;
@@ -102180,7 +101930,7 @@ const App = () => {
           });
         }
         if (localStorage.getItem("neo_load_legacy_historical_seed") === "true") {
-          const historicalUrl = `${apiBase2}/historical-data`;
+          const historicalUrl = `${apiBase}/historical-data`;
           const historicalStartedAt = performance.now();
           const res = await fetch(historicalUrl, { signal: abortController.signal });
           if (cancelled) return;
@@ -102228,7 +101978,7 @@ const App = () => {
           const performanceStartedAt = performance.now();
           while (!cancelled) {
             const pageStartedAt = performance.now();
-            const performanceUrl = `${apiBase2}/trainee-performance?limit=${pageSize}&offset=${offset}`;
+            const performanceUrl = `${apiBase}/trainee-performance?limit=${pageSize}&offset=${offset}`;
             const perfRes = await fetch(performanceUrl, { signal: abortController.signal });
             pushDfpDataDiag("history:trainee-performance-response", {
               url: performanceUrl,
@@ -102313,8 +102063,8 @@ const App = () => {
     const loadSnapshotDates = async () => {
       const startedAt = performance.now();
       try {
-        const apiBase2 = getAppApiBase();
-        const snapshotDatesUrl = `${apiBase2}/daily-snapshot/dates`;
+        const apiBase = getAppApiBase();
+        const snapshotDatesUrl = `${apiBase}/daily-snapshot/dates`;
         pushDfpDataDiag("snapshot-dates:start", {
           url: snapshotDatesUrl
         });
@@ -102481,7 +102231,7 @@ const App = () => {
     }
     const retryDelays = [0, 2e3, 5e3, 1e4];
     try {
-      const apiBase2 = getAppApiBase();
+      const apiBase = getAppApiBase();
       let lastError = null;
       for (let attempt = 0; attempt < retryDelays.length; attempt++) {
         const attemptStartedAt = performance.now();
@@ -102527,7 +102277,7 @@ const App = () => {
               message: `Retrieving DFP data (${candidateIndex + 1}/${candidateKeys.length})`,
               progress
             });
-            const candidateUrl = `${apiBase2}/daily-snapshot/${encodeURIComponent(candidateKey)}`;
+            const candidateUrl = `${apiBase}/daily-snapshot/${encodeURIComponent(candidateKey)}`;
             const candidateStartedAt = performance.now();
             const candidateRes = await fetch(candidateUrl);
             pushDfpDataDiag("snapshot:fetch-response", {
@@ -103667,7 +103417,7 @@ const App = () => {
     console.log(`
 ${"=".repeat(60)}`);
     console.log(`[AV] 📤 postAvailabilityEvent START ${requestId}`);
-    const apiBase2 = getApiBaseUrl();
+    const apiBase = getApiBaseUrl();
     const totalAircraftCount = totalAircraftOverride ?? availableAircraftCount;
     const windowStart = formatWindowTime(flyingStartTime);
     const windowEnd = formatWindowTime(flyingEndTime);
@@ -103682,7 +103432,7 @@ ${"=".repeat(60)}`);
       window: `${windowStart}-${windowEnd}`,
       timestamp: ts.toISOString(),
       sessionUser: sessionUser?.userId ?? "not logged in",
-      apiBase: apiBase2
+      apiBase
     });
     const requestBody = {
       timestamp: ts.toISOString(),
@@ -103700,11 +103450,11 @@ ${"=".repeat(60)}`);
       clientTimezoneOffsetHours: timezoneOffset
     };
     console.log(`[AV] 📦 Request body:`, JSON.stringify(requestBody, null, 2));
-    console.log(`[AV] 🌐 API URL: ${apiBase2}/aircraft-availability-events`);
+    console.log(`[AV] 🌐 API URL: ${apiBase}/aircraft-availability-events`);
     try {
       console.log(`[AV] 🚀 Starting fetch...`);
       const fetchStart = Date.now();
-      const res = await fetch(`${apiBase2}/aircraft-availability-events`, {
+      const res = await fetch(`${apiBase}/aircraft-availability-events`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -103753,8 +103503,8 @@ ${"=".repeat(60)}`);
     };
     window.debugAvailabilityDB = async () => {
       console.log("\n🧪 DEBUGGING AVAILABILITY DATABASE");
-      const apiBase2 = getApiBaseUrl();
-      const url = `${apiBase2}/aircraft-availability-debug`;
+      const apiBase = getApiBaseUrl();
+      const url = `${apiBase}/aircraft-availability-debug`;
       console.log("🧪 API URL:", url);
       console.log("🧪 Current origin:", window.location.origin);
       try {
@@ -103791,8 +103541,8 @@ ${"=".repeat(60)}`);
     };
     window.forceInsertAvailability = async (count = 15) => {
       console.log("\n🧪 FORCE INSERTING AVAILABILITY RECORD");
-      const apiBase2 = getApiBaseUrl();
-      const url = `${apiBase2}/aircraft-availability-debug`;
+      const apiBase = getApiBaseUrl();
+      const url = `${apiBase}/aircraft-availability-debug`;
       console.log("🧪 API URL:", url);
       try {
         const res = await fetch(url, {
@@ -103830,12 +103580,12 @@ ${"=".repeat(60)}`);
     if (!school || !activeUnitCode) return;
     const fetchCurrentAvailability = async () => {
       try {
-        const apiBase2 = getApiBaseUrl();
+        const apiBase = getApiBaseUrl();
         const params = new URLSearchParams({
           locationCode: school,
           unitCode: activeUnitCode
         });
-        const res = await fetch(`${apiBase2}/aircraft-availability-current?${params.toString()}`, {
+        const res = await fetch(`${apiBase}/aircraft-availability-current?${params.toString()}`, {
           credentials: "include"
         });
         if (res.ok) {
@@ -103881,8 +103631,8 @@ ${"=".repeat(60)}`);
       const windowEnd = formatWindowTime(flyingEndTime);
       console.log(`[AV] Running recovery check for ${todayStr}`);
       try {
-        const apiBase2 = getApiBaseUrl();
-        const recovRes = await fetch(`${apiBase2}/aircraft-availability-recalculate`, {
+        const apiBase = getApiBaseUrl();
+        const recovRes = await fetch(`${apiBase}/aircraft-availability-recalculate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -106162,13 +105912,13 @@ ${"=".repeat(60)}`);
       return null;
     }
     try {
-      const apiBase2 = getApiBaseUrl();
+      const apiBase = getApiBaseUrl();
       pushDfpDataDiag("report-lmp:load:start", {
         traineeFullName: trainee.fullName,
         traineeDbId,
-        apiBase: apiBase2
+        apiBase
       });
-      const response = await fetch(`${apiBase2}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
+      const response = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
         credentials: "include"
       });
       pushDfpDataDiag("report-lmp:load:response", {
@@ -106229,10 +105979,10 @@ ${"=".repeat(60)}`);
   const loadPersistedPt051Assessment = reactExports.useCallback(async (trainee, event) => {
     const loadKey = `${event.id}-${trainee.fullName}`;
     try {
-      const apiBase2 = getApiBaseUrl();
+      const apiBase = getApiBaseUrl();
       let assessment = null;
       if (event.id) {
-        const response = await fetch(`${apiBase2}/trainee-performance/${encodeURIComponent(event.id)}`);
+        const response = await fetch(`${apiBase}/trainee-performance/${encodeURIComponent(event.id)}`);
         if (response.ok) {
           const loaded = await response.json();
           pushDfpDataDiag("pt051:load:event-response", {
@@ -106249,7 +105999,7 @@ ${"=".repeat(60)}`);
         }
       }
       if (!assessment) {
-        const response = await fetch(`${apiBase2}/trainee-performance?traineeFullName=${encodeURIComponent(trainee.fullName)}&limit=2000`);
+        const response = await fetch(`${apiBase}/trainee-performance?traineeFullName=${encodeURIComponent(trainee.fullName)}&limit=2000`);
         if (response.ok) {
           const rows = await response.json();
           if (Array.isArray(rows)) {
@@ -107096,7 +106846,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const completedFromLmp = lmp.filter((item) => item.completedAt).map((item) => item.id || item.code).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
     const completedFromScores = (scores.get(trainee.fullName) || []).map((score) => score.event).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
     const completedEventIds = Array.from(/* @__PURE__ */ new Set([...completedFromLmp, ...completedFromScores]));
-    const apiBase2 = getApiBaseUrl();
+    const apiBase = getApiBaseUrl();
     pushDfpDataDiag("report-lmp:persist:start", {
       traineeFullName: trainee.fullName,
       traineeDbId,
@@ -107105,7 +106855,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       excludedCompletedEvents,
       ...summariseTrainingReportLmpItems(lmp)
     });
-    const response = await fetch(`${apiBase2}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
+    const response = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -107146,7 +106896,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       throw new Error("Individual LMP save response did not include persisted events");
     }
     try {
-      const readBackResponse = await fetch(`${apiBase2}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
+      const readBackResponse = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
         credentials: "include"
       });
       const readBackData = readBackResponse.ok ? await readBackResponse.json() : null;
@@ -107180,8 +106930,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       buildPt051EventFromLmpItem(trainee, item).id
     ].filter(Boolean)));
     const eventCodeRefs = new Set([item.id, item.code].filter(Boolean));
-    const apiBase2 = getApiBaseUrl();
-    const scoreResponse = await fetch(`${apiBase2}/scores/trainee/${encodeURIComponent(traineeDbId)}/events`, {
+    const apiBase = getApiBaseUrl();
+    const scoreResponse = await fetch(`${apiBase}/scores/trainee/${encodeURIComponent(traineeDbId)}/events`, {
       method: "DELETE",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -107191,7 +106941,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       const errorText = await scoreResponse.text().catch(() => "");
       throw new Error(errorText || `Failed to delete score records for ${item.code} (${scoreResponse.status})`);
     }
-    const performanceResponse = await fetch(`${apiBase2}/trainee-performance?traineeFullName=${encodeURIComponent(trainee.fullName)}&limit=2000`, {
+    const performanceResponse = await fetch(`${apiBase}/trainee-performance?traineeFullName=${encodeURIComponent(trainee.fullName)}&limit=2000`, {
       credentials: "include"
     });
     if (performanceResponse.ok) {
@@ -107201,7 +106951,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           (assessment) => eventRefs.includes(assessment.eventId) || eventRefs.includes(assessment.id) || eventCodeRefs.has(assessment.flightNumber)
         ).map((assessment) => assessment.eventId).filter(Boolean)));
         for (const eventId of performanceEventIds) {
-          const deleteResponse = await fetch(`${apiBase2}/trainee-performance/${encodeURIComponent(eventId)}`, {
+          const deleteResponse = await fetch(`${apiBase}/trainee-performance/${encodeURIComponent(eventId)}`, {
             method: "DELETE",
             credentials: "include"
           });
@@ -108579,7 +108329,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       console.log("[Persist] No events for", targetDate, "- nothing to persist");
       return;
     }
-    const apiBase2 = getApiBaseUrl();
+    const apiBase = getApiBaseUrl();
     const savedBy = authUser?.userId ?? sessionUser?.userId ?? null;
     const snapshotKey = getDailySnapshotKey(targetDate);
     const staffEventsForDate = allEventsForDate.filter(
@@ -108663,7 +108413,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     console.log(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
     cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
-    fetch(`${apiBase2}/daily-snapshot/save`, {
+    fetch(`${apiBase}/daily-snapshot/save`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(snapshotPayload)
@@ -108683,7 +108433,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     console.log(`[PT051] Snapshot persistence skipped for ${targetDate}; ${assessmentsMap.size} active records use TraineePerformance`);
   };
   const persistPt051AssessmentRecord = async (assessment) => {
-    const apiBase2 = getApiBaseUrl();
+    const apiBase = getApiBaseUrl();
     const trainee = allTraineesData.find((t) => t.fullName === assessment.traineeFullName);
     const traineeId = trainee?.id;
     if (!traineeId) {
@@ -108701,7 +108451,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       trainingReportNotesLength: String(assessment.trainingReportNotes || "").trim().length,
       trainingReportNotesPreview: String(assessment.trainingReportNotes || "").trim().slice(0, 120)
     });
-    const response = await fetch(`${apiBase2}/trainee-performance`, {
+    const response = await fetch(`${apiBase}/trainee-performance`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -109239,7 +108989,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     setSelectedEvent(null);
   };
   const handleSendAlert = async (eventId, recipients, description = "") => {
-    const apiBase2 = "/api";
+    const apiBase = "/api";
     const userId = getCurrentUserId() || currentUserName;
     const eventForAlert = events.find((e) => e.id === eventId) || selectedEvent;
     if (isPastDfpDate(eventForAlert?.date || date)) {
@@ -109253,7 +109003,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     console.log("🔔 [Alert] snapshotDate:", snapshotDate);
     console.log("🔔 [Alert] sentBy:", userId);
     console.log("🔔 [Alert] recipients:", recipients);
-    console.log("🔔 [Alert] URL:", `${apiBase2}/alerts/send`);
+    console.log("🔔 [Alert] URL:", `${apiBase}/alerts/send`);
     console.log("🔔 [Alert] eventForAlert:", eventForAlert ? eventForAlert.flightNumber || eventForAlert.type : "NOT FOUND");
     if (!recipients || recipients.length === 0) {
       console.warn("🔔 [Alert] No recipients - alert not sent");
@@ -109281,7 +109031,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         } : {}
       };
       console.log("🔔 [Alert] Payload:", JSON.stringify(payload, null, 2));
-      const res = await fetch(`${apiBase2}/alerts/send`, {
+      const res = await fetch(`${apiBase}/alerts/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -109316,9 +109066,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       denyPastDfpEdit("clear alerts");
       return;
     }
-    const apiBase2 = "/api";
+    const apiBase = "/api";
     try {
-      const res = await fetch(`${apiBase2}/alerts/clear`, {
+      const res = await fetch(`${apiBase}/alerts/clear`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ eventId, date, clearedBy: getCurrentUserId() || currentUserName })
@@ -110562,9 +110312,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     try {
       const activeTraineeNames = traineesForBuildScope.filter((t) => !t.isPaused).map((t) => t.fullName).filter(Boolean);
       if (activeTraineeNames.length > 0) {
-        const apiBase2 = getAppApiBase();
+        const apiBase = getAppApiBase();
         markNeoBuildTiming(timingReport, "elce:request-start", { activeTrainees: activeTraineeNames.length });
-        const elceRes = await fetch(`${apiBase2}/event-completions/elce`, {
+        const elceRes = await fetch(`${apiBase}/event-completions/elce`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ traineeFullNames: activeTraineeNames, buildDate: buildDfpDate })
@@ -110594,7 +110344,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         currentTraineeLMPs: buildTraineeLMPs.size
       });
     } else try {
-      const apiBase2 = getApiBaseUrl();
+      const apiBase = getApiBaseUrl();
       const assignableBuildSyllabus = activeOperationalModel === "flight_school" ? assignableFlightSchoolBuildSyllabus : filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode);
       const bpcIpcSyllabus = assignableBuildSyllabus.filter(
         (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
@@ -110611,7 +110361,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         bpcIpcSyllabus: bpcIpcSyllabus.length,
         ficSyllabus: ficSyllabus.length
       });
-      const syncRes = await fetch(`${apiBase2}/trainees/lmp-sync`, {
+      const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -110622,7 +110372,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         console.warn(`[NEO-Build] Pre-build LMP sync failed (${syncRes.status}); using current in-memory LMPs`);
       }
       markNeoBuildTiming(timingReport, "lmp-fetch:request-start", { buildPayload: true });
-      const lmpRes = await fetch(`${apiBase2}/trainees/lmp-sync?includeEvents=true&build=true`, {
+      const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync?includeEvents=true&build=true`, {
         credentials: "include"
       });
       markNeoBuildTiming(timingReport, "lmp-fetch:response-received", { status: lmpRes.status });
@@ -111965,12 +111715,12 @@ ${conflictLines.join("\n")}${moreText}`,
         // Store the baseline (original published events) for change-bar detection after page reload
         baselineEvents: newEventsForDate
       };
-      const apiBase2 = getApiBaseUrl();
+      const apiBase = getApiBaseUrl();
       loadedSnapshotDates.current.add(snapshotKey);
       loadingSnapshotDates.current.delete(snapshotKey);
       setSnapshotDates((prev) => [.../* @__PURE__ */ new Set([...prev, buildDfpDate])].sort((a, b) => b.localeCompare(a)));
       cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
-      fetch(`${apiBase2}/daily-snapshot/save`, {
+      fetch(`${apiBase}/daily-snapshot/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(snapshotPayload)
@@ -113018,10 +112768,10 @@ ${conflictLines.join("\n")}${moreText}`,
   const syncUnavailabilityFromDatabase = reactExports.useCallback(async () => {
     if (isSetupTestMode()) return false;
     try {
-      const apiBase2 = getAppApiBase();
+      const apiBase = getAppApiBase();
       const [personnelRes, traineesRes] = await Promise.all([
-        fetch(`${apiBase2}/personnel`, { credentials: "include" }),
-        fetch(`${apiBase2}/trainees`, { credentials: "include" })
+        fetch(`${apiBase}/personnel`, { credentials: "include" }),
+        fetch(`${apiBase}/trainees`, { credentials: "include" })
       ]);
       console.log("[Poll] Personnel response:", personnelRes.status, "Trainees response:", traineesRes.status);
       let pollChanged = false;
@@ -113080,8 +112830,8 @@ ${conflictLines.join("\n")}${moreText}`,
   }, [liveSyncEnabled, syncUnavailabilityFromDatabase]);
   const syncAlertsForCurrentDate = reactExports.useCallback(async () => {
     try {
-      const apiBase2 = getAppApiBase();
-      const res = await fetch(`${apiBase2}/daily-snapshot/${encodeURIComponent(getDailySnapshotKey(date))}`);
+      const apiBase = getAppApiBase();
+      const res = await fetch(`${apiBase}/daily-snapshot/${encodeURIComponent(getDailySnapshotKey(date))}`);
       if (!res.ok) return;
       const data = await res.json();
       const snap2 = data.snapshot;
@@ -116704,8 +116454,8 @@ ${error instanceof Error ? error.message : String(error)}`,
                 }
                 console.log("🗑️ App.tsx: onDeleteAssessment called with ID:", assessmentId);
                 const deleteEventId = existingAssessment?.eventId || eventForPt051.id || assessmentId;
-                const apiBase2 = getApiBaseUrl();
-                const response = await fetch(`${apiBase2}/trainee-performance/${encodeURIComponent(deleteEventId)}`, {
+                const apiBase = getApiBaseUrl();
+                const response = await fetch(`${apiBase}/trainee-performance/${encodeURIComponent(deleteEventId)}`, {
                   method: "DELETE"
                 });
                 if (!response.ok) {
@@ -118069,8 +117819,8 @@ Do you want to replace the existing entry?`,
                   ...item,
                   completedAt: completedSet.has(item.id || item.code) ? allScoresForTrainee.find((s) => s.event === (item.id || item.code))?.date || (/* @__PURE__ */ new Date()).toISOString() : null
                 }));
-                const apiBase2 = getAppApiBase();
-                const res = await fetch(`${apiBase2}/trainees/${trainee.id}/lmp`, {
+                const apiBase = getAppApiBase();
+                const res = await fetch(`${apiBase}/trainees/${trainee.id}/lmp`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({

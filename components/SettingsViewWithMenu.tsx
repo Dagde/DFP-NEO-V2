@@ -8,7 +8,6 @@ import AuditButton from './AuditButton';
 import OrganisationSettings from './OrganisationSettings';
 import AppearanceSettings from './AppearanceSettings';
 import PlatformConfigurationSettings from './PlatformConfigurationSettings';
-import { HistoricalDataSeeder } from './HistoricalDataSeeder';
 import PeopleProfilePage from './PeopleProfilePage';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
@@ -183,7 +182,6 @@ type SettingsSection =
     | 'staff-database'
     | 'trainee-database'
     | 'validation'
-    | 'historical-data'
     | 'organisation'
     | 'crew-composition'
     | 'standard-missions'
@@ -248,7 +246,6 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'staff-database': 'Staff Database',
     'trainee-database': 'Trainee Database',
     'validation': 'Cancellation Codes',
-    'historical-data': 'Historical Data',
     'organisation': 'Resource Sharing',
     'crew-composition': 'Crew Composition',
     'standard-missions': 'Standard Missions',
@@ -271,28 +268,6 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'appearance': 'App Appearance',
     'emergency': 'Emergency',
 };
-
-// All sections in order for the left menu
-const allSections: SettingsSection[] = [
-    'scoring-matrix',
-    'training-report-template',
-    'currencies',
-    'sct-events',
-    'people-profile',
-    'event-limits',
-    'duty-turnaround',
-    'business-rules',
-    'data-loaders',
-    'user-list',
-    'staff-database',
-    'trainee-database',
-    'validation',
-    'historical-data',
-    'organisation',
-    'platform-configuration',
-    'appearance',
-    'emergency',
-];
 
 type ScoringMatrixTab = 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
 
@@ -399,13 +374,6 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
       <path d="M9 17l3-8 3 8M10.5 14.5h3"/>
     </svg>
   ),
-  'historical-data': (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-      <circle cx="12" cy="12" r="10"/>
-      <polyline points="12 6 12 12 16 14"/>
-      <path d="M3.05 11a9 9 0 011.4-3.7"/>
-    </svg>
-  ),
   'organisation': (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
@@ -467,7 +435,6 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'staff-database': 'Staff records and details',
   'trainee-database': 'Trainee records and details',
   'validation': 'Master cancellation code table used by cancellation records and analytics',
-  'historical-data': 'Seed & refresh historical training records',
   'organisation': 'Fleet sharing and multi-unit configuration',
   'crew-composition': 'Aircraft-specific crew roles and composition profiles',
   'standard-missions': 'Fixed Crew mission profiles for regular unit flights',
@@ -518,7 +485,6 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'trainee-database':  'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
   // HISTORICAL & ANALYSIS - amber icons
   'validation':        'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
-  'historical-data':   'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
   // SYSTEM SETTINGS - cyan icons
   'organisation':      'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'crew-composition':  'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
@@ -623,7 +589,7 @@ const sectionGroups: {
     description: 'Operational runbook, evidence, cancellation code governance, imports and enduring historical records.',
     accent: 'emerald',
     defaultSection: 'platform-operational-runbook',
-    sections: ['platform-operational-runbook', 'validation', 'data-loaders', 'historical-data'],
+    sections: ['platform-operational-runbook', 'validation', 'data-loaders'],
   },
   {
     label: 'Emergency',
@@ -1269,12 +1235,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             onShowSuccess={props.onShowSuccess}
                             currentUserPermission={props.currentUserPermission}
                             courseColors={props.courseColors}
-                        />
-                    )}
-                    {activeSection === 'historical-data' && (
-                        <HistoricalDataSeeder
-                            onClose={() => setActiveSection('home')}
-                            onDataSeeded={() => { /* page will reload */ }}
                         />
                     )}
                     {/* End section content */}
