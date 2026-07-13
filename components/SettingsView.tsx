@@ -8,7 +8,6 @@ import DownloadConfirmationFlyout from './DownloadConfirmationFlyout';
 import DeleteFileConfirmationFlyout from './DeleteFileConfirmationFlyout';
 import UpdateConfirmationFlyout from './UpdateConfirmationFlyout';
 import NewRecordConfirmationFlyout from './NewRecordConfirmationFlyout';
-import PermissionsManagerFlyout from './PermissionsManagerFlyout';
 import UpdateErrorFlyout from './UpdateErrorFlyout';
 import UpdateSummaryFlyout from './UpdateSummaryFlyout';
 import ScoringMatrixFlyout from './ScoringMatrixFlyout';
@@ -16,7 +15,6 @@ import CourseSelectionFlyout from './CourseSelectionFlyout';
 import { CourseSelectionDialog } from './CourseSelectionDialog';
 import { Instructor, Trainee, SyllabusItemDetail, InstructorRank, InstructorCategory, SeatConfig, TraineeRank, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CancellationRecord, CancellationCode, CrewRequirement } from '../types';
 import ACHistoryPage from './ACHistoryPage';
-import PermissionsManagerWindow from './PermissionsManagerWindow';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { debouncedAuditLog } from '../utils/auditDebounce';
@@ -44,7 +42,7 @@ const TEMPLATE_OVERRIDE_FOLDER_ID = 'template_overrides';
 
 interface SettingsViewProps {
     hideHeader?: boolean;
-    activeSection?: 'scoring-matrix' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions' | 'validation' | 'trainee-database' | 'user-list' | 'staff-database' | 'organisation' | 'appearance' | 'emergency';
+    activeSection?: 'scoring-matrix' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'validation' | 'trainee-database' | 'user-list' | 'staff-database' | 'organisation' | 'appearance' | 'emergency';
     instructorsData: Instructor[];
     traineesData: Trainee[];
     syllabusDetails: SyllabusItemDetail[];
@@ -630,8 +628,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     // SCT Events State
     const [isEditingSctEvents, setIsEditingSctEvents] = useState(false);
     
-    // Permissions Manager State
-    const [showPermissionsManager, setShowPermissionsManager] = useState(false);
     const [tempSctEvents, setTempSctEvents] = useState<string[]>([]);
     const [newSctEvent, setNewSctEvent] = useState('');
     
@@ -2511,48 +2507,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             )}
                         </div>
                     </div>
-
-                   )}
-                   {/* Permissions Manager Window */}
-                   {shouldShowSection('permissions') && (
-                   <PermissionsManagerWindow
-                       instructors={instructorsData}
-                       trainees={traineesData}
-                       onUpdateInstructorPermission={(idNumber, permissionLevel) => {
-                           const instructor = instructorsData.find(inst => inst.idNumber === idNumber);
-                           const oldPermission = instructor?.permissions?.[0] || 'None';
-                           const updatedInstructors = instructorsData.map(inst => 
-                               inst.idNumber === idNumber 
-                                   ? { ...inst, permissions: [permissionLevel] }
-                                   : inst
-                           );
-                           onBulkUpdateInstructors(updatedInstructors);
-                           logAudit({
-                               page: 'Settings - Permissions',
-                               action: 'update',
-                               description: `Updated instructor permission: ${instructor?.name}`,
-                               changes: `From: ${oldPermission} To: ${permissionLevel}`
-                           });
-                       }}
-                       onUpdateTraineePermission={(idNumber, permissionLevel) => {
-                           const trainee = traineesData.find(t => t.idNumber === idNumber);
-                           const oldPermission = trainee?.permissions?.[0] || 'None';
-                           const updatedTrainees = traineesData.map(t => 
-                               t.idNumber === idNumber 
-                                   ? { ...t, permissions: [permissionLevel] }
-                                   : t
-                           );
-                           onBulkUpdateTrainees(updatedTrainees);
-                           logAudit({
-                               page: 'Settings - Permissions',
-                               action: 'update',
-                               description: `Updated trainee permission: ${trainee?.name}`,
-                               changes: `From: ${oldPermission} To: ${permissionLevel}`
-                           });
-                       }}
-                       onShowSuccess={onShowSuccess}
-                          currentUserPermission={currentUserPermission}
-                   />
 
                    )}
                    {/* Emergency Page */}

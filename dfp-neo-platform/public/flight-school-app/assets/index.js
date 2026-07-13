@@ -58587,260 +58587,6 @@ const ACHistoryPage = ({
     ] })
   ] });
 };
-const PermissionsManagerWindow = ({
-  instructors,
-  trainees,
-  onUpdateInstructorPermission,
-  onUpdateTraineePermission,
-  onShowSuccess,
-  currentUserPermission = "Super Admin"
-  // Default to Super Admin for now
-}) => {
-  const [isEditing, setIsEditing] = reactExports.useState(false);
-  const [searchTerm, setSearchTerm] = reactExports.useState("");
-  const [filterPermission, setFilterPermission] = reactExports.useState("All");
-  const [filterType, setFilterType] = reactExports.useState("All");
-  const [tempPermissions, setTempPermissions] = reactExports.useState(/* @__PURE__ */ new Map());
-  const isSuperAdmin = currentUserPermission === "Super Admin";
-  const allUsers = reactExports.useMemo(() => {
-    const instructorEntries = instructors.map((inst) => ({
-      id: inst.idNumber,
-      name: inst.name,
-      type: "Instructor",
-      currentRole: [
-        inst.isExecutive && "Executive",
-        inst.isFlyingSupervisor && "Flying Supervisor",
-        inst.isTestingOfficer && "Testing Officer",
-        inst.isIRE && "IRE"
-      ].filter(Boolean).join(", ") || "Instructor",
-      permissionLevel: inst.permissions?.[0] || "Staff"
-    }));
-    const traineeEntries = trainees.map((trainee) => ({
-      id: trainee.idNumber,
-      name: trainee.name,
-      type: "Trainee",
-      currentRole: trainee.course,
-      permissionLevel: trainee.permissions?.[0] || "Trainee"
-    }));
-    return [...instructorEntries, ...traineeEntries].sort((a, b) => a.name.localeCompare(b.name));
-  }, [instructors, trainees]);
-  const filteredUsers = reactExports.useMemo(() => {
-    return allUsers.filter((user) => {
-      const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || user.currentRole?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesPermission = filterPermission === "All" || user.permissionLevel === filterPermission;
-      const matchesType = filterType === "All" || user.type === filterType;
-      return matchesSearch && matchesPermission && matchesType;
-    });
-  }, [allUsers, searchTerm, filterPermission, filterType]);
-  const handleEdit = () => {
-    const tempMap = /* @__PURE__ */ new Map();
-    allUsers.forEach((user) => {
-      tempMap.set(`${user.type}-${user.id}`, user.permissionLevel);
-    });
-    setTempPermissions(tempMap);
-    setIsEditing(true);
-  };
-  const handleSave = () => {
-    tempPermissions.forEach((permissionLevel, key) => {
-      const [type, idStr] = key.split("-");
-      const id = parseInt(idStr);
-      if (type === "Instructor") {
-        const instructor = instructors.find((i) => i.idNumber === id);
-        if (instructor && instructor.permissions?.[0] !== permissionLevel) {
-          onUpdateInstructorPermission(id, permissionLevel);
-        }
-      } else if (type === "Trainee") {
-        const trainee = trainees.find((t) => t.idNumber === id);
-        if (trainee && trainee.permissions?.[0] !== permissionLevel) {
-          onUpdateTraineePermission(id, permissionLevel);
-        }
-      }
-    });
-    setIsEditing(false);
-    onShowSuccess("User permissions updated successfully");
-  };
-  const handleCancel = () => {
-    setIsEditing(false);
-    setTempPermissions(/* @__PURE__ */ new Map());
-  };
-  const handlePermissionChange = (user, newPermission) => {
-    const key = `${user.type}-${user.id}`;
-    setTempPermissions((prev) => {
-      const newMap = new Map(prev);
-      newMap.set(key, newPermission);
-      return newMap;
-    });
-  };
-  const getTempPermission = (user) => {
-    const key = `${user.type}-${user.id}`;
-    return tempPermissions.get(key) || user.permissionLevel;
-  };
-  const getPermissionColor = (permission) => {
-    const colors = {
-      "Super Admin": "bg-purple-600",
-      "Admin": "bg-red-600",
-      "Staff": "bg-blue-600",
-      "Trainee": "bg-green-600",
-      "Ops": "bg-yellow-600",
-      "Scheduler": "bg-orange-600",
-      "Course Supervisor": "bg-pink-600"
-    };
-    return colors[permission];
-  };
-  const permissionLevels = [
-    "Super Admin",
-    "Admin",
-    "Staff",
-    "Trainee",
-    "Ops",
-    "Scheduler",
-    "Course Supervisor"
-  ];
-  const permissionCounts = reactExports.useMemo(() => {
-    const counts = {
-      "Super Admin": 0,
-      "Admin": 0,
-      "Staff": 0,
-      "Trainee": 0,
-      "Ops": 0,
-      "Scheduler": 0,
-      "Course Supervisor": 0
-    };
-    allUsers.forEach((user) => {
-      counts[user.permissionLevel]++;
-    });
-    return counts;
-  }, [allUsers]);
-  if (!isSuperAdmin) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-6xl h-fit", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Permissions Manager" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mt-1", children: "Manage user access permissions" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 text-center", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-16 w-16 mx-auto text-red-500 mb-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z", clipRule: "evenodd" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-white mb-2", children: "Access Denied" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "Only Super Admin users can manage permissions." })
-      ] })
-    ] });
-  }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-6xl h-fit", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Permissions Manager" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mt-1", children: "Assign permission levels to individual users" })
-      ] }),
-      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: handleSave,
-            className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold",
-            children: "Save Changes"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: handleCancel,
-            className: "px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold",
-            children: "Cancel"
-          }
-        )
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: handleEdit,
-          className: "px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold",
-          children: "Edit Permissions"
-        }
-      )
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            type: "text",
-            placeholder: "Search by name or role/course...",
-            value: searchTerm,
-            onChange: (e) => setSearchTerm(e.target.value),
-            className: "w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
-          }
-        ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "select",
-          {
-            value: filterType,
-            onChange: (e) => setFilterType(e.target.value),
-            className: "bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "All", children: "All Users" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Instructor", children: "Instructors Only" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Trainee", children: "Trainees Only" })
-            ]
-          }
-        ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "select",
-          {
-            value: filterPermission,
-            onChange: (e) => setFilterPermission(e.target.value),
-            className: "bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "All", children: "All Permissions" }),
-              permissionLevels.map((level) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: level, children: level }, level))
-            ]
-          }
-        ) })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2 p-3 bg-gray-700/50 rounded-lg", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400 mr-2", children: "Permission Summary:" }),
-        permissionLevels.map((level) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center space-x-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-3 h-3 rounded ${getPermissionColor(level)}` }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-300", children: [
-            level,
-            ": ",
-            permissionCounts[level]
-          ] })
-        ] }, level))
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto max-h-[500px] overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-left text-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 bg-gray-800 z-10", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "font-medium text-gray-400 px-4 py-3", children: "Name" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "font-medium text-gray-400 px-4 py-3", children: "Type" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "font-medium text-gray-400 px-4 py-3", children: "Role/Course" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "font-medium text-gray-400 px-4 py-3", children: "Permission Level" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: filteredUsers.map((user, idx) => {
-          const displayPermission = isEditing ? getTempPermission(user) : user.permissionLevel;
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: `border-b border-gray-700 ${idx % 2 === 0 ? "bg-gray-800/50" : "bg-gray-800/30"}`, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-200 font-medium", children: user.name }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 rounded text-xs font-semibold ${user.type === "Instructor" ? "bg-blue-600 text-white" : "bg-green-600 text-white"}`, children: user.type }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: user.currentRole }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "select",
-              {
-                value: displayPermission,
-                onChange: (e) => handlePermissionChange(user, e.target.value),
-                className: `${getPermissionColor(displayPermission)} text-white rounded-md py-1 px-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-sky-500`,
-                children: permissionLevels.map((level) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: level, children: level }, level))
-              }
-            ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${getPermissionColor(displayPermission)} text-white px-3 py-1 rounded text-xs font-semibold inline-block`, children: displayPermission }) })
-          ] }, `${user.type}-${user.id}`);
-        }) })
-      ] }) }),
-      filteredUsers.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center py-8 text-gray-400", children: "No users found matching your filters." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 bg-gray-700/50 rounded-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
-        "Showing ",
-        filteredUsers.length,
-        " of ",
-        allUsers.length,
-        " users"
-      ] }) })
-    ] })
-  ] });
-};
 const DutyTurnaroundSection = ({
   preferredDutyPeriod,
   onUpdatePreferredDutyPeriod,
@@ -59666,7 +59412,6 @@ const SettingsView = ({
     }));
   };
   const [isEditingSctEvents, setIsEditingSctEvents] = reactExports.useState(false);
-  const [showPermissionsManager, setShowPermissionsManager] = reactExports.useState(false);
   const [tempSctEvents, setTempSctEvents] = reactExports.useState([]);
   const [newSctEvent, setNewSctEvent] = reactExports.useState("");
   const [selectedCurrency, setSelectedCurrency] = reactExports.useState(null);
@@ -61163,43 +60908,6 @@ const SettingsView = ({
           ] })
         ] }) })
       ] }),
-      shouldShowSection("permissions") && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        PermissionsManagerWindow,
-        {
-          instructors: instructorsData,
-          trainees: traineesData,
-          onUpdateInstructorPermission: (idNumber, permissionLevel) => {
-            const instructor = instructorsData.find((inst) => inst.idNumber === idNumber);
-            const oldPermission = instructor?.permissions?.[0] || "None";
-            const updatedInstructors = instructorsData.map(
-              (inst) => inst.idNumber === idNumber ? { ...inst, permissions: [permissionLevel] } : inst
-            );
-            onBulkUpdateInstructors(updatedInstructors);
-            logAudit({
-              page: "Settings - Permissions",
-              action: "update",
-              description: `Updated instructor permission: ${instructor?.name}`,
-              changes: `From: ${oldPermission} To: ${permissionLevel}`
-            });
-          },
-          onUpdateTraineePermission: (idNumber, permissionLevel) => {
-            const trainee = traineesData.find((t) => t.idNumber === idNumber);
-            const oldPermission = trainee?.permissions?.[0] || "None";
-            const updatedTrainees = traineesData.map(
-              (t) => t.idNumber === idNumber ? { ...t, permissions: [permissionLevel] } : t
-            );
-            onBulkUpdateTrainees(updatedTrainees);
-            logAudit({
-              page: "Settings - Permissions",
-              action: "update",
-              description: `Updated trainee permission: ${trainee?.name}`,
-              changes: `From: ${oldPermission} To: ${permissionLevel}`
-            });
-          },
-          onShowSuccess,
-          currentUserPermission
-        }
-      ),
       shouldShowSection("emergency") && /* @__PURE__ */ jsxRuntimeExports.jsx(
         EmergencyPage,
         {
@@ -71656,7 +71364,6 @@ const sectionLabels = {
   "event-limits": "Event Limits",
   "duty-turnaround": "Duty & Turnaround",
   "business-rules": "Business Rules",
-  "permissions": "Permissions",
   "data-loaders": "Data Import",
   "user-list": "User List",
   "staff-database": "Staff Database",
@@ -71727,10 +71434,6 @@ const sectionIcons = {
   "business-rules": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "12", cy: "12", r: "3" })
-  ] }),
-  "permissions": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: "3", y: "11", width: "18", height: "11", rx: "2", ry: "2" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M7 11V7a5 5 0 0110 0v4" })
   ] }),
   "data-loaders": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" }),
@@ -71803,7 +71506,6 @@ const sectionDescriptions = {
   "event-limits": "Define operational thresholds",
   "duty-turnaround": "Crew duty limits & rest times",
   "business-rules": "System logic and automation",
-  "permissions": "Manage system access and roles",
   "data-loaders": "Import operational data files",
   "user-list": "View and manage user accounts",
   "staff-database": "Staff records and details",
@@ -71845,7 +71547,6 @@ const sectionColors = {
   "duty-turnaround": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   "business-rules": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   // ACCESS & SECURITY - violet icons
-  "permissions": "from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400",
   "user-list": "from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400",
   // DATA MANAGEMENT - emerald icons
   "data-loaders": "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400",

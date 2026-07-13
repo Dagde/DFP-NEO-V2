@@ -178,7 +178,6 @@ type SettingsSection =
     | 'event-limits'
     | 'duty-turnaround'
     | 'business-rules'
-    | 'permissions'
     | 'data-loaders'
     | 'user-list'
     | 'staff-database'
@@ -244,7 +243,6 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'event-limits': 'Event Limits',
     'duty-turnaround': 'Duty & Turnaround',
     'business-rules': 'Business Rules',
-    'permissions': 'Permissions',
     'data-loaders': 'Data Import',
     'user-list': 'User List',
     'staff-database': 'Staff Database',
@@ -284,7 +282,6 @@ const allSections: SettingsSection[] = [
     'event-limits',
     'duty-turnaround',
     'business-rules',
-    'permissions',
     'data-loaders',
     'user-list',
     'staff-database',
@@ -364,12 +361,6 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
       <circle cx="12" cy="12" r="3"/>
-    </svg>
-  ),
-  'permissions': (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-      <path d="M7 11V7a5 5 0 0110 0v4"/>
     </svg>
   ),
   'data-loaders': (
@@ -471,7 +462,6 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'event-limits': 'Define operational thresholds',
   'duty-turnaround': 'Crew duty limits & rest times',
   'business-rules': 'System logic and automation',
-  'permissions': 'Manage system access and roles',
   'data-loaders': 'Import operational data files',
   'user-list': 'View and manage user accounts',
   'staff-database': 'Staff records and details',
@@ -504,7 +494,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
 // Icon accent colours per section - grouped by category for consistent icon colours
 // SYSTEM CONFIGURATION: scoring-matrix, currencies, sct-events (sky blue)
 // OPERATIONS RULES: event-limits, duty-turnaround, business-rules (amber)
-// ACCESS & SECURITY: permissions, user-list (violet)
+// ACCESS & SECURITY: user-list (violet)
 // DATA MANAGEMENT: data-loaders, staff-database, trainee-database (emerald)
 // HISTORICAL & ANALYSIS: validation (rose)
 // SYSTEM SETTINGS: organisation and platform configuration (cyan)
@@ -521,7 +511,6 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'duty-turnaround':   'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   'business-rules':    'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   // ACCESS & SECURITY - violet icons
-  'permissions':       'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
   'user-list':         'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
   // DATA MANAGEMENT - emerald icons
   'data-loaders':      'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
