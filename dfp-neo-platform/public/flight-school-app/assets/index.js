@@ -59426,6 +59426,7 @@ const SettingsView = ({
     return [...masterCurrencies, ...currencyRequirements].filter((c) => c.isVisible).sort(safeNameSort);
   }, [masterCurrencies, currencyRequirements]);
   reactExports.useEffect(() => {
+    if (activeSection && activeSection !== "data-loaders") return;
     const initAndFetch = async () => {
       try {
         await initDB();
@@ -59435,7 +59436,7 @@ const SettingsView = ({
       }
     };
     initAndFetch();
-  }, []);
+  }, [activeSection]);
   const shouldShowSection = (sectionName) => {
     if (!activeSection) return true;
     return activeSection === sectionName;
@@ -59509,7 +59510,7 @@ const SettingsView = ({
     await addFile(file, TEMPLATE_OVERRIDE_FOLDER_ID, `${pendingTemplateOverride.key}::${file.name}`);
     await refreshFiles();
     logAudit({
-      page: "Settings - Data Import",
+      page: "Settings - Import Templates",
       action: "update",
       description: `Changed ${pendingTemplateOverride.label} download template`,
       changes: `Template file: ${file.name}`
@@ -59524,7 +59525,7 @@ const SettingsView = ({
     await Promise.all(existingOverrides.map((existingFile) => deleteFile(existingFile.id)));
     await refreshFiles();
     logAudit({
-      page: "Settings - Data Import",
+      page: "Settings - Import Templates",
       action: "update",
       description: `Reset ${template.label} download template`,
       changes: "Restored built-in template download."
@@ -60011,7 +60012,7 @@ const SettingsView = ({
         ] }) })
       ] }),
       shouldShowSection("data-loaders") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Data Import" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Import Templates" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Download Templates" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-2", children: [
@@ -70727,7 +70728,7 @@ const sectionLabels = {
   "event-limits": "Event Limits",
   "duty-turnaround": "Duty & Turnaround",
   "business-rules": "Business Rules",
-  "data-loaders": "Data Import",
+  "data-loaders": "Import Templates",
   "user-list": "User List",
   "staff-database": "Staff Database",
   "trainee-database": "Trainee Database",
@@ -70861,7 +70862,7 @@ const sectionDescriptions = {
   "event-limits": "Define operational thresholds",
   "duty-turnaround": "Crew duty limits & rest times",
   "business-rules": "System logic and automation",
-  "data-loaders": "Download and manage import templates",
+  "data-loaders": "Download editable import templates",
   "user-list": "View and manage user accounts",
   "staff-database": "Staff records and details",
   "trainee-database": "Trainee records and details",

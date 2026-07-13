@@ -597,7 +597,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const [showScoringMatrix, setShowScoringMatrix] = useState(false);
     const [scoringMatrixTab, setScoringMatrixTab] = useState<'Airmanship' | 'Preparation' | 'Technique' | 'Elements'>('Airmanship');
 
-    // Data Loader State
+    // Import template override state
     const [repoFiles, setRepoFiles] = useState<{ id: string; name: string; folderId: string }[]>([]);
     const [pendingTemplateOverride, setPendingTemplateOverride] = useState<{ key: string; label: string } | null>(null);
     const templateOverrideInputRef = useRef<HTMLInputElement>(null);
@@ -620,6 +620,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     // --- EFFECTS ---
     useEffect(() => {
+        if (activeSection && activeSection !== 'data-loaders') return;
         const initAndFetch = async () => {
             try {
                 await initDB();
@@ -629,7 +630,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             }
         };
         initAndFetch();
-    }, []);
+    }, [activeSection]);
     
     // --- HANDLERS ---
     
@@ -722,7 +723,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         await addFile(file, TEMPLATE_OVERRIDE_FOLDER_ID, `${pendingTemplateOverride.key}::${file.name}`);
         await refreshFiles();
         logAudit({
-            page: 'Settings - Data Import',
+            page: 'Settings - Import Templates',
             action: 'update',
             description: `Changed ${pendingTemplateOverride.label} download template`,
             changes: `Template file: ${file.name}`,
@@ -741,7 +742,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         await Promise.all(existingOverrides.map(existingFile => deleteFile(existingFile.id)));
         await refreshFiles();
         logAudit({
-            page: 'Settings - Data Import',
+            page: 'Settings - Import Templates',
             action: 'update',
             description: `Reset ${template.label} download template`,
             changes: 'Restored built-in template download.',
@@ -1338,11 +1339,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                    )}
-                    {/* Data Import Window */}
+                    {/* Import Templates Window */}
                    {shouldShowSection('data-loaders') && (
                     <div className="w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
                         <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                            <h2 className="text-lg font-semibold text-gray-200">Data Import</h2>
+                            <h2 className="text-lg font-semibold text-gray-200">Import Templates</h2>
                         </div>
                         <div className="p-4 space-y-4">
                             <fieldset className="overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3">
