@@ -10886,7 +10886,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Callsign", value: entry.callsign || "", onChange: (value) => updateUnitCallsignEntry(entry, { callsign: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Default", value: entry.isDefault ? "yes" : "no", options: ["yes", "no"], optionLabels: { yes: "Default callsign", no: "Available callsign" }, onChange: (value) => updateUnitCallsignEntry(entry, { isDefault: value === "yes" }), disabled: true })
         ] }, entry.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Callsigns", value: "No callsigns configured for this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Formation Callsigns", description: "Formation callsigns filtered for the current unit.", action: settingsLink("location", "Take me there"), children: unitFormationCallsigns.length > 0 ? unitFormationCallsigns.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Formation Callsigns", description: "Formation callsigns filtered for the current unit.", action: settingsLink("platform-rank-terminology", "Take me there", { focusSubsectionId: "platform-formation-callsigns" }), children: unitFormationCallsigns.length > 0 ? unitFormationCallsigns.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Name", value: callsign.name || "", onChange: () => {
           }, disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Code", value: callsign.code || "", onChange: () => {
@@ -65054,7 +65054,9 @@ const PlatformConfigurationSettings = ({
   masterCurrencies = [],
   currencyRequirements = [],
   syllabusDetails = [],
-  unitCurrencyDefinitions = {}
+  unitCurrencyDefinitions = {},
+  formationCallsigns = [],
+  onUpdateFormationCallsigns
 }) => {
   const [config, setConfig] = reactExports.useState(emptyConfig);
   const [loading, setLoading] = reactExports.useState(true);
@@ -70930,6 +70932,17 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ] }, entry.id))
           ] })
         ] }),
+        onUpdateFormationCallsigns && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-formation-callsigns", className: "rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          FormationCallsignsSection,
+          {
+            callsigns: formationCallsigns,
+            onUpdateCallsigns: onUpdateFormationCallsigns,
+            units: config.units.map((unit) => unit.code).filter(Boolean),
+            locations: config.locations.map((location) => location.name || location.code).filter(Boolean),
+            canEditSettings: canEditRankTerminology,
+            onAuditLog: logAudit
+          }
+        ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 rounded-lg border border-violet-400/25 bg-violet-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-violet-100", children: "Rank Order" }),
@@ -72163,7 +72176,6 @@ const sectionLabels = {
   "trainee-database": "Trainee Database",
   "validation": "Cancellation Codes",
   "historical-data": "Historical Data",
-  "locale-settings": "Locations & Timezones",
   "timezone": "Timezone",
   "location": "Location",
   "units": "Units",
@@ -72267,11 +72279,6 @@ const sectionIcons = {
     /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: "12 6 12 12 16 14" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M3.05 11a9 9 0 011.4-3.7" })
   ] }),
-  "locale-settings": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "12", cy: "10", r: "3" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 2v3M12 15v3" })
-  ] }),
   "timezone": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "12", cy: "12", r: "10" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
@@ -72329,7 +72336,6 @@ const sectionDescriptions = {
   "trainee-database": "Trainee records and details",
   "validation": "Master cancellation code table used by cancellation records and analytics",
   "historical-data": "Seed & refresh historical training records",
-  "locale-settings": "Manage bases, unit assignment, timezones and training areas",
   "timezone": "Configure timezone settings",
   "location": "Manage base locations",
   "units": "Configure unit settings",
@@ -72378,7 +72384,6 @@ const sectionColors = {
   "validation": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   "historical-data": "from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400",
   // SYSTEM SETTINGS - cyan icons
-  "locale-settings": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "timezone": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "location": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "units": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
@@ -72487,467 +72492,6 @@ const sectionGroups = [
     sections: ["emergency"]
   }
 ];
-const timezoneOptions = [
-  { value: -12, label: "UTC-12:00" },
-  { value: -11, label: "UTC-11:00" },
-  { value: -10, label: "UTC-10:00 (Hawaii)" },
-  { value: -9, label: "UTC-09:00 (Alaska)" },
-  { value: -8, label: "UTC-08:00 (Pacific)" },
-  { value: -7, label: "UTC-07:00 (Mountain)" },
-  { value: -6, label: "UTC-06:00 (Central)" },
-  { value: -5, label: "UTC-05:00 (Eastern)" },
-  { value: -4, label: "UTC-04:00" },
-  { value: -3, label: "UTC-03:00" },
-  { value: -2, label: "UTC-02:00" },
-  { value: -1, label: "UTC-01:00" },
-  { value: 0, label: "UTC+00:00 (GMT/UTC)" },
-  { value: 1, label: "UTC+01:00 (CET)" },
-  { value: 2, label: "UTC+02:00" },
-  { value: 3, label: "UTC+03:00" },
-  { value: 4, label: "UTC+04:00" },
-  { value: 5, label: "UTC+05:00" },
-  { value: 5.5, label: "UTC+05:30 (India)" },
-  { value: 6, label: "UTC+06:00" },
-  { value: 7, label: "UTC+07:00" },
-  { value: 8, label: "UTC+08:00 (Singapore/Perth)" },
-  { value: 9, label: "UTC+09:00 (Japan/Korea)" },
-  { value: 9.5, label: "UTC+09:30 (Adelaide)" },
-  { value: 10, label: "UTC+10:00 (AEST Sydney/Brisbane)" },
-  { value: 10.5, label: "UTC+10:30" },
-  { value: 11, label: "UTC+11:00 (AEDT Sydney)" },
-  { value: 12, label: "UTC+12:00 (New Zealand)" },
-  { value: 13, label: "UTC+13:00 (NZDT)" }
-];
-const formatTimezoneLabel = (offset) => {
-  return timezoneOptions.find((option) => option.value === offset)?.label || `UTC${offset >= 0 ? "+" : ""}${offset}:00`;
-};
-const baseSectionTones = [
-  { border: "border-cyan-400/55", glow: "shadow-cyan-950/30", header: "bg-cyan-500/10", accent: "bg-cyan-300" },
-  { border: "border-emerald-400/55", glow: "shadow-emerald-950/30", header: "bg-emerald-500/10", accent: "bg-emerald-300" },
-  { border: "border-violet-400/55", glow: "shadow-violet-950/30", header: "bg-violet-500/10", accent: "bg-violet-300" },
-  { border: "border-amber-400/55", glow: "shadow-amber-950/30", header: "bg-amber-500/10", accent: "bg-amber-300" },
-  { border: "border-sky-400/55", glow: "shadow-sky-950/30", header: "bg-sky-500/10", accent: "bg-sky-300" },
-  { border: "border-rose-400/55", glow: "shadow-rose-950/30", header: "bg-rose-500/10", accent: "bg-rose-300" }
-];
-const LocaleSettingsSection = ({
-  locations,
-  onUpdateLocations,
-  locationAbbreviations = {},
-  onUpdateLocationAbbreviations,
-  serviceDefinitions = [
-    { longName: "Air Force", shortName: "RAAF" },
-    { longName: "Navy", shortName: "RAN" },
-    { longName: "Army", shortName: "ARA" }
-  ],
-  onUpdateServiceDefinitions,
-  units,
-  onUpdateUnits,
-  unitLocations,
-  onUpdateUnitLocations,
-  locationOpAreas = {},
-  onUpdateLocationOpAreas,
-  timezoneOffset,
-  onUpdateTimezoneOffset,
-  formationCallsigns,
-  onUpdateFormationCallsigns,
-  currentUserPermission,
-  onShowSuccess
-}) => {
-  const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
-  const [isEditing, setIsEditing] = reactExports.useState(false);
-  const [tempLocations, setTempLocations] = reactExports.useState(locations);
-  const [tempLocationAbbreviations, setTempLocationAbbreviations] = reactExports.useState(locationAbbreviations);
-  const [tempUnits, setTempUnits] = reactExports.useState(units);
-  const [tempUnitLocations, setTempUnitLocations] = reactExports.useState(unitLocations);
-  const [tempOpAreas, setTempOpAreas] = reactExports.useState(locationOpAreas);
-  const [tempTimezoneOffset, setTempTimezoneOffset] = reactExports.useState(timezoneOffset);
-  const [tempServiceDefinitions, setTempServiceDefinitions] = reactExports.useState(serviceDefinitions);
-  const [newLocation, setNewLocation] = reactExports.useState("");
-  const [newUnitByLocation, setNewUnitByLocation] = reactExports.useState({});
-  const [newAreaByLocation, setNewAreaByLocation] = reactExports.useState({});
-  const [newServiceLong, setNewServiceLong] = reactExports.useState("");
-  const [newServiceShort, setNewServiceShort] = reactExports.useState("");
-  React.useEffect(() => {
-    if (!isEditing) {
-      setTempLocations(locations);
-      setTempLocationAbbreviations(locationAbbreviations);
-      setTempUnits(units);
-      setTempUnitLocations(unitLocations);
-      setTempOpAreas(locationOpAreas);
-      setTempTimezoneOffset(timezoneOffset);
-      setTempServiceDefinitions(serviceDefinitions);
-    }
-  }, [isEditing, locations, locationAbbreviations, units, unitLocations, locationOpAreas, timezoneOffset, serviceDefinitions]);
-  const resetDrafts = () => {
-    setTempLocations(locations);
-    setTempLocationAbbreviations(locationAbbreviations);
-    setTempUnits(units);
-    setTempUnitLocations(unitLocations);
-    setTempOpAreas(locationOpAreas);
-    setTempTimezoneOffset(timezoneOffset);
-    setTempServiceDefinitions(serviceDefinitions);
-    setNewLocation("");
-    setNewUnitByLocation({});
-    setNewAreaByLocation({});
-    setNewServiceLong("");
-    setNewServiceShort("");
-  };
-  const startEdit = () => {
-    resetDrafts();
-    setIsEditing(true);
-  };
-  const cancelEdit = () => {
-    resetDrafts();
-    setIsEditing(false);
-  };
-  const addLocation = () => {
-    const name = newLocation.trim();
-    if (!name || tempLocations.includes(name)) return;
-    setTempLocations([...tempLocations, name]);
-    setTempLocationAbbreviations((prev) => ({ ...prev, [name]: "" }));
-    setTempOpAreas((prev) => ({ ...prev, [name]: [] }));
-    setNewLocation("");
-  };
-  const removeLocation = async (location) => {
-    if (tempLocations.length <= 1) {
-      await showDarkAlert("At least one location must remain configured.", "Cannot Remove Location", "warning");
-      return;
-    }
-    const password = await showDarkPrompt({
-      title: "Remove Location",
-      message: `Enter your password to remove ${location}. Assigned units will be moved to the first remaining location when you save.`,
-      inputLabel: "Password",
-      inputType: "password",
-      inputPlaceholder: "Enter password",
-      confirmText: "Remove",
-      cancelText: "Cancel",
-      variant: "warning"
-    });
-    if (!password) return;
-    try {
-      const isValid = await verifyCurrentUserPassword(password);
-      if (!isValid) {
-        await showDarkAlert("The password was not accepted. The location was not removed.", "Password Required", "warning");
-        return;
-      }
-    } catch {
-      await showDarkAlert("The app could not verify your password. The location was not removed.", "Password Check Failed", "error");
-      return;
-    }
-    const nextLocations = tempLocations.filter((loc) => loc !== location);
-    const fallbackLocation = nextLocations[0] || "";
-    setTempLocations(nextLocations);
-    setTempLocationAbbreviations((prev) => {
-      const next = { ...prev };
-      delete next[location];
-      return next;
-    });
-    setTempOpAreas((prev) => {
-      const next = { ...prev };
-      delete next[location];
-      return next;
-    });
-    setTempUnitLocations((prev) => Object.fromEntries(
-      Object.entries(prev).map(([unit, assignedLocation]) => [unit, assignedLocation === location ? fallbackLocation : assignedLocation])
-    ));
-  };
-  const renameLocation = (oldLocation, newName) => {
-    setTempLocations((prev) => prev.map((loc) => loc === oldLocation ? newName : loc));
-    setTempLocationAbbreviations((prev) => {
-      const next = { ...prev, [newName]: prev[oldLocation] || "" };
-      if (newName !== oldLocation) delete next[oldLocation];
-      return next;
-    });
-    setTempOpAreas((prev) => {
-      const next = { ...prev, [newName]: prev[oldLocation] || [] };
-      if (newName !== oldLocation) delete next[oldLocation];
-      return next;
-    });
-    setTempUnitLocations((prev) => Object.fromEntries(
-      Object.entries(prev).map(([unit, assignedLocation]) => [unit, assignedLocation === oldLocation ? newName : assignedLocation])
-    ));
-  };
-  const addUnitToLocation = (location) => {
-    const unitName = (newUnitByLocation[location] || "").trim();
-    if (!unitName || tempUnits.includes(unitName)) return;
-    setTempUnits([...tempUnits, unitName]);
-    setTempUnitLocations((prev) => ({ ...prev, [unitName]: location }));
-    setNewUnitByLocation((prev) => ({ ...prev, [location]: "" }));
-  };
-  const removeUnit = (unit) => {
-    setTempUnits((prev) => prev.filter((item) => item !== unit));
-    setTempUnitLocations((prev) => {
-      const next = { ...prev };
-      delete next[unit];
-      return next;
-    });
-  };
-  const addAreaToLocation = (location) => {
-    const area = (newAreaByLocation[location] || "").trim().toUpperCase();
-    if (!area) return;
-    const existing = tempOpAreas[location] || [];
-    if (existing.includes(area)) return;
-    setTempOpAreas((prev) => ({ ...prev, [location]: [...existing, area].sort() }));
-    setNewAreaByLocation((prev) => ({ ...prev, [location]: "" }));
-  };
-  const removeArea = (location, area) => {
-    setTempOpAreas((prev) => ({
-      ...prev,
-      [location]: (prev[location] || []).filter((item) => item !== area)
-    }));
-  };
-  const addService = () => {
-    const longName = newServiceLong.trim();
-    const shortName = newServiceShort.trim().toUpperCase();
-    if (!longName || !shortName || tempServiceDefinitions.some((service) => service.shortName === shortName)) return;
-    setTempServiceDefinitions([...tempServiceDefinitions, { longName, shortName }]);
-    setNewServiceLong("");
-    setNewServiceShort("");
-  };
-  const removeService = (shortName) => {
-    setTempServiceDefinitions((prev) => prev.filter((service) => service.shortName !== shortName));
-  };
-  const saveLocaleSettings = () => {
-    const previousLocations = Array.from(new Set(locations.map((location) => location.trim()).filter(Boolean)));
-    const cleanLocations = tempLocations.map((location) => location.trim()).filter(Boolean);
-    const uniqueLocations = Array.from(new Set(cleanLocations));
-    const fallbackLocation = uniqueLocations[0] || "";
-    const cleanAbbreviations = Object.fromEntries(
-      uniqueLocations.map((location) => [location, (tempLocationAbbreviations[location] || "").trim().toUpperCase()])
-    );
-    const cleanUnits = Array.from(new Set(tempUnits.map((unit) => unit.trim()).filter(Boolean)));
-    const cleanUnitLocations = Object.fromEntries(
-      cleanUnits.map((unit) => [unit, uniqueLocations.includes(tempUnitLocations[unit]) ? tempUnitLocations[unit] : fallbackLocation])
-    );
-    const cleanOpAreas = Object.fromEntries(
-      uniqueLocations.map((location) => [location, Array.from(new Set((tempOpAreas[location] || []).map((area) => area.trim().toUpperCase()).filter(Boolean))).sort()])
-    );
-    onUpdateLocations(uniqueLocations);
-    if (onUpdateLocationAbbreviations) onUpdateLocationAbbreviations(cleanAbbreviations);
-    onUpdateTimezoneOffset(tempTimezoneOffset);
-    onUpdateUnits(cleanUnits);
-    onUpdateUnitLocations(cleanUnitLocations);
-    if (onUpdateLocationOpAreas) onUpdateLocationOpAreas(cleanOpAreas);
-    if (onUpdateServiceDefinitions) onUpdateServiceDefinitions(tempServiceDefinitions);
-    setIsEditing(false);
-    onShowSuccess("Locale settings updated");
-    logAudit({
-      page: "Settings - Locale Settings",
-      action: "Edit",
-      description: "Updated location-led locale settings",
-      changes: `${uniqueLocations.length} locations, ${cleanUnits.length} units, timezone ${formatTimezoneLabel(tempTimezoneOffset)}`
-    });
-    uniqueLocations.filter((location) => !previousLocations.includes(location)).forEach((location) => logAudit({
-      page: "Settings - Locale Settings",
-      action: "Add",
-      description: `Added location ${location}`,
-      changes: `Location: ${location}; code: ${cleanAbbreviations[location] || "none"}; timezone: ${formatTimezoneLabel(tempTimezoneOffset)}`
-    }));
-    previousLocations.filter((location) => !uniqueLocations.includes(location)).forEach((location) => logAudit({
-      page: "Settings - Locale Settings",
-      action: "Delete",
-      description: `Removed location ${location}`,
-      changes: `Remaining locations: ${uniqueLocations.join(", ") || "none"}`
-    }));
-  };
-  const displayedLocations = isEditing ? tempLocations : locations;
-  const displayedUnits = isEditing ? tempUnits : units;
-  const displayedUnitLocations = isEditing ? tempUnitLocations : unitLocations;
-  const displayedOpAreas = isEditing ? tempOpAreas : locationOpAreas;
-  const displayedAbbreviations = isEditing ? tempLocationAbbreviations : locationAbbreviations;
-  const displayedTimezone = isEditing ? tempTimezoneOffset : timezoneOffset;
-  const displayedServices = isEditing ? tempServiceDefinitions : serviceDefinitions;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start gap-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-cyan-200", children: "Locale Settings" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-cyan-100/70", children: "Locations are the parent record. Each location carries its timezone, assigned units, and training areas." })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "ml-auto flex gap-2", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: saveLocaleSettings, className: "rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-700", children: "Save" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: cancelEdit, className: "rounded-md bg-gray-700 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-600", children: "Cancel" })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: startEdit,
-          disabled: !canEditSettings,
-          className: `rounded-md px-3 py-2 text-sm font-semibold ${canEditSettings ? "bg-gray-700 text-white hover:bg-gray-600" : "bg-gray-800 text-gray-500 cursor-not-allowed"}`,
-          children: "Edit"
-        }
-      ) })
-    ] }) }),
-    isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-xs font-semibold uppercase tracking-widest text-gray-500", children: "Add Location" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            value: newLocation,
-            onChange: (event) => setNewLocation(event.target.value),
-            placeholder: "New location name",
-            className: "min-w-64 flex-1 rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: addLocation, className: "rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700", children: "Add Location" })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-4 2xl:grid-cols-2", children: displayedLocations.map((location, locationIndex) => {
-      const assignedUnits = displayedUnits.filter((unit) => displayedUnitLocations[unit] === location);
-      const trainingAreas = displayedOpAreas[location] || [];
-      const tone = baseSectionTones[locationIndex % baseSectionTones.length];
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: `overflow-hidden rounded-lg border-2 ${tone.border} bg-gray-800 shadow-lg ${tone.glow}`, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `border-b border-gray-700 ${tone.header} px-4 py-3`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-1 h-10 w-1.5 shrink-0 rounded-full ${tone.accent}` }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 flex-1", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-2 sm:grid-cols-[1fr_6rem]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                value: location,
-                onChange: (event) => renameLocation(location, event.target.value),
-                className: "rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-lg font-bold text-white focus:border-sky-500 focus:outline-none"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                value: tempLocationAbbreviations[location] || "",
-                onChange: (event) => setTempLocationAbbreviations((prev) => ({ ...prev, [location]: event.target.value.toUpperCase() })),
-                maxLength: 5,
-                placeholder: "Code",
-                className: "rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-center font-mono text-sm font-bold uppercase text-yellow-300 focus:border-sky-500 focus:outline-none"
-              }
-            )
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "truncate text-xl font-bold text-white", children: location }),
-            displayedAbbreviations[location] && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 font-mono text-xs font-bold uppercase tracking-widest text-yellow-300", children: displayedAbbreviations[location] })
-          ] }) }),
-          isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => removeLocation(location), className: "rounded-md border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/10", children: "Remove Location" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-xs font-semibold uppercase tracking-widest text-gray-500", children: "Assigned Timezone" }),
-            isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "select",
-              {
-                value: displayedTimezone,
-                onChange: (event) => setTempTimezoneOffset(parseFloat(event.target.value)),
-                className: "w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none",
-                children: timezoneOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value))
-              }
-            ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md bg-gray-900/70 px-3 py-2 text-sm font-semibold text-gray-200", children: formatTimezoneLabel(displayedTimezone) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold uppercase tracking-widest text-gray-500", children: "Assigned Units" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-600", children: assignedUnits.length })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              assignedUnits.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded-md border border-dashed border-gray-700 px-3 py-2 text-sm text-gray-500", children: "No units assigned." }),
-              assignedUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 rounded-md bg-gray-900/70 px-3 py-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-1 text-sm font-semibold text-gray-200", children: unit }),
-                isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "select",
-                    {
-                      value: tempUnitLocations[unit] || location,
-                      onChange: (event) => setTempUnitLocations((prev) => ({ ...prev, [unit]: event.target.value })),
-                      className: "rounded-md border border-gray-600 bg-gray-950 px-2 py-1 text-xs text-white",
-                      children: tempLocations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => removeUnit(unit), className: "text-xs font-semibold text-red-300 hover:text-red-200", children: "Remove" })
-                ] })
-              ] }, unit))
-            ] }),
-            isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  value: newUnitByLocation[location] || "",
-                  onChange: (event) => setNewUnitByLocation((prev) => ({ ...prev, [location]: event.target.value })),
-                  placeholder: "New unit for this location",
-                  className: "min-w-0 flex-1 rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => addUnitToLocation(location), className: "rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700", children: "Add" })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold uppercase tracking-widest text-gray-500", children: "Assigned Training Areas" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-600", children: trainingAreas.length })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
-              trainingAreas.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded-md border border-dashed border-gray-700 px-3 py-2 text-sm text-gray-500", children: "No training areas assigned." }),
-              trainingAreas.map((area) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-2 rounded-md bg-gray-900/70 px-3 py-1.5 text-sm font-semibold text-gray-200", children: [
-                area,
-                isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => removeArea(location, area), className: "text-gray-500 hover:text-red-300", children: "x" })
-              ] }, area))
-            ] }),
-            isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  value: newAreaByLocation[location] || "",
-                  onChange: (event) => setNewAreaByLocation((prev) => ({ ...prev, [location]: event.target.value.toUpperCase() })),
-                  placeholder: "New training area",
-                  className: "min-w-0 flex-1 rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm uppercase text-white focus:border-sky-500 focus:outline-none"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => addAreaToLocation(location), className: "rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700", children: "Add" })
-            ] })
-          ] })
-        ] })
-      ] }, `settings-location-${locationIndex}`);
-    }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 bg-gray-900/45 px-4 py-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-lg font-bold text-white", children: "Service Branches" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-500", children: "Recognised service names and short codes used when filtering personnel." })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 p-4", children: [
-        displayedServices.map((service) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 rounded-md bg-gray-900/70 px-3 py-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-16 rounded bg-gray-700 px-2 py-1 text-center font-mono text-xs font-bold text-yellow-300", children: service.shortName }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-1 text-sm text-gray-200", children: service.longName }),
-          isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => removeService(service.shortName), className: "text-xs font-semibold text-red-300 hover:text-red-200", children: "Remove" })
-        ] }, service.shortName)),
-        isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-2 pt-2 sm:grid-cols-[8rem_1fr_auto]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              value: newServiceShort,
-              onChange: (event) => setNewServiceShort(event.target.value.toUpperCase()),
-              maxLength: 6,
-              placeholder: "Code",
-              className: "rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm uppercase text-yellow-300 focus:border-sky-500 focus:outline-none"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              value: newServiceLong,
-              onChange: (event) => setNewServiceLong(event.target.value),
-              placeholder: "Service name",
-              className: "rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: addService, className: "rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700", children: "Add" })
-        ] })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      FormationCallsignsSection,
-      {
-        callsigns: formationCallsigns,
-        onUpdateCallsigns: onUpdateFormationCallsigns,
-        units,
-        locations,
-        canEditSettings,
-        onAuditLog: logAudit
-      }
-    )
-  ] });
-};
 const SettingsViewWithMenu = (props) => {
   const contentScrollRef = reactExports.useRef(null);
   const [activeSection, setActiveSection] = reactExports.useState(() => {
@@ -73236,29 +72780,6 @@ const SettingsViewWithMenu = (props) => {
             }
           ) })
         ] }),
-        activeSection === "locale-settings" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          LocaleSettingsSection,
-          {
-            locations: props.locations,
-            onUpdateLocations: props.onUpdateLocations,
-            locationAbbreviations: props.locationAbbreviations,
-            onUpdateLocationAbbreviations: props.onUpdateLocationAbbreviations,
-            serviceDefinitions: props.serviceDefinitions,
-            onUpdateServiceDefinitions: props.onUpdateServiceDefinitions,
-            units: props.units,
-            onUpdateUnits: props.onUpdateUnits,
-            unitLocations: props.unitLocations,
-            onUpdateUnitLocations: props.onUpdateUnitLocations,
-            locationOpAreas: props.locationOpAreas,
-            onUpdateLocationOpAreas: props.onUpdateLocationOpAreas,
-            timezoneOffset: props.timezoneOffset,
-            onUpdateTimezoneOffset: props.onUpdateTimezoneOffset,
-            formationCallsigns: props.formationCallsigns,
-            onUpdateFormationCallsigns: props.onUpdateFormationCallsigns,
-            currentUserPermission: props.currentUserPermission,
-            onShowSuccess: props.onShowSuccess
-          }
-        ),
         activeSection === "scheduling-rules" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-amber-200", children: "Scheduling Rules" }),
@@ -73396,7 +72917,7 @@ const SettingsViewWithMenu = (props) => {
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
-        activeSection !== "scoring-matrix" && activeSection !== "locale-settings" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
+        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
         activeSection === "user-list" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           UserListSection,
           {
@@ -73456,7 +72977,9 @@ const SettingsViewWithMenu = (props) => {
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
             syllabusDetails: props.syllabusDetails,
-            unitCurrencyDefinitions: props.unitCurrencyDefinitions
+            unitCurrencyDefinitions: props.unitCurrencyDefinitions,
+            formationCallsigns: props.formationCallsigns,
+            onUpdateFormationCallsigns: props.onUpdateFormationCallsigns
           }
         ),
         activeSection === "appearance" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(

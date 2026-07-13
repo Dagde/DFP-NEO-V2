@@ -74,6 +74,7 @@ import {
   normaliseUnitCallsignSettings,
   type UnitCallsignEntry,
 } from '../utils/unitCallsigns';
+import FormationCallsignsSection from './FormationCallsignsSection';
 import { getAppApiBase } from '../utils/externalDataControls';
 import {
   isSetupTestMode,
@@ -83,7 +84,7 @@ import {
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
-import type { CurrencyRequirement, MasterCurrency, SyllabusItemDetail } from '../types';
+import type { CurrencyRequirement, FormationCallsign, MasterCurrency, SyllabusItemDetail } from '../types';
 import {
   DEFAULT_INSERT_EVENT_TYPES,
   INSERT_EVENT_LABEL_MAX_LENGTH,
@@ -1677,6 +1678,8 @@ interface PlatformConfigurationSettingsProps {
     masterCurrencies: MasterCurrency[];
     currencyRequirements: CurrencyRequirement[];
   }>;
+  formationCallsigns?: FormationCallsign[];
+  onUpdateFormationCallsigns?: (callsigns: FormationCallsign[]) => void;
 }
 
 const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps> = ({
@@ -1701,6 +1704,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   currencyRequirements = [],
   syllabusDetails = [],
   unitCurrencyDefinitions = {},
+  formationCallsigns = [],
+  onUpdateFormationCallsigns,
 }) => {
   const [config, setConfig] = useState<PlatformConfig>(emptyConfig);
   const [loading, setLoading] = useState(true);
@@ -8312,6 +8317,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 ))}
             </div>
           </div>
+          {onUpdateFormationCallsigns && (
+            <div id="platform-formation-callsigns" className="rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4">
+              <FormationCallsignsSection
+                callsigns={formationCallsigns}
+                onUpdateCallsigns={onUpdateFormationCallsigns}
+                units={config.units.map((unit: any) => unit.code).filter(Boolean)}
+                locations={config.locations.map((location: any) => location.name || location.code).filter(Boolean)}
+                canEditSettings={canEditRankTerminology}
+                onAuditLog={logAudit}
+              />
+            </div>
+          )}
           <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-violet-400/25 bg-violet-500/10 p-4">
             <div>
               <h5 className="text-sm font-bold text-violet-100">Rank Order</h5>

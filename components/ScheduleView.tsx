@@ -2141,7 +2141,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Callsigns" value="No callsigns configured for this unit." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Formation Callsigns" description="Formation callsigns filtered for the current unit." action={settingsLink('location', 'Take me there')}>
+                    <UnitSettingsGroup title="Formation Callsigns" description="Formation callsigns filtered for the current unit." action={settingsLink('platform-rank-terminology', 'Take me there', { focusSubsectionId: 'platform-formation-callsigns' })}>
                         {unitFormationCallsigns.length > 0 ? unitFormationCallsigns.map((callsign) => (
                             <div key={`${callsign.unit}-${callsign.code}-${callsign.locationCode}`} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Name" value={callsign.name || ''} onChange={() => {}} disabled />
