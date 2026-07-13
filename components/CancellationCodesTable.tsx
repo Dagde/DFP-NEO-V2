@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CancellationCode, CancellationCodeCategory, CancellationCodeAppliesTo } from '../types';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface CancellationCodesTableProps {
   codes: CancellationCode[];
@@ -139,7 +140,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
     return (
       <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-white">Cancellation Codes (Master Table)</h2>
+          <h2 className="text-xl font-bold text-white">Cancellation Codes</h2>
           {canEdit && (
             <div className="w-24 h-8 bg-gray-700 rounded animate-pulse" />
           )}
@@ -203,7 +204,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
   return (
     <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-white">Cancellation Codes (Master Table)</h2>
+        <h2 className="text-xl font-bold text-white">Cancellation Codes</h2>
         {canEdit && (
           <div className="flex items-center gap-[1px]">
             <button
@@ -245,6 +246,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                     type="text"
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                    onKeyDownCapture={stopEditableKeyPropagation}
+                    onKeyDown={stopEditableKeyPropagation}
                     maxLength={4}
                     className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
                     placeholder="CODE"
@@ -267,6 +270,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                     type="text"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onKeyDownCapture={stopEditableKeyPropagation}
+                    onKeyDown={stopEditableKeyPropagation}
                     className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
                     placeholder="Description"
                   />
@@ -318,6 +323,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                         type="text"
                         value={formData.code}
                         onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                        onKeyDownCapture={stopEditableKeyPropagation}
+                        onKeyDown={stopEditableKeyPropagation}
                         maxLength={4}
                         className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
                       />
@@ -339,6 +346,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                         type="text"
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        onKeyDownCapture={stopEditableKeyPropagation}
+                        onKeyDown={stopEditableKeyPropagation}
                         className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
                       />
                     </td>
@@ -443,7 +452,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                   No cancellation codes found.
                   {canEdit && (
                     <span className="ml-1">
-                      Click <span className="text-sky-400 font-semibold">+ Add Code</span> to create one.
+                      Click <span className="text-sky-400 font-semibold">Add</span> to create one.
                     </span>
                   )}
                 </td>
@@ -454,9 +463,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
       </div>
 
       <div className="mt-4 text-sm text-gray-400">
-        <p>• Only authorized users (Admin/Config roles) can add, edit, or activate/deactivate codes.</p>
-        <p>• Codes that have been used in cancellations cannot be deleted.</p>
-        <p>• Inactive codes remain visible in historical records.</p>
+        <p>Used codes are retained for historical records and cannot be deleted.</p>
+        <p>Inactive codes remain visible in historical records.</p>
       </div>
 
       {/* Delete Confirmation Dialog */}

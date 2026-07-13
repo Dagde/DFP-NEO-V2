@@ -58126,7 +58126,7 @@ const CancellationCodesTable = ({
   if (isLoading) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Cancellation Codes (Master Table)" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Cancellation Codes" }),
         canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-24 h-8 bg-gray-700 rounded animate-pulse" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
@@ -58162,7 +58162,7 @@ const CancellationCodesTable = ({
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Cancellation Codes (Master Table)" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Cancellation Codes" }),
       canEdit && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
@@ -58202,6 +58202,8 @@ const CancellationCodesTable = ({
               type: "text",
               value: formData.code,
               onChange: (e) => setFormData({ ...formData, code: e.target.value.toUpperCase() }),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              onKeyDown: stopEditableKeyPropagation,
               maxLength: 4,
               className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
               placeholder: "CODE"
@@ -58227,6 +58229,8 @@ const CancellationCodesTable = ({
               type: "text",
               value: formData.description,
               onChange: (e) => setFormData({ ...formData, description: e.target.value }),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              onKeyDown: stopEditableKeyPropagation,
               className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
               placeholder: "Description"
             }
@@ -58278,6 +58282,8 @@ const CancellationCodesTable = ({
                   type: "text",
                   value: formData.code,
                   onChange: (e) => setFormData({ ...formData, code: e.target.value.toUpperCase() }),
+                  onKeyDownCapture: stopEditableKeyPropagation,
+                  onKeyDown: stopEditableKeyPropagation,
                   maxLength: 4,
                   className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
                 }
@@ -58302,6 +58308,8 @@ const CancellationCodesTable = ({
                   type: "text",
                   value: formData.description,
                   onChange: (e) => setFormData({ ...formData, description: e.target.value }),
+                  onKeyDownCapture: stopEditableKeyPropagation,
+                  onKeyDown: stopEditableKeyPropagation,
                   className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
                 }
               ) }),
@@ -58387,16 +58395,15 @@ const CancellationCodesTable = ({
           "No cancellation codes found.",
           canEdit && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-1", children: [
             "Click ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-semibold", children: "+ Add Code" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-semibold", children: "Add" }),
             " to create one."
           ] })
         ] }) })
       ] })
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 text-sm text-gray-400", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Only authorized users (Admin/Config roles) can add, edit, or activate/deactivate codes." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Codes that have been used in cancellations cannot be deleted." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Inactive codes remain visible in historical records." })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Used codes are retained for historical records and cannot be deleted." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Inactive codes remain visible in historical records." })
     ] }),
     deletingCode && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6 max-w-md", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold text-white mb-4", children: "Confirm Delete" }),
