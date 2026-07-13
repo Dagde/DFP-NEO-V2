@@ -66101,15 +66101,16 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     return matchedKey ? childMap[matchedKey] || [] : [];
   };
   const showSectionOnlySaveButton = !(sectionOnly && (scrollTarget === "platform-rank-terminology" || scrollTarget === "platform-task-profiles"));
+  const showSectionOnlyStatusPanel = showSectionOnlySaveButton || !canEdit || Boolean(error);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: stopEditableKeyPropagation, children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-cyan-100", children: "One moment while we apply your changes" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-300", children: "The updated platform settings are being applied across the running app." })
     ] }) }),
-    sectionOnly ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/80 px-4 py-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
+    sectionOnly && showSectionOnlyStatusPanel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/80 px-4 py-3", children: [
+      showSectionOnlySaveButton && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-relaxed text-gray-300", children: "Changes on this settings page are saved into the platform configuration." }),
-        showSectionOnlySaveButton && saveButton
+        saveButton
       ] }),
       !canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Read-only. Super Admin or Admin permission is required to change platform configuration." }),
       error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100", children: error })
