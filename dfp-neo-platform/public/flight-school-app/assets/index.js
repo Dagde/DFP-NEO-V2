@@ -67904,16 +67904,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             `crew-composition-aircraft-tab-${code || aircraft.name}`
           );
         }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border px-3 py-2 ${crewCompositionUnlocked ? "border-cyan-400/40 bg-cyan-500/10" : "border-gray-700 bg-gray-950/60"}`, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Edit State" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-1 text-sm font-bold ${crewCompositionUnlocked ? "text-cyan-100" : "text-gray-200"}`, children: crewCompositionUnlocked ? "Editing active" : "Locked" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: [
-              "Selected aircraft: ",
-              activeCrewCompositionAircraftCode || "Aircraft",
-              "."
-            ] })
-          ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Aircraft Roles" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-cyan-100", children: visibleCrewPositionEntries.length }),
@@ -68343,12 +68334,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           ) }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border px-3 py-2 ${resourcePoolsUnlocked ? "border-cyan-400/40 bg-cyan-500/10" : "border-gray-700 bg-gray-950/60"}`, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Edit State" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-1 text-sm font-bold ${resourcePoolsUnlocked ? "text-cyan-100" : "text-gray-200"}`, children: resourcePoolsUnlocked ? "Editing active" : "Locked" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: resourcePoolsUnlocked ? "Save writes changes to the database and keeps the active DFP loaded." : "Click Edit before changing aircraft or pool settings." })
-        ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Aircraft Types" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-orange-100", children: config.aircraftTypes.length }),

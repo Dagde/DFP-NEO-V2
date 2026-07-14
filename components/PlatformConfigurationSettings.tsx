@@ -6163,12 +6163,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             })}
           </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className={`rounded-lg border px-3 py-2 ${crewCompositionUnlocked ? 'border-cyan-400/40 bg-cyan-500/10' : 'border-gray-700 bg-gray-950/60'}`}>
-              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Edit State</div>
-              <div className={`mt-1 text-sm font-bold ${crewCompositionUnlocked ? 'text-cyan-100' : 'text-gray-200'}`}>{crewCompositionUnlocked ? 'Editing active' : 'Locked'}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Selected aircraft: {activeCrewCompositionAircraftCode || 'Aircraft'}.</div>
-            </div>
+          <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
               <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Aircraft Roles</div>
               <div className="mt-1 text-lg font-black text-cyan-100">{visibleCrewPositionEntries.length}</div>
@@ -6599,16 +6594,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ) : null}
         />
         <div className="p-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className={`rounded-lg border px-3 py-2 ${resourcePoolsUnlocked ? 'border-cyan-400/40 bg-cyan-500/10' : 'border-gray-700 bg-gray-950/60'}`}>
-              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Edit State</div>
-              <div className={`mt-1 text-sm font-bold ${resourcePoolsUnlocked ? 'text-cyan-100' : 'text-gray-200'}`}>
-                {resourcePoolsUnlocked ? 'Editing active' : 'Locked'}
-              </div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">
-                {resourcePoolsUnlocked ? 'Save writes changes to the database and keeps the active DFP loaded.' : 'Click Edit before changing aircraft or pool settings.'}
-              </div>
-            </div>
+          <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
               <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Aircraft Types</div>
               <div className="mt-1 text-lg font-black text-orange-100">{config.aircraftTypes.length}</div>
