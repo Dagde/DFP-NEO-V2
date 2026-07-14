@@ -1007,7 +1007,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                {isEditingSctEvents ? (
                                    <>
                                        <p className="text-sm text-gray-400">Manage SCT event types.</p>
-                                       <ul className="space-y-2 max-h-40 overflow-y-auto">
+                                       <ul className="space-y-2 max-h-60 overflow-y-auto">
                                            {tempSctEvents.map(evt => (
                                                <li key={evt} className="flex items-center justify-between p-2 bg-gray-700/50 rounded">
                                                    <span className="text-white">{evt}</span>
@@ -1038,7 +1038,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                ) : (
                                    <>
                                        <p className="text-sm text-gray-400">Configured SCT event types.</p>
-                                       <ul className="space-y-2 max-h-40 overflow-y-auto">
+                                       <ul className="space-y-2 max-h-60 overflow-y-auto">
                                            {sctEvents.map(evt => (
                                                <li key={evt} className="p-2 bg-gray-700/50 rounded text-white">
                                                    {evt}
