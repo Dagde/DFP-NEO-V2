@@ -63193,7 +63193,7 @@ const OPERATIONAL_RUNBOOK_HELP = {
   evidenceExportPath: "Record where exported audit evidence or legal record packs are stored. Correct examples: \\\\records-server\\dfp-neo\\audit-exports, /srv/dfp-neo/audit-exports, D:\\DFP-NEO\\Evidence, or Approved Records Share - DFP Exports. Do not enter passwords or tokens.",
   auditRetentionYears: "Enter how many years audit logs and legal record evidence must be retained. Whole numbers only. Example: 7.",
   accreditationStatus: "Select the current security or accreditation state for this deployment. This is an administrator record; it does not grant formal approval by itself.",
-  notes: "Add operational notes that help future administrators understand this deployment. Do not record secrets, passwords, licence private keys, database URLs or access tokens."
+  notes: "Add operational notes that help administrators understand this deployment. Do not record secrets, passwords, licence private keys, database URLs or access tokens."
 };
 const OPERATIONAL_RUNBOOK_SECTION_HELP = {
   environmentIdentity: [
@@ -63628,7 +63628,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     }
     const matchingPools = activeResourcePools.filter((pool) => toIdentifier(pool.unitCode) === unitCode || !toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode);
     if (matchingPools.length === 0) {
-      add("WARNING", "Resource Pools", `${unitCode} has no active resource pool`, "DFP resource counts may use the current app defaults until a matching pool is configured.", `unit-${unitCode}-pools`, void 0, { focusSubsectionId: "platform-resource-pools" });
+      add("WARNING", "Resource Pools", `${unitCode} has no active resource pool`, "DFP resource counts may use default values until a matching pool is configured.", `unit-${unitCode}-pools`, void 0, { focusSubsectionId: "platform-resource-pools" });
     }
     const operationalModel = getUnitOperationalModel(unit);
     if (isFixedCrewLikeOperationalModel(operationalModel)) {
@@ -63673,7 +63673,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
   });
   const runtimePools = activeResourcePools.filter((pool) => pool.settings?.applyToV2Runtime === true);
   if (runtimePools.length === 0) {
-    add("WARNING", "Resource Pools", "No pool is applied to the live DFP", 'At least one resource pool should have "Apply to Live DFP" enabled so the DFP uses platform configuration rather than current app defaults.', "runtime-pool-none", void 0, { focusSubsectionId: "platform-resource-pools" });
+    add("WARNING", "Resource Pools", "No pool is applied to the live DFP", 'At least one resource pool should have "Apply to Live DFP" enabled so live resource counts come from platform configuration.', "runtime-pool-none", void 0, { focusSubsectionId: "platform-resource-pools" });
   } else if (!items.some((item) => item.area === "Resource Pools" && item.severity === "CRITICAL")) {
     add("OK", "Resource Pools", "Live DFP resource pools are configured", `${runtimePools.length} active resource pool${runtimePools.length === 1 ? "" : "s"} feed the live DFP.`, "runtime-pool-active");
   }
@@ -63764,7 +63764,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
   const today = /* @__PURE__ */ new Date();
   today.setHours(0, 0, 0, 0);
   if (activeLicences.length === 0) {
-    add("WARNING", "Licensing", "No active licence record", "Commercial installs should have at least one active licence record, even while enforcement remains Monitor Only.", "licence-none", void 0, { focusSubsectionId: "platform-license-records" });
+    add("WARNING", "Licensing", "No active licence record", "Operational deployments should have at least one active licence record.", "licence-none", void 0, { focusSubsectionId: "platform-license-records" });
   } else {
     activeLicences.forEach((license) => {
       const licenseName = license.licenseName || license.licenseKey || "Licence";
@@ -68473,7 +68473,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Deployment Profile" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Describes how this customer installation is expected to run and how the licence will be checked. Keep enforcement at Monitor Only until the customer acceptance path is proven." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Describes how this installation is expected to run and how the licence will be checked." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-100", children: "Runtime-safe: monitor-first" })
           ] }),
@@ -69507,7 +69507,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Rank, Terminology & Labels",
-          subtitle: "Configure personnel display order, local role terminology and customer-facing report labels without changing internal codes."
+          subtitle: "Configure personnel display order, local role terminology and customer-facing report labels."
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [

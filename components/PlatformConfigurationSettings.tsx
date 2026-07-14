@@ -866,7 +866,7 @@ const OPERATIONAL_RUNBOOK_HELP: Record<string, string> = {
   evidenceExportPath: 'Record where exported audit evidence or legal record packs are stored. Correct examples: \\\\records-server\\dfp-neo\\audit-exports, /srv/dfp-neo/audit-exports, D:\\DFP-NEO\\Evidence, or Approved Records Share - DFP Exports. Do not enter passwords or tokens.',
   auditRetentionYears: 'Enter how many years audit logs and legal record evidence must be retained. Whole numbers only. Example: 7.',
   accreditationStatus: 'Select the current security or accreditation state for this deployment. This is an administrator record; it does not grant formal approval by itself.',
-  notes: 'Add operational notes that help future administrators understand this deployment. Do not record secrets, passwords, licence private keys, database URLs or access tokens.',
+  notes: 'Add operational notes that help administrators understand this deployment. Do not record secrets, passwords, licence private keys, database URLs or access tokens.',
 };
 
 const OPERATIONAL_RUNBOOK_SECTION_HELP: Record<string, string> = {
@@ -1426,7 +1426,7 @@ const buildConfigurationHealth = (
       || (!toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode)
     ));
     if (matchingPools.length === 0) {
-      add('WARNING', 'Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource counts may use the current app defaults until a matching pool is configured.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
+      add('WARNING', 'Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource counts may use default values until a matching pool is configured.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
     }
 
     const operationalModel = getUnitOperationalModel(unit);
@@ -1484,7 +1484,7 @@ const buildConfigurationHealth = (
 
   const runtimePools = activeResourcePools.filter((pool) => pool.settings?.applyToV2Runtime === true);
   if (runtimePools.length === 0) {
-    add('WARNING', 'Resource Pools', 'No pool is applied to the live DFP', 'At least one resource pool should have "Apply to Live DFP" enabled so the DFP uses platform configuration rather than current app defaults.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-resource-pools' });
+    add('WARNING', 'Resource Pools', 'No pool is applied to the live DFP', 'At least one resource pool should have "Apply to Live DFP" enabled so live resource counts come from platform configuration.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-resource-pools' });
   } else if (!items.some((item) => item.area === 'Resource Pools' && item.severity === 'CRITICAL')) {
     add('OK', 'Resource Pools', 'Live DFP resource pools are configured', `${runtimePools.length} active resource pool${runtimePools.length === 1 ? '' : 's'} feed the live DFP.`, 'runtime-pool-active');
   }
@@ -1583,7 +1583,7 @@ const buildConfigurationHealth = (
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (activeLicences.length === 0) {
-    add('WARNING', 'Licensing', 'No active licence record', 'Commercial installs should have at least one active licence record, even while enforcement remains Monitor Only.', 'licence-none', undefined, { focusSubsectionId: 'platform-license-records' });
+    add('WARNING', 'Licensing', 'No active licence record', 'Operational deployments should have at least one active licence record.', 'licence-none', undefined, { focusSubsectionId: 'platform-license-records' });
   } else {
     activeLicences.forEach((license) => {
       const licenseName = license.licenseName || license.licenseKey || 'Licence';
@@ -7042,7 +7042,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div>
                 <h5 className="text-sm font-bold text-white">Deployment Profile</h5>
                 <p className="mt-1 text-xs text-gray-400">
-                  Describes how this customer installation is expected to run and how the licence will be checked. Keep enforcement at Monitor Only until the customer acceptance path is proven.
+                  Describes how this installation is expected to run and how the licence will be checked.
                 </p>
               </div>
               <span className="ml-auto rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-100">
@@ -8064,7 +8064,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-rank-terminology" className={getSectionClass('platform-rank-terminology')}>
         <SectionHeader
           title="Rank, Terminology & Labels"
-          subtitle="Configure personnel display order, local role terminology and customer-facing report labels without changing internal codes."
+          subtitle="Configure personnel display order, local role terminology and customer-facing report labels."
         />
         <div className="space-y-4 p-4">
           {!hasRankTerminologyEditPermission ? (
