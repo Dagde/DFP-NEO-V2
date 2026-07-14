@@ -2144,16 +2144,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     return () => window.cancelAnimationFrame(frame);
   }, [scrollTarget, loading, sectionOnly]);
 
-  const enabledModuleCount = useMemo(
-    () => config.unitModules.filter((item) => item.isEnabled !== false).length,
-    [config.unitModules],
-  );
-
-  const activeLicenseCount = useMemo(
-    () => config.licenses.filter((license) => String(license.status || '').toUpperCase() === 'ACTIVE').length,
-    [config.licenses],
-  );
-
   const airfieldCatalogueLookup = useMemo(
     () => (airfieldCatalogue.length ? buildAirfieldCatalogueLookup(airfieldCatalogue) : emptyAirfieldCatalogueLookup),
     [airfieldCatalogue],
@@ -5033,37 +5023,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           )}
         </div>
-      ) : !sectionOnly ? (
-        <>
-          <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <div>
-                <h3 className="text-lg font-bold text-cyan-100">Platform Configuration</h3>
-                <p className="mt-1 text-sm text-cyan-100/70">
-                  Commercial operating model. Resource pools can be applied to the live DFP when ready, while existing operating behaviour remains stable.
-                </p>
-              </div>
+      ) : !sectionOnly && (!canEdit || Boolean(error)) ? (
+        <div className="rounded-lg border border-gray-700 bg-gray-800/80 px-4 py-3">
+          {!canEdit && (
+            <div className="mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100">
+              Read-only. Super Admin or Admin permission is required to change platform configuration.
             </div>
-            {!canEdit && (
-              <div className="mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100">
-                Read-only. Super Admin or Admin permission is required to change platform configuration.
-              </div>
-            )}
-            {error && (
-              <div className="mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100">
-                {error}
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-            <Metric label="Organisations" value={config.organisations.length} />
-            <Metric label="Locations" value={config.locations.length} />
-            <Metric label="Units" value={config.units.length} />
-            <Metric label="Enabled Modules" value={enabledModuleCount} />
-            <Metric label="Active Licences" value={activeLicenseCount} />
-          </div>
-        </>
+          )}
+          {error && (
+            <div className="mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100">
+              {error}
+            </div>
+          )}
+        </div>
       ) : null}
 
       <section id="platform-configuration-health" className={getSectionClass('platform-configuration-health')}>
@@ -8758,13 +8730,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     </div>
   );
 };
-
-const Metric = ({ label, value }: { label: string; value: number }) => (
-  <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
-    <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</div>
-    <div className="mt-2 text-2xl font-bold text-white">{value}</div>
-  </div>
-);
 
 const getConfigurationHealthTone = (severity: ConfigurationHealthSeverity) => {
   if (severity === 'CRITICAL') {
