@@ -58611,9 +58611,57 @@ const DutyTurnaroundSection = ({
   onUpdateFtdTurnaround,
   cptTurnaround,
   onUpdateCptTurnaround,
+  canEdit = true,
+  onShowSuccess,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  const [draftPreferredDutyPeriod, setDraftPreferredDutyPeriod] = reactExports.useState(preferredDutyPeriod);
+  const [draftMaxCrewDutyPeriod, setDraftMaxCrewDutyPeriod] = reactExports.useState(maxCrewDutyPeriod);
+  const [draftFlightTurnaround, setDraftFlightTurnaround] = reactExports.useState(flightTurnaround);
+  const [draftFtdTurnaround, setDraftFtdTurnaround] = reactExports.useState(ftdTurnaround);
+  const [draftCptTurnaround, setDraftCptTurnaround] = reactExports.useState(cptTurnaround);
   const turnaroundOptions = reactExports.useMemo(() => Array.from({ length: 30 }, (_, i) => parseFloat(((i + 1) * 0.1).toFixed(1))), []);
+  const standardSettingsButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
+  reactExports.useEffect(() => {
+    if (isEditing) return;
+    setDraftPreferredDutyPeriod(preferredDutyPeriod);
+    setDraftMaxCrewDutyPeriod(maxCrewDutyPeriod);
+    setDraftFlightTurnaround(flightTurnaround);
+    setDraftFtdTurnaround(ftdTurnaround);
+    setDraftCptTurnaround(cptTurnaround);
+  }, [cptTurnaround, flightTurnaround, ftdTurnaround, isEditing, maxCrewDutyPeriod, preferredDutyPeriod]);
+  const handleEdit = () => {
+    setDraftPreferredDutyPeriod(preferredDutyPeriod);
+    setDraftMaxCrewDutyPeriod(maxCrewDutyPeriod);
+    setDraftFlightTurnaround(flightTurnaround);
+    setDraftFtdTurnaround(ftdTurnaround);
+    setDraftCptTurnaround(cptTurnaround);
+    setIsEditing(true);
+  };
+  const handleCancel = () => {
+    setDraftPreferredDutyPeriod(preferredDutyPeriod);
+    setDraftMaxCrewDutyPeriod(maxCrewDutyPeriod);
+    setDraftFlightTurnaround(flightTurnaround);
+    setDraftFtdTurnaround(ftdTurnaround);
+    setDraftCptTurnaround(cptTurnaround);
+    setIsEditing(false);
+  };
+  const handleSave = () => {
+    onUpdatePreferredDutyPeriod(draftPreferredDutyPeriod);
+    onUpdateMaxCrewDutyPeriod(draftMaxCrewDutyPeriod);
+    onUpdateFlightTurnaround(draftFlightTurnaround);
+    onUpdateFtdTurnaround(draftFtdTurnaround);
+    onUpdateCptTurnaround(draftCptTurnaround);
+    setIsEditing(false);
+    logAudit(
+      "Settings - Duty & Turnaround",
+      "update",
+      "Updated duty and turnaround settings",
+      `Duty period soft/hard: ${preferredDutyPeriod}/${maxCrewDutyPeriod} → ${draftPreferredDutyPeriod}/${draftMaxCrewDutyPeriod}; turnaround ${flightTurnaround}/${ftdTurnaround}/${cptTurnaround} → ${draftFlightTurnaround}/${draftFtdTurnaround}/${draftCptTurnaround}`
+    );
+    onShowSuccess?.("Duty and turnaround settings updated");
+  };
   const TurnaroundInput = ({ label, value, onChange, options }) => {
     const inputId = `turnaround-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -58624,7 +58672,8 @@ const DutyTurnaroundSection = ({
           id: inputId,
           value,
           onChange: (e) => onChange(parseFloat(e.target.value)),
-          className: "w-full mt-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center",
+          disabled: !isEditing,
+          className: `w-full mt-1 border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
           children: options.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: opt, children: [
             opt.toFixed(1),
             " hrs"
@@ -58634,7 +58683,13 @@ const DutyTurnaroundSection = ({
     ] });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit", onKeyDownCapture: stopEditableKeyPropagation, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Duty & Turnaround" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Duty & Turnaround" }),
+      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: standardSettingsButtonClass, children: "Save" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: standardSettingsButtonClass, children: "Cancel" })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleEdit, disabled: !canEdit, className: standardSettingsButtonClass, children: "Edit" })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 space-y-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Crew Duty Period (hrs)" }),
@@ -58645,12 +58700,10 @@ const DutyTurnaroundSection = ({
               "input",
               {
                 type: "number",
-                value: preferredDutyPeriod,
-                onChange: (e) => {
-                  logAudit("Settings", "Edit", "Updated soft limit duty period", `${preferredDutyPeriod} → ${parseInt(e.target.value)}`);
-                  onUpdatePreferredDutyPeriod(parseInt(e.target.value));
-                },
-                className: "w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center"
+                value: draftPreferredDutyPeriod,
+                onChange: (e) => setDraftPreferredDutyPeriod(parseInt(e.target.value) || 0),
+                disabled: !isEditing,
+                className: `w-full border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
               }
             )
           ] }),
@@ -58660,12 +58713,10 @@ const DutyTurnaroundSection = ({
               "input",
               {
                 type: "number",
-                value: maxCrewDutyPeriod,
-                onChange: (e) => {
-                  logAudit("Settings", "Edit", "Updated hard limit duty period", `${maxCrewDutyPeriod} → ${parseInt(e.target.value)}`);
-                  onUpdateMaxCrewDutyPeriod(parseInt(e.target.value));
-                },
-                className: "w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center"
+                value: draftMaxCrewDutyPeriod,
+                onChange: (e) => setDraftMaxCrewDutyPeriod(parseInt(e.target.value) || 0),
+                disabled: !isEditing,
+                className: `w-full border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
               }
             )
           ] })
@@ -58678,11 +58729,8 @@ const DutyTurnaroundSection = ({
             TurnaroundInput,
             {
               label: "Flight",
-              value: flightTurnaround,
-              onChange: (v) => {
-                logAudit("Settings", "Edit", "Updated flight turnaround time", `${flightTurnaround} → ${v}`);
-                onUpdateFlightTurnaround(v);
-              },
+              value: draftFlightTurnaround,
+              onChange: setDraftFlightTurnaround,
               options: turnaroundOptions
             }
           ),
@@ -58690,11 +58738,8 @@ const DutyTurnaroundSection = ({
             TurnaroundInput,
             {
               label: resourceDisplayNames.ftd,
-              value: ftdTurnaround,
-              onChange: (v) => {
-                logAudit("Settings", "Edit", `Updated ${resourceDisplayNames.ftd} turnaround time`, `${ftdTurnaround} → ${v}`);
-                onUpdateFtdTurnaround(v);
-              },
+              value: draftFtdTurnaround,
+              onChange: setDraftFtdTurnaround,
               options: turnaroundOptions
             }
           ),
@@ -58702,11 +58747,8 @@ const DutyTurnaroundSection = ({
             TurnaroundInput,
             {
               label: resourceDisplayNames.cpt,
-              value: cptTurnaround,
-              onChange: (v) => {
-                logAudit("Settings", "Edit", `Updated ${resourceDisplayNames.cpt} turnaround time`, `${cptTurnaround} → ${v}`);
-                onUpdateCptTurnaround(v);
-              },
+              value: draftCptTurnaround,
+              onChange: setDraftCptTurnaround,
               options: turnaroundOptions
             }
           )
@@ -59621,51 +59663,6 @@ const SettingsView = ({
     setTempLimits(JSON.parse(JSON.stringify(eventLimits)));
     setIsEditingLimits(false);
   };
-  const handleUpdatePreferredDutyPeriod = (value) => {
-    onUpdatePreferredDutyPeriod(value);
-    logAudit({
-      page: "Settings - Duty & Turnaround",
-      action: "update",
-      description: "Updated preferred duty period",
-      changes: `Set to: ${value} hours`
-    });
-  };
-  const handleUpdateMaxCrewDutyPeriod = (value) => {
-    onUpdateMaxCrewDutyPeriod(value);
-    logAudit({
-      page: "Settings - Duty & Turnaround",
-      action: "update",
-      description: "Updated max crew duty period",
-      changes: `Set to: ${value} hours`
-    });
-  };
-  const handleUpdateFlightTurnaround = (value) => {
-    onUpdateFlightTurnaround(value);
-    logAudit({
-      page: "Settings - Duty & Turnaround",
-      action: "update",
-      description: "Updated flight turnaround time",
-      changes: `Set to: ${value} minutes`
-    });
-  };
-  const handleUpdateFtdTurnaround = (value) => {
-    onUpdateFtdTurnaround(value);
-    logAudit({
-      page: "Settings - Duty & Turnaround",
-      action: "update",
-      description: `Updated ${resourceDisplayNames.ftd} turnaround time`,
-      changes: `Set to: ${value} minutes`
-    });
-  };
-  const handleUpdateCptTurnaround = (value) => {
-    onUpdateCptTurnaround(value);
-    logAudit({
-      page: "Settings - Duty & Turnaround",
-      action: "update",
-      description: `Updated ${resourceDisplayNames.cpt} turnaround time`,
-      changes: `Set to: ${value} minutes`
-    });
-  };
   const handleUpdatePhraseBank = (newBank) => {
     onUpdatePhraseBank(newBank);
     debouncedAuditLog(
@@ -59767,15 +59764,17 @@ const SettingsView = ({
         DutyTurnaroundSection,
         {
           preferredDutyPeriod,
-          onUpdatePreferredDutyPeriod: handleUpdatePreferredDutyPeriod,
+          onUpdatePreferredDutyPeriod,
           maxCrewDutyPeriod,
-          onUpdateMaxCrewDutyPeriod: handleUpdateMaxCrewDutyPeriod,
+          onUpdateMaxCrewDutyPeriod,
           flightTurnaround,
-          onUpdateFlightTurnaround: handleUpdateFlightTurnaround,
+          onUpdateFlightTurnaround,
           ftdTurnaround,
-          onUpdateFtdTurnaround: handleUpdateFtdTurnaround,
+          onUpdateFtdTurnaround,
           cptTurnaround,
-          onUpdateCptTurnaround: handleUpdateCptTurnaround,
+          onUpdateCptTurnaround,
+          canEdit: canEditSettings,
+          onShowSuccess,
           resourceDisplayNames
         }
       ),

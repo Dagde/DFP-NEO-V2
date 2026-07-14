@@ -846,57 +846,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         setIsEditingLimits(false);
     };
 
-    // Duty & Turnaround Handlers with Audit Logging
-    const handleUpdatePreferredDutyPeriod = (value: number) => {
-        onUpdatePreferredDutyPeriod(value);
-        logAudit({
-            page: 'Settings - Duty & Turnaround',
-            action: 'update',
-            description: 'Updated preferred duty period',
-            changes: `Set to: ${value} hours`
-        });
-    };
-
-    const handleUpdateMaxCrewDutyPeriod = (value: number) => {
-        onUpdateMaxCrewDutyPeriod(value);
-        logAudit({
-            page: 'Settings - Duty & Turnaround',
-            action: 'update',
-            description: 'Updated max crew duty period',
-            changes: `Set to: ${value} hours`
-        });
-    };
-
-    const handleUpdateFlightTurnaround = (value: number) => {
-        onUpdateFlightTurnaround(value);
-        logAudit({
-            page: 'Settings - Duty & Turnaround',
-            action: 'update',
-            description: 'Updated flight turnaround time',
-            changes: `Set to: ${value} minutes`
-        });
-    };
-
-    const handleUpdateFtdTurnaround = (value: number) => {
-        onUpdateFtdTurnaround(value);
-        logAudit({
-            page: 'Settings - Duty & Turnaround',
-            action: 'update',
-            description: `Updated ${resourceDisplayNames.ftd} turnaround time`,
-            changes: `Set to: ${value} minutes`
-        });
-    };
-
-    const handleUpdateCptTurnaround = (value: number) => {
-        onUpdateCptTurnaround(value);
-        logAudit({
-            page: 'Settings - Duty & Turnaround',
-            action: 'update',
-            description: `Updated ${resourceDisplayNames.cpt} turnaround time`,
-            changes: `Set to: ${value} minutes`
-        });
-    };
-
     // Scoring Matrix Handlers
     const handleOpenScoringMatrix = (tab: 'Airmanship' | 'Preparation' | 'Technique' | 'Elements') => {
         setScoringMatrixTab(tab);
@@ -1018,15 +967,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    {shouldShowSection('duty-turnaround') && (
                     <DutyTurnaroundSection
                         preferredDutyPeriod={preferredDutyPeriod}
-                        onUpdatePreferredDutyPeriod={handleUpdatePreferredDutyPeriod}
+                        onUpdatePreferredDutyPeriod={onUpdatePreferredDutyPeriod}
                         maxCrewDutyPeriod={maxCrewDutyPeriod}
-                        onUpdateMaxCrewDutyPeriod={handleUpdateMaxCrewDutyPeriod}
+                        onUpdateMaxCrewDutyPeriod={onUpdateMaxCrewDutyPeriod}
                         flightTurnaround={flightTurnaround}
-                        onUpdateFlightTurnaround={handleUpdateFlightTurnaround}
+                        onUpdateFlightTurnaround={onUpdateFlightTurnaround}
                         ftdTurnaround={ftdTurnaround}
-                        onUpdateFtdTurnaround={handleUpdateFtdTurnaround}
+                        onUpdateFtdTurnaround={onUpdateFtdTurnaround}
                         cptTurnaround={cptTurnaround}
-                        onUpdateCptTurnaround={handleUpdateCptTurnaround}
+                        onUpdateCptTurnaround={onUpdateCptTurnaround}
+                        canEdit={canEditSettings}
+                        onShowSuccess={onShowSuccess}
                         resourceDisplayNames={resourceDisplayNames}
                     />
                    )}
