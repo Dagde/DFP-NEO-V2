@@ -40,6 +40,7 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
     const [draftFlightTurnaround, setDraftFlightTurnaround] = useState(flightTurnaround);
     const [draftFtdTurnaround, setDraftFtdTurnaround] = useState(ftdTurnaround);
     const [draftCptTurnaround, setDraftCptTurnaround] = useState(cptTurnaround);
+    const [openTurnaroundMenu, setOpenTurnaroundMenu] = useState<string | null>(null);
     const turnaroundOptions = useMemo(() => Array.from({ length: 30 }, (_, i) => parseFloat(((i + 1) * 0.1).toFixed(1))), []);
     const standardSettingsButtonClass = 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50';
 
@@ -58,6 +59,7 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
         setDraftFlightTurnaround(flightTurnaround);
         setDraftFtdTurnaround(ftdTurnaround);
         setDraftCptTurnaround(cptTurnaround);
+        setOpenTurnaroundMenu(null);
         setIsEditing(true);
     };
 
@@ -67,6 +69,7 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
         setDraftFlightTurnaround(flightTurnaround);
         setDraftFtdTurnaround(ftdTurnaround);
         setDraftCptTurnaround(cptTurnaround);
+        setOpenTurnaroundMenu(null);
         setIsEditing(false);
     };
 
@@ -76,6 +79,7 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
         onUpdateFlightTurnaround(draftFlightTurnaround);
         onUpdateFtdTurnaround(draftFtdTurnaround);
         onUpdateCptTurnaround(draftCptTurnaround);
+        setOpenTurnaroundMenu(null);
         setIsEditing(false);
         logAudit(
             'Settings - Duty & Turnaround',
@@ -88,22 +92,65 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
 
     const TurnaroundInput: React.FC<{ label: string, value: number, onChange: (value: number) => void, options: number[] }> = ({ label, value, onChange, options }) => {
         const inputId = `turnaround-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+        const isOpen = openTurnaroundMenu === inputId;
         return (
-            <div>
-                <label htmlFor={inputId} className="block text-sm font-medium text-gray-400">{label}</label>
-                <select
+            <div
+                className="relative"
+                onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                        setOpenTurnaroundMenu((current) => (current === inputId ? null : current));
+                    }
+                }}
+            >
+                <label id={`${inputId}-label`} className="block text-sm font-medium text-gray-400">{label}</label>
+                <button
+                    type="button"
                     id={inputId}
-                    value={value}
-                    onChange={(e) => onChange(parseFloat(e.target.value))}
                     disabled={!isEditing}
+                    aria-haspopup="listbox"
+                    aria-expanded={isOpen}
+                    aria-labelledby={`${inputId}-label ${inputId}`}
+                    onClick={() => setOpenTurnaroundMenu((current) => (current === inputId ? null : inputId))}
                     className={`w-full mt-1 border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${
                         isEditing
                             ? 'bg-gray-700 border-gray-600 text-white'
                             : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
                     }`}
                 >
-                    {options.map(opt => <option key={opt} value={opt}>{opt.toFixed(1)} hrs</option>)}
-                </select>
+                    <span>{value.toFixed(1)} hrs</span>
+                    <span className="pointer-events-none absolute right-3 top-[34px] text-xs text-gray-300">▾</span>
+                </button>
+                {isEditing && isOpen && (
+                    <div
+                        role="listbox"
+                        aria-labelledby={`${inputId}-label`}
+                        className="absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-md border border-gray-600 bg-gray-900 py-1 shadow-2xl"
+                    >
+                        {options.map((opt) => {
+                            const selected = opt === value;
+                            return (
+                                <button
+                                    type="button"
+                                    key={opt}
+                                    role="option"
+                                    aria-selected={selected}
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => {
+                                        onChange(opt);
+                                        setOpenTurnaroundMenu(null);
+                                    }}
+                                    className={`block w-full px-3 py-2 text-left text-sm ${
+                                        selected
+                                            ? 'bg-cyan-500/20 text-cyan-100'
+                                            : 'text-gray-200 hover:bg-gray-700'
+                                    }`}
+                                >
+                                    {opt.toFixed(1)} hrs
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         );
     };

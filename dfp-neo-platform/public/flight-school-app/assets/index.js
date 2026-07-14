@@ -58621,6 +58621,7 @@ const DutyTurnaroundSection = ({
   const [draftFlightTurnaround, setDraftFlightTurnaround] = reactExports.useState(flightTurnaround);
   const [draftFtdTurnaround, setDraftFtdTurnaround] = reactExports.useState(ftdTurnaround);
   const [draftCptTurnaround, setDraftCptTurnaround] = reactExports.useState(cptTurnaround);
+  const [openTurnaroundMenu, setOpenTurnaroundMenu] = reactExports.useState(null);
   const turnaroundOptions = reactExports.useMemo(() => Array.from({ length: 30 }, (_, i) => parseFloat(((i + 1) * 0.1).toFixed(1))), []);
   const standardSettingsButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
   reactExports.useEffect(() => {
@@ -58637,6 +58638,7 @@ const DutyTurnaroundSection = ({
     setDraftFlightTurnaround(flightTurnaround);
     setDraftFtdTurnaround(ftdTurnaround);
     setDraftCptTurnaround(cptTurnaround);
+    setOpenTurnaroundMenu(null);
     setIsEditing(true);
   };
   const handleCancel = () => {
@@ -58645,6 +58647,7 @@ const DutyTurnaroundSection = ({
     setDraftFlightTurnaround(flightTurnaround);
     setDraftFtdTurnaround(ftdTurnaround);
     setDraftCptTurnaround(cptTurnaround);
+    setOpenTurnaroundMenu(null);
     setIsEditing(false);
   };
   const handleSave = () => {
@@ -58653,6 +58656,7 @@ const DutyTurnaroundSection = ({
     onUpdateFlightTurnaround(draftFlightTurnaround);
     onUpdateFtdTurnaround(draftFtdTurnaround);
     onUpdateCptTurnaround(draftCptTurnaround);
+    setOpenTurnaroundMenu(null);
     setIsEditing(false);
     logAudit(
       "Settings - Duty & Turnaround",
@@ -58664,23 +58668,71 @@ const DutyTurnaroundSection = ({
   };
   const TurnaroundInput = ({ label, value, onChange, options }) => {
     const inputId = `turnaround-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: inputId, className: "block text-sm font-medium text-gray-400", children: label }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "select",
-        {
-          id: inputId,
-          value,
-          onChange: (e) => onChange(parseFloat(e.target.value)),
-          disabled: !isEditing,
-          className: `w-full mt-1 border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
-          children: options.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: opt, children: [
-            opt.toFixed(1),
-            " hrs"
-          ] }, opt))
-        }
-      )
-    ] });
+    const isOpen = openTurnaroundMenu === inputId;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "relative",
+        onBlur: (event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) {
+            setOpenTurnaroundMenu((current) => current === inputId ? null : current);
+          }
+        },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { id: `${inputId}-label`, className: "block text-sm font-medium text-gray-400", children: label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              id: inputId,
+              disabled: !isEditing,
+              "aria-haspopup": "listbox",
+              "aria-expanded": isOpen,
+              "aria-labelledby": `${inputId}-label ${inputId}`,
+              onClick: () => setOpenTurnaroundMenu((current) => current === inputId ? null : inputId),
+              className: `w-full mt-1 border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  value.toFixed(1),
+                  " hrs"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute right-3 top-[34px] text-xs text-gray-300", children: "▾" })
+              ]
+            }
+          ),
+          isEditing && isOpen && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              role: "listbox",
+              "aria-labelledby": `${inputId}-label`,
+              className: "absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-md border border-gray-600 bg-gray-900 py-1 shadow-2xl",
+              children: options.map((opt) => {
+                const selected = opt === value;
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    role: "option",
+                    "aria-selected": selected,
+                    onMouseDown: (event) => event.preventDefault(),
+                    onClick: () => {
+                      onChange(opt);
+                      setOpenTurnaroundMenu(null);
+                    },
+                    className: `block w-full px-3 py-2 text-left text-sm ${selected ? "bg-cyan-500/20 text-cyan-100" : "text-gray-200 hover:bg-gray-700"}`,
+                    children: [
+                      opt.toFixed(1),
+                      " hrs"
+                    ]
+                  },
+                  opt
+                );
+              })
+            }
+          )
+        ]
+      }
+    );
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit", onKeyDownCapture: stopEditableKeyPropagation, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center", children: [
