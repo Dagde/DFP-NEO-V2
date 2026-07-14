@@ -69890,18 +69890,51 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               info: "Enter one display level per line, highest priority first. Use = on the same line to give titles equal status. Example: Dr = Mr = Ms = Mrs = Mx = APS = CIV = CONTRACTOR. People with equal status are sorted by surname then first name."
             }
           ),
-          personnelDisplaySettings.useSeparateTraineeRankOrder ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-            TextAreaField,
-            {
-              label: "Trainee Rank Order",
-              value: formatRankOrderText(personnelDisplaySettings.traineeRankOrder),
-              disabled: !canEditRankTerminology,
-              onChange: (value) => updatePersonnelDisplaySettings({ traineeRankOrder: parseRankOrderText(value) }),
-              info: "Optional separate ordering for trainee ranks. Enter one display level per line, highest priority first. Use = on the same line to give ranks or titles equal status."
-            }
-          ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm text-cyan-50/90", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-bold text-cyan-100", children: "Trainees use the staff rank order" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 leading-relaxed text-cyan-50/75", children: "Turn on separate trainee rank order if trainees use a different rank structure or if the organisation wants trainees displayed differently from staff." })
+          personnelDisplaySettings.useSeparateTraineeRankOrder ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm ${canEditRankTerminology ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-50" : "border-gray-700 bg-gray-900/60 text-gray-400"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "Use separate trainee rank order" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: personnelDisplaySettings.useSeparateTraineeRankOrder,
+                  disabled: !canEditRankTerminology,
+                  onChange: (event) => updatePersonnelDisplaySettings({
+                    useSeparateTraineeRankOrder: event.target.checked,
+                    traineeRankOrder: event.target.checked ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder
+                  }),
+                  className: "h-4 w-4 rounded border-gray-500 accent-cyan-500 disabled:cursor-not-allowed"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              TextAreaField,
+              {
+                label: "Trainee Rank Order",
+                value: formatRankOrderText(personnelDisplaySettings.traineeRankOrder),
+                disabled: !canEditRankTerminology,
+                onChange: (value) => updatePersonnelDisplaySettings({ traineeRankOrder: parseRankOrderText(value) }),
+                info: "Optional separate ordering for trainee ranks. Enter one display level per line, highest priority first. Use = on the same line to give ranks or titles equal status."
+              }
+            )
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm text-cyan-50/90", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-cyan-100", children: "Trainees use the staff rank order" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: personnelDisplaySettings.useSeparateTraineeRankOrder,
+                  disabled: !canEditRankTerminology,
+                  onChange: (event) => updatePersonnelDisplaySettings({
+                    useSeparateTraineeRankOrder: event.target.checked,
+                    traineeRankOrder: event.target.checked ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder
+                  }),
+                  className: "h-4 w-4 rounded border-gray-500 accent-cyan-500 disabled:cursor-not-allowed"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 leading-relaxed text-cyan-50/75", children: "Turn on the switch if trainees use a different rank structure or if the organisation wants trainees displayed differently from staff." })
           ] })
         ] })
       ] })

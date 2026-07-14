@@ -8450,18 +8450,49 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               info="Enter one display level per line, highest priority first. Use = on the same line to give titles equal status. Example: Dr = Mr = Ms = Mrs = Mx = APS = CIV = CONTRACTOR. People with equal status are sorted by surname then first name."
             />
             {personnelDisplaySettings.useSeparateTraineeRankOrder ? (
-              <TextAreaField
-                label="Trainee Rank Order"
-                value={formatRankOrderText(personnelDisplaySettings.traineeRankOrder)}
-                disabled={!canEditRankTerminology}
-                onChange={(value) => updatePersonnelDisplaySettings({ traineeRankOrder: parseRankOrderText(value) })}
-                info="Optional separate ordering for trainee ranks. Enter one display level per line, highest priority first. Use = on the same line to give ranks or titles equal status."
-              />
+              <div className="space-y-3">
+                <label className={`flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm ${
+                  canEditRankTerminology
+                    ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-50'
+                    : 'border-gray-700 bg-gray-900/60 text-gray-400'
+                }`}>
+                  <span className="font-semibold">Use separate trainee rank order</span>
+                  <input
+                    type="checkbox"
+                    checked={personnelDisplaySettings.useSeparateTraineeRankOrder}
+                    disabled={!canEditRankTerminology}
+                    onChange={(event) => updatePersonnelDisplaySettings({
+                      useSeparateTraineeRankOrder: event.target.checked,
+                      traineeRankOrder: event.target.checked ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder,
+                    })}
+                    className="h-4 w-4 rounded border-gray-500 accent-cyan-500 disabled:cursor-not-allowed"
+                  />
+                </label>
+                <TextAreaField
+                  label="Trainee Rank Order"
+                  value={formatRankOrderText(personnelDisplaySettings.traineeRankOrder)}
+                  disabled={!canEditRankTerminology}
+                  onChange={(value) => updatePersonnelDisplaySettings({ traineeRankOrder: parseRankOrderText(value) })}
+                  info="Optional separate ordering for trainee ranks. Enter one display level per line, highest priority first. Use = on the same line to give ranks or titles equal status."
+                />
+              </div>
             ) : (
               <div className="rounded border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm text-cyan-50/90">
-                <div className="font-bold text-cyan-100">Trainees use the staff rank order</div>
+                <label className="flex items-center justify-between gap-3">
+                  <span className="font-bold text-cyan-100">Trainees use the staff rank order</span>
+                  <input
+                    type="checkbox"
+                    checked={personnelDisplaySettings.useSeparateTraineeRankOrder}
+                    disabled={!canEditRankTerminology}
+                    onChange={(event) => updatePersonnelDisplaySettings({
+                      useSeparateTraineeRankOrder: event.target.checked,
+                      traineeRankOrder: event.target.checked ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder,
+                    })}
+                    className="h-4 w-4 rounded border-gray-500 accent-cyan-500 disabled:cursor-not-allowed"
+                  />
+                </label>
                 <p className="mt-2 leading-relaxed text-cyan-50/75">
-                  Turn on separate trainee rank order if trainees use a different rank structure or if the organisation wants trainees displayed differently from staff.
+                  Turn on the switch if trainees use a different rank structure or if the organisation wants trainees displayed differently from staff.
                 </p>
               </div>
             )}
