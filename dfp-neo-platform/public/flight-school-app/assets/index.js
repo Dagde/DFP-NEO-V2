@@ -3455,6 +3455,17 @@ const RANK_EQUIVALENCY_GRADES = [
   "E-2",
   "E-1"
 ];
+const RANK_EQUIVALENCY_PRESET_LABELS = {
+  AU: "Australia",
+  US: "United States",
+  UK: "United Kingdom",
+  FR: "France",
+  CH: "Switzerland",
+  ES: "Spain",
+  SA: "Saudi Arabia",
+  AE: "United Arab Emirates",
+  CUSTOM: "Custom"
+};
 const makeRankRow = (grade, ranks) => ({
   grade,
   ranks: [0, 1, 2, 3].map((index) => {
@@ -3467,50 +3478,200 @@ const RANK_EQUIVALENCY_PRESETS = {
     preset: "AU",
     services: [{ name: "Air Force" }, { name: "Navy" }, { name: "Army" }, { name: "Marines" }],
     rows: [
-      makeRankRow("O-10", [["Air Marshal", "AIRMSHL"], ["Admiral", "ADM"], ["General", "GEN"], ["", ""]]),
-      makeRankRow("O-9", [["Air Vice-Marshal", "AVM"], ["Vice Admiral", "VADM"], ["Lieutenant General", "LTGEN"], ["", ""]]),
-      makeRankRow("O-8", [["Air Commodore", "AIRCDRE"], ["Rear Admiral", "RADM"], ["Major General", "MAJGEN"], ["", ""]]),
-      makeRankRow("O-7", [["Group Captain", "GPCAPT"], ["Commodore", "CDRE"], ["Brigadier", "BRIG"], ["", ""]]),
-      makeRankRow("O-6", [["Wing Commander", "WGCDR"], ["Captain", "CAPT"], ["Colonel", "COL"], ["", ""]]),
-      makeRankRow("O-5", [["Squadron Leader", "SQNLDR"], ["Commander", "CMDR"], ["Lieutenant Colonel", "LTCOL"], ["", ""]]),
-      makeRankRow("O-4", [["Flight Lieutenant", "FLTLT"], ["Lieutenant Commander", "LCDR"], ["Major", "MAJ"], ["", ""]]),
-      makeRankRow("O-3", [["Flying Officer", "FLGOFF"], ["Lieutenant", "LEUT"], ["Captain", "CAPT"], ["", ""]]),
-      makeRankRow("O-2", [["Pilot Officer", "PLTOFF"], ["Sub Lieutenant", "SBLT"], ["Lieutenant", "LT"], ["", ""]]),
-      makeRankRow("O-1", [["Officer Cadet", "OFFCDT"], ["Midshipman", "MIDN"], ["Officer Cadet", "OFFCDT"], ["", ""]]),
+      makeRankRow("O-10", [["Air Chief Marshal", "ACM"], ["Admiral", "ADML"], ["General", "GEN"], ["", ""]]),
+      makeRankRow("O-9", [["Air Marshal", "AIRMSHL"], ["Vice Admiral", "VADM"], ["Lieutenant General", "LTGEN"], ["", ""]]),
+      makeRankRow("O-8", [["Air Vice-Marshal", "AVM"], ["Rear Admiral", "RADM"], ["Major General", "MAJGEN"], ["", ""]]),
+      makeRankRow("O-7", [["Air Commodore", "AIRCDRE"], ["Commodore", "CDRE"], ["Brigadier", "BRIG"], ["", ""]]),
+      makeRankRow("O-6", [["Group Captain", "GPCAPT"], ["Captain", "CAPT"], ["Colonel", "COL"], ["", ""]]),
+      makeRankRow("O-5", [["Wing Commander", "WGCDR"], ["Commander", "CMDR"], ["Lieutenant Colonel", "LTCOL"], ["", ""]]),
+      makeRankRow("O-4", [["Squadron Leader", "SQNLDR"], ["Lieutenant Commander", "LCDR"], ["Major", "MAJ"], ["", ""]]),
+      makeRankRow("O-3", [["Flight Lieutenant", "FLTLT"], ["Lieutenant", "LEUT"], ["Captain", "CAPT"], ["", ""]]),
+      makeRankRow("O-2", [["Flying Officer", "FLGOFF"], ["Sub Lieutenant", "SBLT"], ["Lieutenant", "LT"], ["", ""]]),
+      makeRankRow("O-1", [["Pilot Officer", "PLTOFF"], ["Acting Sub Lieutenant", "ASLT"], ["Second Lieutenant", "2LT"], ["", ""]]),
       makeRankRow("E-9", [["Warrant Officer", "WOFF"], ["Warrant Officer", "WO"], ["Warrant Officer Class One", "WO1"], ["", ""]]),
       makeRankRow("E-8", [["Flight Sergeant", "FSGT"], ["Chief Petty Officer", "CPO"], ["Warrant Officer Class Two", "WO2"], ["", ""]]),
       makeRankRow("E-7", [["Sergeant", "SGT"], ["Petty Officer", "PO"], ["Staff Sergeant", "SSGT"], ["", ""]]),
-      makeRankRow("E-6", [["Corporal", "CPL"], ["Leading Seaman", "LS"], ["Sergeant", "SGT"], ["", ""]]),
-      makeRankRow("E-5", [["Leading Aircraftman", "LAC"], ["Able Seaman", "AB"], ["Corporal", "CPL"], ["", ""]]),
-      makeRankRow("E-4", [["Aircraftman", "AC"], ["Seaman", "SMN"], ["Private Proficient", "PTE(P)"], ["", ""]]),
-      makeRankRow("E-3", [["Recruit", "RCT"], ["Recruit", "RCT"], ["Recruit", "RCT"], ["", ""]]),
-      makeRankRow("E-2", [["", ""], ["", ""], ["", ""], ["", ""]]),
-      makeRankRow("E-1", [["", ""], ["", ""], ["", ""], ["", ""]])
+      makeRankRow("E-6", [["Sergeant", "SGT"], ["Petty Officer", "PO"], ["Sergeant", "SGT"], ["", ""]]),
+      makeRankRow("E-5", [["Corporal", "CPL"], ["Leading Seaman", "LS"], ["Corporal", "CPL"], ["", ""]]),
+      makeRankRow("E-4", [["Leading Aircraftman", "LAC"], ["Able Seaman", "AB"], ["Lance Corporal", "LCPL"], ["", ""]]),
+      makeRankRow("E-3", [["Leading Aircraftman", "LAC"], ["Able Seaman", "AB"], ["Private Proficient", "PTE(P)"], ["", ""]]),
+      makeRankRow("E-2", [["Aircraftman", "AC"], ["Seaman", "SMN"], ["Private", "PTE"], ["", ""]]),
+      makeRankRow("E-1", [["Aircraftman Recruit", "AC(R)"], ["Recruit", "REC"], ["Recruit", "REC"], ["", ""]])
     ]
   },
   US: {
     preset: "US",
-    services: [{ name: "Air Force" }, { name: "Navy" }, { name: "Marine Corps" }, { name: "Army" }],
+    services: [{ name: "Air Force" }, { name: "Navy" }, { name: "Army" }, { name: "Marines" }],
     rows: [
-      makeRankRow("O-10", [["General of the Air Force", "GOAF"], ["Admiral of the Navy", "ADM"], ["General", "Gen"], ["General", "Gen"]]),
-      makeRankRow("O-9", [["General", "GEN"], ["Fleet Admiral", "ADM"], ["Lieutenant General", "LtGen"], ["Lieutenant General", "LtGen"]]),
-      makeRankRow("O-8", [["Lieutenant General", "Lt Gen"], ["Admiral", "Adm"], ["Major General", "MajGen"], ["Major General", "MajGen"]]),
-      makeRankRow("O-7", [["Major General", "Maj Gen"], ["Vice Admiral", "VAdm"], ["Brigadier General", "BGen"], ["Brigadier General", "BGen"]]),
-      makeRankRow("O-6", [["Brigadier General", "Brig Gen"], ["Rear Admiral Upper Half", "RAdm(U)"], ["Colonel", "Col"], ["Colonel", "Col"]]),
-      makeRankRow("O-5", [["Colonel", "Col"], ["Rear Admiral Lower Half", "RAdm(L)"], ["Lieutenant Colonel", "LtCol"], ["Lieutenant Colonel", "LtCol"]]),
-      makeRankRow("O-4", [["Lieutenant Colonel", "Lt Col"], ["Captain", "Capt"], ["Major", "Maj"], ["Major", "Maj"]]),
-      makeRankRow("O-3", [["Major", "Maj"], ["Commander", "Cmdr"], ["Captain", "Capt"], ["Captain", "Capt"]]),
-      makeRankRow("O-2", [["Captain", "Capt"], ["Lieutenant Commander", "LCDR"], ["First Lieutenant", "1stLt"], ["First Lieutenant", "1stLt"]]),
-      makeRankRow("O-1", [["First Lieutenant", "1st Lt"], ["Lieutenant", "LT"], ["Second Lieutenant", "2ndLt"], ["Second Lieutenant", "2ndLt"]]),
-      makeRankRow("E-9", [["Chief Master Sergeant of the Air Force", "CMSAF"], ["Master Chief Petty Officer of the Navy", "MCPON"], ["Sergeant Major of the Marine Corps", "SMMC"], ["Sergeant Major of the Army", "SMA"]]),
-      makeRankRow("E-8", [["Chief Master Sergeant", "CMSgt"], ["Master Chief Petty Officer", "MCPO"], ["Sergeant Major", "SgtMaj"], ["Command Sergeant Major", "CSM"]]),
-      makeRankRow("E-7", [["Senior Master Sergeant", "SMSgt"], ["Senior Chief Petty Officer", "SCPO"], ["Master Gunnery Sergeant", "MGySgt"], ["Sergeant Major", "SgtMaj"]]),
-      makeRankRow("E-6", [["Master Sergeant", "MSgt"], ["Chief Petty Officer", "CPO"], ["First Sergeant", "1stSgt"], ["First Sergeant", "1SG"]]),
-      makeRankRow("E-5", [["Technical Sergeant", "TSgt"], ["Petty Officer First Class", "PO1"], ["Gunnery Sergeant", "GySgt"], ["Master Sergeant", "MSG"]]),
-      makeRankRow("E-4", [["Staff Sergeant", "SSgt"], ["Petty Officer Second Class", "PO2"], ["Staff Sergeant", "SSgt"], ["Sergeant First Class", "SFC"]]),
-      makeRankRow("E-3", [["Senior Airman", "SrA"], ["Petty Officer Third Class", "PO3"], ["Sergeant", "Sgt"], ["Staff Sergeant", "SSG"]]),
-      makeRankRow("E-2", [["Airman First Class", "A1C"], ["Seaman", "SN"], ["Corporal", "Cpl"], ["Sergeant", "Sgt"]]),
-      makeRankRow("E-1", [["Airman", "Amn"], ["Seaman Apprentice", "SA"], ["Lance Corporal", "LCpl"], ["Private First Class", "PFC"]])
+      makeRankRow("O-10", [["General", "Gen"], ["Admiral", "ADM"], ["General", "GEN"], ["General", "Gen"]]),
+      makeRankRow("O-9", [["Lieutenant General", "Lt Gen"], ["Vice Admiral", "VADM"], ["Lieutenant General", "LTG"], ["Lieutenant General", "LtGen"]]),
+      makeRankRow("O-8", [["Major General", "Maj Gen"], ["Rear Admiral", "RADM"], ["Major General", "MG"], ["Major General", "MajGen"]]),
+      makeRankRow("O-7", [["Brigadier General", "Brig Gen"], ["Rear Admiral Lower Half", "RDML"], ["Brigadier General", "BG"], ["Brigadier General", "BGen"]]),
+      makeRankRow("O-6", [["Colonel", "Col"], ["Captain", "CAPT"], ["Colonel", "COL"], ["Colonel", "Col"]]),
+      makeRankRow("O-5", [["Lieutenant Colonel", "Lt Col"], ["Commander", "CDR"], ["Lieutenant Colonel", "LTC"], ["Lieutenant Colonel", "LtCol"]]),
+      makeRankRow("O-4", [["Major", "Maj"], ["Lieutenant Commander", "LCDR"], ["Major", "MAJ"], ["Major", "Maj"]]),
+      makeRankRow("O-3", [["Captain", "Capt"], ["Lieutenant", "LT"], ["Captain", "CPT"], ["Captain", "Capt"]]),
+      makeRankRow("O-2", [["First Lieutenant", "1st Lt"], ["Lieutenant Junior Grade", "LTJG"], ["First Lieutenant", "1LT"], ["First Lieutenant", "1stLt"]]),
+      makeRankRow("O-1", [["Second Lieutenant", "2d Lt"], ["Ensign", "ENS"], ["Second Lieutenant", "2LT"], ["Second Lieutenant", "2ndLt"]]),
+      makeRankRow("E-9", [["Chief Master Sergeant", "CMSgt"], ["Master Chief Petty Officer", "MCPO"], ["Sergeant Major", "SGM"], ["Sergeant Major", "SgtMaj"]]),
+      makeRankRow("E-8", [["Senior Master Sergeant", "SMSgt"], ["Senior Chief Petty Officer", "SCPO"], ["Master Sergeant", "MSG"], ["Master Sergeant", "MSgt"]]),
+      makeRankRow("E-7", [["Master Sergeant", "MSgt"], ["Chief Petty Officer", "CPO"], ["Sergeant First Class", "SFC"], ["Gunnery Sergeant", "GySgt"]]),
+      makeRankRow("E-6", [["Technical Sergeant", "TSgt"], ["Petty Officer First Class", "PO1"], ["Staff Sergeant", "SSG"], ["Staff Sergeant", "SSgt"]]),
+      makeRankRow("E-5", [["Staff Sergeant", "SSgt"], ["Petty Officer Second Class", "PO2"], ["Sergeant", "SGT"], ["Sergeant", "Sgt"]]),
+      makeRankRow("E-4", [["Senior Airman", "SrA"], ["Petty Officer Third Class", "PO3"], ["Corporal", "CPL"], ["Corporal", "Cpl"]]),
+      makeRankRow("E-3", [["Airman First Class", "A1C"], ["Seaman", "SN"], ["Private First Class", "PFC"], ["Lance Corporal", "LCpl"]]),
+      makeRankRow("E-2", [["Airman", "Amn"], ["Seaman Apprentice", "SA"], ["Private Second Class", "PV2"], ["Private First Class", "PFC"]]),
+      makeRankRow("E-1", [["Airman Basic", "AB"], ["Seaman Recruit", "SR"], ["Private", "PVT"], ["Private", "Pvt"]])
+    ]
+  },
+  UK: {
+    preset: "UK",
+    services: [{ name: "Air Force" }, { name: "Navy" }, { name: "Army" }, { name: "Marines" }],
+    rows: [
+      makeRankRow("O-10", [["Marshal of the Royal Air Force", "MRAF"], ["Admiral of the Fleet", "AF"], ["Field Marshal", "FM"], ["General", "Gen"]]),
+      makeRankRow("O-9", [["Air Chief Marshal", "ACM"], ["Admiral", "Adm"], ["General", "Gen"], ["Lieutenant General", "Lt Gen"]]),
+      makeRankRow("O-8", [["Air Marshal", "AM"], ["Vice Admiral", "VAdm"], ["Lieutenant General", "Lt Gen"], ["Major General", "Maj Gen"]]),
+      makeRankRow("O-7", [["Air Vice-Marshal", "AVM"], ["Rear Admiral", "RAdm"], ["Major General", "Maj Gen"], ["Brigadier", "Brig"]]),
+      makeRankRow("O-6", [["Air Commodore", "Air Cdre"], ["Commodore", "Cdre"], ["Brigadier", "Brig"], ["Colonel", "Col"]]),
+      makeRankRow("O-5", [["Group Captain", "Gp Capt"], ["Captain", "Capt"], ["Colonel", "Col"], ["Lieutenant Colonel", "Lt Col"]]),
+      makeRankRow("O-4", [["Wing Commander", "Wg Cdr"], ["Commander", "Cdr"], ["Lieutenant Colonel", "Lt Col"], ["Major", "Maj"]]),
+      makeRankRow("O-3", [["Squadron Leader", "Sqn Ldr"], ["Lieutenant Commander", "Lt Cdr"], ["Major", "Maj"], ["Captain", "Capt"]]),
+      makeRankRow("O-2", [["Flight Lieutenant", "Flt Lt"], ["Lieutenant", "Lt"], ["Captain", "Capt"], ["Lieutenant", "Lt"]]),
+      makeRankRow("O-1", [["Flying Officer", "Fg Off"], ["Sub Lieutenant", "SLt"], ["Lieutenant", "Lt"], ["Second Lieutenant", "2Lt"]]),
+      makeRankRow("E-9", [["Warrant Officer", "WO"], ["Warrant Officer Class One", "WO1"], ["Warrant Officer Class One", "WO1"], ["Warrant Officer Class One", "WO1"]]),
+      makeRankRow("E-8", [["Flight Sergeant", "FS"], ["Warrant Officer Class Two", "WO2"], ["Warrant Officer Class Two", "WO2"], ["Warrant Officer Class Two", "WO2"]]),
+      makeRankRow("E-7", [["Chief Technician", "Chf Tech"], ["Chief Petty Officer", "CPO"], ["Staff Sergeant", "SSgt"], ["Colour Sergeant", "CSgt"]]),
+      makeRankRow("E-6", [["Sergeant", "Sgt"], ["Petty Officer", "PO"], ["Sergeant", "Sgt"], ["Sergeant", "Sgt"]]),
+      makeRankRow("E-5", [["Corporal", "Cpl"], ["Leading Hand", "LH"], ["Corporal", "Cpl"], ["Corporal", "Cpl"]]),
+      makeRankRow("E-4", [["Corporal", "Cpl"], ["Able Seaman", "AB"], ["Lance Corporal", "LCpl"], ["Lance Corporal", "LCpl"]]),
+      makeRankRow("E-3", [["Senior Aircraftman Technician", "SAC(T)"], ["Able Seaman", "AB"], ["Private", "Pte"], ["Marine", "Mne"]]),
+      makeRankRow("E-2", [["Senior Aircraftman", "SAC"], ["Able Seaman", "AB"], ["Private", "Pte"], ["Marine", "Mne"]]),
+      makeRankRow("E-1", [["Aircraftman", "AC"], ["Able Seaman", "AB"], ["Private", "Pte"], ["Marine", "Mne"]])
+    ]
+  },
+  FR: {
+    preset: "FR",
+    services: [{ name: "Air Force" }, { name: "Navy" }, { name: "Army" }, { name: "Marines" }],
+    rows: [
+      makeRankRow("O-10", [["General d armee aerienne", "GAA"], ["Amiral", "AM"], ["General d armee", "GA"], ["", ""]]),
+      makeRankRow("O-9", [["General de corps aerien", "GCA"], ["Vice-amiral d escadre", "VAE"], ["General de corps d armee", "GCA"], ["", ""]]),
+      makeRankRow("O-8", [["General de division aerienne", "GDA"], ["Vice-amiral", "VA"], ["General de division", "GDI"], ["", ""]]),
+      makeRankRow("O-7", [["General de brigade aerienne", "GBA"], ["Contre-amiral", "CA"], ["General de brigade", "GBR"], ["", ""]]),
+      makeRankRow("O-6", [["Colonel", "COL"], ["Capitaine de vaisseau", "CV"], ["Colonel", "COL"], ["", ""]]),
+      makeRankRow("O-5", [["Lieutenant-colonel", "LCL"], ["Capitaine de fregate", "CF"], ["Lieutenant-colonel", "LCL"], ["", ""]]),
+      makeRankRow("O-4", [["Commandant", "CDT"], ["Capitaine de corvette", "CC"], ["Chef de bataillon", "CBA"], ["", ""]]),
+      makeRankRow("O-3", [["Capitaine", "CNE"], ["Lieutenant de vaisseau", "LV"], ["Capitaine", "CNE"], ["", ""]]),
+      makeRankRow("O-2", [["Lieutenant", "LTN"], ["Enseigne de vaisseau de 1re classe", "EV1"], ["Lieutenant", "LTN"], ["", ""]]),
+      makeRankRow("O-1", [["Sous-lieutenant", "SLT"], ["Enseigne de vaisseau de 2e classe", "EV2"], ["Sous-lieutenant", "SLT"], ["", ""]]),
+      makeRankRow("E-9", [["Major", "MAJ"], ["Major", "MAJ"], ["Major", "MAJ"], ["", ""]]),
+      makeRankRow("E-8", [["Adjudant-chef", "ADC"], ["Premier maitre", "PM"], ["Adjudant-chef", "ADC"], ["", ""]]),
+      makeRankRow("E-7", [["Adjudant", "ADJ"], ["Maitre principal", "MP"], ["Adjudant", "ADJ"], ["", ""]]),
+      makeRankRow("E-6", [["Sergent-chef", "SGT-C"], ["Second maitre", "SM"], ["Marechal des logis-chef", "SCH"], ["", ""]]),
+      makeRankRow("E-5", [["Sergent", "SGT"], ["Quartier-maitre de 1re classe", "QM1"], ["Sergent", "SGT"], ["", ""]]),
+      makeRankRow("E-4", [["Caporal-chef", "CCH"], ["Quartier-maitre de 2e classe", "QM2"], ["Caporal-chef", "CCH"], ["", ""]]),
+      makeRankRow("E-3", [["Caporal", "CAL"], ["Matelot", "MT"], ["Caporal", "CPL"], ["", ""]]),
+      makeRankRow("E-2", [["Aviateur de 1re classe", "AV1"], ["Matelot", "MOT"], ["Soldat de 1re classe", "1CL"], ["", ""]]),
+      makeRankRow("E-1", [["Aviateur de 2e classe", "AV2"], ["Matelot", "MOT"], ["Soldat de 2e classe", "2CL"], ["", ""]])
+    ]
+  },
+  CH: {
+    preset: "CH",
+    services: [{ name: "Air Force" }, { name: "Navy" }, { name: "Army" }, { name: "Marines" }],
+    rows: [
+      makeRankRow("O-10", [["General", "Gen"], ["", ""], ["General", "Gen"], ["", ""]]),
+      makeRankRow("O-9", [["Corps Commander", "Korpskdt"], ["", ""], ["Corps Commander", "Korpskdt"], ["", ""]]),
+      makeRankRow("O-8", [["Division Commander", "Div"], ["", ""], ["Division Commander", "Div"], ["", ""]]),
+      makeRankRow("O-7", [["Brigadier", "Brig"], ["", ""], ["Brigadier", "Brig"], ["", ""]]),
+      makeRankRow("O-6", [["Colonel", "Oberst"], ["", ""], ["Colonel", "Oberst"], ["", ""]]),
+      makeRankRow("O-5", [["Lieutenant Colonel", "Oberstlt"], ["", ""], ["Lieutenant Colonel", "Oberstlt"], ["", ""]]),
+      makeRankRow("O-4", [["Major", "Maj"], ["", ""], ["Major", "Maj"], ["", ""]]),
+      makeRankRow("O-3", [["Captain", "Hptm"], ["", ""], ["Captain", "Hptm"], ["", ""]]),
+      makeRankRow("O-2", [["First Lieutenant", "Oblt"], ["", ""], ["First Lieutenant", "Oblt"], ["", ""]]),
+      makeRankRow("O-1", [["Lieutenant", "Lt"], ["", ""], ["Lieutenant", "Lt"], ["", ""]]),
+      makeRankRow("E-9", [["Chief Warrant Officer", "Chefadj"], ["", ""], ["Chief Warrant Officer", "Chefadj"], ["", ""]]),
+      makeRankRow("E-8", [["Master Warrant Officer", "Hptadj"], ["", ""], ["Master Warrant Officer", "Hptadj"], ["", ""]]),
+      makeRankRow("E-7", [["Staff Warrant Officer", "Stabsadj"], ["", ""], ["Staff Warrant Officer", "Stabsadj"], ["", ""]]),
+      makeRankRow("E-6", [["Warrant Officer", "Adj Uof"], ["", ""], ["Warrant Officer", "Adj Uof"], ["", ""]]),
+      makeRankRow("E-5", [["Chief Sergeant Major", "Hptfw"], ["", ""], ["Chief Sergeant Major", "Hptfw"], ["", ""]]),
+      makeRankRow("E-4", [["Quartermaster Sergeant", "Four"], ["", ""], ["Quartermaster Sergeant", "Four"], ["", ""]]),
+      makeRankRow("E-3", [["Sergeant", "Wm"], ["", ""], ["Sergeant", "Wm"], ["", ""]]),
+      makeRankRow("E-2", [["Lance Corporal", "Obgfr"], ["", ""], ["Lance Corporal", "Obgfr"], ["", ""]]),
+      makeRankRow("E-1", [["Soldier", "Sdt"], ["", ""], ["Soldier", "Sdt"], ["", ""]])
+    ]
+  },
+  ES: {
+    preset: "ES",
+    services: [{ name: "Air Force" }, { name: "Navy" }, { name: "Army" }, { name: "Marines" }],
+    rows: [
+      makeRankRow("O-10", [["General del Aire", "GDA"], ["Almirante general", "AJ"], ["General de Ejercito", "GE"], ["General del Aire", "GDA"]]),
+      makeRankRow("O-9", [["Teniente general", "TGA"], ["Almirante general", "AG"], ["Teniente general", "TGE"], ["Teniente general", "TGA"]]),
+      makeRankRow("O-8", [["General de division", "GDA"], ["Vicealmirante", "VALM"], ["General de division", "GDI"], ["General de division", "GDI"]]),
+      makeRankRow("O-7", [["General de brigada", "GBA"], ["Contralmirante", "CALM"], ["General de brigada", "GBR"], ["General de brigada", "GBR"]]),
+      makeRankRow("O-6", [["Coronel", "COL"], ["Capitan de navio", "CN"], ["Coronel", "COL"], ["Coronel", "COL"]]),
+      makeRankRow("O-5", [["Teniente coronel", "TCO"], ["Capitan de fragata", "CF"], ["Teniente coronel", "TCO"], ["Teniente coronel", "TCO"]]),
+      makeRankRow("O-4", [["Comandante", "CTE"], ["Capitan de corbeta", "CC"], ["Comandante", "CTE"], ["Comandante", "CTE"]]),
+      makeRankRow("O-3", [["Capitan", "CAP"], ["Teniente de navio", "TN"], ["Capitan", "CAP"], ["Capitan", "CAP"]]),
+      makeRankRow("O-2", [["Teniente", "TTE"], ["Alferez de navio", "AN"], ["Teniente", "TTE"], ["Teniente", "TTE"]]),
+      makeRankRow("O-1", [["Alferez", "ALF"], ["Alferez de fragata", "AF"], ["Alferez", "ALF"], ["Alferez", "ALF"]]),
+      makeRankRow("E-9", [["Subteniente mayor", "STMY"], ["Suboficial mayor", "SBMY"], ["Subteniente mayor", "STMY"], ["Subteniente mayor", "STMY"]]),
+      makeRankRow("E-8", [["Subteniente brigada", "SBG"], ["Subteniente brigada", "SBG"], ["Subteniente brigada", "SBG"], ["Subteniente brigada", "SBG"]]),
+      makeRankRow("E-7", [["Brigada", "BG"], ["Brigada", "BG"], ["Brigada", "BG"], ["Brigada", "BG"]]),
+      makeRankRow("E-6", [["Sargento primero", "SG1"], ["Sargento primero", "SG1"], ["Sargento primero", "SG1"], ["Sargento primero", "SG1"]]),
+      makeRankRow("E-5", [["Sargento", "SGT"], ["Sargento", "SGT"], ["Sargento", "SGT"], ["Sargento", "SGT"]]),
+      makeRankRow("E-4", [["Cabo primero", "CB1"], ["Cabo primero", "CB1"], ["Cabo primero", "CB1"], ["Cabo primero", "CB1"]]),
+      makeRankRow("E-3", [["Cabo", "CBO"], ["Cabo", "CBO"], ["Cabo", "CBO"], ["Cabo", "CBO"]]),
+      makeRankRow("E-2", [["Soldado de aviacion", "SDA"], ["Marinero", "MRO"], ["Soldado", "SLD"], ["Soldado", "SLD"]]),
+      makeRankRow("E-1", [["Alumno", "ALU"], ["Marinero", "MR"], ["Soldado", "SLD"], ["Soldado", "SLD"]])
+    ]
+  },
+  SA: {
+    preset: "SA",
+    services: [{ name: "Air Force" }, { name: "Navy" }, { name: "Army" }, { name: "Marines" }],
+    rows: [
+      makeRankRow("O-10", [["General", "GEN"], ["Admiral", "ADM"], ["General", "GEN"], ["General", "GEN"]]),
+      makeRankRow("O-9", [["Lieutenant General", "LTGEN"], ["Vice Admiral", "VADM"], ["Lieutenant General", "LTGEN"], ["Lieutenant General", "LTGEN"]]),
+      makeRankRow("O-8", [["Major General", "MAJGEN"], ["Rear Admiral", "RADM"], ["Major General", "MAJGEN"], ["Major General", "MAJGEN"]]),
+      makeRankRow("O-7", [["Brigadier General", "BRIG"], ["Commodore", "CDRE"], ["Brigadier General", "BRIG"], ["Brigadier General", "BRIG"]]),
+      makeRankRow("O-6", [["Colonel", "COL"], ["Captain", "CAPT"], ["Colonel", "COL"], ["Colonel", "COL"]]),
+      makeRankRow("O-5", [["Lieutenant Colonel", "LTCOL"], ["Commander", "CDR"], ["Lieutenant Colonel", "LTCOL"], ["Lieutenant Colonel", "LTCOL"]]),
+      makeRankRow("O-4", [["Major", "MAJ"], ["Lieutenant Commander", "LCDR"], ["Major", "MAJ"], ["Major", "MAJ"]]),
+      makeRankRow("O-3", [["Captain", "CAPT"], ["Lieutenant", "LT"], ["Captain", "CAPT"], ["Captain", "CAPT"]]),
+      makeRankRow("O-2", [["First Lieutenant", "1LT"], ["Sub Lieutenant", "SLT"], ["First Lieutenant", "1LT"], ["First Lieutenant", "1LT"]]),
+      makeRankRow("O-1", [["Second Lieutenant", "2LT"], ["Ensign", "ENS"], ["Second Lieutenant", "2LT"], ["Second Lieutenant", "2LT"]]),
+      makeRankRow("E-9", [["Chief Warrant Officer", "CWO"], ["Chief Petty Officer", "CPO"], ["Chief Warrant Officer", "CWO"], ["Chief Warrant Officer", "CWO"]]),
+      makeRankRow("E-8", [["Warrant Officer", "WO"], ["Petty Officer First Class", "PO1"], ["Warrant Officer", "WO"], ["Warrant Officer", "WO"]]),
+      makeRankRow("E-7", [["Master Sergeant", "MSGT"], ["Petty Officer Second Class", "PO2"], ["Master Sergeant", "MSGT"], ["Master Sergeant", "MSGT"]]),
+      makeRankRow("E-6", [["Sergeant First Class", "SGT1"], ["Petty Officer Third Class", "PO3"], ["Sergeant First Class", "SGT1"], ["Sergeant First Class", "SGT1"]]),
+      makeRankRow("E-5", [["Sergeant", "SGT"], ["Leading Seaman", "LS"], ["Sergeant", "SGT"], ["Sergeant", "SGT"]]),
+      makeRankRow("E-4", [["Corporal", "CPL"], ["Able Seaman", "AB"], ["Corporal", "CPL"], ["Corporal", "CPL"]]),
+      makeRankRow("E-3", [["Lance Corporal", "LCPL"], ["Seaman", "SN"], ["Lance Corporal", "LCPL"], ["Lance Corporal", "LCPL"]]),
+      makeRankRow("E-2", [["Private First Class", "PFC"], ["Seaman Apprentice", "SA"], ["Private First Class", "PFC"], ["Private First Class", "PFC"]]),
+      makeRankRow("E-1", [["Private", "PVT"], ["Seaman Recruit", "SR"], ["Private", "PVT"], ["Private", "PVT"]])
+    ]
+  },
+  AE: {
+    preset: "AE",
+    services: [{ name: "Air Force" }, { name: "Navy" }, { name: "Army" }, { name: "Marines" }],
+    rows: [
+      makeRankRow("O-10", [["General", "GEN"], ["Admiral", "ADM"], ["General", "GEN"], ["", ""]]),
+      makeRankRow("O-9", [["Lieutenant General", "LTGEN"], ["Vice Admiral", "VADM"], ["Lieutenant General", "LTGEN"], ["", ""]]),
+      makeRankRow("O-8", [["Major General", "MAJGEN"], ["Rear Admiral", "RADM"], ["Major General", "MAJGEN"], ["", ""]]),
+      makeRankRow("O-7", [["Brigadier General", "BRIG"], ["Commodore", "CDRE"], ["Brigadier General", "BRIG"], ["", ""]]),
+      makeRankRow("O-6", [["Colonel", "COL"], ["Captain", "CAPT"], ["Colonel", "COL"], ["", ""]]),
+      makeRankRow("O-5", [["Lieutenant Colonel", "LTCOL"], ["Commander", "CDR"], ["Lieutenant Colonel", "LTCOL"], ["", ""]]),
+      makeRankRow("O-4", [["Major", "MAJ"], ["Lieutenant Commander", "LCDR"], ["Major", "MAJ"], ["", ""]]),
+      makeRankRow("O-3", [["Captain", "CAPT"], ["Lieutenant", "LT"], ["Captain", "CAPT"], ["", ""]]),
+      makeRankRow("O-2", [["First Lieutenant", "1LT"], ["Sub Lieutenant", "SLT"], ["First Lieutenant", "1LT"], ["", ""]]),
+      makeRankRow("O-1", [["Second Lieutenant", "2LT"], ["Ensign", "ENS"], ["Second Lieutenant", "2LT"], ["", ""]]),
+      makeRankRow("E-9", [["Chief Warrant Officer", "CWO"], ["Chief Petty Officer", "CPO"], ["Chief Warrant Officer", "CWO"], ["", ""]]),
+      makeRankRow("E-8", [["Warrant Officer", "WO"], ["Petty Officer First Class", "PO1"], ["Warrant Officer", "WO"], ["", ""]]),
+      makeRankRow("E-7", [["Master Sergeant", "MSGT"], ["Petty Officer Second Class", "PO2"], ["Master Sergeant", "MSGT"], ["", ""]]),
+      makeRankRow("E-6", [["Sergeant First Class", "SGT1"], ["Petty Officer Third Class", "PO3"], ["Sergeant First Class", "SGT1"], ["", ""]]),
+      makeRankRow("E-5", [["Sergeant", "SGT"], ["Leading Seaman", "LS"], ["Sergeant", "SGT"], ["", ""]]),
+      makeRankRow("E-4", [["Corporal", "CPL"], ["Able Seaman", "AB"], ["Corporal", "CPL"], ["", ""]]),
+      makeRankRow("E-3", [["Lance Corporal", "LCPL"], ["Seaman", "SN"], ["Lance Corporal", "LCPL"], ["", ""]]),
+      makeRankRow("E-2", [["Private First Class", "PFC"], ["Seaman Apprentice", "SA"], ["Private First Class", "PFC"], ["", ""]]),
+      makeRankRow("E-1", [["Private", "PVT"], ["Seaman Recruit", "SR"], ["Private", "PVT"], ["", ""]])
     ]
   },
   CUSTOM: {
@@ -3565,7 +3726,7 @@ const normaliseRankEquivalencyCell = (cell) => ({
   abbreviation: String(cell?.abbreviation || "").trim()
 });
 const normaliseRankEquivalencyConfig = (input, fallback = DEFAULT_RANK_EQUIVALENCY_CONFIG) => {
-  const preset = input?.preset === "US" || input?.preset === "CUSTOM" || input?.preset === "AU" ? input.preset : fallback.preset;
+  const preset = input?.preset && input.preset in RANK_EQUIVALENCY_PRESETS ? input.preset : fallback.preset;
   const fallbackConfig = preset === "CUSTOM" ? fallback : RANK_EQUIVALENCY_PRESETS[preset];
   const rawServices = Array.isArray(input?.services) ? input.services : fallbackConfig.services;
   const services = [0, 1, 2, 3].map((index) => ({
@@ -70032,18 +70193,14 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-[220px] text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
                 "Rank Preset",
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "select",
                   {
                     value: staffRankEquivalency.preset,
                     disabled: !canEditRankTerminology,
                     onChange: (event) => applyStaffRankPreset(event.target.value),
                     className: `mt-1 w-full rounded border px-3 py-2 text-sm font-semibold ${canEditRankTerminology ? "border-gray-600 bg-gray-950 text-white" : "border-gray-700 bg-gray-800 text-gray-400 cursor-not-allowed"}`,
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "AU", children: "Australia" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "US", children: "United States" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "CUSTOM", children: "Custom" })
-                    ]
+                    children: Object.keys(RANK_EQUIVALENCY_PRESET_LABELS).map((preset) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: preset, children: RANK_EQUIVALENCY_PRESET_LABELS[preset] }, preset))
                   }
                 )
               ] })

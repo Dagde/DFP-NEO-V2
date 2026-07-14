@@ -29,6 +29,7 @@ import {
   normalisePersonnelDisplaySettings,
   normaliseRankEquivalencyConfig,
   parseRankOrderText,
+  RANK_EQUIVALENCY_PRESET_LABELS,
   RANK_EQUIVALENCY_PRESETS,
   type PersonnelDisplaySettings,
   type RankEquivalencyConfig,
@@ -8503,9 +8504,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         : 'border-gray-700 bg-gray-800 text-gray-400 cursor-not-allowed'
                     }`}
                   >
-                    <option value="AU">Australia</option>
-                    <option value="US">United States</option>
-                    <option value="CUSTOM">Custom</option>
+                    {(Object.keys(RANK_EQUIVALENCY_PRESET_LABELS) as RankEquivalencyPresetKey[]).map((preset) => (
+                      <option key={preset} value={preset}>
+                        {RANK_EQUIVALENCY_PRESET_LABELS[preset]}
+                      </option>
+                    ))}
                   </select>
                 </label>
               </div>
