@@ -59877,7 +59877,7 @@ const SettingsView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4 flex min-h-0 flex-1 flex-col", children: isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
             "Manage ",
-            sctLongLabel,
+            sctShortLabel,
             " event types."
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: tempSctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-2 bg-gray-700/50 rounded", children: [
@@ -59905,7 +59905,7 @@ const SettingsView = ({
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
             "Configured ",
-            sctLongLabel,
+            sctShortLabel,
             " event types."
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: sctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-2 bg-gray-700/50 rounded text-white", children: evt }, evt)) })
