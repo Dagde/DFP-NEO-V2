@@ -6083,7 +6083,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             <div className={resourceSectionPanelHeaderClass}>
                               <div>
                                 <div className={resourceSectionPanelTitleClass}>Required Roles</div>
-                                <div className={resourceSectionPanelHintClass}>{crewMode === 'CUSTOM' ? 'Manual role requirements are stored with the mission profile for later scheduling use.' : 'Only used when Custom Crew is selected.'}</div>
+                                <div className={resourceSectionPanelHintClass}>{crewMode === 'CUSTOM' ? 'Set the crew positions this mission must include when scheduled.' : 'Only used when Custom Crew is selected.'}</div>
                               </div>
                               <button type="button" onClick={() => addStandardMissionRoleRequirement(profile)} disabled={!canEditSection('platform-standard-missions') || crewMode !== 'CUSTOM'} className={platformActionButtonClass}>Add Role</button>
                             </div>
@@ -6176,7 +6176,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Crew Position Labels / Roles</h4>
-                <p className={resourceSectionPanelHintClass}>These are the role keys currently used by {activeCrewCompositionAircraftCode || 'this aircraft'}. Model applicability includes Flight School, Air Combat, Fixed Crew and Pooled Crew.</p>
+                <p className={resourceSectionPanelHintClass}>These are the crew positions available for {activeCrewCompositionAircraftCode || 'this aircraft'}. Choose which operational models should use each position.</p>
               </div>
               <button type="button" onClick={addCrewPositionEntry} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
                 <span className="text-[10px] leading-tight">Add<br />Position</span>
@@ -6187,7 +6187,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
                 return (
                   <div key={`crew-role-${entry.id}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(182px,1.05fr)_minmax(65px,0.375fr)_minmax(300px,1.65fr)_auto]">
-                    <Field label="Generic Position" value={entry.genericName} disabled={!canEditCrewComposition || isDefaultEntry} onChange={(value) => updateCrewPositionEntry(entry.id, { genericName: value })} info={isDefaultEntry ? 'Baseline generic positions stay fixed so aircraft seat links remain stable.' : 'The generic role key saved on aircraft seats and alternate crew profiles.'} />
+                    <Field label="Generic Position" value={entry.genericName} disabled={!canEditCrewComposition || isDefaultEntry} onChange={(value) => updateCrewPositionEntry(entry.id, { genericName: value })} info={isDefaultEntry ? 'Baseline crew positions stay fixed so aircraft seat links remain reliable.' : 'The position used by aircraft seats and alternate crew profiles.'} />
                     <Field label="Label" value={entry.label} disabled={!canEditCrewComposition} onChange={(value) => updateCrewPositionEntry(entry.id, { label: value })} />
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-400">Applies To</label>
@@ -6228,7 +6228,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Standard Crew Composition</h4>
-                <p className={resourceSectionPanelHintClass}>This standard composition is stored against {activeCrewCompositionAircraftCode || 'the selected aircraft type'}.</p>
+                <p className={resourceSectionPanelHintClass}>This standard composition applies to {activeCrewCompositionAircraftCode || 'the selected aircraft type'}.</p>
               </div>
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
