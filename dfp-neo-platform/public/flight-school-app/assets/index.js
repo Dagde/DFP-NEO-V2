@@ -70929,7 +70929,7 @@ const sectionLabels = {
   "platform-permission-profiles": "Permission Profiles",
   "platform-rank-terminology": "Rank, Terminology & Labels",
   "platform-user-access": "User Access Scopes",
-  "platform-scheduling-rule-sets": "Enterprise Rule Sets",
+  "platform-scheduling-rule-sets": "Scheduling Rule Sets",
   "appearance": "App Appearance",
   "emergency": "Emergency"
 };
@@ -71063,7 +71063,7 @@ const sectionDescriptions = {
   "platform-permission-profiles": "Reusable permission profiles for user roles",
   "platform-rank-terminology": "Rank ordering and local instructor terminology",
   "platform-user-access": "Control where each user can work",
-  "platform-scheduling-rule-sets": "Commercial scheduling rule set records",
+  "platform-scheduling-rule-sets": "Scheduling rules for selected units, aircraft and operating areas",
   "appearance": "Choose dark or light display theme",
   "emergency": "System freeze and emergency controls"
 };
@@ -71170,7 +71170,7 @@ const sectionGroups = [
   {
     label: "DFP Build Rules",
     shortLabel: "Rules",
-    description: "Persistent scheduling policy, duty limits, turnarounds and enterprise rule sets. Daily build factors stay in NEO Build > Priorities.",
+    description: "Event limits, duty rules, turnarounds and scheduling rule sets. Daily build factors stay in NEO Build > Priorities.",
     accent: "amber",
     defaultSection: "scheduling-rules",
     sections: ["scheduling-rules"]
