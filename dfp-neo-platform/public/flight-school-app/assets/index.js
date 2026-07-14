@@ -63965,9 +63965,9 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
           "WARNING",
           "Unit Separation",
           `${unitCode} will use shared resource capacity`,
-          `${unitCode} is a Fixed Crew unit without its own runtime resource pool. It can still schedule by falling back to shared/location capacity, but separated-unit builds may not reflect a dedicated unit allocation.`,
+          `${unitCode} is a Fixed Crew unit without its own live DFP resource pool. It can still schedule by falling back to shared or location capacity, but separated-unit builds may not reflect a dedicated unit allocation.`,
           `unit-${unitCode}-separation-resource-pool`,
-          "Open Aircraft & Resource Pools and add or enable a unit-specific runtime pool if this unit needs independent aircraft, FTD or CPT capacity after separation.",
+          "Open Aircraft & Resource Pools and add or enable a unit-specific pool if this unit needs independent aircraft, simulator or trainer capacity after separation.",
           { focusSubsectionId: "platform-resource-pools" }
         );
       }
@@ -64012,9 +64012,9 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "WARNING",
       "Unit Separation",
       "Combined-unit profiles need per-unit copies",
-      `${missingCompositeClones} Standard Mission, Alternate Crew or Currency Profile unit record${missingCompositeClones === 1 ? "" : "s"} will be backfilled on the next platform save so separated units can continue to see them.`,
+      `${missingCompositeClones} Standard Mission, Alternate Crew or Currency Profile unit record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
-      "Click Save on any Platform & Deployment or Crew Composition settings page. The save process creates missing per-unit copies while preserving the combined-unit profile group.",
+      "Open Crew Composition, press Edit, then Save. Saving that section creates the missing per-unit copies while preserving the combined-unit profile group.",
       { section: "crew-composition", label: "Crew Composition", focusSubsectionId: "platform-crew-composition" }
     );
   } else {
@@ -66309,7 +66309,7 @@ This permanently removes the organisation record from platform configuration and
     const confirmed = await showDarkConfirm(
       `Delete resource pool "${selectedResourcePoolDeleteOption.name}"?
 
-This removes it from the Aircraft & Resource Pools draft. Click Save afterwards to write the deletion to the database.`,
+This removes it from Aircraft & Resource Pools. Press Save in this section to apply the deletion.`,
       "Delete Resource Pool?",
       "warning"
     );
@@ -66340,7 +66340,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
       resourcePools: prev.resourcePools.filter((pool, index) => String(pool.id || pool.code || `resource-pool-${index}`) !== selectedResourcePoolDeleteOption.key)
     }));
     setSelectedResourcePoolDeleteKey("");
-    onShowSuccess(`Resource pool "${selectedResourcePoolDeleteOption.name}" removed. Click Save to apply the deletion.`);
+    onShowSuccess(`Resource pool "${selectedResourcePoolDeleteOption.name}" removed. Press Save to apply the deletion.`);
   };
   const save = async (configOverride, restoreSection, options) => {
     const configToSave = buildSeparationReadyConfig(normaliseSettingsPlatformConfig(
@@ -68254,7 +68254,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Aircraft Types & Resource Pools",
-          subtitle: resourcePoolsUnlocked ? "Editing is active. Click Save to write aircraft type and resource pool changes to the database, then return this section to read-only mode." : "Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources. Click Edit before making changes.",
+          subtitle: resourcePoolsUnlocked ? "Editing is active. Press Save to apply aircraft type and resource pool changes, then return this section to read-only mode." : "Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources. Click Edit before making changes.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: resourcePoolsUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
@@ -68343,7 +68343,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Resource Pools" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-cyan-100", children: config.resourcePools.length }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Dedicated or shared live runtime resources." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Dedicated or shared live DFP resources." })
         ] })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 pb-4", children: [
@@ -68572,7 +68572,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                       ] })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-md border px-2 py-1 text-right ${runtimeEnabled ? "border-emerald-400/40 bg-emerald-500/10" : "border-gray-700 bg-gray-900"}`, children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-black uppercase tracking-wide text-gray-500", children: "V2 Runtime" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-black uppercase tracking-wide text-gray-500", children: "Live DFP" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-sm font-black ${runtimeEnabled ? "text-emerald-200" : "text-gray-300"}`, children: runtimeEnabled ? "On" : "Off" })
                     ] })
                   ] }),
