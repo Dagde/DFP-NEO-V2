@@ -24,12 +24,18 @@ export interface RankEquivalencyConfig {
   rows: RankEquivalencyRow[];
 }
 
+export interface RankOptionGroup {
+  label: string;
+  options: string[];
+}
+
 export interface PersonnelDisplaySettings {
   sortMode: PersonnelSortMode;
   useSeparateTraineeRankOrder: boolean;
   staffRankOrder: string[];
   traineeRankOrder: string[];
   staffRankEquivalency: RankEquivalencyConfig;
+  civilianTitles: string[];
   civilianContractorGroupName: string;
   instructorLabel: string;
 }
@@ -52,6 +58,8 @@ export const DEFAULT_STAFF_RANK_ORDER = [
   'AC',
   'APS = Dr = Mr = Ms = Mrs = Mx = CIV = CONTRACTOR',
 ];
+
+export const DEFAULT_CIVILIAN_TITLES = ['APS', 'Dr', 'Mr', 'Ms', 'Mrs', 'Mx', 'CIV', 'CONTRACTOR'];
 
 export const RANK_EQUIVALENCY_GRADES = [
   'O-10',
@@ -311,6 +319,7 @@ export const DEFAULT_PERSONNEL_DISPLAY_SETTINGS: PersonnelDisplaySettings = {
   staffRankOrder: DEFAULT_STAFF_RANK_ORDER,
   traineeRankOrder: DEFAULT_STAFF_RANK_ORDER,
   staffRankEquivalency: DEFAULT_RANK_EQUIVALENCY_CONFIG,
+  civilianTitles: DEFAULT_CIVILIAN_TITLES,
   civilianContractorGroupName: 'Civilian Contractors',
   instructorLabel: 'QFI',
 };
@@ -344,7 +353,22 @@ const uniqueRankList = (value: unknown, fallback: string[]): string[] => {
   return ranks.length ? ranks : fallback;
 };
 
-const CIVILIAN_EQUAL_RANK_KEYS = new Set(['APS', 'DR', 'MR', 'MS', 'MRS', 'MX', 'CIV', 'CONTRACTOR']);
+const normaliseCivilianTitles = (value: unknown): string[] => {
+  const source = Array.isArray(value) ? value : DEFAULT_CIVILIAN_TITLES;
+  const seen = new Set<string>();
+  const titles = source
+    .flatMap((entry) => String(entry || '').split(/[=|]/))
+    .filter((entry) => String(entry || '').trim())
+    .filter((entry) => {
+      const key = rankKey(entry);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  return titles.length ? titles : DEFAULT_CIVILIAN_TITLES;
+};
+
+const CIVILIAN_EQUAL_RANK_KEYS = new Set(DEFAULT_CIVILIAN_TITLES.map(rankKey));
 
 const groupLegacyCivilianRanks = (rankOrder: string[]): string[] => {
   const civilians: string[] = [];
@@ -394,6 +418,7 @@ export const normaliseRankEquivalencyConfig = (
 };
 
 export const getRankOrderFromEquivalency = (config?: Partial<RankEquivalencyConfig> | null): string[] => {
+  const civilianTitles = normaliseCivilianTitles((config as any)?.civilianTitles);
   const normalised = normaliseRankEquivalencyConfig(config);
   const rankOrder = normalised.rows
     .map((row) => {
@@ -404,12 +429,14 @@ export const getRankOrderFromEquivalency = (config?: Partial<RankEquivalencyConf
         .join(' = ');
     })
     .filter(Boolean);
-  return groupLegacyCivilianRanks(uniqueRankList([...rankOrder, 'APS = Dr = Mr = Ms = Mrs = Mx = CIV = CONTRACTOR'], DEFAULT_STAFF_RANK_ORDER));
+  const civilianGroup = civilianTitles.join(' = ');
+  return groupLegacyCivilianRanks(uniqueRankList([...rankOrder, civilianGroup], DEFAULT_STAFF_RANK_ORDER));
 };
 
 export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDisplaySettings> | null): PersonnelDisplaySettings => {
   const staffRankEquivalency = normaliseRankEquivalencyConfig(input?.staffRankEquivalency, DEFAULT_RANK_EQUIVALENCY_CONFIG);
-  const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, getRankOrderFromEquivalency(staffRankEquivalency)));
+  const civilianTitles = normaliseCivilianTitles(input?.civilianTitles || (input as any)?.civilianRankTitles);
+  const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, getRankOrderFromEquivalency({ ...staffRankEquivalency, civilianTitles } as any)));
   const traineeRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder));
 
   return {
@@ -418,6 +445,7 @@ export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDispl
     staffRankOrder,
     traineeRankOrder,
     staffRankEquivalency,
+    civilianTitles,
     civilianContractorGroupName: String(input?.civilianContractorGroupName || '').trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.civilianContractorGroupName,
     instructorLabel: String(input?.instructorLabel || '').trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel,
   };
@@ -504,6 +532,49 @@ export const getRankOptionsForGroup = (
 ): string[] => {
   const configuredRanks = flattenRankOrder(getRankOrderForGroup(settings, group));
   return configuredRanks.length ? configuredRanks : flattenRankOrder(DEFAULT_STAFF_RANK_ORDER);
+};
+
+export const getRankOptionGroupsForGroup = (
+  settings?: Partial<PersonnelDisplaySettings>,
+  group: PersonnelGroup = 'staff',
+): RankOptionGroup[] => {
+  const safe = normalisePersonnelDisplaySettings(settings);
+  if (group === 'trainee' && safe.useSeparateTraineeRankOrder) {
+    const traineeOptions = getRankOptionsForGroup(safe, 'trainee');
+    return traineeOptions.length ? [{ label: 'Trainee ranks', options: traineeOptions }] : [];
+  }
+
+  const seen = new Set<string>();
+  const groups = safe.staffRankEquivalency.services
+    .map((service, serviceIndex) => {
+      const options = safe.staffRankEquivalency.rows
+        .map((row) => String(row.ranks[serviceIndex]?.abbreviation || '').trim())
+        .filter(Boolean)
+        .filter((option) => {
+          const key = rankKey(option);
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      return {
+        label: String(service.name || `Service ${serviceIndex + 1}`).trim() || `Service ${serviceIndex + 1}`,
+        options,
+      };
+    })
+    .filter((rankGroup) => rankGroup.options.length > 0);
+
+  const civilianOptions = safe.civilianTitles
+    .map((title) => String(title || '').trim())
+    .filter(Boolean)
+    .filter((title) => {
+      const key = rankKey(title);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  if (civilianOptions.length) groups.push({ label: 'Civilian titles', options: civilianOptions });
+
+  return groups.length ? groups : [{ label: 'Ranks', options: getRankOptionsForGroup(safe, group) }];
 };
 
 export const getRankSortIndex = (

@@ -3434,6 +3434,7 @@ const DEFAULT_STAFF_RANK_ORDER = [
   "AC",
   "APS = Dr = Mr = Ms = Mrs = Mx = CIV = CONTRACTOR"
 ];
+const DEFAULT_CIVILIAN_TITLES = ["APS", "Dr", "Mr", "Ms", "Mrs", "Mx", "CIV", "CONTRACTOR"];
 const RANK_EQUIVALENCY_GRADES = [
   "O-10",
   "O-9",
@@ -3687,6 +3688,7 @@ const DEFAULT_PERSONNEL_DISPLAY_SETTINGS = {
   staffRankOrder: DEFAULT_STAFF_RANK_ORDER,
   traineeRankOrder: DEFAULT_STAFF_RANK_ORDER,
   staffRankEquivalency: DEFAULT_RANK_EQUIVALENCY_CONFIG,
+  civilianTitles: DEFAULT_CIVILIAN_TITLES,
   civilianContractorGroupName: "Civilian Contractors",
   instructorLabel: "QFI"
 };
@@ -3705,7 +3707,18 @@ const uniqueRankList = (value, fallback) => {
   }).map(normaliseRankGroup).filter(Boolean);
   return ranks.length ? ranks : fallback;
 };
-const CIVILIAN_EQUAL_RANK_KEYS = /* @__PURE__ */ new Set(["APS", "DR", "MR", "MS", "MRS", "MX", "CIV", "CONTRACTOR"]);
+const normaliseCivilianTitles = (value) => {
+  const source = Array.isArray(value) ? value : DEFAULT_CIVILIAN_TITLES;
+  const seen = /* @__PURE__ */ new Set();
+  const titles = source.flatMap((entry) => String(entry || "").split(/[=|]/)).filter((entry) => String(entry || "").trim()).filter((entry) => {
+    const key = rankKey(entry);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return titles.length ? titles : DEFAULT_CIVILIAN_TITLES;
+};
+const CIVILIAN_EQUAL_RANK_KEYS = new Set(DEFAULT_CIVILIAN_TITLES.map(rankKey));
 const groupLegacyCivilianRanks = (rankOrder) => {
   const civilians = [];
   const otherRanks = [];
@@ -3743,16 +3756,19 @@ const normaliseRankEquivalencyConfig = (input, fallback = DEFAULT_RANK_EQUIVALEN
   return { preset, services, rows };
 };
 const getRankOrderFromEquivalency = (config) => {
+  const civilianTitles = normaliseCivilianTitles(config?.civilianTitles);
   const normalised = normaliseRankEquivalencyConfig(config);
   const rankOrder = normalised.rows.map((row) => {
     const values = row.ranks.flatMap((cell) => [cell.abbreviation, cell.rank]);
     return values.map((value) => String(value || "").trim()).filter(Boolean).join(" = ");
   }).filter(Boolean);
-  return groupLegacyCivilianRanks(uniqueRankList([...rankOrder, "APS = Dr = Mr = Ms = Mrs = Mx = CIV = CONTRACTOR"], DEFAULT_STAFF_RANK_ORDER));
+  const civilianGroup = civilianTitles.join(" = ");
+  return groupLegacyCivilianRanks(uniqueRankList([...rankOrder, civilianGroup], DEFAULT_STAFF_RANK_ORDER));
 };
 const normalisePersonnelDisplaySettings = (input) => {
   const staffRankEquivalency = normaliseRankEquivalencyConfig(input?.staffRankEquivalency, DEFAULT_RANK_EQUIVALENCY_CONFIG);
-  const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, getRankOrderFromEquivalency(staffRankEquivalency)));
+  const civilianTitles = normaliseCivilianTitles(input?.civilianTitles || input?.civilianRankTitles);
+  const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, getRankOrderFromEquivalency({ ...staffRankEquivalency, civilianTitles })));
   const traineeRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder));
   return {
     sortMode: input?.sortMode === "alphabetical" ? "alphabetical" : "rank-then-name",
@@ -3760,6 +3776,7 @@ const normalisePersonnelDisplaySettings = (input) => {
     staffRankOrder,
     traineeRankOrder,
     staffRankEquivalency,
+    civilianTitles,
     civilianContractorGroupName: String(input?.civilianContractorGroupName || "").trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.civilianContractorGroupName,
     instructorLabel: String(input?.instructorLabel || "").trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel
   };
@@ -3815,6 +3832,34 @@ const flattenRankOrder = (rankOrder = []) => {
 const getRankOptionsForGroup = (settings, group = "staff") => {
   const configuredRanks = flattenRankOrder(getRankOrderForGroup(settings, group));
   return configuredRanks.length ? configuredRanks : flattenRankOrder(DEFAULT_STAFF_RANK_ORDER);
+};
+const getRankOptionGroupsForGroup = (settings, group = "staff") => {
+  const safe2 = normalisePersonnelDisplaySettings(settings);
+  if (group === "trainee" && safe2.useSeparateTraineeRankOrder) {
+    const traineeOptions = getRankOptionsForGroup(safe2, "trainee");
+    return traineeOptions.length ? [{ label: "Trainee ranks", options: traineeOptions }] : [];
+  }
+  const seen = /* @__PURE__ */ new Set();
+  const groups = safe2.staffRankEquivalency.services.map((service, serviceIndex) => {
+    const options = safe2.staffRankEquivalency.rows.map((row) => String(row.ranks[serviceIndex]?.abbreviation || "").trim()).filter(Boolean).filter((option) => {
+      const key = rankKey(option);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return {
+      label: String(service.name || `Service ${serviceIndex + 1}`).trim() || `Service ${serviceIndex + 1}`,
+      options
+    };
+  }).filter((rankGroup) => rankGroup.options.length > 0);
+  const civilianOptions = safe2.civilianTitles.map((title) => String(title || "").trim()).filter(Boolean).filter((title) => {
+    const key = rankKey(title);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (civilianOptions.length) groups.push({ label: "Civilian titles", options: civilianOptions });
+  return groups.length ? groups : [{ label: "Ranks", options: getRankOptionsForGroup(safe2, group) }];
 };
 const getRankSortIndex = (rank, settings, group = "staff") => {
   const targetKey = rankKey(rank);
@@ -22675,11 +22720,12 @@ const TraineeProfileFlyout = ({
   const [name, setName] = reactExports.useState(trainee.name);
   const [idNumber, setIdNumber] = reactExports.useState(trainee.idNumber);
   const [rank, setRank] = reactExports.useState(trainee.rank);
-  const traineeRankOptions = reactExports.useMemo(() => {
-    const configuredRanks = getRankOptionsForGroup(personnelDisplaySettings || void 0, "trainee");
+  const traineeRankOptionGroups = reactExports.useMemo(() => {
+    const configuredGroups = getRankOptionGroupsForGroup(personnelDisplaySettings || void 0, "trainee");
+    const configuredRanks = configuredGroups.flatMap((group) => group.options);
     const currentRank = String(rank || "").trim();
     const hasCurrentRank = Boolean(currentRank) && configuredRanks.some((option) => option.toLowerCase() === currentRank.toLowerCase());
-    return currentRank && !hasCurrentRank ? [...configuredRanks, currentRank] : configuredRanks;
+    return currentRank && !hasCurrentRank ? [...configuredGroups, { label: "Current value", options: [currentRank] }] : configuredGroups;
   }, [personnelDisplaySettings, rank]);
   const [service, setService] = reactExports.useState(trainee.service || "");
   const [course, setCourse] = reactExports.useState(trainee.course || activeCourses[0] || "");
@@ -23813,7 +23859,7 @@ ${errorText || `HTTP ${response.status}`}`);
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 lg:grid-cols-6 gap-2.5", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => handleNameChange(e.target.value) }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: traineeRankOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option)) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: traineeRankOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, `${group.label}-${option}`)) }, group.label)) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Service", value: service, onChange: (e) => setService(e.target.value), children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAAF", children: "RAAF" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAN", children: "RAN" }),
@@ -49116,11 +49162,12 @@ const InstructorProfileFlyout = ({
   const [idNumber, setIdNumber] = reactExports.useState(instructor.idNumber);
   const [name, setName] = reactExports.useState(instructor.name);
   const [rank, setRank] = reactExports.useState(instructor.rank);
-  const staffRankOptions = reactExports.useMemo(() => {
-    const configuredRanks = getRankOptionsForGroup(personnelDisplaySettings || void 0, "staff");
+  const staffRankOptionGroups = reactExports.useMemo(() => {
+    const configuredGroups = getRankOptionGroupsForGroup(personnelDisplaySettings || void 0, "staff");
+    const configuredRanks = configuredGroups.flatMap((group) => group.options);
     const currentRank = String(rank || "").trim();
     const hasCurrentRank = Boolean(currentRank) && configuredRanks.some((option) => option.toLowerCase() === currentRank.toLowerCase());
-    return currentRank && !hasCurrentRank ? [...configuredRanks, currentRank] : configuredRanks;
+    return currentRank && !hasCurrentRank ? [...configuredGroups, { label: "Current value", options: [currentRank] }] : configuredGroups;
   }, [personnelDisplaySettings, rank]);
   const [role, setRole] = reactExports.useState(instructor.role);
   const staffRoleOptions = reactExports.useMemo(() => {
@@ -50434,7 +50481,7 @@ const InstructorProfileFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => setName(e.target.value) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: staffRankOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option)) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: staffRankOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, `${group.label}-${option}`)) }, group.label)) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Role", value: role, onChange: (e) => setRole(e.target.value), children: staffRoleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-6 gap-3", children: [
@@ -64979,9 +65026,18 @@ This permanently removes the organisation record from platform configuration and
   };
   const updateStaffRankEquivalency = (nextEquivalency) => {
     const staffRankEquivalency2 = normaliseRankEquivalencyConfig(nextEquivalency);
-    const staffRankOrder = getRankOrderFromEquivalency(staffRankEquivalency2);
+    const staffRankOrder = getRankOrderFromEquivalency({ ...staffRankEquivalency2, civilianTitles: personnelDisplaySettings.civilianTitles });
     updatePersonnelDisplaySettings({
       staffRankEquivalency: staffRankEquivalency2,
+      staffRankOrder,
+      ...personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }
+    });
+  };
+  const updateCivilianTitles = (value) => {
+    const civilianTitles = value.split(/\r?\n/).filter((title) => title.trim());
+    const staffRankOrder = getRankOrderFromEquivalency({ ...personnelDisplaySettings.staffRankEquivalency, civilianTitles });
+    updatePersonnelDisplaySettings({
+      civilianTitles,
       staffRankOrder,
       ...personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }
     });
@@ -70261,8 +70317,18 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 ] }) }, `${row.grade}-${serviceIndex}`))
               ] }, row.grade)) })
             ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-relaxed text-gray-400", children: "Civilian and contractor titles remain grouped after the service rank levels." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-relaxed text-gray-400", children: "Military ranks are listed above by service and level. Civilian and contractor titles are managed separately below." })
           ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TextAreaField,
+            {
+              label: "Civilian / Contractor Titles",
+              value: personnelDisplaySettings.civilianTitles.join("\n"),
+              disabled: !canEditRankTerminology,
+              onChange: updateCivilianTitles,
+              info: "Enter one civilian or contractor title per line. These titles appear after the military rank groups and are treated as equal status for sorting."
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: personnelDisplaySettings.useSeparateTraineeRankOrder ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm ${canEditRankTerminology ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-50" : "border-gray-700 bg-gray-900/60 text-gray-400"}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "Use separate trainee rank order" }),

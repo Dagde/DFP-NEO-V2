@@ -17,7 +17,7 @@ import PT051View from './PT051View';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
   DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
-  getRankOptionsForGroup,
+  getRankOptionGroupsForGroup,
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
 import {
@@ -966,11 +966,14 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [name, setName] = useState(trainee.name);
     const [idNumber, setIdNumber] = useState(trainee.idNumber);
     const [rank, setRank] = useState<TraineeRank>(trainee.rank);
-    const traineeRankOptions = useMemo(() => {
-      const configuredRanks = getRankOptionsForGroup(personnelDisplaySettings || undefined, 'trainee');
+    const traineeRankOptionGroups = useMemo(() => {
+      const configuredGroups = getRankOptionGroupsForGroup(personnelDisplaySettings || undefined, 'trainee');
+      const configuredRanks = configuredGroups.flatMap(group => group.options);
       const currentRank = String(rank || '').trim();
       const hasCurrentRank = Boolean(currentRank) && configuredRanks.some(option => option.toLowerCase() === currentRank.toLowerCase());
-      return currentRank && !hasCurrentRank ? [...configuredRanks, currentRank] : configuredRanks;
+      return currentRank && !hasCurrentRank
+        ? [...configuredGroups, { label: 'Current value', options: [currentRank] }]
+        : configuredGroups;
     }, [personnelDisplaySettings, rank]);
     const [service, setService] = useState(trainee.service || '');
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
@@ -2320,8 +2323,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               </div>
                               <InputField label="ID Number" value={idNumber} onChange={e => setIdNumber(parseInt(e.target.value) || 0)} />
                               <Dropdown label="Rank" value={rank} onChange={e => setRank(e.target.value as TraineeRank)}>
-                                {traineeRankOptions.map(option => (
-                                  <option key={option} value={option}>{option}</option>
+                                {traineeRankOptionGroups.map(group => (
+                                  <optgroup key={group.label} label={group.label}>
+                                    {group.options.map(option => (
+                                      <option key={`${group.label}-${option}`} value={option}>{option}</option>
+                                    ))}
+                                  </optgroup>
                                 ))}
                               </Dropdown>
                               <Dropdown label="Service" value={service} onChange={e => setService(e.target.value)}>

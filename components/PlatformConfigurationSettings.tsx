@@ -2727,9 +2727,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const updateStaffRankEquivalency = (nextEquivalency: RankEquivalencyConfig) => {
     const staffRankEquivalency = normaliseRankEquivalencyConfig(nextEquivalency);
-    const staffRankOrder = getRankOrderFromEquivalency(staffRankEquivalency);
+    const staffRankOrder = getRankOrderFromEquivalency({ ...staffRankEquivalency, civilianTitles: personnelDisplaySettings.civilianTitles } as any);
     updatePersonnelDisplaySettings({
       staffRankEquivalency,
+      staffRankOrder,
+      ...(personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }),
+    });
+  };
+
+  const updateCivilianTitles = (value: string) => {
+    const civilianTitles = value
+      .split(/\r?\n/)
+      .filter((title) => title.trim());
+    const staffRankOrder = getRankOrderFromEquivalency({ ...personnelDisplaySettings.staffRankEquivalency, civilianTitles } as any);
+    updatePersonnelDisplaySettings({
+      civilianTitles,
       staffRankOrder,
       ...(personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }),
     });
@@ -8588,9 +8600,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </table>
               </div>
               <p className="mt-2 text-xs leading-relaxed text-gray-400">
-                Civilian and contractor titles remain grouped after the service rank levels.
+                Military ranks are listed above by service and level. Civilian and contractor titles are managed separately below.
               </p>
             </div>
+            <TextAreaField
+              label="Civilian / Contractor Titles"
+              value={personnelDisplaySettings.civilianTitles.join('\n')}
+              disabled={!canEditRankTerminology}
+              onChange={updateCivilianTitles}
+              info="Enter one civilian or contractor title per line. These titles appear after the military rank groups and are treated as equal status for sorting."
+            />
             <div className="grid gap-4 lg:grid-cols-2">
             {personnelDisplaySettings.useSeparateTraineeRankOrder ? (
               <div className="space-y-3">
