@@ -58690,7 +58690,7 @@ const DutyTurnaroundSection = ({
               "aria-expanded": isOpen,
               "aria-labelledby": `${inputId}-label ${inputId}`,
               onClick: () => setOpenTurnaroundMenu((current) => current === inputId ? null : inputId),
-              className: `w-full mt-1 border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
+              className: `relative w-full mt-1 border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                   value.toFixed(1),
@@ -58700,7 +58700,7 @@ const DutyTurnaroundSection = ({
                   "span",
                   {
                     "aria-hidden": "true",
-                    className: "pointer-events-none absolute right-3 top-[35px] h-0 w-0 border-x-[5px] border-t-[6px] border-x-transparent border-t-gray-300"
+                    className: "pointer-events-none absolute right-3 top-1/2 h-0 w-0 -translate-y-1/2 border-x-[5px] border-t-[6px] border-x-transparent border-t-gray-300"
                   }
                 )
               ]
