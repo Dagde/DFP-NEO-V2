@@ -3992,7 +3992,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               allowOfflineOperation: deploymentProfile.mode !== 'Online SaaS',
             },
             offlineFingerprint: '',
-            notes: 'Stage 11 deployment readiness record. Enforcement is monitor-only unless deliberately changed by the platform administrator.',
+            notes: 'Deployment readiness record. Licence enforcement should remain in Monitor Only unless deliberately changed by the platform administrator.',
           },
         ],
       };
@@ -5041,7 +5041,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-configuration-health" className={getSectionClass('platform-configuration-health')}>
         <SectionHeader
           title="Configuration Health"
-          subtitle="Advisory checks for the commercial platform model. These checks highlight setup gaps without blocking the current app."
+          subtitle="Review setup gaps and missing records before operational use, deployment, or accreditation review."
           action={(
             <button
               type="button"
@@ -5064,7 +5064,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div>
                 <h5 className="text-sm font-bold text-white">Commercial Configuration Assurance</h5>
                 <p className="mt-1 text-xs leading-relaxed text-gray-400">
-                  This is a management view for administrators. Critical items should be fixed before relying on the platform model; warnings are setup gaps or records that should be reviewed before sale, deployment, or accreditation evidence export.
+                  This is a management view for administrators. Critical items should be fixed before operational use; warnings are setup gaps or records that should be reviewed before deployment or accreditation evidence export.
                 </p>
               </div>
               <span className="ml-auto rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-100">
@@ -7065,7 +7065,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <h5 className="text-sm font-bold text-white">Offline And On-Prem Readiness Checklist</h5>
-              <InfoHint text="These checks are deliberately visible to administrators. They make the offline/private-network deployment obligations explicit before this app is sold or installed on a defence network." />
+              <InfoHint text="Use these checks to confirm the responsibilities for offline or private-network operation before the system is installed on a defence network." />
               <span className="ml-auto text-xs font-semibold text-gray-400">
                 {readinessCompleteCount} of {DEPLOYMENT_READINESS_ITEMS.length} complete
               </span>
@@ -7198,7 +7198,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <h5 className="text-sm font-bold text-white">Operational Checks</h5>
-              <InfoHint text="These checks are derived from the runbook fields. They are not enforcement gates yet; they are a simple readiness signal for deployment and customer assurance." />
+              <InfoHint text="These checks summarise the runbook fields and show whether key deployment records are complete." />
               <span className="ml-auto text-xs font-semibold text-gray-400">
                 {operationalCompleteCount} of {operationalSignals.length} complete
               </span>
@@ -7413,7 +7413,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="mt-4 rounded border border-gray-700 bg-gray-950 p-3">
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <h6 className="text-xs font-bold uppercase tracking-wide text-gray-300">Licensed Modules</h6>
-                    <InfoHint text="This is the commercial entitlement list. In development mode it is visible and testable but does not block access. In production mode, signed licences can be enforced by deployment configuration." />
+                    <InfoHint text="Select the modules covered by this licence. Signed licences can be enforced when the deployment is configured to do so." />
                     <span className="ml-auto text-xs text-gray-400">{moduleCodes.length} selected</span>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

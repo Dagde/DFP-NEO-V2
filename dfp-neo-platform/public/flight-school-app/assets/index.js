@@ -65714,7 +65714,7 @@ This permanently removes the organisation record from platform configuration and
               allowOfflineOperation: deploymentProfile.mode !== "Online SaaS"
             },
             offlineFingerprint: "",
-            notes: "Stage 11 deployment readiness record. Enforcement is monitor-only unless deliberately changed by the platform administrator."
+            notes: "Deployment readiness record. Licence enforcement should remain in Monitor Only unless deliberately changed by the platform administrator."
           }
         ]
       };
@@ -66546,7 +66546,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Configuration Health",
-          subtitle: "Advisory checks for the commercial platform model. These checks highlight setup gaps without blocking the current app.",
+          subtitle: "Review setup gaps and missing records before operational use, deployment, or accreditation review.",
           action: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -66567,7 +66567,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Commercial Configuration Assurance" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "This is a management view for administrators. Critical items should be fixed before relying on the platform model; warnings are setup gaps or records that should be reviewed before sale, deployment, or accreditation evidence export." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "This is a management view for administrators. Critical items should be fixed before operational use; warnings are setup gaps or records that should be reviewed before deployment or accreditation evidence export." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-100", children: "Advisory only" })
         ] }) }),
@@ -68492,7 +68492,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Offline And On-Prem Readiness Checklist" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "These checks are deliberately visible to administrators. They make the offline/private-network deployment obligations explicit before this app is sold or installed on a defence network." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use these checks to confirm the responsibilities for offline or private-network operation before the system is installed on a defence network." }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto text-xs font-semibold text-gray-400", children: [
               readinessCompleteCount,
               " of ",
@@ -68627,7 +68627,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Operational Checks" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "These checks are derived from the runbook fields. They are not enforcement gates yet; they are a simple readiness signal for deployment and customer assurance." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "These checks summarise the runbook fields and show whether key deployment records are complete." }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto text-xs font-semibold text-gray-400", children: [
               operationalCompleteCount,
               " of ",
@@ -68837,7 +68837,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded border border-gray-700 bg-gray-950 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Licensed Modules" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "This is the commercial entitlement list. In development mode it is visible and testable but does not block access. In production mode, signed licences can be enforced by deployment configuration." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Select the modules covered by this licence. Signed licences can be enforced when the deployment is configured to do so." }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto text-xs text-gray-400", children: [
                   moduleCodes.length,
                   " selected"
