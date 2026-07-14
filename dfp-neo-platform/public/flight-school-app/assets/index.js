@@ -69574,7 +69574,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               disabled: !canEditRankTerminology,
               maxLength: SCT_SHORT_LABEL_MAX_LENGTH,
               onChange: (value) => updateSctTerminology({ shortLabel: value }),
-              info: `The short customer-facing label for staff continuation training flights and simulator events. This changes what users see in headings and menus; it does not change the internal event category or saved event codes. Maximum ${SCT_SHORT_LABEL_MAX_LENGTH} characters. Default: SCT.`
+              info: "The display label for staff continuation training flights and simulator events. You may rename it to match your organisation's terminology. Changing this label only affects what users see; it does not change the underlying event type or saved event codes."
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
