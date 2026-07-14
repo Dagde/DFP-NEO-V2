@@ -59395,18 +59395,24 @@ const SettingsView = ({
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
   const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
+  const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
+  const [isEditingBusinessRules, setIsEditingBusinessRules] = reactExports.useState(false);
+  const [tempMaxDispatchPerHour, setTempMaxDispatchPerHour] = reactExports.useState(maxDispatchPerHour);
+  const [tempDispatchStaggerSettings, setTempDispatchStaggerSettings] = reactExports.useState(resolvedDispatchStaggerSettings);
+  const [tempTileStatusSettings, setTempTileStatusSettings] = reactExports.useState(resolvedTileStatusSettings);
+  const displayedDispatchStaggerSettings = isEditingBusinessRules ? tempDispatchStaggerSettings : resolvedDispatchStaggerSettings;
+  const displayedTileStatusSettings = isEditingBusinessRules ? tempTileStatusSettings : resolvedTileStatusSettings;
+  const displayedMaxDispatchPerHour = isEditingBusinessRules ? tempMaxDispatchPerHour : maxDispatchPerHour;
+  const canEditBusinessRules = canEditSettings && isEditingBusinessRules;
   const handleDispatchStaggerChange = (updates) => {
-    if (!onUpdateDispatchStaggerSettings) return;
-    onUpdateDispatchStaggerSettings(normaliseDispatchStaggerSettings({
-      ...resolvedDispatchStaggerSettings,
+    setTempDispatchStaggerSettings((current) => normaliseDispatchStaggerSettings({
+      ...current,
       ...updates
     }));
   };
-  const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
   const handleTileStatusMinutesChange = (key, value) => {
-    if (!onUpdateTileStatusSettings) return;
-    onUpdateTileStatusSettings(normaliseTileStatusSettings({
-      ...resolvedTileStatusSettings,
+    setTempTileStatusSettings((current) => normaliseTileStatusSettings({
+      ...current,
       [key]: value
     }));
   };
@@ -59537,6 +59543,35 @@ const SettingsView = ({
       changes: "Restored built-in template download."
     });
     onShowSuccess(`${template.label} template reset to built-in default.`);
+  };
+  const handleEditBusinessRules = () => {
+    setTempMaxDispatchPerHour(maxDispatchPerHour);
+    setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
+    setTempTileStatusSettings(resolvedTileStatusSettings);
+    setIsEditingBusinessRules(true);
+  };
+  const handleSaveBusinessRules = () => {
+    onUpdateMaxDispatchPerHour(tempMaxDispatchPerHour);
+    if (onUpdateDispatchStaggerSettings) {
+      onUpdateDispatchStaggerSettings(normaliseDispatchStaggerSettings(tempDispatchStaggerSettings));
+    }
+    if (onUpdateTileStatusSettings) {
+      onUpdateTileStatusSettings(normaliseTileStatusSettings(tempTileStatusSettings));
+    }
+    setIsEditingBusinessRules(false);
+    onShowSuccess("Business rules updated");
+    logAudit({
+      page: "Settings - Business Rules",
+      action: "update",
+      description: "Updated business rule settings",
+      changes: `Max dispatch/hr: ${tempMaxDispatchPerHour}; flight stagger: ${tempDispatchStaggerSettings.flightNoMinimum ? "none" : `${tempDispatchStaggerSettings.flightMinutes} min`}; simulator stagger: ${tempDispatchStaggerSettings.simulatorNoMinimum ? "none" : `${tempDispatchStaggerSettings.simulatorMinutes} min`}; authorisation warnings: ${tempTileStatusSettings.authorizationWarningMinutes}/${tempTileStatusSettings.authorizationUrgentMinutes} min`
+    });
+  };
+  const handleCancelBusinessRules = () => {
+    setTempMaxDispatchPerHour(maxDispatchPerHour);
+    setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
+    setTempTileStatusSettings(resolvedTileStatusSettings);
+    setIsEditingBusinessRules(false);
   };
   const handleEditSctEvents = () => {
     setTempSctEvents([...sctEvents]);
@@ -59880,17 +59915,31 @@ const SettingsView = ({
         ] })
       ] }),
       shouldShowSection("business-rules") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Business Rules" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Business Rules" }),
+          isEditingBusinessRules ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveBusinessRules, className: standardSettingsButtonClass, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelBusinessRules, className: standardSettingsButtonClass, children: "Cancel" })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleEditBusinessRules,
+              disabled: !canEditSettings,
+              className: standardSettingsButtonClass,
+              children: "Edit"
+            }
+          )
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Max dispatch / hr" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "select",
               {
-                value: maxDispatchPerHour,
-                onChange: (e) => onUpdateMaxDispatchPerHour(parseInt(e.target.value)),
-                disabled: !canEditSettings,
-                className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditSettings ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
+                value: displayedMaxDispatchPerHour,
+                onChange: (e) => setTempMaxDispatchPerHour(parseInt(e.target.value)),
+                disabled: !canEditBusinessRules,
+                className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
                 children: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20].map((value) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value, children: value }, value))
               }
             ),
@@ -59910,9 +59959,9 @@ const SettingsView = ({
                       "input",
                       {
                         type: "checkbox",
-                        checked: resolvedDispatchStaggerSettings.flightNoMinimum,
+                        checked: displayedDispatchStaggerSettings.flightNoMinimum,
                         onChange: (event) => handleDispatchStaggerChange({ flightNoMinimum: event.target.checked }),
-                        disabled: !canEditSettings || !onUpdateDispatchStaggerSettings,
+                        disabled: !canEditBusinessRules || !onUpdateDispatchStaggerSettings,
                         className: "h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed"
                       }
                     ),
@@ -59927,10 +59976,10 @@ const SettingsView = ({
                       min: 0,
                       max: 120,
                       step: 1,
-                      value: resolvedDispatchStaggerSettings.flightMinutes,
+                      value: displayedDispatchStaggerSettings.flightMinutes,
                       onChange: (event) => handleDispatchStaggerChange({ flightMinutes: Number(event.target.value) }),
-                      disabled: !canEditSettings || !onUpdateDispatchStaggerSettings || resolvedDispatchStaggerSettings.flightNoMinimum,
-                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditSettings && onUpdateDispatchStaggerSettings && !resolvedDispatchStaggerSettings.flightNoMinimum ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                      disabled: !canEditBusinessRules || !onUpdateDispatchStaggerSettings || displayedDispatchStaggerSettings.flightNoMinimum,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && onUpdateDispatchStaggerSettings && !displayedDispatchStaggerSettings.flightNoMinimum ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
@@ -59944,9 +59993,9 @@ const SettingsView = ({
                       "input",
                       {
                         type: "checkbox",
-                        checked: resolvedDispatchStaggerSettings.simulatorNoMinimum,
+                        checked: displayedDispatchStaggerSettings.simulatorNoMinimum,
                         onChange: (event) => handleDispatchStaggerChange({ simulatorNoMinimum: event.target.checked }),
-                        disabled: !canEditSettings || !onUpdateDispatchStaggerSettings,
+                        disabled: !canEditBusinessRules || !onUpdateDispatchStaggerSettings,
                         className: "h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed"
                       }
                     ),
@@ -59961,10 +60010,10 @@ const SettingsView = ({
                       min: 0,
                       max: 120,
                       step: 1,
-                      value: resolvedDispatchStaggerSettings.simulatorMinutes,
+                      value: displayedDispatchStaggerSettings.simulatorMinutes,
                       onChange: (event) => handleDispatchStaggerChange({ simulatorMinutes: Number(event.target.value) }),
-                      disabled: !canEditSettings || !onUpdateDispatchStaggerSettings || resolvedDispatchStaggerSettings.simulatorNoMinimum,
-                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditSettings && onUpdateDispatchStaggerSettings && !resolvedDispatchStaggerSettings.simulatorNoMinimum ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                      disabled: !canEditBusinessRules || !onUpdateDispatchStaggerSettings || displayedDispatchStaggerSettings.simulatorNoMinimum,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && onUpdateDispatchStaggerSettings && !displayedDispatchStaggerSettings.simulatorNoMinimum ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
@@ -59988,10 +60037,10 @@ const SettingsView = ({
                       min: 0,
                       max: 720,
                       step: 5,
-                      value: resolvedTileStatusSettings.authorizationWarningMinutes,
+                      value: displayedTileStatusSettings.authorizationWarningMinutes,
                       onChange: (e) => handleTileStatusMinutesChange("authorizationWarningMinutes", Number(e.target.value)),
-                      disabled: !canEditSettings,
-                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditSettings ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                      disabled: !canEditBusinessRules,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
@@ -60007,10 +60056,10 @@ const SettingsView = ({
                       min: 0,
                       max: 720,
                       step: 5,
-                      value: resolvedTileStatusSettings.authorizationUrgentMinutes,
+                      value: displayedTileStatusSettings.authorizationUrgentMinutes,
                       onChange: (e) => handleTileStatusMinutesChange("authorizationUrgentMinutes", Number(e.target.value)),
-                      disabled: !canEditSettings,
-                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditSettings ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                      disabled: !canEditBusinessRules,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })

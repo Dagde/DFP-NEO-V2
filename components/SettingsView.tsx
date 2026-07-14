@@ -563,18 +563,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const canEditSettings = ['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission);
     const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
     const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
+    const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
+    const [isEditingBusinessRules, setIsEditingBusinessRules] = useState(false);
+    const [tempMaxDispatchPerHour, setTempMaxDispatchPerHour] = useState(maxDispatchPerHour);
+    const [tempDispatchStaggerSettings, setTempDispatchStaggerSettings] = useState<DispatchStaggerSettings>(resolvedDispatchStaggerSettings);
+    const [tempTileStatusSettings, setTempTileStatusSettings] = useState<TileStatusSettings>(resolvedTileStatusSettings);
+    const displayedDispatchStaggerSettings = isEditingBusinessRules ? tempDispatchStaggerSettings : resolvedDispatchStaggerSettings;
+    const displayedTileStatusSettings = isEditingBusinessRules ? tempTileStatusSettings : resolvedTileStatusSettings;
+    const displayedMaxDispatchPerHour = isEditingBusinessRules ? tempMaxDispatchPerHour : maxDispatchPerHour;
+    const canEditBusinessRules = canEditSettings && isEditingBusinessRules;
     const handleDispatchStaggerChange = (updates: Partial<DispatchStaggerSettings>) => {
-        if (!onUpdateDispatchStaggerSettings) return;
-        onUpdateDispatchStaggerSettings(normaliseDispatchStaggerSettings({
-            ...resolvedDispatchStaggerSettings,
+        setTempDispatchStaggerSettings((current) => normaliseDispatchStaggerSettings({
+            ...current,
             ...updates,
         }));
     };
-    const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
     const handleTileStatusMinutesChange = (key: keyof TileStatusSettings, value: number) => {
-        if (!onUpdateTileStatusSettings) return;
-        onUpdateTileStatusSettings(normaliseTileStatusSettings({
-            ...resolvedTileStatusSettings,
+        setTempTileStatusSettings((current) => normaliseTileStatusSettings({
+            ...current,
             [key]: value,
         }));
     };
@@ -748,6 +754,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             changes: 'Restored built-in template download.',
         });
         onShowSuccess(`${template.label} template reset to built-in default.`);
+    };
+
+    const handleEditBusinessRules = () => {
+        setTempMaxDispatchPerHour(maxDispatchPerHour);
+        setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
+        setTempTileStatusSettings(resolvedTileStatusSettings);
+        setIsEditingBusinessRules(true);
+    };
+
+    const handleSaveBusinessRules = () => {
+        onUpdateMaxDispatchPerHour(tempMaxDispatchPerHour);
+        if (onUpdateDispatchStaggerSettings) {
+            onUpdateDispatchStaggerSettings(normaliseDispatchStaggerSettings(tempDispatchStaggerSettings));
+        }
+        if (onUpdateTileStatusSettings) {
+            onUpdateTileStatusSettings(normaliseTileStatusSettings(tempTileStatusSettings));
+        }
+        setIsEditingBusinessRules(false);
+        onShowSuccess('Business rules updated');
+        logAudit({
+            page: 'Settings - Business Rules',
+            action: 'update',
+            description: 'Updated business rule settings',
+            changes: `Max dispatch/hr: ${tempMaxDispatchPerHour}; flight stagger: ${tempDispatchStaggerSettings.flightNoMinimum ? 'none' : `${tempDispatchStaggerSettings.flightMinutes} min`}; simulator stagger: ${tempDispatchStaggerSettings.simulatorNoMinimum ? 'none' : `${tempDispatchStaggerSettings.simulatorMinutes} min`}; authorisation warnings: ${tempTileStatusSettings.authorizationWarningMinutes}/${tempTileStatusSettings.authorizationUrgentMinutes} min`,
+        });
+    };
+
+    const handleCancelBusinessRules = () => {
+        setTempMaxDispatchPerHour(maxDispatchPerHour);
+        setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
+        setTempTileStatusSettings(resolvedTileStatusSettings);
+        setIsEditingBusinessRules(false);
     };
 
     // SCT Events Handlers
@@ -1183,6 +1221,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit">
                         <div className="p-4 flex justify-between items-center">
                             <h2 className="text-lg font-semibold text-gray-200">Business Rules</h2>
+                            {isEditingBusinessRules ? (
+                                <div className="flex gap-[1px]">
+                                    <button onClick={handleSaveBusinessRules} className={standardSettingsButtonClass}>Save</button>
+                                    <button onClick={handleCancelBusinessRules} className={standardSettingsButtonClass}>Cancel</button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={handleEditBusinessRules}
+                                    disabled={!canEditSettings}
+                                    className={standardSettingsButtonClass}
+                                >
+                                    Edit
+                                </button>
+                            )}
                         </div>
                         <div className="p-4 border-t border-gray-700">
                             <div className="space-y-4">
@@ -1191,11 +1243,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         Max dispatch / hr
                                     </label>
                                     <select 
-                                        value={maxDispatchPerHour}
-                                        onChange={(e) => onUpdateMaxDispatchPerHour(parseInt(e.target.value))}
-                                        disabled={!canEditSettings}
+                                        value={displayedMaxDispatchPerHour}
+                                        onChange={(e) => setTempMaxDispatchPerHour(parseInt(e.target.value))}
+                                        disabled={!canEditBusinessRules}
                                         className={`w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
-                                            canEditSettings 
+                                            canEditBusinessRules
                                                 ? 'bg-gray-700 border-gray-600 text-white' 
                                                 : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
                                         }`}
@@ -1224,9 +1276,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                 <label className="flex items-center gap-2 text-xs text-gray-300">
                                                     <input
                                                         type="checkbox"
-                                                        checked={resolvedDispatchStaggerSettings.flightNoMinimum}
+                                                        checked={displayedDispatchStaggerSettings.flightNoMinimum}
                                                         onChange={(event) => handleDispatchStaggerChange({ flightNoMinimum: event.target.checked })}
-                                                        disabled={!canEditSettings || !onUpdateDispatchStaggerSettings}
+                                                        disabled={!canEditBusinessRules || !onUpdateDispatchStaggerSettings}
                                                         className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed"
                                                     />
                                                     No minimum
@@ -1238,11 +1290,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                     min={0}
                                                     max={120}
                                                     step={1}
-                                                    value={resolvedDispatchStaggerSettings.flightMinutes}
+                                                    value={displayedDispatchStaggerSettings.flightMinutes}
                                                     onChange={(event) => handleDispatchStaggerChange({ flightMinutes: Number(event.target.value) })}
-                                                    disabled={!canEditSettings || !onUpdateDispatchStaggerSettings || resolvedDispatchStaggerSettings.flightNoMinimum}
+                                                    disabled={!canEditBusinessRules || !onUpdateDispatchStaggerSettings || displayedDispatchStaggerSettings.flightNoMinimum}
                                                     className={`w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
-                                                        canEditSettings && onUpdateDispatchStaggerSettings && !resolvedDispatchStaggerSettings.flightNoMinimum
+                                                        canEditBusinessRules && onUpdateDispatchStaggerSettings && !displayedDispatchStaggerSettings.flightNoMinimum
                                                             ? 'bg-gray-700 border-gray-600 text-white'
                                                             : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
                                                     }`}
@@ -1256,9 +1308,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                 <label className="flex items-center gap-2 text-xs text-gray-300">
                                                     <input
                                                         type="checkbox"
-                                                        checked={resolvedDispatchStaggerSettings.simulatorNoMinimum}
+                                                        checked={displayedDispatchStaggerSettings.simulatorNoMinimum}
                                                         onChange={(event) => handleDispatchStaggerChange({ simulatorNoMinimum: event.target.checked })}
-                                                        disabled={!canEditSettings || !onUpdateDispatchStaggerSettings}
+                                                        disabled={!canEditBusinessRules || !onUpdateDispatchStaggerSettings}
                                                         className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed"
                                                     />
                                                     No minimum
@@ -1270,11 +1322,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                     min={0}
                                                     max={120}
                                                     step={1}
-                                                    value={resolvedDispatchStaggerSettings.simulatorMinutes}
+                                                    value={displayedDispatchStaggerSettings.simulatorMinutes}
                                                     onChange={(event) => handleDispatchStaggerChange({ simulatorMinutes: Number(event.target.value) })}
-                                                    disabled={!canEditSettings || !onUpdateDispatchStaggerSettings || resolvedDispatchStaggerSettings.simulatorNoMinimum}
+                                                    disabled={!canEditBusinessRules || !onUpdateDispatchStaggerSettings || displayedDispatchStaggerSettings.simulatorNoMinimum}
                                                     className={`w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
-                                                        canEditSettings && onUpdateDispatchStaggerSettings && !resolvedDispatchStaggerSettings.simulatorNoMinimum
+                                                        canEditBusinessRules && onUpdateDispatchStaggerSettings && !displayedDispatchStaggerSettings.simulatorNoMinimum
                                                             ? 'bg-gray-700 border-gray-600 text-white'
                                                             : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
                                                     }`}
@@ -1302,11 +1354,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                     min={0}
                                                     max={720}
                                                     step={5}
-                                                    value={resolvedTileStatusSettings.authorizationWarningMinutes}
+                                                    value={displayedTileStatusSettings.authorizationWarningMinutes}
                                                     onChange={(e) => handleTileStatusMinutesChange('authorizationWarningMinutes', Number(e.target.value))}
-                                                    disabled={!canEditSettings}
+                                                    disabled={!canEditBusinessRules}
                                                     className={`w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
-                                                        canEditSettings
+                                                        canEditBusinessRules
                                                             ? 'bg-gray-700 border-gray-600 text-white'
                                                             : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
                                                     }`}
@@ -1322,11 +1374,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                     min={0}
                                                     max={720}
                                                     step={5}
-                                                    value={resolvedTileStatusSettings.authorizationUrgentMinutes}
+                                                    value={displayedTileStatusSettings.authorizationUrgentMinutes}
                                                     onChange={(e) => handleTileStatusMinutesChange('authorizationUrgentMinutes', Number(e.target.value))}
-                                                    disabled={!canEditSettings}
+                                                    disabled={!canEditBusinessRules}
                                                     className={`w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
-                                                        canEditSettings
+                                                        canEditBusinessRules
                                                             ? 'bg-gray-700 border-gray-600 text-white'
                                                             : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
                                                     }`}
