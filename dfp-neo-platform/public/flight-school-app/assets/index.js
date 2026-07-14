@@ -67451,11 +67451,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Configure model task profiles globally. Configure task tile abbreviations separately for each unit; blank unit abbreviations display tasking tiles as Task." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border px-3 py-2 ${taskProfilesUnlocked ? "border-cyan-400/40 bg-cyan-500/10" : "border-gray-700 bg-gray-950/60"}`, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.2em] text-gray-500", children: "Edit state" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-1 text-sm font-bold ${taskProfilesUnlocked ? "text-cyan-100" : "text-gray-200"}`, children: taskProfilesUnlocked ? "Editing active" : "Locked" })
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the task names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: OPERATIONAL_MODEL_OPTIONS.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [

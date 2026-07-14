@@ -5681,11 +5681,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Configure model task profiles globally. Configure task tile abbreviations separately for each unit; blank unit abbreviations display tasking tiles as Task.
-          </div>
-          <div className={`rounded-lg border px-3 py-2 ${taskProfilesUnlocked ? 'border-cyan-400/40 bg-cyan-500/10' : 'border-gray-700 bg-gray-950/60'}`}>
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Edit state</div>
-            <div className={`mt-1 text-sm font-bold ${taskProfilesUnlocked ? 'text-cyan-100' : 'text-gray-200'}`}>{taskProfilesUnlocked ? 'Editing active' : 'Locked'}</div>
+            Set the task names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {OPERATIONAL_MODEL_OPTIONS.map((option) => {
