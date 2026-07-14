@@ -59836,7 +59836,7 @@ const SettingsView = ({
           resourceDisplayNames
         }
       ),
-      shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit", children: [
+      shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-[500px] flex flex-col", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "SCT Events" }),
           isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
@@ -59853,9 +59853,9 @@ const SettingsView = ({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4 flex min-h-0 flex-1 flex-col", children: isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage SCT event types." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 max-h-60 overflow-y-auto", children: tempSctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-2 bg-gray-700/50 rounded", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: tempSctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-2 bg-gray-700/50 rounded", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: evt }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveSctEvent(evt), className: "p-1 text-gray-400 hover:text-red-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) })
           ] }, evt)) }),
@@ -59879,7 +59879,7 @@ const SettingsView = ({
           ] })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Configured SCT event types." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 max-h-60 overflow-y-auto", children: sctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-2 bg-gray-700/50 rounded text-white", children: evt }, evt)) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: sctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-2 bg-gray-700/50 rounded text-white", children: evt }, evt)) })
         ] }) })
       ] }),
       shouldShowSection("currencies") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-4", children: [

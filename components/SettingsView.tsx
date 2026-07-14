@@ -984,7 +984,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                           {/* SCT Events Window */}
                    {shouldShowSection('sct-events') && (
-                       <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit">
+                       <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-[500px] flex flex-col">
                            <div className="p-4 flex justify-between items-center border-b border-gray-700">
                                <h2 className="text-lg font-semibold text-gray-200">SCT Events</h2>
                                {isEditingSctEvents ? (
@@ -1003,11 +1003,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                </button>
                                )}
                            </div>
-                           <div className="p-4 space-y-4">
+                           <div className="p-4 space-y-4 flex min-h-0 flex-1 flex-col">
                                {isEditingSctEvents ? (
                                    <>
                                        <p className="text-sm text-gray-400">Manage SCT event types.</p>
-                                       <ul className="space-y-2 max-h-60 overflow-y-auto">
+                                       <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto">
                                            {tempSctEvents.map(evt => (
                                                <li key={evt} className="flex items-center justify-between p-2 bg-gray-700/50 rounded">
                                                    <span className="text-white">{evt}</span>
@@ -1038,7 +1038,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                ) : (
                                    <>
                                        <p className="text-sm text-gray-400">Configured SCT event types.</p>
-                                       <ul className="space-y-2 max-h-60 overflow-y-auto">
+                                       <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto">
                                            {sctEvents.map(evt => (
                                                <li key={evt} className="p-2 bg-gray-700/50 rounded text-white">
                                                    {evt}
