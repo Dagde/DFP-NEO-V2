@@ -5047,9 +5047,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const showSectionOnlyStatusPanel = !canEdit || Boolean(error);
+  const handleSettingsKeyDownCapture = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('[data-rank-equivalency-input="true"]')) return;
+    stopEditableKeyPropagation(event);
+  };
 
   return (
-    <div className="relative space-y-8" onKeyDownCapture={stopEditableKeyPropagation}>
+    <div className="relative space-y-8" onKeyDownCapture={handleSettingsKeyDownCapture}>
       {applyingChanges && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm">
           <div className="rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl">
@@ -8522,6 +8527,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <input
                             value={service.name}
                             disabled={!canEditRankTerminology}
+                            data-rank-equivalency-input="true"
                             onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankServiceName(serviceIndex, value))}
                             onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankServiceName(serviceIndex, value))}
                             onKeyDown={stopEditableKeyPropagation}
@@ -8547,6 +8553,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 value={cell.rank}
                                 disabled={!canEditRankTerminology}
                                 placeholder="Rank"
+                                data-rank-equivalency-input="true"
                                 onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, 'rank', value))}
                                 onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, 'rank', value))}
                                 onKeyDown={stopEditableKeyPropagation}
@@ -8561,6 +8568,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 value={cell.abbreviation}
                                 disabled={!canEditRankTerminology}
                                 placeholder="Abbrev"
+                                data-rank-equivalency-input="true"
                                 onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, 'abbreviation', value))}
                                 onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, 'abbreviation', value))}
                                 onKeyDown={stopEditableKeyPropagation}

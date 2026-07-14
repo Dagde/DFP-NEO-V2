@@ -66840,7 +66840,12 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     return matchedKey ? childMap[matchedKey] || [] : [];
   };
   const showSectionOnlyStatusPanel = !canEdit || Boolean(error);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: stopEditableKeyPropagation, children: [
+  const handleSettingsKeyDownCapture = (event) => {
+    const target = event.target;
+    if (target?.closest('[data-rank-equivalency-input="true"]')) return;
+    stopEditableKeyPropagation(event);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: handleSettingsKeyDownCapture, children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-cyan-100", children: "One moment while we apply your changes" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-300", children: "The updated platform settings are being applied across the running app." })
@@ -70213,6 +70218,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   {
                     value: service.name,
                     disabled: !canEditRankTerminology,
+                    "data-rank-equivalency-input": "true",
                     onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankServiceName(serviceIndex, value)),
                     onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankServiceName(serviceIndex, value)),
                     onKeyDown: stopEditableKeyPropagation,
@@ -70230,6 +70236,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                       value: cell.rank,
                       disabled: !canEditRankTerminology,
                       placeholder: "Rank",
+                      "data-rank-equivalency-input": "true",
                       onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, "rank", value)),
                       onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, "rank", value)),
                       onKeyDown: stopEditableKeyPropagation,
@@ -70243,6 +70250,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                       value: cell.abbreviation,
                       disabled: !canEditRankTerminology,
                       placeholder: "Abbrev",
+                      "data-rank-equivalency-input": "true",
                       onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, "abbreviation", value)),
                       onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, "abbreviation", value)),
                       onKeyDown: stopEditableKeyPropagation,
