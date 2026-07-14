@@ -8611,6 +8611,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               info="Enter one civilian or contractor title per line. These titles appear after the military rank groups and are treated as equal status for sorting."
               className="block w-[200px] max-w-[200px]"
               fieldClassName="w-[200px] max-w-[200px]"
+              fieldSizingClassName="h-[150px]"
             />
             <div className="grid gap-4 lg:grid-cols-2">
             {personnelDisplaySettings.useSeparateTraineeRankOrder ? (
@@ -9327,11 +9328,11 @@ const TasField = ({ label, value, disabled, onChange, info, placeholder = 'KTAS'
   </label>
 );
 
-const TextAreaField = ({ label, value, disabled, onChange, info, className = 'lg:col-span-2', fieldClassName = 'w-full' }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string; className?: string; fieldClassName?: string }) => (
+const TextAreaField = ({ label, value, disabled, onChange, info, className = 'lg:col-span-2', fieldClassName = 'w-full', fieldSizingClassName = 'min-h-[74px]' }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string; className?: string; fieldClassName?: string; fieldSizingClassName?: string }) => (
   <label className={className}>
     <FieldLabel label={label} info={info} />
     <textarea
-      className={`${fieldClass.replace('w-full', fieldClassName)} min-h-[74px] resize-y`}
+      className={`${fieldClass.replace('w-full', fieldClassName)} ${fieldSizingClassName} resize-y`}
       value={value || ''}
       disabled={disabled}
       onKeyDownCapture={stopEditableKeyPropagation}

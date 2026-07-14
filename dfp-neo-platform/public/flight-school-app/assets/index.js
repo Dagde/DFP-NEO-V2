@@ -70328,7 +70328,8 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               onChange: updateCivilianTitles,
               info: "Enter one civilian or contractor title per line. These titles appear after the military rank groups and are treated as equal status for sorting.",
               className: "block w-[200px] max-w-[200px]",
-              fieldClassName: "w-[200px] max-w-[200px]"
+              fieldClassName: "w-[200px] max-w-[200px]",
+              fieldSizingClassName: "h-[150px]"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: personnelDisplaySettings.useSeparateTraineeRankOrder ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
@@ -70981,12 +70982,12 @@ const TasField = ({ label, value, disabled, onChange, info, placeholder = "KTAS"
     }
   )
 ] });
-const TextAreaField = ({ label, value, disabled, onChange, info, className = "lg:col-span-2", fieldClassName = "w-full" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className, children: [
+const TextAreaField = ({ label, value, disabled, onChange, info, className = "lg:col-span-2", fieldClassName = "w-full", fieldSizingClassName = "min-h-[74px]" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
     "textarea",
     {
-      className: `${fieldClass.replace("w-full", fieldClassName)} min-h-[74px] resize-y`,
+      className: `${fieldClass.replace("w-full", fieldClassName)} ${fieldSizingClassName} resize-y`,
       value: value || "",
       disabled,
       onKeyDownCapture: stopEditableKeyPropagation,
