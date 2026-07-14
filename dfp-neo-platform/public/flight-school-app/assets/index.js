@@ -58696,7 +58696,13 @@ const DutyTurnaroundSection = ({
                   value.toFixed(1),
                   " hrs"
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute right-3 top-[34px] text-xs text-gray-300", children: "▾" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    "aria-hidden": "true",
+                    className: "pointer-events-none absolute right-3 top-[35px] h-0 w-0 border-x-[5px] border-t-[6px] border-x-transparent border-t-gray-300"
+                  }
+                )
               ]
             }
           ),
