@@ -68515,7 +68515,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           showResourcePoolDeletePanel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-red-100", children: "Delete Resource Pool Entered In Error" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-red-100/70", children: "Select by resource pool name only. Deletion requires your password and is not applied to the database until this section is saved." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-red-100/70", children: "Select by resource pool name only. Deletion requires your password and is applied only when this section is saved." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -68594,7 +68594,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Display Names" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Terminology shown on the DFP while stable internal resource keys remain unchanged." })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Terminology shown on the DFP. Changing these labels does not alter existing saved records." })
                       ] }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft", value: pool.settings?.aircraftLabel || "PC-21", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
@@ -68833,7 +68833,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Deployment Profile" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Describes how this installation is expected to run and how the licence will be checked." })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-100", children: "Runtime-safe: monitor-first" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-100", children: "Safe mode: monitor first" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Operating Model", value: deploymentProfile.mode, disabled: !canEditSection("platform-deployment-readiness"), options: DEPLOYMENT_MODE_OPTIONS, onChange: (value) => updateDeploymentProfile({ mode: value }) }),
@@ -69030,8 +69030,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[1.2fr,1fr,1fr]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Licence Runtime" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/80", children: licenseStatus?.message || "Licence runtime status has not loaded yet." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Licence Status" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/80", children: licenseStatus?.message || "Licence status has not loaded yet." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 text-xs", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Mode", value: licenseStatus?.runtimeMode || "development" }),
@@ -69958,7 +69958,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               disabled: !canEditRankTerminology,
               maxLength: SCT_LONG_LABEL_MAX_LENGTH,
               onChange: (value) => updateSctTerminology({ longLabel: value }),
-              info: `The full plain-English name shown where there is room to explain the type of event. It is for display wording only, so NEO Build and scheduler logic still recognise the stable internal SCT category. Maximum ${SCT_LONG_LABEL_MAX_LENGTH} characters. Default: Staff Continuation Training.`
+              info: `The full display label for staff continuation training flights and simulator events. You may rename it to match your organisation's terminology. Changing this label only affects what users see; it does not change the underlying event type or saved event codes. Maximum ${SCT_LONG_LABEL_MAX_LENGTH} characters.`
             }
           )
         ] }),

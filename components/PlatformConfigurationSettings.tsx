@@ -6780,7 +6780,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="mb-3">
                   <div className="text-xs font-black uppercase tracking-wide text-red-100">Delete Resource Pool Entered In Error</div>
                   <div className="mt-1 text-[11px] leading-relaxed text-red-100/70">
-                    Select by resource pool name only. Deletion requires your password and is not applied to the database until this section is saved.
+                    Select by resource pool name only. Deletion requires your password and is applied only when this section is saved.
                   </div>
                 </div>
                 <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
@@ -6859,7 +6859,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className={resourceSectionPanelHeaderClass}>
                         <div>
                           <div className={resourceSectionPanelTitleClass}>Display Names</div>
-                          <div className={resourceSectionPanelHintClass}>Terminology shown on the DFP while stable internal resource keys remain unchanged.</div>
+                          <div className={resourceSectionPanelHintClass}>Terminology shown on the DFP. Changing these labels does not alter existing saved records.</div>
                         </div>
                       </div>
                       <div className="grid gap-3 md:grid-cols-3">
@@ -7097,7 +7097,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </p>
               </div>
               <span className="ml-auto rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-100">
-                Runtime-safe: monitor-first
+                Safe mode: monitor first
               </span>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
@@ -7293,9 +7293,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
             <div className="grid gap-3 lg:grid-cols-[1.2fr,1fr,1fr]">
               <div>
-                <h5 className="text-sm font-bold text-white">Licence Runtime</h5>
+                <h5 className="text-sm font-bold text-white">Licence Status</h5>
                 <p className="mt-1 text-xs text-cyan-100/80">
-                  {licenseStatus?.message || 'Licence runtime status has not loaded yet.'}
+                  {licenseStatus?.message || 'Licence status has not loaded yet.'}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -8197,7 +8197,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               disabled={!canEditRankTerminology}
               maxLength={SCT_LONG_LABEL_MAX_LENGTH}
               onChange={(value) => updateSctTerminology({ longLabel: value })}
-              info={`The full plain-English name shown where there is room to explain the type of event. It is for display wording only, so NEO Build and scheduler logic still recognise the stable internal SCT category. Maximum ${SCT_LONG_LABEL_MAX_LENGTH} characters. Default: Staff Continuation Training.`}
+              info={`The full display label for staff continuation training flights and simulator events. You may rename it to match your organisation's terminology. Changing this label only affects what users see; it does not change the underlying event type or saved event codes. Maximum ${SCT_LONG_LABEL_MAX_LENGTH} characters.`}
             />
           </div>
           <div id="platform-crew-position-labels" className="rounded-lg border border-orange-400/25 bg-orange-500/10 p-4">
