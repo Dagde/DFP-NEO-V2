@@ -1415,11 +1415,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                    )}
-                    {/* Events Limits Window */}
+                    {/* Event Limits Window */}
                    {shouldShowSection('event-limits') && (
                     <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-2xl h-fit">
                         <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                            <h2 className="text-lg font-semibold text-gray-200">Events Limits</h2>
+                            <h2 className="text-lg font-semibold text-gray-200">Event Limits</h2>
                             {isEditingLimits ? (
                                 <div className="flex gap-[1px]">
                                     <button onClick={handleSaveLimits} className={standardSettingsButtonClass}>Save</button>
