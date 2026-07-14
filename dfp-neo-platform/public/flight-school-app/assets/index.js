@@ -70084,7 +70084,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Scheduling Rule Sets",
-          subtitle: "Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types.",
+          subtitle: "Create and manage scheduling rules for specific units, aircraft types, or operating areas.",
           action: renderSectionEditSaveButton("platform-scheduling-rule-sets")
         }
       ),

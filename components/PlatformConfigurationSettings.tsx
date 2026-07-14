@@ -8652,7 +8652,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-scheduling-rule-sets" className={getSectionClass('platform-scheduling-rule-sets')}>
         <SectionHeader
           title="Scheduling Rule Sets"
-          subtitle="Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types."
+          subtitle="Create and manage scheduling rules for specific units, aircraft types, or operating areas."
           action={renderSectionEditSaveButton('platform-scheduling-rule-sets')}
         />
         <div className="space-y-4 p-4">
