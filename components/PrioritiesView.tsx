@@ -3346,27 +3346,29 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                           {sctEvents.map(e => <option key={e} value={e}>{currencyProfileNameLabels[e] || e}</option>)}
                                       </select>
                                   </div>
-                                  <div className={`${tileBaseClass} flex flex-col`}>
-                                      <div className={tileLabelClass}>Crew Composition</div>
-                                      <select
-                                          value={crewRequirementPresetIdFor(req.crewRequirement)}
-                                          onChange={e => {
-                                              const preset = crewRequirementPresets.find(candidate => candidate.id === e.target.value);
-                                              if (!preset) return;
-                                              onPatchSctRequest(req.id, { crewRequirement: crewRequirementFromPreset(preset) }, type);
-                                          }}
-                                          className={controlClass}
-                                      >
-                                          <option value="">Select composition</option>
-                                          {Array.from(crewRequirementPresetsByUnit.entries()).map(([unitCode, presets]) => (
-                                              <optgroup key={unitCode} label={unitCode}>
-                                                  {presets.map(preset => (
-                                                      <option key={preset.id} value={preset.id}>{preset.label}</option>
-                                                  ))}
-                                              </optgroup>
-                                          ))}
-                                      </select>
-                                  </div>
+                                  {!isFlightSchoolCurrencyRequest && (
+                                      <div className={`${tileBaseClass} flex flex-col`}>
+                                          <div className={tileLabelClass}>Crew Composition</div>
+                                          <select
+                                              value={crewRequirementPresetIdFor(req.crewRequirement)}
+                                              onChange={e => {
+                                                  const preset = crewRequirementPresets.find(candidate => candidate.id === e.target.value);
+                                                  if (!preset) return;
+                                                  onPatchSctRequest(req.id, { crewRequirement: crewRequirementFromPreset(preset) }, type);
+                                              }}
+                                              className={controlClass}
+                                          >
+                                              <option value="">Select composition</option>
+                                              {Array.from(crewRequirementPresetsByUnit.entries()).map(([unitCode, presets]) => (
+                                                  <optgroup key={unitCode} label={unitCode}>
+                                                      {presets.map(preset => (
+                                                          <option key={preset.id} value={preset.id}>{preset.label}</option>
+                                                      ))}
+                                                  </optgroup>
+                                              ))}
+                                          </select>
+                                      </div>
+                                  )}
                                   <div className={`${tileBaseClass} flex flex-col`}>
                                       <div className={tileLabelClass}>CONFIG</div>
                                       <div className="[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white">
