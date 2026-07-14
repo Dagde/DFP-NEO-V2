@@ -8655,10 +8655,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           subtitle="Create and manage scheduling rules for specific units, aircraft types, or operating areas."
           action={renderSectionEditSaveButton('platform-scheduling-rule-sets')}
         />
-        <div className="space-y-4 p-4">
-          <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3">
+        <div className="space-y-5 p-4">
+          <div className="rounded-lg border border-cyan-400/45 bg-cyan-500/10 p-3 shadow-[inset_4px_0_0_rgba(34,211,238,0.45)]">
             <div className="mb-3 flex flex-wrap items-center gap-3">
               <div>
+                <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-cyan-200/80">Subset of Scheduling Rule Sets</div>
                 <h5 className="text-sm font-bold text-cyan-100">Individual LMP Insert Event Types</h5>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-100/75">
                   Controls the event types available from the Individual LMP Insert Event action. Labels are capped at {INSERT_EVENT_LABEL_MAX_LENGTH} characters because they are used on schedule tiles.
@@ -8714,16 +8715,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               ))}
             </div>
           </div>
-          <div id="platform-scheduling-rule-records" className="space-y-3">
-          {config.schedulingRuleSets.map((ruleSet, index) => (
-            <div key={ruleSet.id || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5">
-              <Field label="Name" value={ruleSet.name} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateRow('schedulingRuleSets', index, { name: value })} />
-              <SelectField label="Unit" value={ruleSet.unitCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('schedulingRuleSets', index, { unitCode: value || null })} />
-              <SelectField label="Aircraft Type" value={ruleSet.aircraftTypeCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...config.aircraftTypes.map((aircraft) => aircraft.code)]} onChange={(value) => updateRow('schedulingRuleSets', index, { aircraftTypeCode: value || null })} />
-              <SelectField label="Scope" value={ruleSet.scope || 'Unit'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Organisation', 'Location', 'Unit', 'AircraftType']} onChange={(value) => updateRow('schedulingRuleSets', index, { scope: value })} />
-              <SelectField label="Active" value={ruleSet.isActive === false ? 'No' : 'Yes'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Yes', 'No']} onChange={(value) => updateRow('schedulingRuleSets', index, { isActive: value === 'Yes' })} />
+          <div id="platform-scheduling-rule-records" className="rounded-lg border border-gray-600/80 bg-gray-900/70 p-3 shadow-[inset_4px_0_0_rgba(148,163,184,0.28)]">
+            <div className="mb-3">
+              <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Main Rule Set Records</div>
+              <h5 className="text-sm font-bold text-white">Scheduling Rule Set Records</h5>
+              <p className="mt-1 text-xs leading-relaxed text-gray-400">
+                Use these records to apply named scheduling rules to selected units, aircraft types or operating scopes.
+              </p>
             </div>
-          ))}
+            <div className="space-y-3">
+              {config.schedulingRuleSets.map((ruleSet, index) => (
+                <div key={ruleSet.id || index} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5">
+                  <Field label="Name" value={ruleSet.name} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateRow('schedulingRuleSets', index, { name: value })} />
+                  <SelectField label="Unit" value={ruleSet.unitCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('schedulingRuleSets', index, { unitCode: value || null })} />
+                  <SelectField label="Aircraft Type" value={ruleSet.aircraftTypeCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...config.aircraftTypes.map((aircraft) => aircraft.code)]} onChange={(value) => updateRow('schedulingRuleSets', index, { aircraftTypeCode: value || null })} />
+                  <SelectField label="Scope" value={ruleSet.scope || 'Unit'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Organisation', 'Location', 'Unit', 'AircraftType']} onChange={(value) => updateRow('schedulingRuleSets', index, { scope: value })} />
+                  <SelectField label="Active" value={ruleSet.isActive === false ? 'No' : 'Yes'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Yes', 'No']} onChange={(value) => updateRow('schedulingRuleSets', index, { isActive: value === 'Yes' })} />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
