@@ -60067,7 +60067,7 @@ const SettingsView = ({
                 value: displayedMaxDispatchPerHour,
                 onChange: (e) => setTempMaxDispatchPerHour(parseInt(e.target.value)),
                 disabled: !canEditBusinessRules,
-                className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
+                className: `w-[100px] px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
                 children: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20].map((value) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value, children: value }, value))
               }
             ),
