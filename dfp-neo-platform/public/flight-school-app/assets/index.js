@@ -60201,9 +60201,9 @@ const SettingsView = ({
       shouldShowSection("data-loaders") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Import Templates" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Download Templates" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Blank Template Downloads" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Download templates for bulk uploads in the relevant Staff, Trainee, Syllabus and Organisation pages." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Download blank templates for bulk uploads in the relevant Staff, Trainee, Syllabus and Organisation pages. Completed files are imported from those pages, not stored here." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -60225,7 +60225,7 @@ const SettingsView = ({
                       type: "button",
                       onClick: () => void handleChangeTemplateClick(template),
                       className: "shrink-0 whitespace-nowrap rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20",
-                      children: "Change"
+                      children: "Change Template"
                     }
                   ),
                   overrideName ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -71041,7 +71041,7 @@ const sectionDescriptions = {
   "event-limits": "Define operational thresholds",
   "duty-turnaround": "Crew duty limits & rest times",
   "business-rules": "System logic and automation",
-  "data-loaders": "Download editable import templates",
+  "data-loaders": "Download blank import templates",
   "user-list": "View and manage user accounts",
   "staff-database": "Staff records and details",
   "trainee-database": "Trainee records and details",

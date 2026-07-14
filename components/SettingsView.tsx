@@ -1366,9 +1366,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                         <div className="p-4 space-y-4">
                             <fieldset className="overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3">
-                                <legend className="px-2 text-sm font-semibold text-gray-300">Download Templates</legend>
+                                <legend className="px-2 text-sm font-semibold text-gray-300">Blank Template Downloads</legend>
                                 <div className="mt-2 space-y-2">
-                                    <p className="text-xs text-gray-400">Download templates for bulk uploads in the relevant Staff, Trainee, Syllabus and Organisation pages.</p>
+                                    <p className="text-xs text-gray-400">
+                                        Download blank templates for bulk uploads in the relevant Staff, Trainee, Syllabus and Organisation pages. Completed files are imported from those pages, not stored here.
+                                    </p>
                                     <input
                                         ref={templateOverrideInputRef}
                                         type="file"
@@ -1389,7 +1391,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                         onClick={() => void handleChangeTemplateClick(template)}
                                                         className="shrink-0 whitespace-nowrap rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20"
                                                     >
-                                                        Change
+                                                        Change Template
                                                     </button>
                                                     {overrideName ? (
                                                         <button

@@ -437,7 +437,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'event-limits': 'Define operational thresholds',
   'duty-turnaround': 'Crew duty limits & rest times',
   'business-rules': 'System logic and automation',
-  'data-loaders': 'Download editable import templates',
+  'data-loaders': 'Download blank import templates',
   'user-list': 'View and manage user accounts',
   'staff-database': 'Staff records and details',
   'trainee-database': 'Trainee records and details',
