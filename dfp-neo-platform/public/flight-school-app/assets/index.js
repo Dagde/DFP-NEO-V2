@@ -60002,7 +60002,7 @@ const SettingsView = ({
     await addFile(file, TEMPLATE_OVERRIDE_FOLDER_ID, `${pendingTemplateOverride.key}::${file.name}`);
     await refreshFiles();
     logAudit({
-      page: "Settings - Import Templates",
+      page: "Settings - Template Downloads",
       action: "update",
       description: `Changed ${pendingTemplateOverride.label} download template`,
       changes: `Template file: ${file.name}`
@@ -60017,7 +60017,7 @@ const SettingsView = ({
     await Promise.all(existingOverrides.map((existingFile) => deleteFile(existingFile.id)));
     await refreshFiles();
     logAudit({
-      page: "Settings - Import Templates",
+      page: "Settings - Template Downloads",
       action: "update",
       description: `Reset ${template.label} download template`,
       changes: "Restored built-in template download."
@@ -60525,11 +60525,11 @@ const SettingsView = ({
         ] }) })
       ] }),
       shouldShowSection("data-loaders") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Import Templates" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Template Downloads" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Blank Template Downloads" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Download blank templates for bulk uploads in the relevant Staff, Trainee, Syllabus and Organisation pages. Completed files are imported from those pages, not stored here." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Download blank templates for bulk uploads in the relevant Staff, Trainee, Syllabus and Organisation pages. Completed files are selected or dropped into those pages, not stored here." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -71372,7 +71372,7 @@ const sectionLabels = {
   "event-limits": "Event Limits",
   "duty-turnaround": "Duty & Turnaround",
   "business-rules": "Business Rules",
-  "data-loaders": "Import Templates",
+  "data-loaders": "Template Downloads",
   "user-list": "User List",
   "staff-database": "Staff Database",
   "trainee-database": "Trainee Database",
@@ -71506,7 +71506,7 @@ const sectionDescriptions = {
   "event-limits": "Define operational thresholds",
   "duty-turnaround": "Crew duty limits & rest times",
   "business-rules": "System logic and automation",
-  "data-loaders": "Download blank import templates",
+  "data-loaders": "Download blank upload templates",
   "user-list": "View and manage user accounts",
   "staff-database": "Staff records and details",
   "trainee-database": "Trainee records and details",
@@ -71643,7 +71643,7 @@ const sectionGroups = [
   {
     label: "Records & Data",
     shortLabel: "Data",
-    description: "Operational runbook, evidence, cancellation code governance, templates and enduring historical records.",
+    description: "Operational runbook, evidence, cancellation code governance, template downloads and enduring historical records.",
     accent: "emerald",
     defaultSection: "platform-operational-runbook",
     sections: ["platform-operational-runbook", "validation", "data-loaders"]
