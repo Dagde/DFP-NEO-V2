@@ -66864,7 +66864,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Units",
-          subtitle: "Unit is the centre of configuration: model, type, location, enabled modules and future UI behaviour. Select and highlight a unit row first, then press EDIT to change that unit.",
+          subtitle: "Manage each unit's operating model, type, home location and enabled modules. Select a unit row first, then press Edit to change it.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
@@ -67325,7 +67325,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Standard Missions",
-          subtitle: "Fixed Crew mission profiles for regular unit flights. These profiles are configuration only for now and are not yet wired into NEO Build.",
+          subtitle: "Define reusable Fixed Crew mission profiles for regular unit flights.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Mission" })
@@ -68394,7 +68394,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Unit Modules",
-          subtitle: "Controls which functional modules each unit can use. This is the future licensing and role-aware UI switchboard.",
+          subtitle: "Choose which app modules each unit can use.",
           action: renderSectionEditSaveButton("platform-unit-modules")
         }
       ),
@@ -68436,7 +68436,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Deployment Readiness",
-          subtitle: "Commercial deployment posture for SaaS, defence networks, fully offline installs and hybrid sync. These settings are admin-editable and do not hard-block operations yet.",
+          subtitle: "Record readiness for SaaS, defence network, fully offline and hybrid deployments.",
           action: renderSectionEditSaveButton("platform-deployment-readiness")
         }
       ),
@@ -68658,7 +68658,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         SectionHeader,
         {
           title: "Licensing & Deployment",
-          subtitle: "Commercial licensing for online SaaS, private defence networks, hybrid sync and fully offline deployments. Development mode remains non-blocking while signed licence files can be tested end to end.",
+          subtitle: "Manage licence records, deployment limits and signed licence files.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-licensing"),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLicense, disabled: !canEditSection("platform-licensing"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
@@ -68791,7 +68791,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded border border-cyan-500/25 bg-cyan-500/10 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center gap-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-cyan-100", children: "Licence Controls" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "These controls describe how the licence should behave in each deployment model. They are saved now for commercial readiness; live runtime enforcement should remain Monitor Only until a customer acceptance process is complete." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "These controls describe how the licence should behave for each deployment model. Use Monitor Only when you want to review licence status without blocking users." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
