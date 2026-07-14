@@ -30,6 +30,12 @@ import {
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
 import {
+  SCT_LONG_LABEL_MAX_LENGTH,
+  SCT_SHORT_LABEL_MAX_LENGTH,
+  normaliseSctTerminology,
+  type SctTerminology,
+} from '../utils/sctTerminology';
+import {
   TRAINING_REPORT_NAME_MAX_LENGTH,
   TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH,
   TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
@@ -2186,6 +2192,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(
     primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null,
   );
+  const sctTerminology = normaliseSctTerminology(
+    primaryOrganisationSettings.sctTerminology || null,
+  );
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null,
   );
@@ -2725,6 +2734,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ...settings,
       trainingReportTerminology: normaliseTrainingReportTerminology({
         ...(settings.trainingReportTerminology || {}),
+        ...changes,
+      }),
+    }));
+  };
+
+  const updateSctTerminology = (changes: Partial<SctTerminology>) => {
+    setRankTerminologyDirty(true);
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      sctTerminology: normaliseSctTerminology({
+        ...(settings.sctTerminology || {}),
         ...changes,
       }),
     }));
@@ -8139,6 +8159,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               maxLength={TRAINING_REPORT_NAME_MAX_LENGTH}
               onChange={(value) => updateTrainingReportTerminology({ name: value })}
               info={`The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: PT-051, Report, Grade Form.`}
+            />
+            <Field
+              label="Continuation Training Short Label"
+              value={sctTerminology.shortLabel}
+              disabled={!canEditRankTerminology}
+              maxLength={SCT_SHORT_LABEL_MAX_LENGTH}
+              onChange={(value) => updateSctTerminology({ shortLabel: value })}
+              info={`The short customer-facing label for staff continuation training flights and simulator events. This changes what users see in headings and menus; it does not change the internal event category or saved event codes. Maximum ${SCT_SHORT_LABEL_MAX_LENGTH} characters. Default: SCT.`}
+            />
+            <Field
+              label="Continuation Training Full Name"
+              value={sctTerminology.longLabel}
+              disabled={!canEditRankTerminology}
+              maxLength={SCT_LONG_LABEL_MAX_LENGTH}
+              onChange={(value) => updateSctTerminology({ longLabel: value })}
+              info={`The full plain-English name shown where there is room to explain the type of event. It is for display wording only, so NEO Build and scheduler logic still recognise the stable internal SCT category. Maximum ${SCT_LONG_LABEL_MAX_LENGTH} characters. Default: Staff Continuation Training.`}
             />
           </div>
           <div id="platform-crew-position-labels" className="rounded-lg border border-orange-400/25 bg-orange-500/10 p-4">

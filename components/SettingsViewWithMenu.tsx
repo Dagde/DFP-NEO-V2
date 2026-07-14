@@ -20,6 +20,7 @@ import type { DispatchStaggerSettings } from '../utils/dispatchStagger';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
+import { DEFAULT_SCT_TERMINOLOGY, type SctTerminology } from '../utils/sctTerminology';
 
 interface SettingsViewWithMenuProps {
     locations: string[];
@@ -67,6 +68,7 @@ interface SettingsViewWithMenuProps {
     }>;
     sctEvents: string[];
     onUpdateSctEvents: (events: string[]) => void;
+    sctTerminology?: SctTerminology;
     preferredDutyPeriod: number;
     onUpdatePreferredDutyPeriod: (value: number) => void;
     maxCrewDutyPeriod: number;
@@ -649,6 +651,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         focusSubsectionId?: string;
     } | null>(null);
     const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = useState(false);
+    const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
+    const getSectionLabel = (section: SettingsMenuSection): string => (
+        section === 'sct-events'
+            ? `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} Events`
+            : sectionLabels[section]
+    );
 
     const changeActiveSection = (section: ActiveSection) => {
         if (section !== 'currencies') {
@@ -699,7 +707,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         if (!query) return true;
         return [
             groupLabel,
-            sectionLabels[section],
+            getSectionLabel(section),
             sectionDescriptions[section],
         ].some(value => value.toLowerCase().includes(query));
     };
@@ -865,7 +873,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                         }`}
                                                     >
                                                         <span className="min-w-0">
-                                                            <span className="block truncate">{sectionLabels[section]}</span>
+                                                            <span className="block truncate">{getSectionLabel(section)}</span>
                                                         </span>
                                                     </button>
                                                 );
@@ -959,7 +967,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 {sectionIcons[activeSection as SettingsMenuSection]}
                             </div>
                             <h2 className="text-xl sm:text-2xl font-bold text-white">
-                                {sectionLabels[activeSection as SettingsMenuSection]}
+                                {getSectionLabel(activeSection as SettingsMenuSection)}
                             </h2>
                             <div className="ml-auto flex items-center gap-[10px]">
                                 {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
@@ -967,7 +975,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                         <strong>Read-Only Mode</strong>
                                     </div>
                                 )}
-                                <AuditButton pageName={`Settings - ${sectionLabels[activeSection as SettingsMenuSection]}`} />
+                                <AuditButton pageName={`Settings - ${getSectionLabel(activeSection as SettingsMenuSection)}`} />
                             </div>
                         </div>
 

@@ -59,6 +59,7 @@ import {
     getUnitTrainingReportTemplate,
     getUnitTrainingReportTerminology,
 } from './utils/trainingReportTerminology';
+import { getSctTerminology } from './utils/sctTerminology';
 import {
     crewPositionValuesMatch,
     findCrewPositionEntry,
@@ -41735,6 +41736,7 @@ appliedUpdates.forEach(update => {
                     unitCurrencyDefinitions={unitCurrencyDefinitions}
                     sctEvents={sctEvents}
                     onUpdateSctEvents={setSctEvents}
+                    sctTerminology={getSctTerminology(platformConfig)}
                     preferredDutyPeriod={preferredDutyPeriod}
                     onUpdatePreferredDutyPeriod={setPreferredDutyPeriod}
                     maxCrewDutyPeriod={maxCrewDutyPeriod}

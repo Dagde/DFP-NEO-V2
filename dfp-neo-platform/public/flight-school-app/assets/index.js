@@ -4026,6 +4026,21 @@ const getUnitTrainingReportPhraseBank = (config, unitCode, fallbackPhraseBank) =
   const source = unit?.settings?.trainingReportPhraseBank || organisationPhraseBank || fallbackPhraseBank || DEFAULT_PHRASE_BANK;
   return JSON.parse(JSON.stringify(source));
 };
+const DEFAULT_SCT_TERMINOLOGY = {
+  shortLabel: "SCT",
+  longLabel: "Staff Continuation Training"
+};
+const SCT_SHORT_LABEL_MAX_LENGTH = 12;
+const SCT_LONG_LABEL_MAX_LENGTH = 40;
+const normaliseSctTerminology = (input) => ({
+  shortLabel: String(input?.shortLabel || "").trim().slice(0, SCT_SHORT_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY.shortLabel,
+  longLabel: String(input?.longLabel || "").trim().slice(0, SCT_LONG_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY.longLabel
+});
+const getSctTerminology = (config) => {
+  const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
+  const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
+  return normaliseSctTerminology(activeOrganisation?.settings?.sctTerminology || null);
+};
 const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "pooled_crew"];
 const normaliseCode$3 = (value, fallback) => {
   const token = String(value || "").trim().toUpperCase().replace(/[^A-Z]+/g, "").slice(0, 3);
@@ -59490,10 +59505,13 @@ const SettingsView = ({
   totalAircraft,
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY
 }) => {
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
+  const sctShortLabel = sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel;
+  const sctLongLabel = sctTerminology.longLabel || DEFAULT_SCT_TERMINOLOGY.longLabel;
   const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
   const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
   const [isEditingBusinessRules, setIsEditingBusinessRules] = reactExports.useState(false);
@@ -59683,9 +59701,9 @@ const SettingsView = ({
     onUpdateSctEvents(tempSctEvents);
     setIsEditingSctEvents(false);
     logAudit({
-      page: "Settings - SCT Events",
+      page: `Settings - ${sctShortLabel} Events`,
       action: "update",
-      description: "Updated SCT event types",
+      description: `Updated ${sctLongLabel} event types`,
       changes: `From: [${oldEvents}] To: [${newEvents}]`
     });
   };
@@ -59838,7 +59856,10 @@ const SettingsView = ({
       ),
       shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-[600px] flex flex-col", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "SCT Events" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-lg font-semibold text-gray-200", children: [
+            sctShortLabel,
+            " Events"
+          ] }),
           isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleSaveSctEvents, className: standardSettingsButtonClass, children: "Save" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleCancelSctEvents, className: standardSettingsButtonClass, children: "Cancel" })
@@ -59854,7 +59875,11 @@ const SettingsView = ({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4 flex min-h-0 flex-1 flex-col", children: isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage SCT event types." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
+            "Manage ",
+            sctLongLabel,
+            " event types."
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: tempSctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-2 bg-gray-700/50 rounded", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: evt }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveSctEvent(evt), className: "p-1 text-gray-400 hover:text-red-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) })
@@ -59871,14 +59896,18 @@ const SettingsView = ({
                   stopEditableKeyPropagation(e);
                   if (e.key === "Enter") handleAddSctEvent();
                 },
-                placeholder: "New SCT event name",
+                placeholder: `New ${sctShortLabel} event name`,
                 className: "flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500"
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleAddSctEvent, className: "px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "+" })
           ] })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Configured SCT event types." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
+            "Configured ",
+            sctLongLabel,
+            " event types."
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: sctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-2 bg-gray-700/50 rounded text-white", children: evt }, evt)) })
         ] }) })
       ] }),
@@ -64213,6 +64242,9 @@ const PlatformConfigurationSettings = ({
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(
     primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null
   );
+  const sctTerminology = normaliseSctTerminology(
+    primaryOrganisationSettings.sctTerminology || null
+  );
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
@@ -64643,6 +64675,16 @@ This permanently removes the organisation record from platform configuration and
       ...settings,
       trainingReportTerminology: normaliseTrainingReportTerminology({
         ...settings.trainingReportTerminology || {},
+        ...changes
+      })
+    }));
+  };
+  const updateSctTerminology = (changes) => {
+    setRankTerminologyDirty(true);
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      sctTerminology: normaliseSctTerminology({
+        ...settings.sctTerminology || {},
         ...changes
       })
     }));
@@ -69512,17 +69554,41 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 lg:grid-cols-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Field,
-          {
-            label: "Training Report Name",
-            value: trainingReportTerminology.name,
-            disabled: !canEditRankTerminology,
-            maxLength: TRAINING_REPORT_NAME_MAX_LENGTH,
-            onChange: (value) => updateTrainingReportTerminology({ name: value }),
-            info: `The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: PT-051, Report, Grade Form.`
-          }
-        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Field,
+            {
+              label: "Training Report Name",
+              value: trainingReportTerminology.name,
+              disabled: !canEditRankTerminology,
+              maxLength: TRAINING_REPORT_NAME_MAX_LENGTH,
+              onChange: (value) => updateTrainingReportTerminology({ name: value }),
+              info: `The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: PT-051, Report, Grade Form.`
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Field,
+            {
+              label: "Continuation Training Short Label",
+              value: sctTerminology.shortLabel,
+              disabled: !canEditRankTerminology,
+              maxLength: SCT_SHORT_LABEL_MAX_LENGTH,
+              onChange: (value) => updateSctTerminology({ shortLabel: value }),
+              info: `The short customer-facing label for staff continuation training flights and simulator events. This changes what users see in headings and menus; it does not change the internal event category or saved event codes. Maximum ${SCT_SHORT_LABEL_MAX_LENGTH} characters. Default: SCT.`
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Field,
+            {
+              label: "Continuation Training Full Name",
+              value: sctTerminology.longLabel,
+              disabled: !canEditRankTerminology,
+              maxLength: SCT_LONG_LABEL_MAX_LENGTH,
+              onChange: (value) => updateSctTerminology({ longLabel: value }),
+              info: `The full plain-English name shown where there is room to explain the type of event. It is for display wording only, so NEO Build and scheduler logic still recognise the stable internal SCT category. Maximum ${SCT_LONG_LABEL_MAX_LENGTH} characters. Default: Staff Continuation Training.`
+            }
+          )
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-crew-position-labels", className: "rounded-lg border border-orange-400/25 bg-orange-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -71149,6 +71215,8 @@ const SettingsViewWithMenu = (props) => {
   const settingsGroupOpenTimerRef = reactExports.useRef(null);
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
+  const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
+  const getSectionLabel = (section) => section === "sct-events" ? `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} Events` : sectionLabels[section];
   const changeActiveSection = (section) => {
     if (section !== "currencies") {
       setEmbeddedCurrencyBuilderOpen(false);
@@ -71194,7 +71262,7 @@ const SettingsViewWithMenu = (props) => {
     if (!query) return true;
     return [
       groupLabel,
-      sectionLabels[section],
+      getSectionLabel(section),
       sectionDescriptions[section]
     ].some((value) => value.toLowerCase().includes(query));
   };
@@ -71310,7 +71378,7 @@ const SettingsViewWithMenu = (props) => {
                   {
                     onClick: () => changeActiveSection(section),
                     className: `flex min-h-[32px] w-[175px] items-center rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${activeSection === section ? "border-gray-500 bg-gray-800 text-gray-100" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: sectionLabels[section] }) })
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: getSectionLabel(section) }) })
                   },
                   section
                 );
@@ -71382,10 +71450,10 @@ const SettingsViewWithMenu = (props) => {
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-5 h-5 flex-shrink-0 ${sectionColors[activeSection]?.split(" ")[3] || "text-sky-400"}`, children: sectionIcons[activeSection] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl sm:text-2xl font-bold text-white", children: sectionLabels[activeSection] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl sm:text-2xl font-bold text-white", children: getSectionLabel(activeSection) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
             !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Read-Only Mode" }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `Settings - ${sectionLabels[activeSection]}` })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `Settings - ${getSectionLabel(activeSection)}` })
           ] })
         ] }),
         activeSection === "scoring-matrix" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700", children: [
@@ -116023,6 +116091,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             unitCurrencyDefinitions,
             sctEvents,
             onUpdateSctEvents: setSctEvents,
+            sctTerminology: getSctTerminology(platformConfig),
             preferredDutyPeriod,
             onUpdatePreferredDutyPeriod: setPreferredDutyPeriod,
             maxCrewDutyPeriod,

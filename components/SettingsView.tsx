@@ -24,6 +24,7 @@ import {
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
+import { DEFAULT_SCT_TERMINOLOGY, type SctTerminology } from '../utils/sctTerminology';
 
 
 declare var XLSX: any;
@@ -74,6 +75,7 @@ interface SettingsViewProps {
     dayFlyingStart?: string;
     dayFlyingEnd?: string;
     resourceDisplayNames?: ResourceDisplayNames;
+    sctTerminology?: SctTerminology;
 }
 
 // ─── Inline Scoring Matrix Component ────────────────────────────────────────
@@ -555,13 +557,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     totalAircraft,
     dayFlyingStart = '08:00',
     dayFlyingEnd = '17:00',
-    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+    sctTerminology = DEFAULT_SCT_TERMINOLOGY
 }) => {
     // --- STATE ---
     
     // Permission Check - Only Super Admin, Admin, and Scheduler can edit Settings
     const canEditSettings = ['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission);
     const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
+    const sctShortLabel = sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel;
+    const sctLongLabel = sctTerminology.longLabel || DEFAULT_SCT_TERMINOLOGY.longLabel;
     const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
     const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
     const [isEditingBusinessRules, setIsEditingBusinessRules] = useState(false);
@@ -800,9 +805,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         onUpdateSctEvents(tempSctEvents);
         setIsEditingSctEvents(false);
         logAudit({
-            page: 'Settings - SCT Events',
+            page: `Settings - ${sctShortLabel} Events`,
             action: 'update',
-            description: 'Updated SCT event types',
+            description: `Updated ${sctLongLabel} event types`,
             changes: `From: [${oldEvents}] To: [${newEvents}]`
         });
     };
@@ -986,7 +991,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    {shouldShowSection('sct-events') && (
                        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-[600px] flex flex-col">
                            <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                               <h2 className="text-lg font-semibold text-gray-200">SCT Events</h2>
+                               <h2 className="text-lg font-semibold text-gray-200">{sctShortLabel} Events</h2>
                                {isEditingSctEvents ? (
                                    <div className="flex gap-[1px]">
                                        <button type="button" onClick={handleSaveSctEvents} className={standardSettingsButtonClass}>Save</button>
@@ -1006,7 +1011,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                            <div className="p-4 space-y-4 flex min-h-0 flex-1 flex-col">
                                {isEditingSctEvents ? (
                                    <>
-                                       <p className="text-sm text-gray-400">Manage SCT event types.</p>
+                                       <p className="text-sm text-gray-400">Manage {sctLongLabel} event types.</p>
                                        <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto">
                                            {tempSctEvents.map(evt => (
                                                <li key={evt} className="flex items-center justify-between p-2 bg-gray-700/50 rounded">
@@ -1029,7 +1034,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                    stopEditableKeyPropagation(e);
                                                    if (e.key === 'Enter') handleAddSctEvent();
                                                }}
-                                               placeholder="New SCT event name" 
+                                               placeholder={`New ${sctShortLabel} event name`}
                                                className="flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" 
                                            />
                                            <button type="button" onClick={handleAddSctEvent} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">+</button>
@@ -1037,7 +1042,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                    </>
                                ) : (
                                    <>
-                                       <p className="text-sm text-gray-400">Configured SCT event types.</p>
+                                       <p className="text-sm text-gray-400">Configured {sctLongLabel} event types.</p>
                                        <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto">
                                            {sctEvents.map(evt => (
                                                <li key={evt} className="p-2 bg-gray-700/50 rounded text-white">
