@@ -60275,7 +60275,7 @@ const SettingsView = ({
       ] }),
       shouldShowSection("currencies") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit flex flex-col", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Currencies" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Currency Requirements" }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto max-h-[400px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-left text-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "font-medium text-gray-400 px-4 pt-0 pb-2 border-b border-gray-700", children: "Currency" }),
@@ -71365,7 +71365,7 @@ const isPlatformConfigurationMenuSection = (section) => Object.prototype.hasOwnP
 const sectionLabels = {
   "scoring-matrix": "Scoring Matrix",
   "training-report-template": "Training Reports",
-  "currencies": "Currencies",
+  "currencies": "Currency Requirements",
   "sct-events": "SCT Events",
   "people-profile": "NEO Build People Profile",
   "scheduling-rules": "Scheduling Rules",
@@ -71499,7 +71499,7 @@ const sectionIcons = {
 const sectionDescriptions = {
   "scoring-matrix": "Configure scoring logic and weighting",
   "training-report-template": "Configure report labels, grades and repeat rules",
-  "currencies": "Manage qualification expiry dates",
+  "currencies": "Manage currency expiry requirements",
   "sct-events": "Event scoring rules and triggers",
   "people-profile": "Assign NEO Build training basis and exclusions",
   "scheduling-rules": "Event limits, duty rules, turnarounds and dispatch limits",

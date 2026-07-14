@@ -243,7 +243,7 @@ const isPlatformConfigurationMenuSection = (section: SettingsMenuSection): secti
 const sectionLabels: Record<SettingsMenuSection, string> = {
     'scoring-matrix': 'Scoring Matrix',
     'training-report-template': 'Training Reports',
-    'currencies': 'Currencies',
+    'currencies': 'Currency Requirements',
     'sct-events': 'SCT Events',
     'people-profile': 'NEO Build People Profile',
     'scheduling-rules': 'Scheduling Rules',
@@ -430,7 +430,7 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
 const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'scoring-matrix': 'Configure scoring logic and weighting',
   'training-report-template': 'Configure report labels, grades and repeat rules',
-  'currencies': 'Manage qualification expiry dates',
+  'currencies': 'Manage currency expiry requirements',
   'sct-events': 'Event scoring rules and triggers',
   'people-profile': 'Assign NEO Build training basis and exclusions',
   'scheduling-rules': 'Event limits, duty rules, turnarounds and dispatch limits',

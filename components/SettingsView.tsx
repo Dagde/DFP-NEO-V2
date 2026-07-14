@@ -1056,12 +1056,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        </div>
 
                    )}
-                    {/* Currencies Window */}
+                    {/* Currency Requirements Window */}
                    {shouldShowSection('currencies') && (
                     <div className="flex gap-4">
                         <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit flex flex-col">
                             <div className="p-4 flex justify-between items-center shrink-0">
-                                <h2 className="text-lg font-semibold text-gray-200">Currencies</h2>
+                                <h2 className="text-lg font-semibold text-gray-200">Currency Requirements</h2>
                             </div>
                              <div className="flex-1 overflow-y-auto max-h-[400px]">
                                 <table className="w-full text-left text-sm">
