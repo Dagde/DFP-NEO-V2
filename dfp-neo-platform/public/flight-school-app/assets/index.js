@@ -71491,10 +71491,6 @@ const SettingsViewWithMenu = (props) => {
           ) })
         ] }),
         activeSection === "scheduling-rules" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-amber-200", children: "Scheduling Rules" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-amber-100/70", children: "Event limits, duty and turnaround rules, and dispatch constraints in one place." })
-          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, activeSection: "event-limits" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, activeSection: "duty-turnaround" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, activeSection: "business-rules" }),

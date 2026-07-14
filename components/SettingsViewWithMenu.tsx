@@ -1023,10 +1023,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
                     {activeSection === 'scheduling-rules' && (
                         <div className="space-y-5">
-                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-                                <h3 className="text-lg font-bold text-amber-200">Scheduling Rules</h3>
-                                <p className="mt-1 text-sm text-amber-100/70">Event limits, duty and turnaround rules, and dispatch constraints in one place.</p>
-                            </div>
                             <SettingsView {...props} activeSection="event-limits" />
                             <SettingsView {...props} activeSection="duty-turnaround" />
                             <SettingsView {...props} activeSection="business-rules" />
