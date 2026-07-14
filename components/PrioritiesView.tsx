@@ -3083,6 +3083,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     : [];
                   const aircraftCount = Math.max(1, Math.floor(Number(req.aircraftCount) || 1));
                   const formationAssignments = Array.from({ length: Math.max(0, aircraftCount - 1) }, (_, index) => req.formationCrew?.[index] || {});
+                  const isFlightSchoolCurrencyRequest = priorityAllocationModel === 'flight_school';
+                  const flightSchoolSecondPilot = String(req.crewMember || '').trim();
+                  const hasFlightSchoolSecondPilotOrSolo = !isFlightSchoolCurrencyRequest || Boolean(flightSchoolSecondPilot);
                   const updateFormationAssignment = (index: number, updates: Partial<FixedCrewFormationAssignment>) => {
                     const nextAssignments = formationAssignments.map((assignment, assignmentIndex) => (
                       assignmentIndex === index ? { ...assignment, ...updates } : assignment
@@ -3092,7 +3095,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   const formationAssignmentsComplete = !isFixedCrewModel || aircraftCount <= 1 || formationAssignments.every(assignment => (
                       (assignment.crewGroupKey || assignment.crewDisplayLabel) && assignment.crewIndividual
                   ));
-                  const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? (req.crewGroupKey || req.crewDisplayLabel) : req.name) && formationAssignmentsComplete);
+                  const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? (req.crewGroupKey || req.crewDisplayLabel) : req.name) && hasFlightSchoolSecondPilotOrSolo && formationAssignmentsComplete);
                   const stageSpecificCurrencyRequest = () => {
                       if (!canSubmitRequest) return;
                       const profile = currencyProfilesForContext.find(candidate => (
@@ -3104,6 +3107,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                       const displayName = isFixedCrewModel
                           ? (req.crewIndividual || selectedCrewGroup?.label || req.crewDisplayLabel || req.crewGroup || 'Fixed Crew')
                           : (req.name || 'Currency request');
+                      const flightSchoolIsSolo = isFlightSchoolCurrencyRequest && flightSchoolSecondPilot === 'Solo';
                       const draftEvent = {
                           id: requestDraftId,
                           audience: 'staff' as const,
@@ -3113,13 +3117,17 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                           eventType: type,
                           currencyProfileName: String(req.event || '').trim(),
                           currencyProfileCode: profileCode,
-                          crewMode: req.flightType === 'Solo' ? 'solo' as const : 'withOtherPilot' as const,
+                          crewMode: flightSchoolIsSolo || req.flightType === 'Solo' ? 'solo' as const : 'withOtherPilot' as const,
                           dueCurrencies: req.currency ? [req.currency] : currencyNames,
                           selectedCurrencies: req.currency ? [req.currency] : [],
                           aircraftConfigId: req.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
                           aircraftCount: Math.max(1, Math.floor(Number(req.aircraftCount) || 1)),
                           crewRequirement: req.crewRequirement || { mode: 'aircraft_default' as const },
-                          picName: req.crewIndividual || '',
+                          picName: isFixedCrewModel
+                              ? (req.crewIndividual || '')
+                              : flightSchoolIsSolo
+                                  ? ''
+                                  : flightSchoolSecondPilot,
                           fixedCrewGroupKey: req.crewGroupKey || selectedCrewGroup?.key || '',
                           fixedCrewDisplayLabel: selectedCrewGroup?.label || req.crewDisplayLabel || '',
                           formationCrew: formationAssignments.map(assignment => ({
@@ -3158,7 +3166,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                               <div className="space-y-3">
                               <div className="grid grid-cols-5 gap-2">
                                   <div className={`${tileBaseClass} flex flex-col`}>
-                                      <div className={tileLabelClass}>Crew</div>
+                                      <div className={tileLabelClass}>{isFlightSchoolCurrencyRequest ? 'Pilot' : 'Crew'}</div>
                                       {isFixedCrewModel ? (
                                         <div className="space-y-2">
                                           <div className={aircraftCount > 1 ? 'grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2' : ''}>
@@ -3234,14 +3242,24 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                           })}
                                         </div>
                                       ) : (
-                                          <select value={req.name} onChange={e => onUpdateSctRequest(req.id, 'name', e.target.value, type)} className={controlClass}>
-                                              <option value="">Select Instructor</option>
+                                          <select
+                                              value={req.name}
+                                              onChange={e => {
+                                                  const nextName = e.target.value;
+                                                  onPatchSctRequest(req.id, {
+                                                      name: nextName,
+                                                      ...(req.crewMember === nextName ? { crewMember: '', flightType: 'Dual' as const } : {}),
+                                                  }, type);
+                                              }}
+                                              className={controlClass}
+                                          >
+                                              <option value="">{isFlightSchoolCurrencyRequest ? 'Select pilot' : 'Select Instructor'}</option>
                                               {instructorNames.map(name => <option key={name} value={name}>{name}</option>)}
                                           </select>
                                       )}
                                   </div>
                                   <div className={`${tileBaseClass} flex flex-col`}>
-                                      <div className={tileLabelClass}>PIC</div>
+                                      <div className={tileLabelClass}>{isFlightSchoolCurrencyRequest ? 'Second Pilot' : 'PIC'}</div>
                                       {isFixedCrewModel ? (
                                         <div className="space-y-2">
                                           <div className={aircraftCount > 1 ? 'grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2' : ''}>
@@ -3299,6 +3317,24 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                               );
                                           })}
                                         </div>
+                                      ) : isFlightSchoolCurrencyRequest ? (
+                                          <select
+                                              value={flightSchoolSecondPilot}
+                                              onChange={e => {
+                                                  const nextSecondPilot = e.target.value;
+                                                  onPatchSctRequest(req.id, {
+                                                      crewMember: nextSecondPilot,
+                                                      flightType: nextSecondPilot === 'Solo' ? 'Solo' : 'Dual',
+                                                  }, type);
+                                              }}
+                                              className={controlClass}
+                                          >
+                                              <option value="">Select second pilot / Solo</option>
+                                              <option value="Solo">Solo</option>
+                                              {instructorNames
+                                                  .filter(name => name !== req.name)
+                                                  .map(name => <option key={name} value={name}>{name}</option>)}
+                                          </select>
                                       ) : (
                                           <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-500">N/A</div>
                                       )}
