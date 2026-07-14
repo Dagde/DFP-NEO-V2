@@ -63862,7 +63862,7 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
   if (area === "Operational Runbook") {
     return "Open Operational Runbook and complete support, backup, restore, update, audit and accreditation fields using the help icon examples beside each section.";
   }
-  return "Open the matching Platform Configuration section, correct the referenced record, save, and recheck Configuration Health.";
+  return "Open the matching Settings section, correct the referenced record, save that section, and recheck Configuration Health.";
 };
 const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, operationalReadinessPercent) => {
   const items = [];
