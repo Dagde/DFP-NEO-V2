@@ -984,7 +984,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                           {/* SCT Events Window */}
                    {shouldShowSection('sct-events') && (
-                       <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-[500px] flex flex-col">
+                       <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-[600px] flex flex-col">
                            <div className="p-4 flex justify-between items-center border-b border-gray-700">
                                <h2 className="text-lg font-semibold text-gray-200">SCT Events</h2>
                                {isEditingSctEvents ? (
