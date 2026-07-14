@@ -70151,11 +70151,11 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ) })
           ] }, `${eventType.label}-${eventTypeIndex}`)) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-scheduling-rule-records", className: "rounded-lg border border-gray-600/80 bg-gray-900/70 p-3 shadow-[inset_4px_0_0_rgba(148,163,184,0.28)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-scheduling-rule-records", className: "rounded-lg border border-amber-400/30 bg-amber-500/[0.06] p-3 shadow-[inset_4px_0_0_rgba(251,191,36,0.28)]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-wide text-gray-400", children: "Main Rule Set Records" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-wide text-amber-200/70", children: "Main Rule Set Records" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Scheduling Rule Set Records" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "Use these records to apply named scheduling rules to selected units, aircraft types or operating scopes." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-amber-50/60", children: "Use these records to apply named scheduling rules to selected units, aircraft types or operating scopes." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: ruleSet.name, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),

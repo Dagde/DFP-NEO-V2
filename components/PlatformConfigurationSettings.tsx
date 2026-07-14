@@ -8715,11 +8715,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               ))}
             </div>
           </div>
-          <div id="platform-scheduling-rule-records" className="rounded-lg border border-gray-600/80 bg-gray-900/70 p-3 shadow-[inset_4px_0_0_rgba(148,163,184,0.28)]">
+          <div id="platform-scheduling-rule-records" className="rounded-lg border border-amber-400/30 bg-amber-500/[0.06] p-3 shadow-[inset_4px_0_0_rgba(251,191,36,0.28)]">
             <div className="mb-3">
-              <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Main Rule Set Records</div>
+              <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-amber-200/70">Main Rule Set Records</div>
               <h5 className="text-sm font-bold text-white">Scheduling Rule Set Records</h5>
-              <p className="mt-1 text-xs leading-relaxed text-gray-400">
+              <p className="mt-1 text-xs leading-relaxed text-amber-50/60">
                 Use these records to apply named scheduling rules to selected units, aircraft types or operating scopes.
               </p>
             </div>
