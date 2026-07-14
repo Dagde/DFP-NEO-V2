@@ -8609,6 +8609,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               disabled={!canEditRankTerminology}
               onChange={updateCivilianTitles}
               info="Enter one civilian or contractor title per line. These titles appear after the military rank groups and are treated as equal status for sorting."
+              className="max-w-[200px]"
             />
             <div className="grid gap-4 lg:grid-cols-2">
             {personnelDisplaySettings.useSeparateTraineeRankOrder ? (
@@ -9325,8 +9326,8 @@ const TasField = ({ label, value, disabled, onChange, info, placeholder = 'KTAS'
   </label>
 );
 
-const TextAreaField = ({ label, value, disabled, onChange, info }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string }) => (
-  <label className="lg:col-span-2">
+const TextAreaField = ({ label, value, disabled, onChange, info, className = 'lg:col-span-2' }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string; className?: string }) => (
+  <label className={className}>
     <FieldLabel label={label} info={info} />
     <textarea
       className={`${fieldClass} min-h-[74px] resize-y`}
