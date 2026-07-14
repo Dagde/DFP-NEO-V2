@@ -59839,12 +59839,13 @@ const SettingsView = ({
       shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "SCT Events" }),
-          isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveSctEvents, className: standardSettingsButtonClass, children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelSctEvents, className: standardSettingsButtonClass, children: "Cancel" })
+          isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleSaveSctEvents, className: standardSettingsButtonClass, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleCancelSctEvents, className: standardSettingsButtonClass, children: "Cancel" })
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
+              type: "button",
               onClick: handleEditSctEvents,
               disabled: !canEditSettings,
               className: standardSettingsButtonClass,
@@ -59865,11 +59866,16 @@ const SettingsView = ({
                 type: "text",
                 value: newSctEvent,
                 onChange: (e) => setNewSctEvent(e.target.value),
+                onKeyDownCapture: stopEditableKeyPropagation,
+                onKeyDown: (e) => {
+                  stopEditableKeyPropagation(e);
+                  if (e.key === "Enter") handleAddSctEvent();
+                },
                 placeholder: "New SCT event name",
                 className: "flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500"
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddSctEvent, className: "px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "+" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleAddSctEvent, className: "px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "+" })
           ] })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Configured SCT event types." }),

@@ -988,12 +988,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                            <div className="p-4 flex justify-between items-center border-b border-gray-700">
                                <h2 className="text-lg font-semibold text-gray-200">SCT Events</h2>
                                {isEditingSctEvents ? (
-                                   <div className="flex space-x-2">
-                                       <button onClick={handleSaveSctEvents} className={standardSettingsButtonClass}>Save</button>
-                                       <button onClick={handleCancelSctEvents} className={standardSettingsButtonClass}>Cancel</button>
+                                   <div className="flex gap-[1px]">
+                                       <button type="button" onClick={handleSaveSctEvents} className={standardSettingsButtonClass}>Save</button>
+                                       <button type="button" onClick={handleCancelSctEvents} className={standardSettingsButtonClass}>Cancel</button>
                                    </div>
                                ) : (
                                    <button 
+                                   type="button"
                                    onClick={handleEditSctEvents} 
                                    disabled={!canEditSettings}
                                    className={standardSettingsButtonClass}
@@ -1023,10 +1024,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                type="text" 
                                                value={newSctEvent} 
                                                onChange={e => setNewSctEvent(e.target.value)} 
+                                               onKeyDownCapture={stopEditableKeyPropagation}
+                                               onKeyDown={(e) => {
+                                                   stopEditableKeyPropagation(e);
+                                                   if (e.key === 'Enter') handleAddSctEvent();
+                                               }}
                                                placeholder="New SCT event name" 
                                                className="flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" 
                                            />
-                                           <button onClick={handleAddSctEvent} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">+</button>
+                                           <button type="button" onClick={handleAddSctEvent} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">+</button>
                                        </div>
                                    </>
                                ) : (
