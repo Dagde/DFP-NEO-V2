@@ -3722,15 +3722,15 @@ const groupLegacyCivilianRanks = (rankOrder) => {
   return uniqueRankList([...otherRanks, civilians.join(" = ")], DEFAULT_STAFF_RANK_ORDER);
 };
 const normaliseRankEquivalencyCell = (cell) => ({
-  rank: String(cell?.rank || "").trim(),
-  abbreviation: String(cell?.abbreviation || "").trim()
+  rank: String(cell?.rank || ""),
+  abbreviation: String(cell?.abbreviation || "")
 });
 const normaliseRankEquivalencyConfig = (input, fallback = DEFAULT_RANK_EQUIVALENCY_CONFIG) => {
   const preset = input?.preset && input.preset in RANK_EQUIVALENCY_PRESETS ? input.preset : fallback.preset;
   const fallbackConfig = preset === "CUSTOM" ? fallback : RANK_EQUIVALENCY_PRESETS[preset];
   const rawServices = Array.isArray(input?.services) ? input.services : fallbackConfig.services;
   const services = [0, 1, 2, 3].map((index) => ({
-    name: String(rawServices[index]?.name || fallbackConfig.services[index]?.name || `Service ${index + 1}`).trim() || `Service ${index + 1}`
+    name: rawServices[index]?.name !== void 0 && rawServices[index]?.name !== null ? String(rawServices[index]?.name) : String(fallbackConfig.services[index]?.name || `Service ${index + 1}`)
   }));
   const rawRows = Array.isArray(input?.rows) ? input.rows : fallbackConfig.rows;
   const rows = RANK_EQUIVALENCY_GRADES.map((grade) => {
