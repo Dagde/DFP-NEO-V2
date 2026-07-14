@@ -25,9 +25,14 @@ import {
 } from '../utils/taskProfiles';
 import {
   formatRankOrderText,
+  getRankOrderFromEquivalency,
   normalisePersonnelDisplaySettings,
+  normaliseRankEquivalencyConfig,
   parseRankOrderText,
+  RANK_EQUIVALENCY_PRESETS,
   type PersonnelDisplaySettings,
+  type RankEquivalencyConfig,
+  type RankEquivalencyPresetKey,
 } from '../utils/personnelDisplaySettings';
 import {
   SCT_LONG_LABEL_MAX_LENGTH,
@@ -2182,6 +2187,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(
     primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null,
   );
+  const staffRankEquivalency = personnelDisplaySettings.staffRankEquivalency;
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null,
   );
@@ -2716,6 +2722,47 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ...changes,
       }),
     }));
+  };
+
+  const updateStaffRankEquivalency = (nextEquivalency: RankEquivalencyConfig) => {
+    const staffRankEquivalency = normaliseRankEquivalencyConfig(nextEquivalency);
+    const staffRankOrder = getRankOrderFromEquivalency(staffRankEquivalency);
+    updatePersonnelDisplaySettings({
+      staffRankEquivalency,
+      staffRankOrder,
+      ...(personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }),
+    });
+  };
+
+  const applyStaffRankPreset = (preset: RankEquivalencyPresetKey) => {
+    const source = preset === 'CUSTOM'
+      ? { ...personnelDisplaySettings.staffRankEquivalency, preset: 'CUSTOM' as const }
+      : RANK_EQUIVALENCY_PRESETS[preset];
+    updateStaffRankEquivalency(normaliseRankEquivalencyConfig(source));
+  };
+
+  const updateStaffRankServiceName = (serviceIndex: number, name: string) => {
+    const nextEquivalency = normaliseRankEquivalencyConfig(personnelDisplaySettings.staffRankEquivalency);
+    nextEquivalency.preset = 'CUSTOM';
+    nextEquivalency.services = nextEquivalency.services.map((service, index) => (
+      index === serviceIndex ? { ...service, name } : service
+    ));
+    updateStaffRankEquivalency(nextEquivalency);
+  };
+
+  const updateStaffRankCell = (rowIndex: number, serviceIndex: number, field: 'rank' | 'abbreviation', value: string) => {
+    const nextEquivalency = normaliseRankEquivalencyConfig(personnelDisplaySettings.staffRankEquivalency);
+    nextEquivalency.preset = 'CUSTOM';
+    nextEquivalency.rows = nextEquivalency.rows.map((row, index) => {
+      if (index !== rowIndex) return row;
+      return {
+        ...row,
+        ranks: row.ranks.map((cell, cellIndex) => (
+          cellIndex === serviceIndex ? { ...cell, [field]: value } : cell
+        )),
+      };
+    });
+    updateStaffRankEquivalency(nextEquivalency);
   };
 
   const updateTrainingReportTerminology = (changes: Partial<TrainingReportTerminology>) => {
@@ -8435,20 +8482,105 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
             {renderRankTerminologySectionAction()}
           </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <TextAreaField
-              label="Staff Rank Order"
-              value={formatRankOrderText(personnelDisplaySettings.staffRankOrder)}
-              disabled={!canEditRankTerminology}
-              onChange={(value) => {
-                const staffRankOrder = parseRankOrderText(value);
-                updatePersonnelDisplaySettings({
-                  staffRankOrder,
-                  ...(personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }),
-                });
-              }}
-              info="Enter one display level per line, highest priority first. Use = on the same line to give titles equal status. Example: Dr = Mr = Ms = Mrs = Mx = APS = CIV = CONTRACTOR. People with equal status are sorted by surname then first name."
-            />
+          <div className="space-y-4">
+            <div className="rounded-lg border border-violet-400/30 bg-violet-500/10 p-4">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h6 className="text-sm font-bold text-violet-100">Staff Rank Equivalency Table</h6>
+                  <p className="mt-1 max-w-3xl text-xs leading-relaxed text-violet-100/75">
+                    Choose a country preset or Custom, then map equivalent ranks across up to four services. The table sets staff rank display order from O-10 through E-1.
+                  </p>
+                </div>
+                <label className="min-w-[220px] text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Rank Preset
+                  <select
+                    value={staffRankEquivalency.preset}
+                    disabled={!canEditRankTerminology}
+                    onChange={(event) => applyStaffRankPreset(event.target.value as RankEquivalencyPresetKey)}
+                    className={`mt-1 w-full rounded border px-3 py-2 text-sm font-semibold ${
+                      canEditRankTerminology
+                        ? 'border-gray-600 bg-gray-950 text-white'
+                        : 'border-gray-700 bg-gray-800 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <option value="AU">Australia</option>
+                    <option value="US">United States</option>
+                    <option value="CUSTOM">Custom</option>
+                  </select>
+                </label>
+              </div>
+              <div className="overflow-x-auto rounded border border-gray-700">
+                <table className="min-w-[1120px] w-full border-collapse text-left text-xs">
+                  <thead className="bg-gray-950 text-gray-300">
+                    <tr>
+                      <th className="w-[72px] border-b border-r border-gray-700 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-gray-500">Level</th>
+                      {staffRankEquivalency.services.map((service, serviceIndex) => (
+                        <th key={`service-${serviceIndex}`} className="border-b border-r border-gray-700 px-3 py-2 last:border-r-0">
+                          <input
+                            value={service.name}
+                            disabled={!canEditRankTerminology}
+                            onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankServiceName(serviceIndex, value))}
+                            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankServiceName(serviceIndex, value))}
+                            onKeyDown={stopEditableKeyPropagation}
+                            onChange={(event) => updateStaffRankServiceName(serviceIndex, event.target.value)}
+                            className={`w-full rounded border px-2 py-1 text-xs font-bold ${
+                              canEditRankTerminology
+                                ? 'border-gray-600 bg-gray-900 text-white'
+                                : 'border-gray-700 bg-gray-800 text-gray-400 cursor-not-allowed'
+                            }`}
+                          />
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {staffRankEquivalency.rows.map((row, rowIndex) => (
+                      <tr key={row.grade} className={row.grade.startsWith('O-') ? 'bg-gray-900/80' : 'bg-gray-950/80'}>
+                        <td className="border-r border-t border-gray-700 px-3 py-2 text-center text-sm font-bold text-gray-200">{row.grade}</td>
+                        {row.ranks.map((cell, serviceIndex) => (
+                          <td key={`${row.grade}-${serviceIndex}`} className="border-r border-t border-gray-700 p-2 last:border-r-0">
+                            <div className="grid gap-1 sm:grid-cols-[1fr_92px]">
+                              <input
+                                value={cell.rank}
+                                disabled={!canEditRankTerminology}
+                                placeholder="Rank"
+                                onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, 'rank', value))}
+                                onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, 'rank', value))}
+                                onKeyDown={stopEditableKeyPropagation}
+                                onChange={(event) => updateStaffRankCell(rowIndex, serviceIndex, 'rank', event.target.value)}
+                                className={`min-w-0 rounded border px-2 py-1 text-xs ${
+                                  canEditRankTerminology
+                                    ? 'border-gray-600 bg-gray-900 text-white placeholder:text-gray-600'
+                                    : 'border-gray-700 bg-gray-800 text-gray-400 cursor-not-allowed'
+                                }`}
+                              />
+                              <input
+                                value={cell.abbreviation}
+                                disabled={!canEditRankTerminology}
+                                placeholder="Abbrev"
+                                onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, 'abbreviation', value))}
+                                onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, 'abbreviation', value))}
+                                onKeyDown={stopEditableKeyPropagation}
+                                onChange={(event) => updateStaffRankCell(rowIndex, serviceIndex, 'abbreviation', event.target.value)}
+                                className={`min-w-0 rounded border px-2 py-1 text-xs font-semibold ${
+                                  canEditRankTerminology
+                                    ? 'border-gray-600 bg-gray-900 text-white placeholder:text-gray-600'
+                                    : 'border-gray-700 bg-gray-800 text-gray-400 cursor-not-allowed'
+                                }`}
+                              />
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-gray-400">
+                Civilian and contractor titles remain grouped after the service rank levels.
+              </p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
             {personnelDisplaySettings.useSeparateTraineeRankOrder ? (
               <div className="space-y-3">
                 <label className={`flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm ${
@@ -8496,6 +8628,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </p>
               </div>
             )}
+            </div>
           </div>
         </div>
       </section>

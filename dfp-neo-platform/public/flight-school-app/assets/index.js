@@ -3434,11 +3434,98 @@ const DEFAULT_STAFF_RANK_ORDER = [
   "AC",
   "APS = Dr = Mr = Ms = Mrs = Mx = CIV = CONTRACTOR"
 ];
+const RANK_EQUIVALENCY_GRADES = [
+  "O-10",
+  "O-9",
+  "O-8",
+  "O-7",
+  "O-6",
+  "O-5",
+  "O-4",
+  "O-3",
+  "O-2",
+  "O-1",
+  "E-9",
+  "E-8",
+  "E-7",
+  "E-6",
+  "E-5",
+  "E-4",
+  "E-3",
+  "E-2",
+  "E-1"
+];
+const makeRankRow = (grade, ranks) => ({
+  grade,
+  ranks: [0, 1, 2, 3].map((index) => {
+    const [rank, abbreviation] = ranks[index] || ["", ""];
+    return { rank, abbreviation };
+  })
+});
+const RANK_EQUIVALENCY_PRESETS = {
+  AU: {
+    preset: "AU",
+    services: [{ name: "Air Force" }, { name: "Navy" }, { name: "Army" }, { name: "Marines" }],
+    rows: [
+      makeRankRow("O-10", [["Air Marshal", "AIRMSHL"], ["Admiral", "ADM"], ["General", "GEN"], ["", ""]]),
+      makeRankRow("O-9", [["Air Vice-Marshal", "AVM"], ["Vice Admiral", "VADM"], ["Lieutenant General", "LTGEN"], ["", ""]]),
+      makeRankRow("O-8", [["Air Commodore", "AIRCDRE"], ["Rear Admiral", "RADM"], ["Major General", "MAJGEN"], ["", ""]]),
+      makeRankRow("O-7", [["Group Captain", "GPCAPT"], ["Commodore", "CDRE"], ["Brigadier", "BRIG"], ["", ""]]),
+      makeRankRow("O-6", [["Wing Commander", "WGCDR"], ["Captain", "CAPT"], ["Colonel", "COL"], ["", ""]]),
+      makeRankRow("O-5", [["Squadron Leader", "SQNLDR"], ["Commander", "CMDR"], ["Lieutenant Colonel", "LTCOL"], ["", ""]]),
+      makeRankRow("O-4", [["Flight Lieutenant", "FLTLT"], ["Lieutenant Commander", "LCDR"], ["Major", "MAJ"], ["", ""]]),
+      makeRankRow("O-3", [["Flying Officer", "FLGOFF"], ["Lieutenant", "LEUT"], ["Captain", "CAPT"], ["", ""]]),
+      makeRankRow("O-2", [["Pilot Officer", "PLTOFF"], ["Sub Lieutenant", "SBLT"], ["Lieutenant", "LT"], ["", ""]]),
+      makeRankRow("O-1", [["Officer Cadet", "OFFCDT"], ["Midshipman", "MIDN"], ["Officer Cadet", "OFFCDT"], ["", ""]]),
+      makeRankRow("E-9", [["Warrant Officer", "WOFF"], ["Warrant Officer", "WO"], ["Warrant Officer Class One", "WO1"], ["", ""]]),
+      makeRankRow("E-8", [["Flight Sergeant", "FSGT"], ["Chief Petty Officer", "CPO"], ["Warrant Officer Class Two", "WO2"], ["", ""]]),
+      makeRankRow("E-7", [["Sergeant", "SGT"], ["Petty Officer", "PO"], ["Staff Sergeant", "SSGT"], ["", ""]]),
+      makeRankRow("E-6", [["Corporal", "CPL"], ["Leading Seaman", "LS"], ["Sergeant", "SGT"], ["", ""]]),
+      makeRankRow("E-5", [["Leading Aircraftman", "LAC"], ["Able Seaman", "AB"], ["Corporal", "CPL"], ["", ""]]),
+      makeRankRow("E-4", [["Aircraftman", "AC"], ["Seaman", "SMN"], ["Private Proficient", "PTE(P)"], ["", ""]]),
+      makeRankRow("E-3", [["Recruit", "RCT"], ["Recruit", "RCT"], ["Recruit", "RCT"], ["", ""]]),
+      makeRankRow("E-2", [["", ""], ["", ""], ["", ""], ["", ""]]),
+      makeRankRow("E-1", [["", ""], ["", ""], ["", ""], ["", ""]])
+    ]
+  },
+  US: {
+    preset: "US",
+    services: [{ name: "Air Force" }, { name: "Navy" }, { name: "Marine Corps" }, { name: "Army" }],
+    rows: [
+      makeRankRow("O-10", [["General of the Air Force", "GOAF"], ["Admiral of the Navy", "ADM"], ["General", "Gen"], ["General", "Gen"]]),
+      makeRankRow("O-9", [["General", "GEN"], ["Fleet Admiral", "ADM"], ["Lieutenant General", "LtGen"], ["Lieutenant General", "LtGen"]]),
+      makeRankRow("O-8", [["Lieutenant General", "Lt Gen"], ["Admiral", "Adm"], ["Major General", "MajGen"], ["Major General", "MajGen"]]),
+      makeRankRow("O-7", [["Major General", "Maj Gen"], ["Vice Admiral", "VAdm"], ["Brigadier General", "BGen"], ["Brigadier General", "BGen"]]),
+      makeRankRow("O-6", [["Brigadier General", "Brig Gen"], ["Rear Admiral Upper Half", "RAdm(U)"], ["Colonel", "Col"], ["Colonel", "Col"]]),
+      makeRankRow("O-5", [["Colonel", "Col"], ["Rear Admiral Lower Half", "RAdm(L)"], ["Lieutenant Colonel", "LtCol"], ["Lieutenant Colonel", "LtCol"]]),
+      makeRankRow("O-4", [["Lieutenant Colonel", "Lt Col"], ["Captain", "Capt"], ["Major", "Maj"], ["Major", "Maj"]]),
+      makeRankRow("O-3", [["Major", "Maj"], ["Commander", "Cmdr"], ["Captain", "Capt"], ["Captain", "Capt"]]),
+      makeRankRow("O-2", [["Captain", "Capt"], ["Lieutenant Commander", "LCDR"], ["First Lieutenant", "1stLt"], ["First Lieutenant", "1stLt"]]),
+      makeRankRow("O-1", [["First Lieutenant", "1st Lt"], ["Lieutenant", "LT"], ["Second Lieutenant", "2ndLt"], ["Second Lieutenant", "2ndLt"]]),
+      makeRankRow("E-9", [["Chief Master Sergeant of the Air Force", "CMSAF"], ["Master Chief Petty Officer of the Navy", "MCPON"], ["Sergeant Major of the Marine Corps", "SMMC"], ["Sergeant Major of the Army", "SMA"]]),
+      makeRankRow("E-8", [["Chief Master Sergeant", "CMSgt"], ["Master Chief Petty Officer", "MCPO"], ["Sergeant Major", "SgtMaj"], ["Command Sergeant Major", "CSM"]]),
+      makeRankRow("E-7", [["Senior Master Sergeant", "SMSgt"], ["Senior Chief Petty Officer", "SCPO"], ["Master Gunnery Sergeant", "MGySgt"], ["Sergeant Major", "SgtMaj"]]),
+      makeRankRow("E-6", [["Master Sergeant", "MSgt"], ["Chief Petty Officer", "CPO"], ["First Sergeant", "1stSgt"], ["First Sergeant", "1SG"]]),
+      makeRankRow("E-5", [["Technical Sergeant", "TSgt"], ["Petty Officer First Class", "PO1"], ["Gunnery Sergeant", "GySgt"], ["Master Sergeant", "MSG"]]),
+      makeRankRow("E-4", [["Staff Sergeant", "SSgt"], ["Petty Officer Second Class", "PO2"], ["Staff Sergeant", "SSgt"], ["Sergeant First Class", "SFC"]]),
+      makeRankRow("E-3", [["Senior Airman", "SrA"], ["Petty Officer Third Class", "PO3"], ["Sergeant", "Sgt"], ["Staff Sergeant", "SSG"]]),
+      makeRankRow("E-2", [["Airman First Class", "A1C"], ["Seaman", "SN"], ["Corporal", "Cpl"], ["Sergeant", "Sgt"]]),
+      makeRankRow("E-1", [["Airman", "Amn"], ["Seaman Apprentice", "SA"], ["Lance Corporal", "LCpl"], ["Private First Class", "PFC"]])
+    ]
+  },
+  CUSTOM: {
+    preset: "CUSTOM",
+    services: [{ name: "Service 1" }, { name: "Service 2" }, { name: "Service 3" }, { name: "Service 4" }],
+    rows: RANK_EQUIVALENCY_GRADES.map((grade) => makeRankRow(grade, []))
+  }
+};
+const DEFAULT_RANK_EQUIVALENCY_CONFIG = RANK_EQUIVALENCY_PRESETS.AU;
 const DEFAULT_PERSONNEL_DISPLAY_SETTINGS = {
   sortMode: "rank-then-name",
   useSeparateTraineeRankOrder: false,
   staffRankOrder: DEFAULT_STAFF_RANK_ORDER,
   traineeRankOrder: DEFAULT_STAFF_RANK_ORDER,
+  staffRankEquivalency: DEFAULT_RANK_EQUIVALENCY_CONFIG,
   civilianContractorGroupName: "Civilian Contractors",
   instructorLabel: "QFI"
 };
@@ -3473,14 +3560,45 @@ const groupLegacyCivilianRanks = (rankOrder) => {
   if (civilians.length <= 1) return rankOrder;
   return uniqueRankList([...otherRanks, civilians.join(" = ")], DEFAULT_STAFF_RANK_ORDER);
 };
+const normaliseRankEquivalencyCell = (cell) => ({
+  rank: String(cell?.rank || "").trim(),
+  abbreviation: String(cell?.abbreviation || "").trim()
+});
+const normaliseRankEquivalencyConfig = (input, fallback = DEFAULT_RANK_EQUIVALENCY_CONFIG) => {
+  const preset = input?.preset === "US" || input?.preset === "CUSTOM" || input?.preset === "AU" ? input.preset : fallback.preset;
+  const fallbackConfig = preset === "CUSTOM" ? fallback : RANK_EQUIVALENCY_PRESETS[preset];
+  const rawServices = Array.isArray(input?.services) ? input.services : fallbackConfig.services;
+  const services = [0, 1, 2, 3].map((index) => ({
+    name: String(rawServices[index]?.name || fallbackConfig.services[index]?.name || `Service ${index + 1}`).trim() || `Service ${index + 1}`
+  }));
+  const rawRows = Array.isArray(input?.rows) ? input.rows : fallbackConfig.rows;
+  const rows = RANK_EQUIVALENCY_GRADES.map((grade) => {
+    const sourceRow = rawRows.find((row) => String(row?.grade || "").trim().toUpperCase() === grade) || fallbackConfig.rows.find((row) => row.grade === grade);
+    return {
+      grade,
+      ranks: [0, 1, 2, 3].map((index) => normaliseRankEquivalencyCell(sourceRow?.ranks?.[index]))
+    };
+  });
+  return { preset, services, rows };
+};
+const getRankOrderFromEquivalency = (config) => {
+  const normalised = normaliseRankEquivalencyConfig(config);
+  const rankOrder = normalised.rows.map((row) => {
+    const values = row.ranks.flatMap((cell) => [cell.abbreviation, cell.rank]);
+    return values.map((value) => String(value || "").trim()).filter(Boolean).join(" = ");
+  }).filter(Boolean);
+  return groupLegacyCivilianRanks(uniqueRankList([...rankOrder, "APS = Dr = Mr = Ms = Mrs = Mx = CIV = CONTRACTOR"], DEFAULT_STAFF_RANK_ORDER));
+};
 const normalisePersonnelDisplaySettings = (input) => {
-  const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, DEFAULT_STAFF_RANK_ORDER));
+  const staffRankEquivalency = normaliseRankEquivalencyConfig(input?.staffRankEquivalency, DEFAULT_RANK_EQUIVALENCY_CONFIG);
+  const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, getRankOrderFromEquivalency(staffRankEquivalency)));
   const traineeRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder));
   return {
     sortMode: input?.sortMode === "alphabetical" ? "alphabetical" : "rank-then-name",
     useSeparateTraineeRankOrder: Boolean(input?.useSeparateTraineeRankOrder),
     staffRankOrder,
     traineeRankOrder,
+    staffRankEquivalency,
     civilianContractorGroupName: String(input?.civilianContractorGroupName || "").trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.civilianContractorGroupName,
     instructorLabel: String(input?.instructorLabel || "").trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel
   };
@@ -64270,6 +64388,7 @@ const PlatformConfigurationSettings = ({
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(
     primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null
   );
+  const staffRankEquivalency = personnelDisplaySettings.staffRankEquivalency;
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null
   );
@@ -64696,6 +64815,37 @@ This permanently removes the organisation record from platform configuration and
         ...changes
       })
     }));
+  };
+  const updateStaffRankEquivalency = (nextEquivalency) => {
+    const staffRankEquivalency2 = normaliseRankEquivalencyConfig(nextEquivalency);
+    const staffRankOrder = getRankOrderFromEquivalency(staffRankEquivalency2);
+    updatePersonnelDisplaySettings({
+      staffRankEquivalency: staffRankEquivalency2,
+      staffRankOrder,
+      ...personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }
+    });
+  };
+  const applyStaffRankPreset = (preset) => {
+    const source = preset === "CUSTOM" ? { ...personnelDisplaySettings.staffRankEquivalency, preset: "CUSTOM" } : RANK_EQUIVALENCY_PRESETS[preset];
+    updateStaffRankEquivalency(normaliseRankEquivalencyConfig(source));
+  };
+  const updateStaffRankServiceName = (serviceIndex, name) => {
+    const nextEquivalency = normaliseRankEquivalencyConfig(personnelDisplaySettings.staffRankEquivalency);
+    nextEquivalency.preset = "CUSTOM";
+    nextEquivalency.services = nextEquivalency.services.map((service, index) => index === serviceIndex ? { ...service, name } : service);
+    updateStaffRankEquivalency(nextEquivalency);
+  };
+  const updateStaffRankCell = (rowIndex, serviceIndex, field, value) => {
+    const nextEquivalency = normaliseRankEquivalencyConfig(personnelDisplaySettings.staffRankEquivalency);
+    nextEquivalency.preset = "CUSTOM";
+    nextEquivalency.rows = nextEquivalency.rows.map((row, index) => {
+      if (index !== rowIndex) return row;
+      return {
+        ...row,
+        ranks: row.ranks.map((cell, cellIndex) => cellIndex === serviceIndex ? { ...cell, [field]: value } : cell)
+      };
+    });
+    updateStaffRankEquivalency(nextEquivalency);
   };
   const updateTrainingReportTerminology = (changes) => {
     setRankTerminologyDirty(true);
@@ -69873,24 +70023,82 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           ] }),
           renderRankTerminologySectionAction()
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            TextAreaField,
-            {
-              label: "Staff Rank Order",
-              value: formatRankOrderText(personnelDisplaySettings.staffRankOrder),
-              disabled: !canEditRankTerminology,
-              onChange: (value) => {
-                const staffRankOrder = parseRankOrderText(value);
-                updatePersonnelDisplaySettings({
-                  staffRankOrder,
-                  ...personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }
-                });
-              },
-              info: "Enter one display level per line, highest priority first. Use = on the same line to give titles equal status. Example: Dr = Mr = Ms = Mrs = Mx = APS = CIV = CONTRACTOR. People with equal status are sorted by surname then first name."
-            }
-          ),
-          personnelDisplaySettings.useSeparateTraineeRankOrder ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-violet-400/30 bg-violet-500/10 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-sm font-bold text-violet-100", children: "Staff Rank Equivalency Table" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-xs leading-relaxed text-violet-100/75", children: "Choose a country preset or Custom, then map equivalent ranks across up to four services. The table sets staff rank display order from O-10 through E-1." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-[220px] text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
+                "Rank Preset",
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: staffRankEquivalency.preset,
+                    disabled: !canEditRankTerminology,
+                    onChange: (event) => applyStaffRankPreset(event.target.value),
+                    className: `mt-1 w-full rounded border px-3 py-2 text-sm font-semibold ${canEditRankTerminology ? "border-gray-600 bg-gray-950 text-white" : "border-gray-700 bg-gray-800 text-gray-400 cursor-not-allowed"}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "AU", children: "Australia" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "US", children: "United States" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "CUSTOM", children: "Custom" })
+                    ]
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1120px] w-full border-collapse text-left text-xs", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-950 text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[72px] border-b border-r border-gray-700 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Level" }),
+                staffRankEquivalency.services.map((service, serviceIndex) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-r border-gray-700 px-3 py-2 last:border-r-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    value: service.name,
+                    disabled: !canEditRankTerminology,
+                    onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankServiceName(serviceIndex, value)),
+                    onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankServiceName(serviceIndex, value)),
+                    onKeyDown: stopEditableKeyPropagation,
+                    onChange: (event) => updateStaffRankServiceName(serviceIndex, event.target.value),
+                    className: `w-full rounded border px-2 py-1 text-xs font-bold ${canEditRankTerminology ? "border-gray-600 bg-gray-900 text-white" : "border-gray-700 bg-gray-800 text-gray-400 cursor-not-allowed"}`
+                  }
+                ) }, `service-${serviceIndex}`))
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: staffRankEquivalency.rows.map((row, rowIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: row.grade.startsWith("O-") ? "bg-gray-900/80" : "bg-gray-950/80", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border-r border-t border-gray-700 px-3 py-2 text-center text-sm font-bold text-gray-200", children: row.grade }),
+                row.ranks.map((cell, serviceIndex) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border-r border-t border-gray-700 p-2 last:border-r-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-1 sm:grid-cols-[1fr_92px]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      value: cell.rank,
+                      disabled: !canEditRankTerminology,
+                      placeholder: "Rank",
+                      onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, "rank", value)),
+                      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, "rank", value)),
+                      onKeyDown: stopEditableKeyPropagation,
+                      onChange: (event) => updateStaffRankCell(rowIndex, serviceIndex, "rank", event.target.value),
+                      className: `min-w-0 rounded border px-2 py-1 text-xs ${canEditRankTerminology ? "border-gray-600 bg-gray-900 text-white placeholder:text-gray-600" : "border-gray-700 bg-gray-800 text-gray-400 cursor-not-allowed"}`
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      value: cell.abbreviation,
+                      disabled: !canEditRankTerminology,
+                      placeholder: "Abbrev",
+                      onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, "abbreviation", value)),
+                      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, "abbreviation", value)),
+                      onKeyDown: stopEditableKeyPropagation,
+                      onChange: (event) => updateStaffRankCell(rowIndex, serviceIndex, "abbreviation", event.target.value),
+                      className: `min-w-0 rounded border px-2 py-1 text-xs font-semibold ${canEditRankTerminology ? "border-gray-600 bg-gray-900 text-white placeholder:text-gray-600" : "border-gray-700 bg-gray-800 text-gray-400 cursor-not-allowed"}`
+                    }
+                  )
+                ] }) }, `${row.grade}-${serviceIndex}`))
+              ] }, row.grade)) })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-relaxed text-gray-400", children: "Civilian and contractor titles remain grouped after the service rank levels." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: personnelDisplaySettings.useSeparateTraineeRankOrder ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm ${canEditRankTerminology ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-50" : "border-gray-700 bg-gray-900/60 text-gray-400"}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "Use separate trainee rank order" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -69935,7 +70143,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               )
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 leading-relaxed text-cyan-50/75", children: "Turn on the switch if trainees use a different rank structure or if the organisation wants trainees displayed differently from staff." })
-          ] })
+          ] }) })
         ] })
       ] })
     ] }),
