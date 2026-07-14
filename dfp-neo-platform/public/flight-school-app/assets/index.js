@@ -59582,6 +59582,10 @@ const SettingsView = ({
       changes: "Updated scheduling limit categories"
     });
   };
+  const handleCancelLimits = () => {
+    setTempLimits(JSON.parse(JSON.stringify(eventLimits)));
+    setIsEditingLimits(false);
+  };
   const handleUpdatePreferredDutyPeriod = (value) => {
     onUpdatePreferredDutyPeriod(value);
     logAudit({
@@ -60066,7 +60070,10 @@ const SettingsView = ({
       shouldShowSection("event-limits") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-2xl h-fit", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Events Limits" }),
-          isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveLimits, className: standardSettingsButtonClass, children: "Save" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+          isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveLimits, className: standardSettingsButtonClass, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelLimits, className: standardSettingsButtonClass, children: "Cancel" })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: handleEditLimits,

@@ -803,6 +803,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         });
     };
 
+    const handleCancelLimits = () => {
+        setTempLimits(JSON.parse(JSON.stringify(eventLimits)));
+        setIsEditingLimits(false);
+    };
+
     // Duty & Turnaround Handlers with Audit Logging
     const handleUpdatePreferredDutyPeriod = (value: number) => {
         onUpdatePreferredDutyPeriod(value);
@@ -1400,7 +1405,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <div className="p-4 flex justify-between items-center border-b border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-200">Events Limits</h2>
                             {isEditingLimits ? (
-                                <button onClick={handleSaveLimits} className={standardSettingsButtonClass}>Save</button>
+                                <div className="flex gap-[1px]">
+                                    <button onClick={handleSaveLimits} className={standardSettingsButtonClass}>Save</button>
+                                    <button onClick={handleCancelLimits} className={standardSettingsButtonClass}>Cancel</button>
+                                </div>
                             ) : (
                                 <button 
                                 onClick={handleEditLimits} 
