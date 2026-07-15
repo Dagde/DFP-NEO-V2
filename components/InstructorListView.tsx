@@ -264,6 +264,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       () => getSimIpDisplayLabel(personnelDisplaySettings),
       [personnelDisplaySettings],
   );
+  const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
+  const contractorStaffGroupLabel = simIpDisplayLabel.trim() || 'Contractor Staff';
 
   const getPooledCrewFlightRoleOrder = (instructor: Instructor): number => {
       const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
@@ -576,16 +578,20 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     setSelectedInstructor(null);
   }
 
-  const renderInstructorList = (instructors: Instructor[]) => (
+  const renderInstructorList = (instructors: Instructor[], muted = false) => (
     <ul className="space-y-2">
       {instructors.map((instructor, index) => {
         const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
-        const roleTextClass = useRoleColours ? roleDisplay.textClassName : 'text-gray-300';
+        const roleTextClass = muted ? 'text-gray-500' : (useRoleColours ? roleDisplay.textClassName : 'text-gray-300');
         return (
           <li
             id={`instructor-row-${instructor.name}`}
             key={instructor.name}
-            className={`group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? 'bg-sky-700 text-white' : 'bg-gray-700/30 text-gray-300'} ${isArchiveMode ? 'hover:bg-red-900/70' : 'hover:bg-sky-800 hover:text-white'}`}
+            className={`group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${
+                muted
+                    ? 'bg-gray-800/25 text-gray-500 hover:bg-gray-800/40 hover:text-gray-400'
+                    : `${selectedInstructor?.name === instructor.name ? 'bg-sky-700 text-white' : 'bg-gray-700/30 text-gray-300'} ${isArchiveMode ? 'hover:bg-red-900/70' : 'hover:bg-sky-800 hover:text-white'}`
+            }`}
             onMouseEnter={(e) => handleMouseEnter(e, instructor.name)}
             onMouseLeave={handleMouseLeave}
             onClick={(e) => {
@@ -598,8 +604,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             title={useRoleColours ? `${instructor.name} - ${roleDisplay.label}` : instructor.name}
           >
             <div className="flex items-center space-x-3 flex-grow min-w-0">
-               <span className="font-mono text-gray-500 w-6 flex-shrink-0 text-right text-xs">{index + 1}.</span>
-              <span className="font-mono text-gray-500 w-12 flex-shrink-0 text-right text-xs">{instructor.rank}</span>
+               <span className={`font-mono w-6 flex-shrink-0 text-right text-xs ${muted ? 'text-gray-600' : 'text-gray-500'}`}>{index + 1}.</span>
+              <span className={`font-mono w-12 flex-shrink-0 text-right text-xs ${muted ? 'text-gray-600' : 'text-gray-500'}`}>{instructor.rank}</span>
               <span className={`flex-grow truncate font-medium ${roleTextClass}`}>{instructor.name}</span>
             </div>
             {useRoleColours && (
@@ -677,15 +683,19 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const renderSupportStaffCards = () => (
     <>
-        {/* SIM IPs - single combined card regardless of unit */}
         {simIps.length > 0 && (
-            <div className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-                <div className="p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
-                    <h3 className="text-lg font-bold text-teal-400">{simIpDisplayLabel}</h3>
-                    <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIps.length}</span>
+            <div
+                className={`bg-gray-800 border rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh] ${
+                    contractorStaffEnabled ? 'border-teal-900/50' : 'border-gray-700/70 opacity-70'
+                }`}
+                title={contractorStaffEnabled ? contractorStaffGroupLabel : `${contractorStaffGroupLabel} is disabled in Settings`}
+            >
+                <div className={`p-3 border-b bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm ${contractorStaffEnabled ? 'border-teal-900/50' : 'border-gray-700/70'}`}>
+                    <h3 className={`text-lg font-bold ${contractorStaffEnabled ? 'text-teal-400' : 'text-gray-500'}`}>{contractorStaffGroupLabel}</h3>
+                    <span className={`text-xs font-mono px-2 py-1 rounded-full ${contractorStaffEnabled ? 'bg-gray-700 text-gray-300' : 'bg-gray-800 text-gray-500'}`}>{simIps.length}</span>
                 </div>
                 <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-                    {renderInstructorList(simIps)}
+                    {renderInstructorList(simIps, !contractorStaffEnabled)}
                 </div>
             </div>
         )}

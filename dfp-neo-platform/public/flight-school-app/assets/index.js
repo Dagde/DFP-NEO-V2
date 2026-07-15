@@ -51625,6 +51625,8 @@ const InstructorListView = ({
     () => getSimIpDisplayLabel(personnelDisplaySettings),
     [personnelDisplaySettings]
   );
+  const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
+  const contractorStaffGroupLabel = simIpDisplayLabel.trim() || "Contractor Staff";
   const getPooledCrewFlightRoleOrder = (instructor) => {
     const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
     const roleText = `${instructor.role || ""} ${roleDisplay.label || ""}`.trim().toLowerCase();
@@ -51889,14 +51891,14 @@ const InstructorListView = ({
     setIsArchiveMode(!isArchiveMode);
     setSelectedInstructor(null);
   };
-  const renderInstructorList = (instructors) => /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: instructors.map((instructor, index) => {
+  const renderInstructorList = (instructors, muted = false) => /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: instructors.map((instructor, index) => {
     const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
-    const roleTextClass = useRoleColours ? roleDisplay.textClassName : "text-gray-300";
+    const roleTextClass = muted ? "text-gray-500" : useRoleColours ? roleDisplay.textClassName : "text-gray-300";
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "li",
       {
         id: `instructor-row-${instructor.name}`,
-        className: `group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? "bg-sky-700 text-white" : "bg-gray-700/30 text-gray-300"} ${isArchiveMode ? "hover:bg-red-900/70" : "hover:bg-sky-800 hover:text-white"}`,
+        className: `group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${muted ? "bg-gray-800/25 text-gray-500 hover:bg-gray-800/40 hover:text-gray-400" : `${selectedInstructor?.name === instructor.name ? "bg-sky-700 text-white" : "bg-gray-700/30 text-gray-300"} ${isArchiveMode ? "hover:bg-red-900/70" : "hover:bg-sky-800 hover:text-white"}`}`,
         onMouseEnter: (e) => handleMouseEnter(e, instructor.name),
         onMouseLeave: handleMouseLeave,
         onClick: (e) => {
@@ -51909,11 +51911,11 @@ const InstructorListView = ({
         title: useRoleColours ? `${instructor.name} - ${roleDisplay.label}` : instructor.name,
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3 flex-grow min-w-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-gray-500 w-6 flex-shrink-0 text-right text-xs", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `font-mono w-6 flex-shrink-0 text-right text-xs ${muted ? "text-gray-600" : "text-gray-500"}`, children: [
               index + 1,
               "."
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-12 flex-shrink-0 text-right text-xs", children: instructor.rank }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-mono w-12 flex-shrink-0 text-right text-xs ${muted ? "text-gray-600" : "text-gray-500"}`, children: instructor.rank }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `flex-grow truncate font-medium ${roleTextClass}`, children: instructor.name })
           ] }),
           useRoleColours && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `max-w-[6rem] flex-shrink-0 truncate text-[10px] font-semibold ${roleTextClass}`, children: roleDisplay.label }),
@@ -51970,13 +51972,20 @@ const InstructorListView = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(fixedCrewGroups[crewName]) })
   ] }, `fixed-crew-${crewName}`);
   const renderSupportStaffCards = () => /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    simIps.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-teal-400", children: simIpDisplayLabel }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: simIps.length })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(simIps) })
-    ] }),
+    simIps.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: `bg-gray-800 border rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh] ${contractorStaffEnabled ? "border-teal-900/50" : "border-gray-700/70 opacity-70"}`,
+        title: contractorStaffEnabled ? contractorStaffGroupLabel : `${contractorStaffGroupLabel} is disabled in Settings`,
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-3 border-b bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm ${contractorStaffEnabled ? "border-teal-900/50" : "border-gray-700/70"}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: `text-lg font-bold ${contractorStaffEnabled ? "text-teal-400" : "text-gray-500"}`, children: contractorStaffGroupLabel }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xs font-mono px-2 py-1 rounded-full ${contractorStaffEnabled ? "bg-gray-700 text-gray-300" : "bg-gray-800 text-gray-500"}`, children: simIps.length })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(simIps, !contractorStaffEnabled) })
+        ]
+      }
+    ),
     sortedOfiUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-purple-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
