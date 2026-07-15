@@ -1350,7 +1350,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         </label>
                                     </div>
                                     <p className="mt-2 text-xs text-gray-500">
-                                        Deployment tiles, Runway DI/TWR DI and Duty Sup events are exempt from these authorisation warning colours.
+                                        Deployment tiles, Runway DI/TWR DI and Duty Supervisor events are exempt from these authorisation warning colours.
                                     </p>
                                 </div>
                             </div>
@@ -1459,7 +1459,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                             ) : <span className="text-white font-mono">{eventLimits.instructor.maxFlightSim || eventLimits.instructor.maxFlightFtd || 2}</span>}
                                         </div>
                                         <div className="flex justify-between items-center gap-3">
-                                            <span className="text-xs text-gray-400">Staff (Flying Supervisor role assigned) - Max Duty Sup session (hrs):</span>
+                                            <span className="text-xs text-gray-400">Staff (Flying Supervisor role assigned) - Max Duty Supervisor session (hrs):</span>
                                             {isEditingLimits ? (
                                                 <input type="number" min="0.25" step="0.25" value={tempLimits.instructor.maxDutySup} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0}})} className="w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                             ) : <span className="text-white font-mono">{eventLimits.instructor.maxDutySup}</span>}
@@ -1479,7 +1479,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                 ) : <span className="text-white font-mono">{eventLimits.exec.maxFlightFtd}</span>}
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-400">Max Duty Sup session (hrs):</span>
+                                                <span className="text-sm text-gray-400">Max Duty Supervisor session (hrs):</span>
                                                 {isEditingLimits ? (
                                                     <input type="number" min="0.25" step="0.25" value={tempLimits.exec.maxDutySup} onChange={e => setTempLimits({...tempLimits, exec: {...tempLimits.exec, maxDutySup: parseFloat(e.target.value) || 0}})} className="w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.exec.maxDutySup}</span>}
@@ -1503,7 +1503,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                 ) : <span className="text-white font-mono">{eventLimits.instructor.maxFlightFtd}</span>}
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-xs text-gray-400">Staff (Flying Supervisor role assigned) - Max Duty Sup session (hrs):</span>
+                                                <span className="text-xs text-gray-400">Staff (Flying Supervisor role assigned) - Max Duty Supervisor session (hrs):</span>
                                                 {isEditingLimits ? (
                                                     <input type="number" min="0.25" step="0.25" value={tempLimits.instructor.maxDutySup} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0}})} className="w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.instructor.maxDutySup}</span>}
