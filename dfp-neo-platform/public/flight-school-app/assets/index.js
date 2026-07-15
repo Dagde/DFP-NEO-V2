@@ -71528,8 +71528,7 @@ const sectionGroups = [
       "platform-permission-profiles",
       "user-list",
       "staff-database",
-      "trainee-database",
-      "people-profile"
+      "trainee-database"
     ]
   },
   {
@@ -71543,10 +71542,10 @@ const sectionGroups = [
   {
     label: "DFP Build Rules",
     shortLabel: "Rules",
-    description: "Event limits, duty rules, turnarounds and scheduling rule sets. Daily build factors stay in NEO Build > Priorities.",
+    description: "Event limits, duty rules, turnarounds, course exclusions and scheduling rule sets. Daily build factors stay in NEO Build > Priorities.",
     accent: "amber",
     defaultSection: "scheduling-rules",
-    sections: ["scheduling-rules"]
+    sections: ["scheduling-rules", "people-profile"]
   },
   {
     label: "Records & Data",
