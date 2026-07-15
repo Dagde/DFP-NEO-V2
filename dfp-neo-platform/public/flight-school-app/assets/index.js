@@ -49748,6 +49748,12 @@ const InstructorProfileFlyout = ({
   };
   const exp = priorExperience;
   const assignedQualificationLabels = assignedQualifications.map((id) => activeQualificationOptions.find((qualification) => qualificationMatches(id, qualification))).filter((qualification) => Boolean(qualification)).map((qualification) => qualification.code || qualification.name);
+  const profileRoleDisplay = getStaffRoleDisplay(
+    instructor.role,
+    crewPositionTerminology,
+    instructorLabel,
+    simIpDisplayLabel
+  );
   const TraineeIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[60] flex items-center justify-center", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#141e2e] rounded-lg shadow-2xl w-[calc(100vw-2rem)] md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[94vh] flex flex-col border border-gray-600 overflow-hidden", onClick: (e) => e.stopPropagation(), children: [
@@ -50576,7 +50582,7 @@ const InstructorProfileFlyout = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Role" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300 font-medium", children: getCrewPositionDisplayLabel(instructor.role, crewPositionTerminology, "N/A") })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300 font-medium", children: profileRoleDisplay.label })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Category" }),

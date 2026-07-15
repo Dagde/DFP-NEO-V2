@@ -36,6 +36,7 @@ import {
   type StaffQualificationCatalogue,
   type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
+import { getStaffRoleDisplay } from '../utils/staffRoleColours';
 
 type LegacyQualificationField = 'isCommandingOfficer' | 'isCFI' | 'isExecutive' | 'isFlyingSupervisor' | 'isTestingOfficer' | 'isIRE' | 'isQFI' | 'isOFI' | 'isDeputyFlightCommander' | 'isContractor' | 'isAdminStaff';
 
@@ -959,6 +960,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     .map(id => activeQualificationOptions.find(qualification => qualificationMatches(id, qualification)))
     .filter((qualification): qualification is StaffQualificationDefinition => Boolean(qualification))
     .map(qualification => qualification.code || qualification.name);
+  const profileRoleDisplay = getStaffRoleDisplay(
+    instructor.role,
+    crewPositionTerminology,
+    instructorLabel,
+    simIpDisplayLabel,
+  );
 
   // Trainee avatar icon
   const TraineeIcon = () => (
@@ -1822,7 +1829,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
                         {/* Row 1 */}
                         <div><span className="text-gray-400 block text-[10px]">ID Number</span><span className="text-white font-medium">{instructor.idNumber}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{getCrewPositionDisplayLabel(instructor.role, crewPositionTerminology, 'N/A')}</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{profileRoleDisplay.label}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{instructor.category}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{displayCallsign || '[None]'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">{suppressProfileCallsign ? '[None]' : instructor.secondaryCallsign || '[None]'}</span></div>
