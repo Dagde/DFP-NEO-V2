@@ -575,6 +575,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const sctShortLabel = sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel;
     const sctLongLabel = sctTerminology.longLabel || DEFAULT_SCT_TERMINOLOGY.longLabel;
     const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
+    const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
+    const contractorStaffLimitLabel = simIpDisplayLabel.trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
     const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
     const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
     const [isEditingBusinessRules, setIsEditingBusinessRules] = useState(false);
@@ -1547,24 +1549,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                             </div>
                                         </div>
                                     </fieldset>
-                                    {/* Contractor staff / SIM IPs */}
-                                    <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                        <legend className="px-2 text-sm font-semibold text-gray-300">{simIpDisplayLabel}</legend>
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd} per day:</span>
-                                                {isEditingLimits ? (
-                                                    <input type="number" value={tempLimits.simIp.maxFtd || 2} onChange={e => setTempLimits({...tempLimits, simIp: {...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                                ) : <span className="text-white font-mono">{eventLimits.simIp.maxFtd}</span>}
+                                    {contractorStaffEnabled ? (
+                                        <fieldset className="p-3 border border-gray-600 rounded-lg">
+                                            <legend className="px-2 text-sm font-semibold text-gray-300">{contractorStaffLimitLabel}</legend>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd} per day:</span>
+                                                    {isEditingLimits ? (
+                                                        <input type="number" value={tempLimits.simIp.maxFtd || 2} onChange={e => setTempLimits({...tempLimits, simIp: {...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                                    ) : <span className="text-white font-mono">{eventLimits.simIp.maxFtd}</span>}
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm text-gray-400">Max total events per day:</span>
+                                                    {isEditingLimits ? (
+                                                        <input type="number" value={tempLimits.simIp.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, simIp: {...tempLimits.simIp, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                                    ) : <span className="text-white font-mono">{eventLimits.simIp.maxTotal}</span>}
+                                                </div>
                                             </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-400">Max total events per day:</span>
-                                                {isEditingLimits ? (
-                                                    <input type="number" value={tempLimits.simIp.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, simIp: {...tempLimits.simIp, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                                ) : <span className="text-white font-mono">{eventLimits.simIp.maxTotal}</span>}
-                                            </div>
-                                        </div>
-                                    </fieldset>
+                                        </fieldset>
+                                    ) : null}
                                 </>
                             )}
                         </div>
