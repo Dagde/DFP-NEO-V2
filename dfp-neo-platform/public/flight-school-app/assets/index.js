@@ -71503,7 +71503,7 @@ const sectionDescriptions = {
   "sct-events": "Event scoring rules and triggers",
   "people-profile": "Assign NEO Build training basis and exclusions",
   "scheduling-rules": "Event limits, duty rules, turnarounds and dispatch limits",
-  "event-limits": "Define operational thresholds",
+  "event-limits": "Set daily flight, simulator and duty supervisor limits",
   "duty-turnaround": "Crew duty limits & rest times",
   "business-rules": "Dispatch rate, stagger and flight tile warning rules",
   "data-loaders": "Download blank upload templates",
