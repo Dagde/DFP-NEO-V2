@@ -428,7 +428,7 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
 
 // Descriptions for each section
 const sectionDescriptions: Record<SettingsMenuSection, string> = {
-  'scoring-matrix': 'Configure scoring logic and weighting',
+  'scoring-matrix': 'Configure report elements, grades and performance text',
   'training-report-template': 'Configure report labels, grades and repeat rules',
   'currencies': 'Manage currency expiry requirements',
   'sct-events': 'Event scoring rules and triggers',

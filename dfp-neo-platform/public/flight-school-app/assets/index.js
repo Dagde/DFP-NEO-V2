@@ -71497,7 +71497,7 @@ const sectionIcons = {
   "emergency": /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full h-full flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-10 h-10 rounded-full bg-gradient-to-b from-red-400 to-red-600 \n        border-2 border-red-500 shadow-[0_3px_0_0_rgba(153,27,27,1),0_4px_8px_rgba(0,0,0,0.4)]\n        flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { viewBox: "0 0 24 24", fill: "currentColor", className: "w-5 h-5 text-white drop-shadow", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" }) }) }) })
 };
 const sectionDescriptions = {
-  "scoring-matrix": "Configure scoring logic and weighting",
+  "scoring-matrix": "Configure report elements, grades and performance text",
   "training-report-template": "Configure report labels, grades and repeat rules",
   "currencies": "Manage currency expiry requirements",
   "sct-events": "Event scoring rules and triggers",
