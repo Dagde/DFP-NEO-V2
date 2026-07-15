@@ -453,9 +453,9 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'platform-master-lmp-access': 'Location and unit access to Master LMPs',
   'platform-resource-pools': 'Aircraft types, shared pools and resource counts',
   'platform-unit-modules': 'Enable features and modules for each unit',
-  'platform-deployment-readiness': 'SaaS, on-premise, offline and hybrid deployment posture',
+  'platform-deployment-readiness': 'SaaS, on-premise, offline and hybrid readiness checks',
   'platform-operational-runbook': 'Support, backup, restore, update and accreditation records',
-  'platform-licensing': 'Licence model, entitlements and validation posture',
+  'platform-licensing': 'Licence model, entitlements and validation status',
   'platform-permission-profiles': 'Reusable permission profiles for user roles',
   'platform-rank-terminology': 'Rank ordering and local instructor terminology',
   'platform-user-access': 'Control where each user can work',
@@ -527,7 +527,7 @@ const sectionGroups: {
   {
     label: 'Platform & Deployment',
     shortLabel: 'Platform',
-    description: 'Customer, bases, units, aircraft pools, enabled features, licensing and deployment posture.',
+    description: 'Customer, bases, units, aircraft pools, enabled features, licensing and deployment readiness.',
     accent: 'cyan',
     defaultSection: 'platform-configuration-health',
     sections: [
