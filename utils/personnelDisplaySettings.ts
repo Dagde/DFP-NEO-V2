@@ -384,6 +384,12 @@ const normaliseCivilianTitles = (value: unknown): string[] => {
   return titles.length ? titles : DEFAULT_CIVILIAN_TITLES;
 };
 
+const preserveEditableTextSetting = (value: unknown, fallback: string): string => {
+  if (value === undefined || value === null) return fallback;
+  const text = String(value);
+  return text.trim() ? text : fallback;
+};
+
 const CIVILIAN_EQUAL_RANK_KEYS = new Set(DEFAULT_CIVILIAN_TITLES.map(rankKey));
 
 const groupLegacyCivilianRanks = (rankOrder: string[]): string[] => {
@@ -454,7 +460,7 @@ export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDispl
   const civilianTitles = normaliseCivilianTitles(input?.civilianTitles || (input as any)?.civilianRankTitles);
   const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, getRankOrderFromEquivalency({ ...staffRankEquivalency, civilianTitles } as any)));
   const traineeRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder));
-  const simIpDisplayLabel = String(input?.simIpDisplayLabel || '').trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
+  const simIpDisplayLabel = preserveEditableTextSetting(input?.simIpDisplayLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel);
   const contractorStaffEventEligibility = {
     ...DEFAULT_PERSONNEL_DISPLAY_SETTINGS.contractorStaffEventEligibility,
     ...(input?.contractorStaffEventEligibility || {}),
@@ -467,8 +473,8 @@ export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDispl
     traineeRankOrder,
     staffRankEquivalency,
     civilianTitles,
-    civilianContractorGroupName: String(input?.civilianContractorGroupName || '').trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.civilianContractorGroupName,
-    instructorLabel: String(input?.instructorLabel || '').trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel,
+    civilianContractorGroupName: preserveEditableTextSetting(input?.civilianContractorGroupName, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.civilianContractorGroupName),
+    instructorLabel: preserveEditableTextSetting(input?.instructorLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel),
     simIpDisplayEnabled: input?.simIpDisplayEnabled !== false,
     simIpDisplayLabel,
     contractorStaffEventEligibility: {
