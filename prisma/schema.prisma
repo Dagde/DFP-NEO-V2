@@ -345,14 +345,13 @@ model DailySnapshot {
 }
 
 // CourseSettings: Global course-related settings
-// Currently stores the neoBuildCourse - which Master LMP to use for Individual LMP generation
+// Stores academic LMP selection and course exclusions used by NEO Build.
 model CourseSettings {
-  id              String   @id @default(cuid())
-  neoBuildCourse  String?  // The course code whose Master LMP is used for Individual LMP generation (e.g., "BPC+IPC", "FIC")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([neoBuildCourse])
+  id                  String   @id @default(cuid())
+  selectedAcademicLmp String?
+  excludedCourses     String   @default("[]")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 // CourseAcademicProgress: Tracks course-level academic event completion

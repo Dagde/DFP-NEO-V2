@@ -8700,11 +8700,10 @@ async function seedCommercialConfigIfEmpty(db) {
 
 async function ensureCourseSettingsTables(db) {
   try {
-    // CourseSettings: stores selectedAcademicLmp + excludedCourses. The legacy neoBuildCourse column is retained if present.
+    // CourseSettings: stores selectedAcademicLmp + excludedCourses.
     await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "CourseSettings" (
         "id"                  TEXT         NOT NULL,
-        "neoBuildCourse"      TEXT,
         "selectedAcademicLmp" TEXT,
         "excludedCourses"     TEXT         NOT NULL DEFAULT '[]',
         "createdAt"           TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
