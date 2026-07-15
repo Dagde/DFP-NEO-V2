@@ -7608,6 +7608,11 @@ function generateDfpInternal(
             slowCalls: [] as any[],
             summary: null as any,
         },
+        zeroTileInvestigation: {
+            purpose: 'Tracks why NEO Build produced no visible tiles.',
+            checkpoints: [] as any[],
+            conclusion: [] as string[],
+        },
         final: null,
     };
 
@@ -11408,6 +11413,14 @@ function generateDfpInternal(
         plusOneCode: ev.plusOne?.code || null,
         plusOneType: ev.plusOne?.type || null,
         });
+    });
+    neoBuildDiag.zeroTileInvestigation.checkpoints.push({
+        stage: 'category-lists-built',
+        activeTrainees: activeTrainees.length,
+        traineeLMPs: traineeLMPs.size,
+        nextEventLists: neoBuildDiag.nextEventLists,
+        noNextByCourse: neoBuildDiag.noNextByCourse,
+        nextSamples: neoBuildDiag.nextSamples.slice(0, 40),
     });
     saveNeoBuildDiag('category-lists-built');
     buildDebugLog(
@@ -20795,6 +20808,55 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             traineeName: (event as any)._traineeName,
         })),
     };
+    if (sortedEvents.length === 0) {
+        const scheduleListSummary = Object.fromEntries(
+            Object.entries(neoBuildDiag.scheduleLists || {}).map(([name, diag]: [string, any]) => [
+                name,
+                {
+                    input: diag.input ?? null,
+                    attempts: diag.attempts ?? null,
+                    successes: diag.successes ?? null,
+                    generatedDelta: diag.generatedDelta ?? null,
+                    unplaced: Array.isArray(diag.unplaced) ? diag.unplaced.slice(0, 30) : [],
+                    rejectionSummary: diag.rejectionSummary || diag.rejections || null,
+                    rejectionSamples: Array.isArray(diag.rejectionSamples) ? diag.rejectionSamples.slice(0, 20) : [],
+                },
+            ])
+        );
+        const nextTotal = Object.values(neoBuildDiag.nextEventLists?.next || {})
+            .reduce((sum: number, value: any) => sum + (Number(value) || 0), 0);
+        const conclusions: string[] = [];
+        if ((neoBuildDiag.input?.trainees || 0) === 0) conclusions.push('Build received zero trainees.');
+        if ((neoBuildDiag.activeTrainees?.total || 0) === 0) conclusions.push('All trainees were filtered out before next-event classification.');
+        if ((neoBuildDiag.input?.traineeLmps || 0) === 0) conclusions.push('Build received zero Individual LMP records.');
+        if (nextTotal === 0 && (neoBuildDiag.activeTrainees?.total || 0) > 0) conclusions.push('Active trainees exist, but none had a schedulable next event.');
+        if (nextTotal > 0) conclusions.push('Schedulable next-event buckets existed, but no schedule list placed an event; inspect scheduleListSummary rejection samples.');
+        if (generatedEventsBeforeFinalCleanup > 0 && sortedEvents.length === 0) conclusions.push('Events existed before final cleanup but all were removed by final cleanup guards.');
+        if (conclusions.length === 0) conclusions.push('No dominant zero-tile cause was inferred; inspect checkpoints and scheduleListSummary.');
+        neoBuildDiag.zeroTileInvestigation.checkpoints.push({
+            stage: 'final-zero-output',
+            generatedEventsBeforeFinalCleanup,
+            finalCleanup: neoBuildDiag.finalCleanup,
+            final: neoBuildDiag.final,
+            scheduleListSummary,
+        });
+        neoBuildDiag.zeroTileInvestigation.conclusion = conclusions;
+        console.error('[NEO-Build][ZeroTileInvestigation] Build produced zero tiles.', {
+            buildDate,
+            conclusions,
+            input: neoBuildDiag.input,
+            activeTrainees: neoBuildDiag.activeTrainees,
+            nextEventLists: neoBuildDiag.nextEventLists,
+            finalCleanup: neoBuildDiag.finalCleanup,
+            scheduleListSummary,
+            download: 'Run __downloadNeoBuildDiagnostic() in DevTools or use the downloaded NEO Build diagnostic file.',
+        });
+        try {
+            localStorage.setItem('neo_build_zero_tile_trace', JSON.stringify(neoBuildDiag.zeroTileInvestigation));
+        } catch (error) {
+            console.warn('[NEO-Build][ZeroTileInvestigation] Failed to save zero-tile trace:', error);
+        }
+    }
     saveCurrencyPriorityDiagnostics('final');
     saveNeoBuildDiag('final');
     if (sortedEvents.length === 0 || windowNormalisationWarnings.length > 0 || normalisedFlyingWindowExclusions.length > 0) {
@@ -34877,6 +34939,66 @@ const App: React.FC = () => {
                     highestPriorityEvents: config.highestPriorityEvents.length,
                     buildDate: config.buildDate
                 });
+                const buildInputTrace = {
+                    timestamp: new Date().toISOString(),
+                    stage: 'before-generateDfpInternal',
+                    buildDate: config.buildDate,
+                    location: school,
+                    activeUnitCode,
+                    activeContextUnitCodes,
+                    operationalModel: activeOperationalModel,
+                    inputs: {
+                        instructors: config.instructors.length,
+                        trainees: config.trainees.length,
+                        syllabus: config.syllabus.length,
+                        traineeLMPs: config.traineeLMPs.size,
+                        scoresTrainees: config.scores.size,
+                        highestPriorityEvents: config.highestPriorityEvents.length,
+                        remedialRequests: config.remedialRequests.length,
+                        sctFlights: config.sctFlights.length,
+                        sctFtds: config.sctFtds.length,
+                    },
+                    resources: {
+                        availableAircraftCount: config.availableAircraftCount,
+                        ftdCount: config.ftdCount,
+                        cptCount: config.cptCount,
+                        aircraftConfigCapacities: config.aircraftConfigCapacities || null,
+                        resourceContext: config.runtimeResourceContext || null,
+                    },
+                    eventLimits: config.eventLimits,
+                    buildWindows: {
+                        dayStart: config.dayStart,
+                        dayEnd: config.dayEnd,
+                        ftdStart: config.ftdStart,
+                        ftdEnd: config.ftdEnd,
+                        allowNightFlying: config.allowNightFlying,
+                        commenceNightFlying: config.commenceNightFlying,
+                        ceaseNightFlying: config.ceaseNightFlying,
+                        flyingWindowExclusions: config.flyingWindowExclusions,
+                    },
+                    samples: {
+                        trainees: config.trainees.slice(0, 20).map((trainee: any) => ({
+                            name: trainee.fullName || trainee.name,
+                            course: trainee.course,
+                            unit: trainee.unit,
+                            paused: trainee.isPaused === true,
+                            lmpEvents: config.traineeLMPs.get(trainee.fullName || trainee.name)?.length || 0,
+                        })),
+                        instructors: config.instructors.slice(0, 20).map((staff: any) => ({
+                            name: staff.name,
+                            role: staff.role,
+                            unit: staff.unit,
+                            category: staff.category,
+                            isAdminStaff: staff.isAdminStaff === true,
+                        })),
+                    },
+                };
+                console.info('[NEO-Build][InputTrace]', buildInputTrace);
+                try {
+                    localStorage.setItem('neo_build_input_trace', JSON.stringify(buildInputTrace));
+                } catch (error) {
+                    console.warn('[NEO-Build][InputTrace] Failed to save input trace:', error);
+                }
 
                 markNeoBuildTiming(timingReport, 'generateDfpInternal:start');
                 const generated = generateDfpInternal(config, setDfpBuildProgress, buildPublishedSchedules);
