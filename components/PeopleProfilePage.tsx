@@ -60,8 +60,8 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
     const unlockForEdit = async () => {
         if (isReadOnly) return;
         const password = await showDarkPrompt({
-            title: 'Edit NEO Build People Profile',
-            message: 'Enter your password to edit NEO Build people profile settings.',
+            title: 'Edit NEO Build Course Exclusions',
+            message: 'Enter your password to edit NEO Build course exclusions.',
             inputLabel: 'Password',
             inputType: 'password',
             inputPlaceholder: 'Enter password',
@@ -73,7 +73,7 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
         try {
             const isValid = await verifyCurrentUserPassword(password);
             if (!isValid) {
-                await showDarkAlert('The password was not accepted.', 'NEO Build People Profile Locked', 'warning');
+                await showDarkAlert('The password was not accepted.', 'NEO Build Course Exclusions Locked', 'warning');
                 return;
             }
             setIsEditUnlocked(true);

@@ -71131,8 +71131,8 @@ const PeopleProfilePage = ({
   const unlockForEdit = async () => {
     if (isReadOnly) return;
     const password = await showDarkPrompt({
-      title: "Edit NEO Build People Profile",
-      message: "Enter your password to edit NEO Build people profile settings.",
+      title: "Edit NEO Build Course Exclusions",
+      message: "Enter your password to edit NEO Build course exclusions.",
       inputLabel: "Password",
       inputType: "password",
       inputPlaceholder: "Enter password",
@@ -71144,7 +71144,7 @@ const PeopleProfilePage = ({
     try {
       const isValid = await verifyCurrentUserPassword(password);
       if (!isValid) {
-        await showDarkAlert("The password was not accepted.", "NEO Build People Profile Locked", "warning");
+        await showDarkAlert("The password was not accepted.", "NEO Build Course Exclusions Locked", "warning");
         return;
       }
       setIsEditUnlocked(true);
@@ -71275,7 +71275,7 @@ const sectionLabels = {
   "training-report-template": "Training Reports",
   "currencies": "Currency Requirements",
   "sct-events": "SCT Events",
-  "people-profile": "NEO Build People Profile",
+  "people-profile": "NEO Build Course Exclusions",
   "scheduling-rules": "Scheduling Rules",
   "event-limits": "Event Limits",
   "duty-turnaround": "Duty & Turnaround",
@@ -71409,7 +71409,7 @@ const sectionDescriptions = {
   "training-report-template": "Configure report labels, grades and repeat rules",
   "currencies": "Manage currency expiry requirements",
   "sct-events": "Event scoring rules and triggers",
-  "people-profile": "Select the Master LMP basis and course exclusions for NEO Build",
+  "people-profile": "Select courses that NEO Build should leave out of schedule generation",
   "scheduling-rules": "Event limits, duty rules, turnarounds and dispatch limits",
   "event-limits": "Set daily event limits and duty supervisor session limits",
   "duty-turnaround": "Crew duty limits & rest times",
