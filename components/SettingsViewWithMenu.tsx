@@ -245,7 +245,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'sct-events': 'SCT Events',
     'people-profile': 'NEO Build Course Exclusions',
     'scheduling-rules': 'Scheduling Rules',
-    'event-limits': 'Daily Event Limits',
+    'event-limits': 'Event Limits',
     'duty-turnaround': 'Duty & Turnaround',
     'business-rules': 'Business Rules',
     'data-loaders': 'Template Downloads',

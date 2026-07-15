@@ -60190,7 +60190,7 @@ const SettingsView = ({
     setIsEditingLimits(false);
     onShowSuccess("Daily event limits updated");
     logAudit({
-      page: "Settings - Daily Event Limits",
+      page: "Settings - Event Limits",
       action: "update",
       description: "Updated event scheduling limits",
       changes: "Updated scheduling limit categories"
@@ -60671,7 +60671,7 @@ const SettingsView = ({
       ] }),
       shouldShowSection("event-limits") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-2xl h-fit", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Daily Event Limits" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Event Limits" }),
           isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveLimits, className: standardSettingsButtonClass, children: "Save" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelLimits, className: standardSettingsButtonClass, children: "Cancel" })
@@ -71449,7 +71449,7 @@ const sectionLabels = {
   "sct-events": "SCT Events",
   "people-profile": "NEO Build Course Exclusions",
   "scheduling-rules": "Scheduling Rules",
-  "event-limits": "Daily Event Limits",
+  "event-limits": "Event Limits",
   "duty-turnaround": "Duty & Turnaround",
   "business-rules": "Business Rules",
   "data-loaders": "Template Downloads",
