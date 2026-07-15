@@ -71866,7 +71866,11 @@ const SettingsViewWithMenu = (props) => {
     }
     openSelectedGroup();
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-settings-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", onKeyDownCapture: stopEditableKeyPropagation, children: [
+  const handleSettingsShellKeyDownCapture = (event) => {
+    if (isEditableElement(event.target)) return;
+    stopEditableKeyPropagation(event);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-settings-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", onKeyDownCapture: handleSettingsShellKeyDownCapture, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500", children: "Find Setting" }),

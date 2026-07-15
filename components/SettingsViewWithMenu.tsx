@@ -11,7 +11,7 @@ import PlatformConfigurationSettings from './PlatformConfigurationSettings';
 import PeopleProfilePage from './PeopleProfilePage';
 import CurrencyBuilderView from './CurrencyBuilderView';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CurrencyDefinition, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
-import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { isEditableElement, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import type { TileStatusSettings } from '../utils/tileStatusSettings';
@@ -813,8 +813,13 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         openSelectedGroup();
     };
 
+    const handleSettingsShellKeyDownCapture = (event: React.KeyboardEvent<HTMLElement>) => {
+        if (isEditableElement(event.target)) return;
+        stopEditableKeyPropagation(event);
+    };
+
     return (
-        <div data-settings-view="true" className="flex-1 flex overflow-hidden bg-gray-900" onKeyDownCapture={stopEditableKeyPropagation}>
+        <div data-settings-view="true" className="flex-1 flex overflow-hidden bg-gray-900" onKeyDownCapture={handleSettingsShellKeyDownCapture}>
             <aside className="hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block">
                 <div className="mb-4">
                     <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500">Find Setting</label>
