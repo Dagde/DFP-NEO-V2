@@ -71249,7 +71249,7 @@ const PeopleProfilePage = ({
         })
       ] }),
       isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-yellow-400/70", children: "Read-only mode — Super Admin or Admin access required to change exclusions." }),
-      !isReadOnly && availableCourses.length > 0 && isEditUnlocked && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-1", children: "Changes take effect immediately — no Save required." })
+      !isReadOnly && availableCourses.length > 0 && isEditUnlocked && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-1", children: "Selections save as you change them. Press Save to lock this section." })
     ] })
   ] });
 };

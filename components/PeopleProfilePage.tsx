@@ -215,7 +215,7 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
 
                 {!isReadOnly && availableCourses.length > 0 && isEditUnlocked && (
                     <p className="text-xs text-gray-500 mt-1">
-                        Changes take effect immediately — no Save required.
+                        Selections save as you change them. Press Save to lock this section.
                     </p>
                 )}
             </div>
