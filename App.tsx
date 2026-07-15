@@ -25597,6 +25597,7 @@ const App: React.FC = () => {
         String(instructor?.role || '').trim().toUpperCase() === 'SIM IP'
     );
     const canContractorStaffWorkEventType = (eventType?: string): boolean => {
+        if (!personnelDisplaySettings.simIpDisplayEnabled) return false;
         const key = String(eventType || '').trim().toLowerCase();
         if (key === 'flight') return contractorStaffEventEligibility.flight;
         if (key === 'ftd' || key === 'sim' || key === 'simulator') return contractorStaffEventEligibility.ftd;

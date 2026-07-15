@@ -482,7 +482,7 @@ export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDispl
 
 export const getSimIpDisplayLabel = (settings?: Partial<PersonnelDisplaySettings> | null): string => {
   const normalised = normalisePersonnelDisplaySettings(settings);
-  return normalised.simIpDisplayEnabled ? normalised.simIpDisplayLabel : 'SIM IP';
+  return normalised.simIpDisplayLabel;
 };
 
 export const getPersonnelDisplaySettings = (config?: PlatformConfig | null): PersonnelDisplaySettings => {

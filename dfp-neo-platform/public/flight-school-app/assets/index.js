@@ -3804,7 +3804,7 @@ const normalisePersonnelDisplaySettings = (input) => {
 };
 const getSimIpDisplayLabel = (settings) => {
   const normalised = normalisePersonnelDisplaySettings(settings);
-  return normalised.simIpDisplayEnabled ? normalised.simIpDisplayLabel : "SIM IP";
+  return normalised.simIpDisplayLabel;
 };
 const getPersonnelDisplaySettings = (config) => {
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
@@ -69953,7 +69953,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-personnel-terminology", className: "flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-700 bg-gray-950/70 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Personnel Terminology" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "Configure sort mode, local instructor wording, contractor grouping and the customer-facing training report name." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "Configure rank sorting, staff type labels, civilian titles and customer-facing report labels." })
           ] }),
           renderRankTerminologySectionAction()
         ] }),
@@ -69982,17 +69982,17 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Field,
             {
-              label: "Civilian Contractor Group",
+              label: "Civilian / Contractor Title Group",
               value: personnelDisplaySettings.civilianContractorGroupName,
               disabled: !canEditRankTerminology,
               onChange: (value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value }),
-              info: "Group or title family used for civilian and contractor personnel. Examples: Civilian Contractors, Contract Instructors, Industry Partners."
+              info: "Heading used for civilian and contractor title options in personnel rank/title lists. This does not control Contractor Staff scheduling."
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Use Contractor Staff Display Label" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs leading-relaxed text-gray-400", children: "Turn on to show staff saved as SIM IP under the configured user-facing label. Turn off to show SIM IP." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Enable Contractor Staff" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs leading-relaxed text-gray-400", children: "Turn on this staff type for contracted or civilian personnel who may be scheduled for selected event types." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -70040,15 +70040,15 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Field,
             {
-              label: "Contractor Staff Display Term",
+              label: "Contractor Staff Name",
               value: personnelDisplaySettings.simIpDisplayLabel,
               disabled: !canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled,
               onChange: (value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value }),
-              info: "The display label for staff whose saved role is SIM IP. Changing this label only affects what users see; it does not change the saved role or scheduler logic."
+              info: "The staff type name users see in profiles, staff lists and scheduling views. Examples: Contractor Staff, Contract Instructor, Simulator Instructor."
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Contractor Staff Event Eligibility" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Contractor Staff Can Be Scheduled For" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2", children: [
               { key: "flight", label: "Flight" },
               { key: "ftd", label: "Simulator" },
@@ -70066,7 +70066,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                       {
                         type: "checkbox",
                         checked,
-                        disabled: !canEditRankTerminology,
+                        disabled: !canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled,
                         onChange: (event) => updatePersonnelDisplaySettings({
                           contractorStaffEventEligibility: {
                             ...personnelDisplaySettings.contractorStaffEventEligibility,
@@ -70082,7 +70082,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 option.key
               );
             }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-[11px] leading-relaxed text-gray-500", children: "Controls which event types Contractor Staff can be considered for by NEO Build. The saved staff role remains internal SIM IP for compatibility." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-[11px] leading-relaxed text-gray-500", children: "Choose the event types this staff type may be assigned by NEO Build." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Field,
@@ -103370,6 +103370,7 @@ const App = () => {
   const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
   const isContractorStaffRole2 = (instructor) => String(instructor?.role || "").trim().toUpperCase() === "SIM IP";
   const canContractorStaffWorkEventType2 = (eventType) => {
+    if (!personnelDisplaySettings.simIpDisplayEnabled) return false;
     const key = String(eventType || "").trim().toLowerCase();
     if (key === "flight") return contractorStaffEventEligibility.flight;
     if (key === "ftd" || key === "sim" || key === "simulator") return contractorStaffEventEligibility.ftd;

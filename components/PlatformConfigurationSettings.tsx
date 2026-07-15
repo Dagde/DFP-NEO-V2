@@ -8127,7 +8127,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div>
               <h5 className="text-sm font-bold text-cyan-100">Personnel Terminology</h5>
               <p className="mt-1 text-xs leading-relaxed text-gray-400">
-                Configure sort mode, local instructor wording, contractor grouping and the customer-facing training report name.
+                Configure rank sorting, staff type labels, civilian titles and customer-facing report labels.
               </p>
             </div>
             {renderRankTerminologySectionAction()}
@@ -8149,18 +8149,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               info="The local term shown to users for instructional staff. Examples: QFI, Instructor, Flying Instructor, Flight Instructor."
             />
             <Field
-              label="Civilian Contractor Group"
+              label="Civilian / Contractor Title Group"
               value={personnelDisplaySettings.civilianContractorGroupName}
               disabled={!canEditRankTerminology}
               onChange={(value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value })}
-              info="Group or title family used for civilian and contractor personnel. Examples: Civilian Contractors, Contract Instructors, Industry Partners."
+              info="Heading used for civilian and contractor title options in personnel rank/title lists. This does not control Contractor Staff scheduling."
             />
             <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
               <label className="flex items-start justify-between gap-3">
                 <span>
-                  <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Use Contractor Staff Display Label</span>
+                  <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Enable Contractor Staff</span>
                   <span className="mt-1 block text-xs leading-relaxed text-gray-400">
-                    Turn on to show staff saved as SIM IP under the configured user-facing label. Turn off to show SIM IP.
+                    Turn on this staff type for contracted or civilian personnel who may be scheduled for selected event types.
                   </span>
                 </span>
                 <input
@@ -8203,15 +8203,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
           <div className="grid gap-3 lg:grid-cols-2">
             <Field
-              label="Contractor Staff Display Term"
+              label="Contractor Staff Name"
               value={personnelDisplaySettings.simIpDisplayLabel}
               disabled={!canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled}
               onChange={(value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value })}
-              info="The display label for staff whose saved role is SIM IP. Changing this label only affects what users see; it does not change the saved role or scheduler logic."
+              info="The staff type name users see in profiles, staff lists and scheduling views. Examples: Contractor Staff, Contract Instructor, Simulator Instructor."
             />
             <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                Contractor Staff Event Eligibility
+                Contractor Staff Can Be Scheduled For
               </label>
               <div className="grid gap-2 sm:grid-cols-2">
                 {[
@@ -8233,7 +8233,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <input
                         type="checkbox"
                         checked={checked}
-                        disabled={!canEditRankTerminology}
+                        disabled={!canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled}
                         onChange={(event) => updatePersonnelDisplaySettings({
                           contractorStaffEventEligibility: {
                             ...personnelDisplaySettings.contractorStaffEventEligibility,
@@ -8248,7 +8248,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 })}
               </div>
               <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
-                Controls which event types Contractor Staff can be considered for by NEO Build. The saved staff role remains internal SIM IP for compatibility.
+                Choose the event types this staff type may be assigned by NEO Build.
               </p>
             </div>
             <Field
