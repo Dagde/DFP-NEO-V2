@@ -1966,7 +1966,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Staff sharing" value={organisationSettings.staffSharingEnabled ? 'No staff sharing arrangement includes this unit.' : 'Staff sharing is not enabled for this unit.'} muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Build Rules" description="Current build rule values for this unit." action={<div className="flex flex-nowrap justify-end gap-2">{settingsLink('business-rules', 'Build Rules')}{settingsLink('duty-turnaround', 'Duty & Turnaround')}{settingsLink('event-limits', 'Event Limits')}</div>}>
+                    <UnitSettingsGroup title="Build Rules" description="Current build rule values for this unit." action={<div className="flex flex-nowrap justify-end gap-2">{settingsLink('business-rules', 'Build Rules')}{settingsLink('duty-turnaround', 'Duty & Turnaround')}{settingsLink('event-limits', 'Daily Event Limits')}</div>}>
                         <UnitSettingsReadRow label="Max dispatch per hour" value={buildRules.maxDispatchPerHour ?? 8} />
                         <UnitSettingsReadRow label="Flight dispatch stagger" value={formatMinutes(flightStaggerMinutes)} />
                         <UnitSettingsReadRow label="Sim dispatch stagger" value={formatMinutes(simStaggerMinutes)} />
