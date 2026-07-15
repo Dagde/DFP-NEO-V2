@@ -52,8 +52,11 @@ import {
 } from './utils/tileStatusSettings';
 import {
     comparePeopleByConfiguredRank,
+    DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
     getPersonnelDisplaySettings,
     getSimIpDisplayLabel,
+    normalisePersonnelDisplaySettings,
+    type PersonnelDisplaySettings,
 } from './utils/personnelDisplaySettings';
 import {
     getUnitTrainingReportPhraseBank,
@@ -5831,6 +5834,7 @@ interface DfpConfig {
   runtimeResourceContext?: Record<string, any>;
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
+  personnelDisplaySettings?: Partial<PersonnelDisplaySettings>;
   remedialPrioritySyncTrace?: any[];
   remedialDataMovementTrace?: any[];
   taskProvenancePreBuild?: any;
@@ -6936,6 +6940,30 @@ function generateDfpInternal(
         getEventDayNightClassification,
         staffSharingEnabled, staffSharingUnits, staffSharingGroups
     } = config;
+    const buildPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
+        config.personnelDisplaySettings || DEFAULT_PERSONNEL_DISPLAY_SETTINGS
+    );
+    const buildContractorStaffEventEligibility = buildPersonnelDisplaySettings.contractorStaffEventEligibility;
+    const isContractorStaffRole = (instructor?: Pick<Instructor, 'role'> | null): boolean => (
+        String(instructor?.role || '').trim().toUpperCase() === 'SIM IP'
+    );
+    const canContractorStaffWorkEventType = (eventType?: string): boolean => {
+        if (!buildPersonnelDisplaySettings.simIpDisplayEnabled) return false;
+        const key = String(eventType || '').trim().toLowerCase();
+        if (key === 'flight') return Boolean(buildContractorStaffEventEligibility.flight);
+        if (key === 'ftd' || key === 'sim' || key === 'simulator') return Boolean(buildContractorStaffEventEligibility.ftd);
+        if (key === 'cpt' || key === 'procedural' || key === 'procedural trainer') return Boolean(buildContractorStaffEventEligibility.cpt);
+        if (key === 'ground' || key === 'academic') return Boolean(buildContractorStaffEventEligibility.ground);
+        return false;
+    };
+    const isQfiBuildInstructor = (instructor: Instructor): boolean => (
+        !isContractorStaffRole(instructor) && (instructor.role === 'QFI' || instructor.isQFI === true)
+    );
+    const isInstructorEligibleForBuildEventType = (instructor: Instructor, eventType: string): boolean => {
+        if (isContractorStaffRole(instructor)) return canContractorStaffWorkEventType(eventType);
+        if (eventType === 'flight' || eventType === 'ftd') return isQfiBuildInstructor(instructor);
+        return true;
+    };
 
     const normaliseBuildWindowStart = (value: number): number => Number.isFinite(Number(value)) ? Number(value) : 0;
     const normaliseBuildWindowEnd = (start: number, end: number): number => {
@@ -34915,6 +34943,7 @@ const App: React.FC = () => {
             },
             crewPositionTerminology: activeCrewPositionTerminology,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
+            personnelDisplaySettings,
             remedialPrioritySyncTrace: (window as any).__lastRemedialPrioritySyncTrace || [],
             remedialDataMovementTrace: (window as any).__lastRemedialDataMovementTrace || [],
             taskProvenancePreBuild: (window as any).__lastTaskingProvenancePreBuild || null,

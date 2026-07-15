@@ -87779,6 +87779,26 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     staffSharingUnits,
     staffSharingGroups
   } = config;
+  const buildPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
+    config.personnelDisplaySettings || DEFAULT_PERSONNEL_DISPLAY_SETTINGS
+  );
+  const buildContractorStaffEventEligibility = buildPersonnelDisplaySettings.contractorStaffEventEligibility;
+  const isContractorStaffRole = (instructor) => String(instructor?.role || "").trim().toUpperCase() === "SIM IP";
+  const canContractorStaffWorkEventType = (eventType) => {
+    if (!buildPersonnelDisplaySettings.simIpDisplayEnabled) return false;
+    const key = String(eventType || "").trim().toLowerCase();
+    if (key === "flight") return Boolean(buildContractorStaffEventEligibility.flight);
+    if (key === "ftd" || key === "sim" || key === "simulator") return Boolean(buildContractorStaffEventEligibility.ftd);
+    if (key === "cpt" || key === "procedural" || key === "procedural trainer") return Boolean(buildContractorStaffEventEligibility.cpt);
+    if (key === "ground" || key === "academic") return Boolean(buildContractorStaffEventEligibility.ground);
+    return false;
+  };
+  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole(instructor) && (instructor.role === "QFI" || instructor.isQFI === true);
+  const isInstructorEligibleForBuildEventType = (instructor, eventType) => {
+    if (isContractorStaffRole(instructor)) return canContractorStaffWorkEventType(eventType);
+    if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor(instructor);
+    return true;
+  };
   const normaliseBuildWindowStart = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
   const normaliseBuildWindowEnd = (start, end) => {
     const numericEnd = Number.isFinite(Number(end)) ? Number(end) : start;
@@ -103463,8 +103483,8 @@ const App = () => {
   const instructorLabel = personnelDisplaySettings.instructorLabel;
   const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
   const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
-  const isContractorStaffRole2 = (instructor) => String(instructor?.role || "").trim().toUpperCase() === "SIM IP";
-  const canContractorStaffWorkEventType2 = (eventType) => {
+  const isContractorStaffRole = (instructor) => String(instructor?.role || "").trim().toUpperCase() === "SIM IP";
+  const canContractorStaffWorkEventType = (eventType) => {
     if (!personnelDisplaySettings.simIpDisplayEnabled) return false;
     const key = String(eventType || "").trim().toLowerCase();
     if (key === "flight") return contractorStaffEventEligibility.flight;
@@ -103473,10 +103493,10 @@ const App = () => {
     if (key === "ground" || key === "academic") return contractorStaffEventEligibility.ground;
     return false;
   };
-  const isQfiBuildInstructor2 = (instructor) => !isContractorStaffRole2(instructor) && (instructor.role === "QFI" || instructor.isQFI === true);
-  const isInstructorEligibleForBuildEventType2 = (instructor, eventType) => {
-    if (isContractorStaffRole2(instructor)) return canContractorStaffWorkEventType2(eventType);
-    if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor2(instructor);
+  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole(instructor) && (instructor.role === "QFI" || instructor.isQFI === true);
+  const isInstructorEligibleForBuildEventType = (instructor, eventType) => {
+    if (isContractorStaffRole(instructor)) return canContractorStaffWorkEventType(eventType);
+    if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor(instructor);
     return true;
   };
   const formatResourceDisplayLabel = reactExports.useCallback(
@@ -110949,6 +110969,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       },
       crewPositionTerminology: activeCrewPositionTerminology,
       staffQualificationCatalogue: activeStaffQualificationCatalogue,
+      personnelDisplaySettings,
       remedialPrioritySyncTrace: window.__lastRemedialPrioritySyncTrace || [],
       remedialDataMovementTrace: window.__lastRemedialDataMovementTrace || [],
       taskProvenancePreBuild: window.__lastTaskingProvenancePreBuild || null,
@@ -113767,7 +113788,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     let qualificationFailures = 0, unavailabilityFailures = 0, overlapFailures = 0;
     const eventAtNewTime = { ...conflictedEvent, startTime: atTime };
     for (const instructor of instructorsData) {
-      const isQualified = isInstructorEligibleForBuildEventType2(instructor, conflictedEvent.type || "ground");
+      const isQualified = isInstructorEligibleForBuildEventType(instructor, conflictedEvent.type || "ground");
       if (!isQualified) {
         qualificationFailures++;
         continue;
@@ -113825,7 +113846,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       return true;
     });
     console.log("🔍 [PILOT REMEDIES DEBUG] Location filtered instructors:", locationFilteredInstructors.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
-    const qualifiedPilots = locationFilteredInstructors.filter((i) => isInstructorEligibleForBuildEventType2(i, "flight"));
+    const qualifiedPilots = locationFilteredInstructors.filter((i) => isInstructorEligibleForBuildEventType(i, "flight"));
     console.log("🔍 [PILOT REMEDIES DEBUG] Filtered qualifiedPilots:", qualifiedPilots.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
     console.log("🔍 Total qualified pilots to check:", qualifiedPilots.length);
     let unavailabilityFailures = 0, overlapFailures = 0;
