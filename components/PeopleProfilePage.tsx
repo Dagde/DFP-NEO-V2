@@ -166,7 +166,7 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
                     This determines which flight and simulator events trainees are assigned.
                 </p>
                 <p className="text-xs text-amber-300/90 mt-2">
-                    <strong>Note:</strong> Only one Master LMP can be selected. This setting is rarely changed.
+                    <strong>Note:</strong> This setting is rarely changed. In combined units, or even within one unit, trainees may be on different courses. NEO Build schedules from the Individual LMP assigned to each trainee.
                 </p>
             </div>
 
@@ -221,8 +221,8 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                         <span>
-                            <strong>Only one Master LMP</strong> can be selected at a time.
-                            This Master LMP will be used by NEO Build to create Individual LMPs for all trainees.
+                            This selection sets the Master LMP basis used when creating trainee Individual LMPs.
+                            NEO Build schedules from the Individual LMP assigned to each trainee.
                         </span>
                     </p>
                 </div>

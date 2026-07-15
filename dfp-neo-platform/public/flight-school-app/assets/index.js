@@ -71218,7 +71218,7 @@ const PeopleProfilePage = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-teal-200/80 leading-relaxed", children: "Select which Master LMP will be used by NEO Build to generate Individual LMPs for trainees. This determines which flight and simulator events trainees are assigned." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-amber-300/90 mt-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Note:" }),
-        " Only one Master LMP can be selected. This setting is rarely changed."
+        " This setting is rarely changed. In combined units, or even within one unit, trainees may be on different courses. NEO Build schedules from the Individual LMP assigned to each trainee."
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-700 rounded-xl p-5 space-y-4", children: [
@@ -71255,10 +71255,7 @@ const PeopleProfilePage = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-amber-900/20 border border-amber-700/30 rounded-lg px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-amber-300/80 flex items-start gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5 mt-0.5 flex-shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Only one Master LMP" }),
-          " can be selected at a time. This Master LMP will be used by NEO Build to create Individual LMPs for all trainees."
-        ] })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "This selection sets the Master LMP basis used when creating trainee Individual LMPs. NEO Build schedules from the Individual LMP assigned to each trainee." })
       ] }) }),
       !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 pt-2", children: [
         hasChanges && pendingCourse && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-amber-300", children: [
@@ -71501,7 +71498,7 @@ const sectionDescriptions = {
   "training-report-template": "Configure report labels, grades and repeat rules",
   "currencies": "Manage currency expiry requirements",
   "sct-events": "Event scoring rules and triggers",
-  "people-profile": "Control who NEO Build can use and any exclusions",
+  "people-profile": "Select the Master LMP basis and course exclusions for NEO Build",
   "scheduling-rules": "Event limits, duty rules, turnarounds and dispatch limits",
   "event-limits": "Set daily event limits and duty supervisor session limits",
   "duty-turnaround": "Crew duty limits & rest times",
