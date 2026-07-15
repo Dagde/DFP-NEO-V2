@@ -837,9 +837,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const handleSaveLimits = () => {
         onUpdateEventLimits(tempLimits);
         setIsEditingLimits(false);
-        onShowSuccess('Events limits updated');
+        onShowSuccess('Daily event limits updated');
         logAudit({
-            page: 'Settings - Event Limits',
+            page: 'Settings - Daily Event Limits',
             action: 'update',
             description: 'Updated event scheduling limits',
             changes: 'Updated scheduling limit categories'
@@ -1419,7 +1419,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    {shouldShowSection('event-limits') && (
                     <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-2xl h-fit">
                         <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                            <h2 className="text-lg font-semibold text-gray-200">Event Limits</h2>
+                            <h2 className="text-lg font-semibold text-gray-200">Daily Event Limits</h2>
                             {isEditingLimits ? (
                                 <div className="flex gap-[1px]">
                                     <button onClick={handleSaveLimits} className={standardSettingsButtonClass}>Save</button>
