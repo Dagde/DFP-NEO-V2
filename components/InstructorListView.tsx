@@ -626,7 +626,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         <select
             value={selectedStaffRoleFilter}
             onChange={(event) => setSelectedStaffRoleFilter(event.target.value)}
-            className="w-full max-w-[6.75rem] bg-gray-900/45 border border-gray-700/70 text-gray-300 text-[10px] font-semibold rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-sky-500/70 focus:border-sky-500/70"
+            className="w-[60px] max-w-[60px] bg-gray-900/45 border border-gray-700/70 text-gray-300 text-[10px] font-semibold rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-sky-500/70 focus:border-sky-500/70"
             title="Filter staff by role"
         >
             {staffRoleFilterOptions.map(option => (
@@ -638,7 +638,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const renderInstructorUnitCard = (unit: string) => (
     <div key={unit} className={`bg-gray-800 border rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh] ${useOperationalStaffListBorder ? 'border-emerald-400/80 shadow-emerald-500/20' : 'border-gray-700'}`}>
-        <div className={`p-3 border-b bg-gray-800/80 grid grid-cols-[minmax(0,6.75rem)_1fr_minmax(0,5rem)] gap-2 items-center rounded-t-lg backdrop-blur-sm ${useOperationalStaffListBorder ? 'border-emerald-400/40' : 'border-gray-700'}`}>
+        <div className={`p-3 border-b bg-gray-800/80 grid grid-cols-[60px_1fr_minmax(0,5rem)] gap-2 items-center rounded-t-lg backdrop-blur-sm ${useOperationalStaffListBorder ? 'border-emerald-400/40' : 'border-gray-700'}`}>
             {renderStaffRoleFilterSelect()}
             <h3 className="text-lg font-bold text-sky-400 text-center truncate">{unit}</h3>
             <span className="justify-self-end text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full whitespace-nowrap">{qfisByUnit[unit].length} Staff</span>
