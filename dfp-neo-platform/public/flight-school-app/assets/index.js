@@ -71627,7 +71627,7 @@ const sectionGroups = [
   {
     label: "Training & Standards",
     shortLabel: "Training",
-    description: "Scoring rules, currencies and SCT event standards used across the training system.",
+    description: "Scoring rules, currency requirements and continuation training event standards used across the training system.",
     accent: "sky",
     defaultSection: "scoring-matrix",
     sections: ["scoring-matrix", "training-report-template", "sct-events", "currencies"]
@@ -71693,6 +71693,7 @@ const SettingsViewWithMenu = (props) => {
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
   const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
   const getSectionLabel = (section) => section === "sct-events" ? `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} Events` : sectionLabels[section];
+  const getSectionDescription = (section) => section === "sct-events" ? `Configure ${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} event standards` : sectionDescriptions[section];
   const changeActiveSection = (section) => {
     if (section !== "currencies") {
       setEmbeddedCurrencyBuilderOpen(false);
@@ -71739,7 +71740,7 @@ const SettingsViewWithMenu = (props) => {
     return [
       groupLabel,
       getSectionLabel(section),
-      sectionDescriptions[section]
+      getSectionDescription(section)
     ].some((value) => value.toLowerCase().includes(query));
   };
   const getGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;

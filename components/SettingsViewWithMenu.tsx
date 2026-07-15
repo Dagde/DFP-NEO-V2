@@ -575,7 +575,7 @@ const sectionGroups: {
   {
     label: 'Training & Standards',
     shortLabel: 'Training',
-    description: 'Scoring rules, currencies and SCT event standards used across the training system.',
+    description: 'Scoring rules, currency requirements and continuation training event standards used across the training system.',
     accent: 'sky',
     defaultSection: 'scoring-matrix',
     sections: ['scoring-matrix', 'training-report-template', 'sct-events', 'currencies'],
@@ -657,6 +657,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             ? `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} Events`
             : sectionLabels[section]
     );
+    const getSectionDescription = (section: SettingsMenuSection): string => (
+        section === 'sct-events'
+            ? `Configure ${(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel)} event standards`
+            : sectionDescriptions[section]
+    );
 
     const changeActiveSection = (section: ActiveSection) => {
         if (section !== 'currencies') {
@@ -708,7 +713,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         return [
             groupLabel,
             getSectionLabel(section),
-            sectionDescriptions[section],
+            getSectionDescription(section),
         ].some(value => value.toLowerCase().includes(query));
     };
 
