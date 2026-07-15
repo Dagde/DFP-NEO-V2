@@ -3692,7 +3692,13 @@ const DEFAULT_PERSONNEL_DISPLAY_SETTINGS = {
   civilianContractorGroupName: "Civilian Contractors",
   instructorLabel: "QFI",
   simIpDisplayEnabled: true,
-  simIpDisplayLabel: "Contractor Staff"
+  simIpDisplayLabel: "Contractor Staff",
+  contractorStaffEventEligibility: {
+    flight: false,
+    ftd: true,
+    cpt: false,
+    ground: false
+  }
 };
 const collator$1 = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
 const rankKey = (rank) => String(rank || "").trim().toUpperCase();
@@ -3773,6 +3779,10 @@ const normalisePersonnelDisplaySettings = (input) => {
   const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, getRankOrderFromEquivalency({ ...staffRankEquivalency, civilianTitles })));
   const traineeRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder));
   const simIpDisplayLabel = String(input?.simIpDisplayLabel || "").trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
+  const contractorStaffEventEligibility = {
+    ...DEFAULT_PERSONNEL_DISPLAY_SETTINGS.contractorStaffEventEligibility,
+    ...input?.contractorStaffEventEligibility || {}
+  };
   return {
     sortMode: input?.sortMode === "alphabetical" ? "alphabetical" : "rank-then-name",
     useSeparateTraineeRankOrder: Boolean(input?.useSeparateTraineeRankOrder),
@@ -3783,7 +3793,13 @@ const normalisePersonnelDisplaySettings = (input) => {
     civilianContractorGroupName: String(input?.civilianContractorGroupName || "").trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.civilianContractorGroupName,
     instructorLabel: String(input?.instructorLabel || "").trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel,
     simIpDisplayEnabled: input?.simIpDisplayEnabled !== false,
-    simIpDisplayLabel
+    simIpDisplayLabel,
+    contractorStaffEventEligibility: {
+      flight: Boolean(contractorStaffEventEligibility.flight),
+      ftd: Boolean(contractorStaffEventEligibility.ftd),
+      cpt: Boolean(contractorStaffEventEligibility.cpt),
+      ground: Boolean(contractorStaffEventEligibility.ground)
+    }
   };
 };
 const getSimIpDisplayLabel = (settings) => {
@@ -49001,6 +49017,7 @@ const LEGACY_QUALIFICATION_FIELD_BY_ID = {
   contractor: "isContractor",
   "admin-staff": "isAdminStaff"
 };
+const isContractorStaffRoleValue = (value) => String(value || "").trim().toUpperCase() === "SIM IP";
 const InputField = ({ label, value, onChange, readOnly, type = "text" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 mb-1", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -49219,17 +49236,29 @@ const InstructorProfileFlyout = ({
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
     [staffQualificationCatalogue]
   );
-  const activeQualificationOptions = reactExports.useMemo(() => getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel).sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, void 0, { sensitivity: "base" })), [normalisedQualificationCatalogue, operationalModel]);
+  const contractorQualificationId = reactExports.useMemo(() => normalisedQualificationCatalogue.qualifications.find((qualification) => normaliseQualificationToken(qualification.id) === "contractor" || normaliseQualificationToken(qualification.code) === "contractor" || normaliseQualificationToken(qualification.name) === "contractor")?.id || "contractor", [normalisedQualificationCatalogue]);
+  const qfiQualificationIds = reactExports.useMemo(() => normalisedQualificationCatalogue.qualifications.filter((qualification) => normaliseQualificationToken(qualification.id) === "qfi" || normaliseQualificationToken(qualification.code) === "qfi" || normaliseQualificationToken(qualification.name) === "qfi").map((qualification) => qualification.id), [normalisedQualificationCatalogue]);
+  const normaliseContractorStaffQualifications = reactExports.useCallback((ids) => {
+    const filtered = ids.filter((id) => !qfiQualificationIds.includes(id));
+    return Array.from(/* @__PURE__ */ new Set([...filtered, contractorQualificationId]));
+  }, [contractorQualificationId, qfiQualificationIds]);
+  const activeQualificationOptions = reactExports.useMemo(() => getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel).filter((qualification) => {
+    if (!isContractorStaffRoleValue(String(role))) return true;
+    return !qfiQualificationIds.includes(qualification.id);
+  }).sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, void 0, { sensitivity: "base" })), [normalisedQualificationCatalogue, operationalModel, qfiQualificationIds, role]);
   const getAssignedQualificationIds = reactExports.useCallback((source) => {
-    const assigned = normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue);
+    let assigned = normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue);
     normalisedQualificationCatalogue.qualifications.forEach((qualification) => {
       const legacyField = LEGACY_QUALIFICATION_FIELD_BY_ID[qualification.id];
       if (legacyField && source[legacyField] === true && !assigned.includes(qualification.id)) {
         assigned.push(qualification.id);
       }
     });
+    if (isContractorStaffRoleValue(source.role)) {
+      assigned = normaliseContractorStaffQualifications(assigned);
+    }
     return assigned;
-  }, [normalisedQualificationCatalogue]);
+  }, [normalisedQualificationCatalogue, normaliseContractorStaffQualifications]);
   const [callsignNumber, setCallsignNumber] = reactExports.useState(instructor.callsignNumber);
   const [service, setService] = reactExports.useState(instructor.service);
   const [category, setCategory] = reactExports.useState(instructor.category);
@@ -49537,6 +49566,15 @@ const InstructorProfileFlyout = ({
     if (legacyField === "isContractor") setIsContractor(isChecked);
     if (legacyField === "isAdminStaff") setIsAdminStaff(isChecked);
   };
+  const handleRoleChange = (nextRole) => {
+    setRole(nextRole);
+    if (isContractorStaffRoleValue(String(nextRole))) {
+      setAssignedQualifications((prev) => normaliseContractorStaffQualifications(prev));
+      setIsQFI(false);
+      setIsContractor(true);
+      setCategory("UnCat");
+    }
+  };
   const handleExperienceChange = (section, field, value) => {
     setPriorExperience((prev) => field ? { ...prev, [section]: { ...prev[section], [field]: value } } : { ...prev, [section]: value });
   };
@@ -49546,6 +49584,11 @@ const InstructorProfileFlyout = ({
       return;
     }
     const savedRole = role;
+    const savedAsContractorStaff = isContractorStaffRoleValue(String(savedRole));
+    const savedQualifications = savedAsContractorStaff ? normaliseContractorStaffQualifications(assignedQualifications) : assignedQualifications;
+    const savedCategory = savedAsContractorStaff ? "UnCat" : category;
+    const savedIsQFI = savedAsContractorStaff ? false : isQFI;
+    const savedIsContractor = savedAsContractorStaff ? true : isContractor;
     let finalPhotoUrl = photoUrl;
     const dbId = instructor.id;
     if (dbId) {
@@ -49606,7 +49649,7 @@ const InstructorProfileFlyout = ({
       callsign: suppressProfileCallsign ? "" : displayCallsign,
       secondaryCallsign: suppressProfileCallsign ? "" : secondaryCallsign,
       service,
-      category,
+      category: savedCategory,
       seatConfig,
       crew,
       preferences: {
@@ -49614,7 +49657,7 @@ const InstructorProfileFlyout = ({
         callsign: suppressProfileCallsign ? null : displayCallsign || null,
         secondaryCallsign: suppressProfileCallsign ? null : secondaryCallsign || null,
         crew: crew || null,
-        qualifications: assignedQualifications
+        qualifications: savedQualifications
       },
       unavailability: unavailabilityPeriods,
       location,
@@ -49631,9 +49674,9 @@ const InstructorProfileFlyout = ({
       isCommandingOfficer,
       isCFI,
       isDeputyFlightCommander,
-      isContractor,
+      isContractor: savedIsContractor,
       isAdminStaff,
-      isQFI,
+      isQFI: savedIsQFI,
       isOFI,
       photoUrl: finalPhotoUrl
     };
@@ -49650,17 +49693,17 @@ const InstructorProfileFlyout = ({
       if ((instructor.secondaryCallsign || "") !== secondaryCallsign) changes.push(`Secondary Callsign: ${instructor.secondaryCallsign || "(none)"} → ${secondaryCallsign || "(none)"}`);
       if ((instructor.crew || "") !== crew) changes.push(`Crew: ${instructor.crew || "(none)"} → ${crew || "(none)"}`);
       const previousQualifications = getAssignedQualificationIds(instructor);
-      if (JSON.stringify(previousQualifications) !== JSON.stringify(assignedQualifications)) {
+      if (JSON.stringify(previousQualifications) !== JSON.stringify(savedQualifications)) {
         const labelsFor = (ids) => ids.map((id) => {
           const match = normalisedQualificationCatalogue.qualifications.find((definition) => qualificationMatches(id, definition));
           return match?.code || match?.name || id;
         }).join(", ") || "(none)";
-        changes.push(`Qualifications: ${labelsFor(previousQualifications)} → ${labelsFor(assignedQualifications)}`);
+        changes.push(`Qualifications: ${labelsFor(previousQualifications)} → ${labelsFor(savedQualifications)}`);
       }
       if (instructor.location !== location) changes.push(`Location: ${instructor.location || "(none)"} → ${location || "(none)"}`);
       if (instructor.phoneNumber !== phoneNumber) changes.push(`Phone: ${instructor.phoneNumber || "(none)"} → ${phoneNumber || "(none)"}`);
       if (instructor.email !== email) changes.push(`Email: ${instructor.email || "(none)"} → ${email || "(none)"}`);
-      if (instructor.category !== category) changes.push(`Category: ${instructor.category} → ${category}`);
+      if (instructor.category !== savedCategory) changes.push(`Category: ${instructor.category} → ${savedCategory}`);
       if (instructor.seatConfig !== seatConfig) changes.push(`Seat Config: ${instructor.seatConfig} → ${seatConfig}`);
       if (instructor.service !== service) changes.push(`Service: ${instructor.service || "(none)"} → ${service || "(none)"}`);
       if (instructor.isTestingOfficer !== isTestingOfficer) changes.push(`Testing Officer: ${instructor.isTestingOfficer} → ${isTestingOfficer}`);
@@ -49670,9 +49713,9 @@ const InstructorProfileFlyout = ({
       if (instructor.isCommandingOfficer !== isCommandingOfficer) changes.push(`CO: ${instructor.isCommandingOfficer} → ${isCommandingOfficer}`);
       if (instructor.isCFI !== isCFI) changes.push(`CFI: ${instructor.isCFI} → ${isCFI}`);
       if (instructor.isDeputyFlightCommander !== isDeputyFlightCommander) changes.push(`Deputy FC: ${instructor.isDeputyFlightCommander} → ${isDeputyFlightCommander}`);
-      if (instructor.isContractor !== isContractor) changes.push(`Contractor: ${instructor.isContractor} → ${isContractor}`);
+      if (instructor.isContractor !== savedIsContractor) changes.push(`Contractor: ${instructor.isContractor} → ${savedIsContractor}`);
       if (instructor.isAdminStaff !== isAdminStaff) changes.push(`Admin Staff: ${instructor.isAdminStaff} → ${isAdminStaff}`);
-      if (instructor.isQFI !== isQFI) changes.push(`${instructorLabel}: ${instructor.isQFI} → ${isQFI}`);
+      if (instructor.isQFI !== savedIsQFI) changes.push(`${instructorLabel}: ${instructor.isQFI} → ${savedIsQFI}`);
       if (instructor.isOFI !== isOFI) changes.push(`OFI: ${instructor.isOFI} → ${isOFI}`);
       const changesStr = changes.length > 0 ? changes.join(", ") : "No field changes";
       logAudit({ action: "Edit", description: `Edited staff profile for ${rank} ${name}`, changes: changesStr, page: "Staff" });
@@ -50510,7 +50553,7 @@ const InstructorProfileFlyout = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => setName(e.target.value) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: staffRankOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, `${group.label}-${option}`)) }, group.label)) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Role", value: role, onChange: (e) => setRole(e.target.value), children: staffRoleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Role", value: role, onChange: (e) => handleRoleChange(e.target.value), children: staffRoleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-6 gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Callsign", value: suppressProfileCallsign ? "" : displayCallsign || "Auto assigned", onChange: () => {
@@ -50523,7 +50566,8 @@ const InstructorProfileFlyout = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAN", children: "RAN" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ARA", children: "ARA" })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Category", value: category, onChange: (e) => setCategory(e.target.value), children: [
+              isContractorStaffRoleValue(String(role)) ? /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Category", value: simIpDisplayLabel, onChange: () => {
+              }, readOnly: true }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Category", value: category, onChange: (e) => setCategory(e.target.value), children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "UnCat", children: "UnCat" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "D", children: "D" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "C", children: "C" }),
@@ -50586,7 +50630,7 @@ const InstructorProfileFlyout = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Category" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.category })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: isContractorStaffRoleValue(instructor.role) ? simIpDisplayLabel : instructor.category })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Callsign" }),
@@ -51091,8 +51135,14 @@ const applyQualificationRoles = (parsedData, rolesValue, crewPositionTerminology
   parsedData.isAdminStaff = rolesLower.includes("admin");
   if (importedCrewRole) {
     parsedData.role = importedCrewRole;
+    if (importedCrewRole === "SIM IP") {
+      parsedData.isQFI = false;
+      parsedData.isContractor = true;
+    }
   } else if (rolesLower.includes("sim ip") || rolesLower.includes("contractor staff")) {
     parsedData.role = "SIM IP";
+    parsedData.isQFI = false;
+    parsedData.isContractor = true;
   } else if (rolesLower.includes("pilot")) {
     parsedData.role = "Pilot";
   } else if (rolesLower.includes("qfi") || rolesLower.includes("instructor")) {
@@ -60715,7 +60765,7 @@ const SettingsView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
-                  "Max ",
+                  "Max Flight/",
                   resourceDisplayNames.ftd,
                   " per day:"
                 ] }),
@@ -69997,6 +70047,43 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               info: "The display label for staff whose saved role is SIM IP. Changing this label only affects what users see; it does not change the saved role or scheduler logic."
             }
           ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Contractor Staff Event Eligibility" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2", children: [
+              { key: "flight", label: "Flight" },
+              { key: "ftd", label: "Simulator" },
+              { key: "cpt", label: "Procedural Trainer" },
+              { key: "ground", label: "Ground / Academic" }
+            ].map((option) => {
+              const checked = personnelDisplaySettings.contractorStaffEventEligibility[option.key];
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "label",
+                {
+                  className: `flex items-center gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${checked ? "border-cyan-400/40 bg-cyan-500/10 text-cyan-100" : "border-gray-700 bg-gray-900/70 text-gray-400"}`,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked,
+                        disabled: !canEditRankTerminology,
+                        onChange: (event) => updatePersonnelDisplaySettings({
+                          contractorStaffEventEligibility: {
+                            ...personnelDisplaySettings.contractorStaffEventEligibility,
+                            [option.key]: event.target.checked
+                          }
+                        }),
+                        className: "h-3.5 w-3.5 rounded border-gray-500 accent-cyan-400"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.label })
+                  ]
+                },
+                option.key
+              );
+            }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-[11px] leading-relaxed text-gray-500", children: "Controls which event types Contractor Staff can be considered for by NEO Build. The saved staff role remains internal SIM IP for compatibility." })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Field,
             {
@@ -91709,7 +91796,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     buildDebugLog("🌙 ===== NIGHT INSTRUCTOR SELECTION =====");
     buildDebugLog(`🌙 Need ${instructorsNeeded} instructors for ${bnfTraineeCount} BNF trainees`);
     const nightEligiblePool = originalInstructors.filter((ip) => {
-      if (ip.role !== "QFI" && !ip.isQFI) return false;
+      if (!isInstructorEligibleForBuildEventType(ip, "flight")) return false;
       if (isPersonStaticallyUnavailable(ip, nightDutyStartTime, nightDutyEndTime, buildDate, "flight")) return false;
       if (isPersonScheduledForDayEvents(ip.name)) {
         buildDebugLog(`🌙 ❌ ${ip.name} excluded - has day events (Active DFP or NEO-Build)`);
@@ -92633,16 +92720,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       } else {
         if (type === "ftd") {
           const simIps = instructors.filter(
-            (i) => i.role === "SIM IP"
+            (i) => isContractorStaffRole(i) && canContractorStaffWorkEventType("ftd")
           );
           const availableQfis = instructors.filter(
-            (i) => i.role === "QFI" || i.isQFI === true
+            (i) => isQfiBuildInstructor(i)
           );
           candidates = [...simIps, ...availableQfis];
         } else {
           candidates = instructors.filter((ip) => {
-            if (type === "flight" && ip.role !== "QFI" && !ip.isQFI) return false;
-            return true;
+            return isInstructorEligibleForBuildEventType(ip, type);
           });
         }
         candidates = candidates.filter((ip) => {
@@ -92680,7 +92766,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           candidatesAfterRoleAndDayNight: _afterQualFilter,
           candidateNames: candidates.slice(0, 20).map((ip) => ip.name),
           intendedNightCandidatesFiltered: instructors.filter((ip) => {
-            if (type === "flight" && ip.role !== "QFI" && !ip.isQFI) return false;
+            if (!isInstructorEligibleForBuildEventType(ip, type)) return false;
             return getScheduledDayNightForStart(startTime) === "Day" && isPersonScheduledForNightEvents(ip.name);
           }).slice(0, 20).map((ip) => ip.name)
         });
@@ -92849,7 +92935,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             _dRej.eventLimit++;
             continue;
           }
-        } else if (!remedialInstructorOverride && ip.role === "SIM IP") {
+        } else if (!remedialInstructorOverride && isContractorStaffRole(ip)) {
           if ((eventTypeForCheck === "flight" || eventTypeForCheck === "ftd") && ipCounts.flightFtd >= eventLimits.simIp.maxFtd) {
             _dRej.eventLimit++;
             continue;
@@ -97815,11 +97901,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return true;
       });
       if (type === "ftd") {
-        const simIps = locationFilteredInstructors.filter((i) => i.role === "SIM IP");
-        const qfis = locationFilteredInstructors.filter((i) => i.role === "QFI" || i.isQFI === true);
+        const simIps = locationFilteredInstructors.filter((i) => isContractorStaffRole(i) && canContractorStaffWorkEventType("ftd"));
+        const qfis = locationFilteredInstructors.filter((i) => isQfiBuildInstructor(i));
         candidates = [...simIps, ...qfis];
       } else {
-        candidates = locationFilteredInstructors.filter((i) => i.role === "QFI" || i.isQFI === true);
+        candidates = locationFilteredInstructors.filter((i) => isInstructorEligibleForBuildEventType(i, type));
       }
       const afterUnitFilter = candidates.filter((ip) => isInstructorEligibleByUnit(ip, trainee));
       candidates = afterUnitFilter;
@@ -103281,6 +103367,22 @@ const App = () => {
   );
   const instructorLabel = personnelDisplaySettings.instructorLabel;
   const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
+  const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
+  const isContractorStaffRole2 = (instructor) => String(instructor?.role || "").trim().toUpperCase() === "SIM IP";
+  const canContractorStaffWorkEventType2 = (eventType) => {
+    const key = String(eventType || "").trim().toLowerCase();
+    if (key === "flight") return contractorStaffEventEligibility.flight;
+    if (key === "ftd" || key === "sim" || key === "simulator") return contractorStaffEventEligibility.ftd;
+    if (key === "cpt" || key === "procedural" || key === "procedural trainer") return contractorStaffEventEligibility.cpt;
+    if (key === "ground" || key === "academic") return contractorStaffEventEligibility.ground;
+    return false;
+  };
+  const isQfiBuildInstructor2 = (instructor) => !isContractorStaffRole2(instructor) && (instructor.role === "QFI" || instructor.isQFI === true);
+  const isInstructorEligibleForBuildEventType2 = (instructor, eventType) => {
+    if (isContractorStaffRole2(instructor)) return canContractorStaffWorkEventType2(eventType);
+    if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor2(instructor);
+    return true;
+  };
   const formatResourceDisplayLabel = reactExports.useCallback(
     (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames),
     [resourceDisplayNames]
@@ -112637,11 +112739,13 @@ ${conflictLines.join("\n")}${moreText}`,
       const roleText = String(instructor.role || "").trim().toLowerCase();
       const unitCode = String(instructor.unit || "").trim().toUpperCase();
       const inferredQfi = roleText === "qfi" || roleText === "instructor";
-      const normalisedRole = unitCode === "77SQN" ? "Pilot" : roleText === "sim ip" ? "SIM IP" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "QFI" : normaliseFixedCrewStaffRole(instructor.role, unitCode) || "QFI";
+      const normalisedRole = unitCode === "77SQN" ? "Pilot" : roleText === "sim ip" || roleText === "contractor staff" ? "SIM IP" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "QFI" : normaliseFixedCrewStaffRole(instructor.role, unitCode) || "QFI";
+      const isContractorStaff = normalisedRole === "SIM IP";
       const nextInstructor = {
         ...instructor,
         role: normalisedRole,
-        isQFI: instructor.isQFI ?? inferredQfi,
+        isQFI: isContractorStaff ? false : instructor.isQFI ?? inferredQfi,
+        isContractor: isContractorStaff ? true : instructor.isContractor ?? false,
         isOFI: instructor.isOFI ?? false,
         isCFI: instructor.isCFI ?? false,
         isAdminStaff: instructor.isAdminStaff ?? false,
@@ -113507,9 +113611,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     let qualificationFailures = 0, unavailabilityFailures = 0, overlapFailures = 0;
     const eventAtNewTime = { ...conflictedEvent, startTime: atTime };
     for (const instructor of instructorsData) {
-      const isQFI = instructor.role === "QFI";
-      const isSimIp2 = instructor.role === "SIM IP";
-      const isQualified = conflictedEvent.type === "flight" && isQFI || conflictedEvent.type === "ftd" && (isQFI || isSimIp2) || conflictedEvent.type === "ground";
+      const isQualified = isInstructorEligibleForBuildEventType2(instructor, conflictedEvent.type || "ground");
       if (!isQualified) {
         qualificationFailures++;
         continue;
@@ -113567,7 +113669,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       return true;
     });
     console.log("🔍 [PILOT REMEDIES DEBUG] Location filtered instructors:", locationFilteredInstructors.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
-    const qualifiedPilots = locationFilteredInstructors.filter((i) => i.role === "QFI" || i.isQFI === true);
+    const qualifiedPilots = locationFilteredInstructors.filter((i) => isInstructorEligibleForBuildEventType2(i, "flight"));
     console.log("🔍 [PILOT REMEDIES DEBUG] Filtered qualifiedPilots:", qualifiedPilots.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
     console.log("🔍 Total qualified pilots to check:", qualifiedPilots.length);
     let unavailabilityFailures = 0, overlapFailures = 0;

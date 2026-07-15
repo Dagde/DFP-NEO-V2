@@ -30,6 +30,7 @@ import {
 } from '../utils/crewPositionTerminology';
 import {
   getQualificationsForOperationalModel,
+  normaliseQualificationToken,
   normaliseAssignedQualificationIds,
   normaliseStaffQualificationCatalogue,
   qualificationMatches,
@@ -53,6 +54,10 @@ const LEGACY_QUALIFICATION_FIELD_BY_ID: Record<string, LegacyQualificationField>
   contractor: 'isContractor',
   'admin-staff': 'isAdminStaff',
 };
+
+const isContractorStaffRoleValue = (value?: string | null): boolean => (
+  String(value || '').trim().toUpperCase() === 'SIM IP'
+);
 
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
@@ -363,20 +368,47 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
     [staffQualificationCatalogue],
   );
+  const contractorQualificationId = useMemo(() => (
+    normalisedQualificationCatalogue.qualifications.find(qualification => (
+      normaliseQualificationToken(qualification.id) === 'contractor'
+      || normaliseQualificationToken(qualification.code) === 'contractor'
+      || normaliseQualificationToken(qualification.name) === 'contractor'
+    ))?.id || 'contractor'
+  ), [normalisedQualificationCatalogue]);
+  const qfiQualificationIds = useMemo(() => (
+    normalisedQualificationCatalogue.qualifications
+      .filter(qualification => (
+        normaliseQualificationToken(qualification.id) === 'qfi'
+        || normaliseQualificationToken(qualification.code) === 'qfi'
+        || normaliseQualificationToken(qualification.name) === 'qfi'
+      ))
+      .map(qualification => qualification.id)
+  ), [normalisedQualificationCatalogue]);
+  const normaliseContractorStaffQualifications = useCallback((ids: string[]): string[] => {
+    const filtered = ids.filter(id => !qfiQualificationIds.includes(id));
+    return Array.from(new Set([...filtered, contractorQualificationId]));
+  }, [contractorQualificationId, qfiQualificationIds]);
   const activeQualificationOptions = useMemo(() => (
     getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel)
+      .filter(qualification => {
+        if (!isContractorStaffRoleValue(String(role))) return true;
+        return !qfiQualificationIds.includes(qualification.id);
+      })
       .sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, undefined, { sensitivity: 'base' }))
-  ), [normalisedQualificationCatalogue, operationalModel]);
+  ), [normalisedQualificationCatalogue, operationalModel, qfiQualificationIds, role]);
   const getAssignedQualificationIds = useCallback((source: Instructor): string[] => {
-    const assigned = normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue);
+    let assigned = normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue);
     normalisedQualificationCatalogue.qualifications.forEach((qualification) => {
       const legacyField = LEGACY_QUALIFICATION_FIELD_BY_ID[qualification.id];
       if (legacyField && source[legacyField] === true && !assigned.includes(qualification.id)) {
         assigned.push(qualification.id);
       }
     });
+    if (isContractorStaffRoleValue(source.role)) {
+      assigned = normaliseContractorStaffQualifications(assigned);
+    }
     return assigned;
-  }, [normalisedQualificationCatalogue]);
+  }, [normalisedQualificationCatalogue, normaliseContractorStaffQualifications]);
   const [callsignNumber, setCallsignNumber] = useState(instructor.callsignNumber);
   const [service, setService] = useState<'RAAF' | 'RAN' | 'ARA' | undefined>(instructor.service);
   const [category, setCategory] = useState<InstructorCategory>(instructor.category);
@@ -724,6 +756,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     if (legacyField === 'isContractor') setIsContractor(isChecked);
     if (legacyField === 'isAdminStaff') setIsAdminStaff(isChecked);
   };
+  const handleRoleChange = (nextRole: StaffRole) => {
+    setRole(nextRole);
+    if (isContractorStaffRoleValue(String(nextRole))) {
+      setAssignedQualifications(prev => normaliseContractorStaffQualifications(prev));
+      setIsQFI(false);
+      setIsContractor(true);
+      setCategory('UnCat');
+    }
+  };
   const handleExperienceChange = (section: keyof LogbookExperience, field: string | null, value: number) => {
     setPriorExperience(prev => field ? { ...prev, [section]: { ...(prev[section] as any), [field]: value } } : { ...prev, [section]: value });
   };
@@ -731,6 +772,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const handleSave = async () => {
     if (!name) { alert("Name is required."); return; }
     const savedRole = role;
+    const savedAsContractorStaff = isContractorStaffRoleValue(String(savedRole));
+    const savedQualifications = savedAsContractorStaff
+      ? normaliseContractorStaffQualifications(assignedQualifications)
+      : assignedQualifications;
+    const savedCategory = savedAsContractorStaff ? 'UnCat' : category;
+    const savedIsQFI = savedAsContractorStaff ? false : isQFI;
+    const savedIsContractor = savedAsContractorStaff ? true : isContractor;
 
     // ── Handle pending photo changes ──────────────────────────────────────────
     let finalPhotoUrl = photoUrl;
@@ -797,7 +845,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       callsign: suppressProfileCallsign ? '' : displayCallsign,
       secondaryCallsign: suppressProfileCallsign ? '' : secondaryCallsign,
       service,
-      category,
+      category: savedCategory,
       seatConfig,
       crew,
       preferences: {
@@ -805,11 +853,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         callsign: suppressProfileCallsign ? null : displayCallsign || null,
         secondaryCallsign: suppressProfileCallsign ? null : secondaryCallsign || null,
         crew: crew || null,
-        qualifications: assignedQualifications,
+        qualifications: savedQualifications,
       },
       unavailability: unavailabilityPeriods, location, unit, flight, phoneNumber, email, permissions,
       priorExperience, isTestingOfficer, isExecutive, isFlyingSupervisor, isIRE,
-      isCommandingOfficer, isCFI, isDeputyFlightCommander, isContractor, isAdminStaff, isQFI, isOFI,
+      isCommandingOfficer, isCFI, isDeputyFlightCommander, isContractor: savedIsContractor, isAdminStaff, isQFI: savedIsQFI, isOFI,
       photoUrl: finalPhotoUrl,
     };
     flushPendingAudits();
@@ -827,17 +875,17 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       if ((instructor.secondaryCallsign || '') !== secondaryCallsign) changes.push(`Secondary Callsign: ${instructor.secondaryCallsign || '(none)'} → ${secondaryCallsign || '(none)'}`);
       if ((instructor.crew || '') !== crew) changes.push(`Crew: ${instructor.crew || '(none)'} → ${crew || '(none)'}`);
       const previousQualifications = getAssignedQualificationIds(instructor);
-      if (JSON.stringify(previousQualifications) !== JSON.stringify(assignedQualifications)) {
+      if (JSON.stringify(previousQualifications) !== JSON.stringify(savedQualifications)) {
         const labelsFor = (ids: string[]) => ids.map(id => {
           const match = normalisedQualificationCatalogue.qualifications.find(definition => qualificationMatches(id, definition));
           return match?.code || match?.name || id;
         }).join(', ') || '(none)';
-        changes.push(`Qualifications: ${labelsFor(previousQualifications)} → ${labelsFor(assignedQualifications)}`);
+        changes.push(`Qualifications: ${labelsFor(previousQualifications)} → ${labelsFor(savedQualifications)}`);
       }
       if (instructor.location !== location) changes.push(`Location: ${instructor.location || '(none)'} → ${location || '(none)'}`);
       if (instructor.phoneNumber !== phoneNumber) changes.push(`Phone: ${instructor.phoneNumber || '(none)'} → ${phoneNumber || '(none)'}`);
       if (instructor.email !== email) changes.push(`Email: ${instructor.email || '(none)'} → ${email || '(none)'}`);
-      if (instructor.category !== category) changes.push(`Category: ${instructor.category} → ${category}`);
+      if (instructor.category !== savedCategory) changes.push(`Category: ${instructor.category} → ${savedCategory}`);
       if (instructor.seatConfig !== seatConfig) changes.push(`Seat Config: ${instructor.seatConfig} → ${seatConfig}`);
       if (instructor.service !== service) changes.push(`Service: ${instructor.service || '(none)'} → ${service || '(none)'}`);
       if (instructor.isTestingOfficer !== isTestingOfficer) changes.push(`Testing Officer: ${instructor.isTestingOfficer} → ${isTestingOfficer}`);
@@ -847,9 +895,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       if (instructor.isCommandingOfficer !== isCommandingOfficer) changes.push(`CO: ${instructor.isCommandingOfficer} → ${isCommandingOfficer}`);
       if (instructor.isCFI !== isCFI) changes.push(`CFI: ${instructor.isCFI} → ${isCFI}`);
       if (instructor.isDeputyFlightCommander !== isDeputyFlightCommander) changes.push(`Deputy FC: ${instructor.isDeputyFlightCommander} → ${isDeputyFlightCommander}`);
-      if (instructor.isContractor !== isContractor) changes.push(`Contractor: ${instructor.isContractor} → ${isContractor}`);
+      if (instructor.isContractor !== savedIsContractor) changes.push(`Contractor: ${instructor.isContractor} → ${savedIsContractor}`);
       if (instructor.isAdminStaff !== isAdminStaff) changes.push(`Admin Staff: ${instructor.isAdminStaff} → ${isAdminStaff}`);
-      if (instructor.isQFI !== isQFI) changes.push(`${instructorLabel}: ${instructor.isQFI} → ${isQFI}`);
+      if (instructor.isQFI !== savedIsQFI) changes.push(`${instructorLabel}: ${instructor.isQFI} → ${savedIsQFI}`);
       if (instructor.isOFI !== isOFI) changes.push(`OFI: ${instructor.isOFI} → ${isOFI}`);
 
       const changesStr = changes.length > 0 ? changes.join(', ') : 'No field changes';
@@ -1740,7 +1788,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           </optgroup>
                         ))}
                       </Dropdown>
-                      <Dropdown label="Role" value={role} onChange={e => setRole(e.target.value as StaffRole)}>
+                      <Dropdown label="Role" value={role} onChange={e => handleRoleChange(e.target.value as StaffRole)}>
                         {staffRoleOptions.map(option => (
                           <option key={option.value} value={option.value}>{option.label}</option>
                         ))}
@@ -1753,9 +1801,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <Dropdown label="Service" value={service || ''} onChange={e => setService(e.target.value as any)}>
                         <option value="">Select...</option><option value="RAAF">RAAF</option><option value="RAN">RAN</option><option value="ARA">ARA</option>
                       </Dropdown>
-                      <Dropdown label="Category" value={category} onChange={e => setCategory(e.target.value as InstructorCategory)}>
-                        <option value="UnCat">UnCat</option><option value="D">D</option><option value="C">C</option><option value="B">B</option><option value="A">A</option>
-                      </Dropdown>
+                      {isContractorStaffRoleValue(String(role)) ? (
+                        <InputField label="Category" value={simIpDisplayLabel} onChange={() => {}} readOnly />
+                      ) : (
+                        <Dropdown label="Category" value={category} onChange={e => setCategory(e.target.value as InstructorCategory)}>
+                          <option value="UnCat">UnCat</option><option value="D">D</option><option value="C">C</option><option value="B">B</option><option value="A">A</option>
+                        </Dropdown>
+                      )}
                       <Dropdown label="Seat Config" value={seatConfig} onChange={e => setSeatConfig(e.target.value as SeatConfig)}>
                         <option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option>
                       </Dropdown>
@@ -1830,7 +1882,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         {/* Row 1 */}
                         <div><span className="text-gray-400 block text-[10px]">ID Number</span><span className="text-white font-medium">{instructor.idNumber}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{profileRoleDisplay.label}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{instructor.category}</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{isContractorStaffRoleValue(instructor.role) ? simIpDisplayLabel : instructor.category}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{displayCallsign || '[None]'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">{suppressProfileCallsign ? '[None]' : instructor.secondaryCallsign || '[None]'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{instructor.crew || '[None]'}</span></div>

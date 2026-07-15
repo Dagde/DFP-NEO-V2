@@ -8209,6 +8209,48 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onChange={(value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value })}
               info="The display label for staff whose saved role is SIM IP. Changing this label only affects what users see; it does not change the saved role or scheduler logic."
             />
+            <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                Contractor Staff Event Eligibility
+              </label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[
+                  { key: 'flight' as const, label: 'Flight' },
+                  { key: 'ftd' as const, label: 'Simulator' },
+                  { key: 'cpt' as const, label: 'Procedural Trainer' },
+                  { key: 'ground' as const, label: 'Ground / Academic' },
+                ].map((option) => {
+                  const checked = personnelDisplaySettings.contractorStaffEventEligibility[option.key];
+                  return (
+                    <label
+                      key={option.key}
+                      className={`flex items-center gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${
+                        checked
+                          ? 'border-cyan-400/40 bg-cyan-500/10 text-cyan-100'
+                          : 'border-gray-700 bg-gray-900/70 text-gray-400'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={!canEditRankTerminology}
+                        onChange={(event) => updatePersonnelDisplaySettings({
+                          contractorStaffEventEligibility: {
+                            ...personnelDisplaySettings.contractorStaffEventEligibility,
+                            [option.key]: event.target.checked,
+                          },
+                        })}
+                        className="h-3.5 w-3.5 rounded border-gray-500 accent-cyan-400"
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
+                Controls which event types Contractor Staff can be considered for by NEO Build. The saved staff role remains internal SIM IP for compatibility.
+              </p>
+            </div>
             <Field
               label="Training Report Name"
               value={trainingReportTerminology.name}

@@ -11760,7 +11760,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
         // CRITICAL: Filter out instructors who already have day events (including from Active DFP)
         const nightEligiblePool = originalInstructors.filter(ip => {
-            if (ip.role !== 'QFI' && !ip.isQFI) return false;
+            if (!isInstructorEligibleForBuildEventType(ip, 'flight')) return false;
             if (isPersonStaticallyUnavailable(ip, nightDutyStartTime, nightDutyEndTime, buildDate, 'flight')) return false;
 
             // NEW: Check if instructor has day events (including Active DFP)
@@ -12868,19 +12868,18 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 candidates = instructors.filter(ip => ip.name === remedialInstructorOverride);
             } else {
                 if (type === 'ftd') {
-                    // FTD: SIM IPs first, then QFIs (role='QFI' OR isQFI=true)
+                    // FTD: Contractor Staff first when enabled, then QFIs.
                     const simIps = instructors.filter(i =>
-                        i.role === 'SIM IP'
+                        isContractorStaffRole(i) && canContractorStaffWorkEventType('ftd')
                     );
                     const availableQfis = instructors.filter(i =>
-                        (i.role === 'QFI' || i.isQFI === true)
+                        isQfiBuildInstructor(i)
                     );
                     candidates = [...simIps, ...availableQfis];
                 } else {
-                    // FLIGHT = QFI only (role='QFI' OR isQFI=true); CPT/GROUND = any instructor
+                    // FLIGHT = QFI plus Contractor Staff only when enabled; CPT/GROUND respect Contractor Staff eligibility.
                     candidates = instructors.filter(ip => {
-                        if (type === 'flight' && ip.role !== 'QFI' && !ip.isQFI) return false;
-                        return true;
+                        return isInstructorEligibleForBuildEventType(ip, type);
                     });
                 }
 
@@ -12923,7 +12922,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     candidateNames: candidates.slice(0, 20).map(ip => ip.name),
                     intendedNightCandidatesFiltered: instructors
                         .filter(ip => {
-                            if (type === 'flight' && ip.role !== 'QFI' && !ip.isQFI) return false;
+                            if (!isInstructorEligibleForBuildEventType(ip, type)) return false;
                             return getScheduledDayNightForStart(startTime) === 'Day' && isPersonScheduledForNightEvents(ip.name);
                         })
                         .slice(0, 20)
@@ -13150,7 +13149,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.exec.maxFlightFtd) { _dRej.eventLimit++; continue; }
                     }
                     if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.exec.maxTotal) { _dRej.eventLimit++; continue; }
-                } else if (!remedialInstructorOverride && ip.role === 'SIM IP') {
+                } else if (!remedialInstructorOverride && isContractorStaffRole(ip)) {
                     if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.simIp.maxFtd) { _dRej.eventLimit++; continue; }
                     if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.simIp.maxTotal) { _dRej.eventLimit++; continue; }
                 } else if (!remedialInstructorOverride) {
@@ -18849,11 +18848,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         });
 
         if (type === 'ftd') {
-            const simIps = locationFilteredInstructors.filter(i => i.role === 'SIM IP');
-            const qfis = locationFilteredInstructors.filter(i => i.role === 'QFI' || i.isQFI === true);
+            const simIps = locationFilteredInstructors.filter(i => isContractorStaffRole(i) && canContractorStaffWorkEventType('ftd'));
+            const qfis = locationFilteredInstructors.filter(i => isQfiBuildInstructor(i));
             candidates = [...simIps, ...qfis];
         } else {
-            candidates = locationFilteredInstructors.filter(i => i.role === 'QFI' || i.isQFI === true);
+            candidates = locationFilteredInstructors.filter(i => isInstructorEligibleForBuildEventType(i, type));
         }
 
         // Apply unit eligibility check (respects staffSharingEnabled setting)
@@ -25593,6 +25592,26 @@ const App: React.FC = () => {
     );
     const instructorLabel = personnelDisplaySettings.instructorLabel;
     const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
+    const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
+    const isContractorStaffRole = (instructor?: Pick<Instructor, 'role'> | null): boolean => (
+        String(instructor?.role || '').trim().toUpperCase() === 'SIM IP'
+    );
+    const canContractorStaffWorkEventType = (eventType?: string): boolean => {
+        const key = String(eventType || '').trim().toLowerCase();
+        if (key === 'flight') return contractorStaffEventEligibility.flight;
+        if (key === 'ftd' || key === 'sim' || key === 'simulator') return contractorStaffEventEligibility.ftd;
+        if (key === 'cpt' || key === 'procedural' || key === 'procedural trainer') return contractorStaffEventEligibility.cpt;
+        if (key === 'ground' || key === 'academic') return contractorStaffEventEligibility.ground;
+        return false;
+    };
+    const isQfiBuildInstructor = (instructor: Instructor): boolean => (
+        !isContractorStaffRole(instructor) && (instructor.role === 'QFI' || instructor.isQFI === true)
+    );
+    const isInstructorEligibleForBuildEventType = (instructor: Instructor, eventType: string): boolean => {
+        if (isContractorStaffRole(instructor)) return canContractorStaffWorkEventType(eventType);
+        if (eventType === 'flight' || eventType === 'ftd') return isQfiBuildInstructor(instructor);
+        return true;
+    };
     const formatResourceDisplayLabel = useCallback(
         (resourceId: string) => formatConfiguredResourceLabel(resourceId, resourceDisplayNames),
         [resourceDisplayNames]
@@ -37141,14 +37160,16 @@ appliedUpdates.forEach(update => {
             const inferredQfi = roleText === 'qfi' || roleText === 'instructor';
             const normalisedRole =
                 unitCode === '77SQN' ? 'Pilot' :
-                roleText === 'sim ip' ? 'SIM IP' :
+                roleText === 'sim ip' || roleText === 'contractor staff' ? 'SIM IP' :
                 roleText === 'pilot' ? 'Pilot' :
                 roleText === 'qfi' || roleText === 'instructor' ? 'QFI' :
                 normaliseFixedCrewStaffRole(instructor.role, unitCode) || 'QFI';
+            const isContractorStaff = normalisedRole === 'SIM IP';
             const nextInstructor: Instructor = {
                 ...instructor,
                 role: normalisedRole,
-                isQFI: instructor.isQFI ?? inferredQfi,
+                isQFI: isContractorStaff ? false : (instructor.isQFI ?? inferredQfi),
+                isContractor: isContractorStaff ? true : (instructor.isContractor ?? false),
                 isOFI: instructor.isOFI ?? false,
                 isCFI: instructor.isCFI ?? false,
                 isAdminStaff: instructor.isAdminStaff ?? false,
@@ -38202,11 +38223,7 @@ appliedUpdates.forEach(update => {
 
         for (const instructor of instructorsData) {
             // Check qualification
-            const isQFI = instructor.role === 'QFI';
-            const isSimIp = instructor.role === 'SIM IP';
-            const isQualified = (conflictedEvent.type === 'flight' && isQFI) ||
-                                (conflictedEvent.type === 'ftd' && (isQFI || isSimIp)) ||
-                                (conflictedEvent.type === 'ground');
+            const isQualified = isInstructorEligibleForBuildEventType(instructor, conflictedEvent.type || 'ground');
             if (!isQualified) { qualificationFailures++; continue; }
 
             const candidateEvent = buildNeoCandidateEvent(eventAtNewTime, 'instructor', instructor.name, atTime);
@@ -38275,7 +38292,7 @@ appliedUpdates.forEach(update => {
 
         console.log('🔍 [PILOT REMEDIES DEBUG] Location filtered instructors:', locationFilteredInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
 
-        const qualifiedPilots = locationFilteredInstructors.filter(i => i.role === 'QFI' || i.isQFI === true);
+        const qualifiedPilots = locationFilteredInstructors.filter(i => isInstructorEligibleForBuildEventType(i, 'flight'));
         console.log('🔍 [PILOT REMEDIES DEBUG] Filtered qualifiedPilots:', qualifiedPilots.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
         console.log('🔍 Total qualified pilots to check:', qualifiedPilots.length);
 

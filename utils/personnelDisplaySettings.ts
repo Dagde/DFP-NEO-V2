@@ -40,6 +40,12 @@ export interface PersonnelDisplaySettings {
   instructorLabel: string;
   simIpDisplayEnabled: boolean;
   simIpDisplayLabel: string;
+  contractorStaffEventEligibility: {
+    flight: boolean;
+    ftd: boolean;
+    cpt: boolean;
+    ground: boolean;
+  };
 }
 
 export const DEFAULT_STAFF_RANK_ORDER = [
@@ -326,6 +332,12 @@ export const DEFAULT_PERSONNEL_DISPLAY_SETTINGS: PersonnelDisplaySettings = {
   instructorLabel: 'QFI',
   simIpDisplayEnabled: true,
   simIpDisplayLabel: 'Contractor Staff',
+  contractorStaffEventEligibility: {
+    flight: false,
+    ftd: true,
+    cpt: false,
+    ground: false,
+  },
 };
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
@@ -443,6 +455,10 @@ export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDispl
   const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, getRankOrderFromEquivalency({ ...staffRankEquivalency, civilianTitles } as any)));
   const traineeRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder));
   const simIpDisplayLabel = String(input?.simIpDisplayLabel || '').trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
+  const contractorStaffEventEligibility = {
+    ...DEFAULT_PERSONNEL_DISPLAY_SETTINGS.contractorStaffEventEligibility,
+    ...(input?.contractorStaffEventEligibility || {}),
+  };
 
   return {
     sortMode: input?.sortMode === 'alphabetical' ? 'alphabetical' : 'rank-then-name',
@@ -455,6 +471,12 @@ export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDispl
     instructorLabel: String(input?.instructorLabel || '').trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel,
     simIpDisplayEnabled: input?.simIpDisplayEnabled !== false,
     simIpDisplayLabel,
+    contractorStaffEventEligibility: {
+      flight: Boolean(contractorStaffEventEligibility.flight),
+      ftd: Boolean(contractorStaffEventEligibility.ftd),
+      cpt: Boolean(contractorStaffEventEligibility.cpt),
+      ground: Boolean(contractorStaffEventEligibility.ground),
+    },
   };
 };
 

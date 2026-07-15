@@ -126,8 +126,14 @@ const applyQualificationRoles = (
     parsedData.isAdminStaff = rolesLower.includes('admin');
     if (importedCrewRole) {
         parsedData.role = importedCrewRole;
+        if (importedCrewRole === 'SIM IP') {
+            parsedData.isQFI = false;
+            parsedData.isContractor = true;
+        }
     } else if (rolesLower.includes('sim ip') || rolesLower.includes('contractor staff')) {
         parsedData.role = 'SIM IP';
+        parsedData.isQFI = false;
+        parsedData.isContractor = true;
     } else if (rolesLower.includes('pilot')) {
         parsedData.role = 'Pilot';
     } else if (rolesLower.includes('qfi') || rolesLower.includes('instructor')) {
