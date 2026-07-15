@@ -7188,7 +7188,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-200/80">Current Display Policy</div>
               <p className="mt-1 text-sm leading-relaxed text-gray-200">
                 {settingsVisibilityPolicy.enabled
-                  ? `Settings visibility filters: ${
+                  ? `Users will see settings for ${
                     settingsVisibilityPolicy.filters.length > 0
                       ? settingsVisibilityPolicy.filters
                         .map((filter) => SETTINGS_VISIBILITY_FILTERS.find((option) => option.value === filter)?.label || filter)
@@ -7198,7 +7198,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   : 'Settings visibility is not limited. Users see the full settings catalogue allowed by their permissions.'}
               </p>
               <p className="mt-2 text-xs leading-relaxed text-gray-400">
-                This policy controls visibility only. Settings still load and remain stored in the editable platform configuration. Section-level filtering should only be applied to records safely tied to the selected context filters. Universal settings remain visible because they can affect all models and NEO Build.
+                This only changes what users see on the Settings pages. It does not delete settings, turn settings off, or stop the app from using saved configuration. Settings that apply to the whole organisation will still be shown.
               </p>
             </div>
           </div>
