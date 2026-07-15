@@ -71505,7 +71505,7 @@ const sectionDescriptions = {
   "scheduling-rules": "Event limits, duty rules, turnarounds and dispatch limits",
   "event-limits": "Define operational thresholds",
   "duty-turnaround": "Crew duty limits & rest times",
-  "business-rules": "System logic and automation",
+  "business-rules": "Dispatch rate, stagger and flight tile warning rules",
   "data-loaders": "Download blank upload templates",
   "user-list": "View and manage user accounts",
   "staff-database": "Staff records and details",
