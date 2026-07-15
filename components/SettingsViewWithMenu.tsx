@@ -432,7 +432,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'training-report-template': 'Configure report labels, grades and repeat rules',
   'currencies': 'Manage currency expiry requirements',
   'sct-events': 'Event scoring rules and triggers',
-  'people-profile': 'Assign NEO Build training basis and exclusions',
+  'people-profile': 'Control who NEO Build can use and any exclusions',
   'scheduling-rules': 'Event limits, duty rules, turnarounds and dispatch limits',
   'event-limits': 'Set daily event limits and duty supervisor session limits',
   'duty-turnaround': 'Crew duty limits & rest times',
