@@ -71095,40 +71095,14 @@ const UserSearchSelect = ({
 };
 const PeopleProfilePage = ({
   traineesData,
-  syllabusDetails,
-  locations,
-  neoBuildCourse,
-  onUpdateNeoBuildCourse,
   excludedCourses,
   onUpdateExcludedCourses,
   onShowSuccess,
   currentUserPermission,
   courseColors = {}
 }) => {
-  const [pendingCourse, setPendingCourse] = reactExports.useState(neoBuildCourse);
   const [isEditUnlocked, setIsEditUnlocked] = reactExports.useState(false);
   const standardActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
-  reactExports.useEffect(() => {
-    if (!isEditUnlocked) setPendingCourse(neoBuildCourse);
-  }, [isEditUnlocked, neoBuildCourse]);
-  const availableLmpTypes = reactExports.useMemo(() => {
-    const lmpTypeSet = /* @__PURE__ */ new Set();
-    syllabusDetails.forEach((item) => {
-      if (item.lmpType && item.lmpType !== "Staff CAT") {
-        lmpTypeSet.add(item.lmpType);
-      }
-      if (!item.lmpType && item.type !== "Academics") {
-        lmpTypeSet.add("BPC+IPC");
-      }
-    });
-    const hasFicCourses = syllabusDetails.some(
-      (item) => item.courses && item.courses.some((c) => c.includes("FIC"))
-    );
-    if (hasFicCourses) {
-      lmpTypeSet.add("FIC");
-    }
-    return Array.from(lmpTypeSet).sort();
-  }, [syllabusDetails]);
   const availableCourses = reactExports.useMemo(() => {
     const courseSet = /* @__PURE__ */ new Set();
     traineesData.forEach((t) => {
@@ -71152,14 +71126,8 @@ const PeopleProfilePage = ({
   }, [traineesData]);
   const isReadOnly = !["Super Admin", "Admin"].includes(currentUserPermission);
   const handleSave = () => {
-    if (hasChanges) {
-      if (!pendingCourse) return;
-      onUpdateNeoBuildCourse(pendingCourse);
-      onShowSuccess(`Master LMP basis for Individual LMP generation set to "${pendingCourse}"`);
-    }
     setIsEditUnlocked(false);
   };
-  const hasChanges = pendingCourse !== neoBuildCourse;
   const unlockForEdit = async () => {
     if (isReadOnly) return;
     const password = await showDarkPrompt({
@@ -71208,67 +71176,10 @@ const PeopleProfilePage = ({
       {
         type: "button",
         onClick: handleEditSaveClick,
-        disabled: isEditUnlocked && hasChanges && !pendingCourse,
         className: standardActionButtonClass,
         children: isEditUnlocked ? "Save" : "Edit"
       }
     ) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-teal-900/30 border border-teal-600/40 rounded-xl p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-teal-300 mb-1", children: "Master LMP Selection" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-teal-200/80 leading-relaxed", children: "Select which Master LMP will be used by NEO Build to generate Individual LMPs for trainees. This determines which flight and simulator events trainees are assigned." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-amber-300/90 mt-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Note:" }),
-        " This setting is rarely changed. In combined units, or even within one unit, trainees may be on different courses. NEO Build schedules from the Individual LMP assigned to each trainee."
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-700 rounded-xl p-5 space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-teal-400", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0m6 2a9 9 0 11-18 0 9 9 0 0118 0z" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Master LMP for Individual LMP Generation" })
-      ] }),
-      neoBuildCourse ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 text-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Currently active:" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2.5 py-0.5 rounded-full bg-teal-900/50 border border-teal-500/40 text-teal-300 font-semibold text-xs", children: neoBuildCourse })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm text-amber-400 flex items-center gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }),
-        "No Master LMP selected. NEO Build will use default BPC+IPC LMP."
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-xs font-medium text-gray-400 mb-1.5", children: [
-          "Master LMP",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1 text-red-400", children: "*" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "select",
-          {
-            value: pendingCourse,
-            onChange: (e) => setPendingCourse(e.target.value),
-            className: "w-full bg-gray-700 border border-teal-600/50 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500",
-            disabled: isReadOnly || !isEditUnlocked,
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select one Master LMP —" }),
-              availableLmpTypes.map((lmpType) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmpType, children: lmpType }, lmpType))
-            ]
-          }
-        ),
-        availableLmpTypes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-1", children: "No Master LMP options available" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-amber-900/20 border border-amber-700/30 rounded-lg px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-amber-300/80 flex items-start gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5 mt-0.5 flex-shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "This selection sets the Master LMP basis used when creating trainee Individual LMPs. NEO Build schedules from the Individual LMP assigned to each trainee." })
-      ] }) }),
-      !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 pt-2", children: [
-        hasChanges && pendingCourse && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-amber-300", children: [
-          "Unsaved — will change to: ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: pendingCourse })
-        ] }),
-        !hasChanges && neoBuildCourse && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-emerald-400 flex items-center gap-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M5 13l4 4L19 7" }) }),
-          "Saved"
-        ] })
-      ] }),
-      isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-yellow-400/70", children: "Read-only mode — Super Admin or Admin access required to change this setting." })
-    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-orange-900/20 border border-orange-600/30 rounded-xl p-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-orange-300 mb-1", children: "Exclude Courses from NEO Build" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-orange-200/80 leading-relaxed", children: [
@@ -72188,11 +72099,6 @@ const SettingsViewWithMenu = (props) => {
           PeopleProfilePage,
           {
             traineesData: props.traineesData,
-            syllabusDetails: props.syllabusDetails,
-            locations: props.locations,
-            neoBuildCourse: props.neoBuildCourse || "",
-            onUpdateNeoBuildCourse: props.onUpdateNeoBuildCourse || (() => {
-            }),
             excludedCourses: props.excludedCourses || [],
             onUpdateExcludedCourses: props.onUpdateExcludedCourses || (() => {
             }),
@@ -103451,7 +103357,6 @@ const App = () => {
     return stored ? JSON.parse(stored) : [];
   });
   const getApiBase2 = () => "/api";
-  const [neoBuildCourse, setNeoBuildCourse] = reactExports.useState("");
   const [persistedAcademicLmp, setPersistedAcademicLmp] = reactExports.useState("");
   const [excludedCourses, setExcludedCourses] = reactExports.useState([]);
   reactExports.useEffect(() => {
@@ -103460,7 +103365,6 @@ const App = () => {
         const res = await fetch(`${getApiBase2()}/settings/course-settings`);
         if (res.ok) {
           const data = await res.json();
-          setNeoBuildCourse(data.neoBuildCourse || "");
           setPersistedAcademicLmp(data.selectedAcademicLmp || "");
           setExcludedCourses(data.excludedCourses || []);
         }
@@ -103470,18 +103374,6 @@ const App = () => {
     };
     loadCourseSettings();
   }, []);
-  const handleUpdateNeoBuildCourse = async (course) => {
-    setNeoBuildCourse(course);
-    try {
-      await fetch(`${getApiBase2()}/settings/course-settings`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ neoBuildCourse: course })
-      });
-    } catch (error) {
-      console.error("[NeoBuildCourse] Failed to save:", error);
-    }
-  };
   const handleUpdateExcludedCourses = async (courses2) => {
     setExcludedCourses(courses2);
     try {
@@ -116595,8 +116487,6 @@ ${error instanceof Error ? error.message : String(error)}`,
             settingsLoaded,
             organisationSettings,
             onUpdateOrganisationSettings: setOrganisationSettings,
-            neoBuildCourse,
-            onUpdateNeoBuildCourse: handleUpdateNeoBuildCourse,
             excludedCourses,
             onUpdateExcludedCourses: handleUpdateExcludedCourses,
             resourceDisplayNames,

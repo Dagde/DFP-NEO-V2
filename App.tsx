@@ -25783,8 +25783,6 @@ const App: React.FC = () => {
     // Shared API base helper — always use relative /api when served from same origin
     const getApiBase = () => '/api';
 
-    // NEO Build basis course (People Profile setting) — persisted in DB
-    const [neoBuildCourse, setNeoBuildCourse] = useState<string>('');
     // Selected Academic LMP — persisted in DB so last selection survives hard reset
     const [persistedAcademicLmp, setPersistedAcademicLmp] = useState<string>('');
     // Courses excluded from NEO Build (e.g. in Academics phase or on course pause)
@@ -25796,7 +25794,6 @@ const App: React.FC = () => {
                 const res = await fetch(`${getApiBase()}/settings/course-settings`);
                 if (res.ok) {
                     const data = await res.json();
-                    setNeoBuildCourse(data.neoBuildCourse || '');
                     setPersistedAcademicLmp(data.selectedAcademicLmp || '');
                     setExcludedCourses(data.excludedCourses || []);
                 }
@@ -25806,19 +25803,6 @@ const App: React.FC = () => {
         };
         loadCourseSettings();
     }, []);
-
-    const handleUpdateNeoBuildCourse = async (course: string) => {
-        setNeoBuildCourse(course);
-        try {
-            await fetch(`${getApiBase()}/settings/course-settings`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ neoBuildCourse: course })
-            });
-        } catch (error) {
-            console.error('[NeoBuildCourse] Failed to save:', error);
-        }
-    };
 
     const handleUpdateExcludedCourses = async (courses: string[]) => {
         setExcludedCourses(courses);
@@ -41771,8 +41755,6 @@ appliedUpdates.forEach(update => {
                        settingsLoaded={settingsLoaded}
                        organisationSettings={organisationSettings}
                        onUpdateOrganisationSettings={setOrganisationSettings}
-                       neoBuildCourse={neoBuildCourse}
-                       onUpdateNeoBuildCourse={handleUpdateNeoBuildCourse}
                        excludedCourses={excludedCourses}
                        onUpdateExcludedCourses={handleUpdateExcludedCourses}
                        resourceDisplayNames={resourceDisplayNames}

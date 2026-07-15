@@ -164,8 +164,6 @@ interface SettingsViewWithMenuProps {
         }>;
     }) => void;
     onDatabaseDataChanged?: () => void;  // Called when staff/trainee database is modified
-    neoBuildCourse?: string;
-    onUpdateNeoBuildCourse?: (course: string) => void;
     excludedCourses?: string[];
     onUpdateExcludedCourses?: (courses: string[]) => void;
     requestedSettingsSection?: {
@@ -1271,10 +1269,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {activeSection === 'people-profile' && (
                         <PeopleProfilePage
                             traineesData={props.traineesData}
-                            syllabusDetails={props.syllabusDetails}
-                            locations={props.locations}
-                            neoBuildCourse={props.neoBuildCourse || ''}
-                            onUpdateNeoBuildCourse={props.onUpdateNeoBuildCourse || (() => {})}
                             excludedCourses={props.excludedCourses || []}
                             onUpdateExcludedCourses={props.onUpdateExcludedCourses || (() => {})}
                             onShowSuccess={props.onShowSuccess}
