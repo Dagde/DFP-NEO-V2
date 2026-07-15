@@ -25165,31 +25165,49 @@ const App: React.FC = () => {
         const numericValue = Math.floor(Number(value));
         return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : fallback;
     };
-    const normaliseEventLimitsForDutySupSessions = (limits: EventLimits): EventLimits => ({
-        ...limits,
-        exec: {
-            ...limits.exec,
-            maxDutySup: normaliseDutySupSessionLimit(limits.exec?.maxDutySup, 2),
-        },
-        instructor: {
-            ...limits.instructor,
-            maxFlightFtd: normalisePositiveIntegerLimit(limits.instructor?.maxFlightFtd, 2),
-            maxFlights: normalisePositiveIntegerLimit(limits.instructor?.maxFlights, 1),
-            maxSimulators: normalisePositiveIntegerLimit(limits.instructor?.maxSimulators, 2),
-            maxFlightSim: normalisePositiveIntegerLimit(
-                limits.instructor?.maxFlightSim,
-                normalisePositiveIntegerLimit(limits.instructor?.maxFlightFtd, 2)
-            ),
-            maxTotal: normalisePositiveIntegerLimit(limits.instructor?.maxTotal, 3),
-            maxDutySup: normaliseDutySupSessionLimit(limits.instructor?.maxDutySup, 2),
-        },
-    });
-    const [eventLimits, setEventLimits] = useState<EventLimits>({
+    const DEFAULT_EVENT_LIMITS: EventLimits = {
         exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
         instructor: { maxFlightFtd: 2, maxFlights: 1, maxSimulators: 2, maxFlightSim: 2, maxDutySup: 2, maxTotal: 3 },
         trainee: { maxFlightFtd: 1, maxTotal: 2 },
         simIp: { maxFtd: 2, maxTotal: 2 }
+    };
+    const normaliseEventLimitsForDutySupSessions = (limits?: Partial<EventLimits> | null): EventLimits => ({
+        ...DEFAULT_EVENT_LIMITS,
+        ...(limits || {}),
+        exec: {
+            ...DEFAULT_EVENT_LIMITS.exec,
+            ...(limits?.exec || {}),
+            maxFlightFtd: normalisePositiveIntegerLimit(limits?.exec?.maxFlightFtd, DEFAULT_EVENT_LIMITS.exec.maxFlightFtd),
+            maxDutySup: normaliseDutySupSessionLimit(limits?.exec?.maxDutySup, DEFAULT_EVENT_LIMITS.exec.maxDutySup),
+            maxTotal: normalisePositiveIntegerLimit(limits?.exec?.maxTotal, DEFAULT_EVENT_LIMITS.exec.maxTotal),
+        },
+        instructor: {
+            ...DEFAULT_EVENT_LIMITS.instructor,
+            ...(limits?.instructor || {}),
+            maxFlightFtd: normalisePositiveIntegerLimit(limits?.instructor?.maxFlightFtd, DEFAULT_EVENT_LIMITS.instructor.maxFlightFtd),
+            maxFlights: normalisePositiveIntegerLimit(limits?.instructor?.maxFlights, DEFAULT_EVENT_LIMITS.instructor.maxFlights || 1),
+            maxSimulators: normalisePositiveIntegerLimit(limits?.instructor?.maxSimulators, DEFAULT_EVENT_LIMITS.instructor.maxSimulators || 2),
+            maxFlightSim: normalisePositiveIntegerLimit(
+                limits?.instructor?.maxFlightSim,
+                normalisePositiveIntegerLimit(limits?.instructor?.maxFlightFtd, DEFAULT_EVENT_LIMITS.instructor.maxFlightFtd)
+            ),
+            maxTotal: normalisePositiveIntegerLimit(limits?.instructor?.maxTotal, DEFAULT_EVENT_LIMITS.instructor.maxTotal),
+            maxDutySup: normaliseDutySupSessionLimit(limits?.instructor?.maxDutySup, DEFAULT_EVENT_LIMITS.instructor.maxDutySup),
+        },
+        trainee: {
+            ...DEFAULT_EVENT_LIMITS.trainee,
+            ...(limits?.trainee || {}),
+            maxFlightFtd: normalisePositiveIntegerLimit(limits?.trainee?.maxFlightFtd, DEFAULT_EVENT_LIMITS.trainee.maxFlightFtd),
+            maxTotal: normalisePositiveIntegerLimit(limits?.trainee?.maxTotal, DEFAULT_EVENT_LIMITS.trainee.maxTotal),
+        },
+        simIp: {
+            ...DEFAULT_EVENT_LIMITS.simIp,
+            ...(limits?.simIp || {}),
+            maxFtd: normalisePositiveIntegerLimit(limits?.simIp?.maxFtd, DEFAULT_EVENT_LIMITS.simIp.maxFtd),
+            maxTotal: normalisePositiveIntegerLimit(limits?.simIp?.maxTotal, DEFAULT_EVENT_LIMITS.simIp.maxTotal),
+        },
     });
+    const [eventLimits, setEventLimits] = useState<EventLimits>(DEFAULT_EVENT_LIMITS);
 
     // Phrase Bank State
     const [phraseBank, setPhraseBank] = useState<PhraseBank>(DEFAULT_PHRASE_BANK);
