@@ -3689,7 +3689,7 @@ const DEFAULT_PERSONNEL_DISPLAY_SETTINGS = {
   traineeRankOrder: DEFAULT_STAFF_RANK_ORDER,
   staffRankEquivalency: DEFAULT_RANK_EQUIVALENCY_CONFIG,
   civilianTitles: DEFAULT_CIVILIAN_TITLES,
-  civilianContractorGroupName: "Civilian Contractors",
+  civilianContractorGroupName: "Civilian titles",
   instructorLabel: "QFI",
   simIpDisplayEnabled: true,
   simIpDisplayLabel: "Contractor Staff",
@@ -11072,7 +11072,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Personnel Terminology", description: "How people, ranks and instructors are named for this organisation.", action: settingsLink("platform-rank-terminology", "Take me there", { focusSubsectionId: "platform-personnel-terminology" }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Personnel sort", value: personnelDisplaySettings.sortMode || "rank-then-name", options: ["rank-then-name", "alphabetical"], optionLabels: { "rank-then-name": "Rank then name", alphabetical: "Alphabetical" }, onChange: (value) => updatePersonnelDisplaySettings({ sortMode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Instructor term", value: personnelDisplaySettings.instructorLabel || "", onChange: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Civilian group", value: personnelDisplaySettings.civilianContractorGroupName || "", onChange: (value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value }), disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Civilian titles", value: (personnelDisplaySettings.civilianTitles || []).join(", ") || "Mr, Ms, Dr" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Trainee ranks", value: personnelDisplaySettings.useSeparateTraineeRankOrder ? "separate" : "staff", options: ["staff", "separate"], optionLabels: { staff: "Uses staff rank order", separate: "Separate trainee rank order" }, onChange: (value) => updatePersonnelDisplaySettings({ useSeparateTraineeRankOrder: value === "separate" }), disabled: true })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Crew Position Labels", description: "Generic scheduler roles mapped to customer-facing words.", action: settingsLink("platform-rank-terminology", "Take me there", { focusSubsectionId: "platform-crew-position-labels" }), children: crewPositionTerminology.positions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
@@ -69977,16 +69977,6 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               disabled: !canEditRankTerminology,
               onChange: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
               info: "The local term shown to users for instructional staff. Examples: QFI, Instructor, Flying Instructor, Flight Instructor."
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Field,
-            {
-              label: "Civilian Title Group",
-              value: personnelDisplaySettings.civilianContractorGroupName,
-              disabled: !canEditRankTerminology,
-              onChange: (value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value }),
-              info: "Heading used for non-military title options in personnel rank/title lists. This does not control scheduling permissions."
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(

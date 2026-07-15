@@ -8148,13 +8148,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onChange={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}
               info="The local term shown to users for instructional staff. Examples: QFI, Instructor, Flying Instructor, Flight Instructor."
             />
-            <Field
-              label="Civilian Title Group"
-              value={personnelDisplaySettings.civilianContractorGroupName}
-              disabled={!canEditRankTerminology}
-              onChange={(value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value })}
-              info="Heading used for non-military title options in personnel rank/title lists. This does not control scheduling permissions."
-            />
             <SelectField
               label="Trainee Rank Source"
               value={personnelDisplaySettings.useSeparateTraineeRankOrder ? 'Use separate trainee rank order' : 'Use staff rank order'}

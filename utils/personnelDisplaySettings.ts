@@ -328,7 +328,7 @@ export const DEFAULT_PERSONNEL_DISPLAY_SETTINGS: PersonnelDisplaySettings = {
   traineeRankOrder: DEFAULT_STAFF_RANK_ORDER,
   staffRankEquivalency: DEFAULT_RANK_EQUIVALENCY_CONFIG,
   civilianTitles: DEFAULT_CIVILIAN_TITLES,
-  civilianContractorGroupName: 'Civilian Contractors',
+  civilianContractorGroupName: 'Civilian titles',
   instructorLabel: 'QFI',
   simIpDisplayEnabled: true,
   simIpDisplayLabel: 'Contractor Staff',
