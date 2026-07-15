@@ -1473,7 +1473,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         <legend className="px-2 text-sm font-semibold text-gray-300">Execs</legend>
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
+                                                <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd} per day:</span>
                                                 {isEditingLimits ? (
                                                     <input type="number" value={tempLimits.exec.maxFlightFtd} onChange={e => setTempLimits({...tempLimits, exec: {...tempLimits.exec, maxFlightFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.exec.maxFlightFtd}</span>}
@@ -1485,7 +1485,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                 ) : <span className="text-white font-mono">{eventLimits.exec.maxDutySup}</span>}
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-400">Max total all events:</span>
+                                                <span className="text-sm text-gray-400">Max total events per day:</span>
                                                 {isEditingLimits ? (
                                                     <input type="number" value={tempLimits.exec.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, exec: {...tempLimits.exec, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.exec.maxTotal}</span>}
@@ -1497,7 +1497,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         <legend className="px-2 text-sm font-semibold text-gray-300">Staff</legend>
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
+                                                <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd} per day:</span>
                                                 {isEditingLimits ? (
                                                     <input type="number" value={tempLimits.instructor.maxFlightFtd || 2} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0, maxFlightSim: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.instructor.maxFlightFtd}</span>}
@@ -1509,7 +1509,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                 ) : <span className="text-white font-mono">{eventLimits.instructor.maxDutySup}</span>}
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-400">Max total all events:</span>
+                                                <span className="text-sm text-gray-400">Max total events per day:</span>
                                                 {isEditingLimits ? (
                                                     <input type="number" value={tempLimits.instructor.maxTotal || 3} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.instructor.maxTotal}</span>}
@@ -1526,13 +1526,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         </legend>
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
+                                                <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd} per day:</span>
                                                 {canEditTraineeLimits ? (
                                                     <input type="number" value={tempLimits.trainee.maxFlightFtd || 1} onChange={e => setTempLimits({...tempLimits, trainee: {...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.trainee.maxFlightFtd}</span>}
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-400">Max total all events:</span>
+                                                <span className="text-sm text-gray-400">Max total events per day:</span>
                                                 {canEditTraineeLimits ? (
                                                     <input type="number" value={tempLimits.trainee.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, trainee: {...tempLimits.trainee, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.trainee.maxTotal}</span>}
@@ -1544,13 +1544,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         <legend className="px-2 text-sm font-semibold text-gray-300">SIM IPs</legend>
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-400">Max {resourceDisplayNames.ftd}:</span>
+                                                <span className="text-sm text-gray-400">Max {resourceDisplayNames.ftd} per day:</span>
                                                 {isEditingLimits ? (
                                                     <input type="number" value={tempLimits.simIp.maxFtd || 2} onChange={e => setTempLimits({...tempLimits, simIp: {...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.simIp.maxFtd}</span>}
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-400">Max total all events:</span>
+                                                <span className="text-sm text-gray-400">Max total events per day:</span>
                                                 {isEditingLimits ? (
                                                     <input type="number" value={tempLimits.simIp.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, simIp: {...tempLimits.simIp, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.simIp.maxTotal}</span>}
