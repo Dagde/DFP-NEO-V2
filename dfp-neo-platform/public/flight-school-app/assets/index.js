@@ -3728,8 +3728,7 @@ const normaliseCivilianTitles = (value) => {
 };
 const preserveEditableTextSetting = (value, fallback) => {
   if (value === void 0 || value === null) return fallback;
-  const text = String(value);
-  return text.trim() ? text : fallback;
+  return String(value);
 };
 const CIVILIAN_EQUAL_RANK_KEYS = new Set(DEFAULT_CIVILIAN_TITLES.map(rankKey));
 const groupLegacyCivilianRanks = (rankOrder) => {

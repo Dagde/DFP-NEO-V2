@@ -386,8 +386,7 @@ const normaliseCivilianTitles = (value: unknown): string[] => {
 
 const preserveEditableTextSetting = (value: unknown, fallback: string): string => {
   if (value === undefined || value === null) return fallback;
-  const text = String(value);
-  return text.trim() ? text : fallback;
+  return String(value);
 };
 
 const CIVILIAN_EQUAL_RANK_KEYS = new Set(DEFAULT_CIVILIAN_TITLES.map(rankKey));
