@@ -71643,7 +71643,7 @@ const sectionGroups = [
   {
     label: "Records & Data",
     shortLabel: "Data",
-    description: "Operational runbook, evidence, cancellation code governance, template downloads and enduring historical records.",
+    description: "Support records, cancellation codes, blank templates and saved operational evidence.",
     accent: "emerald",
     defaultSection: "platform-operational-runbook",
     sections: ["platform-operational-runbook", "validation", "data-loaders"]
