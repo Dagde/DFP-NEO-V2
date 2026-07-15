@@ -8149,43 +8149,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               info="The local term shown to users for instructional staff. Examples: QFI, Instructor, Flying Instructor, Flight Instructor."
             />
             <Field
-              label="Civilian / Contractor Title Group"
+              label="Civilian Title Group"
               value={personnelDisplaySettings.civilianContractorGroupName}
               disabled={!canEditRankTerminology}
               onChange={(value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value })}
-              info="Heading used for civilian and contractor title options in personnel rank/title lists. This does not control Contractor Staff scheduling."
+              info="Heading used for non-military title options in personnel rank/title lists. This does not control scheduling permissions."
             />
-            <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
-              <label className="flex items-start justify-between gap-3">
-                <span>
-                  <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Enable Contractor Staff</span>
-                  <span className="mt-1 block text-xs leading-relaxed text-gray-400">
-                    Turn on this staff type for contracted or civilian personnel who may be scheduled for selected event types.
-                  </span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={personnelDisplaySettings.simIpDisplayEnabled}
-                  disabled={!canEditRankTerminology}
-                  onChange={(event) => updatePersonnelDisplaySettings({ simIpDisplayEnabled: event.target.checked })}
-                  className="peer sr-only"
-                />
-                <span
-                  aria-hidden="true"
-                  className={`mt-1 flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition ${
-                    personnelDisplaySettings.simIpDisplayEnabled
-                      ? 'border-cyan-400/60 bg-cyan-500/30'
-                      : 'border-gray-600 bg-gray-800'
-                  } ${canEditRankTerminology ? '' : 'opacity-50'}`}
-                >
-                  <span
-                    className={`h-3.5 w-3.5 rounded-full bg-gray-100 shadow transition ${
-                      personnelDisplaySettings.simIpDisplayEnabled ? 'translate-x-4' : 'translate-x-0'
-                    }`}
-                  />
-                </span>
-              </label>
-            </div>
             <SelectField
               label="Trainee Rank Source"
               value={personnelDisplaySettings.useSeparateTraineeRankOrder ? 'Use separate trainee rank order' : 'Use staff rank order'}
@@ -8201,19 +8170,52 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               info="Choose Use staff rank order when staff and trainees share the same rank/title priority. Choose Use separate trainee rank order if trainees need their own ordering."
             />
           </div>
-          <div className="grid gap-3 lg:grid-cols-2">
-            <Field
-              label="Contractor Staff Name"
-              value={personnelDisplaySettings.simIpDisplayLabel}
-              disabled={!canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled}
-              onChange={(value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value })}
-              info="The staff type name users see in profiles, staff lists and scheduling views. Examples: Contractor Staff, Contract Instructor, Simulator Instructor."
-            />
-            <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                Contractor Staff Can Be Scheduled For
+          <div className="rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-[220px] flex-1">
+                <h5 className="text-sm font-bold text-cyan-100">Contractor Staff</h5>
+                <p className="mt-1 max-w-3xl text-xs leading-relaxed text-cyan-50/75">
+                  Use this staff type for contracted or civilian personnel, then choose what event types they may be assigned to.
+                </p>
+              </div>
+              <label className="flex min-w-[220px] items-center justify-between gap-3 rounded border border-cyan-400/20 bg-gray-950/60 px-3 py-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-cyan-100">Enabled</span>
+                <input
+                  type="checkbox"
+                  checked={personnelDisplaySettings.simIpDisplayEnabled}
+                  disabled={!canEditRankTerminology}
+                  onChange={(event) => updatePersonnelDisplaySettings({ simIpDisplayEnabled: event.target.checked })}
+                  className="peer sr-only"
+                />
+                <span
+                  aria-hidden="true"
+                  className={`flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition ${
+                    personnelDisplaySettings.simIpDisplayEnabled
+                      ? 'border-cyan-400/60 bg-cyan-500/30'
+                      : 'border-gray-600 bg-gray-800'
+                  } ${canEditRankTerminology ? '' : 'opacity-50'}`}
+                >
+                  <span
+                    className={`h-3.5 w-3.5 rounded-full bg-gray-100 shadow transition ${
+                      personnelDisplaySettings.simIpDisplayEnabled ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </span>
               </label>
-              <div className="grid gap-2 sm:grid-cols-2">
+            </div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(220px,0.8fr)_minmax(360px,1.2fr)]">
+              <Field
+                label="Display Name"
+                value={personnelDisplaySettings.simIpDisplayLabel}
+                disabled={!canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled}
+                onChange={(value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value })}
+                info="The staff type name users see in profiles, staff lists and scheduling views. Examples: Contractor Staff, Contract Instructor, Simulator Instructor."
+              />
+              <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Can Be Scheduled For
+                </label>
+                <div className="grid gap-2 sm:grid-cols-2">
                 {[
                   { key: 'flight' as const, label: 'Flight' },
                   { key: 'ftd' as const, label: 'Simulator' },
@@ -8246,11 +8248,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </label>
                   );
                 })}
+                </div>
+                <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
+                  NEO Build only assigns Contractor Staff to the selected event types.
+                </p>
               </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
-                Choose the event types this staff type may be assigned by NEO Build.
-              </p>
             </div>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
             <Field
               label="Training Report Name"
               value={trainingReportTerminology.name}

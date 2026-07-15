@@ -69982,42 +69982,13 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Field,
             {
-              label: "Civilian / Contractor Title Group",
+              label: "Civilian Title Group",
               value: personnelDisplaySettings.civilianContractorGroupName,
               disabled: !canEditRankTerminology,
               onChange: (value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value }),
-              info: "Heading used for civilian and contractor title options in personnel rank/title lists. This does not control Contractor Staff scheduling."
+              info: "Heading used for non-military title options in personnel rank/title lists. This does not control scheduling permissions."
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start justify-between gap-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Enable Contractor Staff" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs leading-relaxed text-gray-400", children: "Turn on this staff type for contracted or civilian personnel who may be scheduled for selected event types." })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: personnelDisplaySettings.simIpDisplayEnabled,
-                disabled: !canEditRankTerminology,
-                onChange: (event) => updatePersonnelDisplaySettings({ simIpDisplayEnabled: event.target.checked }),
-                className: "peer sr-only"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "span",
-              {
-                "aria-hidden": "true",
-                className: `mt-1 flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition ${personnelDisplaySettings.simIpDisplayEnabled ? "border-cyan-400/60 bg-cyan-500/30" : "border-gray-600 bg-gray-800"} ${canEditRankTerminology ? "" : "opacity-50"}`,
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "span",
-                  {
-                    className: `h-3.5 w-3.5 rounded-full bg-gray-100 shadow transition ${personnelDisplaySettings.simIpDisplayEnabled ? "translate-x-4" : "translate-x-0"}`
-                  }
-                )
-              }
-            )
-          ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             SelectField,
             {
@@ -70036,54 +70007,90 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Field,
-            {
-              label: "Contractor Staff Name",
-              value: personnelDisplaySettings.simIpDisplayLabel,
-              disabled: !canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled,
-              onChange: (value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value }),
-              info: "The staff type name users see in profiles, staff lists and scheduling views. Examples: Contractor Staff, Contract Instructor, Simulator Instructor."
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Contractor Staff Can Be Scheduled For" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2", children: [
-              { key: "flight", label: "Flight" },
-              { key: "ftd", label: "Simulator" },
-              { key: "cpt", label: "Procedural Trainer" },
-              { key: "ground", label: "Ground / Academic" }
-            ].map((option) => {
-              const checked = personnelDisplaySettings.contractorStaffEventEligibility[option.key];
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "label",
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[220px] flex-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Contractor Staff" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-xs leading-relaxed text-cyan-50/75", children: "Use this staff type for contracted or civilian personnel, then choose what event types they may be assigned to." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex min-w-[220px] items-center justify-between gap-3 rounded border border-cyan-400/20 bg-gray-950/60 px-3 py-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wider text-cyan-100", children: "Enabled" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
                 {
-                  className: `flex items-center gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${checked ? "border-cyan-400/40 bg-cyan-500/10 text-cyan-100" : "border-gray-700 bg-gray-900/70 text-gray-400"}`,
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "checkbox",
-                        checked,
-                        disabled: !canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled,
-                        onChange: (event) => updatePersonnelDisplaySettings({
-                          contractorStaffEventEligibility: {
-                            ...personnelDisplaySettings.contractorStaffEventEligibility,
-                            [option.key]: event.target.checked
-                          }
-                        }),
-                        className: "h-3.5 w-3.5 rounded border-gray-500 accent-cyan-400"
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.label })
-                  ]
-                },
-                option.key
-              );
-            }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-[11px] leading-relaxed text-gray-500", children: "Choose the event types this staff type may be assigned by NEO Build." })
+                  type: "checkbox",
+                  checked: personnelDisplaySettings.simIpDisplayEnabled,
+                  disabled: !canEditRankTerminology,
+                  onChange: (event) => updatePersonnelDisplaySettings({ simIpDisplayEnabled: event.target.checked }),
+                  className: "peer sr-only"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  "aria-hidden": "true",
+                  className: `flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition ${personnelDisplaySettings.simIpDisplayEnabled ? "border-cyan-400/60 bg-cyan-500/30" : "border-gray-600 bg-gray-800"} ${canEditRankTerminology ? "" : "opacity-50"}`,
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "span",
+                    {
+                      className: `h-3.5 w-3.5 rounded-full bg-gray-100 shadow transition ${personnelDisplaySettings.simIpDisplayEnabled ? "translate-x-4" : "translate-x-0"}`
+                    }
+                  )
+                }
+              )
+            ] })
           ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid gap-3 lg:grid-cols-[minmax(220px,0.8fr)_minmax(360px,1.2fr)]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Field,
+              {
+                label: "Display Name",
+                value: personnelDisplaySettings.simIpDisplayLabel,
+                disabled: !canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled,
+                onChange: (value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value }),
+                info: "The staff type name users see in profiles, staff lists and scheduling views. Examples: Contractor Staff, Contract Instructor, Simulator Instructor."
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Can Be Scheduled For" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2", children: [
+                { key: "flight", label: "Flight" },
+                { key: "ftd", label: "Simulator" },
+                { key: "cpt", label: "Procedural Trainer" },
+                { key: "ground", label: "Ground / Academic" }
+              ].map((option) => {
+                const checked = personnelDisplaySettings.contractorStaffEventEligibility[option.key];
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "label",
+                  {
+                    className: `flex items-center gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${checked ? "border-cyan-400/40 bg-cyan-500/10 text-cyan-100" : "border-gray-700 bg-gray-900/70 text-gray-400"}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "checkbox",
+                          checked,
+                          disabled: !canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled,
+                          onChange: (event) => updatePersonnelDisplaySettings({
+                            contractorStaffEventEligibility: {
+                              ...personnelDisplaySettings.contractorStaffEventEligibility,
+                              [option.key]: event.target.checked
+                            }
+                          }),
+                          className: "h-3.5 w-3.5 rounded border-gray-500 accent-cyan-400"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.label })
+                    ]
+                  },
+                  option.key
+                );
+              }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-[11px] leading-relaxed text-gray-500", children: "NEO Build only assigns Contractor Staff to the selected event types." })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Field,
             {
