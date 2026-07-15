@@ -63341,6 +63341,43 @@ const AIRFIELD_CATALOGUE_FILE = "airfield-location-catalog.json";
 const MAX_AIRFIELD_SUGGESTIONS = 6;
 const PLATFORM_CONFIG_UPDATED_EVENT$1 = "dfp-platform-config-updated";
 const TRAINEE_DEFAULT_ON_UNIT_CODES$1 = /* @__PURE__ */ new Set(["1FTS", "2FTS", "CFS"]);
+const SETTINGS_VISIBILITY_MODES = [
+  {
+    value: "all",
+    label: "All Settings",
+    description: "Show the full platform configuration. Universal settings are always visible."
+  },
+  {
+    value: "unit",
+    label: "Unit / Combined Unit",
+    description: "Show records tied to the current unit or combined-unit context, while keeping universal settings visible."
+  },
+  {
+    value: "location",
+    label: "Location",
+    description: "Show records tied to the current base or location, while keeping universal settings visible."
+  },
+  {
+    value: "aircraftType",
+    label: "Aircraft Type",
+    description: "Show records tied to the active aircraft type, while keeping universal settings visible."
+  },
+  {
+    value: "parentOrganisation",
+    label: "Parent Organisation",
+    description: "Show records tied to the organisation level above the current unit, while keeping universal settings visible."
+  }
+];
+const DEFAULT_SETTINGS_VISIBILITY_POLICY = {
+  mode: "all"
+};
+const normaliseSettingsVisibilityPolicy = (value) => {
+  const mode = SETTINGS_VISIBILITY_MODES.some((option) => option.value === value?.mode) ? value.mode : DEFAULT_SETTINGS_VISIBILITY_POLICY.mode;
+  return {
+    enabled: value?.enabled === true,
+    mode
+  };
+};
 const getDefaultHasTraineesForUnit$1 = (unitCode) => TRAINEE_DEFAULT_ON_UNIT_CODES$1.has(String(unitCode || "").trim().toUpperCase());
 const applyDefaultUnitTraineeAvailability$1 = (config) => {
   if (!config || !Array.isArray(config.units)) return config;
@@ -64692,6 +64729,9 @@ const PlatformConfigurationSettings = ({
     ...DEFAULT_OPERATIONAL_RUNBOOK,
     ...primaryOrganisationSettings.operationalRunbook || {}
   };
+  const settingsVisibilityPolicy = normaliseSettingsVisibilityPolicy(
+    primaryOrganisationSettings.settingsVisibilityPolicy || null
+  );
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(
     primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null
   );
@@ -64821,6 +64861,15 @@ const PlatformConfigurationSettings = ({
       notifyPlatformConfigUpdatedSoon(nextConfig);
       return nextConfig;
     });
+  };
+  const updateSettingsVisibilityPolicy = (patch) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      settingsVisibilityPolicy: normaliseSettingsVisibilityPolicy({
+        ...settingsVisibilityPolicy,
+        ...patch
+      })
+    }));
   };
   const updateOrganisationStructure = (nextStructure) => {
     setConfig((prev) => {
@@ -66895,6 +66944,11 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   const activeUnitAircraftTypeCodes = Array.from(new Set(
     getActiveScopedUnitCodes().map((unitCode) => getUnitAircraftTypeCode(unitCode)).map((aircraftCode) => String(aircraftCode || "").trim().toUpperCase()).filter(Boolean)
   ));
+  const activeSettingsVisibilityUnitCodes = getActiveScopedUnitCodes();
+  const activeSettingsVisibilityLocationCode = String(activePlatformUnit?.locationCode || activeHomeLocationCode || "").trim().toUpperCase();
+  const activeSettingsVisibilityAircraftTypes = activeUnitAircraftTypeCodes.length > 0 ? activeUnitAircraftTypeCodes : [activeMissionAircraftTypeCode].filter(Boolean);
+  const activeSettingsVisibilityParentOrgCode = String(activePlatformUnit?.organisationCode || primaryOrganisation?.code || "").trim();
+  const activeSettingsVisibilityParentOrg = config.organisations.find((organisation) => String(organisation.code || "").trim().toUpperCase() === activeSettingsVisibilityParentOrgCode.toUpperCase()) || primaryOrganisation;
   const fixedCrewContext = isFixedCrewLikeOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel);
   const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
   const standardMissionProfilesForContext = uniqueProfilesByCompositeGroup(
@@ -68883,6 +68937,77 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           })
         ] }, unit.code)) })
       ] }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-settings-visibility", className: getSectionClass("platform-settings-visibility"), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Settings Visibility",
+          subtitle: "Control whether users see the full settings catalogue or only settings relevant to their operating context.",
+          action: renderSectionEditSaveButton("platform-settings-visibility")
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(240px,0.8fr)_minmax(260px,1fr)]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              ToggleField,
+              {
+                label: "Limit Settings Display",
+                checked: settingsVisibilityPolicy.enabled,
+                disabled: !canEditSection("platform-settings-visibility"),
+                onChange: (checked) => updateSettingsVisibilityPolicy({
+                  enabled: checked,
+                  mode: checked && settingsVisibilityPolicy.mode === "all" ? "unit" : settingsVisibilityPolicy.mode
+                }),
+                info: "Turn this on when normal users should see only settings that are relevant to their unit, location, aircraft type, or organisation position. Admins can still manage the full policy."
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectField,
+              {
+                label: "Display Scope",
+                value: settingsVisibilityPolicy.mode,
+                disabled: !canEditSection("platform-settings-visibility") || !settingsVisibilityPolicy.enabled,
+                options: SETTINGS_VISIBILITY_MODES.map((option) => option.value),
+                optionLabels: SETTINGS_VISIBILITY_MODES.reduce((labels, option) => {
+                  labels[option.value] = option.label;
+                  return labels;
+                }, {}),
+                onChange: (value) => updateSettingsVisibilityPolicy({ mode: value }),
+                info: "Choose the context that record-level settings should be filtered by. Universal platform settings remain visible because they affect the whole system."
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded border border-gray-700 bg-gray-950/60 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-wide text-cyan-200/80", children: "Current Display Policy" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm leading-relaxed text-gray-200", children: settingsVisibilityPolicy.enabled ? `Settings visibility is set to ${SETTINGS_VISIBILITY_MODES.find((option) => option.value === settingsVisibilityPolicy.mode)?.label || "selected scope"}.` : "Settings visibility is not limited. Users see the full settings catalogue allowed by their permissions." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-relaxed text-gray-400", children: "This policy is the control point for scoped settings. Section-level filtering should only be applied to records that are safely tied to a unit, combined unit, location, aircraft type or parent organisation. Universal settings remain visible because they can affect all models and NEO Build." })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Active Context Preview" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Unit Context", value: activeSettingsVisibilityUnitCodes.join(" + ") || activeUnitCode || "No active unit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Location", value: activeSettingsVisibilityLocationCode || "No active location" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Aircraft Type", value: activeSettingsVisibilityAircraftTypes.join(", ") || "No aircraft type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              MetricPill,
+              {
+                label: "Parent Organisation",
+                value: activeSettingsVisibilityParentOrg ? `${activeSettingsVisibilityParentOrg.code || "ORG"}${activeSettingsVisibilityParentOrg.name ? ` - ${activeSettingsVisibilityParentOrg.name}` : ""}` : "No parent organisation"
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-amber-100", children: "Implementation Guardrails" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 grid gap-2 text-xs leading-relaxed text-amber-50/75 md:grid-cols-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-400/20 bg-gray-950/50 p-3", children: "Safe to scope: unit rows, location rows, resource pools, unit modules, Master LMP access, currency profiles, crew compositions, scheduling rule-set records and training configuration that explicitly stores unit or aircraft context." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-400/20 bg-gray-950/50 p-3", children: "Always visible: licensing, deployment readiness, audit, permission profiles, rank terminology, shared labels, operational runbook, app appearance and any other universal setting that can affect multiple models." })
+          ] })
+        ] })
+      ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-deployment-readiness", className: getSectionClass("platform-deployment-readiness"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -71433,6 +71558,7 @@ const platformSectionTargets = {
   "platform-master-lmp-access": "platform-master-lmp-access",
   "platform-resource-pools": "platform-resource-pools",
   "platform-unit-modules": "platform-unit-modules",
+  "platform-settings-visibility": "platform-settings-visibility",
   "platform-deployment-readiness": "platform-deployment-readiness",
   "platform-operational-runbook": "platform-operational-runbook",
   "platform-licensing": "platform-licensing",
@@ -71468,6 +71594,7 @@ const sectionLabels = {
   "platform-master-lmp-access": "Master LMP Access",
   "platform-resource-pools": "Aircraft & Resource Pools",
   "platform-unit-modules": "Unit Features & Modules",
+  "platform-settings-visibility": "Settings Visibility",
   "platform-deployment-readiness": "Deployment Readiness",
   "platform-operational-runbook": "Operational Runbook",
   "platform-licensing": "Licensing & Deployment",
@@ -71563,6 +71690,7 @@ const sectionIcons = {
   "platform-master-lmp-access": platformConfigurationIcon,
   "platform-resource-pools": platformConfigurationIcon,
   "platform-unit-modules": platformConfigurationIcon,
+  "platform-settings-visibility": platformConfigurationIcon,
   "platform-deployment-readiness": platformConfigurationIcon,
   "platform-operational-runbook": platformConfigurationIcon,
   "platform-licensing": platformConfigurationIcon,
@@ -71602,6 +71730,7 @@ const sectionDescriptions = {
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
+  "platform-settings-visibility": "Control whether users see all settings or only settings relevant to their unit, location, aircraft type or organisation position",
   "platform-deployment-readiness": "SaaS, on-premise, offline and hybrid readiness checks",
   "platform-operational-runbook": "Support, backup, restore, update and accreditation records",
   "platform-licensing": "Licence model, entitlements and validation status",
@@ -71644,6 +71773,7 @@ const sectionColors = {
   "platform-master-lmp-access": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-resource-pools": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-unit-modules": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
+  "platform-settings-visibility": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-deployment-readiness": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-operational-runbook": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-licensing": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
@@ -71670,6 +71800,7 @@ const sectionGroups = [
       "platform-master-lmp-access",
       "platform-resource-pools",
       "platform-unit-modules",
+      "platform-settings-visibility",
       "platform-deployment-readiness",
       "platform-licensing",
       "platform-rank-terminology",
