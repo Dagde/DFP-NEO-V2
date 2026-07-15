@@ -66982,7 +66982,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   const showSectionOnlyStatusPanel = !canEdit || Boolean(error);
   const handleSettingsKeyDownCapture = (event) => {
     const target = event.target;
-    if (target?.closest('[data-rank-equivalency-input="true"]')) return;
+    if (target?.closest('input, textarea, select, [contenteditable="true"], [data-rank-equivalency-input="true"]')) return;
     stopEditableKeyPropagation(event);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: handleSettingsKeyDownCapture, children: [

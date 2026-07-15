@@ -5061,7 +5061,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const showSectionOnlyStatusPanel = !canEdit || Boolean(error);
   const handleSettingsKeyDownCapture = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement | null;
-    if (target?.closest('[data-rank-equivalency-input="true"]')) return;
+    if (target?.closest('input, textarea, select, [contenteditable="true"], [data-rank-equivalency-input="true"]')) return;
     stopEditableKeyPropagation(event);
   };
 
