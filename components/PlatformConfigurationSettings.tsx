@@ -131,10 +131,12 @@ type PlatformConfig = {
 };
 
 type SettingsVisibilityMode = 'all' | 'unit' | 'location' | 'aircraftType' | 'parentOrganisation';
+type SettingsVisibilityFilter = Exclude<SettingsVisibilityMode, 'all'>;
 
 type SettingsVisibilityPolicy = {
   enabled: boolean;
-  mode: SettingsVisibilityMode;
+  filters: SettingsVisibilityFilter[];
+  mode?: SettingsVisibilityMode;
 };
 
 type LicenseRuntimeStatus = {
@@ -515,45 +517,45 @@ const AIRFIELD_CATALOGUE_FILE = 'airfield-location-catalog.json';
 const MAX_AIRFIELD_SUGGESTIONS = 6;
 const PLATFORM_CONFIG_UPDATED_EVENT = 'dfp-platform-config-updated';
 const TRAINEE_DEFAULT_ON_UNIT_CODES = new Set(['1FTS', '2FTS', 'CFS']);
-const SETTINGS_VISIBILITY_MODES: Array<{ value: SettingsVisibilityMode; label: string; description: string }> = [
-  {
-    value: 'all',
-    label: 'All Settings',
-    description: 'Show the full platform configuration. Universal settings are always visible.',
-  },
+const SETTINGS_VISIBILITY_FILTERS: Array<{ value: SettingsVisibilityFilter; label: string; description: string }> = [
   {
     value: 'unit',
     label: 'Unit / Combined Unit',
-    description: 'Show records tied to the current unit or combined-unit context, while keeping universal settings visible.',
+    description: 'Only show scoped records tied to the current unit or combined-unit context.',
   },
   {
     value: 'location',
     label: 'Location',
-    description: 'Show records tied to the current base or location, while keeping universal settings visible.',
+    description: 'Only show scoped records tied to the current base or location.',
   },
   {
     value: 'aircraftType',
     label: 'Aircraft Type',
-    description: 'Show records tied to the active aircraft type, while keeping universal settings visible.',
+    description: 'Only show scoped records tied to the active aircraft type.',
   },
   {
     value: 'parentOrganisation',
     label: 'Parent Organisation',
-    description: 'Show records tied to the organisation level above the current unit, while keeping universal settings visible.',
+    description: 'Only show scoped records tied to the organisation level above the current unit.',
   },
 ];
 const DEFAULT_SETTINGS_VISIBILITY_POLICY: SettingsVisibilityPolicy = {
   enabled: false,
-  mode: 'all',
+  filters: [],
 };
 
 const normaliseSettingsVisibilityPolicy = (value?: Partial<SettingsVisibilityPolicy> | null): SettingsVisibilityPolicy => {
-  const mode = SETTINGS_VISIBILITY_MODES.some((option) => option.value === value?.mode)
-    ? value!.mode as SettingsVisibilityMode
-    : DEFAULT_SETTINGS_VISIBILITY_POLICY.mode;
+  const validFilterValues = new Set(SETTINGS_VISIBILITY_FILTERS.map((option) => option.value));
+  const filtersFromArray = Array.isArray(value?.filters)
+    ? value!.filters.filter((filter): filter is SettingsVisibilityFilter => validFilterValues.has(filter as SettingsVisibilityFilter))
+    : [];
+  const legacyMode = value?.mode && validFilterValues.has(value.mode as SettingsVisibilityFilter)
+    ? [value.mode as SettingsVisibilityFilter]
+    : [];
+  const filters = Array.from(new Set(filtersFromArray.length > 0 ? filtersFromArray : legacyMode));
   return {
     enabled: value?.enabled === true,
-    mode,
+    filters,
   };
 };
 
@@ -2405,6 +2407,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ...patch,
       }),
     }));
+  };
+  const toggleSettingsVisibilityFilter = (filter: SettingsVisibilityFilter, checked: boolean) => {
+    const nextFilters = checked
+      ? Array.from(new Set([...settingsVisibilityPolicy.filters, filter]))
+      : settingsVisibilityPolicy.filters.filter((item) => item !== filter);
+    updateSettingsVisibilityPolicy({ filters: nextFilters });
   };
 
   const updateOrganisationStructure = (nextStructure: OrganisationStructureSettings) => {
@@ -7125,44 +7133,72 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-settings-visibility" className={getSectionClass('platform-settings-visibility')}>
         <SectionHeader
           title="Settings Visibility"
-          subtitle="Control whether users see the full settings catalogue or only settings relevant to their operating context."
+          subtitle="Control which settings records are shown to users. This is visibility only; it does not remove or stop loading settings."
           action={renderSectionEditSaveButton('platform-settings-visibility')}
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
-            <div className="grid gap-3 lg:grid-cols-[minmax(240px,0.8fr)_minmax(260px,1fr)]">
+            <div className="grid gap-3 lg:grid-cols-[minmax(240px,0.75fr)_minmax(360px,1.25fr)]">
               <ToggleField
                 label="Limit Settings Display"
                 checked={settingsVisibilityPolicy.enabled}
                 disabled={!canEditSection('platform-settings-visibility')}
                 onChange={(checked) => updateSettingsVisibilityPolicy({
                   enabled: checked,
-                  mode: checked && settingsVisibilityPolicy.mode === 'all' ? 'unit' : settingsVisibilityPolicy.mode,
+                  filters: checked && settingsVisibilityPolicy.filters.length === 0 ? ['unit'] : settingsVisibilityPolicy.filters,
                 })}
-                info="Turn this on when normal users should see only settings that are relevant to their unit, location, aircraft type, or organisation position. Admins can still manage the full policy."
+                info="Turn this on when normal users should see only settings records relevant to selected context filters. This does not remove, unload, or block any settings data."
               />
-              <SelectField
-                label="Display Scope"
-                value={settingsVisibilityPolicy.mode}
-                disabled={!canEditSection('platform-settings-visibility') || !settingsVisibilityPolicy.enabled}
-                options={SETTINGS_VISIBILITY_MODES.map((option) => option.value)}
-                optionLabels={SETTINGS_VISIBILITY_MODES.reduce<Record<string, string>>((labels, option) => {
-                  labels[option.value] = option.label;
-                  return labels;
-                }, {})}
-                onChange={(value) => updateSettingsVisibilityPolicy({ mode: value as SettingsVisibilityMode })}
-                info="Choose the context that record-level settings should be filtered by. Universal platform settings remain visible because they affect the whole system."
-              />
+              <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <span>Display Filters</span>
+                  <InfoHint text="Select one or more filters. When multiple filters are selected, scoped records must match the selected context combination, such as aircraft type within the current location. Universal settings remain visible." />
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {SETTINGS_VISIBILITY_FILTERS.map((option) => {
+                    const checked = settingsVisibilityPolicy.filters.includes(option.value);
+                    const disabled = !canEditSection('platform-settings-visibility') || !settingsVisibilityPolicy.enabled;
+                    return (
+                      <label
+                        key={option.value}
+                        className={`flex min-h-[76px] items-start gap-3 rounded border px-3 py-2 transition ${
+                          checked
+                            ? 'border-cyan-400/45 bg-cyan-500/15 text-cyan-50'
+                            : 'border-gray-700 bg-gray-900/70 text-gray-300'
+                        } ${disabled ? 'opacity-55' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-1 h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                          checked={checked}
+                          disabled={disabled}
+                          onChange={(event) => toggleSettingsVisibilityFilter(option.value, event.target.checked)}
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-bold">{option.label}</span>
+                          <span className="mt-1 block text-xs leading-relaxed text-gray-400">{option.description}</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
             <div className="mt-4 rounded border border-gray-700 bg-gray-950/60 p-3">
               <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-200/80">Current Display Policy</div>
               <p className="mt-1 text-sm leading-relaxed text-gray-200">
                 {settingsVisibilityPolicy.enabled
-                  ? `Settings visibility is set to ${SETTINGS_VISIBILITY_MODES.find((option) => option.value === settingsVisibilityPolicy.mode)?.label || 'selected scope'}.`
+                  ? `Settings visibility filters: ${
+                    settingsVisibilityPolicy.filters.length > 0
+                      ? settingsVisibilityPolicy.filters
+                        .map((filter) => SETTINGS_VISIBILITY_FILTERS.find((option) => option.value === filter)?.label || filter)
+                        .join(' + ')
+                      : 'no filters selected'
+                  }.`
                   : 'Settings visibility is not limited. Users see the full settings catalogue allowed by their permissions.'}
               </p>
               <p className="mt-2 text-xs leading-relaxed text-gray-400">
-                This policy is the control point for scoped settings. Section-level filtering should only be applied to records that are safely tied to a unit, combined unit, location, aircraft type or parent organisation. Universal settings remain visible because they can affect all models and NEO Build.
+                This policy controls visibility only. Settings still load and remain stored in the editable platform configuration. Section-level filtering should only be applied to records safely tied to the selected context filters. Universal settings remain visible because they can affect all models and NEO Build.
               </p>
             </div>
           </div>

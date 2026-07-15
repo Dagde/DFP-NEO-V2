@@ -455,7 +455,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'platform-master-lmp-access': 'Location and unit access to Master LMPs',
   'platform-resource-pools': 'Aircraft types, shared pools and resource counts',
   'platform-unit-modules': 'Enable features and modules for each unit',
-  'platform-settings-visibility': 'Control whether users see all settings or only settings relevant to their unit, location, aircraft type or organisation position',
+  'platform-settings-visibility': 'Control which settings records are visible using unit, location, aircraft type and organisation filters',
   'platform-deployment-readiness': 'SaaS, on-premise, offline and hybrid readiness checks',
   'platform-operational-runbook': 'Support, backup, restore, update and accreditation records',
   'platform-licensing': 'Licence model, entitlements and validation status',

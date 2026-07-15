@@ -63341,41 +63341,36 @@ const AIRFIELD_CATALOGUE_FILE = "airfield-location-catalog.json";
 const MAX_AIRFIELD_SUGGESTIONS = 6;
 const PLATFORM_CONFIG_UPDATED_EVENT$1 = "dfp-platform-config-updated";
 const TRAINEE_DEFAULT_ON_UNIT_CODES$1 = /* @__PURE__ */ new Set(["1FTS", "2FTS", "CFS"]);
-const SETTINGS_VISIBILITY_MODES = [
-  {
-    value: "all",
-    label: "All Settings",
-    description: "Show the full platform configuration. Universal settings are always visible."
-  },
+const SETTINGS_VISIBILITY_FILTERS = [
   {
     value: "unit",
     label: "Unit / Combined Unit",
-    description: "Show records tied to the current unit or combined-unit context, while keeping universal settings visible."
+    description: "Only show scoped records tied to the current unit or combined-unit context."
   },
   {
     value: "location",
     label: "Location",
-    description: "Show records tied to the current base or location, while keeping universal settings visible."
+    description: "Only show scoped records tied to the current base or location."
   },
   {
     value: "aircraftType",
     label: "Aircraft Type",
-    description: "Show records tied to the active aircraft type, while keeping universal settings visible."
+    description: "Only show scoped records tied to the active aircraft type."
   },
   {
     value: "parentOrganisation",
     label: "Parent Organisation",
-    description: "Show records tied to the organisation level above the current unit, while keeping universal settings visible."
+    description: "Only show scoped records tied to the organisation level above the current unit."
   }
 ];
-const DEFAULT_SETTINGS_VISIBILITY_POLICY = {
-  mode: "all"
-};
 const normaliseSettingsVisibilityPolicy = (value) => {
-  const mode = SETTINGS_VISIBILITY_MODES.some((option) => option.value === value?.mode) ? value.mode : DEFAULT_SETTINGS_VISIBILITY_POLICY.mode;
+  const validFilterValues = new Set(SETTINGS_VISIBILITY_FILTERS.map((option) => option.value));
+  const filtersFromArray = Array.isArray(value?.filters) ? value.filters.filter((filter) => validFilterValues.has(filter)) : [];
+  const legacyMode = value?.mode && validFilterValues.has(value.mode) ? [value.mode] : [];
+  const filters = Array.from(new Set(filtersFromArray.length > 0 ? filtersFromArray : legacyMode));
   return {
     enabled: value?.enabled === true,
-    mode
+    filters
   };
 };
 const getDefaultHasTraineesForUnit$1 = (unitCode) => TRAINEE_DEFAULT_ON_UNIT_CODES$1.has(String(unitCode || "").trim().toUpperCase());
@@ -64870,6 +64865,10 @@ const PlatformConfigurationSettings = ({
         ...patch
       })
     }));
+  };
+  const toggleSettingsVisibilityFilter = (filter, checked) => {
+    const nextFilters = checked ? Array.from(/* @__PURE__ */ new Set([...settingsVisibilityPolicy.filters, filter])) : settingsVisibilityPolicy.filters.filter((item) => item !== filter);
+    updateSettingsVisibilityPolicy({ filters: nextFilters });
   };
   const updateOrganisationStructure = (nextStructure) => {
     setConfig((prev) => {
@@ -68943,13 +68942,13 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         SectionHeader,
         {
           title: "Settings Visibility",
-          subtitle: "Control whether users see the full settings catalogue or only settings relevant to their operating context.",
+          subtitle: "Control which settings records are shown to users. This is visibility only; it does not remove or stop loading settings.",
           action: renderSectionEditSaveButton("platform-settings-visibility")
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(240px,0.8fr)_minmax(260px,1fr)]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(240px,0.75fr)_minmax(360px,1.25fr)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               ToggleField,
               {
@@ -68958,31 +68957,49 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 disabled: !canEditSection("platform-settings-visibility"),
                 onChange: (checked) => updateSettingsVisibilityPolicy({
                   enabled: checked,
-                  mode: checked && settingsVisibilityPolicy.mode === "all" ? "unit" : settingsVisibilityPolicy.mode
+                  filters: checked && settingsVisibilityPolicy.filters.length === 0 ? ["unit"] : settingsVisibilityPolicy.filters
                 }),
-                info: "Turn this on when normal users should see only settings that are relevant to their unit, location, aircraft type, or organisation position. Admins can still manage the full policy."
+                info: "Turn this on when normal users should see only settings records relevant to selected context filters. This does not remove, unload, or block any settings data."
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              SelectField,
-              {
-                label: "Display Scope",
-                value: settingsVisibilityPolicy.mode,
-                disabled: !canEditSection("platform-settings-visibility") || !settingsVisibilityPolicy.enabled,
-                options: SETTINGS_VISIBILITY_MODES.map((option) => option.value),
-                optionLabels: SETTINGS_VISIBILITY_MODES.reduce((labels, option) => {
-                  labels[option.value] = option.label;
-                  return labels;
-                }, {}),
-                onChange: (value) => updateSettingsVisibilityPolicy({ mode: value }),
-                info: "Choose the context that record-level settings should be filtered by. Universal platform settings remain visible because they affect the whole system."
-              }
-            )
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Display Filters" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Select one or more filters. When multiple filters are selected, scoped records must match the selected context combination, such as aircraft type within the current location. Universal settings remain visible." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 md:grid-cols-2", children: SETTINGS_VISIBILITY_FILTERS.map((option) => {
+                const checked = settingsVisibilityPolicy.filters.includes(option.value);
+                const disabled = !canEditSection("platform-settings-visibility") || !settingsVisibilityPolicy.enabled;
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "label",
+                  {
+                    className: `flex min-h-[76px] items-start gap-3 rounded border px-3 py-2 transition ${checked ? "border-cyan-400/45 bg-cyan-500/15 text-cyan-50" : "border-gray-700 bg-gray-900/70 text-gray-300"} ${disabled ? "opacity-55" : ""}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "checkbox",
+                          className: "mt-1 h-4 w-4 rounded border-gray-500 accent-cyan-500",
+                          checked,
+                          disabled,
+                          onChange: (event) => toggleSettingsVisibilityFilter(option.value, event.target.checked)
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-bold", children: option.label }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs leading-relaxed text-gray-400", children: option.description })
+                      ] })
+                    ]
+                  },
+                  option.value
+                );
+              }) })
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded border border-gray-700 bg-gray-950/60 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-wide text-cyan-200/80", children: "Current Display Policy" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm leading-relaxed text-gray-200", children: settingsVisibilityPolicy.enabled ? `Settings visibility is set to ${SETTINGS_VISIBILITY_MODES.find((option) => option.value === settingsVisibilityPolicy.mode)?.label || "selected scope"}.` : "Settings visibility is not limited. Users see the full settings catalogue allowed by their permissions." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-relaxed text-gray-400", children: "This policy is the control point for scoped settings. Section-level filtering should only be applied to records that are safely tied to a unit, combined unit, location, aircraft type or parent organisation. Universal settings remain visible because they can affect all models and NEO Build." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm leading-relaxed text-gray-200", children: settingsVisibilityPolicy.enabled ? `Settings visibility filters: ${settingsVisibilityPolicy.filters.length > 0 ? settingsVisibilityPolicy.filters.map((filter) => SETTINGS_VISIBILITY_FILTERS.find((option) => option.value === filter)?.label || filter).join(" + ") : "no filters selected"}.` : "Settings visibility is not limited. Users see the full settings catalogue allowed by their permissions." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-relaxed text-gray-400", children: "This policy controls visibility only. Settings still load and remain stored in the editable platform configuration. Section-level filtering should only be applied to records safely tied to the selected context filters. Universal settings remain visible because they can affect all models and NEO Build." })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
@@ -71730,7 +71747,7 @@ const sectionDescriptions = {
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
-  "platform-settings-visibility": "Control whether users see all settings or only settings relevant to their unit, location, aircraft type or organisation position",
+  "platform-settings-visibility": "Control which settings records are visible using unit, location, aircraft type and organisation filters",
   "platform-deployment-readiness": "SaaS, on-premise, offline and hybrid readiness checks",
   "platform-operational-runbook": "Support, backup, restore, update and accreditation records",
   "platform-licensing": "Licence model, entitlements and validation status",
