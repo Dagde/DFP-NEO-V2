@@ -22,6 +22,7 @@ interface PersonnelColumnProps {
   useRoleColors?: boolean;
   crewPositionTerminology?: CrewPositionTerminology;
   instructorLabel?: string;
+  simIpDisplayLabel?: string;
 }
 
 // Unit color mapping - only text colors
@@ -81,6 +82,7 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
   useRoleColors = false,
   crewPositionTerminology,
   instructorLabel = 'QFI',
+  simIpDisplayLabel = 'SIM IP',
 }) => {
   console.log('🔍 PERSONNEL COLUMN DEBUG - Props:', {
        personnelCount: personnel.length,
@@ -111,7 +113,7 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
       <div className="w-40 bg-gray-800 flex-shrink-0 h-full">
         <ul>
           {personnel.map(({ name, rank, unit, role }, index) => {
-            const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel);
+            const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
             const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(unit) : 'text-gray-300';
             return (
             <li
@@ -157,7 +159,7 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
               {people.map(({ name, rank, unit: personUnit, role }) => {
                 const rowIndex = visualRowIndex;
                 visualRowIndex += 1;
-              const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel);
+              const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
               const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(personUnit) : 'text-gray-300';
               return (
               <li

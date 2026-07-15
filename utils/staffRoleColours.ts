@@ -35,6 +35,7 @@ export const getStaffRoleDisplay = (
   role: string | undefined,
   terminology?: CrewPositionTerminology,
   instructorLabel = 'QFI',
+  simIpDisplayLabel = 'SIM IP',
 ): { key: string; label: string; textClassName: string } => {
   const entry = findCrewPositionEntry(role, terminology);
   const rawRole = String(role || '').trim();
@@ -46,6 +47,14 @@ export const getStaffRoleDisplay = (
       key: 'instructor',
       label: instructorLabel,
       textClassName: 'text-blue-200',
+    };
+  }
+
+  if (stableKey === 'sim ip') {
+    return {
+      key: 'sim-ip',
+      label: simIpDisplayLabel,
+      textClassName: 'text-teal-300',
     };
   }
 

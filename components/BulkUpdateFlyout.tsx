@@ -94,7 +94,7 @@ const normaliseImportedStaffRole = (
     const cleanValue = value.trim();
     const cleanLower = cleanValue.toLowerCase();
     if (!cleanValue) return undefined;
-    if (['sim ip', 'simulator ip', 'sim instructor', 'simulator instructor'].includes(cleanLower)) return 'SIM IP';
+    if (['sim ip', 'simulator ip', 'sim instructor', 'simulator instructor', 'contractor staff'].includes(cleanLower)) return 'SIM IP';
     if (['qfi', 'instructor', 'flight instructor'].includes(cleanLower)) return 'QFI';
 
     const crewPosition = findCrewPositionEntry(cleanValue, crewPositionTerminology);
@@ -126,7 +126,7 @@ const applyQualificationRoles = (
     parsedData.isAdminStaff = rolesLower.includes('admin');
     if (importedCrewRole) {
         parsedData.role = importedCrewRole;
-    } else if (rolesLower.includes('sim ip')) {
+    } else if (rolesLower.includes('sim ip') || rolesLower.includes('contractor staff')) {
         parsedData.role = 'SIM IP';
     } else if (rolesLower.includes('pilot')) {
         parsedData.role = 'Pilot';

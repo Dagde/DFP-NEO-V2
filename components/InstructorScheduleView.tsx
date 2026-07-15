@@ -33,6 +33,7 @@ interface InstructorScheduleViewProps {
   operationalModel?: string;
   crewPositionTerminology?: CrewPositionTerminology;
   instructorLabel?: string;
+  simIpDisplayLabel?: string;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -162,7 +163,7 @@ const createUnavailabilityEvents = (date: string, personnelData: any[], isInstru
 };
 
 
-const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = 'QFI' }) => {
+const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = 'QFI', simIpDisplayLabel = 'SIM IP' }) => {
   // ERROR TRACKING: Log all props to identify missing seatConfigs
   console.log('🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:');
   console.log('  - date:', date);
@@ -665,6 +666,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
             useRoleColors={normaliseOperationalModel(operationalModel) === 'air_combat'}
             crewPositionTerminology={crewPositionTerminology}
             instructorLabel={instructorLabel}
+            simIpDisplayLabel={simIpDisplayLabel}
           />
         </div>
 

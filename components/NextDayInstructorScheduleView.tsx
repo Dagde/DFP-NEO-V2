@@ -29,6 +29,7 @@ interface NextDayInstructorScheduleViewProps {
   operationalModel?: string;
   crewPositionTerminology?: CrewPositionTerminology;
   instructorLabel?: string;
+  simIpDisplayLabel?: string;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -105,6 +106,7 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
     operationalModel,
     crewPositionTerminology,
     instructorLabel = 'QFI',
+    simIpDisplayLabel = 'SIM IP',
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -577,6 +579,7 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
             useRoleColors={normaliseOperationalModel(operationalModel) === 'air_combat'}
             crewPositionTerminology={crewPositionTerminology}
             instructorLabel={instructorLabel}
+            simIpDisplayLabel={simIpDisplayLabel}
           />
         </div>
 

@@ -12,6 +12,7 @@ import AuditButton from './AuditButton';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
     comparePeopleByConfiguredRank,
+    getSimIpDisplayLabel,
     getRankSortIndex,
     splitPersonName,
     type PersonnelDisplaySettings,
@@ -52,8 +53,9 @@ const getStaffRoleFilterOption = (
     role: string | undefined,
     terminology: CrewPositionTerminology | undefined,
     instructorLabel: string,
+    simIpDisplayLabel: string,
 ): { value: string; label: string } => {
-    const roleDisplay = getStaffRoleDisplay(role, terminology, instructorLabel);
+    const roleDisplay = getStaffRoleDisplay(role, terminology, instructorLabel, simIpDisplayLabel);
     return { value: `role:${roleDisplay.key}`, label: roleDisplay.label };
 };
 
@@ -258,9 +260,13 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
   const useRoleColours = isAirCombatModel || isFixedCrewModel;
   const useOperationalStaffListBorder = isAirCombatModel || isFixedCrewModel;
+  const simIpDisplayLabel = useMemo(
+      () => getSimIpDisplayLabel(personnelDisplaySettings),
+      [personnelDisplaySettings],
+  );
 
   const getPooledCrewFlightRoleOrder = (instructor: Instructor): number => {
-      const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel);
+      const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
       const roleText = `${instructor.role || ''} ${roleDisplay.label || ''}`.trim().toLowerCase();
       if (/\bpilot\b/.test(roleText)) return 0;
       if (/\bload\s*master\b|\bloadmaster\b/.test(roleText)) return 1;
@@ -292,7 +298,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const staffRoleFilterOptions = useMemo(() => {
       const optionMap = new Map<string, string>();
       qfis.forEach(instructor => {
-          const option = getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel);
+          const option = getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
           optionMap.set(option.value, option.label);
       });
 
@@ -301,7 +307,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
           .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
 
       return [{ value: 'ALL', label: 'All' }, ...roleOptions];
-  }, [qfis, crewPositionTerminology, instructorLabel]);
+  }, [qfis, crewPositionTerminology, instructorLabel, simIpDisplayLabel]);
 
   useEffect(() => {
       if (selectedStaffRoleFilter !== 'ALL' && !staffRoleFilterOptions.some(option => option.value === selectedStaffRoleFilter)) {
@@ -314,9 +320,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
           return qfis;
       }
       return qfis.filter(instructor =>
-          getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel).value === selectedStaffRoleFilter
+          getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel).value === selectedStaffRoleFilter
       );
-  }, [qfis, selectedStaffRoleFilter, crewPositionTerminology, instructorLabel]);
+  }, [qfis, selectedStaffRoleFilter, crewPositionTerminology, instructorLabel, simIpDisplayLabel]);
 
   const qfisByUnit = useMemo(() => {
       const groups: { [key: string]: Instructor[] } = {};
@@ -573,7 +579,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const renderInstructorList = (instructors: Instructor[]) => (
     <ul className="space-y-2">
       {instructors.map((instructor, index) => {
-        const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel);
+        const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
         const roleTextClass = useRoleColours ? roleDisplay.textClassName : 'text-gray-300';
         return (
           <li
@@ -675,7 +681,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         {simIps.length > 0 && (
             <div className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
                 <div className="p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
-                    <h3 className="text-lg font-bold text-teal-400">SIM IP</h3>
+                    <h3 className="text-lg font-bold text-teal-400">{simIpDisplayLabel}</h3>
                     <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIps.length}</span>
                 </div>
                 <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">

@@ -3690,7 +3690,9 @@ const DEFAULT_PERSONNEL_DISPLAY_SETTINGS = {
   staffRankEquivalency: DEFAULT_RANK_EQUIVALENCY_CONFIG,
   civilianTitles: DEFAULT_CIVILIAN_TITLES,
   civilianContractorGroupName: "Civilian Contractors",
-  instructorLabel: "QFI"
+  instructorLabel: "QFI",
+  simIpDisplayEnabled: true,
+  simIpDisplayLabel: "Contractor Staff"
 };
 const collator$1 = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
 const rankKey = (rank) => String(rank || "").trim().toUpperCase();
@@ -3770,6 +3772,7 @@ const normalisePersonnelDisplaySettings = (input) => {
   const civilianTitles = normaliseCivilianTitles(input?.civilianTitles || input?.civilianRankTitles);
   const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, getRankOrderFromEquivalency({ ...staffRankEquivalency, civilianTitles })));
   const traineeRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder));
+  const simIpDisplayLabel = String(input?.simIpDisplayLabel || "").trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
   return {
     sortMode: input?.sortMode === "alphabetical" ? "alphabetical" : "rank-then-name",
     useSeparateTraineeRankOrder: Boolean(input?.useSeparateTraineeRankOrder),
@@ -3778,8 +3781,14 @@ const normalisePersonnelDisplaySettings = (input) => {
     staffRankEquivalency,
     civilianTitles,
     civilianContractorGroupName: String(input?.civilianContractorGroupName || "").trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.civilianContractorGroupName,
-    instructorLabel: String(input?.instructorLabel || "").trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel
+    instructorLabel: String(input?.instructorLabel || "").trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel,
+    simIpDisplayEnabled: input?.simIpDisplayEnabled !== false,
+    simIpDisplayLabel
   };
+};
+const getSimIpDisplayLabel = (settings) => {
+  const normalised = normalisePersonnelDisplaySettings(settings);
+  return normalised.simIpDisplayEnabled ? normalised.simIpDisplayLabel : "SIM IP";
 };
 const getPersonnelDisplaySettings = (config) => {
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
@@ -16665,7 +16674,7 @@ const STABLE_ROLE_COLOUR_OVERRIDES = {
   trainee: "text-lime-300"
 };
 const normaliseRoleKey = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
-const getStaffRoleDisplay = (role, terminology, instructorLabel = "QFI") => {
+const getStaffRoleDisplay = (role, terminology, instructorLabel = "QFI", simIpDisplayLabel = "SIM IP") => {
   const entry = findCrewPositionEntry(role, terminology);
   const rawRole = String(role || "").trim();
   const label = getCrewPositionDisplayLabel(role, terminology, "Unassigned");
@@ -16675,6 +16684,13 @@ const getStaffRoleDisplay = (role, terminology, instructorLabel = "QFI") => {
       key: "instructor",
       label: instructorLabel,
       textClassName: "text-blue-200"
+    };
+  }
+  if (stableKey === "sim ip") {
+    return {
+      key: "sim-ip",
+      label: simIpDisplayLabel,
+      textClassName: "text-teal-300"
     };
   }
   const override = STABLE_ROLE_COLOUR_OVERRIDES[stableKey] || STABLE_ROLE_COLOUR_OVERRIDES[normaliseRoleKey(label)];
@@ -16743,7 +16759,8 @@ const PersonnelColumn = ({
   useUnitColors = false,
   useRoleColors = false,
   crewPositionTerminology,
-  instructorLabel = "QFI"
+  instructorLabel = "QFI",
+  simIpDisplayLabel = "SIM IP"
 }) => {
   console.log("🔍 PERSONNEL COLUMN DEBUG - Props:", {
     personnelCount: personnel.length,
@@ -16765,7 +16782,7 @@ const PersonnelColumn = ({
   }, [personnel, showUnits]);
   if (!showUnits) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: personnel.map(({ name, rank, unit, role }, index) => {
-      const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel);
+      const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
       const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(unit) : "text-gray-300";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "li",
@@ -16806,7 +16823,7 @@ const PersonnelColumn = ({
       people.map(({ name, rank, unit: personUnit, role }) => {
         const rowIndex = visualRowIndex;
         visualRowIndex += 1;
-        const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel);
+        const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
         const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(personUnit) : "text-gray-300";
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "li",
@@ -16919,7 +16936,7 @@ const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) 
   });
   return unavailabilityEvents;
 };
-const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = "QFI" }) => {
+const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = "QFI", simIpDisplayLabel = "SIM IP" }) => {
   console.log("🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:");
   console.log("  - date:", date);
   console.log("  - events count:", events?.length);
@@ -17356,7 +17373,8 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
               useUnitColors: true,
               useRoleColors: normaliseOperationalModel(operationalModel) === "air_combat",
               crewPositionTerminology,
-              instructorLabel
+              instructorLabel,
+              simIpDisplayLabel
             }
           )
         ] }),
@@ -49170,10 +49188,14 @@ const InstructorProfileFlyout = ({
     return currentRank && !hasCurrentRank ? [...configuredGroups, { label: "Current value", options: [currentRank] }] : configuredGroups;
   }, [personnelDisplaySettings, rank]);
   const [role, setRole] = reactExports.useState(instructor.role);
+  const simIpDisplayLabel = reactExports.useMemo(
+    () => getSimIpDisplayLabel(personnelDisplaySettings),
+    [personnelDisplaySettings]
+  );
   const staffRoleOptions = reactExports.useMemo(() => {
     const legacyOptions = [
       { value: "QFI", label: instructorLabel },
-      { value: "SIM IP", label: "SIM IP" }
+      { value: "SIM IP", label: simIpDisplayLabel }
     ];
     const crewLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
     const crewOptions = getCrewPositionOptions(
@@ -49192,7 +49214,7 @@ const InstructorProfileFlyout = ({
       byValue.set(key, option);
     });
     return Array.from(byValue.values());
-  }, [crewPositionTerminology, instructorLabel, operationalModel, role]);
+  }, [crewPositionTerminology, instructorLabel, operationalModel, role, simIpDisplayLabel]);
   const normalisedQualificationCatalogue = reactExports.useMemo(
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
     [staffQualificationCatalogue]
@@ -51041,7 +51063,7 @@ const normaliseImportedStaffRole = (value, crewPositionTerminology) => {
   const cleanValue = value.trim();
   const cleanLower = cleanValue.toLowerCase();
   if (!cleanValue) return void 0;
-  if (["sim ip", "simulator ip", "sim instructor", "simulator instructor"].includes(cleanLower)) return "SIM IP";
+  if (["sim ip", "simulator ip", "sim instructor", "simulator instructor", "contractor staff"].includes(cleanLower)) return "SIM IP";
   if (["qfi", "instructor", "flight instructor"].includes(cleanLower)) return "QFI";
   const crewPosition = findCrewPositionEntry(cleanValue, crewPositionTerminology);
   if (crewPosition) return isPilotCrewPosition(crewPosition.genericName, crewPositionTerminology) ? "Pilot" : cleanValue;
@@ -51063,7 +51085,7 @@ const applyQualificationRoles = (parsedData, rolesValue, crewPositionTerminology
   parsedData.isAdminStaff = rolesLower.includes("admin");
   if (importedCrewRole) {
     parsedData.role = importedCrewRole;
-  } else if (rolesLower.includes("sim ip")) {
+  } else if (rolesLower.includes("sim ip") || rolesLower.includes("contractor staff")) {
     parsedData.role = "SIM IP";
   } else if (rolesLower.includes("pilot")) {
     parsedData.role = "Pilot";
@@ -51411,8 +51433,8 @@ const isSupportStaffRole = (instructor) => {
   return role === "SIM IP" || role === "OFI" || instructor.isOFI === true;
 };
 const getInstructorCrewGroup = (instructor) => String(instructor.crew || instructor.preferences?.crew || "").trim();
-const getStaffRoleFilterOption = (role, terminology, instructorLabel) => {
-  const roleDisplay = getStaffRoleDisplay(role, terminology, instructorLabel);
+const getStaffRoleFilterOption = (role, terminology, instructorLabel, simIpDisplayLabel) => {
+  const roleDisplay = getStaffRoleDisplay(role, terminology, instructorLabel, simIpDisplayLabel);
   return { value: `role:${roleDisplay.key}`, label: roleDisplay.label };
 };
 const collator = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
@@ -51539,8 +51561,12 @@ const InstructorListView = ({
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
   const useRoleColours = isAirCombatModel || isFixedCrewModel;
   const useOperationalStaffListBorder = isAirCombatModel || isFixedCrewModel;
+  const simIpDisplayLabel = reactExports.useMemo(
+    () => getSimIpDisplayLabel(personnelDisplaySettings),
+    [personnelDisplaySettings]
+  );
   const getPooledCrewFlightRoleOrder = (instructor) => {
-    const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel);
+    const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
     const roleText = `${instructor.role || ""} ${roleDisplay.label || ""}`.trim().toLowerCase();
     if (/\bpilot\b/.test(roleText)) return 0;
     if (/\bload\s*master\b|\bloadmaster\b/.test(roleText)) return 1;
@@ -51565,12 +51591,12 @@ const InstructorListView = ({
   const staffRoleFilterOptions = reactExports.useMemo(() => {
     const optionMap = /* @__PURE__ */ new Map();
     qfis.forEach((instructor) => {
-      const option = getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel);
+      const option = getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
       optionMap.set(option.value, option.label);
     });
     const roleOptions = Array.from(optionMap.entries()).map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label, void 0, { sensitivity: "base" }));
     return [{ value: "ALL", label: "All" }, ...roleOptions];
-  }, [qfis, crewPositionTerminology, instructorLabel]);
+  }, [qfis, crewPositionTerminology, instructorLabel, simIpDisplayLabel]);
   reactExports.useEffect(() => {
     if (selectedStaffRoleFilter !== "ALL" && !staffRoleFilterOptions.some((option) => option.value === selectedStaffRoleFilter)) {
       setSelectedStaffRoleFilter("ALL");
@@ -51581,9 +51607,9 @@ const InstructorListView = ({
       return qfis;
     }
     return qfis.filter(
-      (instructor) => getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel).value === selectedStaffRoleFilter
+      (instructor) => getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel).value === selectedStaffRoleFilter
     );
-  }, [qfis, selectedStaffRoleFilter, crewPositionTerminology, instructorLabel]);
+  }, [qfis, selectedStaffRoleFilter, crewPositionTerminology, instructorLabel, simIpDisplayLabel]);
   const qfisByUnit = reactExports.useMemo(() => {
     const groups = {};
     filteredQfis.forEach((instructor) => {
@@ -51804,7 +51830,7 @@ const InstructorListView = ({
     setSelectedInstructor(null);
   };
   const renderInstructorList = (instructors) => /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: instructors.map((instructor, index) => {
-    const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel);
+    const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
     const roleTextClass = useRoleColours ? roleDisplay.textClassName : "text-gray-300";
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "li",
@@ -51886,7 +51912,7 @@ const InstructorListView = ({
   const renderSupportStaffCards = () => /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     simIps.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-teal-400", children: "SIM IP" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-teal-400", children: simIpDisplayLabel }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: simIps.length })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(simIps) })
@@ -59868,12 +59894,14 @@ const SettingsView = ({
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS
 }) => {
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
   const sctShortLabel = sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel;
   const sctLongLabel = sctTerminology.longLabel || DEFAULT_SCT_TERMINOLOGY.longLabel;
+  const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
   const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
   const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
   const [isEditingBusinessRules, setIsEditingBusinessRules] = reactExports.useState(false);
@@ -60677,7 +60705,7 @@ const SettingsView = ({
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "SIM IPs" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: simIpDisplayLabel }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
@@ -69905,6 +69933,35 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               info: "Group or title family used for civilian and contractor personnel. Examples: Civilian Contractors, Contract Instructors, Industry Partners."
             }
           ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Use Contractor Staff Display Label" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs leading-relaxed text-gray-400", children: "Turn on to show staff saved as SIM IP under the configured user-facing label. Turn off to show SIM IP." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: personnelDisplaySettings.simIpDisplayEnabled,
+                disabled: !canEditRankTerminology,
+                onChange: (event) => updatePersonnelDisplaySettings({ simIpDisplayEnabled: event.target.checked }),
+                className: "peer sr-only"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                "aria-hidden": "true",
+                className: `mt-1 flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition ${personnelDisplaySettings.simIpDisplayEnabled ? "border-cyan-400/60 bg-cyan-500/30" : "border-gray-600 bg-gray-800"} ${canEditRankTerminology ? "" : "opacity-50"}`,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    className: `h-3.5 w-3.5 rounded-full bg-gray-100 shadow transition ${personnelDisplaySettings.simIpDisplayEnabled ? "translate-x-4" : "translate-x-0"}`
+                  }
+                )
+              }
+            )
+          ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             SelectField,
             {
@@ -69924,6 +69981,16 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Field,
+            {
+              label: "Contractor Staff Display Term",
+              value: personnelDisplaySettings.simIpDisplayLabel,
+              disabled: !canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled,
+              onChange: (value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value }),
+              info: "The display label for staff whose saved role is SIM IP. Changing this label only affects what users see; it does not change the saved role or scheduler logic."
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Field,
             {
@@ -78292,7 +78359,8 @@ const NextDayInstructorScheduleView = ({
   aircraftNumberSettings,
   operationalModel,
   crewPositionTerminology,
-  instructorLabel = "QFI"
+  instructorLabel = "QFI",
+  simIpDisplayLabel = "SIM IP"
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(/* @__PURE__ */ new Date());
@@ -78690,7 +78758,8 @@ const NextDayInstructorScheduleView = ({
             useUnitColors: true,
             useRoleColors: normaliseOperationalModel(operationalModel) === "air_combat",
             crewPositionTerminology,
-            instructorLabel
+            instructorLabel,
+            simIpDisplayLabel
           }
         ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -103205,6 +103274,7 @@ const App = () => {
     [platformConfig]
   );
   const instructorLabel = personnelDisplaySettings.instructorLabel;
+  const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
   const formatResourceDisplayLabel = reactExports.useCallback(
     (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames),
     [resourceDisplayNames]
@@ -114998,7 +115068,8 @@ ${error instanceof Error ? error.message : String(error)}`,
               aircraftNumberSettings,
               operationalModel: activeOperationalModel,
               crewPositionTerminology: activeCrewPositionTerminology,
-              instructorLabel
+              instructorLabel,
+              simIpDisplayLabel
             }
           );
         } catch (error) {
@@ -115036,7 +115107,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             aircraftNumberSettings,
             operationalModel: activeOperationalModel,
             crewPositionTerminology: activeCrewPositionTerminology,
-            instructorLabel
+            instructorLabel,
+            simIpDisplayLabel
           }
         );
       case "NextDayTraineeSchedule":

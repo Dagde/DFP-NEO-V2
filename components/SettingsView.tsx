@@ -12,6 +12,11 @@ import DutyTurnaroundSection from './DutyTurnaroundSection';
 import EmergencyPage from './EmergencyPage';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
+    DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+    getSimIpDisplayLabel,
+    type PersonnelDisplaySettings,
+} from '../utils/personnelDisplaySettings';
+import {
     DEFAULT_TILE_STATUS_SETTINGS,
     normaliseTileStatusSettings,
     type TileStatusSettings,
@@ -76,6 +81,7 @@ interface SettingsViewProps {
     dayFlyingEnd?: string;
     resourceDisplayNames?: ResourceDisplayNames;
     sctTerminology?: SctTerminology;
+    personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
 // ─── Inline Scoring Matrix Component ────────────────────────────────────────
@@ -558,7 +564,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     dayFlyingStart = '08:00',
     dayFlyingEnd = '17:00',
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-    sctTerminology = DEFAULT_SCT_TERMINOLOGY
+    sctTerminology = DEFAULT_SCT_TERMINOLOGY,
+    personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS
 }) => {
     // --- STATE ---
     
@@ -567,6 +574,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
     const sctShortLabel = sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel;
     const sctLongLabel = sctTerminology.longLabel || DEFAULT_SCT_TERMINOLOGY.longLabel;
+    const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
     const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
     const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
     const [isEditingBusinessRules, setIsEditingBusinessRules] = useState(false);
@@ -1539,9 +1547,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                             </div>
                                         </div>
                                     </fieldset>
-                                    {/* SIM IPs */}
+                                    {/* Contractor staff / SIM IPs */}
                                     <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                        <legend className="px-2 text-sm font-semibold text-gray-300">SIM IPs</legend>
+                                        <legend className="px-2 text-sm font-semibold text-gray-300">{simIpDisplayLabel}</legend>
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-400">Max {resourceDisplayNames.ftd} per day:</span>

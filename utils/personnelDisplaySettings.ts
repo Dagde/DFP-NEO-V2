@@ -38,6 +38,8 @@ export interface PersonnelDisplaySettings {
   civilianTitles: string[];
   civilianContractorGroupName: string;
   instructorLabel: string;
+  simIpDisplayEnabled: boolean;
+  simIpDisplayLabel: string;
 }
 
 export const DEFAULT_STAFF_RANK_ORDER = [
@@ -322,6 +324,8 @@ export const DEFAULT_PERSONNEL_DISPLAY_SETTINGS: PersonnelDisplaySettings = {
   civilianTitles: DEFAULT_CIVILIAN_TITLES,
   civilianContractorGroupName: 'Civilian Contractors',
   instructorLabel: 'QFI',
+  simIpDisplayEnabled: true,
+  simIpDisplayLabel: 'Contractor Staff',
 };
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
@@ -438,6 +442,7 @@ export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDispl
   const civilianTitles = normaliseCivilianTitles(input?.civilianTitles || (input as any)?.civilianRankTitles);
   const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, getRankOrderFromEquivalency({ ...staffRankEquivalency, civilianTitles } as any)));
   const traineeRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder));
+  const simIpDisplayLabel = String(input?.simIpDisplayLabel || '').trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
 
   return {
     sortMode: input?.sortMode === 'alphabetical' ? 'alphabetical' : 'rank-then-name',
@@ -448,7 +453,14 @@ export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDispl
     civilianTitles,
     civilianContractorGroupName: String(input?.civilianContractorGroupName || '').trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.civilianContractorGroupName,
     instructorLabel: String(input?.instructorLabel || '').trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel,
+    simIpDisplayEnabled: input?.simIpDisplayEnabled !== false,
+    simIpDisplayLabel,
   };
+};
+
+export const getSimIpDisplayLabel = (settings?: Partial<PersonnelDisplaySettings> | null): string => {
+  const normalised = normalisePersonnelDisplaySettings(settings);
+  return normalised.simIpDisplayEnabled ? normalised.simIpDisplayLabel : 'SIM IP';
 };
 
 export const getPersonnelDisplaySettings = (config?: PlatformConfig | null): PersonnelDisplaySettings => {

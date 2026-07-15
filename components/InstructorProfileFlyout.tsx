@@ -14,6 +14,7 @@ import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
   DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  getSimIpDisplayLabel,
   getRankOptionGroupsForGroup,
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
@@ -330,10 +331,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       : configuredGroups;
   }, [personnelDisplaySettings, rank]);
   const [role, setRole] = useState<StaffRole>(instructor.role);
+  const simIpDisplayLabel = useMemo(
+    () => getSimIpDisplayLabel(personnelDisplaySettings),
+    [personnelDisplaySettings],
+  );
   const staffRoleOptions = useMemo(() => {
     const legacyOptions = [
       { value: 'QFI', label: instructorLabel },
-      { value: 'SIM IP', label: 'SIM IP' },
+      { value: 'SIM IP', label: simIpDisplayLabel },
     ];
     const crewLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
     const crewOptions = getCrewPositionOptions(
@@ -352,7 +357,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       byValue.set(key, option);
     });
     return Array.from(byValue.values());
-  }, [crewPositionTerminology, instructorLabel, operationalModel, role]);
+  }, [crewPositionTerminology, instructorLabel, operationalModel, role, simIpDisplayLabel]);
   const normalisedQualificationCatalogue = useMemo(
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
     [staffQualificationCatalogue],

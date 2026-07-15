@@ -8155,6 +8155,37 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onChange={(value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value })}
               info="Group or title family used for civilian and contractor personnel. Examples: Civilian Contractors, Contract Instructors, Industry Partners."
             />
+            <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+              <label className="flex items-start justify-between gap-3">
+                <span>
+                  <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Use Contractor Staff Display Label</span>
+                  <span className="mt-1 block text-xs leading-relaxed text-gray-400">
+                    Turn on to show staff saved as SIM IP under the configured user-facing label. Turn off to show SIM IP.
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={personnelDisplaySettings.simIpDisplayEnabled}
+                  disabled={!canEditRankTerminology}
+                  onChange={(event) => updatePersonnelDisplaySettings({ simIpDisplayEnabled: event.target.checked })}
+                  className="peer sr-only"
+                />
+                <span
+                  aria-hidden="true"
+                  className={`mt-1 flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition ${
+                    personnelDisplaySettings.simIpDisplayEnabled
+                      ? 'border-cyan-400/60 bg-cyan-500/30'
+                      : 'border-gray-600 bg-gray-800'
+                  } ${canEditRankTerminology ? '' : 'opacity-50'}`}
+                >
+                  <span
+                    className={`h-3.5 w-3.5 rounded-full bg-gray-100 shadow transition ${
+                      personnelDisplaySettings.simIpDisplayEnabled ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </span>
+              </label>
+            </div>
             <SelectField
               label="Trainee Rank Source"
               value={personnelDisplaySettings.useSeparateTraineeRankOrder ? 'Use separate trainee rank order' : 'Use staff rank order'}
@@ -8171,6 +8202,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             />
           </div>
           <div className="grid gap-3 lg:grid-cols-2">
+            <Field
+              label="Contractor Staff Display Term"
+              value={personnelDisplaySettings.simIpDisplayLabel}
+              disabled={!canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled}
+              onChange={(value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value })}
+              info="The display label for staff whose saved role is SIM IP. Changing this label only affects what users see; it does not change the saved role or scheduler logic."
+            />
             <Field
               label="Training Report Name"
               value={trainingReportTerminology.name}

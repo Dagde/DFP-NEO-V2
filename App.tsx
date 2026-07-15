@@ -53,6 +53,7 @@ import {
 import {
     comparePeopleByConfiguredRank,
     getPersonnelDisplaySettings,
+    getSimIpDisplayLabel,
 } from './utils/personnelDisplaySettings';
 import {
     getUnitTrainingReportPhraseBank,
@@ -25591,6 +25592,7 @@ const App: React.FC = () => {
         [platformConfig]
     );
     const instructorLabel = personnelDisplaySettings.instructorLabel;
+    const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
     const formatResourceDisplayLabel = useCallback(
         (resourceId: string) => formatConfiguredResourceLabel(resourceId, resourceDisplayNames),
         [resourceDisplayNames]
@@ -40193,6 +40195,7 @@ appliedUpdates.forEach(update => {
                       operationalModel={activeOperationalModel}
                       crewPositionTerminology={activeCrewPositionTerminology}
                       instructorLabel={instructorLabel}
+                      simIpDisplayLabel={simIpDisplayLabel}
                     />;
                 } catch (error) {
                     console.error('🔴 STAFF SCHEDULE ERROR - Failed to render InstructorScheduleView:', error);
@@ -40231,6 +40234,7 @@ appliedUpdates.forEach(update => {
                     operationalModel={activeOperationalModel}
                     crewPositionTerminology={activeCrewPositionTerminology}
                     instructorLabel={instructorLabel}
+                    simIpDisplayLabel={simIpDisplayLabel}
                 />;
             case 'NextDayTraineeSchedule':
                 return <NextDayTraineeScheduleView
