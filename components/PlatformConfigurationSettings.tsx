@@ -5003,6 +5003,101 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const activeSettingsVisibilityParentOrg = config.organisations.find((organisation) => (
     String(organisation.code || '').trim().toUpperCase() === activeSettingsVisibilityParentOrgCode.toUpperCase()
   )) || primaryOrganisation;
+  const settingsVisibilityEnabled = settingsVisibilityPolicy.enabled && settingsVisibilityPolicy.filters.length > 0;
+  const visibilityUnitSet = new Set(activeSettingsVisibilityUnitCodes.map(normaliseUnitCode).filter(Boolean));
+  const visibilityAircraftTypeSet = new Set(activeSettingsVisibilityAircraftTypes.map(normaliseUnitCode).filter(Boolean));
+  const visibilityLocationCode = normaliseUnitCode(activeSettingsVisibilityLocationCode);
+  const visibilityParentOrganisationCode = normaliseUnitCode(activeSettingsVisibilityParentOrgCode);
+  const getVisibilityRecordUnit = (unitCode?: unknown) => {
+    const code = normaliseUnitCode(unitCode);
+    return code ? config.units.find((unit) => normaliseUnitCode(unit.code) === code) || null : null;
+  };
+  const getVisibilityRecordContext = (record: {
+    unitCode?: unknown;
+    locationCode?: unknown;
+    aircraftTypeCode?: unknown;
+    organisationCode?: unknown;
+  }) => {
+    const recordUnit = getVisibilityRecordUnit(record.unitCode);
+    return {
+      unitCode: normaliseUnitCode(record.unitCode),
+      locationCode: normaliseUnitCode(record.locationCode || recordUnit?.locationCode),
+      aircraftTypeCode: normaliseUnitCode(record.aircraftTypeCode || (recordUnit ? getUnitAircraftTypeCode(String(recordUnit.code || '')) : '')),
+      organisationCode: normaliseUnitCode(record.organisationCode || recordUnit?.organisationCode),
+    };
+  };
+  const isRecordVisibleForSettingsPolicy = (record: {
+    unitCode?: unknown;
+    locationCode?: unknown;
+    aircraftTypeCode?: unknown;
+    organisationCode?: unknown;
+  }) => {
+    if (!settingsVisibilityEnabled) return true;
+    const context = getVisibilityRecordContext(record);
+    return settingsVisibilityPolicy.filters.every((filter) => {
+      if (filter === 'unit') {
+        if (!context.unitCode || visibilityUnitSet.size === 0) return true;
+        return visibilityUnitSet.has(context.unitCode);
+      }
+      if (filter === 'location') {
+        if (!context.locationCode || !visibilityLocationCode) return true;
+        return context.locationCode === visibilityLocationCode;
+      }
+      if (filter === 'aircraftType') {
+        if (!context.aircraftTypeCode || visibilityAircraftTypeSet.size === 0) return true;
+        return visibilityAircraftTypeSet.has(context.aircraftTypeCode);
+      }
+      if (filter === 'parentOrganisation') {
+        if (!context.organisationCode || !visibilityParentOrganisationCode) return true;
+        return context.organisationCode === visibilityParentOrganisationCode;
+      }
+      return true;
+    });
+  };
+  const visibleLocationRows = config.locations
+    .map((location, index) => ({ location, index }))
+    .filter(({ location }) => isRecordVisibleForSettingsPolicy({
+      locationCode: location.code,
+      organisationCode: location.organisationCode,
+    }));
+  const visibleUnitRows = config.units
+    .map((unit, index) => ({ unit, index }))
+    .filter(({ unit }) => isRecordVisibleForSettingsPolicy({
+      unitCode: unit.code,
+      locationCode: unit.locationCode,
+      aircraftTypeCode: getUnitAircraftTypeCode(String(unit.code || '')),
+      organisationCode: unit.organisationCode,
+    }));
+  const visibleResourcePoolRows = config.resourcePools
+    .map((pool, index) => ({ pool, index }))
+    .filter(({ pool }) => isRecordVisibleForSettingsPolicy({
+      unitCode: pool.unitCode,
+      locationCode: pool.locationCode,
+      aircraftTypeCode: pool.aircraftTypeCode,
+      organisationCode: pool.organisationCode,
+    }));
+  const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
+    const key = String(pool.id || pool.code || `resource-pool-${index}`);
+    const name = String(pool.name || '').trim() || 'Unnamed Resource Pool';
+    return { key, name };
+  });
+  const activeResourcePoolDeleteOptions = settingsVisibilityEnabled
+    ? visibleResourcePoolDeleteOptions
+    : resourcePoolDeleteOptions;
+  const visibleMasterLmpAccessRuleRows = masterLmpAccessRules
+    .map((rule, index) => ({ rule, index }))
+    .filter(({ rule }) => isRecordVisibleForSettingsPolicy({
+      unitCode: rule.unitCode,
+      locationCode: rule.locationCode,
+    }));
+  const visibleSchedulingRuleSetRows = config.schedulingRuleSets
+    .map((ruleSet, index) => ({ ruleSet, index }))
+    .filter(({ ruleSet }) => isRecordVisibleForSettingsPolicy({
+      unitCode: ruleSet.unitCode,
+      locationCode: ruleSet.locationCode,
+      aircraftTypeCode: ruleSet.aircraftTypeCode,
+      organisationCode: ruleSet.organisationCode,
+    }));
   const fixedCrewContext = isFixedCrewLikeOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel);
   const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
   const standardMissionProfilesForContext = uniqueProfilesByCompositeGroup(
@@ -5434,7 +5529,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   ? `local catalogue unavailable (${airfieldCatalogueError}). Manual latitude, longitude and timezone entry still works.`
                   : 'preparing lookup.'}
           </div>
-          {config.locations.map((location, index) => {
+          {visibleLocationRows.map(({ location, index }) => {
             const rowKey = location.id || `platform-location-${index}`;
             const codeSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.code, airfieldCatalogueLookup);
             const iataSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.iataCode, airfieldCatalogueLookup);
@@ -5553,7 +5648,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="p-4">
           <div className="max-w-full overflow-x-auto pb-2">
             <div className="min-w-[1180px] space-y-3">
-              {config.units.map((unit, index) => {
+              {visibleUnitRows.map(({ unit, index }) => {
                 const unitSettings = unit.settings || {};
                 const isSelectedUnit = selectedUnitIndex === index;
                 const isUnitEditing = canEdit && editingUnitIndex === index;
@@ -5910,7 +6005,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <h4 className="text-sm font-bold text-white">Master LMP Access Rules</h4>
               <p className="mt-1 text-xs leading-relaxed text-gray-400">Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees.</p>
             </div>
-          {masterLmpAccessRules.map((rule, index) => (
+          {visibleMasterLmpAccessRuleRows.map(({ rule, index }) => (
             <div key={rule.id || `master-lmp-access-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_0.8fr_auto]">
               <SelectField
                 label="Master LMP"
@@ -6861,9 +6956,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <SelectField
                     label="Resource Pool"
                     value={selectedResourcePoolDeleteKey}
-                    disabled={!canEditResourcePools || resourcePoolDeleteOptions.length === 0}
-                    options={['', ...resourcePoolDeleteOptions.map((option) => option.key)]}
-                    optionLabels={Object.fromEntries(resourcePoolDeleteOptions.map((option) => [option.key, option.name]))}
+                    disabled={!canEditResourcePools || activeResourcePoolDeleteOptions.length === 0}
+                    options={['', ...activeResourcePoolDeleteOptions.map((option) => option.key)]}
+                    optionLabels={Object.fromEntries(activeResourcePoolDeleteOptions.map((option) => [option.key, option.name]))}
                     emptyLabel="Select resource pool"
                     onChange={setSelectedResourcePoolDeleteKey}
                   />
@@ -6878,7 +6973,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
               </div>
             )}
-            {config.resourcePools.map((pool, index) => {
+            {visibleResourcePoolRows.map(({ pool, index }) => {
               const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
               const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
               const runtimeEnabled = pool.settings?.applyToV2Runtime === true;
@@ -7096,7 +7191,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </tr>
             </thead>
             <tbody>
-              {config.units.map((unit) => (
+              {visibleUnitRows.map(({ unit }) => (
                 <tr id={`platform-unit-modules-${getSettingsFocusAnchor(unit.code)}`} key={unit.code} className="border-t border-gray-700">
                   <td className="px-3 py-2 font-semibold text-white">{unit.name}</td>
                   {config.modules.map((module) => {
@@ -9163,7 +9258,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </p>
             </div>
             <div className="space-y-3">
-              {config.schedulingRuleSets.map((ruleSet, index) => (
+              {visibleSchedulingRuleSetRows.map(({ ruleSet, index }) => (
                 <div key={ruleSet.id || index} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5">
                   <Field label="Name" value={ruleSet.name} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateRow('schedulingRuleSets', index, { name: value })} />
                   <SelectField label="Unit" value={ruleSet.unitCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('schedulingRuleSets', index, { unitCode: value || null })} />

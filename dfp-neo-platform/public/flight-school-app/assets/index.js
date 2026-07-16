@@ -66948,6 +66948,79 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   const activeSettingsVisibilityAircraftTypes = activeUnitAircraftTypeCodes.length > 0 ? activeUnitAircraftTypeCodes : [activeMissionAircraftTypeCode].filter(Boolean);
   const activeSettingsVisibilityParentOrgCode = String(activePlatformUnit?.organisationCode || primaryOrganisation?.code || "").trim();
   const activeSettingsVisibilityParentOrg = config.organisations.find((organisation) => String(organisation.code || "").trim().toUpperCase() === activeSettingsVisibilityParentOrgCode.toUpperCase()) || primaryOrganisation;
+  const settingsVisibilityEnabled = settingsVisibilityPolicy.enabled && settingsVisibilityPolicy.filters.length > 0;
+  const visibilityUnitSet = new Set(activeSettingsVisibilityUnitCodes.map(normaliseUnitCode2).filter(Boolean));
+  const visibilityAircraftTypeSet = new Set(activeSettingsVisibilityAircraftTypes.map(normaliseUnitCode2).filter(Boolean));
+  const visibilityLocationCode = normaliseUnitCode2(activeSettingsVisibilityLocationCode);
+  const visibilityParentOrganisationCode = normaliseUnitCode2(activeSettingsVisibilityParentOrgCode);
+  const getVisibilityRecordUnit = (unitCode) => {
+    const code = normaliseUnitCode2(unitCode);
+    return code ? config.units.find((unit) => normaliseUnitCode2(unit.code) === code) || null : null;
+  };
+  const getVisibilityRecordContext = (record) => {
+    const recordUnit = getVisibilityRecordUnit(record.unitCode);
+    return {
+      unitCode: normaliseUnitCode2(record.unitCode),
+      locationCode: normaliseUnitCode2(record.locationCode || recordUnit?.locationCode),
+      aircraftTypeCode: normaliseUnitCode2(record.aircraftTypeCode || (recordUnit ? getUnitAircraftTypeCode(String(recordUnit.code || "")) : "")),
+      organisationCode: normaliseUnitCode2(record.organisationCode || recordUnit?.organisationCode)
+    };
+  };
+  const isRecordVisibleForSettingsPolicy = (record) => {
+    if (!settingsVisibilityEnabled) return true;
+    const context = getVisibilityRecordContext(record);
+    return settingsVisibilityPolicy.filters.every((filter) => {
+      if (filter === "unit") {
+        if (!context.unitCode || visibilityUnitSet.size === 0) return true;
+        return visibilityUnitSet.has(context.unitCode);
+      }
+      if (filter === "location") {
+        if (!context.locationCode || !visibilityLocationCode) return true;
+        return context.locationCode === visibilityLocationCode;
+      }
+      if (filter === "aircraftType") {
+        if (!context.aircraftTypeCode || visibilityAircraftTypeSet.size === 0) return true;
+        return visibilityAircraftTypeSet.has(context.aircraftTypeCode);
+      }
+      if (filter === "parentOrganisation") {
+        if (!context.organisationCode || !visibilityParentOrganisationCode) return true;
+        return context.organisationCode === visibilityParentOrganisationCode;
+      }
+      return true;
+    });
+  };
+  const visibleLocationRows = config.locations.map((location, index) => ({ location, index })).filter(({ location }) => isRecordVisibleForSettingsPolicy({
+    locationCode: location.code,
+    organisationCode: location.organisationCode
+  }));
+  const visibleUnitRows = config.units.map((unit, index) => ({ unit, index })).filter(({ unit }) => isRecordVisibleForSettingsPolicy({
+    unitCode: unit.code,
+    locationCode: unit.locationCode,
+    aircraftTypeCode: getUnitAircraftTypeCode(String(unit.code || "")),
+    organisationCode: unit.organisationCode
+  }));
+  const visibleResourcePoolRows = config.resourcePools.map((pool, index) => ({ pool, index })).filter(({ pool }) => isRecordVisibleForSettingsPolicy({
+    unitCode: pool.unitCode,
+    locationCode: pool.locationCode,
+    aircraftTypeCode: pool.aircraftTypeCode,
+    organisationCode: pool.organisationCode
+  }));
+  const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
+    const key = String(pool.id || pool.code || `resource-pool-${index}`);
+    const name = String(pool.name || "").trim() || "Unnamed Resource Pool";
+    return { key, name };
+  });
+  const activeResourcePoolDeleteOptions = settingsVisibilityEnabled ? visibleResourcePoolDeleteOptions : resourcePoolDeleteOptions;
+  const visibleMasterLmpAccessRuleRows = masterLmpAccessRules.map((rule, index) => ({ rule, index })).filter(({ rule }) => isRecordVisibleForSettingsPolicy({
+    unitCode: rule.unitCode,
+    locationCode: rule.locationCode
+  }));
+  const visibleSchedulingRuleSetRows = config.schedulingRuleSets.map((ruleSet, index) => ({ ruleSet, index })).filter(({ ruleSet }) => isRecordVisibleForSettingsPolicy({
+    unitCode: ruleSet.unitCode,
+    locationCode: ruleSet.locationCode,
+    aircraftTypeCode: ruleSet.aircraftTypeCode,
+    organisationCode: ruleSet.organisationCode
+  }));
   const fixedCrewContext = isFixedCrewLikeOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel);
   const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
   const standardMissionProfilesForContext = uniqueProfilesByCompositeGroup(
@@ -67299,7 +67372,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           " ",
           airfieldCatalogueStatus === "loaded" ? `${airfieldCatalogue.length.toLocaleString()} local entries available for code or name lookup.` : airfieldCatalogueStatus === "loading" ? "loading local catalogue..." : airfieldCatalogueStatus === "error" ? `local catalogue unavailable (${airfieldCatalogueError}). Manual latitude, longitude and timezone entry still works.` : "preparing lookup."
         ] }),
-        config.locations.map((location, index) => {
+        visibleLocationRows.map(({ location, index }) => {
           const rowKey = location.id || `platform-location-${index}`;
           const codeSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.code, airfieldCatalogueLookup);
           const iataSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.iataCode, airfieldCatalogueLookup);
@@ -67417,7 +67490,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1180px] space-y-3", children: config.units.map((unit, index) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1180px] space-y-3", children: visibleUnitRows.map(({ unit, index }) => {
         const unitSettings = unit.settings || {};
         const isSelectedUnit = selectedUnitIndex === index;
         const isUnitEditing = canEdit && editingUnitIndex === index;
@@ -67762,7 +67835,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: "Master LMP Access Rules" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees." })
           ] }),
-          masterLmpAccessRules.map((rule, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_0.8fr_auto]", children: [
+          visibleMasterLmpAccessRuleRows.map(({ rule, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_0.8fr_auto]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               SelectField,
               {
@@ -68671,9 +68744,9 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 {
                   label: "Resource Pool",
                   value: selectedResourcePoolDeleteKey,
-                  disabled: !canEditResourcePools || resourcePoolDeleteOptions.length === 0,
-                  options: ["", ...resourcePoolDeleteOptions.map((option) => option.key)],
-                  optionLabels: Object.fromEntries(resourcePoolDeleteOptions.map((option) => [option.key, option.name])),
+                  disabled: !canEditResourcePools || activeResourcePoolDeleteOptions.length === 0,
+                  options: ["", ...activeResourcePoolDeleteOptions.map((option) => option.key)],
+                  optionLabels: Object.fromEntries(activeResourcePoolDeleteOptions.map((option) => [option.key, option.name])),
                   emptyLabel: "Select resource pool",
                   onChange: setSelectedResourcePoolDeleteKey
                 }
@@ -68690,7 +68763,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               )
             ] })
           ] }),
-          config.resourcePools.map((pool, index) => {
+          visibleResourcePoolRows.map(({ pool, index }) => {
             const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
             const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
             const runtimeEnabled = pool.settings?.applyToV2Runtime === true;
@@ -68909,7 +68982,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Unit" }),
           config.modules.map((module) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: module.name }, module.code))
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: config.units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { id: `platform-unit-modules-${getSettingsFocusAnchor(unit.code)}`, className: "border-t border-gray-700", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: visibleUnitRows.map(({ unit }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { id: `platform-unit-modules-${getSettingsFocusAnchor(unit.code)}`, className: "border-t border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 font-semibold text-white", children: unit.name }),
           config.modules.map((module) => {
             const unitModuleIndex = config.unitModules.findIndex((item) => item.unitCode === unit.code && item.moduleCode === module.code);
@@ -70928,7 +71001,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Scheduling Rule Set Records" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-amber-50/60", children: "Use these records to apply named scheduling rules to selected units, aircraft types or operating scopes." })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: visibleSchedulingRuleSetRows.map(({ ruleSet, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: ruleSet.name, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
