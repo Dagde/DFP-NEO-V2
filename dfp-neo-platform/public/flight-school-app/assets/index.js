@@ -62952,6 +62952,12 @@ const FormationCallsignsSection = ({
     location: "",
     locationCode: ""
   });
+  const allowedUnitSet = new Set(units.map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean));
+  const isCallsignVisibleForUnitScope = (callsign) => {
+    if (allowedUnitSet.size === 0) return true;
+    const unit = String(callsign.unit || "").trim().toUpperCase();
+    return unit ? allowedUnitSet.has(unit) : false;
+  };
   const handleEdit = async () => {
     if (!canEditSettings) return;
     if (!isSettingsUnlocked) {
@@ -62993,7 +62999,9 @@ const FormationCallsignsSection = ({
     updated[index] = { ...updated[index], [field]: value };
     setTempCallsigns(updated);
   };
-  const filteredCallsigns = isEditing ? selectedUnit === "ALL" ? tempCallsigns : tempCallsigns.filter((c) => c.unit === selectedUnit) : selectedUnit === "ALL" ? callsigns : callsigns.filter((c) => c.unit === selectedUnit);
+  const effectiveSelectedUnit = selectedUnit !== "ALL" && allowedUnitSet.size > 0 && !allowedUnitSet.has(String(selectedUnit || "").trim().toUpperCase()) ? "ALL" : selectedUnit;
+  const scopedCallsigns = (isEditing ? tempCallsigns : callsigns).filter(isCallsignVisibleForUnitScope);
+  const filteredCallsigns = effectiveSelectedUnit === "ALL" ? scopedCallsigns : scopedCallsigns.filter((c) => c.unit === effectiveSelectedUnit);
   const sectionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[800px] h-fit", onKeyDownCapture: stopEditableKeyPropagation, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
@@ -63017,7 +63025,7 @@ const FormationCallsignsSection = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "select",
           {
-            value: selectedUnit,
+            value: effectiveSelectedUnit,
             onChange: (e) => setSelectedUnit(e.target.value),
             className: "bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500",
             children: [
@@ -65529,7 +65537,7 @@ This permanently removes the organisation record from platform configuration and
     crewCompositionSettings.currencyProfiles.filter((profile) => (!profile.aircraftTypeCode || String(profile.aircraftTypeCode || "").trim().toUpperCase() === activeCrewCompositionAircraftCode) && isProfileInActiveUnitContext(profile))
   );
   const addCurrencyProfile = () => {
-    const visibleProfiles = getVisibleCurrencyProfiles();
+    const visibleProfiles = displayCurrencyProfiles;
     const profileIndex = visibleProfiles.length + 1;
     const baseId = createClientRecordId("currency-profile");
     const targetUnitCodes = getActiveScopedUnitCodes();
@@ -65539,10 +65547,10 @@ This permanently removes the organisation record from platform configuration and
       unitCode,
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : "",
       compositeProfileId: combinedContext ? baseId : "",
-      aircraftTypeCode: activeCrewCompositionAircraftCode,
+      aircraftTypeCode: displayCrewCompositionAircraftCode || activeCrewCompositionAircraftCode,
       name: `Profile ${profileIndex}`,
       code: `CURR${profileIndex}`.slice(0, 8).toUpperCase(),
-      crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || "Aircraft"} Crew`,
+      crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || displayCrewCompositionAircraftCode || activeCrewCompositionAircraftCode || "Aircraft"} Crew`,
       config: "ANY",
       currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
       aircraftCount: 1,
@@ -67000,8 +67008,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   const getVisibleAlternateCrewCompositions = () => uniqueProfilesByCompositeGroup(
     crewCompositionSettings.alternateCompositions.filter((profile) => String(profile.aircraftTypeCode || "").trim().toUpperCase() === activeCrewCompositionAircraftCode && isProfileInActiveUnitContext(profile))
   );
-  const activeAircraftAlternateCompositions = getVisibleAlternateCrewCompositions();
-  const activeCurrencyProfiles = getVisibleCurrencyProfiles();
+  getVisibleAlternateCrewCompositions();
+  getVisibleCurrencyProfiles();
   const activePlatformUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === activePrimaryUnitCode) || config.units.find(isActiveRecord) || config.units[0] || null;
   const getUnitAircraftTypeCode = (unitCode) => {
     const normalisedUnitCode = String(unitCode || "").trim().toUpperCase();
@@ -67080,10 +67088,18 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     locationCode: pool.locationCode,
     aircraftTypeCode: pool.aircraftTypeCode,
     organisationCode: pool.organisationCode
-  }));
+  })).filter(({ pool }) => {
+    if (!settingsVisibilityEnabled || !settingsVisibilityPolicy.filters.includes("unit") || visibilityUnitSet.size === 0) {
+      return true;
+    }
+    const poolUnitCode = normaliseUnitCode2(pool.unitCode);
+    const poolAircraftTypeCode = normaliseUnitCode2(pool.aircraftTypeCode);
+    return poolUnitCode && visibilityUnitSet.has(poolUnitCode) || !poolUnitCode && (!poolAircraftTypeCode || visibilityAircraftTypeSet.has(poolAircraftTypeCode));
+  });
   const visibleAircraftTypeCodes = new Set([
-    ...visibleUnitRows.map(({ unit }) => getUnitAircraftTypeCode(String(unit.code || ""))),
-    ...visibleResourcePoolRows.map(({ pool }) => String(pool.aircraftTypeCode || "").trim().toUpperCase())
+    ...settingsVisibilityPolicy.filters.includes("unit") ? activeUnitAircraftTypeCodes : [],
+    ...!settingsVisibilityPolicy.filters.includes("unit") ? visibleUnitRows.map(({ unit }) => getUnitAircraftTypeCode(String(unit.code || ""))) : [],
+    ...!settingsVisibilityPolicy.filters.includes("unit") ? visibleResourcePoolRows.map(({ pool }) => String(pool.aircraftTypeCode || "").trim().toUpperCase()) : []
   ].map(normaliseUnitCode2).filter(Boolean));
   const visibleAircraftTypeRows = config.aircraftTypes.map((aircraft, index) => ({ aircraft, index })).filter(({ aircraft }) => {
     if (!settingsVisibilityEnabled) return true;
@@ -67108,6 +67124,24 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     const code = normaliseUnitCode2(aircraft.code);
     return !code || visibleAircraftTypeRows.some(({ aircraft: visibleAircraft }) => normaliseUnitCode2(visibleAircraft.code) === code);
   }) : crewCompositionAircraftTypes;
+  const displayCrewCompositionAircraft = (settingsVisibilityEnabled ? visibleCrewCompositionAircraftTypes.find((aircraft) => normaliseUnitCode2(aircraft.code) === activeCrewCompositionAircraftCode) || visibleCrewCompositionAircraftTypes[0] : activeCrewCompositionAircraft) || activeCrewCompositionAircraft;
+  const displayCrewCompositionAircraftCode = normaliseUnitCode2(displayCrewCompositionAircraft?.code);
+  const displayCrewCompositionAircraftIndex = Math.max(
+    0,
+    crewCompositionAircraftTypes.findIndex((aircraft) => normaliseUnitCode2(aircraft.code) === displayCrewCompositionAircraftCode)
+  );
+  const displayCrewComposition = normaliseAircraftCrewComposition(displayCrewCompositionAircraft?.crewComposition);
+  const displayAircraftAlternateCompositions = uniqueProfilesByCompositeGroup(
+    crewCompositionSettings.alternateCompositions.filter((profile) => normaliseUnitCode2(profile.aircraftTypeCode) === displayCrewCompositionAircraftCode && isProfileInActiveUnitContext(profile))
+  );
+  const displayCurrencyProfiles = uniqueProfilesByCompositeGroup(
+    crewCompositionSettings.currencyProfiles.filter((profile) => (!profile.aircraftTypeCode || normaliseUnitCode2(profile.aircraftTypeCode) === displayCrewCompositionAircraftCode) && isProfileInActiveUnitContext(profile))
+  );
+  const displayCrewRoleKeys = new Set(
+    displayCrewComposition.seats.flatMap((seat) => getAircraftSeatEligibleRoles(seat)).map((role) => role.toUpperCase())
+  );
+  const displayCrewPositionEntries = crewPositionTerminology.positions.filter((entry) => displayCrewRoleKeys.has(entry.genericName.toUpperCase()));
+  const visibleDisplayCrewPositionEntries = displayCrewPositionEntries.length > 0 ? displayCrewPositionEntries : crewPositionTerminology.positions;
   const visibleUnitCallsignEntries = unitCallsignSettings.entries.filter((entry) => isRecordVisibleForSettingsPolicy({
     unitCode: entry.unitCode
   }));
@@ -68222,7 +68256,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2", children: visibleCrewCompositionAircraftTypes.map((aircraft) => {
           const code = String(aircraft.code || "").trim().toUpperCase();
-          const isActive = code === activeCrewCompositionAircraftCode;
+          const isActive = code === displayCrewCompositionAircraftCode;
           return /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
@@ -68245,10 +68279,10 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Alternate Profiles" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-orange-100", children: activeAircraftAlternateCompositions.length }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-orange-100", children: displayAircraftAlternateCompositions.length }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: [
               "Profiles for ",
-              activeCrewCompositionAircraftCode || "this aircraft",
+              displayCrewCompositionAircraftCode || "this aircraft",
               " only."
             ] })
           ] })
@@ -68259,7 +68293,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Crew Position Labels / Roles" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
                 "These are the crew positions available for ",
-                activeCrewCompositionAircraftCode || "this aircraft",
+                displayCrewCompositionAircraftCode || "this aircraft",
                 ". Choose which operational models should use each position."
               ] })
             ] }),
@@ -68269,7 +68303,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               "Position"
             ] }) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: visibleCrewPositionEntries.map((entry) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: visibleDisplayCrewPositionEntries.map((entry) => {
             const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(182px,1.05fr)_minmax(65px,0.375fr)_minmax(300px,1.65fr)_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Generic Position", value: entry.genericName, disabled: !canEditCrewComposition || isDefaultEntry, onChange: (value) => updateCrewPositionEntry(entry.id, { genericName: value }), info: isDefaultEntry ? "Baseline crew positions stay fixed so aircraft seat links remain reliable." : "The position used by aircraft seats and alternate crew profiles." }),
@@ -68306,34 +68340,34 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Standard Crew Composition" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
               "This standard composition applies to ",
-              activeCrewCompositionAircraftCode || "the selected aircraft type",
+              displayCrewCompositionAircraftCode || "the selected aircraft type",
               "."
             ] })
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-black text-white", children: activeCrewCompositionAircraftCode || "AIRCRAFT" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-black text-white", children: displayCrewCompositionAircraftCode || "AIRCRAFT" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] uppercase tracking-wide text-gray-500", children: [
-                  activeCrewCompositionAircraft?.category || "Training",
+                  displayCrewCompositionAircraft?.category || "Training",
                   " aircraft"
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[360px] gap-2 sm:grid-cols-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Total Seats", value: activeCrewComposition.crewCount, disabled: !canEditCrewComposition, onChange: (value) => updateAircraftCrewCount(activeCrewCompositionAircraftIndex, value) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Total Seats", value: displayCrewComposition.crewCount, disabled: !canEditCrewComposition, onChange: (value) => updateAircraftCrewCount(displayCrewCompositionAircraftIndex, value) }),
                 AIRCRAFT_CREW_RESOURCE_KINDS.map(({ kind, shortLabel }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                   NumberField,
                   {
                     label: shortLabel === "Procedural Trainer" ? "Proc Trainer" : `${shortLabel} Seats`,
-                    value: activeCrewComposition.resourceSeatCounts?.[kind] ?? activeCrewComposition.crewCount,
+                    value: displayCrewComposition.resourceSeatCounts?.[kind] ?? displayCrewComposition.crewCount,
                     disabled: !canEditCrewComposition,
-                    onChange: (value) => updateAircraftCrewResourceSeatCount(activeCrewCompositionAircraftIndex, kind, value)
+                    onChange: (value) => updateAircraftCrewResourceSeatCount(displayCrewCompositionAircraftIndex, kind, value)
                   },
                   `crew-resource-count-${kind}`
                 )),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 h-fit rounded-md border border-orange-300/20 bg-orange-500/10 px-2 py-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-orange-100", children: "Crew Summary" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("ol", { className: "space-y-0.5 text-[11px] font-semibold leading-tight text-orange-50/90", children: getStandardCrewSummary(activeCrewComposition).map((roleLabel, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("ol", { className: "space-y-0.5 text-[11px] font-semibold leading-tight text-orange-50/90", children: getStandardCrewSummary(displayCrewComposition).map((roleLabel, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
                     index + 1,
                     ". ",
                     roleLabel
@@ -68341,10 +68375,10 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 ] })
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 lg:grid-cols-2", children: activeCrewComposition.seats.map((seat, seatIndex) => {
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 lg:grid-cols-2", children: displayCrewComposition.seats.map((seat, seatIndex) => {
               const eligibleRoles = getAircraftSeatEligibleRoles(seat);
               const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, eligibleRoles);
-              const visibleResourceKinds = AIRCRAFT_CREW_RESOURCE_KINDS.filter(({ kind }) => seatIndex < (activeCrewComposition.resourceSeatCounts?.[kind] ?? activeCrewComposition.crewCount));
+              const visibleResourceKinds = AIRCRAFT_CREW_RESOURCE_KINDS.filter(({ kind }) => seatIndex < (displayCrewComposition.resourceSeatCounts?.[kind] ?? displayCrewComposition.crewCount));
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-800 bg-gray-950/70 p-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -68354,7 +68388,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Role eligibility by resource type." })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Default", value: seat.role, disabled: !canEditCrewComposition, options: eligibleRoles, optionLabels: crewPositionLabelMap, onChange: (value) => updateAircraftSeatRole(activeCrewCompositionAircraftIndex, seatIndex, value) }) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Default", value: seat.role, disabled: !canEditCrewComposition, options: eligibleRoles, optionLabels: crewPositionLabelMap, onChange: (value) => updateAircraftSeatRole(displayCrewCompositionAircraftIndex, seatIndex, value) }) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-md border border-gray-800", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -68382,7 +68416,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                             disabled: !canEditCrewComposition || eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase()) && eligibleRoles.length <= 1,
                             onClick: () => {
                               const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
-                              updateAircraftSeatEligibleRole(activeCrewCompositionAircraftIndex, seatIndex, role, !checked);
+                              updateAircraftSeatEligibleRole(displayCrewCompositionAircraftIndex, seatIndex, role, !checked);
                             },
                             className: `px-2 py-1.5 text-left ${eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase()) ? "text-orange-100" : "text-gray-400"} disabled:cursor-not-allowed disabled:opacity-50`,
                             children: crewPositionLabelMap[role] || role
@@ -68398,7 +68432,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                               className: "h-4 w-4 rounded border-gray-500 accent-orange-400",
                               checked,
                               disabled: !canEditCrewComposition || checked && resourceRoles.length <= 1,
-                              onChange: (event) => updateAircraftSeatResourceEligibleRole(activeCrewCompositionAircraftIndex, seatIndex, kind, role, event.target.checked)
+                              onChange: (event) => updateAircraftSeatResourceEligibleRole(displayCrewCompositionAircraftIndex, seatIndex, kind, role, event.target.checked)
                             }
                           ) }, `seat-${seatIndex}-${role}-${kind}`);
                         }),
@@ -68418,17 +68452,17 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Alternate Crew Composition" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
                 "Alternate profiles shown here are only for ",
-                activeCrewCompositionAircraftCode || "the selected aircraft",
+                displayCrewCompositionAircraftCode || "the selected aircraft",
                 "."
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewComposition(activeCrewCompositionAircraftCode), disabled: !canEditCrewComposition || !activeCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewComposition(displayCrewCompositionAircraftCode), disabled: !canEditCrewComposition || !displayCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
               "Add Alt",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "Crew"
             ] }) }) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeAircraftAlternateCompositions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No alternate crew compositions configured." }) : activeAircraftAlternateCompositions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: displayAircraftAlternateCompositions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No alternate crew compositions configured." }) : displayAircraftAlternateCompositions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -68504,7 +68538,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2", children: visibleCrewCompositionAircraftTypes.map((aircraft) => {
           const code = String(aircraft.code || "").trim().toUpperCase();
-          const isActive = code === activeCrewCompositionAircraftCode;
+          const isActive = code === displayCrewCompositionAircraftCode;
           return /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
@@ -68525,21 +68559,21 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Currency Profiles" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
                 "Profiles prefill Specific Currency Requests with crew, aircraft CONFIG and currency for ",
-                activeCrewCompositionAircraftCode || "the selected aircraft",
+                displayCrewCompositionAircraftCode || "the selected aircraft",
                 "."
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addCurrencyProfile, disabled: !canEditCrewComposition || !activeCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addCurrencyProfile, disabled: !canEditCrewComposition || !displayCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
               "Add",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "Profile"
             ] }) }) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No currency profiles configured." }) : activeCurrencyProfiles.map((profile) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: displayCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No currency profiles configured." }) : displayCurrencyProfiles.map((profile) => {
             const crewOptions = Array.from(new Set([
               ...currencyProfileCrewOptions
             ].map((option) => String(option || "").trim()).filter(Boolean)));
-            const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode);
+            const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || displayCrewCompositionAircraftCode);
             const configOptions = profileConfigOptions.includes(profile.config) ? profileConfigOptions : [profile.config, ...profileConfigOptions].filter(Boolean);
             const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency) ? activeCurrencyDefinitionNames : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,0.55fr)_auto]", children: [
@@ -70711,8 +70745,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           {
             callsigns: formationCallsigns,
             onUpdateCallsigns: onUpdateFormationCallsigns,
-            units: config.units.map((unit) => unit.code).filter(Boolean),
-            locations: config.locations.map((location) => location.name || location.code).filter(Boolean),
+            units: visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code).filter(Boolean),
+            locations: (visibleLocationRows.length > 0 ? visibleLocationRows.map(({ location }) => location) : config.locations).map((location) => location.name || location.code).filter(Boolean),
             canEditSettings: canUnlockRankTerminology,
             isSettingsUnlocked: canEditRankTerminology,
             onRequestUnlock: unlockRankTerminology,

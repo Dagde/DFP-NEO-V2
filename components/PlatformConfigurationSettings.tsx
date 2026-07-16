@@ -3181,7 +3181,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   );
 
   const addCurrencyProfile = () => {
-    const visibleProfiles = getVisibleCurrencyProfiles();
+    const visibleProfiles = displayCurrencyProfiles;
     const profileIndex = visibleProfiles.length + 1;
     const baseId = createClientRecordId('currency-profile');
     const targetUnitCodes = getActiveScopedUnitCodes();
@@ -3191,10 +3191,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       unitCode,
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : '',
       compositeProfileId: combinedContext ? baseId : '',
-      aircraftTypeCode: activeCrewCompositionAircraftCode,
+      aircraftTypeCode: displayCrewCompositionAircraftCode || activeCrewCompositionAircraftCode,
       name: `Profile ${profileIndex}`,
       code: `CURR${profileIndex}`.slice(0, 8).toUpperCase(),
-      crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || 'Aircraft'} Crew`,
+      crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || displayCrewCompositionAircraftCode || activeCrewCompositionAircraftCode || 'Aircraft'} Crew`,
       config: 'ANY',
       currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
       aircraftCount: 1,
@@ -5075,10 +5075,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       locationCode: pool.locationCode,
       aircraftTypeCode: pool.aircraftTypeCode,
       organisationCode: pool.organisationCode,
-    }));
+    }))
+    .filter(({ pool }) => {
+      if (!settingsVisibilityEnabled || !settingsVisibilityPolicy.filters.includes('unit') || visibilityUnitSet.size === 0) {
+        return true;
+      }
+      const poolUnitCode = normaliseUnitCode(pool.unitCode);
+      const poolAircraftTypeCode = normaliseUnitCode(pool.aircraftTypeCode);
+      return (poolUnitCode && visibilityUnitSet.has(poolUnitCode))
+        || (!poolUnitCode && (!poolAircraftTypeCode || visibilityAircraftTypeSet.has(poolAircraftTypeCode)));
+    });
   const visibleAircraftTypeCodes = new Set<string>([
-    ...visibleUnitRows.map(({ unit }) => getUnitAircraftTypeCode(String(unit.code || ''))),
-    ...visibleResourcePoolRows.map(({ pool }) => String(pool.aircraftTypeCode || '').trim().toUpperCase()),
+    ...(settingsVisibilityPolicy.filters.includes('unit') ? activeUnitAircraftTypeCodes : []),
+    ...(!settingsVisibilityPolicy.filters.includes('unit') ? visibleUnitRows.map(({ unit }) => getUnitAircraftTypeCode(String(unit.code || ''))) : []),
+    ...(!settingsVisibilityPolicy.filters.includes('unit') ? visibleResourcePoolRows.map(({ pool }) => String(pool.aircraftTypeCode || '').trim().toUpperCase()) : []),
   ].map(normaliseUnitCode).filter(Boolean));
   const visibleAircraftTypeRows = config.aircraftTypes
     .map((aircraft, index) => ({ aircraft, index }))
@@ -5116,6 +5126,39 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       return !code || visibleAircraftTypeRows.some(({ aircraft: visibleAircraft }) => normaliseUnitCode(visibleAircraft.code) === code);
     })
     : crewCompositionAircraftTypes;
+  const displayCrewCompositionAircraft = (
+    settingsVisibilityEnabled
+      ? visibleCrewCompositionAircraftTypes.find((aircraft) => normaliseUnitCode(aircraft.code) === activeCrewCompositionAircraftCode)
+        || visibleCrewCompositionAircraftTypes[0]
+      : activeCrewCompositionAircraft
+  ) || activeCrewCompositionAircraft;
+  const displayCrewCompositionAircraftCode = normaliseUnitCode(displayCrewCompositionAircraft?.code);
+  const displayCrewCompositionAircraftIndex = Math.max(
+    0,
+    crewCompositionAircraftTypes.findIndex((aircraft) => normaliseUnitCode(aircraft.code) === displayCrewCompositionAircraftCode),
+  );
+  const displayCrewComposition = normaliseAircraftCrewComposition(displayCrewCompositionAircraft?.crewComposition);
+  const displayAircraftAlternateCompositions = uniqueProfilesByCompositeGroup(
+    crewCompositionSettings.alternateCompositions.filter((profile) => (
+      normaliseUnitCode(profile.aircraftTypeCode) === displayCrewCompositionAircraftCode
+      && isProfileInActiveUnitContext(profile)
+    )),
+  );
+  const displayCurrencyProfiles = uniqueProfilesByCompositeGroup(
+    crewCompositionSettings.currencyProfiles.filter((profile) => (
+      (!profile.aircraftTypeCode || normaliseUnitCode(profile.aircraftTypeCode) === displayCrewCompositionAircraftCode)
+      && isProfileInActiveUnitContext(profile)
+    )),
+  );
+  const displayCrewRoleKeys = new Set(
+    displayCrewComposition.seats.flatMap((seat) => getAircraftSeatEligibleRoles(seat)).map((role) => role.toUpperCase()),
+  );
+  const displayCrewPositionEntries = crewPositionTerminology.positions.filter((entry) => (
+    displayCrewRoleKeys.has(entry.genericName.toUpperCase())
+  ));
+  const visibleDisplayCrewPositionEntries = displayCrewPositionEntries.length > 0
+    ? displayCrewPositionEntries
+    : crewPositionTerminology.positions;
   const visibleUnitCallsignEntries = unitCallsignSettings.entries.filter((entry) => isRecordVisibleForSettingsPolicy({
     unitCode: entry.unitCode,
   }));
@@ -6366,7 +6409,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2">
             {visibleCrewCompositionAircraftTypes.map((aircraft) => {
               const code = String(aircraft.code || '').trim().toUpperCase();
-              const isActive = code === activeCrewCompositionAircraftCode;
+              const isActive = code === displayCrewCompositionAircraftCode;
               return (
                 <button
                   key={`crew-composition-aircraft-tab-${code || aircraft.name}`}
@@ -6393,8 +6436,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
               <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Alternate Profiles</div>
-              <div className="mt-1 text-lg font-black text-orange-100">{activeAircraftAlternateCompositions.length}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Profiles for {activeCrewCompositionAircraftCode || 'this aircraft'} only.</div>
+              <div className="mt-1 text-lg font-black text-orange-100">{displayAircraftAlternateCompositions.length}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Profiles for {displayCrewCompositionAircraftCode || 'this aircraft'} only.</div>
             </div>
           </div>
 
@@ -6402,14 +6445,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Crew Position Labels / Roles</h4>
-                <p className={resourceSectionPanelHintClass}>These are the crew positions available for {activeCrewCompositionAircraftCode || 'this aircraft'}. Choose which operational models should use each position.</p>
+                <p className={resourceSectionPanelHintClass}>These are the crew positions available for {displayCrewCompositionAircraftCode || 'this aircraft'}. Choose which operational models should use each position.</p>
               </div>
               <button type="button" onClick={addCrewPositionEntry} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
                 <span className="text-[10px] leading-tight">Add<br />Position</span>
               </button>
             </div>
             <div className="space-y-3">
-              {visibleCrewPositionEntries.map((entry) => {
+              {visibleDisplayCrewPositionEntries.map((entry) => {
                 const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
                 return (
                   <div key={`crew-role-${entry.id}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(182px,1.05fr)_minmax(65px,0.375fr)_minmax(300px,1.65fr)_auto]">
@@ -6454,30 +6497,30 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Standard Crew Composition</h4>
-                <p className={resourceSectionPanelHintClass}>This standard composition applies to {activeCrewCompositionAircraftCode || 'the selected aircraft type'}.</p>
+                <p className={resourceSectionPanelHintClass}>This standard composition applies to {displayCrewCompositionAircraftCode || 'the selected aircraft type'}.</p>
               </div>
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
               <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="text-sm font-black text-white">{activeCrewCompositionAircraftCode || 'AIRCRAFT'}</div>
-                  <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">{activeCrewCompositionAircraft?.category || 'Training'} aircraft</div>
+                  <div className="text-sm font-black text-white">{displayCrewCompositionAircraftCode || 'AIRCRAFT'}</div>
+                  <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">{displayCrewCompositionAircraft?.category || 'Training'} aircraft</div>
                 </div>
                 <div className="grid min-w-[360px] gap-2 sm:grid-cols-4">
-                  <NumberField label="Total Seats" value={activeCrewComposition.crewCount} disabled={!canEditCrewComposition} onChange={(value) => updateAircraftCrewCount(activeCrewCompositionAircraftIndex, value)} />
+                  <NumberField label="Total Seats" value={displayCrewComposition.crewCount} disabled={!canEditCrewComposition} onChange={(value) => updateAircraftCrewCount(displayCrewCompositionAircraftIndex, value)} />
                   {AIRCRAFT_CREW_RESOURCE_KINDS.map(({ kind, shortLabel }) => (
                     <NumberField
                       key={`crew-resource-count-${kind}`}
                       label={shortLabel === 'Procedural Trainer' ? 'Proc Trainer' : `${shortLabel} Seats`}
-                      value={activeCrewComposition.resourceSeatCounts?.[kind] ?? activeCrewComposition.crewCount}
+                      value={displayCrewComposition.resourceSeatCounts?.[kind] ?? displayCrewComposition.crewCount}
                       disabled={!canEditCrewComposition}
-                      onChange={(value) => updateAircraftCrewResourceSeatCount(activeCrewCompositionAircraftIndex, kind, value)}
+                      onChange={(value) => updateAircraftCrewResourceSeatCount(displayCrewCompositionAircraftIndex, kind, value)}
                     />
                   ))}
                   <div className="mt-2 h-fit rounded-md border border-orange-300/20 bg-orange-500/10 px-2 py-2">
                     <div className="mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-orange-100">Crew Summary</div>
                     <ol className="space-y-0.5 text-[11px] font-semibold leading-tight text-orange-50/90">
-                      {getStandardCrewSummary(activeCrewComposition).map((roleLabel, index) => (
+                      {getStandardCrewSummary(displayCrewComposition).map((roleLabel, index) => (
                         <li key={`standard-crew-summary-${index}`}>{index + 1}. {roleLabel}</li>
                       ))}
                     </ol>
@@ -6485,11 +6528,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
               </div>
               <div className="grid gap-2 lg:grid-cols-2">
-                {activeCrewComposition.seats.map((seat, seatIndex) => {
+                {displayCrewComposition.seats.map((seat, seatIndex) => {
                   const eligibleRoles = getAircraftSeatEligibleRoles(seat);
                   const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, eligibleRoles);
                   const visibleResourceKinds = AIRCRAFT_CREW_RESOURCE_KINDS.filter(({ kind }) => (
-                    seatIndex < (activeCrewComposition.resourceSeatCounts?.[kind] ?? activeCrewComposition.crewCount)
+                    seatIndex < (displayCrewComposition.resourceSeatCounts?.[kind] ?? displayCrewComposition.crewCount)
                   ));
                   return (
                     <div key={seat.id || `standard-crew-seat-${seatIndex}`} className="rounded-lg border border-gray-800 bg-gray-950/70 p-2">
@@ -6499,7 +6542,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <div className="text-[11px] text-gray-500">Role eligibility by resource type.</div>
                         </div>
                         <div className="w-40">
-                          <SelectField label="Default" value={seat.role} disabled={!canEditCrewComposition} options={eligibleRoles} optionLabels={crewPositionLabelMap} onChange={(value) => updateAircraftSeatRole(activeCrewCompositionAircraftIndex, seatIndex, value)} />
+                          <SelectField label="Default" value={seat.role} disabled={!canEditCrewComposition} options={eligibleRoles} optionLabels={crewPositionLabelMap} onChange={(value) => updateAircraftSeatRole(displayCrewCompositionAircraftIndex, seatIndex, value)} />
                         </div>
                       </div>
                       <div className="overflow-hidden rounded-md border border-gray-800">
@@ -6524,7 +6567,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               disabled={!canEditCrewComposition || (eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase()) && eligibleRoles.length <= 1)}
                               onClick={() => {
                                 const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
-                                updateAircraftSeatEligibleRole(activeCrewCompositionAircraftIndex, seatIndex, role, !checked);
+                                updateAircraftSeatEligibleRole(displayCrewCompositionAircraftIndex, seatIndex, role, !checked);
                               }}
                               className={`px-2 py-1.5 text-left ${eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase()) ? 'text-orange-100' : 'text-gray-400'} disabled:cursor-not-allowed disabled:opacity-50`}
                             >
@@ -6540,7 +6583,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                     className="h-4 w-4 rounded border-gray-500 accent-orange-400"
                                     checked={checked}
                                     disabled={!canEditCrewComposition || (checked && resourceRoles.length <= 1)}
-                                    onChange={(event) => updateAircraftSeatResourceEligibleRole(activeCrewCompositionAircraftIndex, seatIndex, kind, role, event.target.checked)}
+                                    onChange={(event) => updateAircraftSeatResourceEligibleRole(displayCrewCompositionAircraftIndex, seatIndex, kind, role, event.target.checked)}
                                   />
                                 </label>
                               );
@@ -6560,18 +6603,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Alternate Crew Composition</h4>
-                <p className={resourceSectionPanelHintClass}>Alternate profiles shown here are only for {activeCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
+                <p className={resourceSectionPanelHintClass}>Alternate profiles shown here are only for {displayCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
               </div>
               <div className="flex flex-wrap justify-end gap-[1px]">
-                <button type="button" onClick={() => addAlternateCrewComposition(activeCrewCompositionAircraftCode)} disabled={!canEditCrewComposition || !activeCrewCompositionAircraftCode} className={platformActionButtonClass}>
+                <button type="button" onClick={() => addAlternateCrewComposition(displayCrewCompositionAircraftCode)} disabled={!canEditCrewComposition || !displayCrewCompositionAircraftCode} className={platformActionButtonClass}>
                   <span className="text-[9px] leading-tight">Add Alt<br />Crew</span>
                 </button>
               </div>
             </div>
             <div className="space-y-3">
-              {activeAircraftAlternateCompositions.length === 0 ? (
+              {displayAircraftAlternateCompositions.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No alternate crew compositions configured.</div>
-              ) : activeAircraftAlternateCompositions.map((profile) => (
+              ) : displayAircraftAlternateCompositions.map((profile) => (
                 <div key={profile.id} className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
                   <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px]">
                     <div>
@@ -6662,7 +6705,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2">
             {visibleCrewCompositionAircraftTypes.map((aircraft) => {
               const code = String(aircraft.code || '').trim().toUpperCase();
-              const isActive = code === activeCrewCompositionAircraftCode;
+              const isActive = code === displayCrewCompositionAircraftCode;
               return (
                 <button
                   key={`currency-profile-aircraft-tab-${code || aircraft.name}`}
@@ -6685,22 +6728,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Currency Profiles</h4>
-                <p className={resourceSectionPanelHintClass}>Profiles prefill Specific Currency Requests with crew, aircraft CONFIG and currency for {activeCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
+                <p className={resourceSectionPanelHintClass}>Profiles prefill Specific Currency Requests with crew, aircraft CONFIG and currency for {displayCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
               </div>
               <div className="flex flex-wrap justify-end gap-[1px]">
-                <button type="button" onClick={addCurrencyProfile} disabled={!canEditCrewComposition || !activeCrewCompositionAircraftCode} className={platformActionButtonClass}>
+                <button type="button" onClick={addCurrencyProfile} disabled={!canEditCrewComposition || !displayCrewCompositionAircraftCode} className={platformActionButtonClass}>
                   <span className="text-[9px] leading-tight">Add<br />Profile</span>
                 </button>
               </div>
             </div>
             <div className="space-y-3">
-              {activeCurrencyProfiles.length === 0 ? (
+              {displayCurrencyProfiles.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No currency profiles configured.</div>
-              ) : activeCurrencyProfiles.map((profile) => {
+              ) : displayCurrencyProfiles.map((profile) => {
                 const crewOptions = Array.from(new Set([
                   ...currencyProfileCrewOptions,
                 ].map((option) => String(option || '').trim()).filter(Boolean)));
-                const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode);
+                const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || displayCrewCompositionAircraftCode);
                 const configOptions = profileConfigOptions.includes(profile.config) ? profileConfigOptions : [profile.config, ...profileConfigOptions].filter(Boolean);
                 const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency)
                   ? activeCurrencyDefinitionNames
@@ -8872,8 +8915,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <FormationCallsignsSection
                 callsigns={formationCallsigns}
                 onUpdateCallsigns={onUpdateFormationCallsigns}
-                units={config.units.map((unit: any) => unit.code).filter(Boolean)}
-                locations={config.locations.map((location: any) => location.name || location.code).filter(Boolean)}
+                units={visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit: any) => unit.code).filter(Boolean)}
+                locations={(visibleLocationRows.length > 0 ? visibleLocationRows.map(({ location }) => location) : config.locations).map((location: any) => location.name || location.code).filter(Boolean)}
                 canEditSettings={canUnlockRankTerminology}
                 isSettingsUnlocked={canEditRankTerminology}
                 onRequestUnlock={unlockRankTerminology}

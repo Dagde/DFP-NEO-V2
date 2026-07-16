@@ -33,6 +33,12 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
         location: '',
         locationCode: ''
     });
+    const allowedUnitSet = new Set(units.map(unit => String(unit || '').trim().toUpperCase()).filter(Boolean));
+    const isCallsignVisibleForUnitScope = (callsign: FormationCallsign) => {
+        if (allowedUnitSet.size === 0) return true;
+        const unit = String(callsign.unit || '').trim().toUpperCase();
+        return unit ? allowedUnitSet.has(unit) : false;
+    };
 
     const handleEdit = async () => {
         if (!canEditSettings) return;
@@ -83,9 +89,13 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
         setTempCallsigns(updated);
     };
 
-    const filteredCallsigns = isEditing
-        ? (selectedUnit === 'ALL' ? tempCallsigns : tempCallsigns.filter(c => c.unit === selectedUnit))
-        : (selectedUnit === 'ALL' ? callsigns : callsigns.filter(c => c.unit === selectedUnit));
+    const effectiveSelectedUnit = selectedUnit !== 'ALL' && allowedUnitSet.size > 0 && !allowedUnitSet.has(String(selectedUnit || '').trim().toUpperCase())
+        ? 'ALL'
+        : selectedUnit;
+    const scopedCallsigns = (isEditing ? tempCallsigns : callsigns).filter(isCallsignVisibleForUnitScope);
+    const filteredCallsigns = effectiveSelectedUnit === 'ALL'
+        ? scopedCallsigns
+        : scopedCallsigns.filter(c => c.unit === effectiveSelectedUnit);
     const sectionButtonClass = 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50';
 
     return (
@@ -113,7 +123,7 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
                 <div className="flex items-center space-x-2">
                     <label className="text-sm text-gray-400">Filter by Unit:</label>
                     <select
-                        value={selectedUnit}
+                        value={effectiveSelectedUnit}
                         onChange={(e) => setSelectedUnit(e.target.value)}
                         className="bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500"
                     >
