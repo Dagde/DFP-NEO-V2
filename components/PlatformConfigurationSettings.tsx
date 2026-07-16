@@ -1796,6 +1796,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [error, setError] = useState('');
   const loadedConfigRef = useRef<PlatformConfig>(emptyConfig);
   const unitTypeOptions = useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
+  const [unitTypesDraft, setUnitTypesDraft] = useState('');
+  const [isEditingUnitTypes, setIsEditingUnitTypes] = useState(false);
+
+  useEffect(() => {
+    if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join('\n'));
+  }, [isEditingUnitTypes, unitTypeOptions]);
 
   useEffect(() => {
     const handlePlatformConfigUpdated = (event: Event) => {
@@ -3630,6 +3636,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       notifyPlatformConfigUpdatedSoon(nextConfig);
       return nextConfig;
     });
+  };
+
+  const commitUnitTypesDraft = () => {
+    setIsEditingUnitTypes(false);
+    updateUnitTypes(unitTypesDraft);
   };
 
   const removeUserAccessScope = (index: number) => {
@@ -5823,11 +5834,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="mb-4 rounded-lg border border-cyan-500/25 bg-cyan-950/15 p-3">
             <TextAreaField
               label="Unit Types"
-              value={unitTypeOptions.join('\n')}
+              value={isEditingUnitTypes ? unitTypesDraft : unitTypeOptions.join('\n')}
               disabled={!canEdit}
-              onChange={updateUnitTypes}
+              onChange={setUnitTypesDraft}
+              onFocus={() => {
+                setUnitTypesDraft(unitTypeOptions.join('\n'));
+                setIsEditingUnitTypes(true);
+              }}
+              onBlur={commitUnitTypesDraft}
               info="One unit type per line. These options appear in the Unit Type dropdown below and are saved in platform configuration."
               className="block"
+              fieldClassName="w-[300px] max-w-full"
               fieldSizingClassName="min-h-[104px]"
             />
           </div>
@@ -9869,15 +9886,18 @@ const TasField = ({ label, value, disabled, onChange, info, placeholder = 'KTAS'
   </label>
 );
 
-const TextAreaField = ({ label, value, disabled, onChange, info, className = 'lg:col-span-2', fieldClassName = 'w-full', fieldSizingClassName = 'min-h-[74px]' }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string; className?: string; fieldClassName?: string; fieldSizingClassName?: string }) => (
+const TextAreaField = ({ label, value, disabled, onChange, onFocus, onBlur, info, className = 'lg:col-span-2', fieldClassName = 'w-full', fieldSizingClassName = 'min-h-[74px]' }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; onFocus?: () => void; onBlur?: () => void; info?: string; className?: string; fieldClassName?: string; fieldSizingClassName?: string }) => (
   <label className={className}>
     <FieldLabel label={label} info={info} />
     <textarea
       className={`${fieldClass.replace('w-full', fieldClassName)} ${fieldSizingClassName} resize-y`}
       value={value || ''}
       disabled={disabled}
-      onKeyDownCapture={stopEditableKeyPropagation}
+      onBeforeInput={(event) => handleEditableTextBeforeInput(event, onChange)}
+      onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, onChange)}
       onKeyDown={stopEditableKeyPropagation}
+      onFocus={onFocus}
+      onBlur={onBlur}
       onChange={(event) => onChange(event.target.value)}
     />
   </label>

@@ -9677,9 +9677,6 @@ const isEditableElement = (target) => {
 };
 const stopEditableKeyPropagation = (event) => {
   if (isEditableElement(event.target)) {
-    if (event.target instanceof HTMLTextAreaElement && event.key === "Enter") {
-      return;
-    }
     event.stopPropagation();
   }
 };
@@ -64442,6 +64439,11 @@ const PlatformConfigurationSettings = ({
   const [error, setError] = reactExports.useState("");
   const loadedConfigRef = reactExports.useRef(emptyConfig);
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
+  const [unitTypesDraft, setUnitTypesDraft] = reactExports.useState("");
+  const [isEditingUnitTypes, setIsEditingUnitTypes] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join("\n"));
+  }, [isEditingUnitTypes, unitTypeOptions]);
   reactExports.useEffect(() => {
     const handlePlatformConfigUpdated = (event) => {
       const rawConfig = event.detail?.config;
@@ -65929,6 +65931,10 @@ This permanently removes the organisation record from platform configuration and
       notifyPlatformConfigUpdatedSoon(nextConfig);
       return nextConfig;
     });
+  };
+  const commitUnitTypesDraft = () => {
+    setIsEditingUnitTypes(false);
+    updateUnitTypes(unitTypesDraft);
   };
   const removeUserAccessScope = (index) => {
     setConfig((prev) => {
@@ -67725,11 +67731,17 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           TextAreaField,
           {
             label: "Unit Types",
-            value: unitTypeOptions.join("\n"),
+            value: isEditingUnitTypes ? unitTypesDraft : unitTypeOptions.join("\n"),
             disabled: !canEdit,
-            onChange: updateUnitTypes,
+            onChange: setUnitTypesDraft,
+            onFocus: () => {
+              setUnitTypesDraft(unitTypeOptions.join("\n"));
+              setIsEditingUnitTypes(true);
+            },
+            onBlur: commitUnitTypesDraft,
             info: "One unit type per line. These options appear in the Unit Type dropdown below and are saved in platform configuration.",
             className: "block",
+            fieldClassName: "w-[300px] max-w-full",
             fieldSizingClassName: "min-h-[104px]"
           }
         ) }),
@@ -71621,7 +71633,7 @@ const TasField = ({ label, value, disabled, onChange, info, placeholder = "KTAS"
     }
   )
 ] });
-const TextAreaField = ({ label, value, disabled, onChange, info, className = "lg:col-span-2", fieldClassName = "w-full", fieldSizingClassName = "min-h-[74px]" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className, children: [
+const TextAreaField = ({ label, value, disabled, onChange, onFocus, onBlur, info, className = "lg:col-span-2", fieldClassName = "w-full", fieldSizingClassName = "min-h-[74px]" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
     "textarea",
@@ -71629,8 +71641,11 @@ const TextAreaField = ({ label, value, disabled, onChange, info, className = "lg
       className: `${fieldClass.replace("w-full", fieldClassName)} ${fieldSizingClassName} resize-y`,
       value: value || "",
       disabled,
-      onKeyDownCapture: stopEditableKeyPropagation,
+      onBeforeInput: (event) => handleEditableTextBeforeInput(event, onChange),
+      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, onChange),
       onKeyDown: stopEditableKeyPropagation,
+      onFocus,
+      onBlur,
       onChange: (event) => onChange(event.target.value)
     }
   )
