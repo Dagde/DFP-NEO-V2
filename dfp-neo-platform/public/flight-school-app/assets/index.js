@@ -2431,6 +2431,8 @@ const normaliseMasterLmpAccessRules = (config) => {
     organisationCode: rule.organisationCode || "DEFAULT",
     locationCode: rule.locationCode || null,
     unitCode: rule.unitCode || null,
+    aircraftTypeCode: rule.aircraftTypeCode || null,
+    parentOrganisationCode: rule.parentOrganisationCode || rule.parentOrgCode || null,
     operationalModel: normaliseOptionalOperationalModel(rule.operationalModel || rule.model),
     accessLevel: normaliseAccessLevel(rule.accessLevel || rule.access),
     status: String(rule.status || "ACTIVE").toUpperCase()
@@ -2476,6 +2478,12 @@ const getMasterLmpAccessLevel = (config, lmpCode, context = {}) => {
   const targetLmp = normaliseAccessValue(lmpCode);
   const targetOrganisation = normaliseAccessValue(context.organisationCode || "DEFAULT");
   const targetLocation = normaliseAccessValue(context.locationCode);
+  const targetParentOrganisation = normaliseAccessValue(context.parentOrganisationCode);
+  const targetAircraftTypes = [
+    ...Array.isArray(context.aircraftTypeCodes) ? context.aircraftTypeCodes : [],
+    context.aircraftTypeCode
+  ].map(normaliseAccessValue).filter(Boolean);
+  const targetAircraftTypeSet = new Set(targetAircraftTypes);
   const targetUnits = [
     ...Array.isArray(context.unitCodes) ? context.unitCodes : [],
     context.unitCode
@@ -2483,7 +2491,7 @@ const getMasterLmpAccessLevel = (config, lmpCode, context = {}) => {
   const targetUnitSet = new Set(targetUnits);
   const targetModel = normaliseOperationalModel(context.operationalModel);
   const activeRulesForLmp = normaliseMasterLmpAccessRules(config).filter((rule) => String(rule.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((rule) => normaliseAccessValue(rule.lmpCode) === targetLmp);
-  const matchingLevels = activeRulesForLmp.filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation).filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation).filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode))).filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel).map((rule) => normaliseAccessLevel(rule.accessLevel));
+  const matchingLevels = activeRulesForLmp.filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation).filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation).filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode))).filter((rule) => !rule.aircraftTypeCode || targetAircraftTypeSet.size === 0 || targetAircraftTypeSet.has(normaliseAccessValue(rule.aircraftTypeCode))).filter((rule) => !rule.parentOrganisationCode || !targetParentOrganisation || normaliseAccessValue(rule.parentOrganisationCode) === targetParentOrganisation).filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel).map((rule) => normaliseAccessLevel(rule.accessLevel));
   if (matchingLevels.length === 0 && activeRulesForLmp.length === 0 && targetModel === "air_combat") {
     return "Manage";
   }
@@ -65811,8 +65819,7 @@ This permanently removes the organisation record from platform configuration and
     updateMasterLmpAccessRules(masterLmpAccessRules.map((rule, ruleIndex) => ruleIndex === index ? { ...rule, ...changes } : rule));
   };
   const addMasterLmpAccessRule = () => {
-    const activeUnits = config.units.filter(isActiveRecord);
-    const defaultUnit = activeUnits.find((unit) => unit.code === "1FTS") || activeUnits[0];
+    const defaultUnit = activePlatformUnit || config.units.filter(isActiveRecord)[0];
     updateMasterLmpAccessRules([
       ...masterLmpAccessRules,
       {
@@ -65821,7 +65828,9 @@ This permanently removes the organisation record from platform configuration and
         organisationCode: primaryOrganisation?.code || "DEFAULT",
         locationCode: defaultUnit?.locationCode || config.locations[0]?.code || "",
         unitCode: defaultUnit?.code || "",
-        operationalModel: "",
+        aircraftTypeCode: defaultUnit?.code ? getUnitAircraftTypeCode(defaultUnit.code) : "",
+        parentOrganisationCode: defaultUnit?.organisationCode || activeSettingsVisibilityParentOrgCode || "",
+        operationalModel: defaultUnit ? getUnitOperationalModel(defaultUnit) : "",
         accessLevel: "View",
         status: "ACTIVE"
       }
@@ -67159,8 +67168,31 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   const activeResourcePoolDeleteOptions = settingsVisibilityEnabled ? visibleResourcePoolDeleteOptions : resourcePoolDeleteOptions;
   const visibleMasterLmpAccessRuleRows = masterLmpAccessRules.map((rule, index) => ({ rule, index })).filter(({ rule }) => isRecordVisibleForSettingsPolicy({
     unitCode: rule.unitCode,
-    locationCode: rule.locationCode
+    locationCode: rule.locationCode,
+    aircraftTypeCode: rule.aircraftTypeCode,
+    organisationCode: rule.parentOrganisationCode || rule.organisationCode
   }));
+  const activeSettingsVisibilityModels = new Set(
+    visibleUnitRows.map(({ unit }) => getUnitOperationalModel(unit)).map((model) => String(model || "").trim()).filter(Boolean)
+  );
+  const isMasterLmpRuleSpecificToActiveContext = (rule) => {
+    const ruleUnitCode = normaliseUnitCode2(rule.unitCode);
+    const ruleLocationCode = normaliseUnitCode2(rule.locationCode);
+    const ruleAircraftTypeCode = normaliseUnitCode2(rule.aircraftTypeCode);
+    const ruleParentOrganisationCode = normaliseUnitCode2(rule.parentOrganisationCode);
+    const ruleModel = rule.operationalModel ? normaliseOperationalModel(rule.operationalModel) : "";
+    return Boolean(
+      ruleUnitCode && visibilityUnitSet.has(ruleUnitCode) || ruleLocationCode && visibilityLocationCode && ruleLocationCode === visibilityLocationCode || ruleAircraftTypeCode && visibilityAircraftTypeSet.has(ruleAircraftTypeCode) || ruleParentOrganisationCode && visibilityParentOrganisationCode && ruleParentOrganisationCode === visibilityParentOrganisationCode || ruleModel && activeSettingsVisibilityModels.has(ruleModel)
+    );
+  };
+  const isMasterLmpCatalogueEntryVisibleForActiveContext = (entry) => {
+    if (!settingsVisibilityEnabled) return true;
+    if (String(entry.status || "ACTIVE").toUpperCase() === "INACTIVE") return false;
+    const entryCode = normaliseUnitCode2(entry.code);
+    if (!entryCode) return false;
+    return masterLmpAccessRules.some((rule) => String(rule.status || "ACTIVE").toUpperCase() !== "INACTIVE" && normaliseUnitCode2(rule.lmpCode) === entryCode && isMasterLmpRuleSpecificToActiveContext(rule));
+  };
+  const visibleMasterLmpCatalogueRows = masterLmpCatalogue.map((entry, index) => ({ entry, index })).filter(({ entry }) => isMasterLmpCatalogueEntryVisibleForActiveContext(entry));
   const visibleSchedulingRuleSetRows = config.schedulingRuleSets.map((ruleSet, index) => ({ ruleSet, index })).filter(({ ruleSet }) => isRecordVisibleForSettingsPolicy({
     unitCode: ruleSet.unitCode,
     locationCode: ruleSet.locationCode,
@@ -67906,82 +67938,86 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "These are the selectable Master LMP names used by access rules and later LMP assignment workflows." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
-              masterLmpCatalogue.length,
+              visibleMasterLmpCatalogueRows.length,
+              settingsVisibilityEnabled ? ` of ${masterLmpCatalogue.length}` : "",
               " records"
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1110px] space-y-3", children: masterLmpCatalogue.map((entry, index) => {
-            const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || "").trim().toUpperCase()) || 0;
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px_42px] gap-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                Field,
-                {
-                  label: "Code",
-                  value: entry.code,
-                  disabled: !canEditSection("platform-master-lmp-access"),
-                  onChange: (value) => updateMasterLmpCatalogueEntry(index, { code: value, name: entry.name || value }),
-                  info: "Stable selectable value used by Master LMP Access and trainee/course assignment."
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                Field,
-                {
-                  label: "Name",
-                  value: entry.name || entry.code,
-                  disabled: !canEditSection("platform-master-lmp-access"),
-                  onChange: (value) => updateMasterLmpCatalogueEntry(index, { name: value })
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                Field,
-                {
-                  label: "Description",
-                  value: entry.description || "",
-                  disabled: !canEditSection("platform-master-lmp-access"),
-                  onChange: (value) => updateMasterLmpCatalogueEntry(index, { description: value })
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: labelClass, children: "Syllabus Content" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-[38px] items-center rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: [
-                  linkedSyllabusCount,
-                  " event",
-                  linkedSyllabusCount === 1 ? "" : "s"
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                SelectField,
-                {
-                  label: "Status",
-                  value: entry.status || "ACTIVE",
-                  disabled: !canEditSection("platform-master-lmp-access"),
-                  options: ["ACTIVE", "INACTIVE"],
-                  onChange: (value) => updateMasterLmpCatalogueEntry(index, { status: value })
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "aria-hidden": "true", className: "h-[18px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[1110px] space-y-3", children: [
+            visibleMasterLmpCatalogueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950 px-3 py-4 text-sm font-semibold text-gray-300", children: "No Master LMPs assigned to this unit." }),
+            visibleMasterLmpCatalogueRows.map(({ entry, index }) => {
+              const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || "").trim().toUpperCase()) || 0;
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px_42px] gap-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
+                  Field,
                   {
-                    type: "button",
-                    onClick: () => void deleteMasterLmpCatalogueEntry(index),
+                    label: "Code",
+                    value: entry.code,
                     disabled: !canEditSection("platform-master-lmp-access"),
-                    title: `Delete ${entry.name || entry.code || "Master LMP"}`,
-                    className: "flex min-h-[38px] w-full items-center justify-center rounded bg-transparent text-sm font-bold text-red-200 transition hover:bg-red-900/35 disabled:cursor-not-allowed disabled:opacity-45",
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
+                    onChange: (value) => updateMasterLmpCatalogueEntry(index, { code: value, name: entry.name || value }),
+                    info: "Stable selectable value used by Master LMP Access and trainee/course assignment."
                   }
-                )
-              ] })
-            ] }, entry.id || `master-lmp-catalogue-${index}`);
-          }) }) })
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Field,
+                  {
+                    label: "Name",
+                    value: entry.name || entry.code,
+                    disabled: !canEditSection("platform-master-lmp-access"),
+                    onChange: (value) => updateMasterLmpCatalogueEntry(index, { name: value })
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Field,
+                  {
+                    label: "Description",
+                    value: entry.description || "",
+                    disabled: !canEditSection("platform-master-lmp-access"),
+                    onChange: (value) => updateMasterLmpCatalogueEntry(index, { description: value })
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: labelClass, children: "Syllabus Content" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-[38px] items-center rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: [
+                    linkedSyllabusCount,
+                    " event",
+                    linkedSyllabusCount === 1 ? "" : "s"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  SelectField,
+                  {
+                    label: "Status",
+                    value: entry.status || "ACTIVE",
+                    disabled: !canEditSection("platform-master-lmp-access"),
+                    options: ["ACTIVE", "INACTIVE"],
+                    onChange: (value) => updateMasterLmpCatalogueEntry(index, { status: value })
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "aria-hidden": "true", className: "h-[18px]" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => void deleteMasterLmpCatalogueEntry(index),
+                      disabled: !canEditSection("platform-master-lmp-access"),
+                      title: `Delete ${entry.name || entry.code || "Master LMP"}`,
+                      className: "flex min-h-[38px] w-full items-center justify-center rounded bg-transparent text-sm font-bold text-red-200 transition hover:bg-red-900/35 disabled:cursor-not-allowed disabled:opacity-45",
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
+                    }
+                  )
+                ] })
+              ] }, entry.id || `master-lmp-catalogue-${index}`);
+            })
+          ] }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: "Master LMP Access Rules" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees." })
           ] }),
-          visibleMasterLmpAccessRuleRows.map(({ rule, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_0.8fr_auto]", children: [
+          visibleMasterLmpAccessRuleRows.map(({ rule, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_0.9fr_0.9fr_0.9fr_0.9fr_0.9fr_0.8fr_0.8fr_auto]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               SelectField,
               {
@@ -68023,6 +68059,28 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 options: ["", ...OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)],
                 emptyLabel: "Any Model",
                 onChange: (value) => updateMasterLmpAccessRule(index, { operationalModel: value || null })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectField,
+              {
+                label: "Aircraft Type",
+                value: rule.aircraftTypeCode || "",
+                disabled: !canEditSection("platform-master-lmp-access"),
+                options: ["", ...visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code)],
+                emptyLabel: "Any Type",
+                onChange: (value) => updateMasterLmpAccessRule(index, { aircraftTypeCode: value || null })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectField,
+              {
+                label: "Parent Org",
+                value: rule.parentOrganisationCode || "",
+                disabled: !canEditSection("platform-master-lmp-access"),
+                options: ["", ...config.organisations.map((organisation) => organisation.code).filter(Boolean)],
+                emptyLabel: "Any Org",
+                onChange: (value) => updateMasterLmpAccessRule(index, { parentOrganisationCode: value || null })
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -100765,6 +100823,21 @@ const App = () => {
     const unit = (platformConfig?.units || []).filter((candidate) => candidate.status !== "INACTIVE").find((candidate) => String(candidate.code || "").trim().toUpperCase() === normalisedUnit);
     return unit ? getUnitOperationalModel(unit) : activeOperationalModel;
   }, [activeOperationalModel, platformConfig]);
+  const getMasterLmpAccessContextForUnit = reactExports.useCallback((unitCode) => {
+    const normalisedUnit = String(unitCode || activeUnitCode || "").trim().toUpperCase();
+    const unit = (platformConfig?.units || []).filter((candidate) => candidate.status !== "INACTIVE").find((candidate) => String(candidate.code || "").trim().toUpperCase() === normalisedUnit);
+    const locationCode = String(unit?.locationCode || school || "").trim().toUpperCase();
+    const resourcePool = getLocationResourcePool(platformConfig, locationCode || school, normalisedUnit);
+    const unitAircraftType = String(unit?.settings?.aircraftTypeCode || unit?.settings?.aircraftType || "").trim().toUpperCase();
+    const aircraftTypeCode = String(resourcePool?.aircraftTypeCode || unitAircraftType || "").trim().toUpperCase();
+    return {
+      unitCode: normalisedUnit,
+      locationCode,
+      aircraftTypeCode,
+      parentOrganisationCode: unit?.organisationCode || null,
+      operationalModel: unit ? getUnitOperationalModel(unit) : activeOperationalModel
+    };
+  }, [activeOperationalModel, activeUnitCode, platformConfig, school]);
   const getSyllabusMasterLmpCodes = reactExports.useCallback((item) => {
     const courses2 = Array.isArray(item.courses) ? item.courses.filter(Boolean) : [];
     if (courses2.length > 0) return courses2;
@@ -100773,12 +100846,8 @@ const App = () => {
   const hasMasterLmpUnitAccess = reactExports.useCallback((lmpCode, unitCode, requiredAccess = "View") => {
     if (!platformConfigLoaded) return false;
     const contextUnitCode = unitCode || activeUnitCode;
-    return hasMasterLmpAccess(platformConfig, lmpCode, {
-      unitCode: contextUnitCode,
-      locationCode: school,
-      operationalModel: getOperationalModelForUnitCode(contextUnitCode)
-    }, requiredAccess);
-  }, [activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded, school]);
+    return hasMasterLmpAccess(platformConfig, lmpCode, getMasterLmpAccessContextForUnit(contextUnitCode), requiredAccess);
+  }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
   const filterSyllabusForMasterLmpAccess = reactExports.useCallback((items, requiredAccess = "View", unitCode) => {
     const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
     const activeUnit = normaliseContextCode(unitCode || activeUnitCode);
@@ -101773,15 +101842,11 @@ const App = () => {
       if (!code) return false;
       const key = code.toUpperCase();
       if (seen.has(key)) return false;
-      const hasAccess = contextUnitCodes.some((unitCode) => hasMasterLmpAccess(platformConfig, code, {
-        unitCode,
-        locationCode: school,
-        operationalModel: getOperationalModelForUnitCode(unitCode)
-      }, "View"));
+      const hasAccess = contextUnitCodes.some((unitCode) => hasMasterLmpAccess(platformConfig, code, getMasterLmpAccessContextForUnit(unitCode), "View"));
       if (hasAccess) seen.add(key);
       return hasAccess;
     });
-  }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded, school]);
+  }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
   reactExports.useEffect(() => {
     if (!setupTestProfile) return;
     const activeOrganisation = (platformConfig?.organisations || [])[0];
@@ -101798,11 +101863,7 @@ const App = () => {
         unitCode,
         locationCode: school,
         operationalModel: getOperationalModelForUnitCode(unitCode),
-        hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, {
-          unitCode,
-          locationCode: school,
-          operationalModel: getOperationalModelForUnitCode(unitCode)
-        }, "View"),
+        hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, getMasterLmpAccessContextForUnit(unitCode), "View"),
         matchingRules: normalisedAccessRules.filter((rule) => String(rule?.lmpCode || "").trim().toUpperCase() === lmpCode.toUpperCase())
       }))
     }));
@@ -101817,11 +101878,7 @@ const App = () => {
           unitCode,
           locationCode: school,
           operationalModel: getOperationalModelForUnitCode(unitCode),
-          hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, {
-            unitCode,
-            locationCode: school,
-            operationalModel: getOperationalModelForUnitCode(unitCode)
-          }, "View"),
+          hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, getMasterLmpAccessContextForUnit(unitCode), "View"),
           matchingRules: normalisedAccessRules.filter((rule) => String(rule?.lmpCode || "").trim().toUpperCase() === lmpCode.toUpperCase())
         }))
       }));
@@ -107433,10 +107490,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const traineeUnitCode = data.unit || activeUnitCode;
     const requestedLmpType = data.lmpType || "";
     const requestedAcademicLmpType = data.academicLmpType || "";
-    const lmpAccessContext = {
-      unitCode: traineeUnitCode,
-      operationalModel: activeOperationalModel
-    };
+    const lmpAccessContext = getMasterLmpAccessContextForUnit(traineeUnitCode);
     if (requestedLmpType && !hasMasterLmpAccess(platformConfig, requestedLmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
@@ -107517,7 +107571,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     } else {
       console.log("⚠️ [APP] Skipping DB update - not a DB trainee or no ID");
     }
-  }, [activeOperationalModel, activeUnitCode, platformConfig]);
+  }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig]);
   const buildRemedialPackageLmp = (originalTraineeLMP, eventToRemediate, newEvents) => {
     let lastNewEventId = eventToRemediate.id;
     const remedialPackageItems = [];
@@ -108203,10 +108257,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const handleUpdateCourseFromTrainingRecords = async (courseName, data) => {
     const courseUnitCode = data.unit || activeUnitCode;
-    const lmpAccessContext = {
-      unitCode: courseUnitCode,
-      operationalModel: activeOperationalModel
-    };
+    const lmpAccessContext = getMasterLmpAccessContextForUnit(courseUnitCode);
     if (data.lmpType && !hasMasterLmpAccess(platformConfig, data.lmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;

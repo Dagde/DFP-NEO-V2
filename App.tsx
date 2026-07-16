@@ -22030,6 +22030,24 @@ const App: React.FC = () => {
         return unit ? getUnitOperationalModel(unit) : activeOperationalModel;
     }, [activeOperationalModel, platformConfig]);
 
+    const getMasterLmpAccessContextForUnit = useCallback((unitCode?: string | null) => {
+        const normalisedUnit = String(unitCode || activeUnitCode || '').trim().toUpperCase();
+        const unit = (platformConfig?.units || [])
+            .filter((candidate: any) => candidate.status !== 'INACTIVE')
+            .find((candidate: any) => String(candidate.code || '').trim().toUpperCase() === normalisedUnit);
+        const locationCode = String(unit?.locationCode || school || '').trim().toUpperCase();
+        const resourcePool = getLocationResourcePool(platformConfig, locationCode || school, normalisedUnit);
+        const unitAircraftType = String(unit?.settings?.aircraftTypeCode || unit?.settings?.aircraftType || '').trim().toUpperCase();
+        const aircraftTypeCode = String(resourcePool?.aircraftTypeCode || unitAircraftType || '').trim().toUpperCase();
+        return {
+            unitCode: normalisedUnit,
+            locationCode,
+            aircraftTypeCode,
+            parentOrganisationCode: unit?.organisationCode || null,
+            operationalModel: unit ? getUnitOperationalModel(unit) : activeOperationalModel,
+        };
+    }, [activeOperationalModel, activeUnitCode, platformConfig, school]);
+
     const getSyllabusMasterLmpCodes = useCallback((item: SyllabusItemDetail): string[] => {
         const courses = Array.isArray(item.courses) ? item.courses.filter(Boolean) : [];
         if (courses.length > 0) return courses;
@@ -22043,12 +22061,8 @@ const App: React.FC = () => {
     ) => {
         if (!platformConfigLoaded) return false;
         const contextUnitCode = unitCode || activeUnitCode;
-        return hasMasterLmpAccess(platformConfig, lmpCode, {
-            unitCode: contextUnitCode,
-            locationCode: school,
-            operationalModel: getOperationalModelForUnitCode(contextUnitCode),
-        }, requiredAccess);
-    }, [activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded, school]);
+        return hasMasterLmpAccess(platformConfig, lmpCode, getMasterLmpAccessContextForUnit(contextUnitCode), requiredAccess);
+    }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
 
     const filterSyllabusForMasterLmpAccess = useCallback((
         items: SyllabusItemDetail[],
@@ -23318,16 +23332,12 @@ const App: React.FC = () => {
                 const key = code.toUpperCase();
                 if (seen.has(key)) return false;
                 const hasAccess = contextUnitCodes.some((unitCode) => (
-                    hasMasterLmpAccess(platformConfig, code, {
-                        unitCode,
-                        locationCode: school,
-                        operationalModel: getOperationalModelForUnitCode(unitCode),
-                    }, 'View')
+                    hasMasterLmpAccess(platformConfig, code, getMasterLmpAccessContextForUnit(unitCode), 'View')
                 ));
                 if (hasAccess) seen.add(key);
                 return hasAccess;
             });
-    }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded, school]);
+    }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
     useEffect(() => {
         if (!setupTestProfile) return;
         const activeOrganisation = (platformConfig?.organisations || [])[0] as any;
@@ -23350,11 +23360,7 @@ const App: React.FC = () => {
                 unitCode,
                 locationCode: school,
                 operationalModel: getOperationalModelForUnitCode(unitCode),
-                hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, {
-                    unitCode,
-                    locationCode: school,
-                    operationalModel: getOperationalModelForUnitCode(unitCode),
-                }, 'View'),
+                hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, getMasterLmpAccessContextForUnit(unitCode), 'View'),
                 matchingRules: normalisedAccessRules.filter((rule: any) => (
                     String(rule?.lmpCode || '').trim().toUpperCase() === lmpCode.toUpperCase()
                 )),
@@ -23371,11 +23377,7 @@ const App: React.FC = () => {
                     unitCode,
                     locationCode: school,
                     operationalModel: getOperationalModelForUnitCode(unitCode),
-                    hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, {
-                        unitCode,
-                        locationCode: school,
-                        operationalModel: getOperationalModelForUnitCode(unitCode),
-                    }, 'View'),
+                    hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, getMasterLmpAccessContextForUnit(unitCode), 'View'),
                     matchingRules: normalisedAccessRules.filter((rule: any) => (
                         String(rule?.lmpCode || '').trim().toUpperCase() === lmpCode.toUpperCase()
                     )),
@@ -30223,10 +30225,7 @@ const App: React.FC = () => {
         const traineeUnitCode = data.unit || activeUnitCode;
         const requestedLmpType = data.lmpType || '';
         const requestedAcademicLmpType = (data as any).academicLmpType || '';
-        const lmpAccessContext = {
-            unitCode: traineeUnitCode,
-            operationalModel: activeOperationalModel,
-        };
+        const lmpAccessContext = getMasterLmpAccessContextForUnit(traineeUnitCode);
         if (requestedLmpType && !hasMasterLmpAccess(platformConfig, requestedLmpType, lmpAccessContext, 'Assign')) {
             setErrorMessage(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || 'this unit'}. Check Settings → Platform & Deployment → Master LMP Access.`);
             return;
@@ -30316,7 +30315,7 @@ const App: React.FC = () => {
         } else {
             console.log('⚠️ [APP] Skipping DB update - not a DB trainee or no ID');
         }
-    }, [activeOperationalModel, activeUnitCode, platformConfig]);
+    }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig]);
 
     const buildRemedialPackageLmp = (
         originalTraineeLMP: SyllabusItemDetail[],
@@ -31117,10 +31116,7 @@ const App: React.FC = () => {
         data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }
     ) => {
         const courseUnitCode = data.unit || activeUnitCode;
-        const lmpAccessContext = {
-            unitCode: courseUnitCode,
-            operationalModel: activeOperationalModel,
-        };
+        const lmpAccessContext = getMasterLmpAccessContextForUnit(courseUnitCode);
         if (data.lmpType && !hasMasterLmpAccess(platformConfig, data.lmpType, lmpAccessContext, 'Assign')) {
             setErrorMessage(`Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || 'this unit'}. Check Settings → Platform & Deployment → Master LMP Access.`);
             return;

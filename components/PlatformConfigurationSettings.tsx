@@ -3520,8 +3520,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addMasterLmpAccessRule = () => {
-    const activeUnits = config.units.filter(isActiveRecord);
-    const defaultUnit = activeUnits.find((unit) => unit.code === '1FTS') || activeUnits[0];
+    const defaultUnit = activePlatformUnit || config.units.filter(isActiveRecord)[0];
     updateMasterLmpAccessRules([
       ...masterLmpAccessRules,
       {
@@ -3530,7 +3529,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         organisationCode: primaryOrganisation?.code || 'DEFAULT',
         locationCode: defaultUnit?.locationCode || config.locations[0]?.code || '',
         unitCode: defaultUnit?.code || '',
-        operationalModel: '',
+        aircraftTypeCode: defaultUnit?.code ? getUnitAircraftTypeCode(defaultUnit.code) : '',
+        parentOrganisationCode: defaultUnit?.organisationCode || activeSettingsVisibilityParentOrgCode || '',
+        operationalModel: defaultUnit ? getUnitOperationalModel(defaultUnit) : '',
         accessLevel: 'View',
         status: 'ACTIVE',
       },
@@ -5185,7 +5186,43 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     .filter(({ rule }) => isRecordVisibleForSettingsPolicy({
       unitCode: rule.unitCode,
       locationCode: rule.locationCode,
+      aircraftTypeCode: rule.aircraftTypeCode,
+      organisationCode: rule.parentOrganisationCode || rule.organisationCode,
     }));
+  const activeSettingsVisibilityModels = new Set(
+    visibleUnitRows
+      .map(({ unit }) => getUnitOperationalModel(unit))
+      .map((model) => String(model || '').trim())
+      .filter(Boolean),
+  );
+  const isMasterLmpRuleSpecificToActiveContext = (rule: PlatformMasterLmpAccessRule) => {
+    const ruleUnitCode = normaliseUnitCode(rule.unitCode);
+    const ruleLocationCode = normaliseUnitCode(rule.locationCode);
+    const ruleAircraftTypeCode = normaliseUnitCode(rule.aircraftTypeCode);
+    const ruleParentOrganisationCode = normaliseUnitCode(rule.parentOrganisationCode);
+    const ruleModel = rule.operationalModel ? normaliseOperationalModel(rule.operationalModel) : '';
+    return Boolean(
+      (ruleUnitCode && visibilityUnitSet.has(ruleUnitCode))
+      || (ruleLocationCode && visibilityLocationCode && ruleLocationCode === visibilityLocationCode)
+      || (ruleAircraftTypeCode && visibilityAircraftTypeSet.has(ruleAircraftTypeCode))
+      || (ruleParentOrganisationCode && visibilityParentOrganisationCode && ruleParentOrganisationCode === visibilityParentOrganisationCode)
+      || (ruleModel && activeSettingsVisibilityModels.has(ruleModel)),
+    );
+  };
+  const isMasterLmpCatalogueEntryVisibleForActiveContext = (entry: PlatformMasterLmpCatalogueEntry) => {
+    if (!settingsVisibilityEnabled) return true;
+    if (String(entry.status || 'ACTIVE').toUpperCase() === 'INACTIVE') return false;
+    const entryCode = normaliseUnitCode(entry.code);
+    if (!entryCode) return false;
+    return masterLmpAccessRules.some((rule) => (
+      String(rule.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+      && normaliseUnitCode(rule.lmpCode) === entryCode
+      && isMasterLmpRuleSpecificToActiveContext(rule)
+    ));
+  };
+  const visibleMasterLmpCatalogueRows = masterLmpCatalogue
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => isMasterLmpCatalogueEntryVisibleForActiveContext(entry));
   const visibleSchedulingRuleSetRows = config.schedulingRuleSets
     .map((ruleSet, index) => ({ ruleSet, index }))
     .filter(({ ruleSet }) => isRecordVisibleForSettingsPolicy({
@@ -6038,11 +6075,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <h4 className="text-sm font-bold text-white">Master LMP Catalogue</h4>
                 <p className="mt-1 text-xs leading-relaxed text-gray-400">These are the selectable Master LMP names used by access rules and later LMP assignment workflows.</p>
               </div>
-              <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">{masterLmpCatalogue.length} records</span>
+              <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">
+                {visibleMasterLmpCatalogueRows.length}{settingsVisibilityEnabled ? ` of ${masterLmpCatalogue.length}` : ''} records
+              </span>
             </div>
             <div className="max-w-full overflow-x-auto pb-2">
               <div className="min-w-[1110px] space-y-3">
-                {masterLmpCatalogue.map((entry, index) => {
+                {visibleMasterLmpCatalogueRows.length === 0 && (
+                  <div className="rounded border border-dashed border-gray-700 bg-gray-950 px-3 py-4 text-sm font-semibold text-gray-300">
+                    No Master LMPs assigned to this unit.
+                  </div>
+                )}
+                {visibleMasterLmpCatalogueRows.map(({ entry, index }) => {
                   const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || '').trim().toUpperCase()) || 0;
                   return (
                     <div key={entry.id || `master-lmp-catalogue-${index}`} className="grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px_42px] gap-3 rounded border border-gray-700 bg-gray-950 p-3">
@@ -6102,7 +6146,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <p className="mt-1 text-xs leading-relaxed text-gray-400">Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees.</p>
             </div>
           {visibleMasterLmpAccessRuleRows.map(({ rule, index }) => (
-            <div key={rule.id || `master-lmp-access-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_0.8fr_auto]">
+            <div key={rule.id || `master-lmp-access-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_0.9fr_0.9fr_0.9fr_0.9fr_0.9fr_0.8fr_0.8fr_auto]">
               <SelectField
                 label="Master LMP"
                 value={rule.lmpCode}
@@ -6133,6 +6177,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 options={['', ...OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)]}
                 emptyLabel="Any Model"
                 onChange={(value) => updateMasterLmpAccessRule(index, { operationalModel: value || null })}
+              />
+              <SelectField
+                label="Aircraft Type"
+                value={rule.aircraftTypeCode || ''}
+                disabled={!canEditSection('platform-master-lmp-access')}
+                options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code))]}
+                emptyLabel="Any Type"
+                onChange={(value) => updateMasterLmpAccessRule(index, { aircraftTypeCode: value || null })}
+              />
+              <SelectField
+                label="Parent Org"
+                value={rule.parentOrganisationCode || ''}
+                disabled={!canEditSection('platform-master-lmp-access')}
+                options={['', ...config.organisations.map((organisation) => organisation.code).filter(Boolean)]}
+                emptyLabel="Any Org"
+                onChange={(value) => updateMasterLmpAccessRule(index, { parentOrganisationCode: value || null })}
               />
               <SelectField
                 label="Access"

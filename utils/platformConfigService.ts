@@ -262,6 +262,8 @@ export interface PlatformMasterLmpAccessRule {
   organisationCode?: string | null;
   locationCode?: string | null;
   unitCode?: string | null;
+  aircraftTypeCode?: string | null;
+  parentOrganisationCode?: string | null;
   operationalModel?: OperationalModelCode | string | null;
   accessLevel?: MasterLmpAccessLevel | string | null;
   status?: string | null;
@@ -280,6 +282,9 @@ export interface MasterLmpAccessContext {
   locationCode?: string | null;
   unitCode?: string | null;
   unitCodes?: string[];
+  aircraftTypeCode?: string | null;
+  aircraftTypeCodes?: string[];
+  parentOrganisationCode?: string | null;
   operationalModel?: OperationalModelCode | string | null;
 }
 
@@ -473,6 +478,8 @@ export const normaliseMasterLmpAccessRules = (config: PlatformConfig | null): Pl
       organisationCode: rule.organisationCode || 'DEFAULT',
       locationCode: rule.locationCode || null,
       unitCode: rule.unitCode || null,
+      aircraftTypeCode: rule.aircraftTypeCode || null,
+      parentOrganisationCode: rule.parentOrganisationCode || rule.parentOrgCode || null,
       operationalModel: normaliseOptionalOperationalModel(rule.operationalModel || rule.model),
       accessLevel: normaliseAccessLevel(rule.accessLevel || rule.access),
       status: String(rule.status || 'ACTIVE').toUpperCase(),
@@ -530,6 +537,14 @@ export const getMasterLmpAccessLevel = (
   const targetLmp = normaliseAccessValue(lmpCode);
   const targetOrganisation = normaliseAccessValue(context.organisationCode || 'DEFAULT');
   const targetLocation = normaliseAccessValue(context.locationCode);
+  const targetParentOrganisation = normaliseAccessValue(context.parentOrganisationCode);
+  const targetAircraftTypes = [
+    ...(Array.isArray(context.aircraftTypeCodes) ? context.aircraftTypeCodes : []),
+    context.aircraftTypeCode,
+  ]
+    .map(normaliseAccessValue)
+    .filter(Boolean);
+  const targetAircraftTypeSet = new Set(targetAircraftTypes);
   const targetUnits = [
     ...(Array.isArray(context.unitCodes) ? context.unitCodes : []),
     context.unitCode,
@@ -548,6 +563,8 @@ export const getMasterLmpAccessLevel = (
     .filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation)
     .filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation)
     .filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode)))
+    .filter((rule) => !rule.aircraftTypeCode || targetAircraftTypeSet.size === 0 || targetAircraftTypeSet.has(normaliseAccessValue(rule.aircraftTypeCode)))
+    .filter((rule) => !rule.parentOrganisationCode || !targetParentOrganisation || normaliseAccessValue(rule.parentOrganisationCode) === targetParentOrganisation)
     .filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel)
     .map((rule) => normaliseAccessLevel(rule.accessLevel));
 
