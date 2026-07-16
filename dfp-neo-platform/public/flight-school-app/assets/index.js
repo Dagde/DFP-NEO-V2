@@ -66177,7 +66177,9 @@ This permanently removes the organisation record from platform configuration and
   };
   const addUnit = () => {
     if (!canEdit) return;
-    const defaultLocation = config.locations[0]?.code || "ESL";
+    const contextUnit = activePlatformUnit || config.units[Math.min(selectedUnitIndex, Math.max(0, config.units.length - 1))] || null;
+    const contextUnitSettings = contextUnit?.settings || {};
+    const defaultLocation = contextUnit?.locationCode || config.locations[0]?.code || "ESL";
     const newUnitId = createClientRecordId("unit");
     const nextUnitIndex = config.units.length;
     const defaultTrainingReportTemplate = normaliseTrainingReportTemplate(
@@ -66196,12 +66198,15 @@ This permanently removes the organisation record from platform configuration and
           id: newUnitId,
           code: `UNIT-${prev.units.length + 1}`,
           name: "New Unit",
-          organisationCode: prev.organisations[0]?.code || "DEFAULT",
+          organisationCode: contextUnit?.organisationCode || prev.organisations[0]?.code || "DEFAULT",
           locationCode: defaultLocation,
-          unitType: unitTypeOptions[0] || "Training",
+          unitType: contextUnit?.unitType || unitTypeOptions[0] || "Training",
           status: "ACTIVE",
           settings: {
-            operationalModel: DEFAULT_OPERATIONAL_MODEL,
+            parentOrganisationPath: Array.isArray(contextUnitSettings.parentOrganisationPath) ? contextUnitSettings.parentOrganisationPath : void 0,
+            parentOrganisation: contextUnitSettings.parentOrganisation || void 0,
+            aircraftTypeCode: contextUnitSettings.aircraftTypeCode || contextUnitSettings.aircraftType || void 0,
+            operationalModel: contextUnitSettings.operationalModel || DEFAULT_OPERATIONAL_MODEL,
             hasTrainees: false,
             trainingReportTemplate: defaultTrainingReportTemplate,
             trainingReportTerminology: normaliseTrainingReportTerminology({ name: defaultTrainingReportTemplate.displayName }),
@@ -67143,13 +67148,16 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     locationCode: location.code,
     organisationCode: location.organisationCode
   }));
-  const visibleUnitRows = config.units.map((unit, index) => ({ unit, index })).filter(({ unit }) => isRecordVisibleForSettingsPolicy({
-    unitCode: unit.code,
-    locationCode: unit.locationCode,
-    aircraftTypeCode: getUnitAircraftTypeCode(String(unit.code || "")),
-    organisationCode: unit.organisationCode,
-    parentOrganisationCode: getUnitParentOrganisationCode(unit)
-  }));
+  const visibleUnitRows = config.units.map((unit, index) => ({ unit, index })).filter(({ unit, index }) => {
+    if (index === editingUnitIndex) return true;
+    return isRecordVisibleForSettingsPolicy({
+      unitCode: unit.code,
+      locationCode: unit.locationCode,
+      aircraftTypeCode: getUnitAircraftTypeCode(String(unit.code || "")),
+      organisationCode: unit.organisationCode,
+      parentOrganisationCode: getUnitParentOrganisationCode(unit)
+    });
+  });
   const visibleResourcePoolRows = config.resourcePools.map((pool, index) => ({ pool, index })).filter(({ pool }) => isRecordVisibleForSettingsPolicy({
     unitCode: pool.unitCode,
     locationCode: pool.locationCode,

@@ -3952,7 +3952,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const addUnit = () => {
     if (!canEdit) return;
-    const defaultLocation = config.locations[0]?.code || 'ESL';
+    const contextUnit = activePlatformUnit || config.units[Math.min(selectedUnitIndex, Math.max(0, config.units.length - 1))] || null;
+    const contextUnitSettings = contextUnit?.settings || {};
+    const defaultLocation = contextUnit?.locationCode || config.locations[0]?.code || 'ESL';
     const newUnitId = createClientRecordId('unit');
     const nextUnitIndex = config.units.length;
     const defaultTrainingReportTemplate = normaliseTrainingReportTemplate(
@@ -3971,12 +3973,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           id: newUnitId,
           code: `UNIT-${prev.units.length + 1}`,
           name: 'New Unit',
-          organisationCode: prev.organisations[0]?.code || 'DEFAULT',
+          organisationCode: contextUnit?.organisationCode || prev.organisations[0]?.code || 'DEFAULT',
           locationCode: defaultLocation,
-          unitType: unitTypeOptions[0] || 'Training',
+          unitType: contextUnit?.unitType || unitTypeOptions[0] || 'Training',
           status: 'ACTIVE',
           settings: {
-            operationalModel: DEFAULT_OPERATIONAL_MODEL,
+            parentOrganisationPath: Array.isArray(contextUnitSettings.parentOrganisationPath) ? contextUnitSettings.parentOrganisationPath : undefined,
+            parentOrganisation: contextUnitSettings.parentOrganisation || undefined,
+            aircraftTypeCode: contextUnitSettings.aircraftTypeCode || contextUnitSettings.aircraftType || undefined,
+            operationalModel: contextUnitSettings.operationalModel || DEFAULT_OPERATIONAL_MODEL,
             hasTrainees: false,
             trainingReportTemplate: defaultTrainingReportTemplate,
             trainingReportTerminology: normaliseTrainingReportTerminology({ name: defaultTrainingReportTemplate.displayName }),
@@ -5119,13 +5124,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   const visibleUnitRows = config.units
     .map((unit, index) => ({ unit, index }))
-    .filter(({ unit }) => isRecordVisibleForSettingsPolicy({
-      unitCode: unit.code,
-      locationCode: unit.locationCode,
-      aircraftTypeCode: getUnitAircraftTypeCode(String(unit.code || '')),
-      organisationCode: unit.organisationCode,
-      parentOrganisationCode: getUnitParentOrganisationCode(unit),
-    }));
+    .filter(({ unit, index }) => {
+      if (index === editingUnitIndex) return true;
+      return isRecordVisibleForSettingsPolicy({
+        unitCode: unit.code,
+        locationCode: unit.locationCode,
+        aircraftTypeCode: getUnitAircraftTypeCode(String(unit.code || '')),
+        organisationCode: unit.organisationCode,
+        parentOrganisationCode: getUnitParentOrganisationCode(unit),
+      });
+    });
   const visibleResourcePoolRows = config.resourcePools
     .map((pool, index) => ({ pool, index }))
     .filter(({ pool }) => isRecordVisibleForSettingsPolicy({
