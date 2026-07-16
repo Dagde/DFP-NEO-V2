@@ -82,9 +82,13 @@ import {
   type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
 import {
+  UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS,
+  UNIT_CALLSIGN_ALLOCATION_METHODS,
   getDefaultUnitCallsign,
+  getUnitCallsignPolicy,
   normaliseUnitCallsignSettings,
   type UnitCallsignEntry,
+  type UnitCallsignPolicy,
 } from '../utils/unitCallsigns';
 import FormationCallsignsSection from './FormationCallsignsSection';
 import { getAppApiBase } from '../utils/externalDataControls';
@@ -3034,11 +3038,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateStaffQualificationCatalogue(nextQualifications, nextDeletedDefaultIds);
   };
 
-  const updateUnitCallsignSettings = (entries: UnitCallsignEntry[]) => {
+  const updateUnitCallsignSettings = (
+    entries: UnitCallsignEntry[],
+    policies: UnitCallsignPolicy[] = unitCallsignSettings.policies,
+  ) => {
     setRankTerminologyDirty(true);
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
-      unitCallsignSettings: normaliseUnitCallsignSettings({ entries }),
+      unitCallsignSettings: normaliseUnitCallsignSettings({ entries, policies }),
     }));
   };
 
@@ -3072,6 +3079,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ...entry,
       isDefault: entry.unitCode === selected.unitCode ? entry.id === entryId : entry.isDefault,
     })));
+  };
+
+  const updateUnitCallsignPolicy = (unitCode: string, changes: Partial<UnitCallsignPolicy>) => {
+    const nextUnitCode = String(unitCode || '').trim().toUpperCase();
+    if (!nextUnitCode) return;
+    const currentPolicy = getUnitCallsignPolicy(unitCallsignSettings, nextUnitCode);
+    const nextPolicy = { ...currentPolicy, ...changes, unitCode: nextUnitCode };
+    updateUnitCallsignSettings(
+      unitCallsignSettings.entries,
+      [
+        ...unitCallsignSettings.policies.filter((policy) => policy.unitCode !== nextUnitCode),
+        nextPolicy,
+      ],
+    );
   };
 
   const updateCrewCompositionSettings = (
@@ -8989,6 +9010,39 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             </div>
             <div className="mt-4 space-y-3">
+              <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h6 className="text-xs font-bold uppercase tracking-wide text-cyan-100">Aircraft Callsign Assignment</h6>
+                    <p className="mt-1 text-xs leading-relaxed text-cyan-100/70">
+                      Choose whether callsigns belong to the staff member, to each flight, or are selected by the scheduler.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {visibleUnitOptions.map((unitCode) => {
+                    const policy = getUnitCallsignPolicy(unitCallsignSettings, unitCode);
+                    const unit = config.units.find((candidate: any) => String(candidate.code || '').trim().toUpperCase() === unitCode);
+                    const label = `${unitCode}${unit?.name && unit.name !== unitCode ? ` - ${unit.name}` : ''}`;
+                    return (
+                      <SelectField
+                        key={unitCode}
+                        label={label}
+                        value={policy.allocationMethod}
+                        disabled={!canEditRankTerminology}
+                        options={UNIT_CALLSIGN_ALLOCATION_METHODS}
+                        optionLabels={UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS}
+                        onChange={(value) => updateUnitCallsignPolicy(unitCode, { allocationMethod: value as UnitCallsignPolicy['allocationMethod'] })}
+                      />
+                    );
+                  })}
+                  {visibleUnitOptions.length === 0 && (
+                    <div className="rounded border border-gray-700 bg-gray-950 px-3 py-4 text-sm text-gray-400">
+                      No active units are available for callsign assignment.
+                    </div>
+                  )}
+                </div>
+              </div>
               {visibleUnitCallsignEntries.length === 0 && (
                 <div className="rounded border border-gray-700 bg-gray-950 px-3 py-4 text-sm text-gray-400">
                   No unit callsigns configured.

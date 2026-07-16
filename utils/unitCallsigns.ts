@@ -5,9 +5,27 @@ export interface UnitCallsignEntry {
   isDefault?: boolean;
 }
 
+export type UnitCallsignAllocationMethod = 'permanent' | 'per-flight' | 'user-choice';
+
+export interface UnitCallsignPolicy {
+  unitCode: string;
+  allocationMethod: UnitCallsignAllocationMethod;
+}
+
 export interface UnitCallsignSettings {
   entries: UnitCallsignEntry[];
+  policies: UnitCallsignPolicy[];
 }
+
+export const UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS: Record<UnitCallsignAllocationMethod, string> = {
+  permanent: 'Permanent',
+  'per-flight': 'Per Flight',
+  'user-choice': 'User Choice',
+};
+
+export const UNIT_CALLSIGN_ALLOCATION_METHODS = Object.keys(
+  UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS,
+) as UnitCallsignAllocationMethod[];
 
 const makeUnitCallsignId = (unitCode: string, callsign: string, index: number): string => {
   const token = `${unitCode}-${callsign}`
@@ -16,6 +34,13 @@ const makeUnitCallsignId = (unitCode: string, callsign: string, index: number): 
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
   return token ? `unit-callsign-${token}` : `unit-callsign-${index + 1}`;
+};
+
+const normaliseAllocationMethod = (value: unknown): UnitCallsignAllocationMethod => {
+  const raw = String(value || '').trim().toLowerCase().replace(/[\s_]+/g, '-');
+  if (raw === 'permanent') return 'permanent';
+  if (raw === 'user-choice' || raw === 'choice') return 'user-choice';
+  return 'per-flight';
 };
 
 export const normaliseUnitCallsignSettings = (source: unknown): UnitCallsignSettings => {
@@ -48,6 +73,20 @@ export const normaliseUnitCallsignSettings = (source: unknown): UnitCallsignSett
   });
 
   const defaultsByUnit = new Set<string>();
+  const rawPolicies = Array.isArray((source as any)?.policies)
+    ? (source as any).policies
+    : [];
+  const policiesByUnit = new Map<string, UnitCallsignPolicy>();
+
+  rawPolicies.forEach((policy: any) => {
+    const unitCode = String(policy?.unitCode || policy?.unit || '').trim().toUpperCase();
+    if (!unitCode) return;
+    policiesByUnit.set(unitCode, {
+      unitCode,
+      allocationMethod: normaliseAllocationMethod(policy?.allocationMethod || policy?.method),
+    });
+  });
+
   return {
     entries: uniqueEntries.map((entry) => {
       if (!entry.isDefault) return entry;
@@ -55,6 +94,20 @@ export const normaliseUnitCallsignSettings = (source: unknown): UnitCallsignSett
       defaultsByUnit.add(entry.unitCode);
       return entry;
     }),
+    policies: Array.from(policiesByUnit.values())
+      .sort((left, right) => left.unitCode.localeCompare(right.unitCode, undefined, { sensitivity: 'base' })),
+  };
+};
+
+export const getUnitCallsignPolicy = (
+  settings: UnitCallsignSettings | undefined,
+  unitCode?: unknown,
+): UnitCallsignPolicy => {
+  const unit = String(unitCode || '').trim().toUpperCase();
+  const policy = normaliseUnitCallsignSettings(settings).policies.find((entry) => entry.unitCode === unit);
+  return {
+    unitCode: unit,
+    allocationMethod: policy?.allocationMethod || 'per-flight',
   };
 };
 

@@ -17,7 +17,11 @@ import { getCrewPositionLabelMap, normaliseCrewPositionTerminology } from '../ut
 import { normalisePersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import { normaliseStaffQualificationCatalogue } from '../utils/staffQualifications';
 import { normaliseTrainingReportTemplate, normaliseTrainingReportTerminology } from '../utils/trainingReportTerminology';
-import { normaliseUnitCallsignSettings } from '../utils/unitCallsigns';
+import {
+    UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS,
+    getUnitCallsignPolicy,
+    normaliseUnitCallsignSettings,
+} from '../utils/unitCallsigns';
 import { getEffectiveDispatchStaggerMinutes, type DispatchStaggerSettings } from '../utils/dispatchStagger';
 import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from '../utils/sunTimes';
 import {
@@ -2153,6 +2157,10 @@ const OrganisationMyUnitSettings: React.FC<{
                         ))}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Unit Callsigns" description="Callsign bases offered when creating or editing unit events." action={settingsLink('platform-rank-terminology', 'Take me there', { focusSubsectionId: 'platform-unit-callsigns' })}>
+                        <UnitSettingsReadRow
+                            label="Assignment"
+                            value={UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS[getUnitCallsignPolicy(unitCallsignSettings, unit?.code).allocationMethod]}
+                        />
                         {unitCallsignEntries.length > 0 ? unitCallsignEntries.map((entry) => (
                             <div key={entry.id} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Callsign" value={entry.callsign || ''} onChange={(value) => updateUnitCallsignEntry(entry, { callsign: value })} disabled={!canEdit} />

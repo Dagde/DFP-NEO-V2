@@ -4787,9 +4787,23 @@ const getStaffCallsignAssignments = (instructors, settings) => {
   return assignments;
 };
 const getStaffCallsignKey = personKey;
+const UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS = {
+  permanent: "Permanent",
+  "per-flight": "Per Flight",
+  "user-choice": "User Choice"
+};
+const UNIT_CALLSIGN_ALLOCATION_METHODS = Object.keys(
+  UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS
+);
 const makeUnitCallsignId = (unitCode, callsign, index) => {
   const token = `${unitCode}-${callsign}`.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return token ? `unit-callsign-${token}` : `unit-callsign-${index + 1}`;
+};
+const normaliseAllocationMethod = (value) => {
+  const raw = String(value || "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+  if (raw === "permanent") return "permanent";
+  if (raw === "user-choice" || raw === "choice") return "user-choice";
+  return "per-flight";
 };
 const normaliseUnitCallsignSettings = (source) => {
   const rawEntries = Array.isArray(source?.entries) ? source.entries : Array.isArray(source) ? source : [];
@@ -4812,13 +4826,32 @@ const normaliseUnitCallsignSettings = (source) => {
     return true;
   });
   const defaultsByUnit = /* @__PURE__ */ new Set();
+  const rawPolicies = Array.isArray(source?.policies) ? source.policies : [];
+  const policiesByUnit = /* @__PURE__ */ new Map();
+  rawPolicies.forEach((policy) => {
+    const unitCode = String(policy?.unitCode || policy?.unit || "").trim().toUpperCase();
+    if (!unitCode) return;
+    policiesByUnit.set(unitCode, {
+      unitCode,
+      allocationMethod: normaliseAllocationMethod(policy?.allocationMethod || policy?.method)
+    });
+  });
   return {
     entries: uniqueEntries.map((entry) => {
       if (!entry.isDefault) return entry;
       if (defaultsByUnit.has(entry.unitCode)) return { ...entry, isDefault: false };
       defaultsByUnit.add(entry.unitCode);
       return entry;
-    })
+    }),
+    policies: Array.from(policiesByUnit.values()).sort((left, right) => left.unitCode.localeCompare(right.unitCode, void 0, { sensitivity: "base" }))
+  };
+};
+const getUnitCallsignPolicy = (settings, unitCode) => {
+  const unit = String(unitCode || "").trim().toUpperCase();
+  const policy = normaliseUnitCallsignSettings(settings).policies.find((entry) => entry.unitCode === unit);
+  return {
+    unitCode: unit,
+    allocationMethod: policy?.allocationMethod || "per-flight"
   };
 };
 const getUnitCallsignEntries = (settings, unitCode) => {
@@ -11105,10 +11138,19 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Display label", value: entry.label || "", onChange: (value) => updateCrewPositionEntry(entry, { label: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Models", value: (entry.operationalModels || []).join(", "), onChange: (value) => updateCrewPositionEntry(entry, { operationalModels: value.split(",").map((item) => item.trim()).filter(Boolean) }), disabled: true })
         ] }, entry.id)) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Unit Callsigns", description: "Callsign bases offered when creating or editing unit events.", action: settingsLink("platform-rank-terminology", "Take me there", { focusSubsectionId: "platform-unit-callsigns" }), children: unitCallsignEntries.length > 0 ? unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Callsign", value: entry.callsign || "", onChange: (value) => updateUnitCallsignEntry(entry, { callsign: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Default", value: entry.isDefault ? "yes" : "no", options: ["yes", "no"], optionLabels: { yes: "Default callsign", no: "Available callsign" }, onChange: (value) => updateUnitCallsignEntry(entry, { isDefault: value === "yes" }), disabled: true })
-        ] }, entry.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Callsigns", value: "No callsigns configured for this unit.", muted: true }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Unit Callsigns", description: "Callsign bases offered when creating or editing unit events.", action: settingsLink("platform-rank-terminology", "Take me there", { focusSubsectionId: "platform-unit-callsigns" }), children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            UnitSettingsReadRow,
+            {
+              label: "Assignment",
+              value: UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS[getUnitCallsignPolicy(unitCallsignSettings, unit?.code).allocationMethod]
+            }
+          ),
+          unitCallsignEntries.length > 0 ? unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Callsign", value: entry.callsign || "", onChange: (value) => updateUnitCallsignEntry(entry, { callsign: value }), disabled: true }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Default", value: entry.isDefault ? "yes" : "no", options: ["yes", "no"], optionLabels: { yes: "Default callsign", no: "Available callsign" }, onChange: (value) => updateUnitCallsignEntry(entry, { isDefault: value === "yes" }), disabled: true })
+          ] }, entry.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Callsigns", value: "No callsigns configured for this unit.", muted: true })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Formation Callsigns", description: "Formation callsigns filtered for the current unit.", action: settingsLink("platform-rank-terminology", "Take me there", { focusSubsectionId: "platform-formation-callsigns" }), children: unitFormationCallsigns.length > 0 ? unitFormationCallsigns.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Name", value: callsign.name || "", onChange: () => {
           }, disabled: true }),
@@ -65453,11 +65495,11 @@ This permanently removes the organisation record from platform configuration and
     const nextDeletedDefaultIds = defaultStaffQualificationIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...staffQualificationCatalogue.deletedDefaultIds || [], entryId])) : staffQualificationCatalogue.deletedDefaultIds || [];
     updateStaffQualificationCatalogue(nextQualifications, nextDeletedDefaultIds);
   };
-  const updateUnitCallsignSettings = (entries) => {
+  const updateUnitCallsignSettings = (entries, policies = unitCallsignSettings.policies) => {
     setRankTerminologyDirty(true);
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
-      unitCallsignSettings: normaliseUnitCallsignSettings({ entries })
+      unitCallsignSettings: normaliseUnitCallsignSettings({ entries, policies })
     }));
   };
   const updateUnitCallsignEntry = (entryId, changes) => {
@@ -65485,6 +65527,19 @@ This permanently removes the organisation record from platform configuration and
       ...entry,
       isDefault: entry.unitCode === selected.unitCode ? entry.id === entryId : entry.isDefault
     })));
+  };
+  const updateUnitCallsignPolicy = (unitCode, changes) => {
+    const nextUnitCode = String(unitCode || "").trim().toUpperCase();
+    if (!nextUnitCode) return;
+    const currentPolicy = getUnitCallsignPolicy(unitCallsignSettings, nextUnitCode);
+    const nextPolicy = { ...currentPolicy, ...changes, unitCode: nextUnitCode };
+    updateUnitCallsignSettings(
+      unitCallsignSettings.entries,
+      [
+        ...unitCallsignSettings.policies.filter((policy) => policy.unitCode !== nextUnitCode),
+        nextPolicy
+      ]
+    );
   };
   const updateCrewCompositionSettings = (alternateCompositions, currencyProfiles = crewCompositionSettings.currencyProfiles) => {
     updatePrimaryOrganisationSettings((settings) => ({
@@ -70839,6 +70894,32 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-400/20 bg-cyan-500/10 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap items-start justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-cyan-100", children: "Aircraft Callsign Assignment" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/70", children: "Choose whether callsigns belong to the staff member, to each flight, or are selected by the scheduler." })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3", children: [
+                visibleUnitOptions.map((unitCode) => {
+                  const policy = getUnitCallsignPolicy(unitCallsignSettings, unitCode);
+                  const unit = config.units.find((candidate) => String(candidate.code || "").trim().toUpperCase() === unitCode);
+                  const label = `${unitCode}${unit?.name && unit.name !== unitCode ? ` - ${unit.name}` : ""}`;
+                  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    SelectField,
+                    {
+                      label,
+                      value: policy.allocationMethod,
+                      disabled: !canEditRankTerminology,
+                      options: UNIT_CALLSIGN_ALLOCATION_METHODS,
+                      optionLabels: UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS,
+                      onChange: (value) => updateUnitCallsignPolicy(unitCode, { allocationMethod: value })
+                    },
+                    unitCode
+                  );
+                }),
+                visibleUnitOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950 px-3 py-4 text-sm text-gray-400", children: "No active units are available for callsign assignment." })
+              ] })
+            ] }),
             visibleUnitCallsignEntries.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950 px-3 py-4 text-sm text-gray-400", children: "No unit callsigns configured." }),
             [...visibleUnitCallsignEntries].sort((left, right) => left.unitCode.localeCompare(right.unitCode, void 0, { sensitivity: "base" }) || left.callsign.localeCompare(right.callsign, void 0, { sensitivity: "base" })).map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(140px,0.7fr)_minmax(180px,1fr)_auto_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
