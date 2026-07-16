@@ -3,6 +3,12 @@ import {
   comparePeopleByConfiguredRank,
   type PersonnelDisplaySettings,
 } from './personnelDisplaySettings';
+import {
+  getDefaultUnitCallsign,
+  getUnitCallsignPolicy,
+  normaliseUnitCallsignSettings,
+  type UnitCallsignSettings,
+} from './unitCallsigns';
 
 const CALLSIGN_LIMIT = 50;
 
@@ -15,6 +21,10 @@ const isQfiStaff = (person: Instructor): boolean =>
   person.role === 'QFI' || person.isQFI === true || (person as any).role === 'INSTRUCTOR';
 
 const isSimIp = (person: Instructor): boolean => person.role === 'SIM IP';
+
+const isCallsignAssignableStaff = (person: Instructor): boolean => (
+  isQfiStaff(person) || isSimIp(person)
+);
 
 const isLegacyFlightSchoolCallsignUnit = (person: Instructor): boolean => {
   const unit = norm(person.unit);
@@ -59,7 +69,39 @@ const assignSequence = (
   return nextNumber;
 };
 
-export const getStaffCallsignAssignments = (
+const getConfiguredPermanentCallsignAssignments = (
+  instructors: Instructor[],
+  settings?: PersonnelDisplaySettings,
+  unitCallsignSettings?: UnitCallsignSettings,
+): Map<string, StaffCallsignInfo> => {
+  const assignments = new Map<string, StaffCallsignInfo>();
+  const callsignSettings = normaliseUnitCallsignSettings(unitCallsignSettings || null);
+  const permanentUnitCodes = Array.from(new Set(
+    callsignSettings.entries
+      .map((entry) => entry.unitCode)
+      .filter((unitCode) => (
+        unitCode
+        && getUnitCallsignPolicy(callsignSettings, unitCode).allocationMethod === 'permanent'
+        && getDefaultUnitCallsign(callsignSettings, unitCode)
+      )),
+  ));
+
+  permanentUnitCodes.forEach((unitCode) => {
+    const prefix = getDefaultUnitCallsign(callsignSettings, unitCode);
+    if (!prefix) return;
+    const unitStaff = sortedStaff(instructors.filter((person) => (
+      person.name
+      && (person as any).isActive !== false
+      && norm(person.unit) === unitCode
+      && isCallsignAssignableStaff(person)
+    )), settings);
+    assignSequence(assignments, unitStaff, prefix, 1);
+  });
+
+  return assignments;
+};
+
+const getLegacyFlightSchoolCallsignAssignments = (
   instructors: Instructor[],
   settings?: PersonnelDisplaySettings,
 ): Map<string, StaffCallsignInfo> => {
@@ -85,6 +127,21 @@ export const getStaffCallsignAssignments = (
   assignSequence(assignments, peaSimIp, 'VIPR', nextVipr);
 
   return assignments;
+};
+
+export const getStaffCallsignAssignments = (
+  instructors: Instructor[],
+  settings?: PersonnelDisplaySettings,
+  unitCallsignSettings?: UnitCallsignSettings,
+): Map<string, StaffCallsignInfo> => {
+  const configuredAssignments = getConfiguredPermanentCallsignAssignments(
+    instructors,
+    settings,
+    unitCallsignSettings,
+  );
+
+  if (configuredAssignments.size > 0) return configuredAssignments;
+  return getLegacyFlightSchoolCallsignAssignments(instructors, settings);
 };
 
 export const getStaffCallsignKey = personKey;

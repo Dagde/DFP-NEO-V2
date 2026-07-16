@@ -4737,56 +4737,6 @@ const getInsertEventTypes = (config) => {
   const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
   return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes || null);
 };
-const CALLSIGN_LIMIT = 50;
-const norm = (value) => String(value || "").trim().toUpperCase();
-const personKey = (person) => String(person.id || person.idNumber || person.name || "").trim();
-const isQfiStaff = (person) => person.role === "QFI" || person.isQFI === true || person.role === "INSTRUCTOR";
-const isSimIp = (person) => person.role === "SIM IP";
-const isLegacyFlightSchoolCallsignUnit = (person) => {
-  const unit = norm(person.unit);
-  return unit.startsWith("1FTS") || unit.startsWith("CFS") || unit.startsWith("2FTS");
-};
-const isEastSale = (person) => {
-  const location = norm(person.location);
-  const unit = norm(person.unit);
-  return location === "EAST SALE" || location === "ESL" || !location && (unit.startsWith("1FTS") || unit.startsWith("CFS"));
-};
-const isPearce = (person) => {
-  const location = norm(person.location);
-  const unit = norm(person.unit);
-  return location === "PEARCE" || location === "PEA" || !location && unit.startsWith("2FTS");
-};
-const sortedStaff = (people, settings) => [...people].sort((a, b) => comparePeopleByConfiguredRank(a, b, settings, "staff"));
-const assignSequence = (assignments, people, prefix, startingNumber = 1) => {
-  let nextNumber = startingNumber;
-  people.forEach((person) => {
-    const key = personKey(person);
-    if (!key || nextNumber > CALLSIGN_LIMIT) return;
-    assignments.set(key, {
-      callsign: `${prefix}${nextNumber}`,
-      callsignPrefix: prefix,
-      callsignNumber: nextNumber
-    });
-    nextNumber += 1;
-  });
-  return nextNumber;
-};
-const getStaffCallsignAssignments = (instructors, settings) => {
-  const assignments = /* @__PURE__ */ new Map();
-  const activeStaff = instructors.filter((person) => person.name && person.isActive !== false && isLegacyFlightSchoolCallsignUnit(person));
-  const oneFts = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("1FTS")), settings);
-  const cfs = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("CFS")), settings);
-  const twoFts = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("2FTS")), settings);
-  const eslSimIp = sortedStaff(activeStaff.filter((person) => isSimIp(person) && isEastSale(person)), settings);
-  const peaSimIp = sortedStaff(activeStaff.filter((person) => isSimIp(person) && isPearce(person)), settings);
-  const nextRolr = assignSequence(assignments, oneFts, "ROLR", 1);
-  assignSequence(assignments, eslSimIp, "ROLR", nextRolr);
-  assignSequence(assignments, cfs, "ALDN", 1);
-  const nextVipr = assignSequence(assignments, twoFts, "VIPR", 1);
-  assignSequence(assignments, peaSimIp, "VIPR", nextVipr);
-  return assignments;
-};
-const getStaffCallsignKey = personKey;
 const UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS = {
   permanent: "Permanent",
   "per-flight": "Per Flight",
@@ -4872,6 +4822,80 @@ const buildUnitEventCallsign = (base, number) => {
   if (!callsign) return "";
   return `${callsign} ${formatUnitCallsignNumber(number)}`;
 };
+const CALLSIGN_LIMIT = 50;
+const norm = (value) => String(value || "").trim().toUpperCase();
+const personKey = (person) => String(person.id || person.idNumber || person.name || "").trim();
+const isQfiStaff = (person) => person.role === "QFI" || person.isQFI === true || person.role === "INSTRUCTOR";
+const isSimIp = (person) => person.role === "SIM IP";
+const isCallsignAssignableStaff = (person) => isQfiStaff(person) || isSimIp(person);
+const isLegacyFlightSchoolCallsignUnit = (person) => {
+  const unit = norm(person.unit);
+  return unit.startsWith("1FTS") || unit.startsWith("CFS") || unit.startsWith("2FTS");
+};
+const isEastSale = (person) => {
+  const location = norm(person.location);
+  const unit = norm(person.unit);
+  return location === "EAST SALE" || location === "ESL" || !location && (unit.startsWith("1FTS") || unit.startsWith("CFS"));
+};
+const isPearce = (person) => {
+  const location = norm(person.location);
+  const unit = norm(person.unit);
+  return location === "PEARCE" || location === "PEA" || !location && unit.startsWith("2FTS");
+};
+const sortedStaff = (people, settings) => [...people].sort((a, b) => comparePeopleByConfiguredRank(a, b, settings, "staff"));
+const assignSequence = (assignments, people, prefix, startingNumber = 1) => {
+  let nextNumber = startingNumber;
+  people.forEach((person) => {
+    const key = personKey(person);
+    if (!key || nextNumber > CALLSIGN_LIMIT) return;
+    assignments.set(key, {
+      callsign: `${prefix}${nextNumber}`,
+      callsignPrefix: prefix,
+      callsignNumber: nextNumber
+    });
+    nextNumber += 1;
+  });
+  return nextNumber;
+};
+const getConfiguredPermanentCallsignAssignments = (instructors, settings, unitCallsignSettings) => {
+  const assignments = /* @__PURE__ */ new Map();
+  const callsignSettings = normaliseUnitCallsignSettings(unitCallsignSettings || null);
+  const permanentUnitCodes = Array.from(new Set(
+    callsignSettings.entries.map((entry) => entry.unitCode).filter((unitCode) => unitCode && getUnitCallsignPolicy(callsignSettings, unitCode).allocationMethod === "permanent" && getDefaultUnitCallsign(callsignSettings, unitCode))
+  ));
+  permanentUnitCodes.forEach((unitCode) => {
+    const prefix = getDefaultUnitCallsign(callsignSettings, unitCode);
+    if (!prefix) return;
+    const unitStaff = sortedStaff(instructors.filter((person) => person.name && person.isActive !== false && norm(person.unit) === unitCode && isCallsignAssignableStaff(person)), settings);
+    assignSequence(assignments, unitStaff, prefix, 1);
+  });
+  return assignments;
+};
+const getLegacyFlightSchoolCallsignAssignments = (instructors, settings) => {
+  const assignments = /* @__PURE__ */ new Map();
+  const activeStaff = instructors.filter((person) => person.name && person.isActive !== false && isLegacyFlightSchoolCallsignUnit(person));
+  const oneFts = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("1FTS")), settings);
+  const cfs = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("CFS")), settings);
+  const twoFts = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("2FTS")), settings);
+  const eslSimIp = sortedStaff(activeStaff.filter((person) => isSimIp(person) && isEastSale(person)), settings);
+  const peaSimIp = sortedStaff(activeStaff.filter((person) => isSimIp(person) && isPearce(person)), settings);
+  const nextRolr = assignSequence(assignments, oneFts, "ROLR", 1);
+  assignSequence(assignments, eslSimIp, "ROLR", nextRolr);
+  assignSequence(assignments, cfs, "ALDN", 1);
+  const nextVipr = assignSequence(assignments, twoFts, "VIPR", 1);
+  assignSequence(assignments, peaSimIp, "VIPR", nextVipr);
+  return assignments;
+};
+const getStaffCallsignAssignments = (instructors, settings, unitCallsignSettings) => {
+  const configuredAssignments = getConfiguredPermanentCallsignAssignments(
+    instructors,
+    settings,
+    unitCallsignSettings
+  );
+  if (configuredAssignments.size > 0) return configuredAssignments;
+  return getLegacyFlightSchoolCallsignAssignments(instructors, settings);
+};
+const getStaffCallsignKey = personKey;
 const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS = {
   courses: 60,
   trainingPackages: 40
@@ -106124,8 +106148,8 @@ ${"=".repeat(60)}`);
     }
   }, [publishedSchedules, date, school, baselineSchedules]);
   const staffCallsignAssignments = reactExports.useMemo(
-    () => getStaffCallsignAssignments(allInstructorsData, personnelDisplaySettings),
-    [allInstructorsData, personnelDisplaySettings]
+    () => getStaffCallsignAssignments(allInstructorsData, personnelDisplaySettings, activeUnitCallsignSettings),
+    [activeUnitCallsignSettings, allInstructorsData, personnelDisplaySettings]
   );
   const personnelData = reactExports.useMemo(() => {
     const data = /* @__PURE__ */ new Map();
@@ -106134,7 +106158,8 @@ ${"=".repeat(60)}`);
       const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
       const savedCallsign = String(instructor.callsign || "").trim();
       const callsign = savedCallsign || assigned?.callsign || "";
-      const callsignPrefix = assigned?.callsignPrefix || callsign.match(/^[A-Za-z]+/)?.[0] || (school === "ESL" ? "ROLR" : "VIPR");
+      const configuredPrefix = getDefaultUnitCallsign(activeUnitCallsignSettings, instructor.unit);
+      const callsignPrefix = assigned?.callsignPrefix || callsign.match(/^[A-Za-z]+/)?.[0] || configuredPrefix;
       const callsignNumber = assigned?.callsignNumber || instructor.callsignNumber || 0;
       if (callsign || callsignNumber > 0) {
         data.set(instructor.name, {
@@ -106145,7 +106170,7 @@ ${"=".repeat(60)}`);
       }
     });
     return data;
-  }, [allInstructorsData, school, staffCallsignAssignments]);
+  }, [activeUnitCallsignSettings, allInstructorsData, staffCallsignAssignments]);
   const staffCallsignSyncHashRef = reactExports.useRef("");
   reactExports.useEffect(() => {
     const updates = allInstructorsData.map((instructor) => {

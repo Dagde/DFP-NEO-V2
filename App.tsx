@@ -28210,8 +28210,8 @@ const App: React.FC = () => {
     }, [publishedSchedules, date, school, baselineSchedules]);
 
     const staffCallsignAssignments = useMemo(
-        () => getStaffCallsignAssignments(allInstructorsData, personnelDisplaySettings),
-        [allInstructorsData, personnelDisplaySettings]
+        () => getStaffCallsignAssignments(allInstructorsData, personnelDisplaySettings, activeUnitCallsignSettings),
+        [activeUnitCallsignSettings, allInstructorsData, personnelDisplaySettings]
     );
 
     const personnelData = useMemo(() => {
@@ -28222,7 +28222,8 @@ const App: React.FC = () => {
             const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
             const savedCallsign = String(instructor.callsign || '').trim();
             const callsign = savedCallsign || assigned?.callsign || '';
-            const callsignPrefix = assigned?.callsignPrefix || callsign.match(/^[A-Za-z]+/)?.[0] || (school === 'ESL' ? 'ROLR' : 'VIPR');
+            const configuredPrefix = getDefaultUnitCallsign(activeUnitCallsignSettings, instructor.unit);
+            const callsignPrefix = assigned?.callsignPrefix || callsign.match(/^[A-Za-z]+/)?.[0] || configuredPrefix;
             const callsignNumber = assigned?.callsignNumber || instructor.callsignNumber || 0;
 
             if (callsign || callsignNumber > 0) {
@@ -28234,7 +28235,7 @@ const App: React.FC = () => {
             }
         });
         return data;
-    }, [allInstructorsData, school, staffCallsignAssignments]);
+    }, [activeUnitCallsignSettings, allInstructorsData, staffCallsignAssignments]);
 
     const staffCallsignSyncHashRef = useRef('');
     useEffect(() => {
