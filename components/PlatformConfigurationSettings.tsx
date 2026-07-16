@@ -516,7 +516,6 @@ const COMMON_IANA_TIMEZONES = [
 const AIRFIELD_CATALOGUE_FILE = 'airfield-location-catalog.json';
 const MAX_AIRFIELD_SUGGESTIONS = 6;
 const PLATFORM_CONFIG_UPDATED_EVENT = 'dfp-platform-config-updated';
-const TRAINEE_DEFAULT_ON_UNIT_CODES = new Set(['1FTS', '2FTS', 'CFS']);
 const SETTINGS_VISIBILITY_FILTERS: Array<{ value: SettingsVisibilityFilter; label: string; description: string }> = [
   {
     value: 'unit',
@@ -559,9 +558,7 @@ const normaliseSettingsVisibilityPolicy = (value?: Partial<SettingsVisibilityPol
   };
 };
 
-const getDefaultHasTraineesForUnit = (unitCode: unknown): boolean => (
-  TRAINEE_DEFAULT_ON_UNIT_CODES.has(String(unitCode || '').trim().toUpperCase())
-);
+const getDefaultHasTraineesForUnit = (_unitCode: unknown): boolean => false;
 
 const applyDefaultUnitTraineeAvailability = (config: PlatformConfig): PlatformConfig => {
   if (!config || !Array.isArray(config.units)) return config;

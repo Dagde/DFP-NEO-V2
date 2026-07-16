@@ -63432,7 +63432,6 @@ const COMMON_IANA_TIMEZONES = [
 const AIRFIELD_CATALOGUE_FILE = "airfield-location-catalog.json";
 const MAX_AIRFIELD_SUGGESTIONS = 6;
 const PLATFORM_CONFIG_UPDATED_EVENT$1 = "dfp-platform-config-updated";
-const TRAINEE_DEFAULT_ON_UNIT_CODES$1 = /* @__PURE__ */ new Set(["1FTS", "2FTS", "CFS"]);
 const SETTINGS_VISIBILITY_FILTERS = [
   {
     value: "unit",
@@ -63465,7 +63464,7 @@ const normaliseSettingsVisibilityPolicy = (value) => {
     filters
   };
 };
-const getDefaultHasTraineesForUnit$1 = (unitCode) => TRAINEE_DEFAULT_ON_UNIT_CODES$1.has(String(unitCode || "").trim().toUpperCase());
+const getDefaultHasTraineesForUnit$1 = (_unitCode) => false;
 const applyDefaultUnitTraineeAvailability$1 = (config) => {
   if (!config || !Array.isArray(config.units)) return config;
   let changed = false;
@@ -82988,8 +82987,7 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
 };
 console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
 console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
-const TRAINEE_DEFAULT_ON_UNIT_CODES = /* @__PURE__ */ new Set(["1FTS", "2FTS", "CFS"]);
-const getDefaultHasTraineesForUnit = (unitCode) => TRAINEE_DEFAULT_ON_UNIT_CODES.has(String(unitCode || "").trim().toUpperCase());
+const getDefaultHasTraineesForUnit = (_unitCode) => false;
 const applyDefaultUnitTraineeAvailability = (config) => {
   if (!config || !Array.isArray(config.units)) return config;
   let changed = false;

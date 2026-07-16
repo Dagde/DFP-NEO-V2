@@ -158,11 +158,7 @@ import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
 
-const TRAINEE_DEFAULT_ON_UNIT_CODES = new Set(['1FTS', '2FTS', 'CFS']);
-
-const getDefaultHasTraineesForUnit = (unitCode: unknown): boolean => (
-    TRAINEE_DEFAULT_ON_UNIT_CODES.has(String(unitCode || '').trim().toUpperCase())
-);
+const getDefaultHasTraineesForUnit = (_unitCode: unknown): boolean => false;
 
 const applyDefaultUnitTraineeAvailability = (config: PlatformConfig | null): PlatformConfig | null => {
     if (!config || !Array.isArray(config.units)) return config;
