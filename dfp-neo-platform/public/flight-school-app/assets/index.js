@@ -72452,9 +72452,9 @@ const SettingsViewWithMenu = (props) => {
                   "button",
                   {
                     onClick: () => changeActiveSection(section),
-                    className: `flex min-h-[32px] w-[175px] items-center gap-1 rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${sectionActive ? "border-transparent bg-transparent text-emerald-400" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
+                    className: `flex min-h-[32px] w-[175px] items-center gap-1 rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${sectionActive ? "border-transparent bg-transparent text-sky-300" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
                     children: [
-                      sectionActive ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-emerald-400", "aria-hidden": "true" }) : null,
+                      sectionActive ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300", "aria-hidden": "true" }) : null,
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: getSectionLabel(section) }) })
                     ]
                   },
