@@ -7461,7 +7461,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
 
           <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
-            <h5 className="text-sm font-bold text-white">Active Context Preview</h5>
+            <h5 className="text-sm font-bold text-white">Settings Shown For</h5>
             <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <MetricPill label="Unit Context" value={activeSettingsVisibilityUnitCodes.join(' + ') || activeUnitCode || 'No active unit'} />
               <MetricPill label="Location" value={activeSettingsVisibilityLocationCode || 'No active location'} />
@@ -7474,13 +7474,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
 
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
-            <h5 className="text-sm font-bold text-amber-100">Implementation Guardrails</h5>
+            <h5 className="text-sm font-bold text-amber-100">What This Filter Can Hide</h5>
             <div className="mt-2 grid gap-2 text-xs leading-relaxed text-amber-50/75 md:grid-cols-2">
               <div className="rounded border border-amber-400/20 bg-gray-950/50 p-3">
-                Safe to scope: unit rows, location rows, resource pools, unit modules, Master LMP access, currency profiles, crew compositions, scheduling rule-set records and training configuration that explicitly stores unit or aircraft context.
+                The filter can hide settings that clearly belong to another unit, location, aircraft type, or parent organisation.
               </div>
               <div className="rounded border border-amber-400/20 bg-gray-950/50 p-3">
-                Always visible: licensing, deployment readiness, audit, permission profiles, rank terminology, shared labels, operational runbook, app appearance and any other universal setting that can affect multiple models.
+                Shared organisation-wide settings stay visible because they may affect more than one unit or the wider platform.
               </div>
             </div>
           </div>
