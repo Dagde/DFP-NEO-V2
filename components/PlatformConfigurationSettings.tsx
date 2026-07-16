@@ -4063,33 +4063,34 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       return;
     }
 
-    setConfig((prev) => {
-      const removed = prev.units[unitIndex];
-      const removedCode = String(removed?.code || '').trim();
-      const nextUnits = prev.units.filter((_, itemIndex) => itemIndex !== unitIndex);
-      return {
-        ...prev,
-        units: nextUnits,
-        unitModules: prev.unitModules.filter((item) => String(item.unitCode || '').trim() !== removedCode),
-        resourcePools: prev.resourcePools.map((pool) => (
-          removedCode && String(pool.unitCode || '').trim() === removedCode ? { ...pool, unitCode: null } : pool
-        )),
-        userAccess: prev.userAccess.map((access) => (
-          removedCode && String(access.unitCode || '').trim() === removedCode ? { ...access, unitCode: null } : access
-        )),
-        schedulingRuleSets: prev.schedulingRuleSets.map((ruleSet) => (
-          removedCode && String(ruleSet.unitCode || '').trim() === removedCode ? { ...ruleSet, unitCode: null } : ruleSet
-        )),
-        organisations: prev.organisations.map((organisation) => ({
-          ...organisation,
-          settings: removedCode
-            ? rewriteUnitCodesInSettings(organisation.settings || {}, removedCode, null)
-            : organisation.settings,
-        })),
-      };
-    });
-    setSelectedUnitIndex(Math.max(0, unitIndex - 1));
-    setEditingUnitIndex(null);
+    const removedCode = String(unit?.code || '').trim();
+    const nextConfig: PlatformConfig = {
+      ...config,
+      units: config.units.filter((_, itemIndex) => itemIndex !== unitIndex),
+      unitModules: config.unitModules.filter((item) => String(item.unitCode || '').trim() !== removedCode),
+      resourcePools: config.resourcePools.map((pool) => (
+        removedCode && String(pool.unitCode || '').trim() === removedCode ? { ...pool, unitCode: null } : pool
+      )),
+      userAccess: config.userAccess.map((access) => (
+        removedCode && String(access.unitCode || '').trim() === removedCode ? { ...access, unitCode: null } : access
+      )),
+      schedulingRuleSets: config.schedulingRuleSets.map((ruleSet) => (
+        removedCode && String(ruleSet.unitCode || '').trim() === removedCode ? { ...ruleSet, unitCode: null } : ruleSet
+      )),
+      organisations: config.organisations.map((organisation) => ({
+        ...organisation,
+        settings: removedCode
+          ? rewriteUnitCodesInSettings(organisation.settings || {}, removedCode, null)
+          : organisation.settings,
+      })),
+    };
+
+    const saved = await save(nextConfig, 'platform-units', { successMessage: `Unit ${unitLabel} deleted.` });
+    if (saved) {
+      setConfig(nextConfig);
+      setSelectedUnitIndex(Math.max(0, unitIndex - 1));
+      setEditingUnitIndex(null);
+    }
   };
 
   const addAircraftType = () => {
