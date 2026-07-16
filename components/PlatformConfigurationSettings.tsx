@@ -3530,7 +3530,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         locationCode: defaultUnit?.locationCode || config.locations[0]?.code || '',
         unitCode: defaultUnit?.code || '',
         aircraftTypeCode: defaultUnit?.code ? getUnitAircraftTypeCode(defaultUnit.code) : '',
-        parentOrganisationCode: defaultUnit?.organisationCode || activeSettingsVisibilityParentOrgCode || '',
+        parentOrganisationCode: getUnitParentOrganisationCode(defaultUnit) || activeSettingsVisibilityParentOrgCode || '',
         operationalModel: defaultUnit ? getUnitOperationalModel(defaultUnit) : '',
         accessLevel: 'View',
         status: 'ACTIVE',
@@ -4976,6 +4976,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     || config.units.find(isActiveRecord)
     || config.units[0]
     || null;
+  const getUnitParentOrganisationPath = (unit: any): string[] => (
+    Array.isArray(unit?.settings?.parentOrganisationPath)
+      ? unit.settings.parentOrganisationPath
+      : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || '')
+        .split('-')
+    ).map((part: unknown) => String(part || '').trim()).filter(Boolean);
+  const getUnitParentOrganisationCode = (unit: any): string => {
+    const path = getUnitParentOrganisationPath(unit);
+    return String(path[path.length - 1] || '').trim();
+  };
   const getUnitAircraftTypeCode = (unitCode: string): string => {
     const normalisedUnitCode = String(unitCode || '').trim().toUpperCase();
     const unit = config.units.find((row) => String(row.code || '').trim().toUpperCase() === normalisedUnitCode) || null;
@@ -5000,10 +5010,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const activeSettingsVisibilityAircraftTypes = activeUnitAircraftTypeCodes.length > 0
     ? activeUnitAircraftTypeCodes
     : [activeMissionAircraftTypeCode].filter(Boolean);
-  const activeSettingsVisibilityParentOrgCode = String(activePlatformUnit?.organisationCode || primaryOrganisation?.code || '').trim();
-  const activeSettingsVisibilityParentOrg = config.organisations.find((organisation) => (
-    String(organisation.code || '').trim().toUpperCase() === activeSettingsVisibilityParentOrgCode.toUpperCase()
-  )) || primaryOrganisation;
+  const activeSettingsVisibilityParentOrgCode = getUnitParentOrganisationCode(activePlatformUnit);
   const settingsVisibilityEnabled = settingsVisibilityPolicy.enabled && settingsVisibilityPolicy.filters.length > 0;
   const visibilityUnitSet = new Set(activeSettingsVisibilityUnitCodes.map(normaliseUnitCode).filter(Boolean));
   const visibilityAircraftTypeSet = new Set(activeSettingsVisibilityAircraftTypes.map(normaliseUnitCode).filter(Boolean));
@@ -5018,6 +5025,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     locationCode?: unknown;
     aircraftTypeCode?: unknown;
     organisationCode?: unknown;
+    parentOrganisationCode?: unknown;
   }) => {
     const recordUnit = getVisibilityRecordUnit(record.unitCode);
     return {
@@ -5025,6 +5033,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       locationCode: normaliseUnitCode(record.locationCode || recordUnit?.locationCode),
       aircraftTypeCode: normaliseUnitCode(record.aircraftTypeCode || (recordUnit ? getUnitAircraftTypeCode(String(recordUnit.code || '')) : '')),
       organisationCode: normaliseUnitCode(record.organisationCode || recordUnit?.organisationCode),
+      parentOrganisationCode: normaliseUnitCode(record.parentOrganisationCode || (recordUnit ? getUnitParentOrganisationCode(recordUnit) : '')),
     };
   };
   const isRecordVisibleForSettingsPolicy = (record: {
@@ -5032,6 +5041,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     locationCode?: unknown;
     aircraftTypeCode?: unknown;
     organisationCode?: unknown;
+    parentOrganisationCode?: unknown;
   }) => {
     if (!settingsVisibilityEnabled) return true;
     const context = getVisibilityRecordContext(record);
@@ -5049,8 +5059,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         return visibilityAircraftTypeSet.has(context.aircraftTypeCode);
       }
       if (filter === 'parentOrganisation') {
-        if (!context.organisationCode || !visibilityParentOrganisationCode) return true;
-        return context.organisationCode === visibilityParentOrganisationCode;
+        if (!context.parentOrganisationCode || !visibilityParentOrganisationCode) return true;
+        return context.parentOrganisationCode === visibilityParentOrganisationCode;
       }
       return true;
     });
@@ -5068,6 +5078,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       locationCode: unit.locationCode,
       aircraftTypeCode: getUnitAircraftTypeCode(String(unit.code || '')),
       organisationCode: unit.organisationCode,
+      parentOrganisationCode: getUnitParentOrganisationCode(unit),
     }));
   const visibleResourcePoolRows = config.resourcePools
     .map((pool, index) => ({ pool, index }))
@@ -5188,6 +5199,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       locationCode: rule.locationCode,
       aircraftTypeCode: rule.aircraftTypeCode,
       organisationCode: rule.parentOrganisationCode || rule.organisationCode,
+      parentOrganisationCode: rule.parentOrganisationCode,
     }));
   const activeSettingsVisibilityModels = new Set(
     visibleUnitRows
@@ -5305,12 +5317,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       options: level.options.map((option) => String(option || '').trim()).filter(Boolean),
     }))
     .filter((level) => level.options.length > 0);
-  const getUnitParentOrganisationPath = (unit: any): string[] => (
-    Array.isArray(unit?.settings?.parentOrganisationPath)
-      ? unit.settings.parentOrganisationPath
-      : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || '')
-        .split('-')
-    ).map((part: unknown) => String(part || '').trim()).filter(Boolean);
   const updateUnitParentOrganisationPath = (unitIndex: number, unit: any, levelIndex: number, selectedValue: string) => {
     const currentPath = getUnitParentOrganisationPath(unit);
     const nextPath = currentPath.slice(0, levelIndex);
@@ -7462,11 +7468,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <MetricPill label="Aircraft Type" value={activeSettingsVisibilityAircraftTypes.join(', ') || 'No aircraft type'} />
               <MetricPill
                 label="Parent Organisation"
-                value={
-                  activeSettingsVisibilityParentOrg
-                    ? `${activeSettingsVisibilityParentOrg.code || 'ORG'}${activeSettingsVisibilityParentOrg.name ? ` - ${activeSettingsVisibilityParentOrg.name}` : ''}`
-                    : 'No parent organisation'
-                }
+                value={activeSettingsVisibilityParentOrgCode || 'No parent organisation'}
               />
             </div>
           </div>

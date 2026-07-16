@@ -65829,7 +65829,7 @@ This permanently removes the organisation record from platform configuration and
         locationCode: defaultUnit?.locationCode || config.locations[0]?.code || "",
         unitCode: defaultUnit?.code || "",
         aircraftTypeCode: defaultUnit?.code ? getUnitAircraftTypeCode(defaultUnit.code) : "",
-        parentOrganisationCode: defaultUnit?.organisationCode || activeSettingsVisibilityParentOrgCode || "",
+        parentOrganisationCode: getUnitParentOrganisationCode(defaultUnit) || activeSettingsVisibilityParentOrgCode || "",
         operationalModel: defaultUnit ? getUnitOperationalModel(defaultUnit) : "",
         accessLevel: "View",
         status: "ACTIVE"
@@ -67020,6 +67020,11 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   getVisibleAlternateCrewCompositions();
   getVisibleCurrencyProfiles();
   const activePlatformUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === activePrimaryUnitCode) || config.units.find(isActiveRecord) || config.units[0] || null;
+  const getUnitParentOrganisationPath2 = (unit) => (Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-")).map((part) => String(part || "").trim()).filter(Boolean);
+  const getUnitParentOrganisationCode = (unit) => {
+    const path = getUnitParentOrganisationPath2(unit);
+    return String(path[path.length - 1] || "").trim();
+  };
   const getUnitAircraftTypeCode = (unitCode) => {
     const normalisedUnitCode = String(unitCode || "").trim().toUpperCase();
     const unit = config.units.find((row) => String(row.code || "").trim().toUpperCase() === normalisedUnitCode) || null;
@@ -67039,8 +67044,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   const activeSettingsVisibilityUnitCodes = getActiveScopedUnitCodes();
   const activeSettingsVisibilityLocationCode = String(activePlatformUnit?.locationCode || activeHomeLocationCode || "").trim().toUpperCase();
   const activeSettingsVisibilityAircraftTypes = activeUnitAircraftTypeCodes.length > 0 ? activeUnitAircraftTypeCodes : [activeMissionAircraftTypeCode].filter(Boolean);
-  const activeSettingsVisibilityParentOrgCode = String(activePlatformUnit?.organisationCode || primaryOrganisation?.code || "").trim();
-  const activeSettingsVisibilityParentOrg = config.organisations.find((organisation) => String(organisation.code || "").trim().toUpperCase() === activeSettingsVisibilityParentOrgCode.toUpperCase()) || primaryOrganisation;
+  const activeSettingsVisibilityParentOrgCode = getUnitParentOrganisationCode(activePlatformUnit);
   const settingsVisibilityEnabled = settingsVisibilityPolicy.enabled && settingsVisibilityPolicy.filters.length > 0;
   const visibilityUnitSet = new Set(activeSettingsVisibilityUnitCodes.map(normaliseUnitCode2).filter(Boolean));
   const visibilityAircraftTypeSet = new Set(activeSettingsVisibilityAircraftTypes.map(normaliseUnitCode2).filter(Boolean));
@@ -67056,7 +67060,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       unitCode: normaliseUnitCode2(record.unitCode),
       locationCode: normaliseUnitCode2(record.locationCode || recordUnit?.locationCode),
       aircraftTypeCode: normaliseUnitCode2(record.aircraftTypeCode || (recordUnit ? getUnitAircraftTypeCode(String(recordUnit.code || "")) : "")),
-      organisationCode: normaliseUnitCode2(record.organisationCode || recordUnit?.organisationCode)
+      organisationCode: normaliseUnitCode2(record.organisationCode || recordUnit?.organisationCode),
+      parentOrganisationCode: normaliseUnitCode2(record.parentOrganisationCode || (recordUnit ? getUnitParentOrganisationCode(recordUnit) : ""))
     };
   };
   const isRecordVisibleForSettingsPolicy = (record) => {
@@ -67076,8 +67081,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         return visibilityAircraftTypeSet.has(context.aircraftTypeCode);
       }
       if (filter === "parentOrganisation") {
-        if (!context.organisationCode || !visibilityParentOrganisationCode) return true;
-        return context.organisationCode === visibilityParentOrganisationCode;
+        if (!context.parentOrganisationCode || !visibilityParentOrganisationCode) return true;
+        return context.parentOrganisationCode === visibilityParentOrganisationCode;
       }
       return true;
     });
@@ -67090,7 +67095,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     unitCode: unit.code,
     locationCode: unit.locationCode,
     aircraftTypeCode: getUnitAircraftTypeCode(String(unit.code || "")),
-    organisationCode: unit.organisationCode
+    organisationCode: unit.organisationCode,
+    parentOrganisationCode: getUnitParentOrganisationCode(unit)
   }));
   const visibleResourcePoolRows = config.resourcePools.map((pool, index) => ({ pool, index })).filter(({ pool }) => isRecordVisibleForSettingsPolicy({
     unitCode: pool.unitCode,
@@ -67170,7 +67176,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     unitCode: rule.unitCode,
     locationCode: rule.locationCode,
     aircraftTypeCode: rule.aircraftTypeCode,
-    organisationCode: rule.parentOrganisationCode || rule.organisationCode
+    organisationCode: rule.parentOrganisationCode || rule.organisationCode,
+    parentOrganisationCode: rule.parentOrganisationCode
   }));
   const activeSettingsVisibilityModels = new Set(
     visibleUnitRows.map(({ unit }) => getUnitOperationalModel(unit)).map((model) => String(model || "").trim()).filter(Boolean)
@@ -67254,7 +67261,6 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     name: level.name || `Level ${index + 1}`,
     options: level.options.map((option) => String(option || "").trim()).filter(Boolean)
   })).filter((level) => level.options.length > 0);
-  const getUnitParentOrganisationPath2 = (unit) => (Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-")).map((part) => String(part || "").trim()).filter(Boolean);
   const updateUnitParentOrganisationPath = (unitIndex, unit, levelIndex, selectedValue) => {
     const currentPath = getUnitParentOrganisationPath2(unit);
     const nextPath = currentPath.slice(0, levelIndex);
@@ -69289,7 +69295,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               MetricPill,
               {
                 label: "Parent Organisation",
-                value: activeSettingsVisibilityParentOrg ? `${activeSettingsVisibilityParentOrg.code || "ORG"}${activeSettingsVisibilityParentOrg.name ? ` - ${activeSettingsVisibilityParentOrg.name}` : ""}` : "No parent organisation"
+                value: activeSettingsVisibilityParentOrgCode || "No parent organisation"
               }
             )
           ] })
@@ -100826,6 +100832,7 @@ const App = () => {
   const getMasterLmpAccessContextForUnit = reactExports.useCallback((unitCode) => {
     const normalisedUnit = String(unitCode || activeUnitCode || "").trim().toUpperCase();
     const unit = (platformConfig?.units || []).filter((candidate) => candidate.status !== "INACTIVE").find((candidate) => String(candidate.code || "").trim().toUpperCase() === normalisedUnit);
+    const parentOrganisationPath = (Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-")).map((part) => String(part || "").trim()).filter(Boolean);
     const locationCode = String(unit?.locationCode || school || "").trim().toUpperCase();
     const resourcePool = getLocationResourcePool(platformConfig, locationCode || school, normalisedUnit);
     const unitAircraftType = String(unit?.settings?.aircraftTypeCode || unit?.settings?.aircraftType || "").trim().toUpperCase();
@@ -100834,7 +100841,7 @@ const App = () => {
       unitCode: normalisedUnit,
       locationCode,
       aircraftTypeCode,
-      parentOrganisationCode: unit?.organisationCode || null,
+      parentOrganisationCode: parentOrganisationPath[parentOrganisationPath.length - 1] || null,
       operationalModel: unit ? getUnitOperationalModel(unit) : activeOperationalModel
     };
   }, [activeOperationalModel, activeUnitCode, platformConfig, school]);

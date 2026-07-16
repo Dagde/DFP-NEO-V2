@@ -22035,6 +22035,11 @@ const App: React.FC = () => {
         const unit = (platformConfig?.units || [])
             .filter((candidate: any) => candidate.status !== 'INACTIVE')
             .find((candidate: any) => String(candidate.code || '').trim().toUpperCase() === normalisedUnit);
+        const parentOrganisationPath = (
+            Array.isArray(unit?.settings?.parentOrganisationPath)
+                ? unit.settings.parentOrganisationPath
+                : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || '').split('-')
+        ).map((part: unknown) => String(part || '').trim()).filter(Boolean);
         const locationCode = String(unit?.locationCode || school || '').trim().toUpperCase();
         const resourcePool = getLocationResourcePool(platformConfig, locationCode || school, normalisedUnit);
         const unitAircraftType = String(unit?.settings?.aircraftTypeCode || unit?.settings?.aircraftType || '').trim().toUpperCase();
@@ -22043,7 +22048,7 @@ const App: React.FC = () => {
             unitCode: normalisedUnit,
             locationCode,
             aircraftTypeCode,
-            parentOrganisationCode: unit?.organisationCode || null,
+            parentOrganisationCode: parentOrganisationPath[parentOrganisationPath.length - 1] || null,
             operationalModel: unit ? getUnitOperationalModel(unit) : activeOperationalModel,
         };
     }, [activeOperationalModel, activeUnitCode, platformConfig, school]);
