@@ -874,18 +874,22 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                     <div className="min-h-0 overflow-hidden">
                                         <div className="space-y-[1px] py-[1px]">
                                             {group.visibleSections.map(section => {
+                                                const sectionActive = activeSection === section;
                                                 return (
                                                     <button
                                                         key={section}
                                                         onClick={() => changeActiveSection(section)}
-                                                        className={`flex min-h-[32px] w-[175px] items-center rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${
-                                                            activeSection === section
-                                                                ? 'border-gray-500 bg-gray-800 text-gray-100'
+                                                        className={`flex min-h-[32px] w-[175px] items-center gap-1 rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${
+                                                            sectionActive
+                                                                ? 'border-transparent bg-transparent text-emerald-400'
                                                                 : section === 'emergency'
                                                                     ? 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
                                                                     : 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
                                                         }`}
                                                     >
+                                                        {sectionActive ? (
+                                                            <span className="h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-emerald-400" aria-hidden="true" />
+                                                        ) : null}
                                                         <span className="min-w-0">
                                                             <span className="block truncate">{getSectionLabel(section)}</span>
                                                         </span>
