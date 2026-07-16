@@ -7461,7 +7461,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
 
           <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
-            <h5 className="text-sm font-bold text-white">Settings Shown For</h5>
+            <h5 className="text-sm font-bold text-white">Applied Filter Context</h5>
             <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <MetricPill label="Unit Context" value={activeSettingsVisibilityUnitCodes.join(' + ') || activeUnitCode || 'No active unit'} />
               <MetricPill label="Location" value={activeSettingsVisibilityLocationCode || 'No active location'} />

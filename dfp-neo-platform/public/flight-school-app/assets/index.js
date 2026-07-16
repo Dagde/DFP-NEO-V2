@@ -69286,7 +69286,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Settings Shown For" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Applied Filter Context" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Unit Context", value: activeSettingsVisibilityUnitCodes.join(" + ") || activeUnitCode || "No active unit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Location", value: activeSettingsVisibilityLocationCode || "No active location" }),
