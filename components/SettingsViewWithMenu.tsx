@@ -1221,6 +1221,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             onShowSuccess={props.onShowSuccess}
                             onDataChanged={props.onDatabaseDataChanged}
                             onNavigateToProfile={props.onNavigateToProfile}
+                            activeUnitCodes={props.activeUnitCodes && props.activeUnitCodes.length > 0 ? props.activeUnitCodes : (props.activeUnitCode ? [props.activeUnitCode] : [])}
                         />
                     )}
                     {activeSection === 'trainee-database' && (
@@ -1229,6 +1230,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             onShowSuccess={props.onShowSuccess}
                             onDataChanged={props.onDatabaseDataChanged}
                             onNavigateToProfile={props.onNavigateToProfile}
+                            activeUnitCodes={props.activeUnitCodes && props.activeUnitCodes.length > 0 ? props.activeUnitCodes : (props.activeUnitCode ? [props.activeUnitCode] : [])}
                         />
                     )}
                     {activeSection === 'organisation' && (

@@ -3022,7 +3022,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addUnitCallsignEntry = () => {
-    const defaultUnit = config.units.find(isActiveRecord)?.code || config.units[0]?.code || '';
+    const defaultUnit = visibleUnitOptions[0] || config.units.find(isActiveRecord)?.code || config.units[0]?.code || '';
     updateUnitCallsignSettings([
       ...unitCallsignSettings.entries,
       {
@@ -5076,6 +5076,70 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       aircraftTypeCode: pool.aircraftTypeCode,
       organisationCode: pool.organisationCode,
     }));
+  const visibleAircraftTypeCodes = new Set<string>([
+    ...visibleUnitRows.map(({ unit }) => getUnitAircraftTypeCode(String(unit.code || ''))),
+    ...visibleResourcePoolRows.map(({ pool }) => String(pool.aircraftTypeCode || '').trim().toUpperCase()),
+  ].map(normaliseUnitCode).filter(Boolean));
+  const visibleAircraftTypeRows = config.aircraftTypes
+    .map((aircraft, index) => ({ aircraft, index }))
+    .filter(({ aircraft }) => {
+      if (!settingsVisibilityEnabled) return true;
+      const aircraftCode = normaliseUnitCode(aircraft.code);
+      if (!aircraftCode) return true;
+      if (settingsVisibilityPolicy.filters.includes('aircraftType') && visibilityAircraftTypeSet.size > 0) {
+        return visibilityAircraftTypeSet.has(aircraftCode);
+      }
+      if (
+        settingsVisibilityPolicy.filters.includes('unit')
+        || settingsVisibilityPolicy.filters.includes('location')
+        || settingsVisibilityPolicy.filters.includes('parentOrganisation')
+      ) {
+        return visibleAircraftTypeCodes.size === 0 || visibleAircraftTypeCodes.has(aircraftCode);
+      }
+      return true;
+    });
+  const visibleAircraftTypeOptions = visibleAircraftTypeRows.map(({ aircraft }) => aircraft.code).filter(Boolean);
+  const visibleLocationOptions = visibleLocationRows.map(({ location }) => location.code).filter(Boolean);
+  const visibleUnitOptions = visibleUnitRows.map(({ unit }) => unit.code).filter(Boolean);
+  const visibleOperationalModelValues = new Set(
+    visibleUnitRows
+      .map(({ unit }) => getUnitOperationalModel(unit))
+      .map((model) => String(model || '').trim())
+      .filter(Boolean),
+  );
+  const visibleOperationalModelOptions = settingsVisibilityEnabled && visibleOperationalModelValues.size > 0
+    ? OPERATIONAL_MODEL_OPTIONS.filter((option) => visibleOperationalModelValues.has(option.value))
+    : OPERATIONAL_MODEL_OPTIONS;
+  const visibleCrewCompositionAircraftTypes = settingsVisibilityEnabled
+    ? crewCompositionAircraftTypes.filter((aircraft) => {
+      const code = normaliseUnitCode(aircraft.code);
+      return !code || visibleAircraftTypeRows.some(({ aircraft: visibleAircraft }) => normaliseUnitCode(visibleAircraft.code) === code);
+    })
+    : crewCompositionAircraftTypes;
+  const visibleCrewCompositionAircraftSignature = visibleCrewCompositionAircraftTypes
+    .map((aircraft) => normaliseUnitCode(aircraft.code))
+    .join('|');
+  useEffect(() => {
+    if (!settingsVisibilityEnabled || visibleCrewCompositionAircraftTypes.length === 0) return;
+    const activeCode = normaliseUnitCode(activeCrewCompositionAircraftCode);
+    const activeIsVisible = visibleCrewCompositionAircraftTypes.some((aircraft) => normaliseUnitCode(aircraft.code) === activeCode);
+    if (!activeIsVisible) {
+      setCrewCompositionAircraftCode(normaliseUnitCode(visibleCrewCompositionAircraftTypes[0]?.code));
+    }
+  }, [activeCrewCompositionAircraftCode, settingsVisibilityEnabled, visibleCrewCompositionAircraftSignature]);
+  const visibleUnitCallsignEntries = unitCallsignSettings.entries.filter((entry) => isRecordVisibleForSettingsPolicy({
+    unitCode: entry.unitCode,
+  }));
+  const visibleUserAccessRows = config.userAccess
+    .map((access, index) => ({ access, index }))
+    .filter(({ access }) => isRecordVisibleForSettingsPolicy({
+      unitCode: access.unitCode,
+      locationCode: access.locationCode,
+      organisationCode: access.organisationCode,
+    }));
+  const visibleSelectedAccessRows = visibleUserAccessRows.filter(({ access }) => (
+    String(access.userId || '').trim() === selectedAccessUserId
+  ));
   const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
     const name = String(pool.name || '').trim() || 'Unnamed Resource Pool';
@@ -5772,7 +5836,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </div>
                 </label>
                 <div>
-                  <SelectField label="Location" value={unit.locationCode || ''} disabled={!isUnitEditing} options={config.locations.map((location) => location.code)} onChange={(value) => updateRow('units', index, { locationCode: value })} />
+                  <SelectField label="Location" value={unit.locationCode || ''} disabled={!isUnitEditing} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)} onChange={(value) => updateRow('units', index, { locationCode: value })} />
                 </div>
                 <div>
                   <SelectField label="Unit Type" value={unit.unitType || 'Training'} disabled={!isUnitEditing} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational']} onChange={(value) => updateRow('units', index, { unitType: value })} />
@@ -5857,7 +5921,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             Set the task names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            {OPERATIONAL_MODEL_OPTIONS.map((option) => {
+            {visibleOperationalModelOptions.map((option) => {
               const profiles = taskProfiles[option.value] || [];
               return (
                 <div key={option.value} className="rounded-lg border border-gray-700 bg-gray-900 p-3">
@@ -5888,7 +5952,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div id="platform-task-tile-abbreviations" className="mt-5">
             <h4 className="mb-2 text-sm font-bold text-white">Unit Task Tile Abbreviations</h4>
             <div className="grid gap-4 lg:grid-cols-2">
-              {config.units.filter(isActiveRecord).map((unit) => {
+              {visibleUnitRows.filter(({ unit }) => isActiveRecord(unit)).map(({ unit }) => {
                 const unitIndex = config.units.findIndex((candidate) => candidate === unit);
                 const abbreviations = unit.settings?.taskProfileAbbreviations || {};
                 const unitDraftKey = getTaskProfileUnitDraftKey(unit, unitIndex);
@@ -6018,7 +6082,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 label="Location"
                 value={rule.locationCode || ''}
                 disabled={!canEditSection('platform-master-lmp-access')}
-                options={['', ...config.locations.map((location) => location.code)]}
+                options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code))]}
                 emptyLabel="All Locations"
                 onChange={(value) => updateMasterLmpAccessRule(index, { locationCode: value || null })}
               />
@@ -6026,7 +6090,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 label="Unit"
                 value={rule.unitCode || ''}
                 disabled={!canEditSection('platform-master-lmp-access')}
-                options={['', ...config.units.map((unit) => unit.code)]}
+                options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code))]}
                 emptyLabel="All Units"
                 onChange={(value) => updateMasterLmpAccessRule(index, { unitCode: value || null })}
               />
@@ -6159,8 +6223,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               />
                               <Field label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." />
                               <SelectField label="Type" value={profile.resourceType} disabled={!canEditSection('platform-standard-missions')} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />
-                              <SelectField label="Dep" value={profile.departureLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() })} />
-                              <SelectField label="Arr" value={profile.arrivalLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() })} />
+                              <SelectField label="Dep" value={profile.departureLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() })} />
+                              <SelectField label="Arr" value={profile.arrivalLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() })} />
                               <NumberField label="Duration (min)" value={profile.durationMinutes} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { durationMinutes: clampWholeNumber(value, 240, 1, 1440) })} />
                               <NumberField label="Pre-Flight (min)" value={profile.preFlightMinutes} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { preFlightMinutes: clampWholeNumber(value, 90, 0, 1440) })} />
                               <NumberField label="Post-Flight (min)" value={profile.postFlightMinutes} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { postFlightMinutes: clampWholeNumber(value, 60, 0, 1440) })} />
@@ -6311,7 +6375,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2">
-            {crewCompositionAircraftTypes.map((aircraft) => {
+            {visibleCrewCompositionAircraftTypes.map((aircraft) => {
               const code = String(aircraft.code || '').trim().toUpperCase();
               const isActive = code === activeCrewCompositionAircraftCode;
               return (
@@ -6365,7 +6429,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-400">Applies To</label>
                       <div className="grid gap-1 rounded border border-gray-700 bg-gray-950/70 p-2 sm:grid-cols-2 xl:grid-cols-4">
-                        {OPERATIONAL_MODEL_OPTIONS.map((option) => {
+                        {visibleOperationalModelOptions.map((option) => {
                           const selectedModels = entry.operationalModels?.length ? entry.operationalModels : OPERATIONAL_MODEL_OPTIONS.map((modelOption) => modelOption.value);
                           const isSelected = selectedModels.includes(option.value);
                           return (
@@ -6607,7 +6671,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2">
-            {crewCompositionAircraftTypes.map((aircraft) => {
+            {visibleCrewCompositionAircraftTypes.map((aircraft) => {
               const code = String(aircraft.code || '').trim().toUpperCase();
               const isActive = code === activeCrewCompositionAircraftCode;
               return (
@@ -6766,7 +6830,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
               <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Aircraft Types</div>
-              <div className="mt-1 text-lg font-black text-orange-100">{config.aircraftTypes.length}</div>
+              <div className="mt-1 text-lg font-black text-orange-100">{visibleAircraftTypeRows.length}</div>
               <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Capability, category and crew-seat rules.</div>
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
@@ -6791,7 +6855,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             >
               <span className="flex items-center justify-between gap-2 text-xs font-black uppercase tracking-wide">
                 <span>Aircraft Types</span>
-                <span className="rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] text-orange-100">{config.aircraftTypes.length}</span>
+                <span className="rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] text-orange-100">{visibleAircraftTypeRows.length}</span>
               </span>
               <span className="mt-1 block text-[11px] leading-relaxed">Capability and crew-seat rules</span>
             </button>
@@ -6819,7 +6883,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Aircraft Types</h4>
               <p className="mt-1 text-xs text-gray-500">Define aircraft capability and normal seat eligibility.</p>
             </div>
-            {config.aircraftTypes.map((aircraft, index) => {
+            {visibleAircraftTypeRows.map(({ aircraft, index }) => {
               const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
               const crewPositionOptions = getCrewPositionOptions(
                 crewPositionTerminology,
@@ -7017,9 +7081,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                         <Field label="Pool Code" value={pool.code} disabled={!canEditResourcePools} onChange={(value) => updateRow('resourcePools', index, { code: value })} />
                         <Field label="Pool Name" value={pool.name} disabled={!canEditResourcePools} onChange={(value) => updateRow('resourcePools', index, { name: value })} />
-                        <SelectField label="Location" value={pool.locationCode || ''} disabled={!canEditResourcePools} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('resourcePools', index, { locationCode: value || null })} />
-                        <SelectField label="Owning Unit" value={pool.unitCode || ''} disabled={!canEditResourcePools} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('resourcePools', index, { unitCode: value || null })} />
-                        <SelectField label="Aircraft Type" value={pool.aircraftTypeCode || ''} disabled={!canEditResourcePools} options={['', ...config.aircraftTypes.map((aircraft) => aircraft.code)]} onChange={(value) => updateRow('resourcePools', index, { aircraftTypeCode: value || null })} />
+                        <SelectField label="Location" value={pool.locationCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code))]} onChange={(value) => updateRow('resourcePools', index, { locationCode: value || null })} />
+                        <SelectField label="Owning Unit" value={pool.unitCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code))]} onChange={(value) => updateRow('resourcePools', index, { unitCode: value || null })} />
+                        <SelectField label="Aircraft Type" value={pool.aircraftTypeCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code))]} onChange={(value) => updateRow('resourcePools', index, { aircraftTypeCode: value || null })} />
                         <SelectField label="Pool Type" value={pool.poolType || 'Dedicated'} disabled={!canEditResourcePools} options={['Dedicated', 'Shared']} onChange={(value) => updateRow('resourcePools', index, { poolType: value })} />
                       </div>
                     </div>
@@ -8760,12 +8824,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             </div>
             <div className="mt-4 space-y-3">
-              {unitCallsignSettings.entries.length === 0 && (
+              {visibleUnitCallsignEntries.length === 0 && (
                 <div className="rounded border border-gray-700 bg-gray-950 px-3 py-4 text-sm text-gray-400">
                   No unit callsigns configured.
                 </div>
               )}
-              {[...unitCallsignSettings.entries]
+              {[...visibleUnitCallsignEntries]
                 .sort((left, right) => (
                   left.unitCode.localeCompare(right.unitCode, undefined, { sensitivity: 'base' })
                   || left.callsign.localeCompare(right.callsign, undefined, { sensitivity: 'base' })
@@ -8776,7 +8840,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       label="Unit"
                       value={entry.unitCode}
                       disabled={!canEditRankTerminology}
-                      options={config.units.map((unit) => unit.code)}
+                      options={visibleUnitOptions}
                       onChange={(value) => updateUnitCallsignEntry(entry.id, { unitCode: value.toUpperCase(), isDefault: false })}
                     />
                     <Field
@@ -9040,7 +9104,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div>
                 <span className={labelClass}>Access Scopes</span>
                 <div className="rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100">
-                  {selectedAccessRows.length}
+                  {visibleSelectedAccessRows.length}
                 </div>
               </div>
             </div>
@@ -9063,7 +9127,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       type="checkbox"
                       className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
                       checked={checked}
-                      disabled={!canEditSection('platform-user-access') || selectedAccessRows.length === 0}
+                      disabled={!canEditSection('platform-user-access') || visibleSelectedAccessRows.length === 0}
                       onChange={(event) => {
                         const profileIds = event.target.checked
                           ? Array.from(new Set([...selectedUserProfileIds, profile.id]))
@@ -9081,13 +9145,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           </div>
 
-          {selectedAccessRows.length === 0 && (
+          {visibleSelectedAccessRows.length === 0 && (
             <div className="rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100">
               This user has no access scopes. Add a scope before testing this account.
             </div>
           )}
 
-          {selectedAccessRows.map(({ access, index }) => {
+          {visibleSelectedAccessRows.map(({ access, index }) => {
             const appliesToAllFeatures = !access.moduleCode;
             const scopeKey = access.id || `${access.userId}-${index}`;
             const showAdvancedFeatureArea = advancedFeatureAreaOpenByScope[scopeKey] === true;
@@ -9125,8 +9189,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
                 <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-[1.1fr_1fr_1fr_1fr_0.75fr_0.85fr]">
                   <SelectField label="Organisation" value={access.organisationCode || 'DEFAULT'} disabled={!canEditSection('platform-user-access')} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('userAccess', index, { organisationCode: value })} />
-                  <SelectField label="Location" value={access.locationCode || ''} disabled={!canEditSection('platform-user-access')} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('userAccess', index, { locationCode: value || null })} emptyLabel="All Locations" />
-                  <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEditSection('platform-user-access')} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} emptyLabel="All Units" />
+                  <SelectField label="Location" value={access.locationCode || ''} disabled={!canEditSection('platform-user-access')} options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code))]} onChange={(value) => updateRow('userAccess', index, { locationCode: value || null })} emptyLabel="All Locations" />
+                  <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEditSection('platform-user-access')} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code))]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} emptyLabel="All Units" />
                   <SelectField label="Administration Level" value={access.role || 'Viewer'} disabled={!canEditSection('platform-user-access')} options={['Viewer', 'Scheduler', 'Supervisor', 'Unit Admin', 'Platform Admin', 'Super Admin']} onChange={(value) => updateRow('userAccess', index, { role: value })} />
                   <SelectField label="Access" value={access.accessLevel || 'Read'} disabled={!canEditSection('platform-user-access')} options={['Read', 'Write', 'Admin']} onChange={(value) => updateRow('userAccess', index, { accessLevel: value })} />
                   <SelectField label="Status" value={access.status || 'ACTIVE'} disabled={!canEditSection('platform-user-access')} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('userAccess', index, { status: value })} />
@@ -9261,8 +9325,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               {visibleSchedulingRuleSetRows.map(({ ruleSet, index }) => (
                 <div key={ruleSet.id || index} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5">
                   <Field label="Name" value={ruleSet.name} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateRow('schedulingRuleSets', index, { name: value })} />
-                  <SelectField label="Unit" value={ruleSet.unitCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('schedulingRuleSets', index, { unitCode: value || null })} />
-                  <SelectField label="Aircraft Type" value={ruleSet.aircraftTypeCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...config.aircraftTypes.map((aircraft) => aircraft.code)]} onChange={(value) => updateRow('schedulingRuleSets', index, { aircraftTypeCode: value || null })} />
+                  <SelectField label="Unit" value={ruleSet.unitCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code))]} onChange={(value) => updateRow('schedulingRuleSets', index, { unitCode: value || null })} />
+                  <SelectField label="Aircraft Type" value={ruleSet.aircraftTypeCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code))]} onChange={(value) => updateRow('schedulingRuleSets', index, { aircraftTypeCode: value || null })} />
                   <SelectField label="Scope" value={ruleSet.scope || 'Unit'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Organisation', 'Location', 'Unit', 'AircraftType']} onChange={(value) => updateRow('schedulingRuleSets', index, { scope: value })} />
                   <SelectField label="Active" value={ruleSet.isActive === false ? 'No' : 'Yes'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Yes', 'No']} onChange={(value) => updateRow('schedulingRuleSets', index, { isActive: value === 'Yes' })} />
                 </div>

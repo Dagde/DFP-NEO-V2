@@ -52161,10 +52161,10 @@ const END_HOUR$2 = 24;
 const TOTAL_HOURS$2 = END_HOUR$2 - START_HOUR$2;
 const CREW_COLUMN_WIDTH = 180;
 const TIME_HEADER_HEIGHT$2 = 40;
-const normaliseUnitCode = (value) => String(value || "").trim().toUpperCase();
+const normaliseUnitCode$2 = (value) => String(value || "").trim().toUpperCase();
 const normaliseCrewLabel = (value) => String(value || "").replace(/^CREW\s*/i, "").replace(/\s*\/\s*[A-Z0-9-]+$/i, "").trim();
 const makeCrewKey = (unit, crew) => {
-  const unitCode = normaliseUnitCode(unit);
+  const unitCode = normaliseUnitCode$2(unit);
   const crewLabel = normaliseCrewLabel(crew);
   return unitCode && crewLabel ? `${unitCode}::${crewLabel}` : "";
 };
@@ -52239,7 +52239,7 @@ const CrewScheduleView = ({
     instructorsData.forEach((staff) => {
       const key = makeCrewKey(staff.unit, staff.crew);
       if (!key) return;
-      const unit = normaliseUnitCode(staff.unit);
+      const unit = normaliseUnitCode$2(staff.unit);
       const unitCrews = unitMap.get(unit) || /* @__PURE__ */ new Map();
       const crew = unitCrews.get(key) || { key, label: formatCrewDisplay(key), unit, members: [] };
       if (staff.name && !crew.members.includes(staff.name)) crew.members.push(staff.name);
@@ -61065,13 +61065,20 @@ const UserListSection = ({
     ] }) })
   ] });
 };
-const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile }) => {
+const normaliseUnitCode$1 = (value) => String(value || "").trim().toUpperCase();
+const isSettingsVisibilityPolicyEnabled$1 = (policy) => {
+  if (!policy || policy.enabled !== true) return false;
+  if (Array.isArray(policy.filters) && policy.filters.length > 0) return true;
+  return Boolean(policy.mode && policy.mode !== "all");
+};
+const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile, activeUnitCodes = [] }) => {
   const [staffData, setStaffData] = reactExports.useState([]);
   useSystemFreeze();
   const [loading, setLoading] = reactExports.useState(true);
   const [error, setError] = reactExports.useState(null);
   const [deletingId, setDeletingId] = reactExports.useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = reactExports.useState(null);
+  const [settingsVisibilityEnabled, setSettingsVisibilityEnabled] = reactExports.useState(false);
   const [sortField, setSortField] = reactExports.useState("name");
   const [sortDirection, setSortDirection] = reactExports.useState("asc");
   const isAdmin = currentUserPermission === "Super Admin" || currentUserPermission === "Admin";
@@ -61098,9 +61105,17 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
     };
     fetchMyPersonnel();
   }, []);
+  const activeUnitSet = reactExports.useMemo(() => new Set(activeUnitCodes.map(normaliseUnitCode$1).filter(Boolean)), [activeUnitCodes]);
+  const visibleStaffData = reactExports.useMemo(() => {
+    if (!settingsVisibilityEnabled || activeUnitSet.size === 0) return staffData;
+    return staffData.filter((staff) => {
+      const unitCode = normaliseUnitCode$1(staff.unit);
+      return !unitCode || activeUnitSet.has(unitCode);
+    });
+  }, [activeUnitSet, settingsVisibilityEnabled, staffData]);
   const duplicateNames = reactExports.useMemo(() => {
     const nameCounts = /* @__PURE__ */ new Map();
-    staffData.forEach((s) => {
+    visibleStaffData.forEach((s) => {
       const key = (s.name || "").trim().toLowerCase();
       nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
     });
@@ -61109,9 +61124,28 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
       if (count > 1) dupes.add(name);
     });
     return dupes;
-  }, [staffData]);
+  }, [visibleStaffData]);
   reactExports.useEffect(() => {
     fetchDatabaseStaff();
+  }, []);
+  reactExports.useEffect(() => {
+    let cancelled = false;
+    const loadSettingsVisibilityPolicy = async () => {
+      try {
+        const response = await fetch("/api/platform-config", { credentials: "include" });
+        if (!response.ok) return;
+        const data = await response.json();
+        const primaryOrganisation = Array.isArray(data?.organisations) ? data.organisations[0] : null;
+        const policy = primaryOrganisation?.settings?.settingsVisibilityPolicy;
+        if (!cancelled) setSettingsVisibilityEnabled(isSettingsVisibilityPolicyEnabled$1(policy));
+      } catch (err) {
+        console.warn("[StaffDB] Could not load settings visibility policy:", err);
+      }
+    };
+    void loadSettingsVisibilityPolicy();
+    return () => {
+      cancelled = true;
+    };
   }, []);
   const [debugInfo, setDebugInfo] = reactExports.useState([]);
   const addDebug = (msg) => {
@@ -61226,7 +61260,7 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
     }
   };
   const sortedStaffData = reactExports.useMemo(() => {
-    const sorted = [...staffData].sort((a, b) => {
+    const sorted = [...visibleStaffData].sort((a, b) => {
       let aValue;
       let bValue;
       switch (sortField) {
@@ -61266,7 +61300,7 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
       return 0;
     });
     return sorted;
-  }, [staffData, sortField, sortDirection]);
+  }, [visibleStaffData, sortField, sortDirection]);
   const SortIndicator = ({ field }) => {
     if (sortField !== field) {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1 text-gray-500", children: "⇅" });
@@ -61309,10 +61343,13 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-gray-800/80 border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400", children: "Staff Database" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mt-1", children: "All personnel records from the database (click column headers to sort)" })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400 mt-1", children: [
+          settingsVisibilityEnabled ? "Personnel records visible for the current Settings context" : "All personnel records from the database",
+          " (click column headers to sort)"
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-3 py-1 rounded-full", children: [
-        staffData.length,
+        visibleStaffData.length,
         " Staff"
       ] }) })
     ] }) }) }),
@@ -61417,23 +61454,50 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-400", children: "Source: Database" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-gray-500 text-xs", children: [
         "Count: ",
-        staffData.length
+        visibleStaffData.length,
+        settingsVisibilityEnabled ? ` of ${staffData.length}` : ""
       ] })
     ] })
   ] });
 };
-const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile }) => {
+const normaliseUnitCode = (value) => String(value || "").trim().toUpperCase();
+const isSettingsVisibilityPolicyEnabled = (policy) => {
+  if (!policy || policy.enabled !== true) return false;
+  if (Array.isArray(policy.filters) && policy.filters.length > 0) return true;
+  return Boolean(policy.mode && policy.mode !== "all");
+};
+const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile, activeUnitCodes = [] }) => {
   const [traineeData, setTraineeData] = reactExports.useState([]);
   useSystemFreeze();
   const [loading, setLoading] = reactExports.useState(true);
   const [error, setError] = reactExports.useState(null);
   const [deletingId, setDeletingId] = reactExports.useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = reactExports.useState(null);
+  const [settingsVisibilityEnabled, setSettingsVisibilityEnabled] = reactExports.useState(false);
   const [sortField, setSortField] = reactExports.useState("name");
   const [sortDirection, setSortDirection] = reactExports.useState("asc");
   const isAdmin = currentUserPermission === "Super Admin" || currentUserPermission === "Admin";
   reactExports.useEffect(() => {
     fetchDatabaseTrainees();
+  }, []);
+  reactExports.useEffect(() => {
+    let cancelled = false;
+    const loadSettingsVisibilityPolicy = async () => {
+      try {
+        const response = await fetch("/api/platform-config", { credentials: "include" });
+        if (!response.ok) return;
+        const data = await response.json();
+        const primaryOrganisation = Array.isArray(data?.organisations) ? data.organisations[0] : null;
+        const policy = primaryOrganisation?.settings?.settingsVisibilityPolicy;
+        if (!cancelled) setSettingsVisibilityEnabled(isSettingsVisibilityPolicyEnabled(policy));
+      } catch (err) {
+        console.warn("[TraineeDB] Could not load settings visibility policy:", err);
+      }
+    };
+    void loadSettingsVisibilityPolicy();
+    return () => {
+      cancelled = true;
+    };
   }, []);
   const [debugInfo, setDebugInfo] = reactExports.useState([]);
   const addDebug = (msg) => {
@@ -61532,6 +61596,14 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
       await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
     }
   };
+  const activeUnitSet = reactExports.useMemo(() => new Set(activeUnitCodes.map(normaliseUnitCode).filter(Boolean)), [activeUnitCodes]);
+  const visibleTraineeData = reactExports.useMemo(() => {
+    if (!settingsVisibilityEnabled || activeUnitSet.size === 0) return traineeData;
+    return traineeData.filter((trainee) => {
+      const unitCode = normaliseUnitCode(trainee.unit);
+      return !unitCode || activeUnitSet.has(unitCode);
+    });
+  }, [activeUnitSet, settingsVisibilityEnabled, traineeData]);
   const handleSort = (field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -61541,7 +61613,7 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
     }
   };
   const sortedTraineeData = reactExports.useMemo(() => {
-    const sorted = [...traineeData].sort((a, b) => {
+    const sorted = [...visibleTraineeData].sort((a, b) => {
       let aValue;
       let bValue;
       switch (sortField) {
@@ -61585,7 +61657,7 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
       return 0;
     });
     return sorted;
-  }, [traineeData, sortField, sortDirection]);
+  }, [visibleTraineeData, sortField, sortDirection]);
   const SortIndicator = ({ field }) => {
     if (sortField !== field) {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1 text-gray-500", children: "⇅" });
@@ -61631,10 +61703,13 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-gray-800/80 border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400", children: "Trainee Database" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mt-1", children: "All trainee records from the database (click column headers to sort)" })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400 mt-1", children: [
+          settingsVisibilityEnabled ? "Trainee records visible for the current Settings context" : "All trainee records from the database",
+          " (click column headers to sort)"
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-3 py-1 rounded-full", children: [
-        traineeData.length,
+        visibleTraineeData.length,
         " Trainees"
       ] })
     ] }) }) }),
@@ -61727,7 +61802,8 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-400", children: "Source: Database" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-gray-500 text-xs", children: [
         "Count: ",
-        traineeData.length
+        visibleTraineeData.length,
+        settingsVisibilityEnabled ? ` of ${traineeData.length}` : ""
       ] })
     ] })
   ] });
@@ -65337,7 +65413,7 @@ This permanently removes the organisation record from platform configuration and
     updateUnitCallsignSettings(unitCallsignSettings.entries.map((entry) => entry.id === entryId ? { ...entry, ...changes } : entry));
   };
   const addUnitCallsignEntry = () => {
-    const defaultUnit = config.units.find(isActiveRecord)?.code || config.units[0]?.code || "";
+    const defaultUnit = visibleUnitOptions[0] || config.units.find(isActiveRecord)?.code || config.units[0]?.code || "";
     updateUnitCallsignSettings([
       ...unitCallsignSettings.entries,
       {
@@ -67005,6 +67081,51 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     aircraftTypeCode: pool.aircraftTypeCode,
     organisationCode: pool.organisationCode
   }));
+  const visibleAircraftTypeCodes = new Set([
+    ...visibleUnitRows.map(({ unit }) => getUnitAircraftTypeCode(String(unit.code || ""))),
+    ...visibleResourcePoolRows.map(({ pool }) => String(pool.aircraftTypeCode || "").trim().toUpperCase())
+  ].map(normaliseUnitCode2).filter(Boolean));
+  const visibleAircraftTypeRows = config.aircraftTypes.map((aircraft, index) => ({ aircraft, index })).filter(({ aircraft }) => {
+    if (!settingsVisibilityEnabled) return true;
+    const aircraftCode = normaliseUnitCode2(aircraft.code);
+    if (!aircraftCode) return true;
+    if (settingsVisibilityPolicy.filters.includes("aircraftType") && visibilityAircraftTypeSet.size > 0) {
+      return visibilityAircraftTypeSet.has(aircraftCode);
+    }
+    if (settingsVisibilityPolicy.filters.includes("unit") || settingsVisibilityPolicy.filters.includes("location") || settingsVisibilityPolicy.filters.includes("parentOrganisation")) {
+      return visibleAircraftTypeCodes.size === 0 || visibleAircraftTypeCodes.has(aircraftCode);
+    }
+    return true;
+  });
+  const visibleAircraftTypeOptions = visibleAircraftTypeRows.map(({ aircraft }) => aircraft.code).filter(Boolean);
+  const visibleLocationOptions = visibleLocationRows.map(({ location }) => location.code).filter(Boolean);
+  const visibleUnitOptions = visibleUnitRows.map(({ unit }) => unit.code).filter(Boolean);
+  const visibleOperationalModelValues = new Set(
+    visibleUnitRows.map(({ unit }) => getUnitOperationalModel(unit)).map((model) => String(model || "").trim()).filter(Boolean)
+  );
+  const visibleOperationalModelOptions = settingsVisibilityEnabled && visibleOperationalModelValues.size > 0 ? OPERATIONAL_MODEL_OPTIONS.filter((option) => visibleOperationalModelValues.has(option.value)) : OPERATIONAL_MODEL_OPTIONS;
+  const visibleCrewCompositionAircraftTypes = settingsVisibilityEnabled ? crewCompositionAircraftTypes.filter((aircraft) => {
+    const code = normaliseUnitCode2(aircraft.code);
+    return !code || visibleAircraftTypeRows.some(({ aircraft: visibleAircraft }) => normaliseUnitCode2(visibleAircraft.code) === code);
+  }) : crewCompositionAircraftTypes;
+  const visibleCrewCompositionAircraftSignature = visibleCrewCompositionAircraftTypes.map((aircraft) => normaliseUnitCode2(aircraft.code)).join("|");
+  reactExports.useEffect(() => {
+    if (!settingsVisibilityEnabled || visibleCrewCompositionAircraftTypes.length === 0) return;
+    const activeCode = normaliseUnitCode2(activeCrewCompositionAircraftCode);
+    const activeIsVisible = visibleCrewCompositionAircraftTypes.some((aircraft) => normaliseUnitCode2(aircraft.code) === activeCode);
+    if (!activeIsVisible) {
+      setCrewCompositionAircraftCode(normaliseUnitCode2(visibleCrewCompositionAircraftTypes[0]?.code));
+    }
+  }, [activeCrewCompositionAircraftCode, settingsVisibilityEnabled, visibleCrewCompositionAircraftSignature]);
+  const visibleUnitCallsignEntries = unitCallsignSettings.entries.filter((entry) => isRecordVisibleForSettingsPolicy({
+    unitCode: entry.unitCode
+  }));
+  const visibleUserAccessRows = config.userAccess.map((access, index) => ({ access, index })).filter(({ access }) => isRecordVisibleForSettingsPolicy({
+    unitCode: access.unitCode,
+    locationCode: access.locationCode,
+    organisationCode: access.organisationCode
+  }));
+  const visibleSelectedAccessRows = visibleUserAccessRows.filter(({ access }) => String(access.userId || "").trim() === selectedAccessUserId);
   const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
     const name = String(pool.name || "").trim() || "Unnamed Resource Pool";
@@ -67601,7 +67722,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                   ) : null
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !isUnitEditing, options: config.locations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !isUnitEditing, options: visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit Type", value: unit.unitType || "Training", disabled: !isUnitEditing, options: ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"], onChange: (value) => updateRow("units", index, { unitType: value }) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -67677,7 +67798,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the task names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: OPERATIONAL_MODEL_OPTIONS.map((option) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
@@ -67704,7 +67825,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-task-tile-abbreviations", className: "mt-5", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-sm font-bold text-white", children: "Unit Task Tile Abbreviations" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: config.units.filter(isActiveRecord).map((unit) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleUnitRows.filter(({ unit }) => isActiveRecord(unit)).map(({ unit }) => {
             const unitIndex = config.units.findIndex((candidate) => candidate === unit);
             const abbreviations = unit.settings?.taskProfileAbbreviations || {};
             const unitDraftKey = getTaskProfileUnitDraftKey(unit, unitIndex);
@@ -67852,7 +67973,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 label: "Location",
                 value: rule.locationCode || "",
                 disabled: !canEditSection("platform-master-lmp-access"),
-                options: ["", ...config.locations.map((location) => location.code)],
+                options: ["", ...visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)],
                 emptyLabel: "All Locations",
                 onChange: (value) => updateMasterLmpAccessRule(index, { locationCode: value || null })
               }
@@ -67863,7 +67984,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 label: "Unit",
                 value: rule.unitCode || "",
                 disabled: !canEditSection("platform-master-lmp-access"),
-                options: ["", ...config.units.map((unit) => unit.code)],
+                options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code)],
                 emptyLabel: "All Units",
                 onChange: (value) => updateMasterLmpAccessRule(index, { unitCode: value || null })
               }
@@ -67986,8 +68107,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Type", value: profile.resourceType, disabled: !canEditSection("platform-standard-missions"), options: STANDARD_MISSION_RESOURCE_TYPES, onChange: (value) => updateStandardMissionProfile(profile.id, { resourceType: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Dep", value: profile.departureLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Arr", value: profile.arrivalLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Dep", value: profile.departureLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Arr", value: profile.arrivalLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Duration (min)", value: profile.durationMinutes, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { durationMinutes: clampWholeNumber(value, 240, 1, 1440) }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Pre-Flight (min)", value: profile.preFlightMinutes, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { preFlightMinutes: clampWholeNumber(value, 90, 0, 1440) }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Post-Flight (min)", value: profile.postFlightMinutes, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { postFlightMinutes: clampWholeNumber(value, 60, 0, 1440) }) }),
@@ -68108,7 +68229,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2", children: crewCompositionAircraftTypes.map((aircraft) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2", children: visibleCrewCompositionAircraftTypes.map((aircraft) => {
           const code = String(aircraft.code || "").trim().toUpperCase();
           const isActive = code === activeCrewCompositionAircraftCode;
           return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -68164,7 +68285,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Label", value: entry.label, disabled: !canEditCrewComposition, onChange: (value) => updateCrewPositionEntry(entry.id, { label: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-400", children: "Applies To" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-1 rounded border border-gray-700 bg-gray-950/70 p-2 sm:grid-cols-2 xl:grid-cols-4", children: OPERATIONAL_MODEL_OPTIONS.map((option) => {
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-1 rounded border border-gray-700 bg-gray-950/70 p-2 sm:grid-cols-2 xl:grid-cols-4", children: visibleOperationalModelOptions.map((option) => {
                   const selectedModels = entry.operationalModels?.length ? entry.operationalModels : OPERATIONAL_MODEL_OPTIONS.map((modelOption) => modelOption.value);
                   const isSelected = selectedModels.includes(option.value);
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-2 rounded px-2 py-1 text-[11px] font-semibold ${isSelected ? "bg-cyan-500/10 text-cyan-100" : "text-gray-400"}`, children: [
@@ -68390,7 +68511,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2", children: crewCompositionAircraftTypes.map((aircraft) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2", children: visibleCrewCompositionAircraftTypes.map((aircraft) => {
           const code = String(aircraft.code || "").trim().toUpperCase();
           const isActive = code === activeCrewCompositionAircraftCode;
           return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -68558,7 +68679,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Aircraft Types" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-orange-100", children: config.aircraftTypes.length }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-orange-100", children: visibleAircraftTypeRows.length }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Capability, category and crew-seat rules." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
@@ -68580,7 +68701,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center justify-between gap-2 text-xs font-black uppercase tracking-wide", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Aircraft Types" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] text-orange-100", children: config.aircraftTypes.length })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] text-orange-100", children: visibleAircraftTypeRows.length })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Capability and crew-seat rules" })
               ]
@@ -68609,7 +68730,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Aircraft Types" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Define aircraft capability and normal seat eligibility." })
           ] }),
-          config.aircraftTypes.map((aircraft, index) => {
+          visibleAircraftTypeRows.map(({ aircraft, index }) => {
             const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
             const crewPositionOptions = getCrewPositionOptions(
               crewPositionTerminology,
@@ -68806,9 +68927,9 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-3", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Code", value: pool.code, disabled: !canEditResourcePools, onChange: (value) => updateRow("resourcePools", index, { code: value }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Name", value: pool.name, disabled: !canEditResourcePools, onChange: (value) => updateRow("resourcePools", index, { name: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEditResourcePools, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEditResourcePools, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEditResourcePools, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEditResourcePools, options: ["", ...visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEditResourcePools, options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEditResourcePools, options: ["", ...visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEditResourcePools, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) })
                       ] })
                     ] }),
@@ -70549,15 +70670,15 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-3", children: [
-            unitCallsignSettings.entries.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950 px-3 py-4 text-sm text-gray-400", children: "No unit callsigns configured." }),
-            [...unitCallsignSettings.entries].sort((left, right) => left.unitCode.localeCompare(right.unitCode, void 0, { sensitivity: "base" }) || left.callsign.localeCompare(right.callsign, void 0, { sensitivity: "base" })).map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(140px,0.7fr)_minmax(180px,1fr)_auto_auto]", children: [
+            visibleUnitCallsignEntries.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950 px-3 py-4 text-sm text-gray-400", children: "No unit callsigns configured." }),
+            [...visibleUnitCallsignEntries].sort((left, right) => left.unitCode.localeCompare(right.unitCode, void 0, { sensitivity: "base" }) || left.callsign.localeCompare(right.callsign, void 0, { sensitivity: "base" })).map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(140px,0.7fr)_minmax(180px,1fr)_auto_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 SelectField,
                 {
                   label: "Unit",
                   value: entry.unitCode,
                   disabled: !canEditRankTerminology,
-                  options: config.units.map((unit) => unit.code),
+                  options: visibleUnitOptions,
                   onChange: (value) => updateUnitCallsignEntry(entry.id, { unitCode: value.toUpperCase(), isDefault: false })
                 }
               ),
@@ -70790,7 +70911,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Access Scopes" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: selectedAccessRows.length })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: visibleSelectedAccessRows.length })
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Profiles define what the user can do. Scope fields define where those profiles apply." })
@@ -70809,7 +70930,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                   type: "checkbox",
                   className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
                   checked,
-                  disabled: !canEditSection("platform-user-access") || selectedAccessRows.length === 0,
+                  disabled: !canEditSection("platform-user-access") || visibleSelectedAccessRows.length === 0,
                   onChange: (event) => {
                     const profileIds = event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedUserProfileIds, profile.id])) : selectedUserProfileIds.filter((id) => id !== profile.id);
                     setSelectedUserProfileIds(profileIds);
@@ -70823,8 +70944,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             ] }, profile.id);
           }) })
         ] }),
-        selectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "This user has no access scopes. Add a scope before testing this account." }),
-        selectedAccessRows.map(({ access, index }) => {
+        visibleSelectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "This user has no access scopes. Add a scope before testing this account." }),
+        visibleSelectedAccessRows.map(({ access, index }) => {
           const appliesToAllFeatures = !access.moduleCode;
           const scopeKey = access.id || `${access.userId}-${index}`;
           const showAdvancedFeatureArea = advancedFeatureAreaOpenByScope[scopeKey] === true;
@@ -70863,8 +70984,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3 xl:grid-cols-[1.1fr_1fr_1fr_1fr_0.75fr_0.85fr]", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEditSection("platform-user-access"), options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || "", disabled: !canEditSection("platform-user-access"), options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("userAccess", index, { locationCode: value || null }), emptyLabel: "All Locations" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: access.unitCode || "", disabled: !canEditSection("platform-user-access"), options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("userAccess", index, { unitCode: value || null }), emptyLabel: "All Units" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || "", disabled: !canEditSection("platform-user-access"), options: ["", ...visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)], onChange: (value) => updateRow("userAccess", index, { locationCode: value || null }), emptyLabel: "All Locations" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: access.unitCode || "", disabled: !canEditSection("platform-user-access"), options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code)], onChange: (value) => updateRow("userAccess", index, { unitCode: value || null }), emptyLabel: "All Units" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Administration Level", value: access.role || "Viewer", disabled: !canEditSection("platform-user-access"), options: ["Viewer", "Scheduler", "Supervisor", "Unit Admin", "Platform Admin", "Super Admin"], onChange: (value) => updateRow("userAccess", index, { role: value }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Access", value: access.accessLevel || "Read", disabled: !canEditSection("platform-user-access"), options: ["Read", "Write", "Admin"], onChange: (value) => updateRow("userAccess", index, { accessLevel: value }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: access.status || "ACTIVE", disabled: !canEditSection("platform-user-access"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("userAccess", index, { status: value }) })
@@ -71003,8 +71124,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: visibleSchedulingRuleSetRows.map(({ ruleSet, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: ruleSet.name, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Scope", value: ruleSet.scope || "Unit", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["Organisation", "Location", "Unit", "AircraftType"], onChange: (value) => updateRow("schedulingRuleSets", index, { scope: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Active", value: ruleSet.isActive === false ? "No" : "Yes", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["Yes", "No"], onChange: (value) => updateRow("schedulingRuleSets", index, { isActive: value === "Yes" }) })
           ] }, ruleSet.id || index)) })
@@ -72432,7 +72553,8 @@ const SettingsViewWithMenu = (props) => {
             currentUserPermission: props.currentUserPermission,
             onShowSuccess: props.onShowSuccess,
             onDataChanged: props.onDatabaseDataChanged,
-            onNavigateToProfile: props.onNavigateToProfile
+            onNavigateToProfile: props.onNavigateToProfile,
+            activeUnitCodes: props.activeUnitCodes && props.activeUnitCodes.length > 0 ? props.activeUnitCodes : props.activeUnitCode ? [props.activeUnitCode] : []
           }
         ),
         activeSection === "trainee-database" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -72441,7 +72563,8 @@ const SettingsViewWithMenu = (props) => {
             currentUserPermission: props.currentUserPermission,
             onShowSuccess: props.onShowSuccess,
             onDataChanged: props.onDatabaseDataChanged,
-            onNavigateToProfile: props.onNavigateToProfile
+            onNavigateToProfile: props.onNavigateToProfile,
+            activeUnitCodes: props.activeUnitCodes && props.activeUnitCodes.length > 0 ? props.activeUnitCodes : props.activeUnitCode ? [props.activeUnitCode] : []
           }
         ),
         activeSection === "organisation" && /* @__PURE__ */ jsxRuntimeExports.jsx(

@@ -9,6 +9,7 @@ interface StaffDatabaseTableProps {
   onShowSuccess?: (message: string) => void;
   onDataChanged?: () => void;  // Callback to refresh parent data
   onNavigateToProfile?: (user: any) => void;  // Navigate to staff profile for editing
+  activeUnitCodes?: string[];
 }
 
 interface DatabaseStaff {
@@ -36,13 +37,22 @@ interface DatabaseStaff {
 type SortField = 'name' | 'rank' | 'unit' | 'flight' | 'idNumber' | 'type' | 'role';
 type SortDirection = 'asc' | 'desc';
 
-const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile }) => {
+const normaliseUnitCode = (value: unknown) => String(value || '').trim().toUpperCase();
+
+const isSettingsVisibilityPolicyEnabled = (policy: any) => {
+  if (!policy || policy.enabled !== true) return false;
+  if (Array.isArray(policy.filters) && policy.filters.length > 0) return true;
+  return Boolean(policy.mode && policy.mode !== 'all');
+};
+
+const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile, activeUnitCodes = [] }) => {
   const [staffData, setStaffData] = useState<DatabaseStaff[]>([]);
   const { isFrozen } = useSystemFreeze();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [settingsVisibilityEnabled, setSettingsVisibilityEnabled] = useState<boolean>(false);
   
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('name');
@@ -77,20 +87,49 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
     fetchMyPersonnel();
   }, []);
 
+  const activeUnitSet = useMemo(() => new Set(activeUnitCodes.map(normaliseUnitCode).filter(Boolean)), [activeUnitCodes]);
+  const visibleStaffData = useMemo(() => {
+    if (!settingsVisibilityEnabled || activeUnitSet.size === 0) return staffData;
+    return staffData.filter((staff) => {
+      const unitCode = normaliseUnitCode(staff.unit);
+      return !unitCode || activeUnitSet.has(unitCode);
+    });
+  }, [activeUnitSet, settingsVisibilityEnabled, staffData]);
+
   // Detect duplicate names — mark records with same name as potential duplicates
   const duplicateNames = useMemo(() => {
     const nameCounts = new Map<string, number>();
-    staffData.forEach(s => {
+    visibleStaffData.forEach(s => {
       const key = (s.name || '').trim().toLowerCase();
       nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
     });
     const dupes = new Set<string>();
     nameCounts.forEach((count, name) => { if (count > 1) dupes.add(name); });
     return dupes;
-  }, [staffData]);
+  }, [visibleStaffData]);
 
   useEffect(() => {
     fetchDatabaseStaff();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadSettingsVisibilityPolicy = async () => {
+      try {
+        const response = await fetch('/api/platform-config', { credentials: 'include' });
+        if (!response.ok) return;
+        const data = await response.json();
+        const primaryOrganisation = Array.isArray(data?.organisations) ? data.organisations[0] : null;
+        const policy = primaryOrganisation?.settings?.settingsVisibilityPolicy;
+        if (!cancelled) setSettingsVisibilityEnabled(isSettingsVisibilityPolicyEnabled(policy));
+      } catch (err) {
+        console.warn('[StaffDB] Could not load settings visibility policy:', err);
+      }
+    };
+    void loadSettingsVisibilityPolicy();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
@@ -237,7 +276,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
 
   // Sorted data using useMemo
   const sortedStaffData = useMemo(() => {
-    const sorted = [...staffData].sort((a, b) => {
+    const sorted = [...visibleStaffData].sort((a, b) => {
       let aValue: any;
       let bValue: any;
 
@@ -280,7 +319,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
     });
 
     return sorted;
-  }, [staffData, sortField, sortDirection]);
+  }, [visibleStaffData, sortField, sortDirection]);
 
   // Sort indicator component
   const SortIndicator = ({ field }: { field: SortField }) => {
@@ -357,12 +396,12 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
             <div>
               <h3 className="text-lg font-bold text-sky-400">Staff Database</h3>
               <p className="text-sm text-gray-400 mt-1">
-                All personnel records from the database (click column headers to sort)
+                {settingsVisibilityEnabled ? 'Personnel records visible for the current Settings context' : 'All personnel records from the database'} (click column headers to sort)
               </p>
             </div>
             <div className="flex items-center">
               <span className="text-xs font-mono bg-gray-700 text-gray-300 px-3 py-1 rounded-full">
-                {staffData.length} Staff
+                {visibleStaffData.length} Staff
               </span>
             </div>
           </div>
@@ -499,7 +538,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
           Source: Database
         </div>
         <div className="text-gray-500 text-xs">
-          Count: {staffData.length}
+          Count: {visibleStaffData.length}{settingsVisibilityEnabled ? ` of ${staffData.length}` : ''}
         </div>
       </div>
     </div>

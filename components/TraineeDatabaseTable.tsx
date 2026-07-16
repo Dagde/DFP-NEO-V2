@@ -10,6 +10,7 @@ interface TraineeDatabaseTableProps {
   onShowSuccess?: (message: string) => void;
   onDataChanged?: () => void;  // Callback to refresh parent data
   onNavigateToProfile?: (trainee: any) => void;  // Navigate to trainee profile for editing
+  activeUnitCodes?: string[];
 }
 
 interface DatabaseTrainee {
@@ -41,13 +42,22 @@ interface DatabaseTrainee {
 type SortField = 'name' | 'role' | 'rank' | 'course' | 'unit' | 'idNumber' | 'primaryInstructor' | 'status';
 type SortDirection = 'asc' | 'desc';
 
-const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile }) => {
+const normaliseUnitCode = (value: unknown) => String(value || '').trim().toUpperCase();
+
+const isSettingsVisibilityPolicyEnabled = (policy: any) => {
+  if (!policy || policy.enabled !== true) return false;
+  if (Array.isArray(policy.filters) && policy.filters.length > 0) return true;
+  return Boolean(policy.mode && policy.mode !== 'all');
+};
+
+const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile, activeUnitCodes = [] }) => {
   const [traineeData, setTraineeData] = useState<DatabaseTrainee[]>([]);
   const { isFrozen } = useSystemFreeze();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [settingsVisibilityEnabled, setSettingsVisibilityEnabled] = useState<boolean>(false);
   
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('name');
@@ -57,6 +67,26 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
 
   useEffect(() => {
     fetchDatabaseTrainees();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadSettingsVisibilityPolicy = async () => {
+      try {
+        const response = await fetch('/api/platform-config', { credentials: 'include' });
+        if (!response.ok) return;
+        const data = await response.json();
+        const primaryOrganisation = Array.isArray(data?.organisations) ? data.organisations[0] : null;
+        const policy = primaryOrganisation?.settings?.settingsVisibilityPolicy;
+        if (!cancelled) setSettingsVisibilityEnabled(isSettingsVisibilityPolicyEnabled(policy));
+      } catch (err) {
+        console.warn('[TraineeDB] Could not load settings visibility policy:', err);
+      }
+    };
+    void loadSettingsVisibilityPolicy();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
@@ -178,6 +208,15 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
     }
   };
 
+  const activeUnitSet = useMemo(() => new Set(activeUnitCodes.map(normaliseUnitCode).filter(Boolean)), [activeUnitCodes]);
+  const visibleTraineeData = useMemo(() => {
+    if (!settingsVisibilityEnabled || activeUnitSet.size === 0) return traineeData;
+    return traineeData.filter((trainee) => {
+      const unitCode = normaliseUnitCode(trainee.unit);
+      return !unitCode || activeUnitSet.has(unitCode);
+    });
+  }, [activeUnitSet, settingsVisibilityEnabled, traineeData]);
+
   // Sorting function
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -192,7 +231,7 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
 
   // Sorted data using useMemo
   const sortedTraineeData = useMemo(() => {
-    const sorted = [...traineeData].sort((a, b) => {
+    const sorted = [...visibleTraineeData].sort((a, b) => {
       let aValue: any;
       let bValue: any;
 
@@ -239,7 +278,7 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
     });
 
     return sorted;
-  }, [traineeData, sortField, sortDirection]);
+  }, [visibleTraineeData, sortField, sortDirection]);
 
   // Sort indicator component
   const SortIndicator = ({ field }: { field: SortField }) => {
@@ -327,11 +366,11 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
               <div>
                 <h3 className="text-lg font-bold text-sky-400">Trainee Database</h3>
                 <p className="text-sm text-gray-400 mt-1">
-                  All trainee records from the database (click column headers to sort)
+                  {settingsVisibilityEnabled ? 'Trainee records visible for the current Settings context' : 'All trainee records from the database'} (click column headers to sort)
                 </p>
               </div>
               <span className="text-xs font-mono bg-gray-700 text-gray-300 px-3 py-1 rounded-full">
-                {traineeData.length} Trainees
+                {visibleTraineeData.length} Trainees
               </span>
             </div>
           </div>
@@ -454,7 +493,7 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
           Source: Database
         </div>
         <div className="text-gray-500 text-xs">
-          Count: {traineeData.length}
+          Count: {visibleTraineeData.length}{settingsVisibilityEnabled ? ` of ${traineeData.length}` : ''}
         </div>
       </div>
     </div>
