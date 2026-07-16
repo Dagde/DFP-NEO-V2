@@ -26688,6 +26688,9 @@ const App: React.FC = () => {
                 const savedUnits = saved.units?.length ? saved.units : units;
                 const savedUnitLocations = saved.unitLocations || unitLocations;
                 const savedLocationOpAreas = saved.locationOpAreas || locationOpAreas;
+                const configuredUnitTypes = Array.isArray(platformConfig?.unitTypes) && platformConfig.unitTypes.length > 0
+                    ? platformConfig.unitTypes
+                    : ['Training'];
                 const resolveLegacyLocationCode = (locationValue: string): string => {
                     const raw = String(locationValue || '').trim();
                     if (!raw) return '';
@@ -26721,7 +26724,7 @@ const App: React.FC = () => {
                             name: code,
                             organisationCode: 'DEFAULT',
                             locationCode,
-                            unitType: 'Training',
+                            unitType: configuredUnitTypes[0] || 'Training',
                             status: 'ACTIVE',
                             settings: {
                                 source: 'legacy-settings',
@@ -26751,6 +26754,7 @@ const App: React.FC = () => {
                         userAccess: [],
                         platformUsers: [],
                         schedulingRuleSets: [],
+                        unitTypes: configuredUnitTypes,
                     };
                     const existingLocationCodes = new Set((base.locations || []).map((location: any) => String(location.code || '').trim().toUpperCase()));
                     const existingLocationNames = new Set((base.locations || []).map((location: any) => String(location.name || '').trim().toLowerCase()));

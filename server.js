@@ -950,6 +950,23 @@ const normaliseAuditDateOnly = (value) => {
   return String(value).slice(0, 10);
 };
 
+const DEFAULT_COMMERCIAL_UNIT_TYPES = ['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational'];
+
+const normaliseCommercialUnitTypes = (values, units = []) => {
+  const seen = new Set();
+  const sourceValues = Array.isArray(values) ? values : DEFAULT_COMMERCIAL_UNIT_TYPES;
+  const usedValues = Array.isArray(units) ? units.map((unit) => unit?.unitType) : [];
+  return [...sourceValues, ...usedValues]
+    .map((value) => String(value || '').trim())
+    .filter((value) => {
+      if (!value) return false;
+      const key = value.toUpperCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+};
+
 const PLATFORM_CONFIG_AUDIT_TABLES = [
   {
     collection: 'organisations',
@@ -1879,6 +1896,10 @@ app.get('/api/platform-config', async (req, res) => {
       organisations,
       locations,
       units,
+      unitTypes: normaliseCommercialUnitTypes(
+        organisations.find((org) => org?.settings?.unitTypes)?.settings?.unitTypes,
+        units
+      ),
       aircraftTypes: aircraftTypes.map((aircraftType) => ({
         ...aircraftType,
         crewComposition: aircraftType.crewComposition || aircraftType.settings?.crewComposition || null,
@@ -2360,6 +2381,7 @@ app.post('/api/platform-config', async (req, res) => {
       organisations: rawOrganisations = [],
       locations: rawLocations = [],
       units: rawUnits = [],
+      unitTypes: rawUnitTypes,
       aircraftTypes: rawAircraftTypes = [],
       resourcePools: rawResourcePools = [],
       unitModules: rawUnitModules = [],
@@ -2386,6 +2408,7 @@ app.post('/api/platform-config', async (req, res) => {
     const organisations = toArray(rawOrganisations);
     const locations = toArray(rawLocations);
     const units = toArray(rawUnits);
+    const unitTypes = normaliseCommercialUnitTypes(rawUnitTypes, units);
     const aircraftTypes = toArray(rawAircraftTypes);
     const resourcePools = toArray(rawResourcePools);
     const unitModules = toArray(rawUnitModules);
@@ -2460,6 +2483,10 @@ app.post('/api/platform-config', async (req, res) => {
 
     for (const org of organisations) {
       if (!org.code || !org.name) continue;
+      const organisationSettings = { ...(org.settings || {}) };
+      if (org.code === organisations[0]?.code) {
+        organisationSettings.unitTypes = unitTypes;
+      }
       await db.$executeRawUnsafe(`
         INSERT INTO "CommercialOrganisation" ("id", "code", "name", "status", "settings", "createdAt", "updatedAt")
         VALUES (gen_random_uuid()::text, $1, $2, $3, $4::jsonb, $5::timestamp, $5::timestamp)
@@ -2468,7 +2495,7 @@ app.post('/api/platform-config', async (req, res) => {
           "status" = $3,
           "settings" = $4::jsonb,
           "updatedAt" = $5::timestamp
-      `, org.code, org.name, org.status || 'ACTIVE', toJson(org.settings), now);
+      `, org.code, org.name, org.status || 'ACTIVE', toJson(organisationSettings), now);
     }
 
     for (const location of locations) {
@@ -2506,7 +2533,7 @@ app.post('/api/platform-config', async (req, res) => {
           "status" = $6,
           "settings" = $7::jsonb,
           "updatedAt" = $8::timestamp
-      `, unit.organisationCode || 'DEFAULT', unit.locationCode || 'ESL', unit.code, unit.name, unit.unitType || 'Training', unit.status || 'ACTIVE', toJson(unit.settings), now);
+      `, unit.organisationCode || 'DEFAULT', unit.locationCode || 'ESL', unit.code, unit.name, unit.unitType || unitTypes[0] || 'Training', unit.status || 'ACTIVE', toJson(unit.settings), now);
     }
 
     for (const aircraftType of aircraftTypes) {

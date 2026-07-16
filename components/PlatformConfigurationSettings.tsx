@@ -120,6 +120,7 @@ type PlatformConfig = {
   organisations: any[];
   locations: any[];
   units: any[];
+  unitTypes?: string[];
   aircraftTypes: any[];
   resourcePools: any[];
   modules: any[];
@@ -187,6 +188,7 @@ const emptyConfig: PlatformConfig = {
   organisations: [],
   locations: [],
   units: [],
+  unitTypes: [],
   aircraftTypes: [],
   resourcePools: [],
   modules: [],
@@ -516,6 +518,7 @@ const COMMON_IANA_TIMEZONES = [
 const AIRFIELD_CATALOGUE_FILE = 'airfield-location-catalog.json';
 const MAX_AIRFIELD_SUGGESTIONS = 6;
 const PLATFORM_CONFIG_UPDATED_EVENT = 'dfp-platform-config-updated';
+const DEFAULT_UNIT_TYPES = ['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational'];
 const SETTINGS_VISIBILITY_FILTERS: Array<{ value: SettingsVisibilityFilter; label: string; description: string }> = [
   {
     value: 'unit',
@@ -560,6 +563,25 @@ const normaliseSettingsVisibilityPolicy = (value?: Partial<SettingsVisibilityPol
 
 const getDefaultHasTraineesForUnit = (_unitCode: unknown): boolean => false;
 
+const normaliseUnitTypes = (values: unknown, units: any[] = []): string[] => {
+  const sourceValues = Array.isArray(values) ? values : DEFAULT_UNIT_TYPES;
+  const usedValues = Array.isArray(units) ? units.map((unit) => unit?.unitType) : [];
+  const seen = new Set<string>();
+  return [...sourceValues, ...usedValues]
+    .map((value) => String(value || '').trim())
+    .filter((value) => {
+      if (!value) return false;
+      const key = value.toUpperCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+};
+
+const unitTypeListsEqual = (left: string[] = [], right: string[] = []): boolean => (
+  left.length === right.length && left.every((value, index) => value === right[index])
+);
+
 const applyDefaultUnitTraineeAvailability = (config: PlatformConfig): PlatformConfig => {
   if (!config || !Array.isArray(config.units)) return config;
   let changed = false;
@@ -575,7 +597,8 @@ const applyDefaultUnitTraineeAvailability = (config: PlatformConfig): PlatformCo
       },
     };
   });
-  return changed ? { ...config, units } : config;
+  const unitTypes = normaliseUnitTypes(config.unitTypes, units);
+  return changed || !unitTypeListsEqual(unitTypes, config.unitTypes || []) ? { ...config, units, unitTypes } : config;
 };
 
 const normaliseSettingsPlatformConfig = (source?: Partial<PlatformConfig> | null): PlatformConfig => (
@@ -1772,6 +1795,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [applyingChanges, setApplyingChanges] = useState(false);
   const [error, setError] = useState('');
   const loadedConfigRef = useRef<PlatformConfig>(emptyConfig);
+  const unitTypeOptions = useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
 
   useEffect(() => {
     const handlePlatformConfigUpdated = (event: Event) => {
@@ -3594,6 +3618,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
+  const updateUnitTypes = (value: string) => {
+    setConfig((prev) => {
+      const nextConfig = {
+        ...prev,
+        unitTypes: normaliseUnitTypes(
+          value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean),
+          prev.units,
+        ),
+      };
+      notifyPlatformConfigUpdatedSoon(nextConfig);
+      return nextConfig;
+    });
+  };
+
   const removeUserAccessScope = (index: number) => {
     setConfig((prev) => {
       const nextConfig = {
@@ -3924,7 +3962,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           name: 'New Unit',
           organisationCode: prev.organisations[0]?.code || 'DEFAULT',
           locationCode: defaultLocation,
-          unitType: 'Training',
+          unitType: unitTypeOptions[0] || 'Training',
           status: 'ACTIVE',
           settings: {
             operationalModel: DEFAULT_OPERATIONAL_MODEL,
@@ -5782,6 +5820,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ) : null}
         />
         <div className="p-4">
+          <div className="mb-4 rounded-lg border border-cyan-500/25 bg-cyan-950/15 p-3">
+            <TextAreaField
+              label="Unit Types"
+              value={unitTypeOptions.join('\n')}
+              disabled={!canEdit}
+              onChange={updateUnitTypes}
+              info="One unit type per line. These options appear in the Unit Type dropdown below and are saved in platform configuration."
+              className="block"
+              fieldSizingClassName="min-h-[104px]"
+            />
+          </div>
           <div className="max-w-full overflow-x-auto pb-2">
             <div className="min-w-[1180px] space-y-3">
               {visibleUnitRows.map(({ unit, index }) => {
@@ -5911,7 +5960,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <SelectField label="Location" value={unit.locationCode || ''} disabled={!isUnitEditing} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)} onChange={(value) => updateRow('units', index, { locationCode: value })} />
                 </div>
                 <div>
-                  <SelectField label="Unit Type" value={unit.unitType || 'Training'} disabled={!isUnitEditing} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational']} onChange={(value) => updateRow('units', index, { unitType: value })} />
+                  <SelectField label="Unit Type" value={unit.unitType || unitTypeOptions[0] || ''} disabled={!isUnitEditing} options={unitTypeOptions} onChange={(value) => updateRow('units', index, { unitType: value })} />
                 </div>
                 <label>
                   <FieldLabel

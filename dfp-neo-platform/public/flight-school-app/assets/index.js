@@ -2304,6 +2304,7 @@ const emptyPlatformConfig = {
   organisations: [],
   locations: [],
   units: [],
+  unitTypes: [],
   aircraftTypes: [],
   resourcePools: [],
   modules: [],
@@ -2321,6 +2322,7 @@ const normalisePlatformConfig = (source) => {
     organisations: Array.isArray(raw.organisations) ? raw.organisations : [],
     locations: Array.isArray(raw.locations) ? raw.locations : [],
     units: Array.isArray(raw.units) ? raw.units : [],
+    unitTypes: Array.isArray(raw.unitTypes) ? raw.unitTypes : [],
     aircraftTypes: Array.isArray(raw.aircraftTypes) ? raw.aircraftTypes : [],
     resourcePools: Array.isArray(raw.resourcePools) ? raw.resourcePools : [],
     modules: Array.isArray(raw.modules) ? raw.modules : [],
@@ -9734,6 +9736,19 @@ const getLocalDateString = (date = /* @__PURE__ */ new Date()) => {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
+const DEFAULT_UNIT_TYPES$1 = ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"];
+const normaliseUnitTypeOptions = (platformConfig) => {
+  const seen = /* @__PURE__ */ new Set();
+  const sourceValues = Array.isArray(platformConfig?.unitTypes) ? platformConfig.unitTypes : DEFAULT_UNIT_TYPES$1;
+  const usedValues = Array.isArray(platformConfig?.units) ? platformConfig.units.map((unit) => unit?.unitType) : [];
+  return [...sourceValues, ...usedValues].map((value) => String(value || "").trim()).filter((value) => {
+    if (!value) return false;
+    const key = value.toUpperCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
 const getResourceCategory$1 = (res) => {
   if (!res) return "Other";
   if (res.startsWith("PC-21") || res.startsWith("Deployed")) return "PC-21";
@@ -10614,6 +10629,7 @@ const UnitSettingsTextAreaRow = ({ label, value, onChange, disabled = false, pla
 ] });
 const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
   const [activeCategory, setActiveCategory] = reactExports.useState("identity");
+  const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
   const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
   const units = platformConfig?.units || [];
   const unit = units.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === activeUnitCode) || units.find((candidate) => String(candidate?.status || "ACTIVE").toUpperCase() !== "INACTIVE") || units[0];
@@ -11149,7 +11165,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
         }, disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit name", value: unit.name || "", onChange: (value) => updateUnit(), disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Location", value: unit.locationCode || "", options: locations.map((item) => item.code), onChange: (value) => updateUnit(), disabled: true }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Unit type", value: unit.unitType || "Training", options: ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"], onChange: (value) => updateUnit(), disabled: true }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Unit type", value: unit.unitType || unitTypeOptions[0] || "", options: unitTypeOptions, onChange: (value) => updateUnit(), disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Trainees", value: unitHasTrainees ? "On" : "Off", onChange: () => {
         }, disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Operating model", value: operationalModel, options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value), optionLabels: modelOptionLabels, onChange: (value) => updateUnitSettings2({ operationalModel: value }), disabled: true })
@@ -11199,6 +11215,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
 };
 const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePlatformConfig, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
   const [mode, setMode] = reactExports.useState("detect");
+  const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
   const [wizardStep, setWizardStep] = reactExports.useState(() => {
     if (typeof window === "undefined") return 0;
     const stored = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
@@ -11405,7 +11422,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     code: String(currentUnit?.code || unitCode || "36SQN"),
     name: String(currentUnit?.name || currentUnit?.code || unitCode || "36SQN"),
     locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
-    unitType: String(currentUnit?.unitType || "Operational"),
+    unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ""),
     operationalModel: String(getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
     hasTrainees: currentUnit?.settings?.hasTrainees !== false
   });
@@ -11571,11 +11588,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       code: String(currentUnit?.code || unitCode || "36SQN"),
       name: String(currentUnit?.name || currentUnit?.code || unitCode || "36SQN"),
       locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
-      unitType: String(currentUnit?.unitType || "Operational"),
+      unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ""),
       operationalModel: String(getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
       hasTrainees: currentUnit?.settings?.hasTrainees !== false
     });
-  }, [activeWizardLocationCode, currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code]);
+  }, [activeWizardLocationCode, currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code, unitTypeOptions]);
   reactExports.useEffect(() => {
     setResourceDraft({
       aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "C-17A"),
@@ -11733,7 +11750,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         code: cleanCode,
         name: unitDraft.name || cleanCode,
         locationCode: unitDraft.locationCode,
-        unitType: unitDraft.unitType || "Operational",
+        unitType: unitDraft.unitType || unitTypeOptions[0] || "",
         status: "ACTIVE",
         settings: {
           ...currentUnit?.settings || {},
@@ -13504,7 +13521,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         code: row.code || `UNIT${index + 1}`,
         name: row.name || row.code || `Unit ${index + 1}`,
         locationCode: index === 0 ? effectiveUnitDraft.locationCode || primaryLocationCode : primaryLocationCode,
-        unitType: index === 0 ? effectiveUnitDraft.unitType || "Operational" : "Operational",
+        unitType: index === 0 ? effectiveUnitDraft.unitType || unitTypeOptions[0] || "" : unitTypeOptions[0] || "",
         status: "ACTIVE",
         settings: {
           operationalModel: effectiveUnitDraft.operationalModel,
@@ -14351,7 +14368,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "36SQN"),
           wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "36SQN"),
           wizardDataListField("Home location", unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, "YAMB"),
-          wizardField("Unit type", unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"]),
+          wizardField("Unit type", unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions),
           wizardField(
             "Operational model",
             getWizardOperationalModelLabel(unitDraft.operationalModel),
@@ -63218,6 +63235,7 @@ const emptyConfig = {
   organisations: [],
   locations: [],
   units: [],
+  unitTypes: [],
   aircraftTypes: [],
   resourcePools: [],
   modules: [],
@@ -63432,6 +63450,7 @@ const COMMON_IANA_TIMEZONES = [
 const AIRFIELD_CATALOGUE_FILE = "airfield-location-catalog.json";
 const MAX_AIRFIELD_SUGGESTIONS = 6;
 const PLATFORM_CONFIG_UPDATED_EVENT$1 = "dfp-platform-config-updated";
+const DEFAULT_UNIT_TYPES = ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"];
 const SETTINGS_VISIBILITY_FILTERS = [
   {
     value: "unit",
@@ -63465,6 +63484,19 @@ const normaliseSettingsVisibilityPolicy = (value) => {
   };
 };
 const getDefaultHasTraineesForUnit$1 = (_unitCode) => false;
+const normaliseUnitTypes = (values, units = []) => {
+  const sourceValues = Array.isArray(values) ? values : DEFAULT_UNIT_TYPES;
+  const usedValues = Array.isArray(units) ? units.map((unit) => unit?.unitType) : [];
+  const seen = /* @__PURE__ */ new Set();
+  return [...sourceValues, ...usedValues].map((value) => String(value || "").trim()).filter((value) => {
+    if (!value) return false;
+    const key = value.toUpperCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+const unitTypeListsEqual = (left = [], right = []) => left.length === right.length && left.every((value, index) => value === right[index]);
 const applyDefaultUnitTraineeAvailability$1 = (config) => {
   if (!config || !Array.isArray(config.units)) return config;
   let changed = false;
@@ -63480,7 +63512,8 @@ const applyDefaultUnitTraineeAvailability$1 = (config) => {
       }
     };
   });
-  return changed ? { ...config, units } : config;
+  const unitTypes = normaliseUnitTypes(config.unitTypes, units);
+  return changed || !unitTypeListsEqual(unitTypes, config.unitTypes || []) ? { ...config, units, unitTypes } : config;
 };
 const normaliseSettingsPlatformConfig = (source) => applyDefaultUnitTraineeAvailability$1(normalisePlatformConfig(source));
 const hasActivePlatformRecords = (records) => records.some((record) => String(record?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
@@ -64408,6 +64441,7 @@ const PlatformConfigurationSettings = ({
   const [applyingChanges, setApplyingChanges] = reactExports.useState(false);
   const [error, setError] = reactExports.useState("");
   const loadedConfigRef = reactExports.useRef(emptyConfig);
+  const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   reactExports.useEffect(() => {
     const handlePlatformConfigUpdated = (event) => {
       const rawConfig = event.detail?.config;
@@ -65883,6 +65917,19 @@ This permanently removes the organisation record from platform configuration and
       return nextConfig;
     });
   };
+  const updateUnitTypes = (value) => {
+    setConfig((prev) => {
+      const nextConfig = {
+        ...prev,
+        unitTypes: normaliseUnitTypes(
+          value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean),
+          prev.units
+        )
+      };
+      notifyPlatformConfigUpdatedSoon(nextConfig);
+      return nextConfig;
+    });
+  };
   const removeUserAccessScope = (index) => {
     setConfig((prev) => {
       const nextConfig = {
@@ -66145,7 +66192,7 @@ This permanently removes the organisation record from platform configuration and
           name: "New Unit",
           organisationCode: prev.organisations[0]?.code || "DEFAULT",
           locationCode: defaultLocation,
-          unitType: "Training",
+          unitType: unitTypeOptions[0] || "Training",
           status: "ACTIVE",
           settings: {
             operationalModel: DEFAULT_OPERATIONAL_MODEL,
@@ -67673,166 +67720,180 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1180px] space-y-3", children: visibleUnitRows.map(({ unit, index }) => {
-        const unitSettings = unit.settings || {};
-        const isSelectedUnit = selectedUnitIndex === index;
-        const isUnitEditing = canEdit && editingUnitIndex === index;
-        const rowKey = unit.id || `platform-unit-${index}`;
-        const parentOrganisationPath = getUnitParentOrganisationPath2(unit);
-        const parentOrganisationDisplay = parentOrganisationPath[parentOrganisationPath.length - 1] || "";
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 rounded-lg border border-cyan-500/25 bg-cyan-950/15 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          TextAreaField,
           {
-            ref: (node) => {
-              unitRowRefs.current[rowKey] = node;
-            },
-            onClick: () => setSelectedUnitIndex(index),
-            className: `relative grid cursor-pointer grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(138px,1.14fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(105px,0.7fr)_minmax(190px,1.45fr)] gap-3 rounded border-2 p-3 transition-colors ${isSelectedUnit ? "border-cyan-300 bg-cyan-500/10 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40" : "border-gray-700 bg-gray-900 hover:border-gray-500"}`,
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit", value: unit.code, disabled: !isUnitEditing, onChange: (value) => updateUnitCode(index, value) }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit Name", value: unit.name, disabled: !isUnitEditing, onChange: (value) => updateRow("units", index, { name: value }) }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: "Parent Org.", info: "Select each organisation level in order. The saved path is stored against this unit." }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+            label: "Unit Types",
+            value: unitTypeOptions.join("\n"),
+            disabled: !canEdit,
+            onChange: updateUnitTypes,
+            info: "One unit type per line. These options appear in the Unit Type dropdown below and are saved in platform configuration.",
+            className: "block",
+            fieldSizingClassName: "min-h-[104px]"
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1180px] space-y-3", children: visibleUnitRows.map(({ unit, index }) => {
+          const unitSettings = unit.settings || {};
+          const isSelectedUnit = selectedUnitIndex === index;
+          const isUnitEditing = canEdit && editingUnitIndex === index;
+          const rowKey = unit.id || `platform-unit-${index}`;
+          const parentOrganisationPath = getUnitParentOrganisationPath2(unit);
+          const parentOrganisationDisplay = parentOrganisationPath[parentOrganisationPath.length - 1] || "";
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              ref: (node) => {
+                unitRowRefs.current[rowKey] = node;
+              },
+              onClick: () => setSelectedUnitIndex(index),
+              className: `relative grid cursor-pointer grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(138px,1.14fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(105px,0.7fr)_minmax(190px,1.45fr)] gap-3 rounded border-2 p-3 transition-colors ${isSelectedUnit ? "border-cyan-300 bg-cyan-500/10 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40" : "border-gray-700 bg-gray-900 hover:border-gray-500"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit", value: unit.code, disabled: !isUnitEditing, onChange: (value) => updateUnitCode(index, value) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit Name", value: unit.name, disabled: !isUnitEditing, onChange: (value) => updateRow("units", index, { name: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: "Parent Org.", info: "Select each organisation level in order. The saved path is stored against this unit." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "button",
+                      {
+                        type: "button",
+                        className: `${fieldClass} flex min-h-[38px] items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:opacity-60`,
+                        disabled: !isUnitEditing || organisationParentLevels.length === 0,
+                        onClick: (event) => {
+                          event.stopPropagation();
+                          if (openParentOrgUnitIndex === index) {
+                            setOpenParentOrgUnitIndex(null);
+                            setParentOrgMenuPlacement({ direction: "down", maxHeight: 340 });
+                            return;
+                          }
+                          const rect = event.currentTarget.getBoundingClientRect();
+                          const viewportMargin = 12;
+                          const menuGap = 4;
+                          const desiredMenuHeight = 340;
+                          const availableBelow = Math.max(0, window.innerHeight - rect.bottom - viewportMargin - menuGap);
+                          const availableAbove = Math.max(0, rect.top - viewportMargin - menuGap);
+                          const shouldOpenUp = availableBelow < desiredMenuHeight && availableAbove > availableBelow;
+                          const maxHeight = Math.max(160, Math.min(desiredMenuHeight, shouldOpenUp ? availableAbove : availableBelow));
+                          setParentOrgMenuPlacement({ direction: shouldOpenUp ? "up" : "down", maxHeight });
+                          setOpenParentOrgUnitIndex(index);
+                        },
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "span",
+                            {
+                              className: `min-w-0 truncate ${parentOrganisationDisplay ? "text-white" : "text-gray-500"}`,
+                              title: parentOrganisationPath.join("-"),
+                              children: parentOrganisationDisplay || "Choose Level 1"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-cyan-200", children: openParentOrgUnitIndex === index ? "^" : "v" })
+                        ]
+                      }
+                    ),
+                    openParentOrgUnitIndex === index && isUnitEditing && organisationParentLevels.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "div",
+                      {
+                        className: `absolute left-0 z-[180] flex items-start overflow-y-auto rounded-lg border border-cyan-400/35 bg-gray-950/95 p-2 shadow-2xl shadow-black/45 ${parentOrgMenuPlacement.direction === "up" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"}`,
+                        style: {
+                          maxHeight: parentOrgMenuPlacement.maxHeight
+                        },
+                        onClick: (event) => event.stopPropagation(),
+                        children: [
+                          organisationParentLevels.slice(0, Math.min(organisationParentLevels.length, parentOrganisationPath.length + 1)).map((level, parentLevelIndex) => {
+                            const selectedValue = parentOrganisationPath[parentLevelIndex] || "";
+                            const levelOptions = getFilteredParentOrganisationOptions(level, parentOrganisationPath, parentLevelIndex);
+                            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-56 border-r border-gray-700/70 last:border-r-0", children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-cyan-200", children: level.name || `Level ${level.levelIndex}` }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-72 overflow-y-auto py-1", children: levelOptions.map((option) => {
+                                const isSelected = option === selectedValue;
+                                const hasNextLevel = parentLevelIndex < organisationParentLevels.length - 1;
+                                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                                  "button",
+                                  {
+                                    type: "button",
+                                    className: `flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs font-semibold transition-colors ${isSelected ? "bg-cyan-500/20 text-cyan-50" : "text-gray-200 hover:bg-cyan-500/10 hover:text-cyan-50"}`,
+                                    onClick: () => {
+                                      updateUnitParentOrganisationPath(index, unit, parentLevelIndex, option);
+                                      if (!hasNextLevel) {
+                                        setOpenParentOrgUnitIndex(null);
+                                        setParentOrgMenuPlacement({ direction: "down", maxHeight: 340 });
+                                      }
+                                    },
+                                    children: [
+                                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate", children: option }),
+                                      hasNextLevel ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-cyan-200", children: ">" }) : null
+                                    ]
+                                  },
+                                  `${level.levelIndex}-${option}`
+                                );
+                              }) })
+                            ] }, `unit-${rowKey}-parent-org-menu-${level.levelIndex}`);
+                          }),
+                          parentOrganisationPath.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-28 px-2 py-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              className: "w-full rounded border border-gray-700 bg-gray-900 px-2 py-2 text-xs font-bold text-gray-200 hover:border-red-400/60 hover:bg-red-500/10 hover:text-red-100",
+                              onClick: () => clearUnitParentOrganisationPath(index, unit),
+                              children: "Clear"
+                            }
+                          ) }) : null
+                        ]
+                      }
+                    ) : null
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !isUnitEditing, options: visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit Type", value: unit.unitType || unitTypeOptions[0] || "", disabled: !isUnitEditing, options: unitTypeOptions, onChange: (value) => updateRow("units", index, { unitType: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    FieldLabel,
+                    {
+                      label: "Trainees",
+                      info: "Turn off for units that do not use trainee records. Trainee event limits stay saved, but are greyed out for that unit."
+                    }
+                  ),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "button",
                     {
                       type: "button",
-                      className: `${fieldClass} flex min-h-[38px] items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:opacity-60`,
-                      disabled: !isUnitEditing || organisationParentLevels.length === 0,
+                      "aria-pressed": unitSettings.hasTrainees !== false,
+                      disabled: !isUnitEditing,
                       onClick: (event) => {
                         event.stopPropagation();
-                        if (openParentOrgUnitIndex === index) {
-                          setOpenParentOrgUnitIndex(null);
-                          setParentOrgMenuPlacement({ direction: "down", maxHeight: 340 });
-                          return;
-                        }
-                        const rect = event.currentTarget.getBoundingClientRect();
-                        const viewportMargin = 12;
-                        const menuGap = 4;
-                        const desiredMenuHeight = 340;
-                        const availableBelow = Math.max(0, window.innerHeight - rect.bottom - viewportMargin - menuGap);
-                        const availableAbove = Math.max(0, rect.top - viewportMargin - menuGap);
-                        const shouldOpenUp = availableBelow < desiredMenuHeight && availableAbove > availableBelow;
-                        const maxHeight = Math.max(160, Math.min(desiredMenuHeight, shouldOpenUp ? availableAbove : availableBelow));
-                        setParentOrgMenuPlacement({ direction: shouldOpenUp ? "up" : "down", maxHeight });
-                        setOpenParentOrgUnitIndex(index);
+                        updateUnitSettings(unit, { hasTrainees: unitSettings.hasTrainees === false });
                       },
+                      className: `flex h-[38px] w-full items-center justify-between rounded border px-3 text-xs font-black uppercase tracking-wide transition ${unitSettings.hasTrainees !== false ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-100" : "border-gray-700 bg-gray-950 text-gray-400"} disabled:cursor-not-allowed disabled:opacity-60`,
                       children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "span",
-                          {
-                            className: `min-w-0 truncate ${parentOrganisationDisplay ? "text-white" : "text-gray-500"}`,
-                            title: parentOrganisationPath.join("-"),
-                            children: parentOrganisationDisplay || "Choose Level 1"
-                          }
-                        ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-cyan-200", children: openParentOrgUnitIndex === index ? "^" : "v" })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: unitSettings.hasTrainees !== false ? "On" : "Off" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `relative h-5 w-9 rounded-full border transition ${unitSettings.hasTrainees !== false ? "border-cyan-300 bg-cyan-400/30" : "border-gray-600 bg-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full transition ${unitSettings.hasTrainees !== false ? "left-[18px] bg-cyan-100" : "left-1 bg-gray-500"}` }) })
                       ]
                     }
-                  ),
-                  openParentOrgUnitIndex === index && isUnitEditing && organisationParentLevels.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
-                    {
-                      className: `absolute left-0 z-[180] flex items-start overflow-y-auto rounded-lg border border-cyan-400/35 bg-gray-950/95 p-2 shadow-2xl shadow-black/45 ${parentOrgMenuPlacement.direction === "up" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"}`,
-                      style: {
-                        maxHeight: parentOrgMenuPlacement.maxHeight
-                      },
-                      onClick: (event) => event.stopPropagation(),
-                      children: [
-                        organisationParentLevels.slice(0, Math.min(organisationParentLevels.length, parentOrganisationPath.length + 1)).map((level, parentLevelIndex) => {
-                          const selectedValue = parentOrganisationPath[parentLevelIndex] || "";
-                          const levelOptions = getFilteredParentOrganisationOptions(level, parentOrganisationPath, parentLevelIndex);
-                          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-56 border-r border-gray-700/70 last:border-r-0", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-800 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-cyan-200", children: level.name || `Level ${level.levelIndex}` }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-72 overflow-y-auto py-1", children: levelOptions.map((option) => {
-                              const isSelected = option === selectedValue;
-                              const hasNextLevel = parentLevelIndex < organisationParentLevels.length - 1;
-                              return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                                "button",
-                                {
-                                  type: "button",
-                                  className: `flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs font-semibold transition-colors ${isSelected ? "bg-cyan-500/20 text-cyan-50" : "text-gray-200 hover:bg-cyan-500/10 hover:text-cyan-50"}`,
-                                  onClick: () => {
-                                    updateUnitParentOrganisationPath(index, unit, parentLevelIndex, option);
-                                    if (!hasNextLevel) {
-                                      setOpenParentOrgUnitIndex(null);
-                                      setParentOrgMenuPlacement({ direction: "down", maxHeight: 340 });
-                                    }
-                                  },
-                                  children: [
-                                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate", children: option }),
-                                    hasNextLevel ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-cyan-200", children: ">" }) : null
-                                  ]
-                                },
-                                `${level.levelIndex}-${option}`
-                              );
-                            }) })
-                          ] }, `unit-${rowKey}-parent-org-menu-${level.levelIndex}`);
-                        }),
-                        parentOrganisationPath.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-28 px-2 py-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "button",
-                          {
-                            type: "button",
-                            className: "w-full rounded border border-gray-700 bg-gray-900 px-2 py-2 text-xs font-bold text-gray-200 hover:border-red-400/60 hover:bg-red-500/10 hover:text-red-100",
-                            onClick: () => clearUnitParentOrganisationPath(index, unit),
-                            children: "Clear"
-                          }
-                        ) }) : null
-                      ]
-                    }
-                  ) : null
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !isUnitEditing, options: visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit Type", value: unit.unitType || "Training", disabled: !isUnitEditing, options: ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"], onChange: (value) => updateRow("units", index, { unitType: value }) }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  FieldLabel,
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  SelectField,
                   {
-                    label: "Trainees",
-                    info: "Turn off for units that do not use trainee records. Trainee event limits stay saved, but are greyed out for that unit."
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "button",
-                  {
-                    type: "button",
-                    "aria-pressed": unitSettings.hasTrainees !== false,
+                    label: "Model",
+                    value: getUnitOperationalModel(unit),
                     disabled: !isUnitEditing,
-                    onClick: (event) => {
-                      event.stopPropagation();
-                      updateUnitSettings(unit, { hasTrainees: unitSettings.hasTrainees === false });
-                    },
-                    className: `flex h-[38px] w-full items-center justify-between rounded border px-3 text-xs font-black uppercase tracking-wide transition ${unitSettings.hasTrainees !== false ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-100" : "border-gray-700 bg-gray-950 text-gray-400"} disabled:cursor-not-allowed disabled:opacity-60`,
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: unitSettings.hasTrainees !== false ? "On" : "Off" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `relative h-5 w-9 rounded-full border transition ${unitSettings.hasTrainees !== false ? "border-cyan-300 bg-cyan-400/30" : "border-gray-600 bg-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full transition ${unitSettings.hasTrainees !== false ? "left-[18px] bg-cyan-100" : "left-1 bg-gray-500"}` }) })
-                    ]
+                    options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value),
+                    optionLabels: Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label])),
+                    onChange: (value) => updateRow("units", index, {
+                      settings: {
+                        ...unitSettings,
+                        operationalModel: value || DEFAULT_OPERATIONAL_MODEL
+                      }
+                    })
                   }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                SelectField,
-                {
-                  label: "Model",
-                  value: getUnitOperationalModel(unit),
-                  disabled: !isUnitEditing,
-                  options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value),
-                  optionLabels: Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label])),
-                  onChange: (value) => updateRow("units", index, {
-                    settings: {
-                      ...unitSettings,
-                      operationalModel: value || DEFAULT_OPERATIONAL_MODEL
-                    }
-                  })
-                }
-              ) })
-            ]
-          },
-          rowKey
-        );
-      }) }) }) })
+                ) })
+              ]
+            },
+            rowKey
+          );
+        }) }) })
+      ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-task-profiles", className: getSectionClass("platform-task-profiles"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -104734,6 +104795,7 @@ ${"=".repeat(60)}`);
         const savedUnits = saved.units?.length ? saved.units : units;
         const savedUnitLocations = saved.unitLocations || unitLocations;
         const savedLocationOpAreas = saved.locationOpAreas || locationOpAreas;
+        const configuredUnitTypes = Array.isArray(platformConfig?.unitTypes) && platformConfig.unitTypes.length > 0 ? platformConfig.unitTypes : ["Training"];
         const resolveLegacyLocationCode = (locationValue) => {
           const raw = String(locationValue || "").trim();
           if (!raw) return "";
@@ -104762,7 +104824,7 @@ ${"=".repeat(60)}`);
             name: code,
             organisationCode: "DEFAULT",
             locationCode,
-            unitType: "Training",
+            unitType: configuredUnitTypes[0] || "Training",
             status: "ACTIVE",
             settings: {
               source: "legacy-settings",
@@ -104790,7 +104852,8 @@ ${"=".repeat(60)}`);
             unitModules: [],
             userAccess: [],
             platformUsers: [],
-            schedulingRuleSets: []
+            schedulingRuleSets: [],
+            unitTypes: configuredUnitTypes
           };
           const existingLocationCodes = new Set((base.locations || []).map((location) => String(location.code || "").trim().toUpperCase()));
           const existingLocationNames = new Set((base.locations || []).map((location) => String(location.name || "").trim().toLowerCase()));

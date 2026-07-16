@@ -198,6 +198,23 @@ const getLocalDateString = (date: Date = new Date()): string => {
     return `${year}-${month}-${day}`;
 };
 
+const DEFAULT_UNIT_TYPES = ['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational'];
+
+const normaliseUnitTypeOptions = (platformConfig?: any): string[] => {
+    const seen = new Set<string>();
+    const sourceValues = Array.isArray(platformConfig?.unitTypes) ? platformConfig.unitTypes : DEFAULT_UNIT_TYPES;
+    const usedValues = Array.isArray(platformConfig?.units) ? platformConfig.units.map((unit: any) => unit?.unitType) : [];
+    return [...sourceValues, ...usedValues]
+        .map((value) => String(value || '').trim())
+        .filter((value) => {
+            if (!value) return false;
+            const key = value.toUpperCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+};
+
 const getResourceCategory = (res?: string) => {
     if (!res) return 'Other';
     if (res.startsWith('PC-21') || res.startsWith('Deployed')) return 'PC-21';
@@ -1439,6 +1456,7 @@ const OrganisationMyUnitSettings: React.FC<{
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
 }> = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
     const [activeCategory, setActiveCategory] = useState('identity');
+    const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
     const units = platformConfig?.units || [];
     const unit = units.find((candidate: any) => normaliseUnitSettingsIdentifier(candidate?.code) === activeUnitCode)
@@ -2219,7 +2237,7 @@ const OrganisationMyUnitSettings: React.FC<{
                     <UnitSettingsField label="Unit code" value={unit.code || ''} onChange={() => {}} disabled />
                     <UnitSettingsField label="Unit name" value={unit.name || ''} onChange={(value) => updateUnit({ name: value })} disabled={!canEdit} />
                     <UnitSettingsSelect label="Location" value={unit.locationCode || ''} options={locations.map((item: any) => item.code)} onChange={(value) => updateUnit({ locationCode: value })} disabled={!canEdit} />
-                    <UnitSettingsSelect label="Unit type" value={unit.unitType || 'Training'} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational']} onChange={(value) => updateUnit({ unitType: value })} disabled={!canEdit} />
+                    <UnitSettingsSelect label="Unit type" value={unit.unitType || unitTypeOptions[0] || ''} options={unitTypeOptions} onChange={(value) => updateUnit({ unitType: value })} disabled={!canEdit} />
                     <UnitSettingsField label="Trainees" value={unitHasTrainees ? 'On' : 'Off'} onChange={() => {}} disabled />
                     <UnitSettingsSelect label="Operating model" value={operationalModel} options={OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)} optionLabels={modelOptionLabels} onChange={(value) => updateUnitSettings({ operationalModel: value })} disabled={!canEdit} />
                 </UnitSettingsGroup>
@@ -2286,6 +2304,7 @@ const InitialSetupWizard: React.FC<{
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
 }> = ({ platformConfig, unitCode, locationCode, onUpdatePlatformConfig, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
     const [mode, setMode] = useState<InitialSetupWizardMode>('detect');
+    const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const [wizardStep, setWizardStep] = useState(() => {
         if (typeof window === 'undefined') return 0;
         const stored = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
@@ -2543,7 +2562,7 @@ const InitialSetupWizard: React.FC<{
         code: String(currentUnit?.code || unitCode || '36SQN'),
         name: String(currentUnit?.name || currentUnit?.code || unitCode || '36SQN'),
         locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
-        unitType: String(currentUnit?.unitType || 'Operational'),
+        unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ''),
         operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
         hasTrainees: currentUnit?.settings?.hasTrainees !== false,
     });
@@ -2720,11 +2739,11 @@ const InitialSetupWizard: React.FC<{
             code: String(currentUnit?.code || unitCode || '36SQN'),
             name: String(currentUnit?.name || currentUnit?.code || unitCode || '36SQN'),
             locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
-            unitType: String(currentUnit?.unitType || 'Operational'),
+            unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ''),
             operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
             hasTrainees: currentUnit?.settings?.hasTrainees !== false,
         });
-    }, [activeWizardLocationCode, currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code]);
+    }, [activeWizardLocationCode, currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code, unitTypeOptions]);
 
     useEffect(() => {
         setResourceDraft({
@@ -2897,7 +2916,7 @@ const InitialSetupWizard: React.FC<{
                 code: cleanCode,
                 name: unitDraft.name || cleanCode,
                 locationCode: unitDraft.locationCode,
-                unitType: unitDraft.unitType || 'Operational',
+                unitType: unitDraft.unitType || unitTypeOptions[0] || '',
                 status: 'ACTIVE',
                 settings: {
                     ...(currentUnit?.settings || {}),
@@ -4954,7 +4973,7 @@ const InitialSetupWizard: React.FC<{
                 code: row.code || `UNIT${index + 1}`,
                 name: row.name || row.code || `Unit ${index + 1}`,
                 locationCode: index === 0 ? (effectiveUnitDraft.locationCode || primaryLocationCode) : primaryLocationCode,
-                unitType: index === 0 ? effectiveUnitDraft.unitType || 'Operational' : 'Operational',
+                unitType: index === 0 ? effectiveUnitDraft.unitType || unitTypeOptions[0] || '' : unitTypeOptions[0] || '',
                 status: 'ACTIVE',
                 settings: {
                     operationalModel: effectiveUnitDraft.operationalModel,
@@ -5825,7 +5844,7 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, '36SQN')}
                     {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, '36SQN')}
                     {wizardDataListField('Home location', unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, 'YAMB')}
-                    {wizardField('Unit type', unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), ['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational'])}
+                    {wizardField('Unit type', unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions)}
                     {wizardField(
                         'Operational model',
                         getWizardOperationalModelLabel(unitDraft.operationalModel),

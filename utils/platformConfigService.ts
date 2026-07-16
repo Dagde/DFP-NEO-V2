@@ -58,6 +58,7 @@ export interface PlatformConfig {
   organisations: any[];
   locations: PlatformLocation[];
   units: PlatformUnit[];
+  unitTypes?: string[];
   aircraftTypes: any[];
   resourcePools: PlatformResourcePool[];
   modules: any[];
@@ -310,6 +311,7 @@ const emptyPlatformConfig: PlatformConfig = {
   organisations: [],
   locations: [],
   units: [],
+  unitTypes: [],
   aircraftTypes: [],
   resourcePools: [],
   modules: [],
@@ -328,6 +330,7 @@ export const normalisePlatformConfig = (source?: Partial<PlatformConfig> | null)
     organisations: Array.isArray(raw.organisations) ? raw.organisations : [],
     locations: Array.isArray(raw.locations) ? raw.locations : [],
     units: Array.isArray(raw.units) ? raw.units : [],
+    unitTypes: Array.isArray(raw.unitTypes) ? raw.unitTypes : [],
     aircraftTypes: Array.isArray(raw.aircraftTypes) ? raw.aircraftTypes : [],
     resourcePools: Array.isArray(raw.resourcePools) ? raw.resourcePools : [],
     modules: Array.isArray(raw.modules) ? raw.modules : [],
