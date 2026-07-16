@@ -5116,17 +5116,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       return !code || visibleAircraftTypeRows.some(({ aircraft: visibleAircraft }) => normaliseUnitCode(visibleAircraft.code) === code);
     })
     : crewCompositionAircraftTypes;
-  const visibleCrewCompositionAircraftSignature = visibleCrewCompositionAircraftTypes
-    .map((aircraft) => normaliseUnitCode(aircraft.code))
-    .join('|');
-  useEffect(() => {
-    if (!settingsVisibilityEnabled || visibleCrewCompositionAircraftTypes.length === 0) return;
-    const activeCode = normaliseUnitCode(activeCrewCompositionAircraftCode);
-    const activeIsVisible = visibleCrewCompositionAircraftTypes.some((aircraft) => normaliseUnitCode(aircraft.code) === activeCode);
-    if (!activeIsVisible) {
-      setCrewCompositionAircraftCode(normaliseUnitCode(visibleCrewCompositionAircraftTypes[0]?.code));
-    }
-  }, [activeCrewCompositionAircraftCode, settingsVisibilityEnabled, visibleCrewCompositionAircraftSignature]);
   const visibleUnitCallsignEntries = unitCallsignSettings.entries.filter((entry) => isRecordVisibleForSettingsPolicy({
     unitCode: entry.unitCode,
   }));

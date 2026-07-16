@@ -67108,15 +67108,6 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     const code = normaliseUnitCode2(aircraft.code);
     return !code || visibleAircraftTypeRows.some(({ aircraft: visibleAircraft }) => normaliseUnitCode2(visibleAircraft.code) === code);
   }) : crewCompositionAircraftTypes;
-  const visibleCrewCompositionAircraftSignature = visibleCrewCompositionAircraftTypes.map((aircraft) => normaliseUnitCode2(aircraft.code)).join("|");
-  reactExports.useEffect(() => {
-    if (!settingsVisibilityEnabled || visibleCrewCompositionAircraftTypes.length === 0) return;
-    const activeCode = normaliseUnitCode2(activeCrewCompositionAircraftCode);
-    const activeIsVisible = visibleCrewCompositionAircraftTypes.some((aircraft) => normaliseUnitCode2(aircraft.code) === activeCode);
-    if (!activeIsVisible) {
-      setCrewCompositionAircraftCode(normaliseUnitCode2(visibleCrewCompositionAircraftTypes[0]?.code));
-    }
-  }, [activeCrewCompositionAircraftCode, settingsVisibilityEnabled, visibleCrewCompositionAircraftSignature]);
   const visibleUnitCallsignEntries = unitCallsignSettings.entries.filter((entry) => isRecordVisibleForSettingsPolicy({
     unitCode: entry.unitCode
   }));
