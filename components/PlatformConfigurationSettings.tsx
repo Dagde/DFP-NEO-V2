@@ -6375,7 +6375,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <button
                       type="button"
                       onClick={() => toggleMasterLmpAccessScope(rule, index)}
-                      className="min-h-[38px] w-full rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-500/20"
+                      className={platformActionButtonClass}
                     >
                       {advancedScopeOpen ? 'Hide Advanced' : 'Advanced Scope'}
                       {advancedScopeCount > 0 ? ` (${advancedScopeCount})` : ''}
@@ -6386,9 +6386,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       type="button"
                       disabled={!canEditSection('platform-master-lmp-access')}
                       onClick={() => removeMasterLmpAccessRule(index)}
-                      className="min-h-[38px] rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      title={`Delete ${rule.lmpCode || 'Master LMP'} access rule`}
+                      aria-label={`Delete ${rule.lmpCode || 'Master LMP'} access rule`}
+                      className="flex min-h-[38px] w-[42px] items-center justify-center rounded bg-transparent text-sm font-bold text-red-200 transition hover:bg-red-900/35 disabled:cursor-not-allowed disabled:opacity-45"
                     >
-                      Remove
+                      <TrashIcon aria-hidden="true" className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
