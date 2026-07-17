@@ -2292,6 +2292,26 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     primaryOrganisationSettings.unitCallsignSettings || null,
   );
   const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
+  const callsignAssignableRoleOptions = useMemo(() => {
+    const roleOptions = [
+      { value: 'QFI', label: personnelDisplaySettings.instructorLabel || 'QFI' },
+      { value: 'SIM IP', label: personnelDisplaySettings.simIpDisplayLabel || 'Contractor Staff' },
+      ...crewPositionTerminology.positions.map((entry) => ({
+        value: entry.genericName,
+        label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName,
+      })),
+    ];
+    const byValue = new Map<string, { value: string; label: string }>();
+    roleOptions.forEach((option) => {
+      const value = String(option.value || '').trim();
+      const key = value.toUpperCase();
+      if (!key || byValue.has(key)) return;
+      byValue.set(key, { value, label: option.label || value });
+    });
+    return Array.from(byValue.values()).sort((left, right) => (
+      left.label.localeCompare(right.label, undefined, { sensitivity: 'base' })
+    ));
+  }, [crewPositionLabelMap, crewPositionTerminology.positions, personnelDisplaySettings.instructorLabel, personnelDisplaySettings.simIpDisplayLabel]);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || '').includes('+')
     ? String(activeUnitCode || '').split('+')[0]?.trim()
@@ -4992,26 +5012,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const resourceSectionPanelHintClass = 'text-[11px] leading-relaxed text-gray-500';
   const getSettingsFocusAnchor = (value: any) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
   const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
-  const callsignAssignableRoleOptions = useMemo(() => {
-    const roleOptions = [
-      { value: 'QFI', label: personnelDisplaySettings.instructorLabel || 'QFI' },
-      { value: 'SIM IP', label: personnelDisplaySettings.simIpDisplayLabel || 'Contractor Staff' },
-      ...crewPositionTerminology.positions.map((entry) => ({
-        value: entry.genericName,
-        label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName,
-      })),
-    ];
-    const byValue = new Map<string, { value: string; label: string }>();
-    roleOptions.forEach((option) => {
-      const value = String(option.value || '').trim();
-      const key = value.toUpperCase();
-      if (!key || byValue.has(key)) return;
-      byValue.set(key, { value, label: option.label || value });
-    });
-    return Array.from(byValue.values()).sort((left, right) => (
-      left.label.localeCompare(right.label, undefined, { sensitivity: 'base' })
-    ));
-  }, [crewPositionLabelMap, crewPositionTerminology.positions, personnelDisplaySettings.instructorLabel, personnelDisplaySettings.simIpDisplayLabel]);
   const activeCrewCompositionAircraftIndex = Math.max(
     0,
     crewCompositionAircraftTypes.findIndex((aircraft) => String(aircraft.code || '').trim().toUpperCase() === crewCompositionAircraftCode.trim().toUpperCase()),

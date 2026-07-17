@@ -64966,6 +64966,24 @@ const PlatformConfigurationSettings = ({
     primaryOrganisationSettings.unitCallsignSettings || null
   );
   const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
+  const callsignAssignableRoleOptions = reactExports.useMemo(() => {
+    const roleOptions = [
+      { value: "QFI", label: personnelDisplaySettings.instructorLabel || "QFI" },
+      { value: "SIM IP", label: personnelDisplaySettings.simIpDisplayLabel || "Contractor Staff" },
+      ...crewPositionTerminology.positions.map((entry) => ({
+        value: entry.genericName,
+        label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName
+      }))
+    ];
+    const byValue = /* @__PURE__ */ new Map();
+    roleOptions.forEach((option) => {
+      const value = String(option.value || "").trim();
+      const key = value.toUpperCase();
+      if (!key || byValue.has(key)) return;
+      byValue.set(key, { value, label: option.label || value });
+    });
+    return Array.from(byValue.values()).sort((left, right) => left.label.localeCompare(right.label, void 0, { sensitivity: "base" }));
+  }, [crewPositionLabelMap, crewPositionTerminology.positions, personnelDisplaySettings.instructorLabel, personnelDisplaySettings.simIpDisplayLabel]);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0]?.trim() : String(activeUnitCode || "").trim();
   const activeTrainingReportUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === activeTrainingReportUnitCode.toUpperCase()) || config.units.find(isActiveRecord) || config.units[0] || null;
@@ -67145,24 +67163,6 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   const resourceSectionPanelHintClass = "text-[11px] leading-relaxed text-gray-500";
   const getSettingsFocusAnchor = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
   const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
-  const callsignAssignableRoleOptions = reactExports.useMemo(() => {
-    const roleOptions = [
-      { value: "QFI", label: personnelDisplaySettings.instructorLabel || "QFI" },
-      { value: "SIM IP", label: personnelDisplaySettings.simIpDisplayLabel || "Contractor Staff" },
-      ...crewPositionTerminology.positions.map((entry) => ({
-        value: entry.genericName,
-        label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName
-      }))
-    ];
-    const byValue = /* @__PURE__ */ new Map();
-    roleOptions.forEach((option) => {
-      const value = String(option.value || "").trim();
-      const key = value.toUpperCase();
-      if (!key || byValue.has(key)) return;
-      byValue.set(key, { value, label: option.label || value });
-    });
-    return Array.from(byValue.values()).sort((left, right) => left.label.localeCompare(right.label, void 0, { sensitivity: "base" }));
-  }, [crewPositionLabelMap, crewPositionTerminology.positions, personnelDisplaySettings.instructorLabel, personnelDisplaySettings.simIpDisplayLabel]);
   const activeCrewCompositionAircraftIndex = Math.max(
     0,
     crewCompositionAircraftTypes.findIndex((aircraft) => String(aircraft.code || "").trim().toUpperCase() === crewCompositionAircraftCode.trim().toUpperCase())
