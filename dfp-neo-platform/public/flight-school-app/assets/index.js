@@ -2284,17 +2284,6 @@ const DEFAULT_PLATFORM_PERMISSION_PROFILES = [
     permissions: ALL_PLATFORM_PERMISSION_IDS
   }
 ];
-const DEFAULT_MASTER_LMP_ACCESS_RULES = [
-  { id: "master-lmp-bpc-ipc-1fts", lmpCode: "BPC+IPC", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "1FTS", accessLevel: "Manage", status: "ACTIVE" },
-  { id: "master-lmp-bpc-ipc-2fts", lmpCode: "BPC+IPC", organisationCode: "DEFAULT", locationCode: "YPEA", unitCode: "2FTS", accessLevel: "Manage", status: "ACTIVE" },
-  { id: "master-lmp-bpc-ipc-cfs", lmpCode: "BPC+IPC", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "CFS", accessLevel: "View", status: "ACTIVE" },
-  { id: "master-lmp-fic-cfs", lmpCode: "FIC", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "CFS", accessLevel: "Manage", status: "ACTIVE" },
-  { id: "master-lmp-fic-1fts", lmpCode: "FIC", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "1FTS", accessLevel: "View", status: "ACTIVE" },
-  { id: "master-lmp-fic-2fts", lmpCode: "FIC", organisationCode: "DEFAULT", locationCode: "YPEA", unitCode: "2FTS", accessLevel: "View", status: "ACTIVE" },
-  { id: "master-lmp-pc21-ground-school-1fts", lmpCode: "PC-21 Ground School", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "1FTS", accessLevel: "Manage", status: "ACTIVE" },
-  { id: "master-lmp-pc21-ground-school-2fts", lmpCode: "PC-21 Ground School", organisationCode: "DEFAULT", locationCode: "YPEA", unitCode: "2FTS", accessLevel: "Manage", status: "ACTIVE" },
-  { id: "master-lmp-pc21-ground-school-cfs", lmpCode: "PC-21 Ground School", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "CFS", accessLevel: "View", status: "ACTIVE" }
-];
 const DEFAULT_MASTER_LMP_CATALOGUE = [
   { id: "master-lmp-catalogue-bpc-ipc", code: "BPC+IPC", name: "BPC+IPC", description: "Default Flight School basic and instrument progression Master LMP.", status: "ACTIVE" },
   { id: "master-lmp-catalogue-fic", code: "FIC", name: "FIC", description: "Default Flight Instructor Course Master LMP.", status: "ACTIVE" },
@@ -2426,7 +2415,7 @@ const normaliseOptionalOperationalModel = (value) => {
 const masterLmpAccessWeight = (level) => level === "Manage" ? 3 : level === "Assign" ? 2 : 1;
 const normaliseMasterLmpAccessRules = (config) => {
   const configured = config?.organisations?.[0]?.settings?.masterLmpAccess;
-  const source = Array.isArray(configured) ? configured : DEFAULT_MASTER_LMP_ACCESS_RULES;
+  const source = Array.isArray(configured) ? configured : [];
   return source.map((rule, index) => ({
     id: String(rule.id || `master-lmp-access-${index + 1}`),
     lmpCode: String(rule.lmpCode || rule.masterLmp || rule.course || "").trim(),
@@ -2494,9 +2483,6 @@ const getMasterLmpAccessLevel = (config, lmpCode, context = {}) => {
   const targetModel = normaliseOperationalModel(context.operationalModel);
   const activeRulesForLmp = normaliseMasterLmpAccessRules(config).filter((rule) => String(rule.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((rule) => normaliseAccessValue(rule.lmpCode) === targetLmp);
   const matchingLevels = activeRulesForLmp.filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation).filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation).filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode))).filter((rule) => !rule.aircraftTypeCode || targetAircraftTypeSet.size === 0 || targetAircraftTypeSet.has(normaliseAccessValue(rule.aircraftTypeCode))).filter((rule) => !rule.parentOrganisationCode || !targetParentOrganisation || normaliseAccessValue(rule.parentOrganisationCode) === targetParentOrganisation).filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel).map((rule) => normaliseAccessLevel(rule.accessLevel));
-  if (matchingLevels.length === 0 && activeRulesForLmp.length === 0 && targetModel === "air_combat") {
-    return "Manage";
-  }
   if (matchingLevels.length === 0) return null;
   return matchingLevels.sort((a, b) => masterLmpAccessWeight(b) - masterLmpAccessWeight(a))[0];
 };

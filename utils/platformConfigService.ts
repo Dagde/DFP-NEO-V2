@@ -289,17 +289,7 @@ export interface MasterLmpAccessContext {
   operationalModel?: OperationalModelCode | string | null;
 }
 
-export const DEFAULT_MASTER_LMP_ACCESS_RULES: PlatformMasterLmpAccessRule[] = [
-  { id: 'master-lmp-bpc-ipc-1fts', lmpCode: 'BPC+IPC', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: '1FTS', accessLevel: 'Manage', status: 'ACTIVE' },
-  { id: 'master-lmp-bpc-ipc-2fts', lmpCode: 'BPC+IPC', organisationCode: 'DEFAULT', locationCode: 'YPEA', unitCode: '2FTS', accessLevel: 'Manage', status: 'ACTIVE' },
-  { id: 'master-lmp-bpc-ipc-cfs', lmpCode: 'BPC+IPC', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: 'CFS', accessLevel: 'View', status: 'ACTIVE' },
-  { id: 'master-lmp-fic-cfs', lmpCode: 'FIC', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: 'CFS', accessLevel: 'Manage', status: 'ACTIVE' },
-  { id: 'master-lmp-fic-1fts', lmpCode: 'FIC', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: '1FTS', accessLevel: 'View', status: 'ACTIVE' },
-  { id: 'master-lmp-fic-2fts', lmpCode: 'FIC', organisationCode: 'DEFAULT', locationCode: 'YPEA', unitCode: '2FTS', accessLevel: 'View', status: 'ACTIVE' },
-  { id: 'master-lmp-pc21-ground-school-1fts', lmpCode: 'PC-21 Ground School', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: '1FTS', accessLevel: 'Manage', status: 'ACTIVE' },
-  { id: 'master-lmp-pc21-ground-school-2fts', lmpCode: 'PC-21 Ground School', organisationCode: 'DEFAULT', locationCode: 'YPEA', unitCode: '2FTS', accessLevel: 'Manage', status: 'ACTIVE' },
-  { id: 'master-lmp-pc21-ground-school-cfs', lmpCode: 'PC-21 Ground School', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: 'CFS', accessLevel: 'View', status: 'ACTIVE' },
-];
+export const DEFAULT_MASTER_LMP_ACCESS_RULES: PlatformMasterLmpAccessRule[] = [];
 
 export const DEFAULT_MASTER_LMP_CATALOGUE: PlatformMasterLmpCatalogueEntry[] = [
   { id: 'master-lmp-catalogue-bpc-ipc', code: 'BPC+IPC', name: 'BPC+IPC', description: 'Default Flight School basic and instrument progression Master LMP.', status: 'ACTIVE' },
@@ -472,7 +462,7 @@ export const normaliseMasterLmpAccessRules = (config: PlatformConfig | null): Pl
   const configured = config?.organisations?.[0]?.settings?.masterLmpAccess;
   const source = Array.isArray(configured)
     ? configured
-    : DEFAULT_MASTER_LMP_ACCESS_RULES;
+    : [];
 
   return source
     .map((rule: any, index: number) => ({
@@ -570,10 +560,6 @@ export const getMasterLmpAccessLevel = (
     .filter((rule) => !rule.parentOrganisationCode || !targetParentOrganisation || normaliseAccessValue(rule.parentOrganisationCode) === targetParentOrganisation)
     .filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel)
     .map((rule) => normaliseAccessLevel(rule.accessLevel));
-
-  if (matchingLevels.length === 0 && activeRulesForLmp.length === 0 && targetModel === 'air_combat') {
-    return 'Manage';
-  }
 
   if (matchingLevels.length === 0) return null;
   return matchingLevels.sort((a, b) => masterLmpAccessWeight(b) - masterLmpAccessWeight(a))[0];
