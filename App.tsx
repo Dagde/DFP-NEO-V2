@@ -7637,6 +7637,13 @@ function generateDfpInternal(
             checkpoints: [] as any[],
             conclusion: [] as string[],
         },
+        individualLmpDurationDiagnostics: {
+            purpose: 'Tracks whether NEO Build uses the trainee Individual LMP row, including DPCO/DNCO added time, when sizing Flight and FTD tiles.',
+            lookups: [] as any[],
+            placements: [] as any[],
+            finalEvents: [] as any[],
+            conclusions: [] as string[],
+        },
         final: null,
     };
 
@@ -11959,28 +11966,96 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     // ── END FLIGHT BOTTLENECK DIAGNOSTIC SETUP ──────────────────────────────
 
-    const getIndividualLmpItemForTraineeEvent = (
+    const shouldTraceIndividualLmpDuration = (traineeName?: string, eventCode?: string, details: Record<string, any> = {}): boolean => {
+        const nameText = String(traineeName || '').toLowerCase();
+        const eventText = String(eventCode || '').toUpperCase();
+        return nameText.includes('luna') ||
+            nameText.includes('edwards') ||
+            eventText === 'BGF20' ||
+            details.hasForwardedNotes === true ||
+            details.hasNextEventExtensions === true ||
+            (Number.isFinite(Number(details.individualFlightOrSimHours)) &&
+                Number.isFinite(Number(details.baseFlightOrSimHours)) &&
+                Number(details.individualFlightOrSimHours) !== Number(details.baseFlightOrSimHours));
+    };
+
+    const traceIndividualLmpDuration = (phase: string, details: Record<string, any>) => {
+        if (!shouldTraceIndividualLmpDuration(details.trainee, details.eventCode, details)) return;
+        const entry = {
+            phase,
+            timestamp: new Date().toISOString(),
+            ...details,
+        };
+        neoBuildDiag.individualLmpDurationDiagnostics.lookups.push(entry);
+        if (neoBuildDiag.individualLmpDurationDiagnostics.lookups.length > 600) {
+            neoBuildDiag.individualLmpDurationDiagnostics.lookups =
+                neoBuildDiag.individualLmpDurationDiagnostics.lookups.slice(-600);
+        }
+        if (phase.includes('placed')) {
+            neoBuildDiag.individualLmpDurationDiagnostics.placements.push(entry);
+            neoBuildDiag.individualLmpDurationDiagnostics.placements =
+                neoBuildDiag.individualLmpDurationDiagnostics.placements.slice(-240);
+        }
+    };
+
+    const resolveIndividualLmpItemForTraineeEvent = (
         trainee: Trainee | null | undefined,
         syllabusItem: SyllabusItemDetail | null | undefined
-    ): SyllabusItemDetail | null => {
-        if (!trainee || !syllabusItem) return null;
+    ): { item: SyllabusItemDetail | null; details: Record<string, any> } => {
+        if (!trainee || !syllabusItem) return {
+            item: null,
+            details: {
+                reason: !trainee ? 'missing-trainee' : 'missing-syllabus-item',
+            },
+        };
         const traineeNames = [
             trainee.fullName,
             trainee.name,
             (trainee as any).displayName,
         ].map(value => String(value || '').trim()).filter(Boolean);
-        const lmp = traineeNames.reduce<LMP[] | undefined>((found, name) => found || traineeLMPs.get(name), undefined)
-            || Array.from(traineeLMPs.entries()).find(([name]) => traineeNames.some(candidate => personnelNamesMatch(candidate, name)))?.[1];
-        if (!Array.isArray(lmp) || lmp.length === 0) return null;
+        const exactLmpEntry = traineeNames
+            .map(name => [name, traineeLMPs.get(name)] as const)
+            .find(([, lmp]) => Array.isArray(lmp));
+        const fuzzyLmpEntry = exactLmpEntry
+            ? null
+            : Array.from(traineeLMPs.entries()).find(([name]) => traineeNames.some(candidate => personnelNamesMatch(candidate, name)));
+        const matchedLmpKey = exactLmpEntry?.[0] || fuzzyLmpEntry?.[0] || null;
+        const lmp = exactLmpEntry?.[1] || fuzzyLmpEntry?.[1];
 
         const eventRefs = [
             syllabusItem.id,
             syllabusItem.code,
             syllabusItem.masterEventId,
         ].map(value => String(value || '').trim().toUpperCase()).filter(Boolean);
-        if (eventRefs.length === 0) return null;
+        const baseDetails = {
+            trainee: trainee.fullName || trainee.name || null,
+            traineeNames,
+            matchedLmpKey,
+            lmpCount: Array.isArray(lmp) ? lmp.length : 0,
+            eventCode: syllabusItem.code || syllabusItem.id || null,
+            eventId: syllabusItem.id || null,
+            eventRefs,
+            baseType: syllabusItem.type || null,
+            baseFlightOrSimHours: syllabusItem.flightOrSimHours ?? null,
+            baseDuration: syllabusItem.duration ?? null,
+            baseTotalEventHours: syllabusItem.totalEventHours ?? null,
+        };
+        if (!Array.isArray(lmp) || lmp.length === 0) return {
+            item: null,
+            details: {
+                ...baseDetails,
+                reason: 'no-individual-lmp-for-trainee',
+            },
+        };
+        if (eventRefs.length === 0) return {
+            item: null,
+            details: {
+                ...baseDetails,
+                reason: 'no-event-refs-from-syllabus-item',
+            },
+        };
 
-        return lmp.find(item => {
+        const matchedItem = lmp.find(item => {
             const itemRefs = [
                 item.id,
                 item.code,
@@ -11988,6 +12063,48 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             ].map(value => String(value || '').trim().toUpperCase()).filter(Boolean);
             return itemRefs.some(ref => eventRefs.includes(ref));
         }) || null;
+        const relatedItems = lmp
+            .filter(item => String(item.code || '').trim().toUpperCase() === String(syllabusItem.code || '').trim().toUpperCase())
+            .slice(0, 8)
+            .map(item => ({
+                id: item.id || null,
+                code: item.code || null,
+                type: item.type || null,
+                flightOrSimHours: item.flightOrSimHours ?? null,
+                duration: item.duration ?? null,
+                totalEventHours: item.totalEventHours ?? null,
+                completedAt: (item as any).completedAt || null,
+                extensionKeys: Object.keys(((item as any).trainingReportNextEventExtensions || {}) as Record<string, any>),
+                forwardedKeys: Object.keys(((item as any).trainingReportForwardedNotes || {}) as Record<string, any>),
+                hasForwardedNotes: Object.values(((item as any).trainingReportForwardedNotes || {}) as Record<string, any>)
+                    .some((entry: any) => String(entry?.notes || '').trim()),
+            }));
+        return {
+            item: matchedItem,
+            details: {
+                ...baseDetails,
+                reason: matchedItem ? 'matched-individual-lmp-item' : 'no-matching-individual-lmp-item',
+                individualItemId: matchedItem?.id || null,
+                individualEventCode: matchedItem?.code || null,
+                individualType: matchedItem?.type || null,
+                individualFlightOrSimHours: matchedItem?.flightOrSimHours ?? null,
+                individualDuration: matchedItem?.duration ?? null,
+                individualTotalEventHours: matchedItem?.totalEventHours ?? null,
+                hasNextEventExtensions: Boolean(matchedItem && Object.keys(((matchedItem as any).trainingReportNextEventExtensions || {}) as Record<string, any>).length),
+                hasForwardedNotes: Boolean(matchedItem && Object.values(((matchedItem as any).trainingReportForwardedNotes || {}) as Record<string, any>)
+                    .some((entry: any) => String(entry?.notes || '').trim())),
+                extensionKeys: matchedItem ? Object.keys(((matchedItem as any).trainingReportNextEventExtensions || {}) as Record<string, any>) : [],
+                forwardedKeys: matchedItem ? Object.keys(((matchedItem as any).trainingReportForwardedNotes || {}) as Record<string, any>) : [],
+                relatedItems,
+            },
+        };
+    };
+
+    const getIndividualLmpItemForTraineeEvent = (
+        trainee: Trainee | null | undefined,
+        syllabusItem: SyllabusItemDetail | null | undefined
+    ): SyllabusItemDetail | null => {
+        return resolveIndividualLmpItemForTraineeEvent(trainee, syllabusItem).item;
     };
 
     const getScheduledEventDurationSource = (
@@ -12015,16 +12132,25 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         trainee?: Trainee | null
     ): number => {
         const source = getScheduledEventDurationSource(syllabusItem, scheduleType, trainee);
-        const individualLmpItem = source === 'individual-flight-sim-hours' || source === 'duration'
-            ? getIndividualLmpItemForTraineeEvent(trainee, syllabusItem)
-            : null;
+        const resolvedIndividual = source === 'individual-flight-sim-hours' || source === 'duration'
+            ? resolveIndividualLmpItemForTraineeEvent(trainee, syllabusItem)
+            : { item: null, details: {} };
+        const individualLmpItem = resolvedIndividual.item;
         const rawValue = source === 'individual-flight-sim-hours'
             ? (individualLmpItem?.flightOrSimHours ?? syllabusItem.flightOrSimHours)
             : source === 'total-event-hours'
                 ? (individualLmpItem?.totalEventHours ?? syllabusItem.totalEventHours)
                 : (individualLmpItem?.duration ?? syllabusItem.duration);
         const duration = Number(rawValue);
-        return Number.isFinite(duration) && duration > 0 ? Number(duration.toFixed(2)) : 1;
+        const resolvedDuration = Number.isFinite(duration) && duration > 0 ? Number(duration.toFixed(2)) : 1;
+        traceIndividualLmpDuration('duration-resolved', {
+            ...resolvedIndividual.details,
+            scheduleType,
+            durationSource: source,
+            rawDurationValue: rawValue ?? null,
+            resolvedDuration,
+        });
+        return resolvedDuration;
     };
 
     const scheduleList = (
@@ -13547,6 +13673,20 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 primaryPreferOnly,
                 requirePreferredNightAircraft,
             });
+            traceIndividualLmpDuration('schedule-event-placed-stby', {
+                trainee: trainee.fullName,
+                eventCode: syllabusItem.code,
+                eventId: syllabusItem.id,
+                scheduleType: type,
+                durationSource: scheduledDurationSource,
+                resolvedDuration: scheduledDuration,
+                generatedDuration: stbyResult.duration,
+                startTime,
+                resourceId,
+                baseFlightOrSimHours: syllabusItem.flightOrSimHours ?? null,
+                baseDuration: syllabusItem.duration ?? null,
+                baseTotalEventHours: syllabusItem.totalEventHours ?? null,
+            });
             return stbyResult;
         }
 
@@ -13788,6 +13928,23 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             forcedInstructorConflict: forcedInstructorConflictDetails.length > 0 || undefined,
             forcedInstructorConflictDetails: forcedInstructorConflictDetails.length > 0 ? forcedInstructorConflictDetails : undefined,
         };
+        traceIndividualLmpDuration('schedule-event-placed', {
+            trainee: trainee.fullName,
+            eventCode: syllabusItem.code,
+            eventId: syllabusItem.id,
+            scheduleType: type,
+            durationSource: scheduledDurationSource,
+            resolvedDuration: scheduledDuration,
+            generatedDuration: result.duration,
+            startTime,
+            resourceId,
+            instructor: result.instructor || null,
+            student: result.student || null,
+            pilot: result.pilot || null,
+            baseFlightOrSimHours: syllabusItem.flightOrSimHours ?? null,
+            baseDuration: syllabusItem.duration ?? null,
+            baseTotalEventHours: syllabusItem.totalEventHours ?? null,
+        });
         if (forcedInstructorConflictDetails.length > 0 && remedialInstructorOverride) {
             forcedRemedialInstructorConflicts.push({
                 trainee: trainee.fullName,
@@ -20888,6 +21045,50 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         };
     });
     neoBuildDiag.mandatoryRemedialFlights.forcedInstructorConflicts = forcedRemedialInstructorConflicts;
+    neoBuildDiag.individualLmpDurationDiagnostics.finalEvents = sortedEvents
+        .filter(event => {
+            const eventCode = String(event.flightNumber || (event as any).eventCode || '').trim().toUpperCase();
+            const peopleText = [
+                (event as any)._traineeName,
+                event.student,
+                event.pilot,
+                event.instructor,
+                event.crew,
+                event.attendees,
+            ].flat().map(value => String(value || '')).join(' ').toLowerCase();
+            const hasForwardedNotes = Boolean(
+                String((event as any).preFlightNotes || '').trim() ||
+                Object.values(((event as any).trainingReportForwardedNotes || {}) as Record<string, any>)
+                    .some((entry: any) => String(entry?.notes || '').trim())
+            );
+            return eventCode === 'BGF20' ||
+                peopleText.includes('luna') ||
+                peopleText.includes('edwards') ||
+                hasForwardedNotes;
+        })
+        .slice(0, 120)
+        .map(event => ({
+            id: event.id,
+            flightNumber: event.flightNumber,
+            type: event.type,
+            resourceId: event.resourceId,
+            startTime: event.startTime,
+            duration: event.duration,
+            instructor: event.instructor || null,
+            student: event.student || null,
+            pilot: event.pilot || null,
+            crew: event.crew || null,
+            attendees: event.attendees || null,
+            source: (event as any)._source || null,
+            traineeName: (event as any)._traineeName || null,
+            preFlightNoteLength: String((event as any).preFlightNotes || '').trim().length,
+            forwardedKeys: Object.keys(((event as any).trainingReportForwardedNotes || {}) as Record<string, any>),
+        }));
+    neoBuildDiag.individualLmpDurationDiagnostics.conclusions = [
+        'If lookups show no matching Individual LMP item, the scheduler is receiving a base syllabus row instead of the trainee LMP row or the event identifiers do not match.',
+        'If lookups show individualFlightOrSimHours is correct but placements/finalEvents show duration 1.0, the duration is being overwritten after resolution.',
+        'If finalEvents has no forwardedKeys/preFlightNoteLength for the target event, the pre-flight triangle cannot render because the tile event has no forwarded notes attached.',
+    ];
 
     neoBuildDiag.final = {
         totalEvents: sortedEvents.length,
@@ -27477,6 +27678,7 @@ const App: React.FC = () => {
     const decorateEventWithForwardedPreFlightNotes = useCallback((event: ScheduleEvent): ScheduleEvent => {
         const tileEligible = event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt';
         if (!tileEligible || traineeLMPs.size === 0) return event;
+        const eventCodeForDiag = String(event.flightNumber || event.eventCode || event.id || '').trim().toUpperCase();
 
         const notesByKey = new Map<string, string>();
         const addNotes = (notes: unknown) => {
@@ -27535,10 +27737,12 @@ const App: React.FC = () => {
                     addPerson(trainee.name);
                 });
         });
+        const initialCandidateNamesForDiag = Array.from(candidateNames);
 
         const forwardedNotes: Record<string, any> = {
             ...((event.trainingReportForwardedNotes || {}) as Record<string, any>),
         };
+        const lmpMatchDiag: any[] = [];
 
         const inspectLmpItem = (item: SyllabusItemDetail) => {
             const itemRefs = [
@@ -27557,12 +27761,58 @@ const App: React.FC = () => {
         };
 
         candidateNames.forEach(name => {
-            const lmp = traineeLMPs.get(name) ||
-                Array.from(traineeLMPs.entries()).find(([lmpName]) => personnelNamesMatch(lmpName, name))?.[1];
+            const exactLmp = traineeLMPs.get(name);
+            const fuzzyLmpEntry = exactLmp ? null : Array.from(traineeLMPs.entries()).find(([lmpName]) => personnelNamesMatch(lmpName, name));
+            const lmp = exactLmp || fuzzyLmpEntry?.[1];
+            if (eventCodeForDiag === 'BGF20' || String(name || '').toLowerCase().includes('luna') || String(name || '').toLowerCase().includes('edwards')) {
+                lmpMatchDiag.push({
+                    candidateName: name,
+                    matchedKey: exactLmp ? name : fuzzyLmpEntry?.[0] || null,
+                    lmpCount: Array.isArray(lmp) ? lmp.length : 0,
+                    matchingItems: Array.isArray(lmp)
+                        ? lmp
+                            .filter(item => String(item.code || '').trim().toUpperCase() === eventCodeForDiag)
+                            .slice(0, 6)
+                            .map(item => ({
+                                id: item.id || null,
+                                code: item.code || null,
+                                type: item.type || null,
+                                flightOrSimHours: item.flightOrSimHours ?? null,
+                                duration: item.duration ?? null,
+                                forwardedKeys: Object.keys(((item as any).trainingReportForwardedNotes || {}) as Record<string, any>),
+                                forwardedNoteLengths: Object.values(((item as any).trainingReportForwardedNotes || {}) as Record<string, any>)
+                                    .map((entry: any) => String(entry?.notes || '').trim().length),
+                            }))
+                        : [],
+                });
+            }
             if (Array.isArray(lmp)) {
                 lmp.forEach(inspectLmpItem);
             }
         });
+
+        const shouldTraceNotes = eventCodeForDiag === 'BGF20' ||
+            initialCandidateNamesForDiag.some(name => /luna|edwards/i.test(name)) ||
+            notesByKey.size > 0 ||
+            lmpMatchDiag.some(entry => entry.matchingItems?.some((item: any) => item.forwardedKeys?.length));
+        if (shouldTraceNotes) {
+            pushDfpDataDiag('preflight-notes:decorate-event', {
+                eventId: event.id,
+                eventCode: event.flightNumber || event.eventCode || null,
+                eventType: event.type,
+                student: event.student || null,
+                pilot: event.pilot || null,
+                instructor: event.instructor || null,
+                traineeName: (event as any)._traineeName || null,
+                eventRefs: Array.from(eventRefs),
+                candidateNames: Array.from(candidateNames),
+                notesFound: notesByKey.size,
+                forwardedKeysFound: Object.keys(forwardedNotes),
+                existingPreFlightNoteLength: String(event.preFlightNotes || '').trim().length,
+                existingForwardedKeys: Object.keys((event.trainingReportForwardedNotes || {}) as Record<string, any>),
+                lmpMatchDiag,
+            });
+        }
 
         if (notesByKey.size === 0) return event;
 

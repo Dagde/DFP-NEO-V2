@@ -89060,6 +89060,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       checkpoints: [],
       conclusion: []
     },
+    individualLmpDurationDiagnostics: {
+      purpose: "Tracks whether NEO Build uses the trainee Individual LMP row, including DPCO/DNCO added time, when sizing Flight and FTD tiles.",
+      lookups: [],
+      placements: [],
+      finalEvents: [],
+      conclusions: []
+    },
     final: null
   };
   const saveNeoBuildDiag = (stage) => {
@@ -92737,22 +92744,76 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log("   C. Primary blocker: " + blockerType + " (instr=" + instrTotal + ", ac=" + acTotal + ", area=" + areaTotal + ", sep=" + sepTotal + ")");
     console.log('[FLIGHT-DIAG] END - also in localStorage key "flight_diag_report"');
   };
-  const getIndividualLmpItemForTraineeEvent = (trainee, syllabusItem) => {
-    if (!trainee || !syllabusItem) return null;
+  const shouldTraceIndividualLmpDuration = (traineeName, eventCode2, details = {}) => {
+    const nameText = String(traineeName || "").toLowerCase();
+    const eventText = String(eventCode2 || "").toUpperCase();
+    return nameText.includes("luna") || nameText.includes("edwards") || eventText === "BGF20" || details.hasForwardedNotes === true || details.hasNextEventExtensions === true || Number.isFinite(Number(details.individualFlightOrSimHours)) && Number.isFinite(Number(details.baseFlightOrSimHours)) && Number(details.individualFlightOrSimHours) !== Number(details.baseFlightOrSimHours);
+  };
+  const traceIndividualLmpDuration = (phase, details) => {
+    if (!shouldTraceIndividualLmpDuration(details.trainee, details.eventCode, details)) return;
+    const entry = {
+      phase,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      ...details
+    };
+    neoBuildDiag.individualLmpDurationDiagnostics.lookups.push(entry);
+    if (neoBuildDiag.individualLmpDurationDiagnostics.lookups.length > 600) {
+      neoBuildDiag.individualLmpDurationDiagnostics.lookups = neoBuildDiag.individualLmpDurationDiagnostics.lookups.slice(-600);
+    }
+    if (phase.includes("placed")) {
+      neoBuildDiag.individualLmpDurationDiagnostics.placements.push(entry);
+      neoBuildDiag.individualLmpDurationDiagnostics.placements = neoBuildDiag.individualLmpDurationDiagnostics.placements.slice(-240);
+    }
+  };
+  const resolveIndividualLmpItemForTraineeEvent = (trainee, syllabusItem) => {
+    if (!trainee || !syllabusItem) return {
+      item: null,
+      details: {
+        reason: !trainee ? "missing-trainee" : "missing-syllabus-item"
+      }
+    };
     const traineeNames = [
       trainee.fullName,
       trainee.name,
       trainee.displayName
     ].map((value) => String(value || "").trim()).filter(Boolean);
-    const lmp = traineeNames.reduce((found, name) => found || traineeLMPs.get(name), void 0) || Array.from(traineeLMPs.entries()).find(([name]) => traineeNames.some((candidate) => personnelNamesMatch(candidate, name)))?.[1];
-    if (!Array.isArray(lmp) || lmp.length === 0) return null;
+    const exactLmpEntry = traineeNames.map((name) => [name, traineeLMPs.get(name)]).find(([, lmp2]) => Array.isArray(lmp2));
+    const fuzzyLmpEntry = exactLmpEntry ? null : Array.from(traineeLMPs.entries()).find(([name]) => traineeNames.some((candidate) => personnelNamesMatch(candidate, name)));
+    const matchedLmpKey = exactLmpEntry?.[0] || fuzzyLmpEntry?.[0] || null;
+    const lmp = exactLmpEntry?.[1] || fuzzyLmpEntry?.[1];
     const eventRefs = [
       syllabusItem.id,
       syllabusItem.code,
       syllabusItem.masterEventId
     ].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
-    if (eventRefs.length === 0) return null;
-    return lmp.find((item) => {
+    const baseDetails = {
+      trainee: trainee.fullName || trainee.name || null,
+      traineeNames,
+      matchedLmpKey,
+      lmpCount: Array.isArray(lmp) ? lmp.length : 0,
+      eventCode: syllabusItem.code || syllabusItem.id || null,
+      eventId: syllabusItem.id || null,
+      eventRefs,
+      baseType: syllabusItem.type || null,
+      baseFlightOrSimHours: syllabusItem.flightOrSimHours ?? null,
+      baseDuration: syllabusItem.duration ?? null,
+      baseTotalEventHours: syllabusItem.totalEventHours ?? null
+    };
+    if (!Array.isArray(lmp) || lmp.length === 0) return {
+      item: null,
+      details: {
+        ...baseDetails,
+        reason: "no-individual-lmp-for-trainee"
+      }
+    };
+    if (eventRefs.length === 0) return {
+      item: null,
+      details: {
+        ...baseDetails,
+        reason: "no-event-refs-from-syllabus-item"
+      }
+    };
+    const matchedItem = lmp.find((item) => {
       const itemRefs = [
         item.id,
         item.code,
@@ -92760,6 +92821,39 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
       return itemRefs.some((ref) => eventRefs.includes(ref));
     }) || null;
+    const relatedItems = lmp.filter((item) => String(item.code || "").trim().toUpperCase() === String(syllabusItem.code || "").trim().toUpperCase()).slice(0, 8).map((item) => ({
+      id: item.id || null,
+      code: item.code || null,
+      type: item.type || null,
+      flightOrSimHours: item.flightOrSimHours ?? null,
+      duration: item.duration ?? null,
+      totalEventHours: item.totalEventHours ?? null,
+      completedAt: item.completedAt || null,
+      extensionKeys: Object.keys(item.trainingReportNextEventExtensions || {}),
+      forwardedKeys: Object.keys(item.trainingReportForwardedNotes || {}),
+      hasForwardedNotes: Object.values(item.trainingReportForwardedNotes || {}).some((entry) => String(entry?.notes || "").trim())
+    }));
+    return {
+      item: matchedItem,
+      details: {
+        ...baseDetails,
+        reason: matchedItem ? "matched-individual-lmp-item" : "no-matching-individual-lmp-item",
+        individualItemId: matchedItem?.id || null,
+        individualEventCode: matchedItem?.code || null,
+        individualType: matchedItem?.type || null,
+        individualFlightOrSimHours: matchedItem?.flightOrSimHours ?? null,
+        individualDuration: matchedItem?.duration ?? null,
+        individualTotalEventHours: matchedItem?.totalEventHours ?? null,
+        hasNextEventExtensions: Boolean(matchedItem && Object.keys(matchedItem.trainingReportNextEventExtensions || {}).length),
+        hasForwardedNotes: Boolean(matchedItem && Object.values(matchedItem.trainingReportForwardedNotes || {}).some((entry) => String(entry?.notes || "").trim())),
+        extensionKeys: matchedItem ? Object.keys(matchedItem.trainingReportNextEventExtensions || {}) : [],
+        forwardedKeys: matchedItem ? Object.keys(matchedItem.trainingReportForwardedNotes || {}) : [],
+        relatedItems
+      }
+    };
+  };
+  const getIndividualLmpItemForTraineeEvent = (trainee, syllabusItem) => {
+    return resolveIndividualLmpItemForTraineeEvent(trainee, syllabusItem).item;
   };
   const getScheduledEventDurationSource = (syllabusItem, scheduleType, trainee) => {
     const itemType = String(scheduleType || syllabusItem.type || "").trim().toLowerCase();
@@ -92777,10 +92871,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const getScheduledEventDuration = (syllabusItem, scheduleType, trainee) => {
     const source = getScheduledEventDurationSource(syllabusItem, scheduleType, trainee);
-    const individualLmpItem = source === "individual-flight-sim-hours" || source === "duration" ? getIndividualLmpItemForTraineeEvent(trainee, syllabusItem) : null;
+    const resolvedIndividual = source === "individual-flight-sim-hours" || source === "duration" ? resolveIndividualLmpItemForTraineeEvent(trainee, syllabusItem) : { item: null, details: {} };
+    const individualLmpItem = resolvedIndividual.item;
     const rawValue = source === "individual-flight-sim-hours" ? individualLmpItem?.flightOrSimHours ?? syllabusItem.flightOrSimHours : source === "total-event-hours" ? individualLmpItem?.totalEventHours ?? syllabusItem.totalEventHours : individualLmpItem?.duration ?? syllabusItem.duration;
     const duration = Number(rawValue);
-    return Number.isFinite(duration) && duration > 0 ? Number(duration.toFixed(2)) : 1;
+    const resolvedDuration = Number.isFinite(duration) && duration > 0 ? Number(duration.toFixed(2)) : 1;
+    traceIndividualLmpDuration("duration-resolved", {
+      ...resolvedIndividual.details,
+      scheduleType,
+      durationSource: source,
+      rawDurationValue: rawValue ?? null,
+      resolvedDuration
+    });
+    return resolvedDuration;
   };
   const scheduleList = (list, type, isPlusOne, startTimeBoundary, endTimeBoundary, standbyPrefix, isNightPass, diagnosticLabel, syllabusOverrides, latestStartBefore) => {
     const timeIncrement = getDispatchSearchStepHours(type);
@@ -94198,6 +94301,23 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       forcedInstructorConflict: forcedInstructorConflictDetails.length > 0 || void 0,
       forcedInstructorConflictDetails: forcedInstructorConflictDetails.length > 0 ? forcedInstructorConflictDetails : void 0
     };
+    traceIndividualLmpDuration("schedule-event-placed", {
+      trainee: trainee.fullName,
+      eventCode: syllabusItem.code,
+      eventId: syllabusItem.id,
+      scheduleType: type,
+      durationSource: scheduledDurationSource,
+      resolvedDuration: scheduledDuration,
+      generatedDuration: result.duration,
+      startTime,
+      resourceId,
+      instructor: result.instructor || null,
+      student: result.student || null,
+      pilot: result.pilot || null,
+      baseFlightOrSimHours: syllabusItem.flightOrSimHours ?? null,
+      baseDuration: syllabusItem.duration ?? null,
+      baseTotalEventHours: syllabusItem.totalEventHours ?? null
+    });
     if (forcedInstructorConflictDetails.length > 0 && remedialInstructorOverride) {
       forcedRemedialInstructorConflicts.push({
         trainee: trainee.fullName,
@@ -100226,6 +100346,42 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
   });
   neoBuildDiag.mandatoryRemedialFlights.forcedInstructorConflicts = forcedRemedialInstructorConflicts;
+  neoBuildDiag.individualLmpDurationDiagnostics.finalEvents = sortedEvents.filter((event) => {
+    const eventCode2 = String(event.flightNumber || event.eventCode || "").trim().toUpperCase();
+    const peopleText = [
+      event._traineeName,
+      event.student,
+      event.pilot,
+      event.instructor,
+      event.crew,
+      event.attendees
+    ].flat().map((value) => String(value || "")).join(" ").toLowerCase();
+    const hasForwardedNotes = Boolean(
+      String(event.preFlightNotes || "").trim() || Object.values(event.trainingReportForwardedNotes || {}).some((entry) => String(entry?.notes || "").trim())
+    );
+    return eventCode2 === "BGF20" || peopleText.includes("luna") || peopleText.includes("edwards") || hasForwardedNotes;
+  }).slice(0, 120).map((event) => ({
+    id: event.id,
+    flightNumber: event.flightNumber,
+    type: event.type,
+    resourceId: event.resourceId,
+    startTime: event.startTime,
+    duration: event.duration,
+    instructor: event.instructor || null,
+    student: event.student || null,
+    pilot: event.pilot || null,
+    crew: event.crew || null,
+    attendees: event.attendees || null,
+    source: event._source || null,
+    traineeName: event._traineeName || null,
+    preFlightNoteLength: String(event.preFlightNotes || "").trim().length,
+    forwardedKeys: Object.keys(event.trainingReportForwardedNotes || {})
+  }));
+  neoBuildDiag.individualLmpDurationDiagnostics.conclusions = [
+    "If lookups show no matching Individual LMP item, the scheduler is receiving a base syllabus row instead of the trainee LMP row or the event identifiers do not match.",
+    "If lookups show individualFlightOrSimHours is correct but placements/finalEvents show duration 1.0, the duration is being overwritten after resolution.",
+    "If finalEvents has no forwardedKeys/preFlightNoteLength for the target event, the pre-flight triangle cannot render because the tile event has no forwarded notes attached."
+  ];
   neoBuildDiag.final = {
     totalEvents: sortedEvents.length,
     byType: sortedEvents.reduce((acc, event) => {
@@ -105690,6 +105846,7 @@ ${"=".repeat(60)}`);
   const decorateEventWithForwardedPreFlightNotes = reactExports.useCallback((event) => {
     const tileEligible = event.type === "flight" || event.type === "ftd" || event.type === "cpt";
     if (!tileEligible || traineeLMPs.size === 0) return event;
+    const eventCodeForDiag = String(event.flightNumber || event.eventCode || event.id || "").trim().toUpperCase();
     const notesByKey = /* @__PURE__ */ new Map();
     const addNotes = (notes) => {
       const cleanNotes = String(notes || "").trim();
@@ -105734,9 +105891,11 @@ ${"=".repeat(60)}`);
         addPerson2(trainee.name);
       });
     });
+    const initialCandidateNamesForDiag = Array.from(candidateNames);
     const forwardedNotes = {
       ...event.trainingReportForwardedNotes || {}
     };
+    const lmpMatchDiag = [];
     const inspectLmpItem = (item) => {
       const itemRefs = [
         item.id,
@@ -105750,11 +105909,48 @@ ${"=".repeat(60)}`);
       });
     };
     candidateNames.forEach((name) => {
-      const lmp = traineeLMPs.get(name) || Array.from(traineeLMPs.entries()).find(([lmpName]) => personnelNamesMatch(lmpName, name))?.[1];
+      const exactLmp = traineeLMPs.get(name);
+      const fuzzyLmpEntry = exactLmp ? null : Array.from(traineeLMPs.entries()).find(([lmpName]) => personnelNamesMatch(lmpName, name));
+      const lmp = exactLmp || fuzzyLmpEntry?.[1];
+      if (eventCodeForDiag === "BGF20" || String(name || "").toLowerCase().includes("luna") || String(name || "").toLowerCase().includes("edwards")) {
+        lmpMatchDiag.push({
+          candidateName: name,
+          matchedKey: exactLmp ? name : fuzzyLmpEntry?.[0] || null,
+          lmpCount: Array.isArray(lmp) ? lmp.length : 0,
+          matchingItems: Array.isArray(lmp) ? lmp.filter((item) => String(item.code || "").trim().toUpperCase() === eventCodeForDiag).slice(0, 6).map((item) => ({
+            id: item.id || null,
+            code: item.code || null,
+            type: item.type || null,
+            flightOrSimHours: item.flightOrSimHours ?? null,
+            duration: item.duration ?? null,
+            forwardedKeys: Object.keys(item.trainingReportForwardedNotes || {}),
+            forwardedNoteLengths: Object.values(item.trainingReportForwardedNotes || {}).map((entry) => String(entry?.notes || "").trim().length)
+          })) : []
+        });
+      }
       if (Array.isArray(lmp)) {
         lmp.forEach(inspectLmpItem);
       }
     });
+    const shouldTraceNotes = eventCodeForDiag === "BGF20" || initialCandidateNamesForDiag.some((name) => /luna|edwards/i.test(name)) || notesByKey.size > 0 || lmpMatchDiag.some((entry) => entry.matchingItems?.some((item) => item.forwardedKeys?.length));
+    if (shouldTraceNotes) {
+      pushDfpDataDiag("preflight-notes:decorate-event", {
+        eventId: event.id,
+        eventCode: event.flightNumber || event.eventCode || null,
+        eventType: event.type,
+        student: event.student || null,
+        pilot: event.pilot || null,
+        instructor: event.instructor || null,
+        traineeName: event._traineeName || null,
+        eventRefs: Array.from(eventRefs),
+        candidateNames: Array.from(candidateNames),
+        notesFound: notesByKey.size,
+        forwardedKeysFound: Object.keys(forwardedNotes),
+        existingPreFlightNoteLength: String(event.preFlightNotes || "").trim().length,
+        existingForwardedKeys: Object.keys(event.trainingReportForwardedNotes || {}),
+        lmpMatchDiag
+      });
+    }
     if (notesByKey.size === 0) return event;
     const preFlightNotes = Array.from(notesByKey.values()).join("\n\n");
     return {
