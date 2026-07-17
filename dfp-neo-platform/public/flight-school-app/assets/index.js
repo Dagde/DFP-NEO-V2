@@ -87304,11 +87304,11 @@ const DfpSidePanelTimeline = ({
 };
 const normalisePersonnelRecord = (person) => {
   const preferences = person?.preferences && typeof person.preferences === "object" && !Array.isArray(person.preferences) ? person.preferences : {};
-  const unitCode = String(person?.unit || "").trim().toUpperCase();
+  String(person?.unit || "").trim().toUpperCase();
   const normalisedRole = normaliseFixedCrewStaffRole(person?.role);
   return {
     ...person,
-    role: unitCode === "77SQN" ? "Pilot" : normalisedRole,
+    role: normalisedRole,
     callsign: person?.callsign || preferences.callsign || "",
     secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || "",
     callsignNumber: person?.callsignNumber,
@@ -114415,9 +114415,9 @@ ${conflictLines.join("\n")}${moreText}`,
   const handleBulkUpdateInstructors = reactExports.useCallback(async (updatedInstructors) => {
     const normaliseImportedInstructor = (instructor) => {
       const roleText = String(instructor.role || "").trim().toLowerCase();
-      const unitCode = String(instructor.unit || "").trim().toUpperCase();
+      String(instructor.unit || "").trim().toUpperCase();
       const inferredQfi = roleText === "qfi" || roleText === "instructor";
-      const normalisedRole = unitCode === "77SQN" ? "Pilot" : roleText === "sim ip" || roleText === "contractor staff" ? "SIM IP" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "QFI" : normaliseFixedCrewStaffRole(instructor.role) || "QFI";
+      const normalisedRole = roleText === "sim ip" || roleText === "contractor staff" ? "SIM IP" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "QFI" : normaliseFixedCrewStaffRole(instructor.role) || "QFI";
       const isContractorStaff = normalisedRole === "SIM IP";
       const nextInstructor = {
         ...instructor,

@@ -266,9 +266,6 @@ async function runPrismaRuntimeMaintenance(db) {
     await migrateIntegratedCombatOperationsTiming(db);
     // Fix Academics items: ensure courses[] contains the module name (not the item's own code)
     await migrateAcademicsCoursesField(db);
-    // 77SQN is a single-seat Air Combat unit in this model: all active staff
-    // records must remain Pilot even if a bulk import carries crew-position labels.
-    await repairAirCombatPersonnelRoles(db);
     console.log(`✅ Prisma runtime maintenance checks complete in ${Date.now() - startedAt}ms`);
   } catch (error) {
     console.error('❌ Prisma runtime maintenance failed:', error);
@@ -323,30 +320,7 @@ function schedulePrismaPrewarm() {
   console.log(`🔥 Prisma connection prewarm scheduled in ${delayMs}ms`);
 }
 
-async function repairAirCombatPersonnelRoles(db) {
-  try {
-    const updated = await db.$executeRawUnsafe(`
-      UPDATE "Personnel"
-      SET "role" = 'Pilot',
-          "isQFI" = false,
-          "updatedAt" = CURRENT_TIMESTAMP
-      WHERE UPPER(COALESCE("unit", '')) = '77SQN'
-        AND COALESCE("isActive", true) = true
-        AND (
-          COALESCE("role", '') <> 'Pilot'
-          OR COALESCE("isQFI", false) = true
-        )
-    `);
-    if (updated > 0) {
-      console.log(`[AirCombatRoleRepair] Normalised ${updated} active 77SQN personnel record(s) to role=Pilot, isQFI=false.`);
-    }
-  } catch (error) {
-    console.warn('[AirCombatRoleRepair] Could not repair 77SQN personnel roles:', error.message);
-  }
-}
-
 function normalisePersonnelPayloadForUnit(body = {}) {
-  const unitCode = String(body.unit || '').trim().toUpperCase();
   const roleCode = String(body.role || '').trim().toUpperCase().replace(/[\s-]+/g, ' ');
   if (
     roleCode === 'AEA'
@@ -358,12 +332,7 @@ function normalisePersonnelPayloadForUnit(body = {}) {
       role: 'AWO',
     };
   }
-  if (unitCode !== '77SQN') return body;
-  return {
-    ...body,
-    role: 'Pilot',
-    isQFI: false,
-  };
+  return body;
 }
 
 const LOCATION_NAME_BY_CODE = {

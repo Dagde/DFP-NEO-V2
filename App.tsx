@@ -4898,7 +4898,7 @@ const normalisePersonnelRecord = (person: any): any => {
     const normalisedRole = normaliseFixedCrewStaffRole(person?.role, unitCode);
     return {
         ...person,
-        role: unitCode === '77SQN' ? 'Pilot' : normalisedRole,
+        role: normalisedRole,
         callsign: person?.callsign || preferences.callsign || '',
         secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || '',
         callsignNumber: person?.callsignNumber,
@@ -38223,7 +38223,6 @@ appliedUpdates.forEach(update => {
             const unitCode = String(instructor.unit || '').trim().toUpperCase();
             const inferredQfi = roleText === 'qfi' || roleText === 'instructor';
             const normalisedRole =
-                unitCode === '77SQN' ? 'Pilot' :
                 roleText === 'sim ip' || roleText === 'contractor staff' ? 'SIM IP' :
                 roleText === 'pilot' ? 'Pilot' :
                 roleText === 'qfi' || roleText === 'instructor' ? 'QFI' :
