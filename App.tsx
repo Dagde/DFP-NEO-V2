@@ -32068,8 +32068,10 @@ const App: React.FC = () => {
         const extensionLedger = {
             ...(nextEvent.trainingReportNextEventExtensions || {}),
         } as Record<string, number>;
+        const previousAssessmentKey = String(nextEvent.trainingReportLastExtendedByAssessmentId || '').trim();
         const previousExtension = Number(
             extensionLedger[extensionKey] ||
+            (previousAssessmentKey && previousAssessmentKey !== extensionKey ? extensionLedger[previousAssessmentKey] : 0) ||
             legacyExtensionKeys.map(key => Number(extensionLedger[key] || 0)).find(value => value > 0) ||
             0
         );
@@ -32095,6 +32097,9 @@ const App: React.FC = () => {
                 delete extensionLedger[key];
             }
         });
+        if (previousAssessmentKey && previousAssessmentKey !== extensionKey && Object.prototype.hasOwnProperty.call(extensionLedger, previousAssessmentKey)) {
+            delete extensionLedger[previousAssessmentKey];
+        }
         extensionLedger[extensionKey] = requestedExtension;
 
         const updatedNextEvent: SyllabusItemDetail & Record<string, any> = {
@@ -35366,12 +35371,20 @@ const App: React.FC = () => {
                     const extensionLedger = {
                         ...(updatedTarget.trainingReportNextEventExtensions || {}),
                     } as Record<string, number>;
-                    const previousExtension = Number(extensionLedger[assessmentKey] || 0);
+                    const previousAssessmentKey = String(updatedTarget.trainingReportLastExtendedByAssessmentId || '').trim();
+                    const previousExtension = Number(
+                        extensionLedger[assessmentKey] ||
+                        (previousAssessmentKey && previousAssessmentKey !== assessmentKey ? extensionLedger[previousAssessmentKey] : 0) ||
+                        0
+                    );
                     const delta = requestedExtension - previousExtension;
                     if (Math.abs(delta) >= 0.0001) {
                         const existingFlightOrSimHours = Number(updatedTarget.flightOrSimHours || updatedTarget.duration || 0);
                         const existingDuration = Number(updatedTarget.duration || updatedTarget.flightOrSimHours || 0);
                         const existingTotalEventHours = Number(updatedTarget.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
+                        if (previousAssessmentKey && previousAssessmentKey !== assessmentKey && Object.prototype.hasOwnProperty.call(extensionLedger, previousAssessmentKey)) {
+                            delete extensionLedger[previousAssessmentKey];
+                        }
                         extensionLedger[assessmentKey] = requestedExtension;
                         updatedTarget = {
                             ...updatedTarget,

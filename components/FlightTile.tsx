@@ -134,9 +134,8 @@ const getTrainingReportExtensionNotesForTile = (event: ScheduleEvent | EventSegm
     if (extensionEntries.length === 0) return '';
 
     const eventCode = String(event.flightNumber || (event as any).eventCode || 'this event').trim() || 'this event';
-    return Array.from(new Set(extensionEntries))
-        .map(hours => `${hours} hrs added to ${eventCode}.`)
-        .join('\n');
+    const currentHours = extensionEntries[extensionEntries.length - 1];
+    return `${currentHours} hrs added to ${eventCode}.`;
 };
 
 const getPreFlightNotesForTile = (event: ScheduleEvent | EventSegment): string => {
@@ -381,6 +380,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     : '';
   const preFlightNotesForTile = getPreFlightNotesForTile(event);
   const [showPreFlightNotesTooltip, setShowPreFlightNotesTooltip] = useState(false);
+  const [preFlightNotesTooltipPlacement, setPreFlightNotesTooltipPlacement] = useState<'above' | 'below'>('above');
+  const preFlightNotesMarkerRef = useRef<HTMLDivElement | null>(null);
   const preFlightNotesTooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearPreFlightNotesTooltipTimer = () => {
@@ -1029,12 +1030,15 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
       return (
           <div
+              ref={preFlightNotesMarkerRef}
               className="group absolute bottom-0 right-0 z-40 h-3 w-3 cursor-help"
               aria-label={`Pre-flight Notes: ${preFlightNotesForTile}`}
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
               onMouseEnter={() => {
                   clearPreFlightNotesTooltipTimer();
+                  const markerRect = preFlightNotesMarkerRef.current?.getBoundingClientRect();
+                  setPreFlightNotesTooltipPlacement(markerRect && markerRect.top < 120 ? 'below' : 'above');
                   preFlightNotesTooltipTimerRef.current = setTimeout(() => {
                       setShowPreFlightNotesTooltip(true);
                   }, 1000);
@@ -1049,7 +1053,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                   style={{ borderBottomColor: '#c66a2b' }}
               />
               <div
-                  className={`pointer-events-none absolute bottom-3 right-0 whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl ${showPreFlightNotesTooltip ? 'block' : 'hidden'}`}
+                  className={`pointer-events-none absolute ${preFlightNotesTooltipPlacement === 'below' ? 'top-3' : 'bottom-3'} right-0 whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl ${showPreFlightNotesTooltip ? 'block' : 'hidden'}`}
                   style={{
                       backgroundColor: 'rgba(15, 23, 42, 0.98)',
                       borderColor: 'rgba(198, 106, 43, 0.72)',

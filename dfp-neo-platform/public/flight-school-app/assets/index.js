@@ -8322,7 +8322,8 @@ const getTrainingReportExtensionNotesForTile = (event) => {
   const extensionEntries = Object.values(event.trainingReportNextEventExtensions || {}).map(formatTrainingReportExtensionHours).filter(Boolean);
   if (extensionEntries.length === 0) return "";
   const eventCode2 = String(event.flightNumber || event.eventCode || "this event").trim() || "this event";
-  return Array.from(new Set(extensionEntries)).map((hours) => `${hours} hrs added to ${eventCode2}.`).join("\n");
+  const currentHours = extensionEntries[extensionEntries.length - 1];
+  return `${currentHours} hrs added to ${eventCode2}.`;
 };
 const getPreFlightNotesForTile = (event) => {
   const tileEligible = event.type === "flight" || event.type === "ftd" || event.type === "cpt";
@@ -8475,6 +8476,8 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
   const preFlightNotesForTile = getPreFlightNotesForTile(event);
   const [showPreFlightNotesTooltip, setShowPreFlightNotesTooltip] = reactExports.useState(false);
+  const [preFlightNotesTooltipPlacement, setPreFlightNotesTooltipPlacement] = reactExports.useState("above");
+  const preFlightNotesMarkerRef = reactExports.useRef(null);
   const preFlightNotesTooltipTimerRef = reactExports.useRef(null);
   const clearPreFlightNotesTooltipTimer = () => {
     if (preFlightNotesTooltipTimerRef.current) {
@@ -9000,12 +9003,15 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
+        ref: preFlightNotesMarkerRef,
         className: "group absolute bottom-0 right-0 z-40 h-3 w-3 cursor-help",
         "aria-label": `Pre-flight Notes: ${preFlightNotesForTile}`,
         onClick: (e) => e.stopPropagation(),
         onMouseDown: (e) => e.stopPropagation(),
         onMouseEnter: () => {
           clearPreFlightNotesTooltipTimer();
+          const markerRect = preFlightNotesMarkerRef.current?.getBoundingClientRect();
+          setPreFlightNotesTooltipPlacement(markerRect && markerRect.top < 120 ? "below" : "above");
           preFlightNotesTooltipTimerRef.current = setTimeout(() => {
             setShowPreFlightNotesTooltip(true);
           }, 1e3);
@@ -9025,7 +9031,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
-              className: `pointer-events-none absolute bottom-3 right-0 whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl ${showPreFlightNotesTooltip ? "block" : "hidden"}`,
+              className: `pointer-events-none absolute ${preFlightNotesTooltipPlacement === "below" ? "top-3" : "bottom-3"} right-0 whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl ${showPreFlightNotesTooltip ? "block" : "hidden"}`,
               style: {
                 backgroundColor: "rgba(15, 23, 42, 0.98)",
                 borderColor: "rgba(198, 106, 43, 0.72)",
@@ -109339,8 +109345,9 @@ ${error instanceof Error ? error.message : String(error)}`,
     const extensionLedger = {
       ...nextEvent.trainingReportNextEventExtensions || {}
     };
+    const previousAssessmentKey = String(nextEvent.trainingReportLastExtendedByAssessmentId || "").trim();
     const previousExtension = Number(
-      extensionLedger[extensionKey] || legacyExtensionKeys.map((key) => Number(extensionLedger[key] || 0)).find((value) => value > 0) || 0
+      extensionLedger[extensionKey] || (previousAssessmentKey && previousAssessmentKey !== extensionKey ? extensionLedger[previousAssessmentKey] : 0) || legacyExtensionKeys.map((key) => Number(extensionLedger[key] || 0)).find((value) => value > 0) || 0
     );
     const requestedExtension = Number(assessment.dpcoFollowUp?.extraHours || 0);
     const delta = requestedExtension - previousExtension;
@@ -109363,6 +109370,9 @@ ${error instanceof Error ? error.message : String(error)}`,
         delete extensionLedger[key];
       }
     });
+    if (previousAssessmentKey && previousAssessmentKey !== extensionKey && Object.prototype.hasOwnProperty.call(extensionLedger, previousAssessmentKey)) {
+      delete extensionLedger[previousAssessmentKey];
+    }
     extensionLedger[extensionKey] = requestedExtension;
     const updatedNextEvent = {
       ...nextEvent,
@@ -112032,12 +112042,18 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           const extensionLedger = {
             ...updatedTarget.trainingReportNextEventExtensions || {}
           };
-          const previousExtension = Number(extensionLedger[assessmentKey] || 0);
+          const previousAssessmentKey = String(updatedTarget.trainingReportLastExtendedByAssessmentId || "").trim();
+          const previousExtension = Number(
+            extensionLedger[assessmentKey] || (previousAssessmentKey && previousAssessmentKey !== assessmentKey ? extensionLedger[previousAssessmentKey] : 0) || 0
+          );
           const delta = requestedExtension - previousExtension;
           if (Math.abs(delta) >= 1e-4) {
             const existingFlightOrSimHours = Number(updatedTarget.flightOrSimHours || updatedTarget.duration || 0);
             const existingDuration = Number(updatedTarget.duration || updatedTarget.flightOrSimHours || 0);
             const existingTotalEventHours = Number(updatedTarget.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
+            if (previousAssessmentKey && previousAssessmentKey !== assessmentKey && Object.prototype.hasOwnProperty.call(extensionLedger, previousAssessmentKey)) {
+              delete extensionLedger[previousAssessmentKey];
+            }
             extensionLedger[assessmentKey] = requestedExtension;
             updatedTarget = {
               ...updatedTarget,
