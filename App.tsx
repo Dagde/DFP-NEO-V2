@@ -29823,7 +29823,7 @@ const App: React.FC = () => {
                     !assessment.dpcoFollowUp &&
                     trainee.fullName === assessment.traineeFullName
                 ) {
-                    const persistedLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+                    const persistedLmp = await loadPersistedTraineeLmp(trainee) || traineeLMPs.get(trainee.fullName);
                     const sourceIndex = Array.isArray(persistedLmp)
                         ? persistedLmp.findIndex(item => (
                             String(item.id || '') === String(assessment.eventId || '') ||
@@ -29897,7 +29897,7 @@ const App: React.FC = () => {
                 return updated;
             });
         }
-    }, []);
+    }, [loadPersistedTraineeLmp, pushDfpDataDiag, traineeLMPs]);
 
     useEffect(() => {
         if (activeView !== 'PT051' || !eventForPt051 || !selectedTraineeForHateSheet) return;
@@ -31730,11 +31730,15 @@ const App: React.FC = () => {
             return;
         }
 
-        const originalLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+        const persistedLmp = await loadPersistedTraineeLmp(trainee);
+        const stateLmp = traineeLMPs.get(trainee.fullName);
+        const originalLmp = persistedLmp || stateLmp;
         pushDfpDataDiag('report-lmp:extra-event:original-lmp', {
             assessmentId: assessment.id,
             traineeFullName: trainee.fullName,
-            source: traineeLMPs.has(trainee.fullName) ? 'state' : 'persisted-load',
+            source: persistedLmp ? 'persisted-first' : stateLmp ? 'state-fallback' : 'missing',
+            persistedCount: Array.isArray(persistedLmp) ? persistedLmp.length : 0,
+            stateCount: Array.isArray(stateLmp) ? stateLmp.length : 0,
             ...summariseTrainingReportLmpItems(originalLmp),
         });
         if (!originalLmp || originalLmp.length === 0) {
@@ -31932,11 +31936,15 @@ const App: React.FC = () => {
             return;
         }
 
-        const originalLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+        const persistedLmp = await loadPersistedTraineeLmp(trainee);
+        const stateLmp = traineeLMPs.get(trainee.fullName);
+        const originalLmp = persistedLmp || stateLmp;
         pushDfpDataDiag('report-lmp:extend-next:original-lmp', {
             assessmentId: assessment.id,
             traineeFullName: trainee.fullName,
-            source: traineeLMPs.has(trainee.fullName) ? 'state' : 'persisted-load',
+            source: persistedLmp ? 'persisted-first' : stateLmp ? 'state-fallback' : 'missing',
+            persistedCount: Array.isArray(persistedLmp) ? persistedLmp.length : 0,
+            stateCount: Array.isArray(stateLmp) ? stateLmp.length : 0,
             ...summariseTrainingReportLmpItems(originalLmp),
         });
         if (!originalLmp || originalLmp.length === 0) {
@@ -32005,10 +32013,19 @@ const App: React.FC = () => {
 
         const nextEvent = originalLmp[nextEventIndex] as SyllabusItemDetail & Record<string, any>;
         const extensionKey = assessment.id || assessment.eventId;
+        const legacyExtensionKeys = [
+            assessment.eventId,
+            `${assessment.eventId}`,
+            `${assessment.flightNumber}-${assessment.traineeFullName}`,
+        ].map(value => String(value || '').trim()).filter(Boolean);
         const extensionLedger = {
             ...(nextEvent.trainingReportNextEventExtensions || {}),
         } as Record<string, number>;
-        const previousExtension = Number(extensionLedger[extensionKey] || 0);
+        const previousExtension = Number(
+            extensionLedger[extensionKey] ||
+            legacyExtensionKeys.map(key => Number(extensionLedger[key] || 0)).find(value => value > 0) ||
+            0
+        );
         const requestedExtension = Number(assessment.dpcoFollowUp?.extraHours || 0);
         const delta = requestedExtension - previousExtension;
         if (Math.abs(delta) < 0.0001) {
@@ -32026,6 +32043,11 @@ const App: React.FC = () => {
         const existingFlightOrSimHours = Number(nextEvent.flightOrSimHours || nextEvent.duration || 0);
         const existingDuration = Number(nextEvent.duration || nextEvent.flightOrSimHours || 0);
         const existingTotalEventHours = Number(nextEvent.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
+        legacyExtensionKeys.forEach(key => {
+            if (key !== extensionKey && Object.prototype.hasOwnProperty.call(extensionLedger, key)) {
+                delete extensionLedger[key];
+            }
+        });
         extensionLedger[extensionKey] = requestedExtension;
 
         const updatedNextEvent: SyllabusItemDetail & Record<string, any> = {

@@ -107462,7 +107462,7 @@ ${"=".repeat(60)}`);
       }
       if (assessment?.eventId && assessment?.traineeFullName) {
         if (assessment.dcoResult === "DPCO" && !assessment.dpcoFollowUp && trainee.fullName === assessment.traineeFullName) {
-          const persistedLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+          const persistedLmp = await loadPersistedTraineeLmp(trainee) || traineeLMPs.get(trainee.fullName);
           const sourceIndex = Array.isArray(persistedLmp) ? persistedLmp.findIndex((item) => String(item.id || "") === String(assessment.eventId || "") || String(item.masterEventId || "") === String(assessment.eventId || "") || String(item.code || "").trim().toUpperCase() === String(assessment.flightNumber || "").trim().toUpperCase()) : -1;
           const nextFlightOrSim = Array.isArray(persistedLmp) ? persistedLmp.find((item, index) => index > sourceIndex && (item.type === "Flight" || item.type === "FTD") && item.trainingReportNextEventExtensions && typeof item.trainingReportNextEventExtensions === "object") : void 0;
           const extensionLedger = nextFlightOrSim?.trainingReportNextEventExtensions || {};
@@ -107518,7 +107518,7 @@ ${"=".repeat(60)}`);
         return updated;
       });
     }
-  }, []);
+  }, [loadPersistedTraineeLmp, pushDfpDataDiag, traineeLMPs]);
   reactExports.useEffect(() => {
     if (activeView !== "PT051" || !eventForPt051 || !selectedTraineeForHateSheet) return;
     const loadKey = `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
@@ -109026,11 +109026,15 @@ ${error instanceof Error ? error.message : String(error)}`,
       console.warn("[Training Report] Could not insert extra event: trainee not found", assessment.traineeFullName);
       return;
     }
-    const originalLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+    const persistedLmp = await loadPersistedTraineeLmp(trainee);
+    const stateLmp = traineeLMPs.get(trainee.fullName);
+    const originalLmp = persistedLmp || stateLmp;
     pushDfpDataDiag("report-lmp:extra-event:original-lmp", {
       assessmentId: assessment.id,
       traineeFullName: trainee.fullName,
-      source: traineeLMPs.has(trainee.fullName) ? "state" : "persisted-load",
+      source: persistedLmp ? "persisted-first" : stateLmp ? "state-fallback" : "missing",
+      persistedCount: Array.isArray(persistedLmp) ? persistedLmp.length : 0,
+      stateCount: Array.isArray(stateLmp) ? stateLmp.length : 0,
       ...summariseTrainingReportLmpItems(originalLmp)
     });
     if (!originalLmp || originalLmp.length === 0) {
@@ -109152,16 +109156,16 @@ ${error instanceof Error ? error.message : String(error)}`,
       }
     });
     try {
-      const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+      const persistedLmp2 = await persistTraineeLmp(trainee, updatedLmp);
       pushDfpDataDiag("report-lmp:extra-event:persisted", {
         assessmentId: assessment.id,
         traineeFullName: trainee.fullName,
         extraEventCode,
-        ...summariseTrainingReportLmpItems(persistedLmp)
+        ...summariseTrainingReportLmpItems(persistedLmp2)
       });
       setTraineeLMPs((prev) => {
         const updated = new Map(prev);
-        updated.set(trainee.fullName, persistedLmp);
+        updated.set(trainee.fullName, persistedLmp2);
         return updated;
       });
       logAudit(
@@ -109214,11 +109218,15 @@ ${error instanceof Error ? error.message : String(error)}`,
       console.warn("[Training Report] Could not extend next event: trainee not found", assessment.traineeFullName);
       return;
     }
-    const originalLmp = traineeLMPs.get(trainee.fullName) || await loadPersistedTraineeLmp(trainee);
+    const persistedLmp = await loadPersistedTraineeLmp(trainee);
+    const stateLmp = traineeLMPs.get(trainee.fullName);
+    const originalLmp = persistedLmp || stateLmp;
     pushDfpDataDiag("report-lmp:extend-next:original-lmp", {
       assessmentId: assessment.id,
       traineeFullName: trainee.fullName,
-      source: traineeLMPs.has(trainee.fullName) ? "state" : "persisted-load",
+      source: persistedLmp ? "persisted-first" : stateLmp ? "state-fallback" : "missing",
+      persistedCount: Array.isArray(persistedLmp) ? persistedLmp.length : 0,
+      stateCount: Array.isArray(stateLmp) ? stateLmp.length : 0,
       ...summariseTrainingReportLmpItems(originalLmp)
     });
     if (!originalLmp || originalLmp.length === 0) {
@@ -109281,10 +109289,17 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     const nextEvent = originalLmp[nextEventIndex];
     const extensionKey = assessment.id || assessment.eventId;
+    const legacyExtensionKeys = [
+      assessment.eventId,
+      `${assessment.eventId}`,
+      `${assessment.flightNumber}-${assessment.traineeFullName}`
+    ].map((value) => String(value || "").trim()).filter(Boolean);
     const extensionLedger = {
       ...nextEvent.trainingReportNextEventExtensions || {}
     };
-    const previousExtension = Number(extensionLedger[extensionKey] || 0);
+    const previousExtension = Number(
+      extensionLedger[extensionKey] || legacyExtensionKeys.map((key) => Number(extensionLedger[key] || 0)).find((value) => value > 0) || 0
+    );
     const requestedExtension = Number(assessment.dpcoFollowUp?.extraHours || 0);
     const delta = requestedExtension - previousExtension;
     if (Math.abs(delta) < 1e-4) {
@@ -109301,6 +109316,11 @@ ${error instanceof Error ? error.message : String(error)}`,
     const existingFlightOrSimHours = Number(nextEvent.flightOrSimHours || nextEvent.duration || 0);
     const existingDuration = Number(nextEvent.duration || nextEvent.flightOrSimHours || 0);
     const existingTotalEventHours = Number(nextEvent.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
+    legacyExtensionKeys.forEach((key) => {
+      if (key !== extensionKey && Object.prototype.hasOwnProperty.call(extensionLedger, key)) {
+        delete extensionLedger[key];
+      }
+    });
     extensionLedger[extensionKey] = requestedExtension;
     const updatedNextEvent = {
       ...nextEvent,
@@ -109335,16 +109355,16 @@ ${error instanceof Error ? error.message : String(error)}`,
       }
     });
     try {
-      const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+      const persistedLmp2 = await persistTraineeLmp(trainee, updatedLmp);
       pushDfpDataDiag("report-lmp:extend-next:persisted", {
         assessmentId: assessment.id,
         traineeFullName: trainee.fullName,
         nextEventCode: nextEvent.code,
-        ...summariseTrainingReportLmpItems(persistedLmp)
+        ...summariseTrainingReportLmpItems(persistedLmp2)
       });
       setTraineeLMPs((prev) => {
         const updated = new Map(prev);
-        updated.set(trainee.fullName, persistedLmp);
+        updated.set(trainee.fullName, persistedLmp2);
         return updated;
       });
       logAudit(
