@@ -1,4 +1,4 @@
-import { r as reactExports, j as jsxRuntimeExports, R as ReactDOM, c as clientExports, a as React, b as ReactDOM$1 } from "./vendor-react.js";
+import { r as reactExports, j as jsxRuntimeExports, R as ReactDOM, c as clientExports, a as React, b as reactDomExports, d as ReactDOM$1 } from "./vendor-react.js";
 import { E } from "./vendor-pdf.js";
 (function polyfill() {
   const relList = document.createElement("link").relList;
@@ -9015,57 +9015,61 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   };
   const renderPreFlightNotesMarker = () => {
     if (!preFlightNotesForTile || isPreview) return null;
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        ref: preFlightNotesMarkerRef,
-        className: "group absolute bottom-0 right-0 z-40 h-3 w-3 cursor-help",
-        "aria-label": `Pre-flight Notes: ${preFlightNotesForTile}`,
-        onClick: (e) => e.stopPropagation(),
-        onMouseDown: (e) => e.stopPropagation(),
-        onMouseEnter: () => {
-          clearPreFlightNotesTooltipTimer();
-          updatePreFlightNotesTooltipPosition();
-          preFlightNotesTooltipTimerRef.current = setTimeout(() => {
+    const tooltip = showPreFlightNotesTooltip && typeof document !== "undefined" ? reactDomExports.createPortal(
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "pointer-events-none fixed z-[9999] whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl",
+          style: {
+            backgroundColor: "rgba(15, 23, 42, 0.98)",
+            borderColor: "rgba(198, 106, 43, 0.72)",
+            color: "#fed7aa",
+            width: "max-content",
+            maxWidth: "min(420px, 80vw)",
+            top: `${preFlightNotesTooltipPosition.top}px`,
+            left: `${preFlightNotesTooltipPosition.left}px`,
+            transform: preFlightNotesTooltipPlacement === "above" ? "translate(-100%, -100%)" : "translateX(-100%)"
+          },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-0.5 text-[8px] font-bold uppercase tracking-wide", style: { color: "#fb923c" }, children: "Pre-flight Notes" }),
+            preFlightNotesForTile
+          ]
+        }
+      ),
+      document.body
+    ) : null;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          ref: preFlightNotesMarkerRef,
+          className: "group absolute bottom-0 right-0 z-40 h-3 w-3 cursor-help",
+          "aria-label": `Pre-flight Notes: ${preFlightNotesForTile}`,
+          onClick: (e) => e.stopPropagation(),
+          onMouseDown: (e) => e.stopPropagation(),
+          onMouseEnter: () => {
+            clearPreFlightNotesTooltipTimer();
             updatePreFlightNotesTooltipPosition();
-            setShowPreFlightNotesTooltip(true);
-          }, 1e3);
-        },
-        onMouseLeave: () => {
-          clearPreFlightNotesTooltipTimer();
-          setShowPreFlightNotesTooltip(false);
-        },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            preFlightNotesTooltipTimerRef.current = setTimeout(() => {
+              updatePreFlightNotesTooltipPosition();
+              setShowPreFlightNotesTooltip(true);
+            }, 1e3);
+          },
+          onMouseLeave: () => {
+            clearPreFlightNotesTooltipTimer();
+            setShowPreFlightNotesTooltip(false);
+          },
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
             {
               className: "absolute bottom-0 right-0 h-0 w-0 border-b-[9px] border-l-[9px] border-l-transparent",
               style: { borderBottomColor: "#c66a2b" }
             }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "div",
-            {
-              className: `pointer-events-none fixed z-[9999] whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl ${showPreFlightNotesTooltip ? "block" : "hidden"}`,
-              style: {
-                backgroundColor: "rgba(15, 23, 42, 0.98)",
-                borderColor: "rgba(198, 106, 43, 0.72)",
-                color: "#fed7aa",
-                width: "max-content",
-                maxWidth: "min(420px, 80vw)",
-                top: `${preFlightNotesTooltipPosition.top}px`,
-                left: `${preFlightNotesTooltipPosition.left}px`,
-                transform: preFlightNotesTooltipPlacement === "above" ? "translate(-100%, -100%)" : "translateX(-100%)"
-              },
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-0.5 text-[8px] font-bold uppercase tracking-wide", style: { color: "#fb923c" }, children: "Pre-flight Notes" }),
-                preFlightNotesForTile
-              ]
-            }
           )
-        ]
-      }
-    );
+        }
+      ),
+      tooltip
+    ] });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
@@ -109581,33 +109585,42 @@ ${error instanceof Error ? error.message : String(error)}`,
     const targetEvent = originalLmp[nextEventIndex];
     const baseNotes = typeof targetEvent.trainingReportBaseNotes === "string" ? targetEvent.trainingReportBaseNotes : String(targetEvent.notes || "");
     const nextNotes = stripGeneratedTrainingReportFollowUpLines(assessment.trainingReportNotes);
-    if (!nextNotes) {
-      pushDfpDataDiag("report-notes:forward:no-free-text-after-clean", {
-        assessmentId: assessment.id,
-        traineeFullName: trainee.fullName,
-        sourceCode: sourceItem.code,
-        targetCode: targetEvent.code
-      });
-      return;
-    }
     const forwardedNotes = {
       ...targetEvent.trainingReportForwardedNotes || {}
     };
     const sourceCodeForNotes = String(sourceItem.code || assessment.flightNumber || "").trim();
+    let removedStaleForwardedNotes = false;
     Object.entries(forwardedNotes).forEach(([key, entry]) => {
       const entrySourceCode = String(entry?.sourceCode || "").trim();
       if (key !== assessmentKey && sourceCodeForNotes && entrySourceCode === sourceCodeForNotes) {
         delete forwardedNotes[key];
+        removedStaleForwardedNotes = true;
       }
     });
-    forwardedNotes[assessmentKey] = {
-      sourceCode: sourceCodeForNotes,
-      notes: nextNotes
-    };
+    if (!nextNotes) {
+      if (Object.prototype.hasOwnProperty.call(forwardedNotes, assessmentKey)) {
+        delete forwardedNotes[assessmentKey];
+        removedStaleForwardedNotes = true;
+      }
+      if (!removedStaleForwardedNotes) {
+        pushDfpDataDiag("report-notes:forward:no-free-text-after-clean", {
+          assessmentId: assessment.id,
+          traineeFullName: trainee.fullName,
+          sourceCode: sourceItem.code,
+          targetCode: targetEvent.code
+        });
+        return;
+      }
+    } else {
+      forwardedNotes[assessmentKey] = {
+        sourceCode: sourceCodeForNotes,
+        notes: nextNotes
+      };
+    }
     const updatedTargetEvent = {
       ...targetEvent,
       trainingReportBaseNotes: baseNotes,
-      trainingReportForwardedNotes: forwardedNotes,
+      trainingReportForwardedNotes: Object.keys(forwardedNotes).length > 0 ? forwardedNotes : void 0,
       trainingReportLastForwardedNotesAssessmentId: assessmentKey,
       notes: baseNotes
     };
@@ -112130,21 +112143,36 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           };
           const nextNotes = stripGeneratedTrainingReportFollowUpLines(assessment.trainingReportNotes);
           const previousNotes = String(existingForwardedNotes[assessmentKey]?.notes || "").trim();
+          const sourceCodeForNotes = String(sourceItem.code || assessment.flightNumber || "").trim();
+          let removedStaleForwardedNotes = false;
+          Object.entries(existingForwardedNotes).forEach(([key, entry]) => {
+            const entrySourceCode = String(entry?.sourceCode || "").trim();
+            if (key !== assessmentKey && sourceCodeForNotes && entrySourceCode === sourceCodeForNotes) {
+              delete existingForwardedNotes[key];
+              removedStaleForwardedNotes = true;
+            }
+          });
           if (!nextNotes) {
+            if (Object.prototype.hasOwnProperty.call(existingForwardedNotes, assessmentKey)) {
+              delete existingForwardedNotes[assessmentKey];
+              removedStaleForwardedNotes = true;
+            }
+            if (removedStaleForwardedNotes) {
+              updatedTarget = {
+                ...updatedTarget,
+                trainingReportBaseNotes: typeof updatedTarget.trainingReportBaseNotes === "string" ? updatedTarget.trainingReportBaseNotes : String(updatedTarget.notes || ""),
+                trainingReportForwardedNotes: Object.keys(existingForwardedNotes).length > 0 ? existingForwardedNotes : void 0,
+                trainingReportLastForwardedNotesAssessmentId: assessmentKey
+              };
+              changed = true;
+            }
             updates.push({
               assessmentId: assessmentKey,
               sourceCode: sourceItem.code,
               targetCode: targetItem.code,
-              outcome: "notes-generated-prefix-only"
+              outcome: removedStaleForwardedNotes ? "removed-forwarded-notes" : "notes-generated-prefix-only"
             });
           } else if (previousNotes !== nextNotes) {
-            const sourceCodeForNotes = String(sourceItem.code || assessment.flightNumber || "").trim();
-            Object.entries(existingForwardedNotes).forEach(([key, entry]) => {
-              const entrySourceCode = String(entry?.sourceCode || "").trim();
-              if (key !== assessmentKey && sourceCodeForNotes && entrySourceCode === sourceCodeForNotes) {
-                delete existingForwardedNotes[key];
-              }
-            });
             existingForwardedNotes[assessmentKey] = {
               sourceCode: sourceCodeForNotes,
               notes: nextNotes
@@ -112161,6 +112189,22 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               sourceCode: sourceItem.code,
               targetCode: targetItem.code,
               outcome: "forwarded-notes",
+              noteLength: nextNotes.length,
+              forwardedKeys: Object.keys(existingForwardedNotes)
+            });
+          } else if (removedStaleForwardedNotes) {
+            updatedTarget = {
+              ...updatedTarget,
+              trainingReportBaseNotes: typeof updatedTarget.trainingReportBaseNotes === "string" ? updatedTarget.trainingReportBaseNotes : String(updatedTarget.notes || ""),
+              trainingReportForwardedNotes: Object.keys(existingForwardedNotes).length > 0 ? existingForwardedNotes : void 0,
+              trainingReportLastForwardedNotesAssessmentId: assessmentKey
+            };
+            changed = true;
+            updates.push({
+              assessmentId: assessmentKey,
+              sourceCode: sourceItem.code,
+              targetCode: targetItem.code,
+              outcome: "removed-stale-forwarded-notes",
               noteLength: nextNotes.length,
               forwardedKeys: Object.keys(existingForwardedNotes)
             });

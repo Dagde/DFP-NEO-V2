@@ -1,4 +1,4 @@
-import { d as commonjsGlobal, g as getDefaultExportFromCjs } from "./vendor-react.js";
+import { e as commonjsGlobal, g as getDefaultExportFromCjs } from "./vendor-react.js";
 import { _ as _typeof$1 } from "./vendor-pdf.js";
 var es_promise = {};
 var es_promise_constructor = {};

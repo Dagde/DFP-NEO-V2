@@ -1,5 +1,6 @@
 
 import React, { MouseEvent, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ScheduleEvent, Trainee, EventSegment } from '../types';
 import {
   AircraftNumberSettings,
@@ -1043,8 +1044,34 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
   const renderPreFlightNotesMarker = () => {
       if (!preFlightNotesForTile || isPreview) return null;
+      const tooltip = showPreFlightNotesTooltip && typeof document !== 'undefined'
+          ? createPortal(
+              <div
+                  className="pointer-events-none fixed z-[9999] whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl"
+                  style={{
+                      backgroundColor: 'rgba(15, 23, 42, 0.98)',
+                      borderColor: 'rgba(198, 106, 43, 0.72)',
+                      color: '#fed7aa',
+                      width: 'max-content',
+                      maxWidth: 'min(420px, 80vw)',
+                      top: `${preFlightNotesTooltipPosition.top}px`,
+                      left: `${preFlightNotesTooltipPosition.left}px`,
+                      transform: preFlightNotesTooltipPlacement === 'above'
+                          ? 'translate(-100%, -100%)'
+                          : 'translateX(-100%)',
+                  }}
+              >
+                  <div className="mb-0.5 text-[8px] font-bold uppercase tracking-wide" style={{ color: '#fb923c' }}>
+                      Pre-flight Notes
+                  </div>
+                  {preFlightNotesForTile}
+              </div>,
+              document.body
+          )
+          : null;
 
       return (
+          <>
           <div
               ref={preFlightNotesMarkerRef}
               className="group absolute bottom-0 right-0 z-40 h-3 w-3 cursor-help"
@@ -1068,27 +1095,9 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                   className="absolute bottom-0 right-0 h-0 w-0 border-b-[9px] border-l-[9px] border-l-transparent"
                   style={{ borderBottomColor: '#c66a2b' }}
               />
-              <div
-                  className={`pointer-events-none fixed z-[9999] whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl ${showPreFlightNotesTooltip ? 'block' : 'hidden'}`}
-                  style={{
-                      backgroundColor: 'rgba(15, 23, 42, 0.98)',
-                      borderColor: 'rgba(198, 106, 43, 0.72)',
-                      color: '#fed7aa',
-                      width: 'max-content',
-                      maxWidth: 'min(420px, 80vw)',
-                      top: `${preFlightNotesTooltipPosition.top}px`,
-                      left: `${preFlightNotesTooltipPosition.left}px`,
-                      transform: preFlightNotesTooltipPlacement === 'above'
-                          ? 'translate(-100%, -100%)'
-                          : 'translateX(-100%)',
-                  }}
-              >
-                  <div className="mb-0.5 text-[8px] font-bold uppercase tracking-wide" style={{ color: '#fb923c' }}>
-                      Pre-flight Notes
-                  </div>
-                  {preFlightNotesForTile}
-              </div>
           </div>
+          {tooltip}
+          </>
       );
   };
 

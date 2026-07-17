@@ -32308,33 +32308,42 @@ const App: React.FC = () => {
             ? targetEvent.trainingReportBaseNotes
             : String(targetEvent.notes || '');
         const nextNotes = stripGeneratedTrainingReportFollowUpLines(assessment.trainingReportNotes);
-        if (!nextNotes) {
-            pushDfpDataDiag('report-notes:forward:no-free-text-after-clean', {
-                assessmentId: assessment.id,
-                traineeFullName: trainee.fullName,
-                sourceCode: sourceItem.code,
-                targetCode: targetEvent.code,
-            });
-            return;
-        }
         const forwardedNotes = {
             ...(targetEvent.trainingReportForwardedNotes || {}),
         } as Record<string, { sourceCode?: string; notes?: string }>;
         const sourceCodeForNotes = String(sourceItem.code || assessment.flightNumber || '').trim();
+        let removedStaleForwardedNotes = false;
         Object.entries(forwardedNotes).forEach(([key, entry]) => {
             const entrySourceCode = String(entry?.sourceCode || '').trim();
             if (key !== assessmentKey && sourceCodeForNotes && entrySourceCode === sourceCodeForNotes) {
                 delete forwardedNotes[key];
+                removedStaleForwardedNotes = true;
             }
         });
-        forwardedNotes[assessmentKey] = {
-            sourceCode: sourceCodeForNotes,
-            notes: nextNotes,
-        };
+        if (!nextNotes) {
+            if (Object.prototype.hasOwnProperty.call(forwardedNotes, assessmentKey)) {
+                delete forwardedNotes[assessmentKey];
+                removedStaleForwardedNotes = true;
+            }
+            if (!removedStaleForwardedNotes) {
+                pushDfpDataDiag('report-notes:forward:no-free-text-after-clean', {
+                    assessmentId: assessment.id,
+                    traineeFullName: trainee.fullName,
+                    sourceCode: sourceItem.code,
+                    targetCode: targetEvent.code,
+                });
+                return;
+            }
+        } else {
+            forwardedNotes[assessmentKey] = {
+                sourceCode: sourceCodeForNotes,
+                notes: nextNotes,
+            };
+        }
         const updatedTargetEvent: SyllabusItemDetail & Record<string, any> = {
             ...targetEvent,
             trainingReportBaseNotes: baseNotes,
-            trainingReportForwardedNotes: forwardedNotes,
+            trainingReportForwardedNotes: Object.keys(forwardedNotes).length > 0 ? forwardedNotes : undefined,
             trainingReportLastForwardedNotesAssessmentId: assessmentKey,
             notes: baseNotes,
         };
@@ -35447,21 +35456,38 @@ const App: React.FC = () => {
                     } as Record<string, { sourceCode?: string; notes?: string }>;
                     const nextNotes = stripGeneratedTrainingReportFollowUpLines(assessment.trainingReportNotes);
                     const previousNotes = String(existingForwardedNotes[assessmentKey]?.notes || '').trim();
+                    const sourceCodeForNotes = String(sourceItem.code || assessment.flightNumber || '').trim();
+                    let removedStaleForwardedNotes = false;
+                    Object.entries(existingForwardedNotes).forEach(([key, entry]) => {
+                        const entrySourceCode = String(entry?.sourceCode || '').trim();
+                        if (key !== assessmentKey && sourceCodeForNotes && entrySourceCode === sourceCodeForNotes) {
+                            delete existingForwardedNotes[key];
+                            removedStaleForwardedNotes = true;
+                        }
+                    });
                     if (!nextNotes) {
+                        if (Object.prototype.hasOwnProperty.call(existingForwardedNotes, assessmentKey)) {
+                            delete existingForwardedNotes[assessmentKey];
+                            removedStaleForwardedNotes = true;
+                        }
+                        if (removedStaleForwardedNotes) {
+                            updatedTarget = {
+                                ...updatedTarget,
+                                trainingReportBaseNotes: typeof updatedTarget.trainingReportBaseNotes === 'string'
+                                    ? updatedTarget.trainingReportBaseNotes
+                                    : String(updatedTarget.notes || ''),
+                                trainingReportForwardedNotes: Object.keys(existingForwardedNotes).length > 0 ? existingForwardedNotes : undefined,
+                                trainingReportLastForwardedNotesAssessmentId: assessmentKey,
+                            };
+                            changed = true;
+                        }
                         updates.push({
                             assessmentId: assessmentKey,
                             sourceCode: sourceItem.code,
                             targetCode: targetItem.code,
-                            outcome: 'notes-generated-prefix-only',
+                            outcome: removedStaleForwardedNotes ? 'removed-forwarded-notes' : 'notes-generated-prefix-only',
                         });
                     } else if (previousNotes !== nextNotes) {
-                        const sourceCodeForNotes = String(sourceItem.code || assessment.flightNumber || '').trim();
-                        Object.entries(existingForwardedNotes).forEach(([key, entry]) => {
-                            const entrySourceCode = String(entry?.sourceCode || '').trim();
-                            if (key !== assessmentKey && sourceCodeForNotes && entrySourceCode === sourceCodeForNotes) {
-                                delete existingForwardedNotes[key];
-                            }
-                        });
                         existingForwardedNotes[assessmentKey] = {
                             sourceCode: sourceCodeForNotes,
                             notes: nextNotes,
@@ -35480,6 +35506,24 @@ const App: React.FC = () => {
                             sourceCode: sourceItem.code,
                             targetCode: targetItem.code,
                             outcome: 'forwarded-notes',
+                            noteLength: nextNotes.length,
+                            forwardedKeys: Object.keys(existingForwardedNotes),
+                        });
+                    } else if (removedStaleForwardedNotes) {
+                        updatedTarget = {
+                            ...updatedTarget,
+                            trainingReportBaseNotes: typeof updatedTarget.trainingReportBaseNotes === 'string'
+                                ? updatedTarget.trainingReportBaseNotes
+                                : String(updatedTarget.notes || ''),
+                            trainingReportForwardedNotes: Object.keys(existingForwardedNotes).length > 0 ? existingForwardedNotes : undefined,
+                            trainingReportLastForwardedNotesAssessmentId: assessmentKey,
+                        };
+                        changed = true;
+                        updates.push({
+                            assessmentId: assessmentKey,
+                            sourceCode: sourceItem.code,
+                            targetCode: targetItem.code,
+                            outcome: 'removed-stale-forwarded-notes',
                             noteLength: nextNotes.length,
                             forwardedKeys: Object.keys(existingForwardedNotes),
                         });

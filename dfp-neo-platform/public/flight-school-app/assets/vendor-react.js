@@ -12460,9 +12460,10 @@ const ReactDOM = /* @__PURE__ */ getDefaultExportFromCjs(reactDomExports);
 export {
   ReactDOM as R,
   React as a,
-  ReactDOM$1 as b,
+  reactDomExports as b,
   clientExports as c,
-  commonjsGlobal as d,
+  ReactDOM$1 as d,
+  commonjsGlobal as e,
   getDefaultExportFromCjs as g,
   jsxRuntimeExports as j,
   reactExports as r
