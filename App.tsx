@@ -4915,6 +4915,66 @@ const normalisePersonnelUnitCode = (value: unknown): string => (
     String(value || '').split('/')[0].trim().toUpperCase().replace(/[\s-]+/g, '')
 );
 
+const normaliseLocationMatchToken = (value: unknown): string => (
+    String(value || '').trim().toUpperCase()
+);
+
+const getConfiguredLocationTokens = (location: any): string[] => {
+    const directTokens = [
+        location?.code,
+        location?.iataCode,
+        location?.iata,
+        location?.icao,
+        location?.icaoCode,
+        location?.name,
+        location?.settings?.legacyCode,
+        location?.settings?.runtimeCode,
+        ...(Array.isArray(location?.aliases) ? location.aliases : []),
+        ...(Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []),
+    ].map(normaliseLocationMatchToken).filter(Boolean);
+    return Array.from(new Set(directTokens));
+};
+
+const getConfiguredLocationAliasesForValue = (platformConfig: any, value: unknown): string[] => {
+    const token = normaliseLocationMatchToken(value);
+    if (!token) return [];
+    const activeLocations = (platformConfig?.locations || [])
+        .filter((location: any) => String(location?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
+    const matchedLocation = activeLocations.find((location: any) => getConfiguredLocationTokens(location).includes(token));
+    return matchedLocation ? getConfiguredLocationTokens(matchedLocation) : [token];
+};
+
+const getConfiguredUnitLocationCode = (platformConfig: any, unitValue: unknown): string => {
+    const unitCode = normalisePersonnelUnitCode(unitValue);
+    if (!unitCode) return '';
+    const configuredUnit = (platformConfig?.units || [])
+        .filter((unit: any) => String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+        .find((unit: any) => normalisePersonnelUnitCode(unit?.code || unit?.name) === unitCode);
+    return String(configuredUnit?.locationCode || configuredUnit?.location || configuredUnit?.baseCode || '').trim();
+};
+
+const locationValueMatchesAliases = (platformConfig: any, value: unknown, activeAliases: Set<string>): boolean => {
+    const valueAliases = getConfiguredLocationAliasesForValue(platformConfig, value);
+    return valueAliases.some(alias => activeAliases.has(alias));
+};
+
+const personMatchesConfiguredLocation = (platformConfig: any, person: any, selectedLocation: unknown): boolean => {
+    const activeAliases = new Set(getConfiguredLocationAliasesForValue(platformConfig, selectedLocation));
+    if (activeAliases.size === 0) return true;
+
+    const personLocation = person?.location;
+    const personUnit = String(person?.unit || '').trim();
+    if (!personLocation && !personUnit) return true;
+    if (personLocation && locationValueMatchesAliases(platformConfig, personLocation, activeAliases)) return true;
+
+    const configuredUnitLocationCode = getConfiguredUnitLocationCode(platformConfig, personUnit);
+    if (configuredUnitLocationCode) {
+        return locationValueMatchesAliases(platformConfig, configuredUnitLocationCode, activeAliases);
+    }
+
+    return !personLocation;
+};
+
 // --- MOCK DATA ---
 import { ESL_DATA } from './mockData';
 import { initializeData } from './lib/dataService';
@@ -19152,18 +19212,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         // Get qualified instructors
         let candidates: Instructor[] = [];
 
-        // Filter instructors by location (not unit) - ESL = East Sale, PEA = Pearce
-        // Use same fallback-to-unit logic as instructorsData useMemo to handle DB staff with null location
-        const locationFullName = config.school === 'ESL' ? 'East Sale' : 'Pearce';
-        const locationShortCode1 = config.school === 'ESL' ? 'ESL' : 'PEA';
-        const locationFilteredInstructors = instructors.filter(i => {
-            if (i.location) return i.location === locationFullName || i.location === locationShortCode1 || i.location === config.school;
-            if (i.unit) {
-                if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
-                if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
-            }
-            return true; // No location or unit info - include by default
-        });
+        const locationFilteredInstructors = instructors.filter(i => personMatchesConfiguredLocation(platformConfig, i, config.school));
 
         if (type === 'ftd') {
             const simIps = locationFilteredInstructors.filter(i => isContractorStaffRole(i) && canContractorStaffWorkEventType('ftd'));
@@ -22723,11 +22772,8 @@ const App: React.FC = () => {
 
         const configuredUnit = (platformConfig?.units || [])
             .filter((unit: any) => unit.status !== 'INACTIVE')
-            .find((unit: any) => String(unit.code || '').trim().toUpperCase() === unitCode);
+            .find((unit: any) => normalisePersonnelUnitCode(unit.code || unit.name) === unitCode);
         if (configuredUnit?.locationCode && isActiveLocationAlias(configuredUnit.locationCode)) return true;
-
-        if (unitCode.startsWith('2FTS')) return isActiveLocationAlias('PEA');
-        if (unitCode.startsWith('1FTS') || unitCode.startsWith('CFS')) return isActiveLocationAlias('ESL');
 
         return !personLocation;
     }, [isActiveLocationAlias, platformConfig]);
@@ -27069,8 +27115,8 @@ const App: React.FC = () => {
                     legacyPlatformLocations,
                     legacyPlatformUnits,
                 });
-                setPlatformConfig(prev => {
-                    const base = prev || {
+                const mergeLegacyPlatformConfig = (baseConfig: any) => {
+                    const base = baseConfig || {
                         organisations: [],
                         locations: [],
                         units: [],
@@ -27100,7 +27146,9 @@ const App: React.FC = () => {
                             ...legacyPlatformUnits.filter(unit => !existingUnitCodes.has(unit.code.toUpperCase())),
                         ],
                     };
-                });
+                };
+                const loadedPlatformConfigForLocation = mergeLegacyPlatformConfig(platformConfig);
+                setPlatformConfig(prev => mergeLegacyPlatformConfig(prev));
                 if (saved.eventLimits) setEventLimits(normaliseEventLimitsForDutySupSessions(saved.eventLimits));
                 if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
                 if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
@@ -27175,20 +27223,10 @@ const App: React.FC = () => {
                     setCoursePercentages(new Map(Object.entries(saved.coursePercentages).map(([k, v]) => [k, v as number])));
                 }
                 if (saved.coursePriorities && saved.coursePriorities.length) {
-                    // Filter coursePriorities by current locality - only include courses
-                    // that have trainees belonging to this school (ESL/PEA)
-                    const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-                    const locationShortCode = school === 'ESL' ? 'ESL' : 'PEA';
+                    // Filter course priorities by the active location using saved person/unit location settings.
                     const localityCourses = saved.coursePriorities.filter(course => {
                         const courseTrainees = allTraineesData.filter(t => t.course === course);
-                        return courseTrainees.some(t => {
-                            if (t.location) return t.location === locationFullName || t.location === locationShortCode || t.location === school;
-                            if (t.unit) {
-                                if (t.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
-                                if (t.unit.startsWith('1FTS') || t.unit.startsWith('CFS')) return locationFullName === 'East Sale';
-                            }
-                            return false;
-                        });
+                        return courseTrainees.some(t => personMatchesConfiguredLocation(loadedPlatformConfigForLocation, t, school));
                     });
                     setCoursePriorities(localityCourses);
                 }
@@ -39298,18 +39336,7 @@ appliedUpdates.forEach(update => {
         console.log('🔍 [PILOT REMEDIES DEBUG] Input allInstructorsData:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, location: i.location })));
         console.log('🔍 [PILOT REMEDIES DEBUG] School:', school);
 
-        // Filter by location (not unit) - ESL = East Sale, PEA = Pearce
-        const locationFilteredInstructors = instructorsData.filter(i => {
-            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-            const locationShortCode = school === 'ESL' ? 'ESL' : 'PEA';
-            if (!i.location && !i.unit) return true;
-            if (i.location) return i.location === locationFullName || i.location === locationShortCode || i.location === school;
-            if (i.unit) {
-                if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
-                if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
-            }
-            return true;
-        });
+        const locationFilteredInstructors = instructorsData.filter(i => personMatchesConfiguredLocation(platformConfig, i, school));
 
         console.log('🔍 [PILOT REMEDIES DEBUG] Location filtered instructors:', locationFilteredInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
 
@@ -39361,7 +39388,7 @@ appliedUpdates.forEach(update => {
             if (eventCountA !== eventCountB) return eventCountA - eventCountB;
             return a.instructor.dutyHours - b.instructor.dutyHours;
         });
-    }, [instructorsData, syllabusDetails, school, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
+    }, [instructorsData, syllabusDetails, school, platformConfig, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
 
     // --- New Iterative Turnaround Fix ---
     const findClosestTurnaroundFix = (
