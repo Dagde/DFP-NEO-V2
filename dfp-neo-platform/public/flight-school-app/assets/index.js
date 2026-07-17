@@ -92737,6 +92737,25 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log("   C. Primary blocker: " + blockerType + " (instr=" + instrTotal + ", ac=" + acTotal + ", area=" + areaTotal + ", sep=" + sepTotal + ")");
     console.log('[FLIGHT-DIAG] END - also in localStorage key "flight_diag_report"');
   };
+  const getScheduledEventDurationSource = (syllabusItem, scheduleType) => {
+    const itemType = String(scheduleType || syllabusItem.type || "").trim().toLowerCase();
+    const isFlightOrFtd = itemType === "flight" || itemType === "ftd";
+    const flightOrSimHours = Number(syllabusItem.flightOrSimHours);
+    if (isFlightOrFtd && Number.isFinite(flightOrSimHours) && flightOrSimHours > 0) {
+      return "individual-flight-sim-hours";
+    }
+    const duration = Number(syllabusItem.duration);
+    if (Number.isFinite(duration) && duration > 0) {
+      return "duration";
+    }
+    return "total-event-hours";
+  };
+  const getScheduledEventDuration = (syllabusItem, scheduleType) => {
+    const source = getScheduledEventDurationSource(syllabusItem, scheduleType);
+    const rawValue = source === "individual-flight-sim-hours" ? syllabusItem.flightOrSimHours : source === "total-event-hours" ? syllabusItem.totalEventHours : syllabusItem.duration;
+    const duration = Number(rawValue);
+    return Number.isFinite(duration) && duration > 0 ? Number(duration.toFixed(2)) : 1;
+  };
   const scheduleList = (list, type, isPlusOne, startTimeBoundary, endTimeBoundary, standbyPrefix, isNightPass, diagnosticLabel, syllabusOverrides, latestStartBefore) => {
     const timeIncrement = getDispatchSearchStepHours(type);
     const listName = diagnosticLabel || `${isNightPass ? "BNF" : type.toUpperCase()} ${isPlusOne ? "Next+1" : "Next"}`;
@@ -92807,6 +92826,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           listDiag.noSyllabusItem++;
           continue;
         }
+        const scheduledDuration = getScheduledEventDuration(syllabusItem, type);
+        const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type);
         const isRemedialItem = isRemedialSyllabusItem(syllabusItem);
         if (type === "flight" && !isPlusOne && !isRemedialItem && isMultiResourceFlightItem(syllabusItem)) {
           traceFormation("skippedSinglePlacements", {
@@ -92845,7 +92866,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               if (placed) break;
               const mustFitFullBookingWindow = isNightPass || type === "ground" || type === "cpt";
               const earliestEventStart = mustFitFullBookingWindow ? space.start + (syllabusItem.preFlightTime || 0) : space.start;
-              const latestEventStart = mustFitFullBookingWindow ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0) : space.end - syllabusItem.duration;
+              const latestEventStart = mustFitFullBookingWindow ? space.end - scheduledDuration - (syllabusItem.postFlightTime || 0) : space.end - scheduledDuration;
               const cappedLatestEventStart = typeof latestStartBefore === "number" ? Math.min(latestEventStart, latestStartBefore - 1e-3) : latestEventStart;
               const possibleSlotCount = cappedLatestEventStart >= earliestEventStart - 1e-3 ? Math.floor((cappedLatestEventStart - earliestEventStart) / timeIncrement + 1e-3) + 1 : 0;
               listDiag.candidateSlots += Math.max(0, possibleSlotCount);
@@ -92858,7 +92879,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                   type,
                   isPlusOne,
                   isNightPass,
-                  duration: syllabusItem.duration,
+                  duration: scheduledDuration,
+                  durationSource: scheduledDurationSource,
+                  lmpDuration: syllabusItem.duration,
+                  lmpFlightOrSimHours: syllabusItem.flightOrSimHours,
                   preFlightTime: syllabusItem.preFlightTime || 0,
                   postFlightTime: syllabusItem.postFlightTime || 0,
                   primaryOnly,
@@ -93090,9 +93114,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     saveNeoBuildDiag(`schedule-list-end:${listName}`);
   };
   const scheduleEvent = (trainee, syllabusItem, startTime, type, isNightPass, isPlusOne, primaryPreferOnly = false, requirePreferredNightAircraft = false, options = {}) => {
+    const scheduledDuration = getScheduledEventDuration(syllabusItem, type);
+    const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type);
     const _isFlight = type === "flight" && !isNightPass;
     const _isNext = !isPlusOne;
-    const _fbEnd = startTime + syllabusItem.duration;
+    const _fbEnd = startTime + scheduledDuration;
     const traineeCounts = eventCounts.get(trainee.fullName);
     const remedialInstructorOverride = getRemedialInstructorOverride(trainee.fullName, syllabusItem.code);
     let forcedInstructorConflictDetails = [];
@@ -93177,7 +93203,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return traceScheduleReject("REMEDIAL_BEFORE_1000");
     }
     if (type === "flight") {
-      const exclusionViolation = getFlightWindowExclusionViolation(startTime, syllabusItem.duration);
+      const exclusionViolation = getFlightWindowExclusionViolation(startTime, scheduledDuration);
       if (exclusionViolation) {
         if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, exclusionViolation.reason);
         return traceScheduleReject("FLYING_WINDOW_EXCLUSION", {
@@ -93187,7 +93213,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           exclusionEnd: exclusionViolation.period.endTime,
           checkedTime: exclusionViolation.checkedTime,
           departureTime: startTime,
-          landingTime: startTime + syllabusItem.duration
+          landingTime: startTime + scheduledDuration
         });
       }
     }
@@ -93233,7 +93259,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     const proposedBookingWindow = {
       start: startTime - (syllabusItem.preFlightTime || 0),
-      end: startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0)
+      end: startTime + scheduledDuration + (syllabusItem.postFlightTime || 0)
     };
     if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_STATICALLY_UNAVAILABLE");
@@ -93269,7 +93295,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     if (options.enforcePersonnelTurnaround && (type === "flight" || type === "ftd" || type === "cpt")) {
       const proposedEventForTurnaround = {
-        duration: syllabusItem.duration,
         flightNumber: syllabusItem.code,
         type
       };
@@ -93282,12 +93307,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           const gap2 = startTime - (existing.startTime + existing.duration);
           return gap2 >= -1e-3 && gap2 < getPriorityTurnaround(existing) - 1e-3;
         }
-        const gap = existing.startTime - (startTime + syllabusItem.duration);
+        const gap = existing.startTime - (startTime + scheduledDuration);
         return gap >= -1e-3 && gap < getPriorityTurnaround(proposedEventForTurnaround) - 1e-3;
       });
       if (traineeTurnaroundConflict) {
         const proposedAfterExisting = startTime >= traineeTurnaroundConflict.startTime;
-        const actualGap = proposedAfterExisting ? startTime - (traineeTurnaroundConflict.startTime + traineeTurnaroundConflict.duration) : traineeTurnaroundConflict.startTime - (startTime + syllabusItem.duration);
+        const actualGap = proposedAfterExisting ? startTime - (traineeTurnaroundConflict.startTime + traineeTurnaroundConflict.duration) : traineeTurnaroundConflict.startTime - (startTime + scheduledDuration);
         const requiredGap = proposedAfterExisting ? getPriorityTurnaround(traineeTurnaroundConflict) : getPriorityTurnaround(proposedEventForTurnaround);
         return traceScheduleReject("TRAINEE_TURNAROUND", {
           conflictingEvent: {
@@ -93323,7 +93348,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const resourceIsOccupied = generatedEvents.some((e) => {
           if (e.resourceId !== candidateResourceId) return false;
           const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
-          const proposedEventEnd = startTime + syllabusItem.duration + proposedTurnaround;
+          const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
           return startTime < existingEventEnd && proposedEventEnd > e.startTime;
         });
         if (!resourceIsOccupied) return true;
@@ -93353,7 +93378,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const resourceIsOccupied = generatedEvents.some((e) => {
           if (e.resourceId !== candidateResourceId) return false;
           const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
-          const proposedEventEnd = startTime + syllabusItem.duration + proposedTurnaround;
+          const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
           return startTime < existingEventEnd && proposedEventEnd > e.startTime;
         });
         if (!resourceIsOccupied) {
@@ -93810,7 +93835,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             continue;
           }
         }
-        const proposedEvents = [...generatedEvents, { startTime, duration: syllabusItem.duration, flightNumber: syllabusItem.code, instructor: ip.name, type }];
+        const proposedEvents = [...generatedEvents, { startTime, duration: scheduledDuration, flightNumber: syllabusItem.code, instructor: ip.name, type }];
         const ipEvents = proposedEvents.filter((e) => getPersonnel(e).includes(ip.name) && (e.type === "flight" || e.type === "ftd" || e.flightNumber.includes("Duty Sup")));
         if (!remedialInstructorOverride && ipEvents.length > 0) {
           const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
@@ -94006,7 +94031,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
         const existingEventEnd = e.startTime + e.duration + existingTurnaround;
         const newEventStart = startTime;
-        const proposedEventEnd = startTime + syllabusItem.duration + proposedTurnaround;
+        const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
         return newEventStart < existingEventEnd && proposedEventEnd > e.startTime;
       });
       if (!resourceIsOccupied) {
@@ -94042,9 +94067,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const isBnf = isNightPass && syllabusItem.code.startsWith("BNF");
       const endTimeBoundary = isBnf ? ceaseNightFlying : flyingEndTime;
       const bookingStart = startTime - (syllabusItem.preFlightTime || 0);
-      const bookingEnd = startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0);
+      const bookingEnd = startTime + scheduledDuration + (syllabusItem.postFlightTime || 0);
       const startTimeBoundary = isBnf ? commenceNightFlying : flyingStartTime;
-      const violatesWindow = isBnf ? bookingStart < startTimeBoundary || bookingEnd > endTimeBoundary : startTime < startTimeBoundary || startTime + syllabusItem.duration > endTimeBoundary;
+      const violatesWindow = isBnf ? bookingStart < startTimeBoundary || bookingEnd > endTimeBoundary : startTime < startTimeBoundary || startTime + scheduledDuration > endTimeBoundary;
       if (violatesWindow) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TIME_BOUNDARY_VIOLATION");
         return traceScheduleReject("TIME_BOUNDARY_VIOLATION", {
@@ -94069,7 +94094,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const existingFormationArea = options.formationGroupId ? generatedEvents.find(
         (event) => event.formationId === options.formationGroupId && event.type === "flight" && !!event.area
       )?.area : void 0;
-      area = existingFormationArea || findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
+      area = existingFormationArea || findAvailableArea(startTime, scheduledDuration, generatedEvents);
       if (!area) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "NO_AREA_AVAILABLE");
         return traceScheduleReject("NO_AREA_AVAILABLE");
@@ -94097,13 +94122,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     if (type === "ground" || type === "cpt") {
       const bookingStart = startTime - (syllabusItem.preFlightTime || 0);
-      const bookingEnd = startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0);
+      const bookingEnd = startTime + scheduledDuration + (syllabusItem.postFlightTime || 0);
       if (bookingStart < flyingStartTime || bookingEnd > flyingEndTime) {
         return traceScheduleReject("GROUND_OR_CPT_WINDOW_VIOLATION", { bookingStart, bookingEnd, flyingStartTime, flyingEndTime });
       }
     } else if (type === "ftd") {
-      if (startTime + syllabusItem.duration > ftdEndTime) {
-        return traceScheduleReject("FTD_WINDOW_VIOLATION", { eventEnd: startTime + syllabusItem.duration, ftdEndTime });
+      if (startTime + scheduledDuration > ftdEndTime) {
+        return traceScheduleReject("FTD_WINDOW_VIOLATION", { eventEnd: startTime + scheduledDuration, ftdEndTime });
       }
     }
     if ((type === "ftd" || type === "cpt") && hasDispatchStaggerConflict(type, startTime, generatedEvents, {
@@ -94121,7 +94146,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       student: trainee.fullName,
       pilot: isSoloFlight ? trainee.fullName : instructor?.name || "",
       flightNumber: syllabusItem.code,
-      duration: syllabusItem.duration,
+      duration: scheduledDuration,
       startTime,
       resourceId,
       color: courseColors[trainee.course] || "bg-gray-500",
@@ -94153,7 +94178,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         event: syllabusItem.code,
         instructor: remedialInstructorOverride,
         startTime,
-        endTime: startTime + syllabusItem.duration,
+        endTime: startTime + scheduledDuration,
         details: forcedInstructorConflictDetails
       });
     }
@@ -94175,7 +94200,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         pilot: result.pilot,
         student: result.student,
         area,
-        dayNight: syllabusItem.dayNight
+        dayNight: syllabusItem.dayNight,
+        duration: scheduledDuration,
+        durationSource: scheduledDurationSource,
+        lmpDuration: syllabusItem.duration,
+        lmpFlightOrSimHours: syllabusItem.flightOrSimHours
       });
     }
     if (isTracedRemedialAttempt) {
@@ -94197,6 +94226,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         student: result.student,
         area,
         dayNight: syllabusItem.dayNight,
+        duration: scheduledDuration,
+        durationSource: scheduledDurationSource,
+        lmpDuration: syllabusItem.duration,
+        lmpFlightOrSimHours: syllabusItem.flightOrSimHours,
         remedialInstructorOverride,
         forcedInstructorConflictDetails
       });
@@ -94222,12 +94255,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         student: result.student,
         area,
         dayNight: syllabusItem.dayNight,
+        duration: scheduledDuration,
+        durationSource: scheduledDurationSource,
+        lmpDuration: syllabusItem.duration,
+        lmpFlightOrSimHours: syllabusItem.flightOrSimHours,
         formationGroupId: options.formationGroupId || null,
         formationPosition: options.formationPosition || null
       }, 3e3);
     }
     if (_isFlight) {
-      _fbLogSuccess(trainee, syllabusItem, _isNext, startTime, startTime + syllabusItem.duration, result.instructor, result.resourceId || "", result.area);
+      _fbLogSuccess(trainee, syllabusItem, _isNext, startTime, startTime + scheduledDuration, result.instructor, result.resourceId || "", result.area);
     }
     options.diagnosticTrace?.({
       phase: "schedule-event",
@@ -94247,6 +94284,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       student: result.student,
       area,
       dayNight: syllabusItem.dayNight,
+      duration: scheduledDuration,
+      durationSource: scheduledDurationSource,
+      lmpDuration: syllabusItem.duration,
+      lmpFlightOrSimHours: syllabusItem.flightOrSimHours,
       primaryPreferOnly,
       requirePreferredNightAircraft
     });
@@ -98492,12 +98533,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           const { next } = traineeNextEventMap.get(trainee.fullName);
           const syllabusItem = next;
           if (!syllabusItem) continue;
+          const scheduledDuration = getScheduledEventDuration(syllabusItem, "flight");
           let placed = false;
           const soloSearchStart = isRemedialSyllabusItem(syllabusItem) ? Math.max(groupSearchStart, REMEDIAL_EARLIEST_START) : groupSearchStart;
           const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) ? [true, false] : [false];
           for (const primaryOnly of passModes) {
             if (placed) break;
-            for (let time = soloSearchStart; time <= Math.min(flyingEndTime, SOLO_WINDOW_END) - syllabusItem.duration + 1e-3; time += TIME_INCREMENT) {
+            for (let time = soloSearchStart; time <= Math.min(flyingEndTime, SOLO_WINDOW_END) - scheduledDuration + 1e-3; time += TIME_INCREMENT) {
               const result = scheduleEvent(trainee, syllabusItem, time, "flight", false, false, primaryOnly);
               if (result && typeof result === "object" && "id" in result) {
                 generatedEvents.push({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });

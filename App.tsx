@@ -11959,6 +11959,37 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     // ── END FLIGHT BOTTLENECK DIAGNOSTIC SETUP ──────────────────────────────
 
+    const getScheduledEventDurationSource = (
+        syllabusItem: SyllabusItemDetail,
+        scheduleType?: 'flight' | 'ftd' | 'ground' | 'cpt'
+    ): 'individual-flight-sim-hours' | 'duration' | 'total-event-hours' => {
+        const itemType = String(scheduleType || syllabusItem.type || '').trim().toLowerCase();
+        const isFlightOrFtd = itemType === 'flight' || itemType === 'ftd';
+        const flightOrSimHours = Number(syllabusItem.flightOrSimHours);
+        if (isFlightOrFtd && Number.isFinite(flightOrSimHours) && flightOrSimHours > 0) {
+            return 'individual-flight-sim-hours';
+        }
+        const duration = Number(syllabusItem.duration);
+        if (Number.isFinite(duration) && duration > 0) {
+            return 'duration';
+        }
+        return 'total-event-hours';
+    };
+
+    const getScheduledEventDuration = (
+        syllabusItem: SyllabusItemDetail,
+        scheduleType?: 'flight' | 'ftd' | 'ground' | 'cpt'
+    ): number => {
+        const source = getScheduledEventDurationSource(syllabusItem, scheduleType);
+        const rawValue = source === 'individual-flight-sim-hours'
+            ? syllabusItem.flightOrSimHours
+            : source === 'total-event-hours'
+                ? syllabusItem.totalEventHours
+                : syllabusItem.duration;
+        const duration = Number(rawValue);
+        return Number.isFinite(duration) && duration > 0 ? Number(duration.toFixed(2)) : 1;
+    };
+
     const scheduleList = (
         list: Trainee[],
         type: 'flight' | 'ftd' | 'cpt' | 'ground',
@@ -12048,6 +12079,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     listDiag.noSyllabusItem++;
                     continue;
                 }
+                const scheduledDuration = getScheduledEventDuration(syllabusItem, type);
+                const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type);
 
                 const isRemedialItem = isRemedialSyllabusItem(syllabusItem);
                 if (type === 'flight' && !isPlusOne && !isRemedialItem && isMultiResourceFlightItem(syllabusItem)) {
@@ -12120,8 +12153,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                 ? space.start + (syllabusItem.preFlightTime || 0)
                                 : space.start;
                             const latestEventStart = mustFitFullBookingWindow
-                                ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0)
-                                : space.end - syllabusItem.duration;
+                                ? space.end - scheduledDuration - (syllabusItem.postFlightTime || 0)
+                                : space.end - scheduledDuration;
                             const cappedLatestEventStart = typeof latestStartBefore === 'number'
                                 ? Math.min(latestEventStart, latestStartBefore - 0.001)
                                 : latestEventStart;
@@ -12138,7 +12171,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                     type,
                                     isPlusOne,
                                     isNightPass,
-                                    duration: syllabusItem.duration,
+                                    duration: scheduledDuration,
+                                    durationSource: scheduledDurationSource,
+                                    lmpDuration: syllabusItem.duration,
+                                    lmpFlightOrSimHours: syllabusItem.flightOrSimHours,
                                     preFlightTime: syllabusItem.preFlightTime || 0,
                                     postFlightTime: syllabusItem.postFlightTime || 0,
                                     primaryOnly,
@@ -12417,9 +12453,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         requirePreferredNightAircraft: boolean = false,
         options: ScheduleEventOptions = {}
     ): ScheduleEventResult => {
+        const scheduledDuration = getScheduledEventDuration(syllabusItem, type);
+        const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type);
         const _isFlight = type === 'flight' && !isNightPass;
         const _isNext = !isPlusOne;
-        const _fbEnd = startTime + syllabusItem.duration;
+        const _fbEnd = startTime + scheduledDuration;
         const traineeCounts = eventCounts.get(trainee.fullName)!;
         const remedialInstructorOverride = getRemedialInstructorOverride(trainee.fullName, syllabusItem.code);
         let forcedInstructorConflictDetails: string[] = [];
@@ -12506,7 +12544,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         }
 
         if (type === 'flight') {
-            const exclusionViolation = getFlightWindowExclusionViolation(startTime, syllabusItem.duration);
+            const exclusionViolation = getFlightWindowExclusionViolation(startTime, scheduledDuration);
             if (exclusionViolation) {
                 if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, exclusionViolation.reason);
                 return traceScheduleReject('FLYING_WINDOW_EXCLUSION', {
@@ -12516,7 +12554,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     exclusionEnd: exclusionViolation.period.endTime,
                     checkedTime: exclusionViolation.checkedTime,
                     departureTime: startTime,
-                    landingTime: startTime + syllabusItem.duration,
+                    landingTime: startTime + scheduledDuration,
                 });
             }
         }
@@ -12573,7 +12611,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
         const proposedBookingWindow = {
             start: startTime - (syllabusItem.preFlightTime || 0),
-            end: startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0),
+            end: startTime + scheduledDuration + (syllabusItem.postFlightTime || 0),
         };
         if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_STATICALLY_UNAVAILABLE');
@@ -12613,7 +12651,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         if (options.enforcePersonnelTurnaround && (type === 'flight' || type === 'ftd' || type === 'cpt')) {
             const proposedEventForTurnaround = {
                 startTime,
-                duration: syllabusItem.duration,
+                duration: scheduledDuration,
                 flightNumber: syllabusItem.code,
                 type,
             } as Omit<ScheduleEvent, 'date'>;
@@ -12628,14 +12666,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     const gap = startTime - (existing.startTime + existing.duration);
                     return gap >= -0.001 && gap < getPriorityTurnaround(existing) - 0.001;
                 }
-                const gap = existing.startTime - (startTime + syllabusItem.duration);
+                const gap = existing.startTime - (startTime + scheduledDuration);
                 return gap >= -0.001 && gap < getPriorityTurnaround(proposedEventForTurnaround) - 0.001;
             });
             if (traineeTurnaroundConflict) {
                 const proposedAfterExisting = startTime >= traineeTurnaroundConflict.startTime;
                 const actualGap = proposedAfterExisting
                     ? startTime - (traineeTurnaroundConflict.startTime + traineeTurnaroundConflict.duration)
-                    : traineeTurnaroundConflict.startTime - (startTime + syllabusItem.duration);
+                    : traineeTurnaroundConflict.startTime - (startTime + scheduledDuration);
                 const requiredGap = proposedAfterExisting
                     ? getPriorityTurnaround(traineeTurnaroundConflict)
                     : getPriorityTurnaround(proposedEventForTurnaround);
@@ -12675,7 +12713,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 const resourceIsOccupied = generatedEvents.some(e => {
                     if (e.resourceId !== candidateResourceId) return false;
                     const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
-                    const proposedEventEnd = startTime + syllabusItem.duration + proposedTurnaround;
+                    const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
                     return startTime < existingEventEnd && proposedEventEnd > e.startTime;
                 });
                 if (!resourceIsOccupied) return true;
@@ -12707,7 +12745,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 const resourceIsOccupied = generatedEvents.some(e => {
                     if (e.resourceId !== candidateResourceId) return false;
                     const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
-                    const proposedEventEnd = startTime + syllabusItem.duration + proposedTurnaround;
+                    const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
                     return startTime < existingEventEnd && proposedEventEnd > e.startTime;
                 });
                 if (!resourceIsOccupied) {
@@ -13275,7 +13313,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 }
                 // ─────────────────────────────────────────────────────────────────────
 
-                const proposedEvents = [...generatedEvents, { startTime, duration: syllabusItem.duration, flightNumber: syllabusItem.code, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>];
+                const proposedEvents = [...generatedEvents, { startTime, duration: scheduledDuration, flightNumber: syllabusItem.code, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>];
                 const ipEvents = proposedEvents.filter(e => getPersonnel(e).includes(ip.name) && (e.type === 'flight' || e.type === 'ftd' || e.flightNumber.includes('Duty Sup')));
                 if (!remedialInstructorOverride && ipEvents.length > 0) {
                     const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
@@ -13443,14 +13481,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const stbyPrefix = type === 'flight' ? 'STBY' : 'FTD-STBY';
             let stbyLine = 1;
             while (generatedEvents.some(e => e.resourceId === `${stbyPrefix} ${stbyLine}` &&
-                e.startTime < startTime + syllabusItem.duration && e.startTime + e.duration > startTime)) {
+                e.startTime < startTime + scheduledDuration && e.startTime + e.duration > startTime)) {
                 stbyLine++;
             }
             resourceId = `${stbyPrefix} ${stbyLine}`;
             const stbyResult = {
                 id: uuidv4(), type: type, instructor: '', student: trainee.fullName,
                 pilot: trainee.fullName,
-                flightNumber: syllabusItem.code, duration: syllabusItem.duration, startTime, resourceId,
+                flightNumber: syllabusItem.code, duration: scheduledDuration, startTime, resourceId,
                 color: courseColors[trainee.course] || 'bg-gray-500',
                 flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school,
                 area: undefined, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
@@ -13465,6 +13503,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 startTime,
                 displayTime: _fmtT(startTime),
                 resourceId,
+                duration: scheduledDuration,
+                durationSource: scheduledDurationSource,
+                lmpDuration: syllabusItem.duration,
+                lmpFlightOrSimHours: syllabusItem.flightOrSimHours,
                 primaryPreferOnly,
                 requirePreferredNightAircraft,
             });
@@ -13551,7 +13593,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
                 const existingEventEnd = e.startTime + e.duration + existingTurnaround;
                 const newEventStart = startTime;
-                const proposedEventEnd = startTime + syllabusItem.duration + proposedTurnaround;
+                const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
                 return newEventStart < existingEventEnd && proposedEventEnd > e.startTime;
             });
             if (!resourceIsOccupied) { resourceId = id; break; }
@@ -13587,11 +13629,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const isBnf = isNightPass && syllabusItem.code.startsWith('BNF');
             const endTimeBoundary = isBnf ? ceaseNightFlying : flyingEndTime;
             const bookingStart = startTime - (syllabusItem.preFlightTime || 0);
-            const bookingEnd = startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0);
+            const bookingEnd = startTime + scheduledDuration + (syllabusItem.postFlightTime || 0);
             const startTimeBoundary = isBnf ? commenceNightFlying : flyingStartTime;
             const violatesWindow = isBnf
                 ? bookingStart < startTimeBoundary || bookingEnd > endTimeBoundary
-                : startTime < startTimeBoundary || startTime + syllabusItem.duration > endTimeBoundary;
+                : startTime < startTimeBoundary || startTime + scheduledDuration > endTimeBoundary;
             if (violatesWindow) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TIME_BOUNDARY_VIOLATION');
                 return traceScheduleReject('TIME_BOUNDARY_VIOLATION', {
@@ -13625,7 +13667,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     !!event.area
                 )?.area
                 : undefined;
-            area = existingFormationArea || findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
+            area = existingFormationArea || findAvailableArea(startTime, scheduledDuration, generatedEvents);
             if (!area) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AREA_AVAILABLE');
                 return traceScheduleReject('NO_AREA_AVAILABLE');
@@ -13669,13 +13711,13 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         // This mirrors the same end-of-window rule applied to flight events above.
         if (type === 'ground' || type === 'cpt') {
             const bookingStart = startTime - (syllabusItem.preFlightTime || 0);
-            const bookingEnd = startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0);
+            const bookingEnd = startTime + scheduledDuration + (syllabusItem.postFlightTime || 0);
             if (bookingStart < flyingStartTime || bookingEnd > flyingEndTime) {
                 return traceScheduleReject('GROUND_OR_CPT_WINDOW_VIOLATION', { bookingStart, bookingEnd, flyingStartTime, flyingEndTime });
             }
         } else if (type === 'ftd') {
-            if (startTime + syllabusItem.duration > ftdEndTime) {
-                return traceScheduleReject('FTD_WINDOW_VIOLATION', { eventEnd: startTime + syllabusItem.duration, ftdEndTime });
+            if (startTime + scheduledDuration > ftdEndTime) {
+                return traceScheduleReject('FTD_WINDOW_VIOLATION', { eventEnd: startTime + scheduledDuration, ftdEndTime });
             }
         }
 
@@ -13690,7 +13732,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
         const result = {
             id: options.eventId || uuidv4(), type: type, instructor: (isSoloFlight ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (isSoloFlight ? trainee.fullName : instructor?.name || ''),
-            flightNumber: syllabusItem.code, duration: syllabusItem.duration, startTime, resourceId,
+            flightNumber: syllabusItem.code, duration: scheduledDuration, startTime, resourceId,
             color: courseColors[trainee.course] || 'bg-gray-500',
             flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school,
             area, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
@@ -13715,7 +13757,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 event: syllabusItem.code,
                 instructor: remedialInstructorOverride,
                 startTime,
-                endTime: startTime + syllabusItem.duration,
+                endTime: startTime + scheduledDuration,
                 details: forcedInstructorConflictDetails,
             });
         }
@@ -13738,6 +13780,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 student: result.student,
                 area,
                 dayNight: syllabusItem.dayNight,
+                duration: scheduledDuration,
+                durationSource: scheduledDurationSource,
+                lmpDuration: syllabusItem.duration,
+                lmpFlightOrSimHours: syllabusItem.flightOrSimHours,
             });
         }
         if (isTracedRemedialAttempt) {
@@ -13759,6 +13805,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 student: result.student,
                 area,
                 dayNight: syllabusItem.dayNight,
+                duration: scheduledDuration,
+                durationSource: scheduledDurationSource,
+                lmpDuration: syllabusItem.duration,
+                lmpFlightOrSimHours: syllabusItem.flightOrSimHours,
                 remedialInstructorOverride,
                 forcedInstructorConflictDetails,
             });
@@ -13784,13 +13834,17 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 student: result.student,
                 area,
                 dayNight: syllabusItem.dayNight,
+                duration: scheduledDuration,
+                durationSource: scheduledDurationSource,
+                lmpDuration: syllabusItem.duration,
+                lmpFlightOrSimHours: syllabusItem.flightOrSimHours,
                 formationGroupId: options.formationGroupId || null,
                 formationPosition: options.formationPosition || null,
             }, 3000);
         }
         // Log successful flight events (first 2 only)
         if (_isFlight) {
-            _fbLogSuccess(trainee, syllabusItem, _isNext, startTime, startTime + syllabusItem.duration, result.instructor, result.resourceId || '', result.area);
+            _fbLogSuccess(trainee, syllabusItem, _isNext, startTime, startTime + scheduledDuration, result.instructor, result.resourceId || '', result.area);
         }
         options.diagnosticTrace?.({
             phase: 'schedule-event',
@@ -13810,6 +13864,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             student: result.student,
             area,
             dayNight: syllabusItem.dayNight,
+            duration: scheduledDuration,
+            durationSource: scheduledDurationSource,
+            lmpDuration: syllabusItem.duration,
+            lmpFlightOrSimHours: syllabusItem.flightOrSimHours,
             primaryPreferOnly,
             requirePreferredNightAircraft,
         });
@@ -18571,6 +18629,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 const { next } = traineeNextEventMap.get(trainee.fullName)!;
                 const syllabusItem = next;
                 if (!syllabusItem) continue;
+                const scheduledDuration = getScheduledEventDuration(syllabusItem, 'flight');
 
                 let placed = false;
                 const soloSearchStart = isRemedialSyllabusItem(syllabusItem)
@@ -18585,7 +18644,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 for (const primaryOnly of passModes) {
                     if (placed) break;
                     for (let time = soloSearchStart;
-                         time <= Math.min(flyingEndTime, SOLO_WINDOW_END) - syllabusItem.duration + 0.001;
+                         time <= Math.min(flyingEndTime, SOLO_WINDOW_END) - scheduledDuration + 0.001;
                          time += TIME_INCREMENT) {
                         const result = scheduleEvent(trainee, syllabusItem, time, 'flight', false, false, primaryOnly);
                         if (result && typeof result === 'object' && 'id' in result) {
