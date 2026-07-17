@@ -4772,8 +4772,8 @@ const normaliseUnitCallsignSettings = (source) => {
   const rawEntries = Array.isArray(source?.entries) ? source.entries : Array.isArray(source) ? source : [];
   const entries = rawEntries.map((entry, index) => {
     const unitCode = String(entry?.unitCode || entry?.unit || "").trim().toUpperCase();
-    const callsign = String(entry?.callsign || entry?.name || entry?.code || "").trim();
-    if (!unitCode || !callsign) return null;
+    const callsign = entry?.callsign !== void 0 && entry?.callsign !== null ? String(entry.callsign) : String(entry?.name || entry?.code || "");
+    if (!unitCode) return null;
     return {
       id: String(entry?.id || makeUnitCallsignId(unitCode, callsign, index)),
       unitCode,
@@ -4783,7 +4783,7 @@ const normaliseUnitCallsignSettings = (source) => {
   }).filter(Boolean);
   const seen = /* @__PURE__ */ new Set();
   const uniqueEntries = entries.filter((entry) => {
-    const key = `${entry.unitCode}::${entry.callsign.toUpperCase()}`;
+    const key = `${entry.unitCode}::${entry.callsign.trim().toUpperCase()}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

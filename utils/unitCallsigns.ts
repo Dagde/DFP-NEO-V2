@@ -72,8 +72,10 @@ export const normaliseUnitCallsignSettings = (source: unknown): UnitCallsignSett
   const entries = rawEntries
     .map((entry: any, index: number): UnitCallsignEntry | null => {
       const unitCode = String(entry?.unitCode || entry?.unit || '').trim().toUpperCase();
-      const callsign = String(entry?.callsign || entry?.name || entry?.code || '').trim();
-      if (!unitCode || !callsign) return null;
+      const callsign = entry?.callsign !== undefined && entry?.callsign !== null
+        ? String(entry.callsign)
+        : String(entry?.name || entry?.code || '');
+      if (!unitCode) return null;
       return {
         id: String(entry?.id || makeUnitCallsignId(unitCode, callsign, index)),
         unitCode,
@@ -85,7 +87,7 @@ export const normaliseUnitCallsignSettings = (source: unknown): UnitCallsignSett
 
   const seen = new Set<string>();
   const uniqueEntries = entries.filter((entry) => {
-    const key = `${entry.unitCode}::${entry.callsign.toUpperCase()}`;
+    const key = `${entry.unitCode}::${entry.callsign.trim().toUpperCase()}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
