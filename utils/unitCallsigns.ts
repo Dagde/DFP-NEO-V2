@@ -10,6 +10,7 @@ export type UnitCallsignAllocationMethod = 'permanent' | 'per-flight' | 'user-ch
 export interface UnitCallsignPolicy {
   unitCode: string;
   allocationMethod: UnitCallsignAllocationMethod;
+  permanentRoleValues?: string[];
 }
 
 export interface UnitCallsignSettings {
@@ -41,6 +42,17 @@ const normaliseAllocationMethod = (value: unknown): UnitCallsignAllocationMethod
   if (raw === 'permanent') return 'permanent';
   if (raw === 'user-choice' || raw === 'choice') return 'user-choice';
   return 'per-flight';
+};
+
+const normaliseRoleValue = (value: unknown): string => String(value || '').trim().toUpperCase();
+
+const normalisePermanentRoleValues = (source: unknown): string[] => {
+  if (!Array.isArray(source)) return [];
+  return Array.from(new Set(
+    source
+      .map(normaliseRoleValue)
+      .filter(Boolean),
+  ));
 };
 
 const isPlaceholderUnitCallsign = (value: unknown): boolean => {
@@ -91,6 +103,9 @@ export const normaliseUnitCallsignSettings = (source: unknown): UnitCallsignSett
     policiesByUnit.set(unitCode, {
       unitCode,
       allocationMethod: normaliseAllocationMethod(policy?.allocationMethod || policy?.method),
+      permanentRoleValues: normalisePermanentRoleValues(
+        policy?.permanentRoleValues || policy?.roleValues || policy?.roles,
+      ),
     });
   });
 
@@ -115,6 +130,7 @@ export const getUnitCallsignPolicy = (
   return {
     unitCode: unit,
     allocationMethod: policy?.allocationMethod || 'per-flight',
+    permanentRoleValues: normalisePermanentRoleValues(policy?.permanentRoleValues),
   };
 };
 

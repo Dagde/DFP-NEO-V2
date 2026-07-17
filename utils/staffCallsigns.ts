@@ -26,6 +26,11 @@ const isCallsignAssignableStaff = (person: Instructor): boolean => (
   Boolean(person.name) && (person as any).isActive !== false && !person.isAdminStaff
 );
 
+const matchesPermanentCallsignRolePolicy = (person: Instructor, allowedRoles: string[] = []): boolean => {
+  if (allowedRoles.length === 0) return true;
+  return allowedRoles.includes(norm(person.role));
+};
+
 const isLegacyFlightSchoolCallsignUnit = (person: Instructor): boolean => {
   const unit = norm(person.unit);
   return unit.startsWith('1FTS') || unit.startsWith('CFS') || unit.startsWith('2FTS');
@@ -89,11 +94,13 @@ const getConfiguredPermanentCallsignAssignments = (
   permanentUnitCodes.forEach((unitCode) => {
     const prefix = getDefaultUnitCallsign(callsignSettings, unitCode);
     if (!prefix) return;
+    const policy = getUnitCallsignPolicy(callsignSettings, unitCode);
     const unitStaff = sortedStaff(instructors.filter((person) => (
       person.name
       && (person as any).isActive !== false
       && norm(person.unit) === unitCode
       && isCallsignAssignableStaff(person)
+      && matchesPermanentCallsignRolePolicy(person, policy.permanentRoleValues || [])
     )), settings);
     assignSequence(assignments, unitStaff, prefix, 1);
   });

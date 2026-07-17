@@ -4755,6 +4755,13 @@ const normaliseAllocationMethod = (value) => {
   if (raw === "user-choice" || raw === "choice") return "user-choice";
   return "per-flight";
 };
+const normaliseRoleValue = (value) => String(value || "").trim().toUpperCase();
+const normalisePermanentRoleValues = (source) => {
+  if (!Array.isArray(source)) return [];
+  return Array.from(new Set(
+    source.map(normaliseRoleValue).filter(Boolean)
+  ));
+};
 const isPlaceholderUnitCallsign = (value) => {
   const token = String(value || "").trim();
   if (!token) return true;
@@ -4789,7 +4796,10 @@ const normaliseUnitCallsignSettings = (source) => {
     if (!unitCode) return;
     policiesByUnit.set(unitCode, {
       unitCode,
-      allocationMethod: normaliseAllocationMethod(policy?.allocationMethod || policy?.method)
+      allocationMethod: normaliseAllocationMethod(policy?.allocationMethod || policy?.method),
+      permanentRoleValues: normalisePermanentRoleValues(
+        policy?.permanentRoleValues || policy?.roleValues || policy?.roles
+      )
     });
   });
   return {
@@ -4807,7 +4817,8 @@ const getUnitCallsignPolicy = (settings, unitCode) => {
   const policy = normaliseUnitCallsignSettings(settings).policies.find((entry) => entry.unitCode === unit);
   return {
     unitCode: unit,
-    allocationMethod: policy?.allocationMethod || "per-flight"
+    allocationMethod: policy?.allocationMethod || "per-flight",
+    permanentRoleValues: normalisePermanentRoleValues(policy?.permanentRoleValues)
   };
 };
 const getUnitCallsignEntries = (settings, unitCode) => {
@@ -4835,6 +4846,10 @@ const personKey = (person) => String(person.id || person.idNumber || person.name
 const isQfiStaff = (person) => person.role === "QFI" || person.isQFI === true || person.role === "INSTRUCTOR";
 const isSimIp = (person) => person.role === "SIM IP";
 const isCallsignAssignableStaff = (person) => Boolean(person.name) && person.isActive !== false && !person.isAdminStaff;
+const matchesPermanentCallsignRolePolicy = (person, allowedRoles = []) => {
+  if (allowedRoles.length === 0) return true;
+  return allowedRoles.includes(norm(person.role));
+};
 const isLegacyFlightSchoolCallsignUnit = (person) => {
   const unit = norm(person.unit);
   return unit.startsWith("1FTS") || unit.startsWith("CFS") || unit.startsWith("2FTS");
@@ -4873,7 +4888,8 @@ const getConfiguredPermanentCallsignAssignments = (instructors, settings, unitCa
   permanentUnitCodes.forEach((unitCode) => {
     const prefix = getDefaultUnitCallsign(callsignSettings, unitCode);
     if (!prefix) return;
-    const unitStaff = sortedStaff(instructors.filter((person) => person.name && person.isActive !== false && norm(person.unit) === unitCode && isCallsignAssignableStaff(person)), settings);
+    const policy = getUnitCallsignPolicy(callsignSettings, unitCode);
+    const unitStaff = sortedStaff(instructors.filter((person) => person.name && person.isActive !== false && norm(person.unit) === unitCode && isCallsignAssignableStaff(person) && matchesPermanentCallsignRolePolicy(person, policy.permanentRoleValues || [])), settings);
     assignSequence(assignments, unitStaff, prefix, 1);
   });
   return assignments;
@@ -65572,6 +65588,17 @@ This permanently removes the organisation record from platform configuration and
       ]
     );
   };
+  const toggleUnitCallsignPermanentRole = (unitCode, roleValue) => {
+    const nextUnitCode = String(unitCode || "").trim().toUpperCase();
+    const nextRole = String(roleValue || "").trim().toUpperCase();
+    if (!nextUnitCode || !nextRole) return;
+    const currentPolicy = getUnitCallsignPolicy(unitCallsignSettings, nextUnitCode);
+    const currentRoles = currentPolicy.permanentRoleValues || [];
+    const allRoles = callsignAssignableRoleOptions.map((option) => option.value.trim().toUpperCase()).filter(Boolean);
+    const effectiveRoles = currentRoles.length > 0 ? currentRoles : allRoles;
+    const nextRoles = effectiveRoles.includes(nextRole) ? effectiveRoles.filter((role) => role !== nextRole) : Array.from(/* @__PURE__ */ new Set([...effectiveRoles, nextRole]));
+    updateUnitCallsignPolicy(nextUnitCode, { permanentRoleValues: nextRoles });
+  };
   const updateCrewCompositionSettings = (alternateCompositions, currencyProfiles = crewCompositionSettings.currencyProfiles) => {
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
@@ -67118,6 +67145,24 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   const resourceSectionPanelHintClass = "text-[11px] leading-relaxed text-gray-500";
   const getSettingsFocusAnchor = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
   const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
+  const callsignAssignableRoleOptions = reactExports.useMemo(() => {
+    const roleOptions = [
+      { value: "QFI", label: personnelDisplaySettings.instructorLabel || "QFI" },
+      { value: "SIM IP", label: personnelDisplaySettings.simIpDisplayLabel || "Contractor Staff" },
+      ...crewPositionTerminology.positions.map((entry) => ({
+        value: entry.genericName,
+        label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName
+      }))
+    ];
+    const byValue = /* @__PURE__ */ new Map();
+    roleOptions.forEach((option) => {
+      const value = String(option.value || "").trim();
+      const key = value.toUpperCase();
+      if (!key || byValue.has(key)) return;
+      byValue.set(key, { value, label: option.label || value });
+    });
+    return Array.from(byValue.values()).sort((left, right) => left.label.localeCompare(right.label, void 0, { sensitivity: "base" }));
+  }, [crewPositionLabelMap, crewPositionTerminology.positions, personnelDisplaySettings.instructorLabel, personnelDisplaySettings.simIpDisplayLabel]);
   const activeCrewCompositionAircraftIndex = Math.max(
     0,
     crewCompositionAircraftTypes.findIndex((aircraft) => String(aircraft.code || "").trim().toUpperCase() === crewCompositionAircraftCode.trim().toUpperCase())
@@ -70935,18 +70980,41 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                   const policy = getUnitCallsignPolicy(unitCallsignSettings, unitCode);
                   const unit = config.units.find((candidate) => String(candidate.code || "").trim().toUpperCase() === unitCode);
                   const label = `${unitCode}${unit?.name && unit.name !== unitCode ? ` - ${unit.name}` : ""}`;
-                  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    SelectField,
-                    {
-                      label,
-                      value: policy.allocationMethod,
-                      disabled: !canEditRankTerminology,
-                      options: UNIT_CALLSIGN_ALLOCATION_METHODS,
-                      optionLabels: UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS,
-                      onChange: (value) => updateUnitCallsignPolicy(unitCode, { allocationMethod: value })
-                    },
-                    unitCode
-                  );
+                  const selectedPermanentRoles = policy.permanentRoleValues || [];
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-300/15 bg-gray-950/50 p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      SelectField,
+                      {
+                        label,
+                        value: policy.allocationMethod,
+                        disabled: !canEditRankTerminology,
+                        options: UNIT_CALLSIGN_ALLOCATION_METHODS,
+                        optionLabels: UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS,
+                        onChange: (value) => updateUnitCallsignPolicy(unitCode, { allocationMethod: value })
+                      }
+                    ),
+                    policy.allocationMethod === "permanent" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-wide text-cyan-100/80", children: "Roles receiving permanent callsigns" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-1.5", children: callsignAssignableRoleOptions.map((option) => {
+                        const value = option.value.trim().toUpperCase();
+                        const isChecked = selectedPermanentRoles.length === 0 || selectedPermanentRoles.includes(value);
+                        return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${isChecked ? "border-cyan-400/35 bg-cyan-500/10 text-cyan-50" : "border-gray-700 bg-gray-950 text-gray-400"}`, children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "checkbox",
+                              checked: isChecked,
+                              disabled: !canEditRankTerminology,
+                              onChange: () => toggleUnitCallsignPermanentRole(unitCode, option.value),
+                              className: "h-3.5 w-3.5 accent-cyan-400"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.label })
+                        ] }, `${unitCode}-${value}`);
+                      }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-[11px] leading-snug text-cyan-100/60", children: "All roles are selected until you untick one." })
+                    ] })
+                  ] }, unitCode);
                 }),
                 visibleUnitOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950 px-3 py-4 text-sm text-gray-400", children: "No active units are available for callsign assignment." })
               ] })
@@ -106163,7 +106231,7 @@ ${"=".repeat(60)}`);
       if (!instructor.name) return;
       const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
       const savedCallsign = String(instructor.callsign || "").trim();
-      const callsign = savedCallsign || assigned?.callsign || "";
+      const callsign = assigned?.callsign || savedCallsign || "";
       const configuredPrefix = getDefaultUnitCallsign(activeUnitCallsignSettings, instructor.unit);
       const callsignPrefix = assigned?.callsignPrefix || callsign.match(/^[A-Za-z]+/)?.[0] || configuredPrefix;
       const callsignNumber = assigned?.callsignNumber || instructor.callsignNumber || 0;

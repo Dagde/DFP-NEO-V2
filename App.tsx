@@ -28220,7 +28220,7 @@ const App: React.FC = () => {
             if (!instructor.name) return;
             const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
             const savedCallsign = String(instructor.callsign || '').trim();
-            const callsign = savedCallsign || assigned?.callsign || '';
+            const callsign = assigned?.callsign || savedCallsign || '';
             const configuredPrefix = getDefaultUnitCallsign(activeUnitCallsignSettings, instructor.unit);
             const callsignPrefix = assigned?.callsignPrefix || callsign.match(/^[A-Za-z]+/)?.[0] || configuredPrefix;
             const callsignNumber = assigned?.callsignNumber || instructor.callsignNumber || 0;

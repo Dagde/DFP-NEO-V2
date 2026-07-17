@@ -3095,6 +3095,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     );
   };
 
+  const toggleUnitCallsignPermanentRole = (unitCode: string, roleValue: string) => {
+    const nextUnitCode = String(unitCode || '').trim().toUpperCase();
+    const nextRole = String(roleValue || '').trim().toUpperCase();
+    if (!nextUnitCode || !nextRole) return;
+    const currentPolicy = getUnitCallsignPolicy(unitCallsignSettings, nextUnitCode);
+    const currentRoles = currentPolicy.permanentRoleValues || [];
+    const allRoles = callsignAssignableRoleOptions.map((option) => option.value.trim().toUpperCase()).filter(Boolean);
+    const effectiveRoles = currentRoles.length > 0 ? currentRoles : allRoles;
+    const nextRoles = effectiveRoles.includes(nextRole)
+      ? effectiveRoles.filter((role) => role !== nextRole)
+      : Array.from(new Set([...effectiveRoles, nextRole]));
+    updateUnitCallsignPolicy(nextUnitCode, { permanentRoleValues: nextRoles });
+  };
+
   const updateCrewCompositionSettings = (
     alternateCompositions: AlternateCrewCompositionProfile[],
     currencyProfiles: CurrencyProfile[] = crewCompositionSettings.currencyProfiles,
@@ -4978,6 +4992,26 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const resourceSectionPanelHintClass = 'text-[11px] leading-relaxed text-gray-500';
   const getSettingsFocusAnchor = (value: any) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
   const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
+  const callsignAssignableRoleOptions = useMemo(() => {
+    const roleOptions = [
+      { value: 'QFI', label: personnelDisplaySettings.instructorLabel || 'QFI' },
+      { value: 'SIM IP', label: personnelDisplaySettings.simIpDisplayLabel || 'Contractor Staff' },
+      ...crewPositionTerminology.positions.map((entry) => ({
+        value: entry.genericName,
+        label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName,
+      })),
+    ];
+    const byValue = new Map<string, { value: string; label: string }>();
+    roleOptions.forEach((option) => {
+      const value = String(option.value || '').trim();
+      const key = value.toUpperCase();
+      if (!key || byValue.has(key)) return;
+      byValue.set(key, { value, label: option.label || value });
+    });
+    return Array.from(byValue.values()).sort((left, right) => (
+      left.label.localeCompare(right.label, undefined, { sensitivity: 'base' })
+    ));
+  }, [crewPositionLabelMap, crewPositionTerminology.positions, personnelDisplaySettings.instructorLabel, personnelDisplaySettings.simIpDisplayLabel]);
   const activeCrewCompositionAircraftIndex = Math.max(
     0,
     crewCompositionAircraftTypes.findIndex((aircraft) => String(aircraft.code || '').trim().toUpperCase() === crewCompositionAircraftCode.trim().toUpperCase()),
@@ -9025,16 +9059,48 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     const policy = getUnitCallsignPolicy(unitCallsignSettings, unitCode);
                     const unit = config.units.find((candidate: any) => String(candidate.code || '').trim().toUpperCase() === unitCode);
                     const label = `${unitCode}${unit?.name && unit.name !== unitCode ? ` - ${unit.name}` : ''}`;
+                    const selectedPermanentRoles = policy.permanentRoleValues || [];
                     return (
-                      <SelectField
-                        key={unitCode}
-                        label={label}
-                        value={policy.allocationMethod}
-                        disabled={!canEditRankTerminology}
-                        options={UNIT_CALLSIGN_ALLOCATION_METHODS}
-                        optionLabels={UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS}
-                        onChange={(value) => updateUnitCallsignPolicy(unitCode, { allocationMethod: value as UnitCallsignPolicy['allocationMethod'] })}
-                      />
+                      <div key={unitCode} className="rounded border border-cyan-300/15 bg-gray-950/50 p-3">
+                        <SelectField
+                          label={label}
+                          value={policy.allocationMethod}
+                          disabled={!canEditRankTerminology}
+                          options={UNIT_CALLSIGN_ALLOCATION_METHODS}
+                          optionLabels={UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS}
+                          onChange={(value) => updateUnitCallsignPolicy(unitCode, { allocationMethod: value as UnitCallsignPolicy['allocationMethod'] })}
+                        />
+                        {policy.allocationMethod === 'permanent' && (
+                          <div className="mt-3">
+                            <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-100/80">Roles receiving permanent callsigns</div>
+                            <div className="mt-2 grid gap-1.5">
+                              {callsignAssignableRoleOptions.map((option) => {
+                                const value = option.value.trim().toUpperCase();
+                                const isChecked = selectedPermanentRoles.length === 0 || selectedPermanentRoles.includes(value);
+                                return (
+                                  <label key={`${unitCode}-${value}`} className={`flex items-center gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${
+                                    isChecked
+                                      ? 'border-cyan-400/35 bg-cyan-500/10 text-cyan-50'
+                                      : 'border-gray-700 bg-gray-950 text-gray-400'
+                                  }`}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      disabled={!canEditRankTerminology}
+                                      onChange={() => toggleUnitCallsignPermanentRole(unitCode, option.value)}
+                                      className="h-3.5 w-3.5 accent-cyan-400"
+                                    />
+                                    <span>{option.label}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            <div className="mt-2 text-[11px] leading-snug text-cyan-100/60">
+                              All roles are selected until you untick one.
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                   {visibleUnitOptions.length === 0 && (
