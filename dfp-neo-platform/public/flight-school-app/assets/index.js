@@ -64541,6 +64541,7 @@ const PlatformConfigurationSettings = ({
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [unitTypesDraft, setUnitTypesDraft] = reactExports.useState("");
   const [isEditingUnitTypes, setIsEditingUnitTypes] = reactExports.useState(false);
+  const [unitCallsignDrafts, setUnitCallsignDrafts] = reactExports.useState({});
   reactExports.useEffect(() => {
     if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join("\n"));
   }, [isEditingUnitTypes, unitTypeOptions]);
@@ -65562,6 +65563,17 @@ This permanently removes the organisation record from platform configuration and
   };
   const updateUnitCallsignEntry = (entryId, changes) => {
     updateUnitCallsignSettings(unitCallsignSettings.entries.map((entry) => entry.id === entryId ? { ...entry, ...changes } : entry));
+  };
+  const updateUnitCallsignDraft = (entryId, value) => {
+    setUnitCallsignDrafts((previous) => ({ ...previous, [entryId]: value }));
+    updateUnitCallsignEntry(entryId, { callsign: value });
+  };
+  const commitUnitCallsignDraft = (entryId) => {
+    setUnitCallsignDrafts((previous) => {
+      if (!(entryId in previous)) return previous;
+      const { [entryId]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
+    });
   };
   const addUnitCallsignEntry = () => {
     const defaultUnit = visibleUnitOptions[0] || config.units.find(isActiveRecord)?.code || config.units[0]?.code || "";
@@ -71051,10 +71063,15 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 Field,
                 {
                   label: "Callsign",
-                  value: entry.callsign,
+                  value: unitCallsignDrafts[entry.id] ?? entry.callsign,
                   disabled: !canEditRankTerminology,
-                  onChange: (value) => updateUnitCallsignEntry(entry.id, { callsign: value }),
-                  info: "Callsign base only. The sortie number is selected when creating or editing an event."
+                  onChange: (value) => updateUnitCallsignDraft(entry.id, value),
+                  info: "Callsign base only. The sortie number is selected when creating or editing an event.",
+                  onFocus: () => setUnitCallsignDrafts((previous) => ({
+                    ...previous,
+                    [entry.id]: previous[entry.id] ?? entry.callsign
+                  })),
+                  onBlur: () => commitUnitCallsignDraft(entry.id)
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -71638,7 +71655,7 @@ const handleEditableTextBeforeInput = (event, onChange, maxLength) => {
   event.stopPropagation();
   insertEditableTextAtCursor(event.currentTarget, " ", onChange, maxLength);
 };
-const Field = ({ label, labelNoWrap = false, value, disabled, onChange, info, maxLength }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+const Field = ({ label, labelNoWrap = false, value, disabled, onChange, onFocus, onBlur, info, maxLength }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info, noWrap: labelNoWrap }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
     "input",
@@ -71650,6 +71667,8 @@ const Field = ({ label, labelNoWrap = false, value, disabled, onChange, info, ma
       onBeforeInput: (event) => handleEditableTextBeforeInput(event, onChange, maxLength),
       onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, onChange, maxLength),
       onKeyDown: stopEditableKeyPropagation,
+      onFocus,
+      onBlur,
       onChange: (event) => onChange(typeof maxLength === "number" ? event.target.value.slice(0, maxLength) : event.target.value)
     }
   ),

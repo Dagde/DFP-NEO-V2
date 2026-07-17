@@ -1803,6 +1803,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const unitTypeOptions = useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [unitTypesDraft, setUnitTypesDraft] = useState('');
   const [isEditingUnitTypes, setIsEditingUnitTypes] = useState(false);
+  const [unitCallsignDrafts, setUnitCallsignDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join('\n'));
@@ -3054,6 +3055,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateUnitCallsignSettings(unitCallsignSettings.entries.map((entry) => (
       entry.id === entryId ? { ...entry, ...changes } : entry
     )));
+  };
+
+  const updateUnitCallsignDraft = (entryId: string, value: string) => {
+    setUnitCallsignDrafts((previous) => ({ ...previous, [entryId]: value }));
+    updateUnitCallsignEntry(entryId, { callsign: value });
+  };
+
+  const commitUnitCallsignDraft = (entryId: string) => {
+    setUnitCallsignDrafts((previous) => {
+      if (!(entryId in previous)) return previous;
+      const { [entryId]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
+    });
   };
 
   const addUnitCallsignEntry = () => {
@@ -9141,10 +9155,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     />
                     <Field
                       label="Callsign"
-                      value={entry.callsign}
+                      value={unitCallsignDrafts[entry.id] ?? entry.callsign}
                       disabled={!canEditRankTerminology}
-                      onChange={(value) => updateUnitCallsignEntry(entry.id, { callsign: value })}
+                      onChange={(value) => updateUnitCallsignDraft(entry.id, value)}
                       info="Callsign base only. The sortie number is selected when creating or editing an event."
+                      onFocus={() => setUnitCallsignDrafts((previous) => ({
+                        ...previous,
+                        [entry.id]: previous[entry.id] ?? entry.callsign,
+                      }))}
+                      onBlur={() => commitUnitCallsignDraft(entry.id)}
                     />
                     <div className="flex items-end">
                       <button
@@ -9797,7 +9816,7 @@ const handleEditableTextBeforeInput = (
   insertEditableTextAtCursor(event.currentTarget, ' ', onChange, maxLength);
 };
 
-const Field = ({ label, labelNoWrap = false, value, disabled, onChange, info, maxLength }: { label: string; labelNoWrap?: boolean; value: string; disabled: boolean; onChange: (value: string) => void; info?: string; maxLength?: number }) => (
+const Field = ({ label, labelNoWrap = false, value, disabled, onChange, onFocus, onBlur, info, maxLength }: { label: string; labelNoWrap?: boolean; value: string; disabled: boolean; onChange: (value: string) => void; onFocus?: () => void; onBlur?: () => void; info?: string; maxLength?: number }) => (
   <label>
     <FieldLabel label={label} info={info} noWrap={labelNoWrap} />
     <input
@@ -9808,6 +9827,8 @@ const Field = ({ label, labelNoWrap = false, value, disabled, onChange, info, ma
       onBeforeInput={(event) => handleEditableTextBeforeInput(event, onChange, maxLength)}
       onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, onChange, maxLength)}
       onKeyDown={stopEditableKeyPropagation}
+      onFocus={onFocus}
+      onBlur={onBlur}
       onChange={(event) => onChange(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value)}
     />
     {typeof maxLength === 'number' ? (
