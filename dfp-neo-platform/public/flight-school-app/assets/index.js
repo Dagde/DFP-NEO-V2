@@ -66463,38 +66463,50 @@ This permanently removes the organisation record from platform configuration and
     const newPoolId = createClientRecordId("pool");
     pendingResourcePoolScrollIdRef.current = newPoolId;
     setResourcePoolActiveTab("resourcePools");
-    setConfig((prev) => ({
-      ...prev,
-      resourcePools: [
-        ...prev.resourcePools,
-        {
-          id: newPoolId,
-          code: `POOL-${prev.resourcePools.length + 1}`,
-          name: "New Resource Pool",
-          organisationCode: prev.organisations[0]?.code || "DEFAULT",
-          locationCode: defaultLocation,
-          unitCode: defaultUnitCode,
-          aircraftTypeCode: prev.aircraftTypes[0]?.code || "PC-21",
-          poolType: "Dedicated",
-          status: "ACTIVE",
-          settings: {
-            applyToV2Runtime: false,
-            aircraftLabel: "PC-21",
-            aircraftNumberUsePrefix: true,
-            aircraftNumberPrefixes: ["A54"],
-            aircraftNumberDefaultPrefix: "A54",
-            aircraftConfigurations: [],
-            ftdLabel: "FTD",
-            cptLabel: "CPT",
-            aircraft: 24,
-            ftd: 5,
-            cpt: 4,
-            standby: 4,
-            ground: 6
+    setConfig((prev) => {
+      const selectedUnitRecord = prev.units.find((unit) => String(unit.code || "").trim().toUpperCase() === String(defaultUnitCode || "").trim().toUpperCase()) || selectedUnit;
+      const unitAircraftCode = String(
+        selectedUnitRecord?.settings?.aircraftTypeCode || selectedUnitRecord?.settings?.aircraftType || ""
+      ).trim().toUpperCase();
+      const visibleAircraftCode = String(visibleAircraftTypeOptions.find(Boolean) || "").trim().toUpperCase();
+      const defaultAircraftTypeCode = unitAircraftCode || visibleAircraftCode || String(prev.aircraftTypes[0]?.code || "").trim().toUpperCase();
+      const defaultAircraftType = prev.aircraftTypes.find((aircraft) => String(aircraft.code || "").trim().toUpperCase() === defaultAircraftTypeCode);
+      const defaultAircraftLabel = String(
+        defaultAircraftType?.name || defaultAircraftType?.code || defaultAircraftTypeCode || "Aircraft"
+      ).trim();
+      return {
+        ...prev,
+        resourcePools: [
+          ...prev.resourcePools,
+          {
+            id: newPoolId,
+            code: `POOL-${prev.resourcePools.length + 1}`,
+            name: "New Resource Pool",
+            organisationCode: prev.organisations[0]?.code || "DEFAULT",
+            locationCode: defaultLocation,
+            unitCode: defaultUnitCode,
+            aircraftTypeCode: defaultAircraftTypeCode || null,
+            poolType: "Dedicated",
+            status: "ACTIVE",
+            settings: {
+              applyToV2Runtime: false,
+              aircraftLabel: defaultAircraftLabel,
+              aircraftNumberUsePrefix: true,
+              aircraftNumberPrefixes: ["A54"],
+              aircraftNumberDefaultPrefix: "A54",
+              aircraftConfigurations: [],
+              ftdLabel: "FTD",
+              cptLabel: "CPT",
+              aircraft: 24,
+              ftd: 5,
+              cpt: 4,
+              standby: 4,
+              ground: 6
+            }
           }
-        }
-      ]
-    }));
+        ]
+      };
+    });
   };
   const addLicense = () => {
     setConfig((prev) => {
@@ -67341,6 +67353,11 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     return true;
   });
   const visibleAircraftTypeOptions = visibleAircraftTypeRows.map(({ aircraft }) => aircraft.code).filter(Boolean);
+  const getAircraftTypeDisplayLabel = (aircraftTypeCode) => {
+    const normalisedAircraftCode = normaliseUnitCode2(aircraftTypeCode);
+    const aircraftType = config.aircraftTypes.find((aircraft) => normaliseUnitCode2(aircraft.code) === normalisedAircraftCode);
+    return String(aircraftType?.name || aircraftType?.code || normalisedAircraftCode || "Aircraft").trim();
+  };
   const visibleLocationOptions = visibleLocationRows.map(({ location }) => location.code).filter(Boolean);
   const visibleUnitOptions = visibleUnitRows.map(({ unit }) => unit.code).filter(Boolean);
   const visibleOperationalModelValues = new Set(
@@ -69318,7 +69335,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Terminology shown on the DFP. Changing these labels does not alter existing saved records." })
                       ] }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft", value: pool.settings?.aircraftLabel || "PC-21", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft", value: pool.settings?.aircraftLabel || getAircraftTypeDisplayLabel(pool.aircraftTypeCode), disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Simulator", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Procedural Trainer", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { cptLabel: value }) })
                       ] })
