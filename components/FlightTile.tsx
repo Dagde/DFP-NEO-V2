@@ -977,7 +977,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                   <div
                       className="font-mono text-white/80 whitespace-nowrap"
                       style={{
-                          fontSize: `${Math.max(8, scaledFontSize - 3)}px`,
+                          fontSize: `${scaledFontSize}px`,
                           lineHeight: '1',
                           opacity: 0.8,
                       }}
