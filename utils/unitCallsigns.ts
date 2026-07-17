@@ -43,6 +43,13 @@ const normaliseAllocationMethod = (value: unknown): UnitCallsignAllocationMethod
   return 'per-flight';
 };
 
+const isPlaceholderUnitCallsign = (value: unknown): boolean => {
+  const token = String(value || '').trim();
+  if (!token) return true;
+  if (token.toLowerCase() === 'default') return true;
+  return /^callsign\s*\d*$/i.test(token);
+};
+
 export const normaliseUnitCallsignSettings = (source: unknown): UnitCallsignSettings => {
   const rawEntries = Array.isArray((source as any)?.entries)
     ? (source as any).entries
@@ -127,7 +134,8 @@ export const getDefaultUnitCallsign = (
   unitCode?: unknown,
 ): string => {
   const entries = getUnitCallsignEntries(settings, unitCode);
-  return entries.find(entry => entry.isDefault)?.callsign || entries[0]?.callsign || '';
+  const usableEntries = entries.filter(entry => !isPlaceholderUnitCallsign(entry.callsign));
+  return usableEntries.find(entry => entry.isDefault)?.callsign || usableEntries[0]?.callsign || '';
 };
 
 export const formatUnitCallsignNumber = (value: unknown): string => {

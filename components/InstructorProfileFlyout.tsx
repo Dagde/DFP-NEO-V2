@@ -687,19 +687,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   }, [selectedAirCombatTraining, selectedAirCombatTrainingItem]);
 
   const callsignData = useMemo(() => personnelData.get(instructor.name), [personnelData, instructor.name]);
-  const suppressProfileCallsign = useMemo(() => {
-    const unitCode = String(unit || instructor.unit || '').trim().toUpperCase();
-    return unitCode === '11SQN' || unitCode === '12SQN';
-  }, [instructor.unit, unit]);
   const displayCallsign = useMemo(() => {
-    if (suppressProfileCallsign) return '';
     if (callsignData?.callsign) return callsignData.callsign;
     if (instructor.callsign) return instructor.callsign;
     if (callsignData && (callsignData.callsignNumber || instructor.callsignNumber)) {
       return `${callsignData.callsignPrefix || ''}${callsignData.callsignNumber || instructor.callsignNumber || ''}`;
     }
     return '';
-  }, [callsignData, instructor.callsign, instructor.callsignNumber, suppressProfileCallsign]);
+  }, [callsignData, instructor.callsign, instructor.callsignNumber]);
 
   const resetState = () => {
     setIdNumber(instructor.idNumber); setName(instructor.name); setRank(instructor.rank);
@@ -841,17 +836,17 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       name,
       rank,
       role: savedRole,
-      callsignNumber: suppressProfileCallsign ? null : callsignNumber,
-      callsign: suppressProfileCallsign ? '' : displayCallsign,
-      secondaryCallsign: suppressProfileCallsign ? '' : secondaryCallsign,
+      callsignNumber,
+      callsign: displayCallsign,
+      secondaryCallsign,
       service,
       category: savedCategory,
       seatConfig,
       crew,
       preferences: {
         ...(instructor.preferences || {}),
-        callsign: suppressProfileCallsign ? null : displayCallsign || null,
-        secondaryCallsign: suppressProfileCallsign ? null : secondaryCallsign || null,
+        callsign: displayCallsign || null,
+        secondaryCallsign: secondaryCallsign || null,
         crew: crew || null,
         qualifications: savedQualifications,
       },
@@ -1795,8 +1790,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       </Dropdown>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                      <InputField label="Callsign" value={suppressProfileCallsign ? '' : displayCallsign || 'Auto assigned'} onChange={() => {}} readOnly />
-                      <InputField label="Secondary Callsign" value={suppressProfileCallsign ? '' : secondaryCallsign} onChange={e => setSecondaryCallsign(e.target.value)} readOnly={suppressProfileCallsign} />
+                      <InputField label="Callsign" value={displayCallsign || 'Auto assigned'} onChange={() => {}} readOnly />
+                      <InputField label="Secondary Callsign" value={secondaryCallsign} onChange={e => setSecondaryCallsign(e.target.value)} />
                       <InputField label="Crew" value={crew} onChange={e => setCrew(e.target.value)} />
                       <Dropdown label="Service" value={service || ''} onChange={e => setService(e.target.value as any)}>
                         <option value="">Select...</option><option value="RAAF">RAAF</option><option value="RAN">RAN</option><option value="ARA">ARA</option>
@@ -1884,7 +1879,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{profileRoleDisplay.label}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{isContractorStaffRoleValue(instructor.role) ? simIpDisplayLabel : instructor.category}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{displayCallsign || '[None]'}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">{suppressProfileCallsign ? '[None]' : instructor.secondaryCallsign || '[None]'}</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">{instructor.secondaryCallsign || '[None]'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{instructor.crew || '[None]'}</span></div>
                         {/* Row 2 */}
                         <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{instructor.rank}</span></div>
