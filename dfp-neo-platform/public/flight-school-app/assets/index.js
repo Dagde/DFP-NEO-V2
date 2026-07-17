@@ -111886,6 +111886,279 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       console.warn("[NEO-Build] Pre-build LMP refresh threw; using current in-memory LMPs:", lmpRefreshErr);
     }
     markNeoBuildTiming(timingReport, "lmp-refresh:complete", { buildTraineeLMPs: buildTraineeLMPs.size });
+    if (activeOperationalModel === "flight_school" && buildTraineeLMPs.size > 0) {
+      const buildTraineeNameSet = new Set(
+        traineesForBuildScope.flatMap((trainee) => [trainee.fullName, trainee.name]).map((name) => String(name || "").trim()).filter(Boolean)
+      );
+      const findReportSourceLmpIndex = (lmp, trainee, assessment) => {
+        const eventRefs = new Set([
+          assessment.eventId,
+          assessment.flightNumber,
+          `lmp-${trainee.id || trainee.idNumber}-${assessment.flightNumber}`
+        ].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean));
+        return lmp.findIndex((item) => {
+          const itemRefs = [
+            item.id,
+            item.code,
+            item.masterEventId,
+            item.eventDescription
+          ].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
+          return itemRefs.some((ref) => eventRefs.has(ref));
+        });
+      };
+      const getAssessmentFollowUpText = (assessment) => [
+        assessment.trainingReportNotes,
+        assessment.overallComments,
+        assessment.comments
+      ].map((value) => String(value || "")).join("\n");
+      const recoverExtraHoursFromAssessmentText = (assessment) => {
+        const text = getAssessmentFollowUpText(assessment);
+        const match = text.match(/(\d+(?:\.\d+)?)\s*(?:hrs?|hours?)\s+added\s+to\s+([A-Z0-9 _-]+)/i);
+        if (!match) return null;
+        const hours = Number(match[1]);
+        const rawTarget = String(match[2] || "").split(/[.\n\r]/)[0].trim();
+        if (!Number.isFinite(hours) || hours <= 0) return null;
+        return {
+          hours,
+          targetCode: rawTarget || void 0
+        };
+      };
+      const getAssessmentRequestedExtension = (assessment) => {
+        const configuredHours = assessment.dcoResult === "DPCO" && assessment.dpcoFollowUp?.action === "extra-hours-next-event" ? Number(assessment.dpcoFollowUp?.extraHours || 0) : 0;
+        if (Number.isFinite(configuredHours) && configuredHours > 0) {
+          return { hours: configuredHours, source: "structured-follow-up" };
+        }
+        const recovered = recoverExtraHoursFromAssessmentText(assessment);
+        return recovered ? { ...recovered, source: "notes-prefix-recovery" } : null;
+      };
+      const applyAssessmentFollowUpToLmp = (trainee, lmp, assessment) => {
+        const sourceIndex = findReportSourceLmpIndex(lmp, trainee, assessment);
+        const updates = [];
+        if (sourceIndex < 0) {
+          updates.push({
+            assessmentId: assessment.id || assessment.eventId,
+            flightNumber: assessment.flightNumber,
+            outcome: "no-source-match"
+          });
+          return { lmp, changed: false, updates };
+        }
+        const sourceItem = lmp[sourceIndex];
+        if (sourceItem.type !== "Flight" && sourceItem.type !== "FTD") {
+          updates.push({
+            assessmentId: assessment.id || assessment.eventId,
+            flightNumber: assessment.flightNumber,
+            sourceCode: sourceItem.code,
+            sourceType: sourceItem.type,
+            outcome: "source-not-flight-or-ftd"
+          });
+          return { lmp, changed: false, updates };
+        }
+        const requestedExtensionInfo = getAssessmentRequestedExtension(assessment);
+        const requestedTargetCode = String(requestedExtensionInfo?.targetCode || "").trim().toUpperCase();
+        const targetIndex = requestedTargetCode ? lmp.findIndex(
+          (item, index) => index > sourceIndex && item.type === sourceItem.type && String(item.code || item.id || "").trim().toUpperCase() === requestedTargetCode
+        ) : lmp.findIndex(
+          (item, index) => index > sourceIndex && item.type === sourceItem.type && !item.completedAt
+        );
+        if (targetIndex < 0) {
+          updates.push({
+            assessmentId: assessment.id || assessment.eventId,
+            flightNumber: assessment.flightNumber,
+            sourceCode: sourceItem.code,
+            sourceType: sourceItem.type,
+            outcome: "no-next-target",
+            requestedTargetCode: requestedTargetCode || null
+          });
+          return { lmp, changed: false, updates };
+        }
+        const assessmentKey = String(assessment.id || assessment.eventId || `${assessment.flightNumber}-${assessment.traineeFullName}`).trim();
+        const targetItem = lmp[targetIndex];
+        let updatedTarget = { ...targetItem };
+        let changed = false;
+        if (requestedExtensionInfo) {
+          const requestedExtension = Number(requestedExtensionInfo.hours);
+          const extensionLedger = {
+            ...updatedTarget.trainingReportNextEventExtensions || {}
+          };
+          const previousExtension = Number(extensionLedger[assessmentKey] || 0);
+          const delta = requestedExtension - previousExtension;
+          if (Math.abs(delta) >= 1e-4) {
+            const existingFlightOrSimHours = Number(updatedTarget.flightOrSimHours || updatedTarget.duration || 0);
+            const existingDuration = Number(updatedTarget.duration || updatedTarget.flightOrSimHours || 0);
+            const existingTotalEventHours = Number(updatedTarget.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
+            extensionLedger[assessmentKey] = requestedExtension;
+            updatedTarget = {
+              ...updatedTarget,
+              flightOrSimHours: Math.max(0, Number((existingFlightOrSimHours + delta).toFixed(2))),
+              duration: Math.max(0, Number((existingDuration + delta).toFixed(2))),
+              totalEventHours: Math.max(0, Number((existingTotalEventHours + delta).toFixed(2))),
+              trainingReportNextEventExtensions: extensionLedger,
+              trainingReportLastExtendedByAssessmentId: assessmentKey
+            };
+            changed = true;
+            updates.push({
+              assessmentId: assessmentKey,
+              sourceCode: sourceItem.code,
+              targetCode: targetItem.code,
+              outcome: "extended-next-event",
+              requestedExtension,
+              requestedExtensionSource: requestedExtensionInfo.source,
+              requestedTargetCode: requestedTargetCode || null,
+              previousExtension,
+              delta,
+              before: {
+                flightOrSimHours: existingFlightOrSimHours,
+                duration: existingDuration,
+                totalEventHours: existingTotalEventHours
+              },
+              after: {
+                flightOrSimHours: updatedTarget.flightOrSimHours,
+                duration: updatedTarget.duration,
+                totalEventHours: updatedTarget.totalEventHours
+              }
+            });
+          } else {
+            updates.push({
+              assessmentId: assessmentKey,
+              sourceCode: sourceItem.code,
+              targetCode: targetItem.code,
+              outcome: "extension-already-applied",
+              requestedExtension,
+              requestedExtensionSource: requestedExtensionInfo.source,
+              requestedTargetCode: requestedTargetCode || null,
+              previousExtension
+            });
+          }
+        }
+        if (assessment.passNotesToNextEvent === true && String(assessment.trainingReportNotes || "").trim().length > 0) {
+          const existingForwardedNotes = {
+            ...updatedTarget.trainingReportForwardedNotes || {}
+          };
+          const nextNotes = String(assessment.trainingReportNotes || "").trim();
+          const previousNotes = String(existingForwardedNotes[assessmentKey]?.notes || "").trim();
+          if (previousNotes !== nextNotes) {
+            existingForwardedNotes[assessmentKey] = {
+              sourceCode: sourceItem.code || assessment.flightNumber,
+              notes: nextNotes
+            };
+            updatedTarget = {
+              ...updatedTarget,
+              trainingReportBaseNotes: typeof updatedTarget.trainingReportBaseNotes === "string" ? updatedTarget.trainingReportBaseNotes : String(updatedTarget.notes || ""),
+              trainingReportForwardedNotes: existingForwardedNotes
+            };
+            changed = true;
+            updates.push({
+              assessmentId: assessmentKey,
+              sourceCode: sourceItem.code,
+              targetCode: targetItem.code,
+              outcome: "forwarded-notes",
+              noteLength: nextNotes.length,
+              forwardedKeys: Object.keys(existingForwardedNotes)
+            });
+          } else {
+            updates.push({
+              assessmentId: assessmentKey,
+              sourceCode: sourceItem.code,
+              targetCode: targetItem.code,
+              outcome: "notes-already-applied",
+              noteLength: nextNotes.length
+            });
+          }
+        }
+        if (!changed) return { lmp, changed: false, updates };
+        const updatedLmp = lmp.map((item, index) => index === targetIndex ? updatedTarget : item);
+        return { lmp: updatedLmp, changed: true, updates };
+      };
+      try {
+        const apiBase = getApiBaseUrl();
+        const allAssessments = [];
+        const pageSize = 2e3;
+        let offset = 0;
+        markNeoBuildTiming(timingReport, "report-followups:request-start", {
+          buildTrainees: buildTraineeNameSet.size,
+          lmpCount: buildTraineeLMPs.size
+        });
+        while (true) {
+          const response = await fetch(`${apiBase}/trainee-performance?limit=${pageSize}&offset=${offset}`, {
+            credentials: "include"
+          });
+          if (!response.ok) {
+            pushDfpDataDiag("build:report-followups:fetch-failed", {
+              status: response.status,
+              offset,
+              text: await response.text().catch(() => "")
+            });
+            break;
+          }
+          const page = await response.json();
+          if (!Array.isArray(page) || page.length === 0) break;
+          allAssessments.push(...page);
+          if (page.length < pageSize) break;
+          offset += pageSize;
+        }
+        const followUpAssessments = allAssessments.filter((assessment) => buildTraineeNameSet.has(String(assessment.traineeFullName || "").trim()) && (Boolean(getAssessmentRequestedExtension(assessment)) || assessment.passNotesToNextEvent === true && String(assessment.trainingReportNotes || "").trim().length > 0));
+        const reconciledLMPs = new Map(buildTraineeLMPs);
+        const changedTrainees = [];
+        const updatesByTrainee = /* @__PURE__ */ new Map();
+        followUpAssessments.forEach((assessment) => {
+          const trainee = traineesForBuildScope.find(
+            (candidate) => candidate.fullName === assessment.traineeFullName || candidate.name === assessment.traineeFullName
+          );
+          const currentLmp = reconciledLMPs.get(assessment.traineeFullName);
+          if (!trainee || !Array.isArray(currentLmp) || currentLmp.length === 0) return;
+          const result = applyAssessmentFollowUpToLmp(trainee, currentLmp, assessment);
+          const previousUpdates = updatesByTrainee.get(assessment.traineeFullName) || [];
+          updatesByTrainee.set(assessment.traineeFullName, [...previousUpdates, ...result.updates]);
+          if (result.changed) {
+            reconciledLMPs.set(assessment.traineeFullName, result.lmp);
+          }
+        });
+        Array.from(updatesByTrainee.entries()).forEach(([traineeFullName, updates]) => {
+          const changed = updates.some((update) => update.outcome === "extended-next-event" || update.outcome === "forwarded-notes");
+          if (!changed) return;
+          const trainee = traineesForBuildScope.find(
+            (candidate) => candidate.fullName === traineeFullName || candidate.name === traineeFullName
+          );
+          const lmp = reconciledLMPs.get(traineeFullName);
+          if (trainee && lmp) changedTrainees.push({ trainee, lmp, updates });
+        });
+        if (changedTrainees.length > 0) {
+          buildTraineeLMPs = reconciledLMPs;
+          setTraineeLMPs(reconciledLMPs);
+          for (const changed of changedTrainees) {
+            try {
+              await persistTraineeLmp(changed.trainee, changed.lmp);
+            } catch (persistError) {
+              pushDfpDataDiag("build:report-followups:persist-failed", {
+                traineeFullName: changed.trainee.fullName,
+                error: persistError instanceof Error ? persistError.message : String(persistError)
+              });
+            }
+          }
+        }
+        pushDfpDataDiag("build:report-followups:reconciled", {
+          fetchedAssessments: allAssessments.length,
+          followUpAssessments: followUpAssessments.length,
+          changedTrainees: changedTrainees.length,
+          samples: Array.from(updatesByTrainee.entries()).slice(0, 20).map(([traineeFullName, updates]) => ({
+            traineeFullName,
+            updates: updates.slice(0, 12)
+          }))
+        });
+        markNeoBuildTiming(timingReport, "report-followups:complete", {
+          fetchedAssessments: allAssessments.length,
+          followUpAssessments: followUpAssessments.length,
+          changedTrainees: changedTrainees.length
+        });
+      } catch (followUpError) {
+        pushDfpDataDiag("build:report-followups:error", {
+          error: followUpError instanceof Error ? followUpError.message : String(followUpError)
+        });
+        markNeoBuildTiming(timingReport, "report-followups:error", {
+          message: followUpError instanceof Error ? followUpError.message : String(followUpError)
+        });
+      }
+    }
     console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
     const staffDataSourceAllowedForBuild = (staff) => {
       const isDatabase = staff._dataSource === "database";
