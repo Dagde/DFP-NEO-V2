@@ -21731,16 +21731,16 @@ const App: React.FC = () => {
     const getStoredOperationalContext = (): { location: string; unit: string } => {
         try {
             const raw = localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
-            if (!raw) return { location: 'ESL', unit: '1FTS' };
+            if (!raw) return { location: '', unit: '' };
             const parsed = JSON.parse(raw);
             const location = String(parsed?.location || '').trim().toUpperCase();
             const unit = String(parsed?.unit || '').trim().toUpperCase();
             return {
-                location: location || 'ESL',
-                unit: unit || '1FTS',
+                location,
+                unit,
             };
         } catch (error) {
-            return { location: 'ESL', unit: '1FTS' };
+            return { location: '', unit: '' };
         }
     };
 
@@ -22125,7 +22125,7 @@ const App: React.FC = () => {
             .some((unit: any) => unit.status !== 'INACTIVE');
         if (hasConfiguredPlatformUnits) return getSetupTestFallbackUnitsForLocation();
 
-        const fallbackCodes = normalisedLocationCode === 'PEA' ? ['2FTS'] : ['1FTS', 'CFS'];
+        const fallbackCodes: string[] = [];
         const fallbackUnits = fallbackCodes.map(code => ({
             code,
             name: code,
@@ -22223,6 +22223,12 @@ const App: React.FC = () => {
             return;
         }
         const activeUnitOption = activeLocationUnitOptions.find(unit => unit.code === activeUnitCode);
+        if (!activeUnitCode) {
+            pushContextSelectorDiag('validate:keep-no-unit-selected', {
+                optionCodes: activeLocationUnitOptions.map((unit: any) => unit.code),
+            });
+            return;
+        }
         if (!activeUnitOption || activeUnitOption.disabled) {
             if (String(activeUnitCode || '').includes('+') && !organisationSettings.fleetSharingEnabled) {
                 pushContextSelectorDiag('validate:hold-shared-until-settings', {
@@ -22249,7 +22255,7 @@ const App: React.FC = () => {
                     return;
                 }
             }
-            const nextUnitCode = (activeLocationUnitOptions.find(unit => !unit.disabled) || activeLocationUnitOptions[0]).code;
+            const nextUnitCode = '';
             pushContextSelectorDiag('validate:reset-unit', {
                 fromUnit: activeUnitCode,
                 toUnit: nextUnitCode,
@@ -22304,7 +22310,7 @@ const App: React.FC = () => {
     }, [activeUnitCode, platformConfigLoaded, school, settingsLoaded, setupTestProfile]);
 
     const activeUnitContext = useMemo(
-        () => activeLocationUnitOptions.find(unit => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
+        () => activeLocationUnitOptions.find(unit => unit.code === activeUnitCode) || null,
         [activeLocationUnitOptions, activeUnitCode],
     );
 
@@ -22326,13 +22332,13 @@ const App: React.FC = () => {
         const activeUnitKeys = activeContextUnitCodes.length > 0
             ? activeContextUnitCodes
             : String(activeUnitCode || '').split('+').map(code => String(code || '').trim().toUpperCase()).filter(Boolean);
-        if (activeUnitKeys.length === 0) return true;
+        if (activeUnitKeys.length === 0) return false;
         const activeUnitKeySet = new Set(activeUnitKeys.map(unitCode => normaliseActiveUnitCode(unitCode)));
         const matchingUnits = (platformConfig?.units || []).filter((unit: any) => (
             activeUnitKeySet.has(normaliseActiveUnitCode(unit?.code))
         ));
-        if (matchingUnits.length === 0) return true;
-        return matchingUnits.some((unit: any) => unit?.settings?.hasTrainees !== false);
+        if (matchingUnits.length === 0) return false;
+        return matchingUnits.some((unit: any) => unit?.settings?.hasTrainees === true);
     }, [activeContextUnitCodes, activeUnitCode, platformConfig]);
     const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
     const activeResourcePoolUnitCode = isSharedFleetOperationalContext
@@ -31400,7 +31406,7 @@ const App: React.FC = () => {
 
     const getDefaultUnitForSchool = (targetSchool: string): string => {
         const options = getUnitOptionsForLocation(targetSchool);
-        return (options.find(unit => !unit.disabled) || options[0])?.code || (targetSchool === 'PEA' ? '2FTS' : '1FTS');
+        return (options.find(unit => !unit.disabled) || options[0])?.code || '';
     };
 
     const changeSchool = (newSchool: string) => {
@@ -44310,7 +44316,7 @@ appliedUpdates.forEach(update => {
                 currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || 'FLTLT'}
                 currentUserName={currentUserName}
                 currentUserLocation={school}
-                currentUserUnit={activeUnitCode || currentUser?.unit || '1FTS'}
+                currentUserUnit={activeUnitCode || currentUser?.unit || ''}
                 canAccessView={canAccessView}
                 canRunNeoBuild={canRunNeoBuildForActiveModel}
                 canPublishDfp={canPublishDfp}

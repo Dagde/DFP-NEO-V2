@@ -100865,16 +100865,16 @@ const App = () => {
   const getStoredOperationalContext = () => {
     try {
       const raw = localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
-      if (!raw) return { location: "ESL", unit: "1FTS" };
+      if (!raw) return { location: "", unit: "" };
       const parsed = JSON.parse(raw);
       const location = String(parsed?.location || "").trim().toUpperCase();
       const unit = String(parsed?.unit || "").trim().toUpperCase();
       return {
-        location: location || "ESL",
-        unit: unit || "1FTS"
+        location,
+        unit
       };
     } catch (error) {
-      return { location: "ESL", unit: "1FTS" };
+      return { location: "", unit: "" };
     }
   };
   const initialOperationalContext = reactExports.useMemo(() => getStoredOperationalContext(), []);
@@ -101218,7 +101218,7 @@ const App = () => {
     }
     const hasConfiguredPlatformUnits = (platformConfig2?.units || []).some((unit) => unit.status !== "INACTIVE");
     if (hasConfiguredPlatformUnits) return getSetupTestFallbackUnitsForLocation();
-    const fallbackCodes = normalisedLocationCode === "PEA" ? ["2FTS"] : ["1FTS", "CFS"];
+    const fallbackCodes = [];
     const fallbackUnits = fallbackCodes.map((code) => ({
       code,
       name: code,
@@ -101301,6 +101301,12 @@ const App = () => {
       return;
     }
     const activeUnitOption = activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode);
+    if (!activeUnitCode) {
+      pushContextSelectorDiag("validate:keep-no-unit-selected", {
+        optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
+      });
+      return;
+    }
     if (!activeUnitOption || activeUnitOption.disabled) {
       if (String(activeUnitCode || "").includes("+") && !organisationSettings.fleetSharingEnabled) {
         pushContextSelectorDiag("validate:hold-shared-until-settings", {
@@ -101322,7 +101328,7 @@ const App = () => {
           return;
         }
       }
-      const nextUnitCode = (activeLocationUnitOptions.find((unit) => !unit.disabled) || activeLocationUnitOptions[0]).code;
+      const nextUnitCode = "";
       pushContextSelectorDiag("validate:reset-unit", {
         fromUnit: activeUnitCode,
         toUnit: nextUnitCode,
@@ -101373,7 +101379,7 @@ const App = () => {
     }
   }, [activeUnitCode, platformConfigLoaded, school, settingsLoaded, setupTestProfile]);
   const activeUnitContext = reactExports.useMemo(
-    () => activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
+    () => activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode) || null,
     [activeLocationUnitOptions, activeUnitCode]
   );
   const activeContextUnitCodes = reactExports.useMemo(() => {
@@ -101388,11 +101394,11 @@ const App = () => {
   const activeUnitHasTrainees = reactExports.useMemo(() => {
     const normaliseActiveUnitCode = (value) => String(value || "").trim().toUpperCase();
     const activeUnitKeys = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
-    if (activeUnitKeys.length === 0) return true;
+    if (activeUnitKeys.length === 0) return false;
     const activeUnitKeySet = new Set(activeUnitKeys.map((unitCode) => normaliseActiveUnitCode(unitCode)));
     const matchingUnits = (platformConfig2?.units || []).filter((unit) => activeUnitKeySet.has(normaliseActiveUnitCode(unit?.code)));
-    if (matchingUnits.length === 0) return true;
-    return matchingUnits.some((unit) => unit?.settings?.hasTrainees !== false);
+    if (matchingUnits.length === 0) return false;
+    return matchingUnits.some((unit) => unit?.settings?.hasTrainees === true);
   }, [activeContextUnitCodes, activeUnitCode, platformConfig2]);
   const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
   const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
@@ -108818,7 +108824,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const getDefaultUnitForSchool = (targetSchool) => {
     const options = getUnitOptionsForLocation(targetSchool);
-    return (options.find((unit) => !unit.disabled) || options[0])?.code || (targetSchool === "PEA" ? "2FTS" : "1FTS");
+    return (options.find((unit) => !unit.disabled) || options[0])?.code || "";
   };
   const changeSchool = (newSchool) => {
     const nextUnit = getDefaultUnitForSchool(newSchool);
@@ -119660,7 +119666,7 @@ Do you want to replace the existing entry?`,
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "FLTLT",
           currentUserName,
           currentUserLocation: school,
-          currentUserUnit: activeUnitCode || currentUser2?.unit || "1FTS",
+          currentUserUnit: activeUnitCode || currentUser2?.unit || "",
           canAccessView,
           canRunNeoBuild: canRunNeoBuildForActiveModel,
           canPublishDfp,
