@@ -1853,6 +1853,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [taskProfileAbbreviationDrafts, setTaskProfileAbbreviationDrafts] = useState<Record<string, string>>({});
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = useState<'aircraftTypes' | 'resourcePools'>('aircraftTypes');
+  const [newAircraftTypeVisibleIds, setNewAircraftTypeVisibleIds] = useState<Set<string>>(new Set());
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = useState(false);
   const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = useState('');
   const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = useState('');
@@ -4121,6 +4122,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addAircraftType = () => {
+    setResourcePoolActiveTab('aircraftTypes');
+    const id = createClientRecordId('aircraft-type');
+    setNewAircraftTypeVisibleIds((current) => new Set([...Array.from(current), id]));
     setConfig((prev) => {
       const existingCodes = new Set(prev.aircraftTypes.map((aircraft: any) => String(aircraft.code || '').trim().toUpperCase()));
       let suffix = prev.aircraftTypes.length + 1;
@@ -4135,7 +4139,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         aircraftTypes: [
           ...prev.aircraftTypes,
           {
-            id: createClientRecordId('aircraft-type'),
+            id,
             code,
             name: 'New Aircraft Type',
             category: 'Other',
@@ -4664,7 +4668,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const saveResourcePoolsAndExitEdit = async () => {
     const saved = await save(undefined, 'platform-resource-pools');
-    if (saved) setResourcePoolsUnlocked(false);
+    if (saved) {
+      setNewAircraftTypeVisibleIds(new Set());
+      setResourcePoolsUnlocked(false);
+    }
   };
 
   const saveCrewCompositionAndExitEdit = async () => {
@@ -4884,6 +4891,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       aircraftTypes: loadedConfigRef.current.aircraftTypes,
       resourcePools: loadedConfigRef.current.resourcePools,
     }));
+    setNewAircraftTypeVisibleIds(new Set());
     setResourcePoolsUnlocked(false);
   };
 
@@ -5208,6 +5216,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const visibleAircraftTypeRows = config.aircraftTypes
     .map((aircraft, index) => ({ aircraft, index }))
     .filter(({ aircraft }) => {
+      if (newAircraftTypeVisibleIds.has(String(aircraft.id || ''))) return true;
       if (!settingsVisibilityEnabled) return true;
       const aircraftCode = normaliseUnitCode(aircraft.code);
       if (!aircraftCode) return true;

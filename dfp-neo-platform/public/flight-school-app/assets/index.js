@@ -64628,6 +64628,7 @@ const PlatformConfigurationSettings = ({
   const [taskProfileAbbreviationDrafts, setTaskProfileAbbreviationDrafts] = reactExports.useState({});
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = reactExports.useState("");
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = reactExports.useState("aircraftTypes");
+  const [newAircraftTypeVisibleIds, setNewAircraftTypeVisibleIds] = reactExports.useState(/* @__PURE__ */ new Set());
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = reactExports.useState(false);
   const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = reactExports.useState("");
   const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = reactExports.useState("");
@@ -66458,6 +66459,9 @@ This permanently removes the organisation record from platform configuration and
     }
   };
   const addAircraftType = () => {
+    setResourcePoolActiveTab("aircraftTypes");
+    const id = createClientRecordId("aircraft-type");
+    setNewAircraftTypeVisibleIds((current) => /* @__PURE__ */ new Set([...Array.from(current), id]));
     setConfig((prev) => {
       const existingCodes = new Set(prev.aircraftTypes.map((aircraft) => String(aircraft.code || "").trim().toUpperCase()));
       let suffix = prev.aircraftTypes.length + 1;
@@ -66471,7 +66475,7 @@ This permanently removes the organisation record from platform configuration and
         aircraftTypes: [
           ...prev.aircraftTypes,
           {
-            id: createClientRecordId("aircraft-type"),
+            id,
             code,
             name: "New Aircraft Type",
             category: "Other",
@@ -66911,7 +66915,10 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   };
   const saveResourcePoolsAndExitEdit = async () => {
     const saved = await save(void 0, "platform-resource-pools");
-    if (saved) setResourcePoolsUnlocked(false);
+    if (saved) {
+      setNewAircraftTypeVisibleIds(/* @__PURE__ */ new Set());
+      setResourcePoolsUnlocked(false);
+    }
   };
   const saveCrewCompositionAndExitEdit = async () => {
     const saved = await save(void 0, "platform-crew-composition");
@@ -67098,6 +67105,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       aircraftTypes: loadedConfigRef.current.aircraftTypes,
       resourcePools: loadedConfigRef.current.resourcePools
     }));
+    setNewAircraftTypeVisibleIds(/* @__PURE__ */ new Set());
     setResourcePoolsUnlocked(false);
   };
   reactExports.useEffect(() => {
@@ -67352,6 +67360,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     ...!settingsVisibilityPolicy.filters.includes("unit") ? visibleResourcePoolRows.map(({ pool }) => String(pool.aircraftTypeCode || "").trim().toUpperCase()) : []
   ].map(normaliseUnitCode2).filter(Boolean));
   const visibleAircraftTypeRows = config.aircraftTypes.map((aircraft, index) => ({ aircraft, index })).filter(({ aircraft }) => {
+    if (newAircraftTypeVisibleIds.has(String(aircraft.id || ""))) return true;
     if (!settingsVisibilityEnabled) return true;
     const aircraftCode = normaliseUnitCode2(aircraft.code);
     if (!aircraftCode) return true;
