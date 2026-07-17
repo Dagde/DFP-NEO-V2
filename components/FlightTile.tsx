@@ -109,26 +109,61 @@ const isAuthorisationWarningExempt = (event: ScheduleEvent | EventSegment): bool
         || exemptOperationalRows.has(eventCategory);
 };
 
+const stripGeneratedTrainingReportFollowUpLines = (value: unknown): string => (
+    String(value || '')
+        .split(/\r?\n/)
+        .flatMap(line => {
+            const trimmedLine = line.trim();
+            return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
+        })
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
+);
+
+const formatTrainingReportExtensionHours = (value: unknown): string => {
+    const hours = Number(value);
+    if (!Number.isFinite(hours) || hours <= 0) return '';
+    return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, '');
+};
+
+const getTrainingReportExtensionNotesForTile = (event: ScheduleEvent | EventSegment): string => {
+    const extensionEntries = Object.values(((event as any).trainingReportNextEventExtensions || {}) as Record<string, number>)
+        .map(formatTrainingReportExtensionHours)
+        .filter(Boolean);
+    if (extensionEntries.length === 0) return '';
+
+    const eventCode = String(event.flightNumber || (event as any).eventCode || 'this event').trim() || 'this event';
+    return Array.from(new Set(extensionEntries))
+        .map(hours => `${hours} hrs added to ${eventCode}.`)
+        .join('\n');
+};
+
 const getPreFlightNotesForTile = (event: ScheduleEvent | EventSegment): string => {
     const tileEligible = event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt';
     if (!tileEligible) return '';
 
-    const explicitNotes = String(event.preFlightNotes || '').trim();
-    if (explicitNotes) return explicitNotes;
+    const extensionNotes = getTrainingReportExtensionNotesForTile(event);
+
+    const explicitNotes = stripGeneratedTrainingReportFollowUpLines(event.preFlightNotes);
 
     const metadataNotes = Object.values((event.trainingReportForwardedNotes || {}) as Record<string, any>)
-        .map((entry: any) => String(entry?.notes || '').trim())
+        .map((entry: any) => stripGeneratedTrainingReportFollowUpLines(entry?.notes))
         .filter(Boolean)
         .join('\n\n')
         .trim();
-    if (metadataNotes) return metadataNotes;
 
     const rawNotes = String(event.notes || '').trim();
     const preFlightMatch = rawNotes.match(/^Pre-flight Notes\s*\n([\s\S]*)$/i);
-    if (preFlightMatch) return preFlightMatch[1].trim();
-
     const legacyTrainingReportMatch = rawNotes.match(/^Training report notes from [^\n]+:\s*\n([\s\S]*)$/i);
-    return legacyTrainingReportMatch ? legacyTrainingReportMatch[1].trim() : '';
+    const legacyNotes = stripGeneratedTrainingReportFollowUpLines(
+        preFlightMatch ? preFlightMatch[1] : legacyTrainingReportMatch ? legacyTrainingReportMatch[1] : ''
+    );
+
+    return [extensionNotes, explicitNotes, metadataNotes, legacyNotes]
+        .filter(Boolean)
+        .join('\n\n')
+        .trim();
 };
 
 const getAuthorizationTextColorClass = (

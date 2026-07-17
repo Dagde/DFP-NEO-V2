@@ -8309,18 +8309,34 @@ const isAuthorisationWarningExempt = (event) => {
   const exemptOperationalRows = /* @__PURE__ */ new Set(["DUTY SUP", "TWR DI", "RUNWAY DI", "RWY DI"]);
   return event.type === "deployment" || exemptOperationalRows.has(resourceId) || exemptOperationalRows.has(flightNumber) || exemptOperationalRows.has(eventCategory);
 };
+const stripGeneratedTrainingReportFollowUpLines$1 = (value) => String(value || "").split(/\r?\n/).flatMap((line) => {
+  const trimmedLine = line.trim();
+  return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
+}).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+const formatTrainingReportExtensionHours = (value) => {
+  const hours = Number(value);
+  if (!Number.isFinite(hours) || hours <= 0) return "";
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, "");
+};
+const getTrainingReportExtensionNotesForTile = (event) => {
+  const extensionEntries = Object.values(event.trainingReportNextEventExtensions || {}).map(formatTrainingReportExtensionHours).filter(Boolean);
+  if (extensionEntries.length === 0) return "";
+  const eventCode2 = String(event.flightNumber || event.eventCode || "this event").trim() || "this event";
+  return Array.from(new Set(extensionEntries)).map((hours) => `${hours} hrs added to ${eventCode2}.`).join("\n");
+};
 const getPreFlightNotesForTile = (event) => {
   const tileEligible = event.type === "flight" || event.type === "ftd" || event.type === "cpt";
   if (!tileEligible) return "";
-  const explicitNotes = String(event.preFlightNotes || "").trim();
-  if (explicitNotes) return explicitNotes;
-  const metadataNotes = Object.values(event.trainingReportForwardedNotes || {}).map((entry) => String(entry?.notes || "").trim()).filter(Boolean).join("\n\n").trim();
-  if (metadataNotes) return metadataNotes;
+  const extensionNotes = getTrainingReportExtensionNotesForTile(event);
+  const explicitNotes = stripGeneratedTrainingReportFollowUpLines$1(event.preFlightNotes);
+  const metadataNotes = Object.values(event.trainingReportForwardedNotes || {}).map((entry) => stripGeneratedTrainingReportFollowUpLines$1(entry?.notes)).filter(Boolean).join("\n\n").trim();
   const rawNotes = String(event.notes || "").trim();
   const preFlightMatch = rawNotes.match(/^Pre-flight Notes\s*\n([\s\S]*)$/i);
-  if (preFlightMatch) return preFlightMatch[1].trim();
   const legacyTrainingReportMatch = rawNotes.match(/^Training report notes from [^\n]+:\s*\n([\s\S]*)$/i);
-  return legacyTrainingReportMatch ? legacyTrainingReportMatch[1].trim() : "";
+  const legacyNotes = stripGeneratedTrainingReportFollowUpLines$1(
+    preFlightMatch ? preFlightMatch[1] : legacyTrainingReportMatch ? legacyTrainingReportMatch[1] : ""
+  );
+  return [extensionNotes, explicitNotes, metadataNotes, legacyNotes].filter(Boolean).join("\n\n").trim();
 };
 const getAuthorizationTextColorClass = (event, currentTime, settings) => {
   if (event.type !== "flight") {
@@ -83290,6 +83306,10 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
 };
 console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
 console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
+const stripGeneratedTrainingReportFollowUpLines = (value) => String(value || "").split(/\r?\n/).flatMap((line) => {
+  const trimmedLine = line.trim();
+  return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
+}).join("\n").replace(/\n{3,}/g, "\n\n").trim();
 const getDefaultHasTraineesForUnit = (_unitCode) => false;
 const applyDefaultUnitTraineeAvailability = (config) => {
   if (!config || !Array.isArray(config.units)) return config;
@@ -93245,6 +93265,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const scheduleEvent = (trainee, syllabusItem, startTime, type, isNightPass, isPlusOne, primaryPreferOnly = false, requirePreferredNightAircraft = false, options = {}) => {
     const scheduledDuration = getScheduledEventDuration(syllabusItem, type, trainee);
     const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type, trainee);
+    const scheduleSourceLmpItem = type === "flight" || type === "ftd" ? getIndividualLmpItemForTraineeEvent(trainee, syllabusItem) : null;
+    const scheduleForwardedNotes = scheduleSourceLmpItem?.trainingReportForwardedNotes;
+    const scheduleExtensionLedger = scheduleSourceLmpItem?.trainingReportNextEventExtensions;
+    const schedulePreFlightNotes = Object.values(scheduleForwardedNotes || {}).map((entry) => stripGeneratedTrainingReportFollowUpLines(entry?.notes)).filter(Boolean).join("\n\n").trim();
     const _isFlight = type === "flight" && !isNightPass;
     const _isNext = !isPlusOne;
     const _fbEnd = startTime + scheduledDuration;
@@ -94299,7 +94323,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       callsign: options.formationCallsign,
       formationSize: options.formationSize,
       forcedInstructorConflict: forcedInstructorConflictDetails.length > 0 || void 0,
-      forcedInstructorConflictDetails: forcedInstructorConflictDetails.length > 0 ? forcedInstructorConflictDetails : void 0
+      forcedInstructorConflictDetails: forcedInstructorConflictDetails.length > 0 ? forcedInstructorConflictDetails : void 0,
+      preFlightNotes: schedulePreFlightNotes,
+      trainingReportForwardedNotes: scheduleForwardedNotes,
+      trainingReportNextEventExtensions: scheduleExtensionLedger
     };
     traceIndividualLmpDuration("schedule-event-placed", {
       trainee: trainee.fullName,
@@ -102150,7 +102177,7 @@ const App = () => {
   function summariseTrainingReportLmpItems(lmp) {
     const items = Array.isArray(lmp) ? lmp : [];
     const reportItems = items.filter(
-      (item) => item?.trainingReportSourceAssessmentId || item?.trainingReportSourceEventId || item?.trainingReportNextEventExtensions || item?.trainingReportLastExtendedByAssessmentId || item?.isRemedial === true || item?.lmpSource === "remedial"
+      (item) => item?.trainingReportSourceAssessmentId || item?.trainingReportSourceEventId || item?.trainingReportNextEventExtensions || item?.trainingReportLastExtendedByAssessmentId || item?.trainingReportForwardedNotes || item?.isRemedial === true || item?.lmpSource === "remedial"
     );
     return {
       count: items.length,
@@ -102170,7 +102197,8 @@ const App = () => {
         trainingReportSourceAssessmentId: item?.trainingReportSourceAssessmentId,
         trainingReportSourceEventId: item?.trainingReportSourceEventId,
         trainingReportNextEventExtensions: item?.trainingReportNextEventExtensions,
-        trainingReportLastExtendedByAssessmentId: item?.trainingReportLastExtendedByAssessmentId
+        trainingReportLastExtendedByAssessmentId: item?.trainingReportLastExtendedByAssessmentId,
+        trainingReportForwardedKeys: Object.keys(item?.trainingReportForwardedNotes || {})
       }))
     };
   }
@@ -105849,7 +105877,7 @@ ${"=".repeat(60)}`);
     const eventCodeForDiag = String(event.flightNumber || event.eventCode || event.id || "").trim().toUpperCase();
     const notesByKey = /* @__PURE__ */ new Map();
     const addNotes = (notes) => {
-      const cleanNotes = String(notes || "").trim();
+      const cleanNotes = stripGeneratedTrainingReportFollowUpLines(notes);
       if (!cleanNotes) return;
       notesByKey.set(cleanNotes, cleanNotes);
     };
@@ -105895,6 +105923,9 @@ ${"=".repeat(60)}`);
     const forwardedNotes = {
       ...event.trainingReportForwardedNotes || {}
     };
+    const extensionLedger = {
+      ...event.trainingReportNextEventExtensions || {}
+    };
     const lmpMatchDiag = [];
     const inspectLmpItem = (item) => {
       const itemRefs = [
@@ -105906,6 +105937,12 @@ ${"=".repeat(60)}`);
       Object.entries(item.trainingReportForwardedNotes || {}).forEach(([key, entry]) => {
         forwardedNotes[key] = entry;
         addNotes(entry?.notes);
+      });
+      Object.entries(item.trainingReportNextEventExtensions || {}).forEach(([key, value]) => {
+        const hours = Number(value);
+        if (Number.isFinite(hours) && hours > 0) {
+          extensionLedger[key] = hours;
+        }
       });
     };
     candidateNames.forEach((name) => {
@@ -105924,6 +105961,7 @@ ${"=".repeat(60)}`);
             flightOrSimHours: item.flightOrSimHours ?? null,
             duration: item.duration ?? null,
             forwardedKeys: Object.keys(item.trainingReportForwardedNotes || {}),
+            extensionKeys: Object.keys(item.trainingReportNextEventExtensions || {}),
             forwardedNoteLengths: Object.values(item.trainingReportForwardedNotes || {}).map((entry) => String(entry?.notes || "").trim().length)
           })) : []
         });
@@ -105946,17 +105984,20 @@ ${"=".repeat(60)}`);
         candidateNames: Array.from(candidateNames),
         notesFound: notesByKey.size,
         forwardedKeysFound: Object.keys(forwardedNotes),
+        extensionKeysFound: Object.keys(extensionLedger),
         existingPreFlightNoteLength: String(event.preFlightNotes || "").trim().length,
         existingForwardedKeys: Object.keys(event.trainingReportForwardedNotes || {}),
+        existingExtensionKeys: Object.keys(event.trainingReportNextEventExtensions || {}),
         lmpMatchDiag
       });
     }
-    if (notesByKey.size === 0) return event;
+    if (notesByKey.size === 0 && Object.keys(extensionLedger).length === 0) return event;
     const preFlightNotes = Array.from(notesByKey.values()).join("\n\n");
     return {
       ...event,
-      preFlightNotes,
-      trainingReportForwardedNotes: Object.keys(forwardedNotes).length > 0 ? forwardedNotes : event.trainingReportForwardedNotes
+      preFlightNotes: preFlightNotes || event.preFlightNotes,
+      trainingReportForwardedNotes: Object.keys(forwardedNotes).length > 0 ? forwardedNotes : event.trainingReportForwardedNotes,
+      trainingReportNextEventExtensions: Object.keys(extensionLedger).length > 0 ? extensionLedger : event.trainingReportNextEventExtensions
     };
   }, [traineeLMPs, traineesData]);
   const eventsForDateWithPreFlightNotes = reactExports.useMemo(() => eventsForDate.map(decorateEventWithForwardedPreFlightNotes), [decorateEventWithForwardedPreFlightNotes, eventsForDate]);
@@ -107250,7 +107291,7 @@ ${"=".repeat(60)}`);
     setPreviousView("HateSheet");
     setActiveView("CourseRoster");
   }, [activeView, selectedTraineeForHateSheet]);
-  const getForwardedNotesFromLmpItem = (item) => Object.values(item?.trainingReportForwardedNotes || {}).map((entry) => String(entry?.notes || "").trim()).filter(Boolean).join("\n\n");
+  const getForwardedNotesFromLmpItem = (item) => Object.values(item?.trainingReportForwardedNotes || {}).map((entry) => stripGeneratedTrainingReportFollowUpLines(entry?.notes)).filter(Boolean).join("\n\n");
   const attachForwardedTrainingReportNotes = reactExports.useCallback((trainee, event) => {
     const traineeLmp = traineeLMPs.get(trainee.fullName) || [];
     if (!Array.isArray(traineeLmp) || traineeLmp.length === 0) return event;
@@ -107549,8 +107590,9 @@ ${"=".repeat(60)}`);
       crew: "",
       eventCode: item.code,
       eventCategory: "lmp_event",
-      preFlightNotes: Object.values(item.trainingReportForwardedNotes || {}).map((entry) => String(entry?.notes || "").trim()).filter(Boolean).join("\n\n"),
-      trainingReportForwardedNotes: item.trainingReportForwardedNotes
+      preFlightNotes: Object.values(item.trainingReportForwardedNotes || {}).map((entry) => stripGeneratedTrainingReportFollowUpLines(entry?.notes)).filter(Boolean).join("\n\n"),
+      trainingReportForwardedNotes: item.trainingReportForwardedNotes,
+      trainingReportNextEventExtensions: item.trainingReportNextEventExtensions
     };
   };
   const handleGeneratePt051FromLmpItem = async (trainee, item) => {
@@ -109510,11 +109552,21 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     const targetEvent = originalLmp[nextEventIndex];
     const baseNotes = typeof targetEvent.trainingReportBaseNotes === "string" ? targetEvent.trainingReportBaseNotes : String(targetEvent.notes || "");
+    const nextNotes = stripGeneratedTrainingReportFollowUpLines(assessment.trainingReportNotes);
+    if (!nextNotes) {
+      pushDfpDataDiag("report-notes:forward:no-free-text-after-clean", {
+        assessmentId: assessment.id,
+        traineeFullName: trainee.fullName,
+        sourceCode: sourceItem.code,
+        targetCode: targetEvent.code
+      });
+      return;
+    }
     const forwardedNotes = {
       ...targetEvent.trainingReportForwardedNotes || {},
       [assessmentKey]: {
         sourceCode: sourceItem.code || assessment.flightNumber,
-        notes: String(assessment.trainingReportNotes || "").trim()
+        notes: nextNotes
       }
     };
     const updatedTargetEvent = {
@@ -109534,7 +109586,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       baseNotesLength: baseNotes.length,
       forwardedKeysBefore: Object.keys(targetEvent.trainingReportForwardedNotes || {}),
       forwardedKeysAfter: Object.keys(forwardedNotes),
-      forwardedNoteLength: String(assessment.trainingReportNotes || "").trim().length,
+      forwardedNoteLength: nextNotes.length,
       extensionKeysOnTarget: Object.keys(targetEvent.trainingReportNextEventExtensions || {}),
       targetHours: {
         flightOrSimHours: targetEvent.flightOrSimHours,
@@ -112034,9 +112086,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           const existingForwardedNotes = {
             ...updatedTarget.trainingReportForwardedNotes || {}
           };
-          const nextNotes = String(assessment.trainingReportNotes || "").trim();
+          const nextNotes = stripGeneratedTrainingReportFollowUpLines(assessment.trainingReportNotes);
           const previousNotes = String(existingForwardedNotes[assessmentKey]?.notes || "").trim();
-          if (previousNotes !== nextNotes) {
+          if (!nextNotes) {
+            updates.push({
+              assessmentId: assessmentKey,
+              sourceCode: sourceItem.code,
+              targetCode: targetItem.code,
+              outcome: "notes-generated-prefix-only"
+            });
+          } else if (previousNotes !== nextNotes) {
             existingForwardedNotes[assessmentKey] = {
               sourceCode: sourceItem.code || assessment.flightNumber,
               notes: nextNotes

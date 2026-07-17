@@ -159,6 +159,18 @@ import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
 
+const stripGeneratedTrainingReportFollowUpLines = (value: unknown): string => (
+    String(value || '')
+        .split(/\r?\n/)
+        .flatMap(line => {
+            const trimmedLine = line.trim();
+            return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
+        })
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
+);
+
 const getDefaultHasTraineesForUnit = (_unitCode: unknown): boolean => false;
 
 const applyDefaultUnitTraineeAvailability = (config: PlatformConfig | null): PlatformConfig | null => {
@@ -12618,6 +12630,16 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     ): ScheduleEventResult => {
         const scheduledDuration = getScheduledEventDuration(syllabusItem, type, trainee);
         const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type, trainee);
+        const scheduleSourceLmpItem = (type === 'flight' || type === 'ftd')
+            ? getIndividualLmpItemForTraineeEvent(trainee, syllabusItem) as (SyllabusItemDetail & Record<string, any>) | null
+            : null;
+        const scheduleForwardedNotes = scheduleSourceLmpItem?.trainingReportForwardedNotes;
+        const scheduleExtensionLedger = scheduleSourceLmpItem?.trainingReportNextEventExtensions;
+        const schedulePreFlightNotes = Object.values((scheduleForwardedNotes || {}) as Record<string, any>)
+            .map((entry: any) => stripGeneratedTrainingReportFollowUpLines(entry?.notes))
+            .filter(Boolean)
+            .join('\n\n')
+            .trim();
         const _isFlight = type === 'flight' && !isNightPass;
         const _isNext = !isPlusOne;
         const _fbEnd = startTime + scheduledDuration;
@@ -13655,6 +13677,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 color: courseColors[trainee.course] || 'bg-gray-500',
                 flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school,
                 area: undefined, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
+                preFlightNotes: schedulePreFlightNotes,
+                trainingReportForwardedNotes: scheduleForwardedNotes,
+                trainingReportNextEventExtensions: scheduleExtensionLedger,
             };
             options.diagnosticTrace?.({
                 phase: 'schedule-event',
@@ -13927,6 +13952,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             formationSize: options.formationSize,
             forcedInstructorConflict: forcedInstructorConflictDetails.length > 0 || undefined,
             forcedInstructorConflictDetails: forcedInstructorConflictDetails.length > 0 ? forcedInstructorConflictDetails : undefined,
+            preFlightNotes: schedulePreFlightNotes,
+            trainingReportForwardedNotes: scheduleForwardedNotes,
+            trainingReportNextEventExtensions: scheduleExtensionLedger,
         };
         traceIndividualLmpDuration('schedule-event-placed', {
             trainee: trainee.fullName,
@@ -23315,6 +23343,7 @@ const App: React.FC = () => {
             item?.trainingReportSourceEventId ||
             item?.trainingReportNextEventExtensions ||
             item?.trainingReportLastExtendedByAssessmentId ||
+            item?.trainingReportForwardedNotes ||
             item?.isRemedial === true ||
             item?.lmpSource === 'remedial'
         );
@@ -23337,6 +23366,7 @@ const App: React.FC = () => {
                 trainingReportSourceEventId: item?.trainingReportSourceEventId,
                 trainingReportNextEventExtensions: item?.trainingReportNextEventExtensions,
                 trainingReportLastExtendedByAssessmentId: item?.trainingReportLastExtendedByAssessmentId,
+                trainingReportForwardedKeys: Object.keys((item?.trainingReportForwardedNotes || {}) as Record<string, any>),
             })),
         };
     }
@@ -27682,7 +27712,7 @@ const App: React.FC = () => {
 
         const notesByKey = new Map<string, string>();
         const addNotes = (notes: unknown) => {
-            const cleanNotes = String(notes || '').trim();
+            const cleanNotes = stripGeneratedTrainingReportFollowUpLines(notes);
             if (!cleanNotes) return;
             notesByKey.set(cleanNotes, cleanNotes);
         };
@@ -27742,6 +27772,9 @@ const App: React.FC = () => {
         const forwardedNotes: Record<string, any> = {
             ...((event.trainingReportForwardedNotes || {}) as Record<string, any>),
         };
+        const extensionLedger: Record<string, number> = {
+            ...(((event as any).trainingReportNextEventExtensions || {}) as Record<string, number>),
+        };
         const lmpMatchDiag: any[] = [];
 
         const inspectLmpItem = (item: SyllabusItemDetail) => {
@@ -27757,6 +27790,13 @@ const App: React.FC = () => {
                 .forEach(([key, entry]) => {
                     forwardedNotes[key] = entry;
                     addNotes((entry as any)?.notes);
+                });
+            Object.entries(((item as any).trainingReportNextEventExtensions || {}) as Record<string, number>)
+                .forEach(([key, value]) => {
+                    const hours = Number(value);
+                    if (Number.isFinite(hours) && hours > 0) {
+                        extensionLedger[key] = hours;
+                    }
                 });
         };
 
@@ -27780,6 +27820,7 @@ const App: React.FC = () => {
                                 flightOrSimHours: item.flightOrSimHours ?? null,
                                 duration: item.duration ?? null,
                                 forwardedKeys: Object.keys(((item as any).trainingReportForwardedNotes || {}) as Record<string, any>),
+                                extensionKeys: Object.keys(((item as any).trainingReportNextEventExtensions || {}) as Record<string, any>),
                                 forwardedNoteLengths: Object.values(((item as any).trainingReportForwardedNotes || {}) as Record<string, any>)
                                     .map((entry: any) => String(entry?.notes || '').trim().length),
                             }))
@@ -27808,21 +27849,26 @@ const App: React.FC = () => {
                 candidateNames: Array.from(candidateNames),
                 notesFound: notesByKey.size,
                 forwardedKeysFound: Object.keys(forwardedNotes),
+                extensionKeysFound: Object.keys(extensionLedger),
                 existingPreFlightNoteLength: String(event.preFlightNotes || '').trim().length,
                 existingForwardedKeys: Object.keys((event.trainingReportForwardedNotes || {}) as Record<string, any>),
+                existingExtensionKeys: Object.keys(((event as any).trainingReportNextEventExtensions || {}) as Record<string, any>),
                 lmpMatchDiag,
             });
         }
 
-        if (notesByKey.size === 0) return event;
+        if (notesByKey.size === 0 && Object.keys(extensionLedger).length === 0) return event;
 
         const preFlightNotes = Array.from(notesByKey.values()).join('\n\n');
         return {
             ...event,
-            preFlightNotes,
+            preFlightNotes: preFlightNotes || event.preFlightNotes,
             trainingReportForwardedNotes: Object.keys(forwardedNotes).length > 0
                 ? forwardedNotes
                 : event.trainingReportForwardedNotes,
+            trainingReportNextEventExtensions: Object.keys(extensionLedger).length > 0
+                ? extensionLedger
+                : (event as any).trainingReportNextEventExtensions,
         };
     }, [traineeLMPs, traineesData]);
 
@@ -29574,7 +29620,7 @@ const App: React.FC = () => {
 
     const getForwardedNotesFromLmpItem = (item?: Partial<SyllabusItemDetail> | null): string => (
         Object.values(((item as any)?.trainingReportForwardedNotes || {}) as Record<string, any>)
-            .map((entry: any) => String(entry?.notes || '').trim())
+            .map((entry: any) => stripGeneratedTrainingReportFollowUpLines(entry?.notes))
             .filter(Boolean)
             .join('\n\n')
     );
@@ -29936,10 +29982,11 @@ const App: React.FC = () => {
             eventCode: item.code,
             eventCategory: 'lmp_event',
             preFlightNotes: Object.values(((item as any).trainingReportForwardedNotes || {}) as Record<string, any>)
-                .map((entry: any) => String(entry?.notes || '').trim())
+                .map((entry: any) => stripGeneratedTrainingReportFollowUpLines(entry?.notes))
                 .filter(Boolean)
                 .join('\n\n'),
             trainingReportForwardedNotes: (item as any).trainingReportForwardedNotes,
+            trainingReportNextEventExtensions: (item as any).trainingReportNextEventExtensions,
         } as ScheduleEvent;
     };
 
@@ -32255,11 +32302,21 @@ const App: React.FC = () => {
         const baseNotes = typeof targetEvent.trainingReportBaseNotes === 'string'
             ? targetEvent.trainingReportBaseNotes
             : String(targetEvent.notes || '');
+        const nextNotes = stripGeneratedTrainingReportFollowUpLines(assessment.trainingReportNotes);
+        if (!nextNotes) {
+            pushDfpDataDiag('report-notes:forward:no-free-text-after-clean', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                sourceCode: sourceItem.code,
+                targetCode: targetEvent.code,
+            });
+            return;
+        }
         const forwardedNotes = {
             ...(targetEvent.trainingReportForwardedNotes || {}),
             [assessmentKey]: {
                 sourceCode: sourceItem.code || assessment.flightNumber,
-                notes: String(assessment.trainingReportNotes || '').trim(),
+                notes: nextNotes,
             },
         } as Record<string, { sourceCode?: string; notes?: string }>;
         const updatedTargetEvent: SyllabusItemDetail & Record<string, any> = {
@@ -32279,7 +32336,7 @@ const App: React.FC = () => {
             baseNotesLength: baseNotes.length,
             forwardedKeysBefore: Object.keys((targetEvent.trainingReportForwardedNotes || {}) as Record<string, any>),
             forwardedKeysAfter: Object.keys(forwardedNotes),
-            forwardedNoteLength: String(assessment.trainingReportNotes || '').trim().length,
+            forwardedNoteLength: nextNotes.length,
             extensionKeysOnTarget: Object.keys((targetEvent.trainingReportNextEventExtensions || {}) as Record<string, any>),
             targetHours: {
                 flightOrSimHours: targetEvent.flightOrSimHours,
@@ -35367,9 +35424,16 @@ const App: React.FC = () => {
                     const existingForwardedNotes = {
                         ...(updatedTarget.trainingReportForwardedNotes || {}),
                     } as Record<string, { sourceCode?: string; notes?: string }>;
-                    const nextNotes = String(assessment.trainingReportNotes || '').trim();
+                    const nextNotes = stripGeneratedTrainingReportFollowUpLines(assessment.trainingReportNotes);
                     const previousNotes = String(existingForwardedNotes[assessmentKey]?.notes || '').trim();
-                    if (previousNotes !== nextNotes) {
+                    if (!nextNotes) {
+                        updates.push({
+                            assessmentId: assessmentKey,
+                            sourceCode: sourceItem.code,
+                            targetCode: targetItem.code,
+                            outcome: 'notes-generated-prefix-only',
+                        });
+                    } else if (previousNotes !== nextNotes) {
                         existingForwardedNotes[assessmentKey] = {
                             sourceCode: sourceItem.code || assessment.flightNumber,
                             notes: nextNotes,

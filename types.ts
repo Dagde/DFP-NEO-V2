@@ -370,6 +370,7 @@ export interface ScheduleEvent {
       notes?: string;
       preFlightNotes?: string;
       trainingReportForwardedNotes?: Record<string, { notes?: string; [key: string]: any }>;
+      trainingReportNextEventExtensions?: Record<string, number>;
   currency?: string;
   currencyDraftId?: string;
   aircraftCount?: number;
