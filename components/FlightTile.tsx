@@ -861,32 +861,6 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                     {aircraftNumberDisplay}
                 </div>
             )}
-            <div className="absolute bottom-0.5 right-3 flex items-center gap-1">
-                {event.area && (
-                    <div
-                        className={`font-sans font-light ${['A','B','C','D','E','F','G','H'].includes(event.area) ? 'text-white' : 'text-yellow-300'}`}
-                        style={{
-                            fontSize: `${scaledFontSize}px`,
-                            lineHeight: '1',
-                            opacity: 0.7,
-                        }}
-                    >
-                        {event.area}
-                    </div>
-                )}
-                {callsign && (
-                    <div
-                        className="font-mono text-white/80"
-                        style={{
-                            fontSize: `${scaledFontSize - 2}px`,
-                            lineHeight: '1',
-                            opacity: 0.8,
-                        }}
-                    >
-                        {callsign}
-                    </div>
-                )}
-            </div>
         </>
     );
   };
@@ -979,6 +953,40 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
           </div>
       );
   }
+
+  const renderCallsignMarker = () => {
+      const canShowCallsignMarker = event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt';
+      if (!canShowCallsignMarker || (!callsign && !event.area) || isPreview || isSmallTile || isDutySup) return null;
+
+      return (
+          <div className="absolute bottom-0.5 right-3 flex items-center gap-1 pointer-events-none">
+              {event.area && (
+                  <div
+                      className={`font-sans font-light ${['A','B','C','D','E','F','G','H'].includes(event.area) ? 'text-white' : 'text-yellow-300'}`}
+                      style={{
+                          fontSize: `${scaledFontSize}px`,
+                          lineHeight: '1',
+                          opacity: 0.7,
+                      }}
+                  >
+                      {event.area}
+                  </div>
+              )}
+              {callsign && (
+                  <div
+                      className="font-mono text-white/80"
+                      style={{
+                          fontSize: `${scaledFontSize - 2}px`,
+                          lineHeight: '1',
+                          opacity: 0.8,
+                      }}
+                  >
+                      {callsign}
+                  </div>
+              )}
+          </div>
+      );
+  };
 
   const renderPreFlightNotesMarker = () => {
       if (!preFlightNotesForTile || isPreview) return null;
@@ -1119,6 +1127,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
             )}
             {renderContent()}
             {renderFlyout()}
+            {renderCallsignMarker()}
             {renderPreFlightNotesMarker()}
         </div>
     </div>

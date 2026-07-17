@@ -4883,14 +4883,13 @@ const normalisePersonnelRecord = (person: any): any => {
         ? person.preferences
         : {};
     const unitCode = String(person?.unit || '').trim().toUpperCase();
-    const suppressLegacyProfileCallsign = unitCode === '11SQN' || unitCode === '12SQN';
     const normalisedRole = normaliseFixedCrewStaffRole(person?.role, unitCode);
     return {
         ...person,
         role: unitCode === '77SQN' ? 'Pilot' : normalisedRole,
-        callsign: suppressLegacyProfileCallsign ? '' : person?.callsign || preferences.callsign || '',
-        secondaryCallsign: suppressLegacyProfileCallsign ? '' : person?.secondaryCallsign || preferences.secondaryCallsign || '',
-        callsignNumber: suppressLegacyProfileCallsign ? null : person?.callsignNumber,
+        callsign: person?.callsign || preferences.callsign || '',
+        secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || '',
+        callsignNumber: person?.callsignNumber,
         crew: person?.crew || preferences.crew || '',
         preferences: {
             ...preferences,

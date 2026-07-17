@@ -23,7 +23,7 @@ const isQfiStaff = (person: Instructor): boolean =>
 const isSimIp = (person: Instructor): boolean => person.role === 'SIM IP';
 
 const isCallsignAssignableStaff = (person: Instructor): boolean => (
-  isQfiStaff(person) || isSimIp(person)
+  Boolean(person.name) && (person as any).isActive !== false && !person.isAdminStaff
 );
 
 const isLegacyFlightSchoolCallsignUnit = (person: Instructor): boolean => {

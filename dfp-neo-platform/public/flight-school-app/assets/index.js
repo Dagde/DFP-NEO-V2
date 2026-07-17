@@ -4827,7 +4827,7 @@ const norm = (value) => String(value || "").trim().toUpperCase();
 const personKey = (person) => String(person.id || person.idNumber || person.name || "").trim();
 const isQfiStaff = (person) => person.role === "QFI" || person.isQFI === true || person.role === "INSTRUCTOR";
 const isSimIp = (person) => person.role === "SIM IP";
-const isCallsignAssignableStaff = (person) => isQfiStaff(person) || isSimIp(person);
+const isCallsignAssignableStaff = (person) => Boolean(person.name) && person.isActive !== false && !person.isAdminStaff;
 const isLegacyFlightSchoolCallsignUnit = (person) => {
   const unit = norm(person.unit);
   return unit.startsWith("1FTS") || unit.startsWith("CFS") || unit.startsWith("2FTS");
@@ -8856,33 +8856,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
           },
           children: aircraftNumberDisplay
         }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-0.5 right-3 flex items-center gap-1", children: [
-        event.area && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "div",
-          {
-            className: `font-sans font-light ${["A", "B", "C", "D", "E", "F", "G", "H"].includes(event.area) ? "text-white" : "text-yellow-300"}`,
-            style: {
-              fontSize: `${scaledFontSize}px`,
-              lineHeight: "1",
-              opacity: 0.7
-            },
-            children: event.area
-          }
-        ),
-        callsign && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "div",
-          {
-            className: "font-mono text-white/80",
-            style: {
-              fontSize: `${scaledFontSize - 2}px`,
-              lineHeight: "1",
-              opacity: 0.8
-            },
-            children: callsign
-          }
-        )
-      ] })
+      )
     ] });
   };
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
@@ -8940,6 +8914,36 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       ] }),
       callsign && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-500 text-[10px]", children: callsign })
     ] }) });
+  };
+  const renderCallsignMarker = () => {
+    const canShowCallsignMarker = event.type === "flight" || event.type === "ftd" || event.type === "cpt";
+    if (!canShowCallsignMarker || !callsign && !event.area || isPreview || isSmallTile || isDutySup) return null;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-0.5 right-3 flex items-center gap-1 pointer-events-none", children: [
+      event.area && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: `font-sans font-light ${["A", "B", "C", "D", "E", "F", "G", "H"].includes(event.area) ? "text-white" : "text-yellow-300"}`,
+          style: {
+            fontSize: `${scaledFontSize}px`,
+            lineHeight: "1",
+            opacity: 0.7
+          },
+          children: event.area
+        }
+      ),
+      callsign && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: "font-mono text-white/80",
+          style: {
+            fontSize: `${scaledFontSize - 2}px`,
+            lineHeight: "1",
+            opacity: 0.8
+          },
+          children: callsign
+        }
+      )
+    ] });
   };
   const renderPreFlightNotesMarker = () => {
     if (!preFlightNotesForTile || isPreview) return null;
@@ -9081,6 +9085,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
           ),
           renderContent(),
           renderFlyout(),
+          renderCallsignMarker(),
           renderPreFlightNotesMarker()
         ] })
       ]
@@ -87142,14 +87147,13 @@ const DfpSidePanelTimeline = ({
 const normalisePersonnelRecord = (person) => {
   const preferences = person?.preferences && typeof person.preferences === "object" && !Array.isArray(person.preferences) ? person.preferences : {};
   const unitCode = String(person?.unit || "").trim().toUpperCase();
-  const suppressLegacyProfileCallsign = unitCode === "11SQN" || unitCode === "12SQN";
   const normalisedRole = normaliseFixedCrewStaffRole(person?.role, unitCode);
   return {
     ...person,
     role: unitCode === "77SQN" ? "Pilot" : normalisedRole,
-    callsign: suppressLegacyProfileCallsign ? "" : person?.callsign || preferences.callsign || "",
-    secondaryCallsign: suppressLegacyProfileCallsign ? "" : person?.secondaryCallsign || preferences.secondaryCallsign || "",
-    callsignNumber: suppressLegacyProfileCallsign ? null : person?.callsignNumber,
+    callsign: person?.callsign || preferences.callsign || "",
+    secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || "",
+    callsignNumber: person?.callsignNumber,
     crew: person?.crew || preferences.crew || "",
     preferences: {
       ...preferences,
