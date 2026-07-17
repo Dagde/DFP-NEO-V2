@@ -30,8 +30,6 @@ const generateRandomIdNumber = (): number => {
     return Math.floor(Math.random() * (9999999 - 1000000 + 1)) + 1000000;
 };
 
-// Unit display sort order in Staff Profile
-const UNIT_SORT_ORDER: Record<string, number> = { '1FTS': 1, 'CFS': 2, '2FTS': 3 };
 const isPilotRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toLowerCase() === 'pilot';
 const isQfiRole = (instructor: Instructor): boolean =>
@@ -339,12 +337,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   }, [filteredQfis]);
 
   const sortedUnits = useMemo(() =>
-      Object.keys(qfisByUnit).sort((a, b) => {
-          const orderA = UNIT_SORT_ORDER[a] ?? 99;
-          const orderB = UNIT_SORT_ORDER[b] ?? 99;
-          if (orderA !== orderB) return orderA - orderB;
-          return a.localeCompare(b);
-      }),
+      Object.keys(qfisByUnit).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })),
   [qfisByUnit]);
 
   const qfisByFlight = useMemo(() => {
@@ -486,12 +479,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   }, [ofis]);
 
   const sortedOfiUnits = useMemo(() =>
-      Object.keys(ofisByUnit).sort((a, b) => {
-          const orderA = UNIT_SORT_ORDER[a] ?? 99;
-          const orderB = UNIT_SORT_ORDER[b] ?? 99;
-          if (orderA !== orderB) return orderA - orderB;
-          return a.localeCompare(b);
-      }),
+      Object.keys(ofisByUnit).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })),
   [ofisByUnit]);
 
   const otherStaffByUnit = useMemo(() => {
@@ -507,12 +495,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   }, [otherStaff]);
 
   const sortedOtherStaffUnits = useMemo(() =>
-      Object.keys(otherStaffByUnit).sort((a, b) => {
-          const orderA = UNIT_SORT_ORDER[a] ?? 99;
-          const orderB = UNIT_SORT_ORDER[b] ?? 99;
-          if (orderA !== orderB) return orderA - orderB;
-          return a.localeCompare(b);
-      }),
+      Object.keys(otherStaffByUnit).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })),
   [otherStaffByUnit]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {

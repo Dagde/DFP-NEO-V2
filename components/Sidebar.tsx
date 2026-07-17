@@ -103,15 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
     return acc;
   }, {} as Record<string, typeof filteredUsers>);
 
-  const unitOrder = ['1FTS', 'CFS', '2FTS'];
-  const sortedUnits = Object.keys(groupedUsers).sort((a, b) => {
-    const aIndex = unitOrder.indexOf(a);
-    const bIndex = unitOrder.indexOf(b);
-    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-    if (aIndex !== -1) return -1;
-    if (bIndex !== -1) return 1;
-    return a.localeCompare(b);
-  });
+  const sortedUnits = Object.keys(groupedUsers).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
   // Show courses represented in the already-scoped active trainee list.
   const filteredCourses = React.useMemo(() => {

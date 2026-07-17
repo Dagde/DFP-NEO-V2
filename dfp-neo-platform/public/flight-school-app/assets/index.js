@@ -7316,15 +7316,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
     acc[unit].push(user);
     return acc;
   }, {});
-  const unitOrder = ["1FTS", "CFS", "2FTS"];
-  Object.keys(groupedUsers).sort((a, b) => {
-    const aIndex = unitOrder.indexOf(a);
-    const bIndex = unitOrder.indexOf(b);
-    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-    if (aIndex !== -1) return -1;
-    if (bIndex !== -1) return 1;
-    return a.localeCompare(b);
-  });
+  Object.keys(groupedUsers).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
   const filteredCourses = React.useMemo(() => {
     if (!allTraineesData || allTraineesData.length === 0) {
       return Object.entries(courseColors);
@@ -51647,7 +51639,6 @@ const ArchivedInstructorsFlyout = ({ archivedInstructors, onClose, onRestore }) 
 const generateRandomIdNumber$1 = () => {
   return Math.floor(Math.random() * (9999999 - 1e6 + 1)) + 1e6;
 };
-const UNIT_SORT_ORDER = { "1FTS": 1, "CFS": 2, "2FTS": 3 };
 const isPilotRole = (instructor) => String(instructor.role || "").trim().toLowerCase() === "pilot";
 const isQfiRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "QFI" || instructor.isQFI === true || String(instructor.role || "").trim().toUpperCase() === "INSTRUCTOR";
 const isConfiguredCrewPositionRole = (instructor, terminology) => Boolean(findCrewPositionEntry(instructor.role, terminology));
@@ -51847,12 +51838,7 @@ const InstructorListView = ({
     return groups;
   }, [filteredQfis]);
   const sortedUnits = reactExports.useMemo(
-    () => Object.keys(qfisByUnit).sort((a, b) => {
-      const orderA = UNIT_SORT_ORDER[a] ?? 99;
-      const orderB = UNIT_SORT_ORDER[b] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return a.localeCompare(b);
-    }),
+    () => Object.keys(qfisByUnit).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })),
     [qfisByUnit]
   );
   const qfisByFlight = reactExports.useMemo(() => {
@@ -51971,12 +51957,7 @@ const InstructorListView = ({
     return groups;
   }, [ofis]);
   const sortedOfiUnits = reactExports.useMemo(
-    () => Object.keys(ofisByUnit).sort((a, b) => {
-      const orderA = UNIT_SORT_ORDER[a] ?? 99;
-      const orderB = UNIT_SORT_ORDER[b] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return a.localeCompare(b);
-    }),
+    () => Object.keys(ofisByUnit).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })),
     [ofisByUnit]
   );
   const otherStaffByUnit = reactExports.useMemo(() => {
@@ -51991,12 +51972,7 @@ const InstructorListView = ({
     return groups;
   }, [otherStaff]);
   const sortedOtherStaffUnits = reactExports.useMemo(
-    () => Object.keys(otherStaffByUnit).sort((a, b) => {
-      const orderA = UNIT_SORT_ORDER[a] ?? 99;
-      const orderB = UNIT_SORT_ORDER[b] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return a.localeCompare(b);
-    }),
+    () => Object.keys(otherStaffByUnit).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })),
     [otherStaffByUnit]
   );
   const handleMouseEnter = (e, instructorName) => {
@@ -57564,15 +57540,7 @@ const StaffSearchDropdown = ({
       acc[unit].push(person);
       return acc;
     }, {});
-    const unitOrder = ["1FTS", "CFS", "2FTS"];
-    const sortedUnits = Object.keys(grouped).sort((a, b) => {
-      const aIndex = unitOrder.indexOf(a);
-      const bIndex = unitOrder.indexOf(b);
-      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-      if (aIndex !== -1) return -1;
-      if (bIndex !== -1) return 1;
-      return a.localeCompare(b);
-    });
+    const sortedUnits = Object.keys(grouped).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
     Object.keys(grouped).forEach((unit) => {
       grouped[unit].sort((a, b) => {
         if (a.rank !== b.rank) return a.rank.localeCompare(b.rank);

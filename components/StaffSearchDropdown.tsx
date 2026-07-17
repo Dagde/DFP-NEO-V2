@@ -51,16 +51,7 @@ const StaffSearchDropdown: React.FC<StaffSearchDropdownProps> = ({
       return acc;
     }, {} as Record<string, StaffMember[]>);
 
-    // Sort units: 1FTS, CFS, 2FTS first, then alphabetically
-    const unitOrder = ['1FTS', 'CFS', '2FTS'];
-    const sortedUnits = Object.keys(grouped).sort((a, b) => {
-      const aIndex = unitOrder.indexOf(a);
-      const bIndex = unitOrder.indexOf(b);
-      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-      if (aIndex !== -1) return -1;
-      if (bIndex !== -1) return 1;
-      return a.localeCompare(b);
-    });
+    const sortedUnits = Object.keys(grouped).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
     // Sort staff within each unit by rank then name
     Object.keys(grouped).forEach(unit => {
