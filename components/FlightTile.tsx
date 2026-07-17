@@ -381,6 +381,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const preFlightNotesForTile = getPreFlightNotesForTile(event);
   const [showPreFlightNotesTooltip, setShowPreFlightNotesTooltip] = useState(false);
   const [preFlightNotesTooltipPlacement, setPreFlightNotesTooltipPlacement] = useState<'above' | 'below'>('above');
+  const [preFlightNotesTooltipPosition, setPreFlightNotesTooltipPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const preFlightNotesMarkerRef = useRef<HTMLDivElement | null>(null);
   const preFlightNotesTooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -396,6 +397,21 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       clearPreFlightNotesTooltipTimer();
       return clearPreFlightNotesTooltipTimer;
   }, [preFlightNotesForTile]);
+
+  const updatePreFlightNotesTooltipPosition = () => {
+      const markerRect = preFlightNotesMarkerRef.current?.getBoundingClientRect();
+      if (!markerRect) return;
+      const estimatedLines = preFlightNotesForTile.split(/\r?\n/).length + 1;
+      const estimatedHeight = Math.min(180, Math.max(34, estimatedLines * 14 + 20));
+      const hasRoomAbove = markerRect.top - estimatedHeight > 8;
+      const placement = hasRoomAbove ? 'above' : 'below';
+      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+      setPreFlightNotesTooltipPlacement(placement);
+      setPreFlightNotesTooltipPosition({
+          top: placement === 'above' ? markerRect.top - 6 : markerRect.bottom + 6,
+          left: Math.min(viewportWidth - 8, Math.max(160, markerRect.right)),
+      });
+  };
   
   
   
@@ -1037,9 +1053,9 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
               onMouseDown={(e) => e.stopPropagation()}
               onMouseEnter={() => {
                   clearPreFlightNotesTooltipTimer();
-                  const markerRect = preFlightNotesMarkerRef.current?.getBoundingClientRect();
-                  setPreFlightNotesTooltipPlacement(markerRect && markerRect.top < 120 ? 'below' : 'above');
+                  updatePreFlightNotesTooltipPosition();
                   preFlightNotesTooltipTimerRef.current = setTimeout(() => {
+                      updatePreFlightNotesTooltipPosition();
                       setShowPreFlightNotesTooltip(true);
                   }, 1000);
               }}
@@ -1053,13 +1069,18 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                   style={{ borderBottomColor: '#c66a2b' }}
               />
               <div
-                  className={`pointer-events-none absolute ${preFlightNotesTooltipPlacement === 'below' ? 'top-3' : 'bottom-3'} right-0 whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl ${showPreFlightNotesTooltip ? 'block' : 'hidden'}`}
+                  className={`pointer-events-none fixed z-[9999] whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl ${showPreFlightNotesTooltip ? 'block' : 'hidden'}`}
                   style={{
                       backgroundColor: 'rgba(15, 23, 42, 0.98)',
                       borderColor: 'rgba(198, 106, 43, 0.72)',
                       color: '#fed7aa',
                       width: 'max-content',
                       maxWidth: 'min(420px, 80vw)',
+                      top: `${preFlightNotesTooltipPosition.top}px`,
+                      left: `${preFlightNotesTooltipPosition.left}px`,
+                      transform: preFlightNotesTooltipPlacement === 'above'
+                          ? 'translate(-100%, -100%)'
+                          : 'translateX(-100%)',
                   }}
               >
                   <div className="mb-0.5 text-[8px] font-bold uppercase tracking-wide" style={{ color: '#fb923c' }}>

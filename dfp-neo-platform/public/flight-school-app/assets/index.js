@@ -8477,6 +8477,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const preFlightNotesForTile = getPreFlightNotesForTile(event);
   const [showPreFlightNotesTooltip, setShowPreFlightNotesTooltip] = reactExports.useState(false);
   const [preFlightNotesTooltipPlacement, setPreFlightNotesTooltipPlacement] = reactExports.useState("above");
+  const [preFlightNotesTooltipPosition, setPreFlightNotesTooltipPosition] = reactExports.useState({ top: 0, left: 0 });
   const preFlightNotesMarkerRef = reactExports.useRef(null);
   const preFlightNotesTooltipTimerRef = reactExports.useRef(null);
   const clearPreFlightNotesTooltipTimer = () => {
@@ -8490,6 +8491,20 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     clearPreFlightNotesTooltipTimer();
     return clearPreFlightNotesTooltipTimer;
   }, [preFlightNotesForTile]);
+  const updatePreFlightNotesTooltipPosition = () => {
+    const markerRect = preFlightNotesMarkerRef.current?.getBoundingClientRect();
+    if (!markerRect) return;
+    const estimatedLines = preFlightNotesForTile.split(/\r?\n/).length + 1;
+    const estimatedHeight = Math.min(180, Math.max(34, estimatedLines * 14 + 20));
+    const hasRoomAbove = markerRect.top - estimatedHeight > 8;
+    const placement = hasRoomAbove ? "above" : "below";
+    const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
+    setPreFlightNotesTooltipPlacement(placement);
+    setPreFlightNotesTooltipPosition({
+      top: placement === "above" ? markerRect.top - 6 : markerRect.bottom + 6,
+      left: Math.min(viewportWidth - 8, Math.max(160, markerRect.right))
+    });
+  };
   const picName = isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
   const pooledCrewSecondaryName = (() => {
     if (!isPooledCrewEvent) return "";
@@ -9010,9 +9025,9 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
         onMouseDown: (e) => e.stopPropagation(),
         onMouseEnter: () => {
           clearPreFlightNotesTooltipTimer();
-          const markerRect = preFlightNotesMarkerRef.current?.getBoundingClientRect();
-          setPreFlightNotesTooltipPlacement(markerRect && markerRect.top < 120 ? "below" : "above");
+          updatePreFlightNotesTooltipPosition();
           preFlightNotesTooltipTimerRef.current = setTimeout(() => {
+            updatePreFlightNotesTooltipPosition();
             setShowPreFlightNotesTooltip(true);
           }, 1e3);
         },
@@ -9031,13 +9046,16 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
-              className: `pointer-events-none absolute ${preFlightNotesTooltipPlacement === "below" ? "top-3" : "bottom-3"} right-0 whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl ${showPreFlightNotesTooltip ? "block" : "hidden"}`,
+              className: `pointer-events-none fixed z-[9999] whitespace-pre-wrap rounded border px-2.5 py-1.5 text-[9px] font-medium leading-tight shadow-xl ${showPreFlightNotesTooltip ? "block" : "hidden"}`,
               style: {
                 backgroundColor: "rgba(15, 23, 42, 0.98)",
                 borderColor: "rgba(198, 106, 43, 0.72)",
                 color: "#fed7aa",
                 width: "max-content",
-                maxWidth: "min(420px, 80vw)"
+                maxWidth: "min(420px, 80vw)",
+                top: `${preFlightNotesTooltipPosition.top}px`,
+                left: `${preFlightNotesTooltipPosition.left}px`,
+                transform: preFlightNotesTooltipPlacement === "above" ? "translate(-100%, -100%)" : "translateX(-100%)"
               },
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-0.5 text-[8px] font-bold uppercase tracking-wide", style: { color: "#fb923c" }, children: "Pre-flight Notes" }),
@@ -109573,16 +109591,24 @@ ${error instanceof Error ? error.message : String(error)}`,
       return;
     }
     const forwardedNotes = {
-      ...targetEvent.trainingReportForwardedNotes || {},
-      [assessmentKey]: {
-        sourceCode: sourceItem.code || assessment.flightNumber,
-        notes: nextNotes
+      ...targetEvent.trainingReportForwardedNotes || {}
+    };
+    const sourceCodeForNotes = String(sourceItem.code || assessment.flightNumber || "").trim();
+    Object.entries(forwardedNotes).forEach(([key, entry]) => {
+      const entrySourceCode = String(entry?.sourceCode || "").trim();
+      if (key !== assessmentKey && sourceCodeForNotes && entrySourceCode === sourceCodeForNotes) {
+        delete forwardedNotes[key];
       }
+    });
+    forwardedNotes[assessmentKey] = {
+      sourceCode: sourceCodeForNotes,
+      notes: nextNotes
     };
     const updatedTargetEvent = {
       ...targetEvent,
       trainingReportBaseNotes: baseNotes,
       trainingReportForwardedNotes: forwardedNotes,
+      trainingReportLastForwardedNotesAssessmentId: assessmentKey,
       notes: baseNotes
     };
     const updatedLmp = originalLmp.map((item, index) => index === nextEventIndex ? updatedTargetEvent : item);
@@ -112112,14 +112138,22 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               outcome: "notes-generated-prefix-only"
             });
           } else if (previousNotes !== nextNotes) {
+            const sourceCodeForNotes = String(sourceItem.code || assessment.flightNumber || "").trim();
+            Object.entries(existingForwardedNotes).forEach(([key, entry]) => {
+              const entrySourceCode = String(entry?.sourceCode || "").trim();
+              if (key !== assessmentKey && sourceCodeForNotes && entrySourceCode === sourceCodeForNotes) {
+                delete existingForwardedNotes[key];
+              }
+            });
             existingForwardedNotes[assessmentKey] = {
-              sourceCode: sourceItem.code || assessment.flightNumber,
+              sourceCode: sourceCodeForNotes,
               notes: nextNotes
             };
             updatedTarget = {
               ...updatedTarget,
               trainingReportBaseNotes: typeof updatedTarget.trainingReportBaseNotes === "string" ? updatedTarget.trainingReportBaseNotes : String(updatedTarget.notes || ""),
-              trainingReportForwardedNotes: existingForwardedNotes
+              trainingReportForwardedNotes: existingForwardedNotes,
+              trainingReportLastForwardedNotesAssessmentId: assessmentKey
             };
             changed = true;
             updates.push({

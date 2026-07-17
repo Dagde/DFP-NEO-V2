@@ -32319,15 +32319,23 @@ const App: React.FC = () => {
         }
         const forwardedNotes = {
             ...(targetEvent.trainingReportForwardedNotes || {}),
-            [assessmentKey]: {
-                sourceCode: sourceItem.code || assessment.flightNumber,
-                notes: nextNotes,
-            },
         } as Record<string, { sourceCode?: string; notes?: string }>;
+        const sourceCodeForNotes = String(sourceItem.code || assessment.flightNumber || '').trim();
+        Object.entries(forwardedNotes).forEach(([key, entry]) => {
+            const entrySourceCode = String(entry?.sourceCode || '').trim();
+            if (key !== assessmentKey && sourceCodeForNotes && entrySourceCode === sourceCodeForNotes) {
+                delete forwardedNotes[key];
+            }
+        });
+        forwardedNotes[assessmentKey] = {
+            sourceCode: sourceCodeForNotes,
+            notes: nextNotes,
+        };
         const updatedTargetEvent: SyllabusItemDetail & Record<string, any> = {
             ...targetEvent,
             trainingReportBaseNotes: baseNotes,
             trainingReportForwardedNotes: forwardedNotes,
+            trainingReportLastForwardedNotesAssessmentId: assessmentKey,
             notes: baseNotes,
         };
         const updatedLmp = originalLmp.map((item, index) => index === nextEventIndex ? updatedTargetEvent : item);
@@ -35447,8 +35455,15 @@ const App: React.FC = () => {
                             outcome: 'notes-generated-prefix-only',
                         });
                     } else if (previousNotes !== nextNotes) {
+                        const sourceCodeForNotes = String(sourceItem.code || assessment.flightNumber || '').trim();
+                        Object.entries(existingForwardedNotes).forEach(([key, entry]) => {
+                            const entrySourceCode = String(entry?.sourceCode || '').trim();
+                            if (key !== assessmentKey && sourceCodeForNotes && entrySourceCode === sourceCodeForNotes) {
+                                delete existingForwardedNotes[key];
+                            }
+                        });
                         existingForwardedNotes[assessmentKey] = {
-                            sourceCode: sourceItem.code || assessment.flightNumber,
+                            sourceCode: sourceCodeForNotes,
                             notes: nextNotes,
                         };
                         updatedTarget = {
@@ -35457,6 +35472,7 @@ const App: React.FC = () => {
                                 ? updatedTarget.trainingReportBaseNotes
                                 : String(updatedTarget.notes || ''),
                             trainingReportForwardedNotes: existingForwardedNotes,
+                            trainingReportLastForwardedNotesAssessmentId: assessmentKey,
                         };
                         changed = true;
                         updates.push({
