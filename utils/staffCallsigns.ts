@@ -27,7 +27,7 @@ const isCallsignAssignableStaff = (person: Instructor): boolean => (
 );
 
 const matchesPermanentCallsignRolePolicy = (person: Instructor, allowedRoles: string[] = []): boolean => {
-  if (allowedRoles.length === 0) return true;
+  if (allowedRoles.length === 0) return false;
   const role = norm(person.role);
   const category = norm(person.category);
   const crew = norm(person.crew);

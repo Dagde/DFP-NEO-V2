@@ -4847,7 +4847,7 @@ const isQfiStaff = (person) => person.role === "QFI" || person.isQFI === true ||
 const isSimIp = (person) => person.role === "SIM IP";
 const isCallsignAssignableStaff = (person) => Boolean(person.name) && person.isActive !== false && !person.isAdminStaff;
 const matchesPermanentCallsignRolePolicy = (person, allowedRoles = []) => {
-  if (allowedRoles.length === 0) return true;
+  if (allowedRoles.length === 0) return false;
   const role = norm(person.role);
   const category = norm(person.category);
   const crew = norm(person.crew);
@@ -64977,29 +64977,6 @@ const PlatformConfigurationSettings = ({
     primaryOrganisationSettings.unitCallsignSettings || null
   );
   const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
-  const callsignAssignableRoleOptions = reactExports.useMemo(() => {
-    const roleOptions = [
-      { value: "QFI", label: personnelDisplaySettings.instructorLabel || "QFI" },
-      { value: "SIM IP", label: personnelDisplaySettings.simIpDisplayLabel || "Contractor Staff" },
-      ...crewPositionTerminology.positions.map((entry) => ({
-        value: entry.genericName,
-        label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName
-      })),
-      { value: "CATEGORY:A", label: "Category A" },
-      { value: "CATEGORY:B", label: "Category B" },
-      { value: "CATEGORY:C", label: "Category C" },
-      { value: "CATEGORY:D", label: "Category D" },
-      { value: "CATEGORY:UNCAT", label: "Uncategorised" }
-    ];
-    const byValue = /* @__PURE__ */ new Map();
-    roleOptions.forEach((option) => {
-      const value = String(option.value || "").trim();
-      const key = value.toUpperCase();
-      if (!key || byValue.has(key)) return;
-      byValue.set(key, { value, label: option.label || value });
-    });
-    return Array.from(byValue.values()).sort((left, right) => left.label.localeCompare(right.label, void 0, { sensitivity: "base" }));
-  }, [crewPositionLabelMap, crewPositionTerminology.positions, personnelDisplaySettings.instructorLabel, personnelDisplaySettings.simIpDisplayLabel]);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0]?.trim() : String(activeUnitCode || "").trim();
   const activeTrainingReportUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === activeTrainingReportUnitCode.toUpperCase()) || config.units.find(isActiveRecord) || config.units[0] || null;
@@ -65628,9 +65605,7 @@ This permanently removes the organisation record from platform configuration and
     if (!nextUnitCode || !nextRole) return;
     const currentPolicy = getUnitCallsignPolicy(unitCallsignSettings, nextUnitCode);
     const currentRoles = currentPolicy.permanentRoleValues || [];
-    const allRoles = callsignAssignableRoleOptions.map((option) => option.value.trim().toUpperCase()).filter(Boolean);
-    const effectiveRoles = currentRoles.length > 0 ? currentRoles : allRoles;
-    const nextRoles = effectiveRoles.includes(nextRole) ? effectiveRoles.filter((role) => role !== nextRole) : Array.from(/* @__PURE__ */ new Set([...effectiveRoles, nextRole]));
+    const nextRoles = currentRoles.includes(nextRole) ? currentRoles.filter((role) => role !== nextRole) : Array.from(/* @__PURE__ */ new Set([...currentRoles, nextRole]));
     updateUnitCallsignPolicy(nextUnitCode, { permanentRoleValues: nextRoles });
   };
   const updateCrewCompositionSettings = (alternateCompositions, currencyProfiles = crewCompositionSettings.currencyProfiles) => {
@@ -67342,6 +67317,31 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     visibleUnitRows.map(({ unit }) => getUnitOperationalModel(unit)).map((model) => String(model || "").trim()).filter(Boolean)
   );
   const visibleOperationalModelOptions = settingsVisibilityEnabled && visibleOperationalModelValues.size > 0 ? OPERATIONAL_MODEL_OPTIONS.filter((option) => visibleOperationalModelValues.has(option.value)) : OPERATIONAL_MODEL_OPTIONS;
+  const callsignAssignableRoleOptions = (() => {
+    const visibleModelSet = new Set(visibleOperationalModelOptions.map((option) => option.value));
+    const visibleCrewPositions = crewPositionTerminology.positions.filter((entry) => visibleModelSet.size === 0 || visibleOperationalModelOptions.length === OPERATIONAL_MODEL_OPTIONS.length || Array.from(visibleModelSet).some((model) => isCrewPositionAvailableForOperationalModel(entry, model)));
+    const roleOptions = [
+      { value: "QFI", label: personnelDisplaySettings.instructorLabel || "QFI" },
+      { value: "SIM IP", label: personnelDisplaySettings.simIpDisplayLabel || "Contractor Staff" },
+      ...visibleCrewPositions.map((entry) => ({
+        value: entry.genericName,
+        label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName
+      })),
+      { value: "CATEGORY:A", label: "Category A" },
+      { value: "CATEGORY:B", label: "Category B" },
+      { value: "CATEGORY:C", label: "Category C" },
+      { value: "CATEGORY:D", label: "Category D" },
+      { value: "CATEGORY:UNCAT", label: "Uncategorised" }
+    ];
+    const byValue = /* @__PURE__ */ new Map();
+    roleOptions.forEach((option) => {
+      const value = String(option.value || "").trim();
+      const key = value.toUpperCase();
+      if (!key || byValue.has(key)) return;
+      byValue.set(key, { value, label: option.label || value });
+    });
+    return Array.from(byValue.values()).sort((left, right) => left.label.localeCompare(right.label, void 0, { sensitivity: "base" }));
+  })();
   const visibleCrewCompositionAircraftTypes = settingsVisibilityEnabled ? crewCompositionAircraftTypes.filter((aircraft) => {
     const code = normaliseUnitCode2(aircraft.code);
     return !code || visibleAircraftTypeRows.some(({ aircraft: visibleAircraft }) => normaliseUnitCode2(visibleAircraft.code) === code);
@@ -71013,7 +71013,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-wide text-cyan-100/80", children: "Roles receiving permanent callsigns" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-1.5", children: callsignAssignableRoleOptions.map((option) => {
                         const value = option.value.trim().toUpperCase();
-                        const isChecked = selectedPermanentRoles.length === 0 || selectedPermanentRoles.includes(value);
+                        const isChecked = selectedPermanentRoles.includes(value);
                         return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${isChecked ? "border-cyan-400/35 bg-cyan-500/10 text-cyan-50" : "border-gray-700 bg-gray-950 text-gray-400"}`, children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "input",
@@ -71028,7 +71028,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.label })
                         ] }, `${unitCode}-${value}`);
                       }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-[11px] leading-snug text-cyan-100/60", children: "All roles are selected until you untick one." })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-[11px] leading-snug text-cyan-100/60", children: "Select one or more roles or categories. If none are selected, no individual permanent callsigns are issued." })
                     ] })
                   ] }, unitCode);
                 }),

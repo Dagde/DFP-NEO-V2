@@ -67,6 +67,7 @@ import {
   DEFAULT_CREW_POSITION_TERMINOLOGY,
   getCrewPositionLabelMap,
   getCrewPositionOptions,
+  isCrewPositionAvailableForOperationalModel,
   normaliseCrewPositionTerminology,
   type CrewPositionTerminologyEntry,
 } from '../utils/crewPositionTerminology';
@@ -2292,31 +2293,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     primaryOrganisationSettings.unitCallsignSettings || null,
   );
   const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
-  const callsignAssignableRoleOptions = useMemo(() => {
-    const roleOptions = [
-      { value: 'QFI', label: personnelDisplaySettings.instructorLabel || 'QFI' },
-      { value: 'SIM IP', label: personnelDisplaySettings.simIpDisplayLabel || 'Contractor Staff' },
-      ...crewPositionTerminology.positions.map((entry) => ({
-        value: entry.genericName,
-        label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName,
-      })),
-      { value: 'CATEGORY:A', label: 'Category A' },
-      { value: 'CATEGORY:B', label: 'Category B' },
-      { value: 'CATEGORY:C', label: 'Category C' },
-      { value: 'CATEGORY:D', label: 'Category D' },
-      { value: 'CATEGORY:UNCAT', label: 'Uncategorised' },
-    ];
-    const byValue = new Map<string, { value: string; label: string }>();
-    roleOptions.forEach((option) => {
-      const value = String(option.value || '').trim();
-      const key = value.toUpperCase();
-      if (!key || byValue.has(key)) return;
-      byValue.set(key, { value, label: option.label || value });
-    });
-    return Array.from(byValue.values()).sort((left, right) => (
-      left.label.localeCompare(right.label, undefined, { sensitivity: 'base' })
-    ));
-  }, [crewPositionLabelMap, crewPositionTerminology.positions, personnelDisplaySettings.instructorLabel, personnelDisplaySettings.simIpDisplayLabel]);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || '').includes('+')
     ? String(activeUnitCode || '').split('+')[0]?.trim()
@@ -3126,11 +3102,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (!nextUnitCode || !nextRole) return;
     const currentPolicy = getUnitCallsignPolicy(unitCallsignSettings, nextUnitCode);
     const currentRoles = currentPolicy.permanentRoleValues || [];
-    const allRoles = callsignAssignableRoleOptions.map((option) => option.value.trim().toUpperCase()).filter(Boolean);
-    const effectiveRoles = currentRoles.length > 0 ? currentRoles : allRoles;
-    const nextRoles = effectiveRoles.includes(nextRole)
-      ? effectiveRoles.filter((role) => role !== nextRole)
-      : Array.from(new Set([...effectiveRoles, nextRole]));
+    const nextRoles = currentRoles.includes(nextRole)
+      ? currentRoles.filter((role) => role !== nextRole)
+      : Array.from(new Set([...currentRoles, nextRole]));
     updateUnitCallsignPolicy(nextUnitCode, { permanentRoleValues: nextRoles });
   };
 
@@ -5247,6 +5221,37 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const visibleOperationalModelOptions = settingsVisibilityEnabled && visibleOperationalModelValues.size > 0
     ? OPERATIONAL_MODEL_OPTIONS.filter((option) => visibleOperationalModelValues.has(option.value))
     : OPERATIONAL_MODEL_OPTIONS;
+  const callsignAssignableRoleOptions = (() => {
+    const visibleModelSet = new Set(visibleOperationalModelOptions.map((option) => option.value));
+    const visibleCrewPositions = crewPositionTerminology.positions.filter((entry) => (
+      visibleModelSet.size === 0
+      || visibleOperationalModelOptions.length === OPERATIONAL_MODEL_OPTIONS.length
+      || Array.from(visibleModelSet).some((model) => isCrewPositionAvailableForOperationalModel(entry, model))
+    ));
+    const roleOptions = [
+      { value: 'QFI', label: personnelDisplaySettings.instructorLabel || 'QFI' },
+      { value: 'SIM IP', label: personnelDisplaySettings.simIpDisplayLabel || 'Contractor Staff' },
+      ...visibleCrewPositions.map((entry) => ({
+        value: entry.genericName,
+        label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName,
+      })),
+      { value: 'CATEGORY:A', label: 'Category A' },
+      { value: 'CATEGORY:B', label: 'Category B' },
+      { value: 'CATEGORY:C', label: 'Category C' },
+      { value: 'CATEGORY:D', label: 'Category D' },
+      { value: 'CATEGORY:UNCAT', label: 'Uncategorised' },
+    ];
+    const byValue = new Map<string, { value: string; label: string }>();
+    roleOptions.forEach((option) => {
+      const value = String(option.value || '').trim();
+      const key = value.toUpperCase();
+      if (!key || byValue.has(key)) return;
+      byValue.set(key, { value, label: option.label || value });
+    });
+    return Array.from(byValue.values()).sort((left, right) => (
+      left.label.localeCompare(right.label, undefined, { sensitivity: 'base' })
+    ));
+  })();
   const visibleCrewCompositionAircraftTypes = settingsVisibilityEnabled
     ? crewCompositionAircraftTypes.filter((aircraft) => {
       const code = normaliseUnitCode(aircraft.code);
@@ -9081,7 +9086,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             <div className="mt-2 grid gap-1.5">
                               {callsignAssignableRoleOptions.map((option) => {
                                 const value = option.value.trim().toUpperCase();
-                                const isChecked = selectedPermanentRoles.length === 0 || selectedPermanentRoles.includes(value);
+                                const isChecked = selectedPermanentRoles.includes(value);
                                 return (
                                   <label key={`${unitCode}-${value}`} className={`flex items-center gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${
                                     isChecked
@@ -9101,7 +9106,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               })}
                             </div>
                             <div className="mt-2 text-[11px] leading-snug text-cyan-100/60">
-                              All roles are selected until you untick one.
+                              Select one or more roles or categories. If none are selected, no individual permanent callsigns are issued.
                             </div>
                           </div>
                         )}
