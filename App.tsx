@@ -11959,17 +11959,50 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     // ── END FLIGHT BOTTLENECK DIAGNOSTIC SETUP ──────────────────────────────
 
+    const getIndividualLmpItemForTraineeEvent = (
+        trainee: Trainee | null | undefined,
+        syllabusItem: SyllabusItemDetail | null | undefined
+    ): SyllabusItemDetail | null => {
+        if (!trainee || !syllabusItem) return null;
+        const traineeNames = [
+            trainee.fullName,
+            trainee.name,
+            (trainee as any).displayName,
+        ].map(value => String(value || '').trim()).filter(Boolean);
+        const lmp = traineeNames.reduce<LMP[] | undefined>((found, name) => found || traineeLMPs.get(name), undefined)
+            || Array.from(traineeLMPs.entries()).find(([name]) => traineeNames.some(candidate => personnelNamesMatch(candidate, name)))?.[1];
+        if (!Array.isArray(lmp) || lmp.length === 0) return null;
+
+        const eventRefs = [
+            syllabusItem.id,
+            syllabusItem.code,
+            syllabusItem.masterEventId,
+        ].map(value => String(value || '').trim().toUpperCase()).filter(Boolean);
+        if (eventRefs.length === 0) return null;
+
+        return lmp.find(item => {
+            const itemRefs = [
+                item.id,
+                item.code,
+                item.masterEventId,
+            ].map(value => String(value || '').trim().toUpperCase()).filter(Boolean);
+            return itemRefs.some(ref => eventRefs.includes(ref));
+        }) || null;
+    };
+
     const getScheduledEventDurationSource = (
         syllabusItem: SyllabusItemDetail,
-        scheduleType?: 'flight' | 'ftd' | 'ground' | 'cpt'
+        scheduleType?: 'flight' | 'ftd' | 'ground' | 'cpt',
+        trainee?: Trainee | null
     ): 'individual-flight-sim-hours' | 'duration' | 'total-event-hours' => {
         const itemType = String(scheduleType || syllabusItem.type || '').trim().toLowerCase();
         const isFlightOrFtd = itemType === 'flight' || itemType === 'ftd';
-        const flightOrSimHours = Number(syllabusItem.flightOrSimHours);
+        const individualLmpItem = isFlightOrFtd ? getIndividualLmpItemForTraineeEvent(trainee, syllabusItem) : null;
+        const flightOrSimHours = Number(individualLmpItem?.flightOrSimHours ?? syllabusItem.flightOrSimHours);
         if (isFlightOrFtd && Number.isFinite(flightOrSimHours) && flightOrSimHours > 0) {
             return 'individual-flight-sim-hours';
         }
-        const duration = Number(syllabusItem.duration);
+        const duration = Number(individualLmpItem?.duration ?? syllabusItem.duration);
         if (Number.isFinite(duration) && duration > 0) {
             return 'duration';
         }
@@ -11978,14 +12011,18 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     const getScheduledEventDuration = (
         syllabusItem: SyllabusItemDetail,
-        scheduleType?: 'flight' | 'ftd' | 'ground' | 'cpt'
+        scheduleType?: 'flight' | 'ftd' | 'ground' | 'cpt',
+        trainee?: Trainee | null
     ): number => {
-        const source = getScheduledEventDurationSource(syllabusItem, scheduleType);
+        const source = getScheduledEventDurationSource(syllabusItem, scheduleType, trainee);
+        const individualLmpItem = source === 'individual-flight-sim-hours' || source === 'duration'
+            ? getIndividualLmpItemForTraineeEvent(trainee, syllabusItem)
+            : null;
         const rawValue = source === 'individual-flight-sim-hours'
-            ? syllabusItem.flightOrSimHours
+            ? (individualLmpItem?.flightOrSimHours ?? syllabusItem.flightOrSimHours)
             : source === 'total-event-hours'
-                ? syllabusItem.totalEventHours
-                : syllabusItem.duration;
+                ? (individualLmpItem?.totalEventHours ?? syllabusItem.totalEventHours)
+                : (individualLmpItem?.duration ?? syllabusItem.duration);
         const duration = Number(rawValue);
         return Number.isFinite(duration) && duration > 0 ? Number(duration.toFixed(2)) : 1;
     };
@@ -12079,8 +12116,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     listDiag.noSyllabusItem++;
                     continue;
                 }
-                const scheduledDuration = getScheduledEventDuration(syllabusItem, type);
-                const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type);
+                const scheduledDuration = getScheduledEventDuration(syllabusItem, type, trainee);
+                const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type, trainee);
 
                 const isRemedialItem = isRemedialSyllabusItem(syllabusItem);
                 if (type === 'flight' && !isPlusOne && !isRemedialItem && isMultiResourceFlightItem(syllabusItem)) {
@@ -12453,8 +12490,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         requirePreferredNightAircraft: boolean = false,
         options: ScheduleEventOptions = {}
     ): ScheduleEventResult => {
-        const scheduledDuration = getScheduledEventDuration(syllabusItem, type);
-        const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type);
+        const scheduledDuration = getScheduledEventDuration(syllabusItem, type, trainee);
+        const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type, trainee);
         const _isFlight = type === 'flight' && !isNightPass;
         const _isNext = !isPlusOne;
         const _fbEnd = startTime + scheduledDuration;
@@ -18629,7 +18666,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 const { next } = traineeNextEventMap.get(trainee.fullName)!;
                 const syllabusItem = next;
                 if (!syllabusItem) continue;
-                const scheduledDuration = getScheduledEventDuration(syllabusItem, 'flight');
+                const scheduledDuration = getScheduledEventDuration(syllabusItem, 'flight', trainee);
 
                 let placed = false;
                 const soloSearchStart = isRemedialSyllabusItem(syllabusItem)
@@ -27479,6 +27516,7 @@ const App: React.FC = () => {
                 });
         };
         [
+            (event as any)._traineeName,
             event.student,
             event.pilot,
             event.crew,
@@ -27486,6 +27524,17 @@ const App: React.FC = () => {
             event.attendees,
             event.crewSelectionOrder,
         ].forEach(addPerson);
+        Array.from(candidateNames).forEach(candidateName => {
+            traineesData
+                .filter(trainee => (
+                    personnelNamesMatch(trainee.fullName, candidateName) ||
+                    personnelNamesMatch(trainee.name, candidateName)
+                ))
+                .forEach(trainee => {
+                    addPerson(trainee.fullName);
+                    addPerson(trainee.name);
+                });
+        });
 
         const forwardedNotes: Record<string, any> = {
             ...((event.trainingReportForwardedNotes || {}) as Record<string, any>),
@@ -27508,7 +27557,8 @@ const App: React.FC = () => {
         };
 
         candidateNames.forEach(name => {
-            const lmp = traineeLMPs.get(name);
+            const lmp = traineeLMPs.get(name) ||
+                Array.from(traineeLMPs.entries()).find(([lmpName]) => personnelNamesMatch(lmpName, name))?.[1];
             if (Array.isArray(lmp)) {
                 lmp.forEach(inspectLmpItem);
             }
@@ -27524,7 +27574,7 @@ const App: React.FC = () => {
                 ? forwardedNotes
                 : event.trainingReportForwardedNotes,
         };
-    }, [traineeLMPs]);
+    }, [traineeLMPs, traineesData]);
 
     const eventsForDateWithPreFlightNotes = useMemo(() => (
         eventsForDate.map(decorateEventWithForwardedPreFlightNotes)

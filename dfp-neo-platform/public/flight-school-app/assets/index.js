@@ -92737,22 +92737,48 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log("   C. Primary blocker: " + blockerType + " (instr=" + instrTotal + ", ac=" + acTotal + ", area=" + areaTotal + ", sep=" + sepTotal + ")");
     console.log('[FLIGHT-DIAG] END - also in localStorage key "flight_diag_report"');
   };
-  const getScheduledEventDurationSource = (syllabusItem, scheduleType) => {
+  const getIndividualLmpItemForTraineeEvent = (trainee, syllabusItem) => {
+    if (!trainee || !syllabusItem) return null;
+    const traineeNames = [
+      trainee.fullName,
+      trainee.name,
+      trainee.displayName
+    ].map((value) => String(value || "").trim()).filter(Boolean);
+    const lmp = traineeNames.reduce((found, name) => found || traineeLMPs.get(name), void 0) || Array.from(traineeLMPs.entries()).find(([name]) => traineeNames.some((candidate) => personnelNamesMatch(candidate, name)))?.[1];
+    if (!Array.isArray(lmp) || lmp.length === 0) return null;
+    const eventRefs = [
+      syllabusItem.id,
+      syllabusItem.code,
+      syllabusItem.masterEventId
+    ].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
+    if (eventRefs.length === 0) return null;
+    return lmp.find((item) => {
+      const itemRefs = [
+        item.id,
+        item.code,
+        item.masterEventId
+      ].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
+      return itemRefs.some((ref) => eventRefs.includes(ref));
+    }) || null;
+  };
+  const getScheduledEventDurationSource = (syllabusItem, scheduleType, trainee) => {
     const itemType = String(scheduleType || syllabusItem.type || "").trim().toLowerCase();
     const isFlightOrFtd = itemType === "flight" || itemType === "ftd";
-    const flightOrSimHours = Number(syllabusItem.flightOrSimHours);
+    const individualLmpItem = isFlightOrFtd ? getIndividualLmpItemForTraineeEvent(trainee, syllabusItem) : null;
+    const flightOrSimHours = Number(individualLmpItem?.flightOrSimHours ?? syllabusItem.flightOrSimHours);
     if (isFlightOrFtd && Number.isFinite(flightOrSimHours) && flightOrSimHours > 0) {
       return "individual-flight-sim-hours";
     }
-    const duration = Number(syllabusItem.duration);
+    const duration = Number(individualLmpItem?.duration ?? syllabusItem.duration);
     if (Number.isFinite(duration) && duration > 0) {
       return "duration";
     }
     return "total-event-hours";
   };
-  const getScheduledEventDuration = (syllabusItem, scheduleType) => {
-    const source = getScheduledEventDurationSource(syllabusItem, scheduleType);
-    const rawValue = source === "individual-flight-sim-hours" ? syllabusItem.flightOrSimHours : source === "total-event-hours" ? syllabusItem.totalEventHours : syllabusItem.duration;
+  const getScheduledEventDuration = (syllabusItem, scheduleType, trainee) => {
+    const source = getScheduledEventDurationSource(syllabusItem, scheduleType, trainee);
+    const individualLmpItem = source === "individual-flight-sim-hours" || source === "duration" ? getIndividualLmpItemForTraineeEvent(trainee, syllabusItem) : null;
+    const rawValue = source === "individual-flight-sim-hours" ? individualLmpItem?.flightOrSimHours ?? syllabusItem.flightOrSimHours : source === "total-event-hours" ? individualLmpItem?.totalEventHours ?? syllabusItem.totalEventHours : individualLmpItem?.duration ?? syllabusItem.duration;
     const duration = Number(rawValue);
     return Number.isFinite(duration) && duration > 0 ? Number(duration.toFixed(2)) : 1;
   };
@@ -92826,8 +92852,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           listDiag.noSyllabusItem++;
           continue;
         }
-        const scheduledDuration = getScheduledEventDuration(syllabusItem, type);
-        const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type);
+        const scheduledDuration = getScheduledEventDuration(syllabusItem, type, trainee);
+        const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type, trainee);
         const isRemedialItem = isRemedialSyllabusItem(syllabusItem);
         if (type === "flight" && !isPlusOne && !isRemedialItem && isMultiResourceFlightItem(syllabusItem)) {
           traceFormation("skippedSinglePlacements", {
@@ -93114,8 +93140,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     saveNeoBuildDiag(`schedule-list-end:${listName}`);
   };
   const scheduleEvent = (trainee, syllabusItem, startTime, type, isNightPass, isPlusOne, primaryPreferOnly = false, requirePreferredNightAircraft = false, options = {}) => {
-    const scheduledDuration = getScheduledEventDuration(syllabusItem, type);
-    const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type);
+    const scheduledDuration = getScheduledEventDuration(syllabusItem, type, trainee);
+    const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type, trainee);
     const _isFlight = type === "flight" && !isNightPass;
     const _isNext = !isPlusOne;
     const _fbEnd = startTime + scheduledDuration;
@@ -98533,7 +98559,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           const { next } = traineeNextEventMap.get(trainee.fullName);
           const syllabusItem = next;
           if (!syllabusItem) continue;
-          const scheduledDuration = getScheduledEventDuration(syllabusItem, "flight");
+          const scheduledDuration = getScheduledEventDuration(syllabusItem, "flight", trainee);
           let placed = false;
           const soloSearchStart = isRemedialSyllabusItem(syllabusItem) ? Math.max(groupSearchStart, REMEDIAL_EARLIEST_START) : groupSearchStart;
           const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) ? [true, false] : [false];
@@ -105694,6 +105720,7 @@ ${"=".repeat(60)}`);
       });
     };
     [
+      event._traineeName,
       event.student,
       event.pilot,
       event.crew,
@@ -105701,6 +105728,12 @@ ${"=".repeat(60)}`);
       event.attendees,
       event.crewSelectionOrder
     ].forEach(addPerson2);
+    Array.from(candidateNames).forEach((candidateName) => {
+      traineesData.filter((trainee) => personnelNamesMatch(trainee.fullName, candidateName) || personnelNamesMatch(trainee.name, candidateName)).forEach((trainee) => {
+        addPerson2(trainee.fullName);
+        addPerson2(trainee.name);
+      });
+    });
     const forwardedNotes = {
       ...event.trainingReportForwardedNotes || {}
     };
@@ -105717,7 +105750,7 @@ ${"=".repeat(60)}`);
       });
     };
     candidateNames.forEach((name) => {
-      const lmp = traineeLMPs.get(name);
+      const lmp = traineeLMPs.get(name) || Array.from(traineeLMPs.entries()).find(([lmpName]) => personnelNamesMatch(lmpName, name))?.[1];
       if (Array.isArray(lmp)) {
         lmp.forEach(inspectLmpItem);
       }
@@ -105729,7 +105762,7 @@ ${"=".repeat(60)}`);
       preFlightNotes,
       trainingReportForwardedNotes: Object.keys(forwardedNotes).length > 0 ? forwardedNotes : event.trainingReportForwardedNotes
     };
-  }, [traineeLMPs]);
+  }, [traineeLMPs, traineesData]);
   const eventsForDateWithPreFlightNotes = reactExports.useMemo(() => eventsForDate.map(decorateEventWithForwardedPreFlightNotes), [decorateEventWithForwardedPreFlightNotes, eventsForDate]);
   const eventsForStaffTraineeSchedule = reactExports.useMemo(() => {
     return eventsForDateWithPreFlightNotes.filter((e) => !e.resourceId.startsWith("STBY"));
