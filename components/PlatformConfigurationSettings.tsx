@@ -6340,7 +6340,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             ].filter((value) => String(value || '').trim()).length;
             return (
               <div key={ruleKey} className="space-y-3 rounded border border-gray-700 bg-gray-900 p-3">
-                <div className="grid gap-3 lg:grid-cols-[minmax(180px,1.4fr)_minmax(150px,1fr)_120px_120px_150px_auto]">
+                <div className="grid gap-3 lg:grid-cols-[minmax(180px,1.4fr)_minmax(150px,1fr)_120px_120px_auto]">
                   <SelectField
                     label="Master LMP"
                     value={rule.lmpCode || ''}
@@ -6370,18 +6370,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     options={['ACTIVE', 'INACTIVE']}
                     onChange={(value) => updateMasterLmpAccessRule(index, { status: value })}
                   />
-                  <div>
-                    <div aria-hidden="true" className="h-[18px]" />
-                    <button
-                      type="button"
-                      onClick={() => toggleMasterLmpAccessScope(rule, index)}
-                      className={platformActionButtonClass}
-                    >
-                      {advancedScopeOpen ? 'Hide Advanced' : 'Advanced Scope'}
-                      {advancedScopeCount > 0 ? ` (${advancedScopeCount})` : ''}
-                    </button>
-                  </div>
-                  <div className="flex items-end justify-end">
+                  <div className="flex items-end justify-end gap-[1px]">
+                    <div>
+                      <div aria-hidden="true" className="h-[18px]" />
+                      <button
+                        type="button"
+                        onClick={() => toggleMasterLmpAccessScope(rule, index)}
+                        className={platformActionButtonClass}
+                      >
+                        {advancedScopeOpen ? 'Hide Advanced' : 'Advanced Scope'}
+                        {advancedScopeCount > 0 ? ` (${advancedScopeCount})` : ''}
+                      </button>
+                    </div>
                     <button
                       type="button"
                       disabled={!canEditSection('platform-master-lmp-access')}

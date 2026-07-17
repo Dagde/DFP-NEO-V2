@@ -68290,7 +68290,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               rule.parentOrganisationCode
             ].filter((value) => String(value || "").trim()).length;
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded border border-gray-700 bg-gray-900 p-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(180px,1.4fr)_minmax(150px,1fr)_120px_120px_150px_auto]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(180px,1.4fr)_minmax(150px,1fr)_120px_120px_auto]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   SelectField,
                   {
@@ -68332,33 +68332,35 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     onChange: (value) => updateMasterLmpAccessRule(index, { status: value })
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "aria-hidden": "true", className: "h-[18px]" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-end justify-end gap-[1px]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "aria-hidden": "true", className: "h-[18px]" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => toggleMasterLmpAccessScope(rule, index),
+                        className: platformActionButtonClass,
+                        children: [
+                          advancedScopeOpen ? "Hide Advanced" : "Advanced Scope",
+                          advancedScopeCount > 0 ? ` (${advancedScopeCount})` : ""
+                        ]
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
                       type: "button",
-                      onClick: () => toggleMasterLmpAccessScope(rule, index),
-                      className: platformActionButtonClass,
-                      children: [
-                        advancedScopeOpen ? "Hide Advanced" : "Advanced Scope",
-                        advancedScopeCount > 0 ? ` (${advancedScopeCount})` : ""
-                      ]
+                      disabled: !canEditSection("platform-master-lmp-access"),
+                      onClick: () => removeMasterLmpAccessRule(index),
+                      title: `Delete ${rule.lmpCode || "Master LMP"} access rule`,
+                      "aria-label": `Delete ${rule.lmpCode || "Master LMP"} access rule`,
+                      className: "flex min-h-[38px] w-[42px] items-center justify-center rounded bg-transparent text-sm font-bold text-red-200 transition hover:bg-red-900/35 disabled:cursor-not-allowed disabled:opacity-45",
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
                     }
                   )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    disabled: !canEditSection("platform-master-lmp-access"),
-                    onClick: () => removeMasterLmpAccessRule(index),
-                    title: `Delete ${rule.lmpCode || "Master LMP"} access rule`,
-                    "aria-label": `Delete ${rule.lmpCode || "Master LMP"} access rule`,
-                    className: "flex min-h-[38px] w-[42px] items-center justify-center rounded bg-transparent text-sm font-bold text-red-200 transition hover:bg-red-900/35 disabled:cursor-not-allowed disabled:opacity-45",
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
-                  }
-                ) })
+                ] })
               ] }),
               advancedScopeOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-cyan-500/20 bg-cyan-500/5 p-3 lg:grid-cols-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
