@@ -1849,6 +1849,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = useState(false);
   const [taskProfilesUnlocked, setTaskProfilesUnlocked] = useState(false);
   const [sectionEditUnlocked, setSectionEditUnlocked] = useState<Record<string, boolean>>({});
+  const [expandedMasterLmpAccessScopes, setExpandedMasterLmpAccessScopes] = useState<Set<string>>(new Set());
   const [taskProfileDrafts, setTaskProfileDrafts] = useState<Record<string, string>>({});
   const [taskProfileAbbreviationDrafts, setTaskProfileAbbreviationDrafts] = useState<Record<string, string>>({});
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
@@ -3603,11 +3604,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         id: createClientRecordId('master-lmp-access'),
         lmpCode: masterLmpOptions[0] || 'BPC+IPC',
         organisationCode: primaryOrganisation?.code || 'DEFAULT',
-        locationCode: defaultUnit?.locationCode || config.locations[0]?.code || '',
+        locationCode: null,
         unitCode: defaultUnit?.code || '',
-        aircraftTypeCode: defaultUnit?.code ? getUnitAircraftTypeCode(defaultUnit.code) : '',
-        parentOrganisationCode: getUnitParentOrganisationCode(defaultUnit) || activeSettingsVisibilityParentOrgCode || '',
-        operationalModel: defaultUnit ? getUnitOperationalModel(defaultUnit) : '',
+        aircraftTypeCode: null,
+        parentOrganisationCode: null,
+        operationalModel: null,
         accessLevel: 'View',
         status: 'ACTIVE',
       },
@@ -3616,6 +3617,23 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const removeMasterLmpAccessRule = (index: number) => {
     updateMasterLmpAccessRules(masterLmpAccessRules.filter((_, ruleIndex) => ruleIndex !== index));
+  };
+
+  const getMasterLmpAccessRuleKey = (rule: PlatformMasterLmpAccessRule, index: number) => (
+    String(rule.id || `master-lmp-access-${index}`)
+  );
+
+  const toggleMasterLmpAccessScope = (rule: PlatformMasterLmpAccessRule, index: number) => {
+    const ruleKey = getMasterLmpAccessRuleKey(rule, index);
+    setExpandedMasterLmpAccessScopes((current) => {
+      const next = new Set(current);
+      if (next.has(ruleKey)) {
+        next.delete(ruleKey);
+      } else {
+        next.add(ruleKey);
+      }
+      return next;
+    });
   };
 
   const updateInsertEventType = (index: number, changes: Partial<InsertEventTypeConfig>) => {
@@ -6246,7 +6264,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </span>
             </div>
             <div className="max-w-full overflow-x-auto pb-2">
-              <div className="min-w-[1110px] space-y-3">
+              <div className="min-w-[900px] space-y-3">
                 {visibleMasterLmpCatalogueRows.length === 0 && (
                   <div className="rounded border border-dashed border-gray-700 bg-gray-950 px-3 py-4 text-sm font-semibold text-gray-300">
                     No Master LMPs assigned to this unit.
@@ -6311,81 +6329,108 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <h4 className="text-sm font-bold text-white">Master LMP Access Rules</h4>
               <p className="mt-1 text-xs leading-relaxed text-gray-400">Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees.</p>
             </div>
-          {visibleMasterLmpAccessRuleRows.map(({ rule, index }) => (
-            <div key={rule.id || `master-lmp-access-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_0.9fr_0.9fr_0.9fr_0.9fr_0.9fr_0.8fr_0.8fr_auto]">
-              <SelectField
-                label="Master LMP"
-                value={rule.lmpCode}
-                disabled={!canEditSection('platform-master-lmp-access')}
-                options={masterLmpOptions}
-                onChange={(value) => updateMasterLmpAccessRule(index, { lmpCode: value })}
-              />
-              <SelectField
-                label="Location"
-                value={rule.locationCode || ''}
-                disabled={!canEditSection('platform-master-lmp-access')}
-                options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code))]}
-                emptyLabel="All Locations"
-                onChange={(value) => updateMasterLmpAccessRule(index, { locationCode: value || null })}
-              />
-              <SelectField
-                label="Unit"
-                value={rule.unitCode || ''}
-                disabled={!canEditSection('platform-master-lmp-access')}
-                options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code))]}
-                emptyLabel="All Units"
-                onChange={(value) => updateMasterLmpAccessRule(index, { unitCode: value || null })}
-              />
-              <SelectField
-                label="Model"
-                value={rule.operationalModel || ''}
-                disabled={!canEditSection('platform-master-lmp-access')}
-                options={['', ...OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)]}
-                emptyLabel="Any Model"
-                onChange={(value) => updateMasterLmpAccessRule(index, { operationalModel: value || null })}
-              />
-              <SelectField
-                label="Aircraft Type"
-                value={rule.aircraftTypeCode || ''}
-                disabled={!canEditSection('platform-master-lmp-access')}
-                options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code))]}
-                emptyLabel="Any Type"
-                onChange={(value) => updateMasterLmpAccessRule(index, { aircraftTypeCode: value || null })}
-              />
-              <SelectField
-                label="Parent Org"
-                value={rule.parentOrganisationCode || ''}
-                disabled={!canEditSection('platform-master-lmp-access')}
-                options={['', ...config.organisations.map((organisation) => organisation.code).filter(Boolean)]}
-                emptyLabel="Any Org"
-                onChange={(value) => updateMasterLmpAccessRule(index, { parentOrganisationCode: value || null })}
-              />
-              <SelectField
-                label="Access"
-                value={rule.accessLevel || 'View'}
-                disabled={!canEditSection('platform-master-lmp-access')}
-                options={['View', 'Assign', 'Manage']}
-                onChange={(value) => updateMasterLmpAccessRule(index, { accessLevel: value })}
-              />
-              <SelectField
-                label="Status"
-                value={rule.status || 'ACTIVE'}
-                disabled={!canEditSection('platform-master-lmp-access')}
-                options={['ACTIVE', 'INACTIVE']}
-                onChange={(value) => updateMasterLmpAccessRule(index, { status: value })}
-              />
-              <div className="flex items-end justify-end">
-                <button
-                  type="button"
-                  disabled={!canEditSection('platform-master-lmp-access')}
-                  onClick={() => removeMasterLmpAccessRule(index)}
-                  className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Remove
-                </button>
+          {visibleMasterLmpAccessRuleRows.map(({ rule, index }) => {
+            const ruleKey = getMasterLmpAccessRuleKey(rule, index);
+            const advancedScopeOpen = expandedMasterLmpAccessScopes.has(ruleKey);
+            const advancedScopeCount = [
+              rule.locationCode,
+              rule.aircraftTypeCode,
+              rule.operationalModel,
+              rule.parentOrganisationCode,
+            ].filter((value) => String(value || '').trim()).length;
+            return (
+              <div key={ruleKey} className="space-y-3 rounded border border-gray-700 bg-gray-900 p-3">
+                <div className="grid gap-3 lg:grid-cols-[minmax(180px,1.4fr)_minmax(150px,1fr)_120px_120px_150px_auto]">
+                  <SelectField
+                    label="Master LMP"
+                    value={rule.lmpCode || ''}
+                    disabled={!canEditSection('platform-master-lmp-access')}
+                    options={masterLmpOptions}
+                    onChange={(value) => updateMasterLmpAccessRule(index, { lmpCode: value })}
+                  />
+                  <SelectField
+                    label="Unit"
+                    value={rule.unitCode || ''}
+                    disabled={!canEditSection('platform-master-lmp-access')}
+                    options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code))]}
+                    emptyLabel="All Units"
+                    onChange={(value) => updateMasterLmpAccessRule(index, { unitCode: value || null })}
+                  />
+                  <SelectField
+                    label="Access"
+                    value={rule.accessLevel || 'View'}
+                    disabled={!canEditSection('platform-master-lmp-access')}
+                    options={['View', 'Assign', 'Manage']}
+                    onChange={(value) => updateMasterLmpAccessRule(index, { accessLevel: value })}
+                  />
+                  <SelectField
+                    label="Status"
+                    value={rule.status || 'ACTIVE'}
+                    disabled={!canEditSection('platform-master-lmp-access')}
+                    options={['ACTIVE', 'INACTIVE']}
+                    onChange={(value) => updateMasterLmpAccessRule(index, { status: value })}
+                  />
+                  <div>
+                    <div aria-hidden="true" className="h-[18px]" />
+                    <button
+                      type="button"
+                      onClick={() => toggleMasterLmpAccessScope(rule, index)}
+                      className="min-h-[38px] w-full rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-500/20"
+                    >
+                      {advancedScopeOpen ? 'Hide Advanced' : 'Advanced Scope'}
+                      {advancedScopeCount > 0 ? ` (${advancedScopeCount})` : ''}
+                    </button>
+                  </div>
+                  <div className="flex items-end justify-end">
+                    <button
+                      type="button"
+                      disabled={!canEditSection('platform-master-lmp-access')}
+                      onClick={() => removeMasterLmpAccessRule(index)}
+                      className="min-h-[38px] rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+                {advancedScopeOpen && (
+                  <div className="grid gap-3 rounded border border-cyan-500/20 bg-cyan-500/5 p-3 lg:grid-cols-4">
+                    <SelectField
+                      label="Location"
+                      value={rule.locationCode || ''}
+                      disabled={!canEditSection('platform-master-lmp-access')}
+                      options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code))]}
+                      emptyLabel="All Locations"
+                      onChange={(value) => updateMasterLmpAccessRule(index, { locationCode: value || null })}
+                    />
+                    <SelectField
+                      label="Aircraft Type"
+                      value={rule.aircraftTypeCode || ''}
+                      disabled={!canEditSection('platform-master-lmp-access')}
+                      options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code))]}
+                      emptyLabel="Any Type"
+                      onChange={(value) => updateMasterLmpAccessRule(index, { aircraftTypeCode: value || null })}
+                    />
+                    <SelectField
+                      label="Model"
+                      value={rule.operationalModel || ''}
+                      disabled={!canEditSection('platform-master-lmp-access')}
+                      options={['', ...OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)]}
+                      emptyLabel="Any Model"
+                      onChange={(value) => updateMasterLmpAccessRule(index, { operationalModel: value || null })}
+                    />
+                    <SelectField
+                      label="Parent Org"
+                      value={rule.parentOrganisationCode || ''}
+                      disabled={!canEditSection('platform-master-lmp-access')}
+                      options={['', ...config.organisations.map((organisation) => organisation.code).filter(Boolean)]}
+                      emptyLabel="Any Org"
+                      onChange={(value) => updateMasterLmpAccessRule(index, { parentOrganisationCode: value || null })}
+                    />
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
           </div>
         </div>
       </section>
