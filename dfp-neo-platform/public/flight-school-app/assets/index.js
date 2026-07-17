@@ -4848,7 +4848,17 @@ const isSimIp = (person) => person.role === "SIM IP";
 const isCallsignAssignableStaff = (person) => Boolean(person.name) && person.isActive !== false && !person.isAdminStaff;
 const matchesPermanentCallsignRolePolicy = (person, allowedRoles = []) => {
   if (allowedRoles.length === 0) return true;
-  return allowedRoles.includes(norm(person.role));
+  const role = norm(person.role);
+  const category = norm(person.category);
+  const crew = norm(person.crew);
+  return allowedRoles.some((token) => {
+    const value = norm(token);
+    if (!value) return false;
+    if (value === role || value === `ROLE:${role}`) return true;
+    if (category && (value === category || value === `CATEGORY:${category}`)) return true;
+    if (crew && (value === crew || value === `CREW:${crew}`)) return true;
+    return false;
+  });
 };
 const isLegacyFlightSchoolCallsignUnit = (person) => {
   const unit = norm(person.unit);
@@ -8939,9 +8949,10 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     ] }) });
   };
   const renderCallsignMarker = () => {
-    const canShowCallsignMarker = event.type === "flight" || event.type === "ftd" || event.type === "cpt";
+    const eventTypeToken = String(event.type || "").trim().toLowerCase();
+    const canShowCallsignMarker = ["flight", "ftd", "cpt", "sim", "simulator"].includes(eventTypeToken);
     if (!canShowCallsignMarker || !callsign && !event.area || isPreview || isSmallTile || isDutySup) return null;
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-0.5 right-3 flex items-center gap-1 pointer-events-none", children: [
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-0.5 right-1 flex items-center gap-1 pointer-events-none text-right", children: [
       event.area && /* @__PURE__ */ jsxRuntimeExports.jsx(
         "div",
         {
@@ -8957,9 +8968,9 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       callsign && /* @__PURE__ */ jsxRuntimeExports.jsx(
         "div",
         {
-          className: "font-mono text-white/80",
+          className: "font-mono text-white/80 whitespace-nowrap",
           style: {
-            fontSize: `${scaledFontSize - 2}px`,
+            fontSize: `${Math.max(8, scaledFontSize - 3)}px`,
             lineHeight: "1",
             opacity: 0.8
           },
@@ -64973,7 +64984,12 @@ const PlatformConfigurationSettings = ({
       ...crewPositionTerminology.positions.map((entry) => ({
         value: entry.genericName,
         label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName
-      }))
+      })),
+      { value: "CATEGORY:A", label: "Category A" },
+      { value: "CATEGORY:B", label: "Category B" },
+      { value: "CATEGORY:C", label: "Category C" },
+      { value: "CATEGORY:D", label: "Category D" },
+      { value: "CATEGORY:UNCAT", label: "Uncategorised" }
     ];
     const byValue = /* @__PURE__ */ new Map();
     roleOptions.forEach((option) => {
@@ -106231,10 +106247,11 @@ ${"=".repeat(60)}`);
       if (!instructor.name) return;
       const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
       const savedCallsign = String(instructor.callsign || "").trim();
-      const callsign = assigned?.callsign || savedCallsign || "";
+      const isPermanentUnitCallsign = getUnitCallsignPolicy(activeUnitCallsignSettings, instructor.unit).allocationMethod === "permanent";
+      const callsign = assigned?.callsign || (isPermanentUnitCallsign ? "" : savedCallsign) || "";
       const configuredPrefix = getDefaultUnitCallsign(activeUnitCallsignSettings, instructor.unit);
       const callsignPrefix = assigned?.callsignPrefix || callsign.match(/^[A-Za-z]+/)?.[0] || configuredPrefix;
-      const callsignNumber = assigned?.callsignNumber || instructor.callsignNumber || 0;
+      const callsignNumber = assigned?.callsignNumber || (isPermanentUnitCallsign ? 0 : instructor.callsignNumber) || 0;
       if (callsign || callsignNumber > 0) {
         data.set(instructor.name, {
           callsignPrefix,
@@ -106249,9 +106266,18 @@ ${"=".repeat(60)}`);
   reactExports.useEffect(() => {
     const updates = allInstructorsData.map((instructor) => {
       const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
-      return assigned && instructor.id && (instructor.callsign !== assigned.callsign || instructor.callsignNumber !== assigned.callsignNumber) ? { instructor, assigned } : null;
+      const isPermanentUnitCallsign = getUnitCallsignPolicy(activeUnitCallsignSettings, instructor.unit).allocationMethod === "permanent";
+      const savedCallsign = String(instructor.callsign || "").trim();
+      if (!instructor.id) return null;
+      if (assigned) {
+        return instructor.callsign !== assigned.callsign || instructor.callsignNumber !== assigned.callsignNumber ? { instructor, assigned } : null;
+      }
+      if (isPermanentUnitCallsign && (savedCallsign || Number(instructor.callsignNumber) > 0)) {
+        return { instructor, assigned: null };
+      }
+      return null;
     }).filter(Boolean);
-    const hash = updates.map(({ instructor, assigned }) => `${instructor.id}:${assigned.callsign}:${assigned.callsignNumber}`).sort().join("|");
+    const hash = updates.map(({ instructor, assigned }) => `${instructor.id}:${assigned?.callsign || "CLEAR"}:${assigned?.callsignNumber || 0}`).sort().join("|");
     if (!hash || staffCallsignSyncHashRef.current === hash) return;
     staffCallsignSyncHashRef.current = hash;
     let cancelled = false;
@@ -106261,8 +106287,8 @@ ${"=".repeat(60)}`);
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          callsign: assigned.callsign,
-          callsignNumber: assigned.callsignNumber
+          callsign: assigned?.callsign || "",
+          callsignNumber: assigned?.callsignNumber || 0
         })
       });
       if (!response.ok) throw new Error(`Failed to save callsign for ${instructor.name}: ${response.status}`);
@@ -106274,13 +106300,18 @@ ${"=".repeat(60)}`);
       if (cancelled) return;
       setInstructorsData((prev) => prev.map((instructor) => {
         const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
-        return assigned ? { ...instructor, callsign: assigned.callsign, callsignNumber: assigned.callsignNumber } : instructor;
+        const isPermanentUnitCallsign = getUnitCallsignPolicy(activeUnitCallsignSettings, instructor.unit).allocationMethod === "permanent";
+        if (assigned) return { ...instructor, callsign: assigned.callsign, callsignNumber: assigned.callsignNumber };
+        if (isPermanentUnitCallsign && (String(instructor.callsign || "").trim() || Number(instructor.callsignNumber) > 0)) {
+          return { ...instructor, callsign: "", callsignNumber: 0 };
+        }
+        return instructor;
       }));
     });
     return () => {
       cancelled = true;
     };
-  }, [allInstructorsData, staffCallsignAssignments]);
+  }, [activeUnitCallsignSettings, allInstructorsData, staffCallsignAssignments]);
   const seatConfigs = reactExports.useMemo(() => {
     const data = /* @__PURE__ */ new Map();
     instructorsData.forEach((instructor) => {

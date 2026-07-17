@@ -113,6 +113,7 @@ import {
     formatUnitCallsignNumber,
     getDefaultUnitCallsign,
     getUnitCallsignEntries,
+    getUnitCallsignPolicy,
     normaliseUnitCallsignSettings,
     type UnitCallsignSettings,
 } from './utils/unitCallsigns';
@@ -28220,10 +28221,11 @@ const App: React.FC = () => {
             if (!instructor.name) return;
             const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
             const savedCallsign = String(instructor.callsign || '').trim();
-            const callsign = assigned?.callsign || savedCallsign || '';
+            const isPermanentUnitCallsign = getUnitCallsignPolicy(activeUnitCallsignSettings, instructor.unit).allocationMethod === 'permanent';
+            const callsign = assigned?.callsign || (isPermanentUnitCallsign ? '' : savedCallsign) || '';
             const configuredPrefix = getDefaultUnitCallsign(activeUnitCallsignSettings, instructor.unit);
             const callsignPrefix = assigned?.callsignPrefix || callsign.match(/^[A-Za-z]+/)?.[0] || configuredPrefix;
-            const callsignNumber = assigned?.callsignNumber || instructor.callsignNumber || 0;
+            const callsignNumber = assigned?.callsignNumber || (isPermanentUnitCallsign ? 0 : instructor.callsignNumber) || 0;
 
             if (callsign || callsignNumber > 0) {
                 data.set(instructor.name, {
@@ -28241,17 +28243,26 @@ const App: React.FC = () => {
         const updates = allInstructorsData
             .map((instructor) => {
                 const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
-                return assigned && (instructor as any).id && (
-                    instructor.callsign !== assigned.callsign ||
-                    instructor.callsignNumber !== assigned.callsignNumber
-                )
-                    ? { instructor, assigned }
-                    : null;
+                const isPermanentUnitCallsign = getUnitCallsignPolicy(activeUnitCallsignSettings, instructor.unit).allocationMethod === 'permanent';
+                const savedCallsign = String(instructor.callsign || '').trim();
+                if (!(instructor as any).id) return null;
+                if (assigned) {
+                    return (
+                        instructor.callsign !== assigned.callsign ||
+                        instructor.callsignNumber !== assigned.callsignNumber
+                    )
+                        ? { instructor, assigned }
+                        : null;
+                }
+                if (isPermanentUnitCallsign && (savedCallsign || Number(instructor.callsignNumber) > 0)) {
+                    return { instructor, assigned: null };
+                }
+                return null;
             })
-            .filter(Boolean) as { instructor: Instructor; assigned: StaffCallsignInfo }[];
+            .filter(Boolean) as { instructor: Instructor; assigned: StaffCallsignInfo | null }[];
 
         const hash = updates
-            .map(({ instructor, assigned }) => `${(instructor as any).id}:${assigned.callsign}:${assigned.callsignNumber}`)
+            .map(({ instructor, assigned }) => `${(instructor as any).id}:${assigned?.callsign || 'CLEAR'}:${assigned?.callsignNumber || 0}`)
             .sort()
             .join('|');
 
@@ -28265,8 +28276,8 @@ const App: React.FC = () => {
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    callsign: assigned.callsign,
-                    callsignNumber: assigned.callsignNumber,
+                    callsign: assigned?.callsign || '',
+                    callsignNumber: assigned?.callsignNumber || 0,
                 }),
             });
             if (!response.ok) throw new Error(`Failed to save callsign for ${instructor.name}: ${response.status}`);
@@ -28278,16 +28289,19 @@ const App: React.FC = () => {
             if (cancelled) return;
             setInstructorsData(prev => prev.map(instructor => {
                 const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
-                return assigned
-                    ? { ...instructor, callsign: assigned.callsign, callsignNumber: assigned.callsignNumber }
-                    : instructor;
+                const isPermanentUnitCallsign = getUnitCallsignPolicy(activeUnitCallsignSettings, instructor.unit).allocationMethod === 'permanent';
+                if (assigned) return { ...instructor, callsign: assigned.callsign, callsignNumber: assigned.callsignNumber };
+                if (isPermanentUnitCallsign && (String(instructor.callsign || '').trim() || Number(instructor.callsignNumber) > 0)) {
+                    return { ...instructor, callsign: '', callsignNumber: 0 };
+                }
+                return instructor;
             }));
         });
 
         return () => {
             cancelled = true;
         };
-    }, [allInstructorsData, staffCallsignAssignments]);
+    }, [activeUnitCallsignSettings, allInstructorsData, staffCallsignAssignments]);
 
     const seatConfigs = useMemo(() => {
         const data = new Map<string, string>();

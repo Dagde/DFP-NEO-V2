@@ -28,7 +28,17 @@ const isCallsignAssignableStaff = (person: Instructor): boolean => (
 
 const matchesPermanentCallsignRolePolicy = (person: Instructor, allowedRoles: string[] = []): boolean => {
   if (allowedRoles.length === 0) return true;
-  return allowedRoles.includes(norm(person.role));
+  const role = norm(person.role);
+  const category = norm(person.category);
+  const crew = norm(person.crew);
+  return allowedRoles.some((token) => {
+    const value = norm(token);
+    if (!value) return false;
+    if (value === role || value === `ROLE:${role}`) return true;
+    if (category && (value === category || value === `CATEGORY:${category}`)) return true;
+    if (crew && (value === crew || value === `CREW:${crew}`)) return true;
+    return false;
+  });
 };
 
 const isLegacyFlightSchoolCallsignUnit = (person: Instructor): boolean => {

@@ -955,11 +955,12 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   }
 
   const renderCallsignMarker = () => {
-      const canShowCallsignMarker = event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt';
+      const eventTypeToken = String(event.type || '').trim().toLowerCase();
+      const canShowCallsignMarker = ['flight', 'ftd', 'cpt', 'sim', 'simulator'].includes(eventTypeToken);
       if (!canShowCallsignMarker || (!callsign && !event.area) || isPreview || isSmallTile || isDutySup) return null;
 
       return (
-          <div className="absolute bottom-0.5 right-3 flex items-center gap-1 pointer-events-none">
+          <div className="absolute bottom-0.5 right-1 flex items-center gap-1 pointer-events-none text-right">
               {event.area && (
                   <div
                       className={`font-sans font-light ${['A','B','C','D','E','F','G','H'].includes(event.area) ? 'text-white' : 'text-yellow-300'}`}
@@ -974,9 +975,9 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
               )}
               {callsign && (
                   <div
-                      className="font-mono text-white/80"
+                      className="font-mono text-white/80 whitespace-nowrap"
                       style={{
-                          fontSize: `${scaledFontSize - 2}px`,
+                          fontSize: `${Math.max(8, scaledFontSize - 3)}px`,
                           lineHeight: '1',
                           opacity: 0.8,
                       }}

@@ -2300,6 +2300,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         value: entry.genericName,
         label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName,
       })),
+      { value: 'CATEGORY:A', label: 'Category A' },
+      { value: 'CATEGORY:B', label: 'Category B' },
+      { value: 'CATEGORY:C', label: 'Category C' },
+      { value: 'CATEGORY:D', label: 'Category D' },
+      { value: 'CATEGORY:UNCAT', label: 'Uncategorised' },
     ];
     const byValue = new Map<string, { value: string; label: string }>();
     roleOptions.forEach((option) => {
