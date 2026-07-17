@@ -1102,12 +1102,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return new Set(codes.map(code => String(code || '').trim().toUpperCase()).filter(Boolean));
   }, [activeUnitCode, activeUnitCodes]);
   const activeTaskingUnitCodes = useMemo(() => (
-    Array.from(activeUnitCodeSet).length > 0
-      ? Array.from(activeUnitCodeSet)
-      : [normaliseTaskingUnitCode(activeUnitCode || school)].filter(Boolean)
-  ), [activeUnitCode, activeUnitCodeSet, school]);
-  const activeTaskingUnitCode = activeTaskingUnitCodes.join('+') || normaliseTaskingUnitCode(activeUnitCode || school);
-  const legacyTaskingUnitCodes = ['11SQN', '12SQN'];
+    Array.from(activeUnitCodeSet)
+  ), [activeUnitCodeSet]);
+  const activeTaskingUnitCode = activeTaskingUnitCodes.join('+') || normaliseTaskingUnitCode(activeUnitCode);
   const getTaskingRequestScopeCodes = (request: Partial<TaskingRequest> | any): string[] => {
     const explicitCodes = Array.isArray(request?.unitCodes)
       ? request.unitCodes.map(normaliseTaskingUnitCode).filter(Boolean)
@@ -1115,7 +1112,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const unitCode = normaliseTaskingUnitCode(request?.unitCode);
     if (unitCode) explicitCodes.push(...splitTaskingCompositeUnitCode(unitCode));
     const uniqueCodes = Array.from(new Set(explicitCodes.filter(Boolean)));
-    return uniqueCodes.length > 0 ? uniqueCodes : legacyTaskingUnitCodes;
+    return uniqueCodes.length > 0 ? uniqueCodes : activeTaskingUnitCodes;
   };
   const taskingRequestMatchesActiveScope = (request: Partial<TaskingRequest> | any): boolean => {
     const scopeCodes = getTaskingRequestScopeCodes(request);

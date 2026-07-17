@@ -204,18 +204,13 @@ export const findCrewPositionEntry = (
 
 export const normaliseFixedCrewStaffRole = (role: unknown, unit: unknown): string => {
   const rawRole = String(role || '').trim();
-  const unitCode = String(unit || '').trim().toUpperCase().replace(/[\s-]+/g, '');
   const roleCode = rawRole.toUpperCase().replace(/[\s-]+/g, ' ');
-  const isFixedCrewMaritimeUnit = unitCode === '11SQN' || unitCode === '12SQN';
   if (
-    isFixedCrewMaritimeUnit
-    && (
-      roleCode === 'AEA'
-      || roleCode === 'ACOUSTIC ELECTRONICS ANALYST'
-      || roleCode === 'AIRBORNE ELECTRONICS ANALYST'
-      || roleCode === 'ELECTRONIC AIRBORNE ANALYST'
-      || roleCode === 'ELECTRONICS AIRBORNE ANALYST'
-    )
+    roleCode === 'AEA'
+    || roleCode === 'ACOUSTIC ELECTRONICS ANALYST'
+    || roleCode === 'AIRBORNE ELECTRONICS ANALYST'
+    || roleCode === 'ELECTRONIC AIRBORNE ANALYST'
+    || roleCode === 'ELECTRONICS AIRBORNE ANALYST'
   ) {
     return 'AWO';
   }

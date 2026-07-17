@@ -652,10 +652,9 @@ const DfpSidePanelTimeline: React.FC<{
             .split(/[+/]/)
             .map(code => String(code || '').trim().toUpperCase())
             .filter(Boolean);
-        return codes.length > 0 ? codes : [String(locationCode || '').trim().toUpperCase()].filter(Boolean);
-    }, [activeUnitCode, locationCode]);
-    const assistTaskingUnitCode = assistTaskingUnitCodes.join('+') || String(activeUnitCode || locationCode || '').trim().toUpperCase();
-    const legacyAssistTaskingUnitCodes = ['11SQN', '12SQN'];
+        return codes;
+    }, [activeUnitCode]);
+    const assistTaskingUnitCode = assistTaskingUnitCodes.join('+') || String(activeUnitCode || '').trim().toUpperCase();
     const getAssistTaskingScopeCodes = (request: any): string[] => {
         const explicitCodes = Array.isArray(request?.unitCodes)
             ? request.unitCodes.map((code: any) => String(code || '').trim().toUpperCase()).filter(Boolean)
@@ -663,7 +662,7 @@ const DfpSidePanelTimeline: React.FC<{
         const unitCode = String(request?.unitCode || '').trim().toUpperCase();
         if (unitCode) explicitCodes.push(...unitCode.split(/[+/]/).map(code => code.trim()).filter(Boolean));
         const uniqueCodes = Array.from(new Set(explicitCodes.filter(Boolean)));
-        return uniqueCodes.length > 0 ? uniqueCodes : legacyAssistTaskingUnitCodes;
+        return uniqueCodes.length > 0 ? uniqueCodes : assistTaskingUnitCodes;
     };
     const assistTaskingMatchesActiveScope = (request: any): boolean => {
         const scopeCodes = getAssistTaskingScopeCodes(request);

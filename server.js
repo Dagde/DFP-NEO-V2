@@ -348,11 +348,11 @@ async function repairAirCombatPersonnelRoles(db) {
 function normalisePersonnelPayloadForUnit(body = {}) {
   const unitCode = String(body.unit || '').trim().toUpperCase();
   const roleCode = String(body.role || '').trim().toUpperCase().replace(/[\s-]+/g, ' ');
-  if ((unitCode === '11SQN' || unitCode === '12SQN') && (
+  if (
     roleCode === 'AEA'
     || roleCode === 'ACOUSTIC ELECTRONICS ANALYST'
     || roleCode === 'AIRBORNE ELECTRONICS ANALYST'
-  )) {
+  ) {
     return {
       ...body,
       role: 'AWO',

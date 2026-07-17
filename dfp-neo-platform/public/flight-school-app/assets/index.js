@@ -3272,15 +3272,13 @@ const findCrewPositionEntry = (value, terminology) => {
 };
 const normaliseFixedCrewStaffRole = (role, unit) => {
   const rawRole = String(role || "").trim();
-  const unitCode = String(unit || "").trim().toUpperCase().replace(/[\s-]+/g, "");
   const roleCode = rawRole.toUpperCase().replace(/[\s-]+/g, " ");
-  const isFixedCrewMaritimeUnit = unitCode === "11SQN" || unitCode === "12SQN";
-  if (isFixedCrewMaritimeUnit && (roleCode === "AEA" || roleCode === "ACOUSTIC ELECTRONICS ANALYST" || roleCode === "AIRBORNE ELECTRONICS ANALYST" || roleCode === "ELECTRONIC AIRBORNE ANALYST" || roleCode === "ELECTRONICS AIRBORNE ANALYST")) {
+  if (roleCode === "AEA" || roleCode === "ACOUSTIC ELECTRONICS ANALYST" || roleCode === "AIRBORNE ELECTRONICS ANALYST" || roleCode === "ELECTRONIC AIRBORNE ANALYST" || roleCode === "ELECTRONICS AIRBORNE ANALYST") {
     return "AWO";
   }
   return rawRole;
 };
-const isFixedCrewLegacyAeaRole = (role, unit) => normaliseFixedCrewStaffRole(role, unit) === "AWO" && String(role || "").trim().toUpperCase().replace(/[\s-]+/g, " ") !== "AWO";
+const isFixedCrewLegacyAeaRole = (role, unit) => normaliseFixedCrewStaffRole(role) === "AWO" && String(role || "").trim().toUpperCase().replace(/[\s-]+/g, " ") !== "AWO";
 const getCrewPositionDisplayLabel = (value, terminology, fallback = "Staff") => {
   const rawValue = String(value || "").trim();
   if (rawValue.toUpperCase() === "AWO") return "AWO";
@@ -37417,15 +37415,14 @@ const PrioritiesView = ({
     const codes = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
   }, [activeUnitCode, activeUnitCodes]);
-  const activeTaskingUnitCodes = reactExports.useMemo(() => Array.from(activeUnitCodeSet).length > 0 ? Array.from(activeUnitCodeSet) : [normaliseTaskingUnitCode(activeUnitCode || school)].filter(Boolean), [activeUnitCode, activeUnitCodeSet, school]);
-  const activeTaskingUnitCode = activeTaskingUnitCodes.join("+") || normaliseTaskingUnitCode(activeUnitCode || school);
-  const legacyTaskingUnitCodes = ["11SQN", "12SQN"];
+  const activeTaskingUnitCodes = reactExports.useMemo(() => Array.from(activeUnitCodeSet), [activeUnitCodeSet]);
+  const activeTaskingUnitCode = activeTaskingUnitCodes.join("+") || normaliseTaskingUnitCode(activeUnitCode);
   const getTaskingRequestScopeCodes = (request) => {
     const explicitCodes = Array.isArray(request?.unitCodes) ? request.unitCodes.map(normaliseTaskingUnitCode).filter(Boolean) : [];
     const unitCode = normaliseTaskingUnitCode(request?.unitCode);
     if (unitCode) explicitCodes.push(...splitTaskingCompositeUnitCode(unitCode));
     const uniqueCodes = Array.from(new Set(explicitCodes.filter(Boolean)));
-    return uniqueCodes.length > 0 ? uniqueCodes : legacyTaskingUnitCodes;
+    return uniqueCodes.length > 0 ? uniqueCodes : activeTaskingUnitCodes;
   };
   const taskingRequestMatchesActiveScope = (request) => {
     const scopeCodes = getTaskingRequestScopeCodes(request);
@@ -83611,16 +83608,15 @@ const DfpSidePanelTimeline = ({
   const [assistTaskMandatory, setAssistTaskMandatory] = reactExports.useState(true);
   const assistTaskingUnitCodes = reactExports.useMemo(() => {
     const codes = String(activeUnitCode || "").split(/[+/]/).map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
-    return codes.length > 0 ? codes : [String(locationCode || "").trim().toUpperCase()].filter(Boolean);
-  }, [activeUnitCode, locationCode]);
-  const assistTaskingUnitCode = assistTaskingUnitCodes.join("+") || String(activeUnitCode || locationCode || "").trim().toUpperCase();
-  const legacyAssistTaskingUnitCodes = ["11SQN", "12SQN"];
+    return codes;
+  }, [activeUnitCode]);
+  const assistTaskingUnitCode = assistTaskingUnitCodes.join("+") || String(activeUnitCode || "").trim().toUpperCase();
   const getAssistTaskingScopeCodes = (request) => {
     const explicitCodes = Array.isArray(request?.unitCodes) ? request.unitCodes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean) : [];
     const unitCode = String(request?.unitCode || "").trim().toUpperCase();
     if (unitCode) explicitCodes.push(...unitCode.split(/[+/]/).map((code) => code.trim()).filter(Boolean));
     const uniqueCodes = Array.from(new Set(explicitCodes.filter(Boolean)));
-    return uniqueCodes.length > 0 ? uniqueCodes : legacyAssistTaskingUnitCodes;
+    return uniqueCodes.length > 0 ? uniqueCodes : assistTaskingUnitCodes;
   };
   const assistTaskingMatchesActiveScope = (request) => {
     const scopeCodes = getAssistTaskingScopeCodes(request);
@@ -87300,7 +87296,7 @@ const DfpSidePanelTimeline = ({
 const normalisePersonnelRecord = (person) => {
   const preferences = person?.preferences && typeof person.preferences === "object" && !Array.isArray(person.preferences) ? person.preferences : {};
   const unitCode = String(person?.unit || "").trim().toUpperCase();
-  const normalisedRole = normaliseFixedCrewStaffRole(person?.role, unitCode);
+  const normalisedRole = normaliseFixedCrewStaffRole(person?.role);
   return {
     ...person,
     role: unitCode === "77SQN" ? "Pilot" : normalisedRole,
@@ -114412,7 +114408,7 @@ ${conflictLines.join("\n")}${moreText}`,
       const roleText = String(instructor.role || "").trim().toLowerCase();
       const unitCode = String(instructor.unit || "").trim().toUpperCase();
       const inferredQfi = roleText === "qfi" || roleText === "instructor";
-      const normalisedRole = unitCode === "77SQN" ? "Pilot" : roleText === "sim ip" || roleText === "contractor staff" ? "SIM IP" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "QFI" : normaliseFixedCrewStaffRole(instructor.role, unitCode) || "QFI";
+      const normalisedRole = unitCode === "77SQN" ? "Pilot" : roleText === "sim ip" || roleText === "contractor staff" ? "SIM IP" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "QFI" : normaliseFixedCrewStaffRole(instructor.role) || "QFI";
       const isContractorStaff = normalisedRole === "SIM IP";
       const nextInstructor = {
         ...instructor,
