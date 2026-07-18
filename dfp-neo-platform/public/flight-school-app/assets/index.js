@@ -19751,7 +19751,7 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, description = "Update
       resourcesHuman: splitListInput(resourcesHuman)
     });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-y-auto rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[220] flex items-start justify-center overflow-y-auto bg-black/70 px-4 pb-4 pt-[96px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-[calc(100vh-112px)] w-full max-w-3xl overflow-y-auto rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700 px-5 py-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: "Edit LMP Event" }),
