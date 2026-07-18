@@ -30963,19 +30963,16 @@ const AddFlightTileModal = ({
   };
   const locationFullName = currentLocationName || school;
   const filteredFormationCallsigns = reactExports.useMemo(() => {
-    const matches = (formationCallsigns || []).filter((fc) => fc.location === locationFullName);
-    return matches.length > 0 ? matches : null;
+    return (formationCallsigns || []).filter((fc) => fc.location === locationFullName);
   }, [formationCallsigns, locationFullName]);
   const formationTypes = reactExports.useMemo(() => {
-    if (filteredFormationCallsigns) return filteredFormationCallsigns.map((cs) => cs.code);
-    return school === "ESL" ? ["MERL", "VANG"] : ["COBR", "HAWK"];
-  }, [filteredFormationCallsigns, school]);
+    return filteredFormationCallsigns.map((cs) => cs.code);
+  }, [filteredFormationCallsigns]);
   const opAreas = reactExports.useMemo(() => {
     const areas = locationOpAreas[locationFullName];
     if (areas && areas.length > 0) return areas;
-    if (school === "ESL") return ["A", "B", "C", "D", "E", "F", "G", "H", "S", "T", "U", "V", "W", "X", "Y", "Z"];
-    return ["-"];
-  }, [locationOpAreas, locationFullName, school]);
+    return [];
+  }, [locationOpAreas, locationFullName]);
   reactExports.useEffect(() => {
     setArea(opAreas[0] || "-");
   }, [opAreas]);
@@ -31190,10 +31187,8 @@ const AddFlightTileModal = ({
     }
     return lmp.find((item) => isFlight(item) && !done.has(item.id) && !done.has(item.code)) || null;
   }, [picName, studentName, flightType, traineeLMPs, scores, eventCategory]);
-  const buildCallsignFromNumber = (num) => {
-    if (!num || num <= 0) return "";
-    const prefix = school === "ESL" ? "ROLR" : "VIPR";
-    return `${prefix}${num}`;
+  const buildCallsignFromNumber = (_num) => {
+    return "";
   };
   reactExports.useEffect(() => {
     if (isFixedCrewModel) return;
@@ -31232,7 +31227,7 @@ const AddFlightTileModal = ({
     }
     setCallsign("");
     setCallsignOptions([]);
-  }, [picName, instructorsData, traineesData, formationCallsigns, school, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
+  }, [picName, instructorsData, traineesData, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
   reactExports.useEffect(() => {
     if (suppressNextCategoryResetRef.current) {
       suppressNextCategoryResetRef.current = false;
@@ -31963,7 +31958,7 @@ const AddFlightTileModal = ({
                         value: origin,
                         onChange: (e) => setOrigin(e.target.value.toUpperCase()),
                         maxLength: 4,
-                        placeholder: "ESL",
+                        placeholder: "Origin",
                         className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
                       }
                     )
@@ -31977,7 +31972,7 @@ const AddFlightTileModal = ({
                         value: destination,
                         onChange: (e) => setDestination(e.target.value.toUpperCase()),
                         maxLength: 4,
-                        placeholder: "PEA",
+                        placeholder: "Destination",
                         className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
                       }
                     )
@@ -32242,7 +32237,7 @@ const AddFlightTileModal = ({
                           value: origin,
                           onChange: (e) => setOrigin(e.target.value.toUpperCase()),
                           maxLength: 4,
-                          placeholder: "ESL",
+                          placeholder: "Origin",
                           className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
                         }
                       )
@@ -32256,7 +32251,7 @@ const AddFlightTileModal = ({
                           value: destination,
                           onChange: (e) => setDestination(e.target.value.toUpperCase()),
                           maxLength: 4,
-                          placeholder: "PEA",
+                          placeholder: "Destination",
                           className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
                         }
                       )
@@ -32272,12 +32267,12 @@ const AddFlightTileModal = ({
                             value: formationType,
                             onChange: (e) => setFormationType(e.target.value),
                             className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
-                            children: filteredFormationCallsigns ? filteredFormationCallsigns.map((cs) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: cs.code, children: [
+                            children: filteredFormationCallsigns.length > 0 ? filteredFormationCallsigns.map((cs) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: cs.code, children: [
                               cs.name,
                               " (",
                               cs.code,
                               ")"
-                            ] }, cs.code)) : formationTypes.map((type) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: type, children: type }, type))
+                            ] }, cs.code)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "No formation callsigns configured" })
                           }
                         )
                       ] }),

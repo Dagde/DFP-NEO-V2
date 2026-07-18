@@ -43,7 +43,7 @@ interface AddFlightTileModalProps {
   instructors: string[];
   trainees: string[];
   syllabusDetails: SyllabusItemDetail[];
-  school: 'ESL' | 'PEA';
+  school: string;
   currentLocationName?: string;
   traineesData: Trainee[];
   instructorsData: Instructor[];
@@ -1396,23 +1396,19 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const locationFullName = currentLocationName || school;
 
   const filteredFormationCallsigns = useMemo(() => {
-    const matches = (formationCallsigns || []).filter(fc => fc.location === locationFullName);
-    return matches.length > 0 ? matches : null;
+    return (formationCallsigns || []).filter(fc => fc.location === locationFullName);
   }, [formationCallsigns, locationFullName]);
 
   const formationTypes = useMemo(() => {
-    if (filteredFormationCallsigns) return filteredFormationCallsigns.map(cs => cs.code);
-    return school === 'ESL' ? ['MERL', 'VANG'] : ['COBR', 'HAWK'];
-  }, [filteredFormationCallsigns, school]);
+    return filteredFormationCallsigns.map(cs => cs.code);
+  }, [filteredFormationCallsigns]);
 
   // ── Op Areas for this location ────────────────────────────────────────────
   const opAreas = useMemo(() => {
     const areas = locationOpAreas[locationFullName];
     if (areas && areas.length > 0) return areas;
-    // fallback defaults
-    if (school === 'ESL') return ['A','B','C','D','E','F','G','H','S','T','U','V','W','X','Y','Z'];
-    return ['-'];
-  }, [locationOpAreas, locationFullName, school]);
+    return [];
+  }, [locationOpAreas, locationFullName]);
 
   // Set default area from opAreas
   useEffect(() => {
@@ -1680,11 +1676,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   }, [picName, studentName, flightType, traineeLMPs, scores, eventCategory]);
 
   // ── Auto-fill callsign from PIC profile + formation callsigns for same unit ──────────
-  // Helper: build callsign string from callsignNumber + school prefix (ESL=ROLR, PEA=VIPR)
-  const buildCallsignFromNumber = (num: number | undefined | null): string => {
-    if (!num || num <= 0) return '';
-    const prefix = school === 'ESL' ? 'ROLR' : 'VIPR';
-    return `${prefix}${num}`;
+  // Legacy numeric callsigns no longer infer unit prefixes. Use configured callsign strings instead.
+  const buildCallsignFromNumber = (_num: number | undefined | null): string => {
+    return '';
   };
 
   useEffect(() => {
@@ -1730,7 +1724,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
     setCallsign('');
     setCallsignOptions([]);
-  }, [picName, instructorsData, traineesData, formationCallsigns, school, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
+  }, [picName, instructorsData, traineesData, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
 
   // ── Auto-set duration from selected LMP event ─────────────────────────────
   // (handled in onFlightNumberChange handler — see handleFlightNumberChange below)
@@ -2551,7 +2545,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       value={origin}
                       onChange={e => setOrigin(e.target.value.toUpperCase())}
                       maxLength={4}
-                      placeholder="ESL"
+                      placeholder="Origin"
                       className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
                     />
                   </div>
@@ -2562,7 +2556,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       value={destination}
                       onChange={e => setDestination(e.target.value.toUpperCase())}
                       maxLength={4}
-                      placeholder="PEA"
+                      placeholder="Destination"
                       className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
                     />
                   </div>
@@ -2807,7 +2801,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                         value={origin}
                         onChange={e => setOrigin(e.target.value.toUpperCase())}
                         maxLength={4}
-                        placeholder="ESL"
+                        placeholder="Origin"
                         className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
                       />
                     </div>
@@ -2818,7 +2812,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                         value={destination}
                         onChange={e => setDestination(e.target.value.toUpperCase())}
                         maxLength={4}
-                        placeholder="PEA"
+                        placeholder="Destination"
                         className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
                       />
                     </div>
@@ -2834,9 +2828,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                           onChange={e => setFormationType(e.target.value)}
                           className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
                         >
-                          {filteredFormationCallsigns
+                          {filteredFormationCallsigns.length > 0
                             ? filteredFormationCallsigns.map(cs => <option key={cs.code} value={cs.code}>{cs.name} ({cs.code})</option>)
-                            : formationTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                            : <option value="" disabled>No formation callsigns configured</option>}
                         </select>
                       </div>
                       <div>
