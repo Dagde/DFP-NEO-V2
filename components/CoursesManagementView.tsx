@@ -48,42 +48,15 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
 
     // Group courses by type (only active courses, not archived)
     const groupedCourses = useMemo(() => {
-        const groups: { [key: string]: Course[] } = {
-            'ADF': [],
-            'FIC': [],
-            'WSO': [],
-            'IFIC': [],
-            'OFI': [],
-            'Pilot Conversion': [],
-            'Other': []
-        };
+        const groups: { [key: string]: Course[] } = {};
 
         // Filter out archived courses
         const activeCourses = courses.filter(course => courseColors.hasOwnProperty(course.name));
 
         activeCourses.forEach(course => {
-            if (course.name.startsWith('ADF')) {
-                groups['ADF'].push(course);
-            } else if (course.name.startsWith('FIC')) {
-                groups['FIC'].push(course);
-            } else if (course.name.startsWith('WSO')) {
-                groups['WSO'].push(course);
-            } else if (course.name.startsWith('IFIC')) {
-                groups['IFIC'].push(course);
-            } else if (course.name.startsWith('OFI')) {
-                groups['OFI'].push(course);
-            } else if (course.name.toLowerCase().includes('conversion')) {
-                groups['Pilot Conversion'].push(course);
-            } else {
-                groups['Other'].push(course);
-            }
-        });
-
-        // Remove empty groups
-        Object.keys(groups).forEach(key => {
-            if (groups[key].length === 0) {
-                delete groups[key];
-            }
+            const groupName = String(course.lmpType || '').trim() || 'Courses';
+            if (!groups[groupName]) groups[groupName] = [];
+            groups[groupName].push(course);
         });
 
         return groups;

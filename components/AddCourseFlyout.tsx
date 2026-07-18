@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 
 export interface NewCourseData {
-    number: string; // This is now the full course name, e.g., "CSE 290" or "FIC 210"
+    number: string;
     color: string;
     startDate: string;
     gradDate: string;
@@ -32,9 +32,6 @@ const ALL_COLORS = [
     'bg-blue-400/80',     // Blue
 ];
 
-const courseTypes = ['ADF', 'FIC', 'WSO', 'IFIC', 'OFI', 'Pilot Conversion'];
-const suffixOptions = ['', 'GS'];
-
 const Dropdown: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void; children: React.ReactNode; id: string }> = ({ label, value, onChange, children, id }) => (
     <div>
         <label htmlFor={id} className="block text-sm font-medium text-gray-400">{label}</label>
@@ -50,10 +47,7 @@ const Dropdown: React.FC<{ label: string; value: string | number; onChange: (e: 
 );
 
 const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, existingCourses, locations = [], units = [] }) => {
-    const [courseType, setCourseType] = useState('ADF');
-    const [cseCourseNumber, setCseCourseNumber] = useState('');
-    const [manualCourseNumber, setManualCourseNumber] = useState('');
-    const [suffix, setSuffix] = useState('');
+    const [courseName, setCourseName] = useState('');
     
     const [startDate, setStartDate] = useState('');
     const [gradDate, setGradDate] = useState('');
@@ -70,47 +64,13 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
 
     const totalStart = useMemo(() => raafStart + navyStart + armyStart, [raafStart, navyStart, armyStart]);
 
-    const cseCourseNumberOptions = useMemo(() => {
-        const options = [];
-        // Accept both CSE and ADF prefixes for backward compatibility
-        const existingCseNumbers = Object.keys(existingCourses)
-            .filter(name => name.startsWith('CSE ') || name.startsWith('ADF'))
-            .map(name => name.replace(/^(CSE|ADF)\s*/i, ''));
-            
-        for (let i = 290; i <= 500; i++) {
-            if (!existingCseNumbers.includes(String(i))) {
-                options.push(i);
-            }
-        }
-        return options;
-    }, [existingCourses]);
-
     const studentNumberOptions = useMemo(() => Array.from({ length: 41 }, (_, i) => i), []);
-    
-    useEffect(() => {
-        if (courseType === 'ADF' && cseCourseNumberOptions.length > 0) {
-            setCseCourseNumber(String(cseCourseNumberOptions[0]));
-        } else {
-            setCseCourseNumber('');
-        }
-    }, [courseType, cseCourseNumberOptions]);
 
     const handleSave = () => {
-        let finalCourseName: string;
-
-        if (courseType === 'ADF') {
-            if (!cseCourseNumber) {
-                alert('Please select an ADF course number.');
-                return;
-            }
-            finalCourseName = `ADF${cseCourseNumber}${suffix}`;
-        } else {
-            const trimmedManualNumber = manualCourseNumber.trim();
-            if (!trimmedManualNumber) {
-                alert('Please enter a course number.');
-                return;
-            }
-            finalCourseName = `${courseType} ${trimmedManualNumber}${suffix}`;
+        const finalCourseName = courseName.trim();
+        if (!finalCourseName) {
+            alert('Please enter a course name.');
+            return;
         }
 
         if (Object.keys(existingCourses).includes(finalCourseName)) {
@@ -150,40 +110,17 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
                 </div>
 
                 <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                    <div className="grid grid-cols-3 gap-4">
-                        <Dropdown label="Course Type" id="course-type" value={courseType} onChange={e => setCourseType(e.target.value)}>
-                           {courseTypes.map(type => <option key={type} value={type}>{type}</option>)}
-                        </Dropdown>
-
-                        {courseType === 'ADF' ? (
-                             <Dropdown label="Course Number" id="course-number" value={cseCourseNumber} onChange={e => setCseCourseNumber(e.target.value)}>
-                                {cseCourseNumberOptions.length > 0 ? (
-                                    cseCourseNumberOptions.map(n => <option key={n} value={n}>{n}</option>)
-                                ) : (
-                                    <option disabled>No courses available</option>
-                                )}
-                            </Dropdown>
-                        ) : (
-                            <div>
-                                <label htmlFor="manual-course-number" className="block text-sm font-medium text-gray-400">Course Number</label>
-                                <input 
-                                    type="text" 
-                                    id="manual-course-number" 
-                                    value={manualCourseNumber} 
-                                    onChange={e => setManualCourseNumber(e.target.value)}
-                                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
-                                    placeholder="e.g., 210"
-                                />
-                            </div>
-                        )}
-
-                        <Dropdown label="Suffix" id="suffix" value={suffix} onChange={e => setSuffix(e.target.value)}>
-                            {suffixOptions.map(option => (
-                                <option key={option} value={option}>
-                                    {option || 'None'}
-                                </option>
-                            ))}
-                        </Dropdown>
+                    <div>
+                        <label htmlFor="course-name" className="block text-sm font-medium text-gray-400">Course Name</label>
+                        <input
+                            type="text"
+                            id="course-name"
+                            value={courseName}
+                            onChange={e => setCourseName(e.target.value)}
+                            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                            placeholder="Enter the course or cohort name"
+                            autoFocus
+                        />
                     </div>
                      <div>
                         <label className="block text-sm font-medium text-gray-400">Allocated Colour</label>

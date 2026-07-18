@@ -6999,8 +6999,6 @@ const ALL_COLORS = [
   "bg-blue-400/80"
   // Blue
 ];
-const courseTypes = ["ADF", "FIC", "WSO", "IFIC", "OFI", "Pilot Conversion"];
-const suffixOptions = ["", "GS"];
 const Dropdown$2 = ({ label, value, onChange, children, id }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: id, className: "block text-sm font-medium text-gray-400", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -7015,10 +7013,7 @@ const Dropdown$2 = ({ label, value, onChange, children, id }) => /* @__PURE__ */
   )
 ] });
 const AddCourseFlyout = ({ onClose, onSave, existingCourses, locations = [], units = [] }) => {
-  const [courseType, setCourseType] = reactExports.useState("ADF");
-  const [cseCourseNumber, setCseCourseNumber] = reactExports.useState("");
-  const [manualCourseNumber, setManualCourseNumber] = reactExports.useState("");
-  const [suffix, setSuffix] = reactExports.useState("");
+  const [courseName, setCourseName] = reactExports.useState("");
   const [startDate, setStartDate] = reactExports.useState("");
   const [gradDate, setGradDate] = reactExports.useState("");
   const [raafStart, setRaafStart] = reactExports.useState(0);
@@ -7031,39 +7026,12 @@ const AddCourseFlyout = ({ onClose, onSave, existingCourses, locations = [], uni
     return ALL_COLORS.find((c) => !usedColors.has(c)) || "bg-gray-400/80";
   }, [existingCourses]);
   const totalStart = reactExports.useMemo(() => raafStart + navyStart + armyStart, [raafStart, navyStart, armyStart]);
-  const cseCourseNumberOptions = reactExports.useMemo(() => {
-    const options = [];
-    const existingCseNumbers = Object.keys(existingCourses).filter((name) => name.startsWith("CSE ") || name.startsWith("ADF")).map((name) => name.replace(/^(CSE|ADF)\s*/i, ""));
-    for (let i = 290; i <= 500; i++) {
-      if (!existingCseNumbers.includes(String(i))) {
-        options.push(i);
-      }
-    }
-    return options;
-  }, [existingCourses]);
   const studentNumberOptions = reactExports.useMemo(() => Array.from({ length: 41 }, (_, i) => i), []);
-  reactExports.useEffect(() => {
-    if (courseType === "ADF" && cseCourseNumberOptions.length > 0) {
-      setCseCourseNumber(String(cseCourseNumberOptions[0]));
-    } else {
-      setCseCourseNumber("");
-    }
-  }, [courseType, cseCourseNumberOptions]);
   const handleSave = () => {
-    let finalCourseName;
-    if (courseType === "ADF") {
-      if (!cseCourseNumber) {
-        alert("Please select an ADF course number.");
-        return;
-      }
-      finalCourseName = `ADF${cseCourseNumber}${suffix}`;
-    } else {
-      const trimmedManualNumber = manualCourseNumber.trim();
-      if (!trimmedManualNumber) {
-        alert("Please enter a course number.");
-        return;
-      }
-      finalCourseName = `${courseType} ${trimmedManualNumber}${suffix}`;
+    const finalCourseName = courseName.trim();
+    if (!finalCourseName) {
+      alert("Please enter a course name.");
+      return;
     }
     if (Object.keys(existingCourses).includes(finalCourseName)) {
       alert(`Course "${finalCourseName}" already exists.`);
@@ -7095,23 +7063,20 @@ const AddCourseFlyout = ({ onClose, onSave, existingCourses, locations = [], uni
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-4 max-h-[70vh] overflow-y-auto", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: "Course Type", id: "course-type", value: courseType, onChange: (e) => setCourseType(e.target.value), children: courseTypes.map((type) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: type, children: type }, type)) }),
-        courseType === "ADF" ? /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: "Course Number", id: "course-number", value: cseCourseNumber, onChange: (e) => setCseCourseNumber(e.target.value), children: cseCourseNumberOptions.length > 0 ? cseCourseNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { disabled: true, children: "No courses available" }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "manual-course-number", className: "block text-sm font-medium text-gray-400", children: "Course Number" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              id: "manual-course-number",
-              value: manualCourseNumber,
-              onChange: (e) => setManualCourseNumber(e.target.value),
-              className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm",
-              placeholder: "e.g., 210"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: "Suffix", id: "suffix", value: suffix, onChange: (e) => setSuffix(e.target.value), children: suffixOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option || "None" }, option)) })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "course-name", className: "block text-sm font-medium text-gray-400", children: "Course Name" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "text",
+            id: "course-name",
+            value: courseName,
+            onChange: (e) => setCourseName(e.target.value),
+            className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm",
+            placeholder: "Enter the course or cohort name",
+            autoFocus: true
+          }
+        )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Allocated Colour" }),
@@ -76694,37 +76659,12 @@ const CoursesManagementView = ({
   const [showChoiceDialog, setShowChoiceDialog] = reactExports.useState(false);
   const [courseToDelete, setCourseToDelete] = reactExports.useState(null);
   const groupedCourses = reactExports.useMemo(() => {
-    const groups = {
-      "ADF": [],
-      "FIC": [],
-      "WSO": [],
-      "IFIC": [],
-      "OFI": [],
-      "Pilot Conversion": [],
-      "Other": []
-    };
+    const groups = {};
     const activeCourses = courses.filter((course) => courseColors.hasOwnProperty(course.name));
     activeCourses.forEach((course) => {
-      if (course.name.startsWith("ADF")) {
-        groups["ADF"].push(course);
-      } else if (course.name.startsWith("FIC")) {
-        groups["FIC"].push(course);
-      } else if (course.name.startsWith("WSO")) {
-        groups["WSO"].push(course);
-      } else if (course.name.startsWith("IFIC")) {
-        groups["IFIC"].push(course);
-      } else if (course.name.startsWith("OFI")) {
-        groups["OFI"].push(course);
-      } else if (course.name.toLowerCase().includes("conversion")) {
-        groups["Pilot Conversion"].push(course);
-      } else {
-        groups["Other"].push(course);
-      }
-    });
-    Object.keys(groups).forEach((key) => {
-      if (groups[key].length === 0) {
-        delete groups[key];
-      }
+      const groupName = String(course.lmpType || "").trim() || "Courses";
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(course);
     });
     return groups;
   }, [courses, courseColors]);
