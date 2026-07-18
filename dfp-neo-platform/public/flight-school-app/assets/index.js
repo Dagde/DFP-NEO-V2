@@ -67256,8 +67256,15 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     )?.aircraftTypeCode || "").trim().toUpperCase();
     return unitPoolAircraft || unitSettingAircraft || activeCrewCompositionAircraftCode || String(config.aircraftTypes[0]?.code || "").trim().toUpperCase();
   };
+  const getUnitOwnedAircraftTypeCode = (unit) => {
+    const unitCode = String(unit?.code || "").trim().toUpperCase();
+    const unitSettingAircraft = String(unit?.settings?.aircraftTypeCode || unit?.settings?.aircraftType || "").trim().toUpperCase();
+    const unitOwnedPoolAircraft = String(config.resourcePools.find((pool) => isActiveRecord(pool) && String(pool.unitCode || "").trim().toUpperCase() === unitCode && String(pool.aircraftTypeCode || "").trim())?.aircraftTypeCode || "").trim().toUpperCase();
+    return unitSettingAircraft || unitOwnedPoolAircraft;
+  };
   const activeHomeLocationCode = String(activePlatformUnit?.locationCode || config.locations[0]?.code || "").trim().toUpperCase();
   const activeMissionAircraftTypeCode = getUnitAircraftTypeCode(activePrimaryUnitCode);
+  const trainingReportPreviewAircraftTypeCode = getUnitOwnedAircraftTypeCode(activeTrainingReportUnit) || activeMissionAircraftTypeCode;
   const activeUnitAircraftTypeCodes = Array.from(new Set(
     getActiveScopedUnitCodes().map((unitCode) => getUnitAircraftTypeCode(unitCode)).map((aircraftCode) => String(aircraftCode || "").trim().toUpperCase()).filter(Boolean)
   ));
@@ -70307,7 +70314,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.training, value: "Air to Air" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.type, value: "Flight" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.timing, value: "08:00 / 1.2h" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.resource, value: `${getAircraftTypeDisplayLabel(activeMissionAircraftTypeCode)} 5` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.resource, value: `${getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode)} 5` }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.callsign, value: "SHOG1" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.unit, value: "77SQN" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.date, value: "2026-06-07" }),
