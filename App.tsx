@@ -22013,7 +22013,7 @@ const App: React.FC = () => {
 
         const configuredSelectableLocations = configuredLocationsWithUnits.length > 0
             ? configuredLocationsWithUnits
-            : getLocationCodesForCurrentRuntime(platformConfig, ['ESL', 'PEA']);
+            : getLocationCodesForCurrentRuntime(platformConfig, []);
         if (!setupTestProfile) return configuredSelectableLocations;
         return Array.from(new Set([
             ...configuredSelectableLocations,
@@ -22032,31 +22032,7 @@ const App: React.FC = () => {
             .find((location: any) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
         const locationAliases = new Set(activeLocation ? getLocationSelectorAliases(activeLocation) : [normalisedLocationCode]);
         const normaliseUnitCode = (value: unknown): string => String(value || '').trim().toUpperCase();
-        const getSetupTestFallbackUnitsForLocation = (): Array<{ code: string; name: string; model: any }> => {
-            if (!setupTestProfile) return [];
-            const locationAliasesForFallback = new Set([
-                normalisedLocationCode,
-                ...Array.from(locationAliases),
-                ...knownDfpLocationAliases(normalisedLocationCode),
-            ].map((alias) => String(alias || '').trim().toUpperCase()).filter(Boolean));
-            if (['ESL', 'YMES', 'EAST SALE'].some((alias) => locationAliasesForFallback.has(alias))) {
-                return [
-                    { code: '1FTS', name: '1FTS', model: normaliseOperationalModel('flight_school') },
-                    { code: 'CFS', name: 'CFS', model: normaliseOperationalModel('flight_school') },
-                ];
-            }
-            if (['PEA', 'YPEA', 'PEARCE'].some((alias) => locationAliasesForFallback.has(alias))) {
-                return [
-                    { code: '2FTS', name: '2FTS', model: normaliseOperationalModel('flight_school') },
-                ];
-            }
-            if (['AMB', 'YAMB', 'AMBERLEY'].some((alias) => locationAliasesForFallback.has(alias))) {
-                return [
-                    { code: '36SQN', name: '36SQN', model: normaliseOperationalModel('pooled_crew') },
-                ];
-            }
-            return [];
-        };
+        const getSetupTestFallbackUnitsForLocation = (): Array<{ code: string; name: string; model: any }> => [];
         const configuredUnits = (platformConfig?.units || [])
             .filter((unit: any) => unit.status !== 'INACTIVE')
             .filter((unit: any) => locationAliases.has(String(unit.locationCode || '').trim().toUpperCase()))
