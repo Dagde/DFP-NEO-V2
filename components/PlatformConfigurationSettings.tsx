@@ -5450,6 +5450,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     standardMissionProfiles.filter(isProfileInActiveUnitContext),
   );
   const defaultMissionCallsign = getDefaultUnitCallsign(unitCallsignSettings, activePrimaryUnitCode);
+  const trainingReportPreviewCallsign = getDefaultUnitCallsign(
+    unitCallsignSettings,
+    activeTrainingReportUnit?.code || activeTrainingReportUnitCode,
+  ) || 'Callsign';
+  const trainingReportPreviewUnitCode = String(activeTrainingReportUnit?.code || activeTrainingReportUnitCode || 'Unit').trim();
   const getStandardMissionCrewOptions = (aircraftTypeCode: string): Array<{ id: string; label: string; mode: 'STANDARD' | 'ALTERNATE' }> => {
     const aircraftCode = String(aircraftTypeCode || activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || 'AIRCRAFT').trim().toUpperCase();
     const alternateCompositions = uniqueProfilesByCompositeGroup(
@@ -8420,8 +8425,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.type} value="Flight" />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.timing} value="08:00 / 1.2h" />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.resource} value={`${getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode)} 5`} />
-                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.callsign} value="SHOG1" />
-                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.unit} value="77SQN" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.callsign} value={trainingReportPreviewCallsign} />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.unit} value={trainingReportPreviewUnitCode} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.date} value="2026-06-07" />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.assessor} value="SQNLDR Burns" />
                   </div>

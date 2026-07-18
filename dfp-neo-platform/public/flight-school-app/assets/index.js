@@ -67473,6 +67473,11 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     standardMissionProfiles.filter(isProfileInActiveUnitContext)
   );
   const defaultMissionCallsign = getDefaultUnitCallsign(unitCallsignSettings, activePrimaryUnitCode);
+  const trainingReportPreviewCallsign = getDefaultUnitCallsign(
+    unitCallsignSettings,
+    activeTrainingReportUnit?.code || activeTrainingReportUnitCode
+  ) || "Callsign";
+  const trainingReportPreviewUnitCode = String(activeTrainingReportUnit?.code || activeTrainingReportUnitCode || "Unit").trim();
   const getStandardMissionCrewOptions = (aircraftTypeCode) => {
     const aircraftCode = String(aircraftTypeCode || activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || "AIRCRAFT").trim().toUpperCase();
     const alternateCompositions = uniqueProfilesByCompositeGroup(
@@ -70315,8 +70320,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.type, value: "Flight" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.timing, value: "08:00 / 1.2h" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.resource, value: `${getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode)} 5` }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.callsign, value: "SHOG1" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.unit, value: "77SQN" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.callsign, value: trainingReportPreviewCallsign }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.unit, value: trainingReportPreviewUnitCode }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.date, value: "2026-06-07" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.assessor, value: "SQNLDR Burns" })
               ] }) })
