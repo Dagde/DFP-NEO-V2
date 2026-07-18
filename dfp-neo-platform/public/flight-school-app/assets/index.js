@@ -62162,6 +62162,8 @@ const OrganisationSettings = ({
       return groupUnits.some((unitCode) => visibleResourceSharingUnitSet.has(unitCode));
     });
   }, [isResourceSharingVisibilityEnabled, persistedResourceSharingGroups, visibleResourceSharingUnitSet]);
+  const activeResourceSharingGroupIsVisible = reactExports.useMemo(() => visibleResourceSharingGroups.some((group) => group.id === activeResourceSharingGroupId), [visibleResourceSharingGroups, activeResourceSharingGroupId]);
+  const displaySelectedUnits = activeResourceSharingGroupIsVisible ? selectedUnits : [];
   reactExports.useEffect(() => {
     setResourceSharingGroups((previous) => previous.map(
       (group) => group.id === activeResourceSharingGroupId ? {
@@ -62672,11 +62674,11 @@ const OrganisationSettings = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "select",
                       {
-                        value: activeResourceSharingGroupId,
+                        value: activeResourceSharingGroupIsVisible ? activeResourceSharingGroupId : "",
                         onChange: (event) => handleSelectResourceSharingGroup(event.target.value),
                         className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500",
                         children: [
-                          visibleResourceSharingGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: activeResourceSharingGroupId, children: "No matching arrangement for this unit context" }),
+                          visibleResourceSharingGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No matching arrangement for this unit context" }),
                           visibleResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group.id, children: [
                             group.name || "Unnamed arrangement",
                             group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join("+")})` : ""
@@ -62691,10 +62693,11 @@ const OrganisationSettings = ({
                       "input",
                       {
                         type: "text",
-                        value: activeResourceSharingGroup.name || "",
+                        value: activeResourceSharingGroupIsVisible ? activeResourceSharingGroup.name || "" : "",
                         onChange: (event) => handleRenameResourceSharingGroup(event.target.value),
+                        disabled: !activeResourceSharingGroupIsVisible,
                         placeholder: "e.g. Base shared aircraft pool",
-                        className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        className: `w-full rounded-md border py-2 px-3 text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500 ${activeResourceSharingGroupIsVisible ? "bg-gray-950/80 border-sky-500/40 text-white" : "bg-gray-900/70 border-gray-700 text-gray-500 cursor-not-allowed"}`
                       }
                     )
                   ] }),
@@ -62713,8 +62716,8 @@ const OrganisationSettings = ({
                       {
                         type: "button",
                         onClick: handleDeleteResourceSharingGroup,
-                        disabled: resourceSharingGroups.length <= 1,
-                        className: `rounded-md px-3 py-2 text-xs font-semibold ${resourceSharingGroups.length <= 1 ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-red-600/80 text-white hover:bg-red-600"}`,
+                        disabled: !activeResourceSharingGroupIsVisible || resourceSharingGroups.length <= 1,
+                        className: `rounded-md px-3 py-2 text-xs font-semibold ${!activeResourceSharingGroupIsVisible || resourceSharingGroups.length <= 1 ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-red-600/80 text-white hover:bg-red-600"}`,
                         children: "Delete"
                       }
                     )
@@ -62744,19 +62747,23 @@ const OrganisationSettings = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", children: visibleResourceSharingUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "div",
                     {
-                      onClick: () => handleToggleUnit(unit),
-                      className: `cursor-pointer rounded-lg border-2 p-3 transition-all ${selectedUnits.includes(unit) ? "border-sky-500 bg-sky-500/10" : "border-gray-600 bg-gray-700/30 hover:border-gray-500"}`,
+                      onClick: () => {
+                        if (!activeResourceSharingGroupIsVisible) return;
+                        handleToggleUnit(unit);
+                      },
+                      className: `cursor-pointer rounded-lg border-2 p-3 transition-all ${displaySelectedUnits.includes(unit) ? "border-sky-500 bg-sky-500/10" : "border-gray-600 bg-gray-700/30 hover:border-gray-500"}`,
                       children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center space-y-1", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-medium ${selectedUnits.includes(unit) ? "text-sky-400" : "text-gray-300"}`, children: unit }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-4 h-4 rounded-full border-2 flex items-center justify-center ${selectedUnits.includes(unit) ? "border-sky-500 bg-sky-500" : "border-gray-500"}`, children: selectedUnits.includes(unit) && /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-2.5 h-2.5 text-white", fill: "currentColor", viewBox: "0 0 20 20", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z", clipRule: "evenodd" }) }) })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-medium ${displaySelectedUnits.includes(unit) ? "text-sky-400" : "text-gray-300"}`, children: unit }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-4 h-4 rounded-full border-2 flex items-center justify-center ${displaySelectedUnits.includes(unit) ? "border-sky-500 bg-sky-500" : "border-gray-500"}`, children: displaySelectedUnits.includes(unit) && /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-2.5 h-2.5 text-white", fill: "currentColor", viewBox: "0 0 20 20", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z", clipRule: "evenodd" }) }) })
                       ] })
                     },
                     unit
                   )) }),
                   visibleResourceSharingUnits.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-200 mt-2 italic", children: "No units match the current settings visibility filters. Add or change the active context before creating this sharing arrangement." }),
-                  selectedUnits.length === 0 && visibleResourceSharingUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2 italic", children: "No units selected. Click on units above to add them." })
+                  !activeResourceSharingGroupIsVisible && visibleResourceSharingUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-200 mt-2 italic", children: "No aircraft sharing arrangement is set up for this unit context. Click Add Arrangement to create one." }),
+                  activeResourceSharingGroupIsVisible && selectedUnits.length === 0 && visibleResourceSharingUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2 italic", children: "No units selected. Click on units above to add them." })
                 ] }),
-                selectedUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4 flex flex-col", children: [
+                activeResourceSharingGroupIsVisible && selectedUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4 flex flex-col", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Allocation Mode" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Choose how aircraft are allocated between participating units." }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col space-y-3", children: [
@@ -62791,7 +62798,7 @@ const OrganisationSettings = ({
                   ] })
                 ] })
               ] }),
-              selectedUnits.length > 0 && allocationMode === "fixed" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              activeResourceSharingGroupIsVisible && selectedUnits.length > 0 && allocationMode === "fixed" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Fixed Allocation Configuration" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Enter desired aircraft allocation for each unit. One unit is auto-calculated." }),
                 validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mb-3 p-3 rounded-lg border ${validationType === "error" ? "bg-red-500/10 border-red-500/30" : validationType === "warning" ? "bg-amber-500/10 border-amber-500/30" : "bg-sky-500/10 border-sky-500/30"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2", children: [
@@ -62894,7 +62901,7 @@ const OrganisationSettings = ({
                   ] }, unitCode);
                 }) })
               ] }),
-              selectedUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg", children: [
+              activeResourceSharingGroupIsVisible && selectedUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sky-400 font-semibold text-sm mb-2", children: "Fleet Sharing Summary" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-300 space-y-1", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [

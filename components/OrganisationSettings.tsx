@@ -392,6 +392,12 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     });
   }, [isResourceSharingVisibilityEnabled, persistedResourceSharingGroups, visibleResourceSharingUnitSet]);
 
+  const activeResourceSharingGroupIsVisible = useMemo(() => (
+    visibleResourceSharingGroups.some(group => group.id === activeResourceSharingGroupId)
+  ), [visibleResourceSharingGroups, activeResourceSharingGroupId]);
+
+  const displaySelectedUnits = activeResourceSharingGroupIsVisible ? selectedUnits : [];
+
   useEffect(() => {
     setResourceSharingGroups(previous => previous.map(group =>
       group.id === activeResourceSharingGroupId
@@ -1041,12 +1047,12 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                     Aircraft Sharing Arrangement
                   </label>
                   <select
-                    value={activeResourceSharingGroupId}
+                    value={activeResourceSharingGroupIsVisible ? activeResourceSharingGroupId : ''}
                     onChange={(event) => handleSelectResourceSharingGroup(event.target.value)}
                     className="w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                   >
                     {visibleResourceSharingGroups.length === 0 && (
-                      <option value={activeResourceSharingGroupId}>
+                      <option value="">
                         No matching arrangement for this unit context
                       </option>
                     )}
@@ -1063,10 +1069,15 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                   </label>
                   <input
                     type="text"
-                    value={activeResourceSharingGroup.name || ''}
+                    value={activeResourceSharingGroupIsVisible ? activeResourceSharingGroup.name || '' : ''}
                     onChange={(event) => handleRenameResourceSharingGroup(event.target.value)}
+                    disabled={!activeResourceSharingGroupIsVisible}
                     placeholder="e.g. Base shared aircraft pool"
-                    className="w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className={`w-full rounded-md border py-2 px-3 text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                      activeResourceSharingGroupIsVisible
+                        ? 'bg-gray-950/80 border-sky-500/40 text-white'
+                        : 'bg-gray-900/70 border-gray-700 text-gray-500 cursor-not-allowed'
+                    }`}
                   />
                 </div>
                 <div className="flex gap-2">
@@ -1080,9 +1091,9 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                   <button
                     type="button"
                     onClick={handleDeleteResourceSharingGroup}
-                    disabled={resourceSharingGroups.length <= 1}
+                    disabled={!activeResourceSharingGroupIsVisible || resourceSharingGroups.length <= 1}
                     className={`rounded-md px-3 py-2 text-xs font-semibold ${
-                      resourceSharingGroups.length <= 1
+                      !activeResourceSharingGroupIsVisible || resourceSharingGroups.length <= 1
                         ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                         : 'bg-red-600/80 text-white hover:bg-red-600'
                     }`}
@@ -1127,21 +1138,24 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                   {visibleResourceSharingUnits.map(unit => (
                     <div
                       key={unit}
-                      onClick={() => handleToggleUnit(unit)}
+                      onClick={() => {
+                        if (!activeResourceSharingGroupIsVisible) return;
+                        handleToggleUnit(unit);
+                      }}
                       className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
-                        selectedUnits.includes(unit)
+                        displaySelectedUnits.includes(unit)
                           ? 'border-sky-500 bg-sky-500/10'
                           : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
                       }`}
                     >
                       <div className="flex flex-col items-center justify-center space-y-1">
-                        <span className={`text-sm font-medium ${selectedUnits.includes(unit) ? 'text-sky-400' : 'text-gray-300'}`}>
+                        <span className={`text-sm font-medium ${displaySelectedUnits.includes(unit) ? 'text-sky-400' : 'text-gray-300'}`}>
                           {unit}
                         </span>
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                          selectedUnits.includes(unit) ? 'border-sky-500 bg-sky-500' : 'border-gray-500'
+                          displaySelectedUnits.includes(unit) ? 'border-sky-500 bg-sky-500' : 'border-gray-500'
                         }`}>
-                          {selectedUnits.includes(unit) && (
+                          {displaySelectedUnits.includes(unit) && (
                             <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
@@ -1158,7 +1172,13 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                   </p>
                 )}
 
-                {selectedUnits.length === 0 && visibleResourceSharingUnits.length > 0 && (
+                {!activeResourceSharingGroupIsVisible && visibleResourceSharingUnits.length > 0 && (
+                  <p className="text-xs text-amber-200 mt-2 italic">
+                    No aircraft sharing arrangement is set up for this unit context. Click Add Arrangement to create one.
+                  </p>
+                )}
+
+                {activeResourceSharingGroupIsVisible && selectedUnits.length === 0 && visibleResourceSharingUnits.length > 0 && (
                   <p className="text-xs text-gray-500 mt-2 italic">
                     No units selected. Click on units above to add them.
                   </p>
@@ -1166,7 +1186,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
               </div>
 
               {/* Allocation Mode Selection - Stacked Vertical with matching height */}
-              {selectedUnits.length > 0 && (
+              {activeResourceSharingGroupIsVisible && selectedUnits.length > 0 && (
                 <div className="bg-gray-700/30 rounded-lg border border-gray-600 p-4 flex flex-col">
                   <h4 className="text-base font-medium text-white mb-2">Allocation Mode</h4>
                   <p className="text-xs text-gray-400 mb-3">
@@ -1219,7 +1239,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
             </div>
 
             {/* Fixed Allocation Configuration - Compact */}
-            {selectedUnits.length > 0 && allocationMode === 'fixed' && (
+            {activeResourceSharingGroupIsVisible && selectedUnits.length > 0 && allocationMode === 'fixed' && (
               <div>
                 <h4 className="text-base font-medium text-white mb-2">Fixed Allocation Configuration</h4>
                 <p className="text-xs text-gray-400 mb-3">
@@ -1378,7 +1398,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
             )}
 
             {/* Summary - Compact */}
-            {selectedUnits.length > 0 && (
+            {activeResourceSharingGroupIsVisible && selectedUnits.length > 0 && (
               <div className="p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg">
                 <h5 className="text-sky-400 font-semibold text-sm mb-2">Fleet Sharing Summary</h5>
                 <div className="text-xs text-gray-300 space-y-1">
