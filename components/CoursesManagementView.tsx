@@ -50,7 +50,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     const [showChoiceDialog, setShowChoiceDialog] = useState(false);
     const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
 
-    // Group courses by type (only active courses, not archived)
+    // Course records stay in one course list; each course's LMP is edited inside the course.
     const groupedCourses = useMemo(() => {
         const groups: { [key: string]: Course[] } = {};
 
@@ -58,7 +58,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
         const activeCourses = courses.filter(course => courseColors.hasOwnProperty(course.name));
 
         activeCourses.forEach(course => {
-            const groupName = String(course.lmpType || '').trim() || 'Courses';
+            const groupName = 'Courses';
             if (!groups[groupName]) groups[groupName] = [];
             groups[groupName].push(course);
         });
