@@ -38567,6 +38567,7 @@ appliedUpdates.forEach(update => {
     const [isManualSyncing, setIsManualSyncing] = useState(false);
     const [lastPollTime, setLastPollTime] = useState<string>('');
     const [lastPollChanged, setLastPollChanged] = useState<boolean>(false);
+    const isAddFlightTileModalOpen = Boolean(selectedEvent && isAddingTile);
 
     useEffect(() => {
         try {
@@ -38642,11 +38643,11 @@ appliedUpdates.forEach(update => {
     }, [buildUnavailHash]);
 
     useEffect(() => {
-        if (!liveSyncEnabled) return;
+        if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
         syncUnavailabilityFromDatabase();
         const pollInterval = setInterval(syncUnavailabilityFromDatabase, 5 * 1000);
         return () => clearInterval(pollInterval);
-    }, [liveSyncEnabled, syncUnavailabilityFromDatabase]);
+    }, [isAddFlightTileModalOpen, liveSyncEnabled, syncUnavailabilityFromDatabase]);
 
 
     // ── Alert response polling ──────────────────────────────────────────────
@@ -38672,11 +38673,11 @@ appliedUpdates.forEach(update => {
     }, [date, school]);
 
     useEffect(() => {
-        if (!liveSyncEnabled) return;
+        if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
         syncAlertsForCurrentDate();
         const interval = setInterval(syncAlertsForCurrentDate, 5 * 1000);
         return () => clearInterval(interval);
-    }, [liveSyncEnabled, syncAlertsForCurrentDate]);
+    }, [isAddFlightTileModalOpen, liveSyncEnabled, syncAlertsForCurrentDate]);
 
     const handleManualSync = useCallback(async () => {
         if (isManualSyncing) return;

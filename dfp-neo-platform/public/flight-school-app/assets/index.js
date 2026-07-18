@@ -115205,6 +115205,7 @@ ${conflictLines.join("\n")}${moreText}`,
   const [isManualSyncing, setIsManualSyncing] = reactExports.useState(false);
   const [lastPollTime, setLastPollTime] = reactExports.useState("");
   const [lastPollChanged, setLastPollChanged] = reactExports.useState(false);
+  const isAddFlightTileModalOpen = Boolean(selectedEvent && isAddingTile);
   reactExports.useEffect(() => {
     try {
       window.localStorage.setItem("dfp_live_sync_enabled", liveSyncEnabled ? "true" : "false");
@@ -115272,11 +115273,11 @@ ${conflictLines.join("\n")}${moreText}`,
     }
   }, [buildUnavailHash]);
   reactExports.useEffect(() => {
-    if (!liveSyncEnabled) return;
+    if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
     syncUnavailabilityFromDatabase();
     const pollInterval = setInterval(syncUnavailabilityFromDatabase, 5 * 1e3);
     return () => clearInterval(pollInterval);
-  }, [liveSyncEnabled, syncUnavailabilityFromDatabase]);
+  }, [isAddFlightTileModalOpen, liveSyncEnabled, syncUnavailabilityFromDatabase]);
   const syncAlertsForCurrentDate = reactExports.useCallback(async () => {
     try {
       const apiBase = getAppApiBase();
@@ -115295,11 +115296,11 @@ ${conflictLines.join("\n")}${moreText}`,
     }
   }, [date, school]);
   reactExports.useEffect(() => {
-    if (!liveSyncEnabled) return;
+    if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
     syncAlertsForCurrentDate();
     const interval = setInterval(syncAlertsForCurrentDate, 5 * 1e3);
     return () => clearInterval(interval);
-  }, [liveSyncEnabled, syncAlertsForCurrentDate]);
+  }, [isAddFlightTileModalOpen, liveSyncEnabled, syncAlertsForCurrentDate]);
   const handleManualSync = reactExports.useCallback(async () => {
     if (isManualSyncing) return;
     setIsManualSyncing(true);
