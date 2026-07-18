@@ -29913,8 +29913,8 @@ const PersonDropdown = ({
   dropdownId = "person-dropdown-portal"
 }) => {
   const [open, setOpen] = reactExports.useState(false);
-  const [hovUnit, setHovUnit] = reactExports.useState(null);
-  const [hovL2, setHovL2] = reactExports.useState(null);
+  const [selectedUnit, setSelectedUnit] = reactExports.useState(null);
+  const [selectedL2, setSelectedL2] = reactExports.useState(null);
   const ref = reactExports.useRef(null);
   const [dropdownPos, setDropdownPos] = reactExports.useState({ top: 0, left: 0 });
   reactExports.useEffect(() => {
@@ -29925,9 +29925,16 @@ const PersonDropdown = ({
         setOpen(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
   }, [dropdownId]);
+  reactExports.useEffect(() => {
+    if (!open) return;
+    if (selectedUnit && allUnits.includes(selectedUnit)) return;
+    const nextUnit = allUnits[0] || null;
+    setSelectedUnit(nextUnit);
+    setSelectedL2(null);
+  }, [allUnits, open, selectedUnit]);
   const handleOpen = () => {
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect();
@@ -29943,6 +29950,9 @@ const PersonDropdown = ({
       {
         id: dropdownId,
         onClick: (e) => e.stopPropagation(),
+        onMouseDown: (e) => e.stopPropagation(),
+        onPointerDown: (e) => e.stopPropagation(),
+        onPointerDownCapture: (e) => e.stopPropagation(),
         style: {
           position: "fixed",
           top: dropdownPos.top,
@@ -29975,11 +29985,10 @@ const PersonDropdown = ({
             allUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "div",
               {
-                onMouseEnter: () => {
-                  setHovUnit(unit);
-                  setHovL2(null);
+                onClick: () => {
+                  setSelectedUnit(unit);
+                  setSelectedL2(null);
                 },
-                onClick: () => setHovUnit(unit),
                 style: {
                   padding: "9px 12px",
                   fontSize: 13,
@@ -29987,8 +29996,8 @@ const PersonDropdown = ({
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  color: hovUnit === unit ? "#fff" : "rgba(255,255,255,0.8)",
-                  backgroundColor: hovUnit === unit ? "rgba(255,255,255,0.12)" : "transparent"
+                  color: selectedUnit === unit ? "#fff" : "rgba(255,255,255,0.8)",
+                  backgroundColor: selectedUnit === unit ? "rgba(255,255,255,0.12)" : "transparent"
                 },
                 children: [
                   unit,
@@ -29998,11 +30007,10 @@ const PersonDropdown = ({
               unit
             ))
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: 130, borderRight: "1px solid rgba(255,255,255,0.12)", overflowY: "auto", maxHeight: 300, backgroundColor: "#16293f" }, children: hovUnit ? getLayer2(hovUnit).map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: 130, borderRight: "1px solid rgba(255,255,255,0.12)", overflowY: "auto", maxHeight: 300, backgroundColor: "#16293f" }, children: selectedUnit ? getLayer2(selectedUnit).map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
-              onMouseEnter: () => setHovL2(opt),
-              onClick: () => setHovL2(opt),
+              onClick: () => setSelectedL2(opt),
               style: {
                 padding: "9px 12px",
                 fontSize: 13,
@@ -30011,8 +30019,8 @@ const PersonDropdown = ({
                 justifyContent: "space-between",
                 alignItems: "center",
                 fontWeight: opt === "STAFF" ? 600 : 400,
-                color: hovL2 === opt ? "#fff" : "rgba(255,255,255,0.8)",
-                backgroundColor: hovL2 === opt ? "rgba(255,255,255,0.12)" : "transparent"
+                color: selectedL2 === opt ? "#fff" : "rgba(255,255,255,0.8)",
+                backgroundColor: selectedL2 === opt ? "rgba(255,255,255,0.12)" : "transparent"
               },
               children: [
                 opt,
@@ -30021,14 +30029,14 @@ const PersonDropdown = ({
             },
             opt
           )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "16px 12px", color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" }, children: "Select unit" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, overflowY: "auto", maxHeight: 300, backgroundColor: "#122437" }, children: hovUnit && hovL2 ? getNames(hovUnit, hovL2).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, overflowY: "auto", maxHeight: 300, backgroundColor: "#122437" }, children: selectedUnit && selectedL2 ? getNames(selectedUnit, selectedL2).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
             {
               onClick: () => {
                 onChange(person.name, []);
                 setOpen(false);
-                setHovUnit(null);
-                setHovL2(null);
+                setSelectedUnit(null);
+                setSelectedL2(null);
               },
               style: {
                 padding: "9px 12px",
@@ -30043,7 +30051,7 @@ const PersonDropdown = ({
               children: person.label
             },
             person.name
-          )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "16px 12px", color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" }, children: hovUnit ? "Select category" : "Select unit" }) })
+          )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "16px 12px", color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" }, children: selectedUnit ? "Select category" : "Select unit" }) })
         ]
       }
     ),
@@ -30336,6 +30344,11 @@ const FlightTile = ({
   const tileRef = reactExports.useRef(null);
   const elemRefs = reactExports.useRef({});
   const dragging = reactExports.useRef(null);
+  const selectContainmentProps = {
+    onMouseDown: (e) => e.stopPropagation(),
+    onPointerDown: (e) => e.stopPropagation(),
+    onClick: (e) => e.stopPropagation()
+  };
   const enterEditMode = () => {
     if (!layoutSaved && tileRef.current) {
       const tileRect = tileRef.current.getBoundingClientRect();
@@ -30431,6 +30444,7 @@ const FlightTile = ({
       {
         value: String(startTime),
         onChange: (e) => onStartTimeChange(parseFloat(e.target.value)),
+        ...selectContainmentProps,
         style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
         children: timeOptions.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value))
       }
@@ -30493,6 +30507,7 @@ const FlightTile = ({
       {
         value: String(duration),
         onChange: (e) => onDurationChange(parseFloat(e.target.value)),
+        ...selectContainmentProps,
         style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
         children: durationOptions.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value))
       }
@@ -30522,6 +30537,7 @@ const FlightTile = ({
       {
         value: area,
         onChange: (e) => onAreaChange(e.target.value),
+        ...selectContainmentProps,
         style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
         children: areaOptions.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value))
       }
@@ -30534,6 +30550,7 @@ const FlightTile = ({
       {
         value: aircraftNumberPrefix,
         onChange: (e) => onAircraftPrefixChange(e.target.value),
+        ...selectContainmentProps,
         style: { position: "absolute", top: 0, left: 0, width: "45%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
         children: aircraftNumberSettings.prefixes.map((prefix) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: prefix, style: { background: "#1a2f4a" }, children: prefix }, prefix))
       }
@@ -30543,6 +30560,7 @@ const FlightTile = ({
       {
         value: aircraftNumber,
         onChange: (e) => onAircraftChange(e.target.value),
+        ...selectContainmentProps,
         style: { position: "absolute", top: 0, right: 0, width: aircraftNumberSettings.usePrefix ? "55%" : "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
         children: aircraftOptions.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value))
       }
@@ -30578,6 +30596,7 @@ const FlightTile = ({
         {
           value: callsign,
           onChange: (e) => onCallsignChange(e.target.value),
+          ...selectContainmentProps,
           style: {
             position: "absolute",
             top: 0,

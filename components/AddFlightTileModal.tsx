@@ -228,13 +228,13 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
   dropdownId = 'person-dropdown-portal',
 }) => {
   const [open, setOpen] = useState(false);
-  const [hovUnit, setHovUnit] = useState<string | null>(null);
-  const [hovL2, setHovL2] = useState<string | null>(null);
+  const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
+  const [selectedL2, setSelectedL2] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const handler = (e: PointerEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         // Also check if click was inside the portal dropdown
         const portalEl = document.getElementById(dropdownId);
@@ -242,9 +242,17 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
         setOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
   }, [dropdownId]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (selectedUnit && allUnits.includes(selectedUnit)) return;
+    const nextUnit = allUnits[0] || null;
+    setSelectedUnit(nextUnit);
+    setSelectedL2(null);
+  }, [allUnits, open, selectedUnit]);
 
   const handleOpen = () => {
     if (ref.current) {
@@ -262,6 +270,9 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
     <div
       id={dropdownId}
       onClick={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
+      onPointerDown={e => e.stopPropagation()}
+      onPointerDownCapture={e => e.stopPropagation()}
       style={{
         position: 'fixed',
         top: dropdownPos.top,
@@ -292,13 +303,15 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
         {allUnits.map(unit => (
           <div
             key={unit}
-            onMouseEnter={() => { setHovUnit(unit); setHovL2(null); }}
-            onClick={() => setHovUnit(unit)}
+            onClick={() => {
+              setSelectedUnit(unit);
+              setSelectedL2(null);
+            }}
             style={{
               padding: '9px 12px', fontSize: 13, cursor: 'pointer',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              color: hovUnit === unit ? '#fff' : 'rgba(255,255,255,0.8)',
-              backgroundColor: hovUnit === unit ? 'rgba(255,255,255,0.12)' : 'transparent',
+              color: selectedUnit === unit ? '#fff' : 'rgba(255,255,255,0.8)',
+              backgroundColor: selectedUnit === unit ? 'rgba(255,255,255,0.12)' : 'transparent',
             }}
           >
             {unit}
@@ -309,18 +322,17 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
 
       {/* Col 2: STAFF / Courses */}
       <div style={{ width: 130, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300, backgroundColor: '#16293f' }}>
-        {hovUnit ? (
-          getLayer2(hovUnit).map(opt => (
+        {selectedUnit ? (
+          getLayer2(selectedUnit).map(opt => (
             <div
               key={opt}
-              onMouseEnter={() => setHovL2(opt)}
-              onClick={() => setHovL2(opt)}
+              onClick={() => setSelectedL2(opt)}
               style={{
                 padding: '9px 12px', fontSize: 13, cursor: 'pointer',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 fontWeight: opt === 'STAFF' ? 600 : 400,
-                color: hovL2 === opt ? '#fff' : 'rgba(255,255,255,0.8)',
-                backgroundColor: hovL2 === opt ? 'rgba(255,255,255,0.12)' : 'transparent',
+                color: selectedL2 === opt ? '#fff' : 'rgba(255,255,255,0.8)',
+                backgroundColor: selectedL2 === opt ? 'rgba(255,255,255,0.12)' : 'transparent',
               }}
             >
               {opt}
@@ -336,15 +348,15 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
 
       {/* Col 3: Names */}
       <div style={{ flex: 1, overflowY: 'auto', maxHeight: 300, backgroundColor: '#122437' }}>
-        {hovUnit && hovL2 ? (
-          getNames(hovUnit, hovL2).map(person => (
+        {selectedUnit && selectedL2 ? (
+          getNames(selectedUnit, selectedL2).map(person => (
             <div
               key={person.name}
               onClick={() => {
                 onChange(person.name, []);
                 setOpen(false);
-                setHovUnit(null);
-                setHovL2(null);
+                setSelectedUnit(null);
+                setSelectedL2(null);
               }}
               style={{
                 padding: '9px 12px', fontSize: 13, cursor: 'pointer',
@@ -360,7 +372,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
           ))
         ) : (
           <div style={{ padding: '16px 12px', color: 'rgba(255,255,255,0.35)', fontSize: 12, textAlign: 'center' }}>
-            {hovUnit ? 'Select category' : 'Select unit'}
+            {selectedUnit ? 'Select category' : 'Select unit'}
           </div>
         )}
       </div>
@@ -707,6 +719,11 @@ const FlightTile: React.FC<TileProps> = ({
   const tileRef   = useRef<HTMLDivElement>(null);
   const elemRefs  = useRef<Partial<Record<ElemKey, HTMLDivElement | null>>>({});
   const dragging  = useRef<{ key: ElemKey; startMouseX: number; startMouseY: number; startPosX: number; startPosY: number } | null>(null);
+  const selectContainmentProps = {
+    onMouseDown: (e: React.MouseEvent) => e.stopPropagation(),
+    onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+    onClick: (e: React.MouseEvent) => e.stopPropagation(),
+  };
 
   // When entering edit mode, capture the real DOM positions of each element
   const enterEditMode = () => {
@@ -832,6 +849,7 @@ const FlightTile: React.FC<TileProps> = ({
         {formatTime(startTime)}
       </span>
       <select value={String(startTime)} onChange={e => onStartTimeChange(parseFloat(e.target.value))}
+        {...selectContainmentProps}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
         {timeOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
       </select>
@@ -863,6 +881,7 @@ const FlightTile: React.FC<TileProps> = ({
     <div style={{ position: 'relative' }}>
       <span style={{ fontFamily: monoFamily, fontSize: 24, fontWeight: 700, color: WHITE_DIM, lineHeight: 1 }}>[{duration.toFixed(1)}]</span>
       <select value={String(duration)} onChange={e => onDurationChange(parseFloat(e.target.value))}
+        {...selectContainmentProps}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
         {durationOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
       </select>
@@ -896,6 +915,7 @@ const FlightTile: React.FC<TileProps> = ({
     <div style={{ position: 'relative' }}>
       <span style={{ fontSize: 24, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_DIM : 'rgba(255,220,60,0.95)', lineHeight: 1 }}>{area || '-'}</span>
       <select value={area} onChange={e => onAreaChange(e.target.value)}
+        {...selectContainmentProps}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
         {areaOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
       </select>
@@ -909,11 +929,13 @@ const FlightTile: React.FC<TileProps> = ({
       </span>
       {aircraftNumberSettings.usePrefix && (
         <select value={aircraftNumberPrefix} onChange={e => onAircraftPrefixChange(e.target.value)}
+          {...selectContainmentProps}
           style={{ position: 'absolute', top: 0, left: 0, width: '45%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
           {aircraftNumberSettings.prefixes.map(prefix => <option key={prefix} value={prefix} style={{ background: '#1a2f4a' }}>{prefix}</option>)}
         </select>
       )}
       <select value={aircraftNumber} onChange={e => onAircraftChange(e.target.value)}
+        {...selectContainmentProps}
         style={{ position: 'absolute', top: 0, right: 0, width: aircraftNumberSettings.usePrefix ? '55%' : '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
         {aircraftOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
       </select>
@@ -942,6 +964,7 @@ const FlightTile: React.FC<TileProps> = ({
           <select
             value={callsign}
             onChange={e => onCallsignChange(e.target.value)}
+            {...selectContainmentProps}
             style={{
               position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
               opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10,
