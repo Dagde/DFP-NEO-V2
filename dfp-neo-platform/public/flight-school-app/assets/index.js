@@ -29860,6 +29860,204 @@ const formatFixedCrewDisplayGroup$1 = (crew) => {
   const crewLabel = parts.slice(1).join("::").trim();
   return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
 };
+const StableDropdown = ({
+  value,
+  options,
+  onChange,
+  children,
+  disabled = false,
+  width = 220,
+  maxHeight = 280,
+  zIndex = 1e4,
+  align = "left"
+}) => {
+  const [open, setOpen] = reactExports.useState(false);
+  const triggerRef = reactExports.useRef(null);
+  const portalId = reactExports.useMemo(() => `stable-dropdown-${Math.random().toString(36).slice(2)}`, []);
+  const [pos, setPos] = reactExports.useState({ top: 0, left: 0 });
+  reactExports.useEffect(() => {
+    const handler = (e) => {
+      const target = e.target;
+      if (triggerRef.current?.contains(target)) return;
+      const portalEl = document.getElementById(portalId);
+      if (portalEl?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [portalId]);
+  const openDropdown = () => {
+    if (disabled) return;
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+      const right = Math.max(8, window.innerWidth - rect.right);
+      setPos(align === "right" ? { top: rect.bottom + 4, right } : { top: rect.bottom + 4, left });
+    }
+    setOpen((o) => !o);
+  };
+  const panel = open && !disabled ? ReactDOM.createPortal(
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        id: portalId,
+        onPointerDown: (e) => e.stopPropagation(),
+        onPointerDownCapture: (e) => e.stopPropagation(),
+        onMouseDown: (e) => e.stopPropagation(),
+        onClick: (e) => e.stopPropagation(),
+        style: {
+          position: "fixed",
+          top: pos.top,
+          left: pos.left,
+          right: pos.right,
+          width,
+          maxHeight,
+          overflowY: "auto",
+          zIndex,
+          backgroundColor: "#172a42",
+          border: "1px solid rgba(255,255,255,0.18)",
+          borderRadius: 8,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.85)",
+          padding: 4
+        },
+        children: options.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "9px 10px", color: "rgba(255,255,255,0.45)", fontSize: 13 }, children: "No options" }) : options.map((option, optionIndex) => {
+          if (option.isHeader) {
+            return /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "div",
+              {
+                style: {
+                  padding: "7px 10px 5px",
+                  color: "rgba(125,211,252,0.88)",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  whiteSpace: "nowrap"
+                },
+                children: option.label
+              },
+              `header-${option.label}-${optionIndex}`
+            );
+          }
+          const selected = option.value === value;
+          return /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              disabled: option.disabled,
+              onClick: () => {
+                if (option.disabled) return;
+                onChange(option.value);
+                setOpen(false);
+              },
+              style: {
+                display: "block",
+                width: "100%",
+                border: "none",
+                borderRadius: 5,
+                background: selected ? "rgba(34,211,238,0.18)" : "transparent",
+                color: option.disabled ? "rgba(255,255,255,0.35)" : selected ? "#fff" : "rgba(255,255,255,0.82)",
+                cursor: option.disabled ? "not-allowed" : "pointer",
+                fontSize: 13,
+                fontWeight: selected ? 700 : 500,
+                lineHeight: 1.2,
+                padding: "8px 10px",
+                textAlign: "left",
+                whiteSpace: "nowrap"
+              },
+              onMouseEnter: (e) => {
+                if (!option.disabled && !selected) e.currentTarget.style.background = "rgba(255,255,255,0.10)";
+              },
+              onMouseLeave: (e) => {
+                e.currentTarget.style.background = selected ? "rgba(34,211,238,0.18)" : "transparent";
+              },
+              children: option.label
+            },
+            `${option.value}-${option.label}`
+          );
+        })
+      }
+    ),
+    document.body
+  ) : null;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      ref: triggerRef,
+      onPointerDown: (e) => e.stopPropagation(),
+      onMouseDown: (e) => e.stopPropagation(),
+      onClick: (e) => {
+        e.stopPropagation();
+        openDropdown();
+      },
+      style: { display: "inline-flex", cursor: disabled ? "default" : "pointer" },
+      children: [
+        children,
+        panel
+      ]
+    }
+  );
+};
+const SelectLikeDropdown = ({
+  value,
+  options,
+  onChange,
+  disabled = false,
+  placeholder = "Select",
+  width = 260,
+  maxHeight = 300,
+  accent = "sky"
+}) => {
+  const selected = options.find((option) => !option.isHeader && option.value === value);
+  const ringColour = accent === "emerald" ? "rgba(16,185,129,0.65)" : "rgba(14,165,233,0.65)";
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    StableDropdown,
+    {
+      value,
+      options,
+      onChange,
+      disabled,
+      width,
+      maxHeight,
+      zIndex: 12e3,
+      children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          type: "button",
+          disabled,
+          onClick: (e) => e.preventDefault(),
+          style: {
+            width: "100%",
+            minHeight: 38,
+            borderRadius: 6,
+            border: "1px solid rgba(75,85,99,1)",
+            backgroundColor: disabled ? "rgba(55,65,81,0.5)" : "rgba(55,65,81,1)",
+            color: disabled ? "rgba(255,255,255,0.45)" : "#fff",
+            cursor: disabled ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            padding: "8px 12px",
+            fontSize: 14,
+            outline: "none",
+            boxShadow: "0 0 0 0 transparent"
+          },
+          onFocus: (e) => {
+            e.currentTarget.style.boxShadow = `0 0 0 2px ${ringColour}`;
+          },
+          onBlur: (e) => {
+            e.currentTarget.style.boxShadow = "0 0 0 0 transparent";
+          },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: selected?.label || placeholder }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { flexShrink: 0, fontSize: 12, color: "rgba(255,255,255,0.65)" }, children: "▼" })
+          ]
+        }
+      )
+    }
+  );
+};
 const twClassToRgba = (cls) => {
   const TAILWIND_COLORS2 = {
     sky: { "400": [56, 189, 248], "500": [14, 165, 233] },
@@ -30344,11 +30542,6 @@ const FlightTile = ({
   const tileRef = reactExports.useRef(null);
   const elemRefs = reactExports.useRef({});
   const dragging = reactExports.useRef(null);
-  const selectContainmentProps = {
-    onMouseDown: (e) => e.stopPropagation(),
-    onPointerDown: (e) => e.stopPropagation(),
-    onClick: (e) => e.stopPropagation()
-  };
   const enterEditMode = () => {
     if (!layoutSaved && tileRef.current) {
       const tileRect = tileRef.current.getBoundingClientRect();
@@ -30437,19 +30630,17 @@ const FlightTile = ({
   const FlexElem = ({ elemKey, children, style }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: (el) => {
     elemRefs.current[elemKey] = el;
   }, style: { display: "inline-flex", alignItems: "center", ...guideGlowStyle(elemKey), ...style }, children });
-  const startTimeContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative" }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }, children: formatTime$3(startTime) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "select",
-      {
-        value: String(startTime),
-        onChange: (e) => onStartTimeChange(parseFloat(e.target.value)),
-        ...selectContainmentProps,
-        style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
-        children: timeOptions.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value))
-      }
-    )
-  ] });
+  const startTimeContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+    StableDropdown,
+    {
+      value: String(startTime),
+      options: timeOptions,
+      onChange: (v) => onStartTimeChange(parseFloat(v)),
+      width: 150,
+      zIndex: zOverride ?? 1e4,
+      children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }, children: formatTime$3(startTime) })
+    }
+  );
   const picNameContent = () => /* @__PURE__ */ jsxRuntimeExports.jsx(
     PersonDropdown,
     {
@@ -30496,23 +30687,21 @@ const FlightTile = ({
       }
     );
   };
-  const durationContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative" }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { fontFamily: monoFamily, fontSize: 24, fontWeight: 700, color: WHITE_DIM, lineHeight: 1 }, children: [
-      "[",
-      duration.toFixed(1),
-      "]"
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "select",
-      {
-        value: String(duration),
-        onChange: (e) => onDurationChange(parseFloat(e.target.value)),
-        ...selectContainmentProps,
-        style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
-        children: durationOptions.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value))
-      }
-    )
-  ] });
+  const durationContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+    StableDropdown,
+    {
+      value: String(duration),
+      options: durationOptions,
+      onChange: (v) => onDurationChange(parseFloat(v)),
+      width: 150,
+      zIndex: zOverride ?? 1e4,
+      children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { fontFamily: monoFamily, fontSize: 24, fontWeight: 700, color: WHITE_DIM, lineHeight: 1 }, children: [
+        "[",
+        duration.toFixed(1),
+        "]"
+      ] })
+    }
+  );
   const eventContent = () => {
     if (eventCategory === "twr_di") {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { position: "relative" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 26, color: WHITE_FULL, lineHeight: 1 }, children: "TWR DI" }) });
@@ -30530,39 +30719,38 @@ const FlightTile = ({
       }
     ) });
   };
-  const areaContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative" }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 24, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_DIM : "rgba(255,220,60,0.95)", lineHeight: 1 }, children: area || "-" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "select",
-      {
-        value: area,
-        onChange: (e) => onAreaChange(e.target.value),
-        ...selectContainmentProps,
-        style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
-        children: areaOptions.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value))
-      }
-    )
-  ] });
+  const areaContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+    StableDropdown,
+    {
+      value: area,
+      options: areaOptions,
+      onChange: onAreaChange,
+      width: 180,
+      zIndex: zOverride ?? 1e4,
+      children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 24, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_DIM : "rgba(255,220,60,0.95)", lineHeight: 1 }, children: area || "-" })
+    }
+  );
   const aircraftContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative" }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 22, color: aircraftNumber ? WHITE_DIM : "rgba(255,255,255,0.35)", lineHeight: 1 }, children: aircraftNumber || "SKIP" }),
-    aircraftNumberSettings.usePrefix && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "select",
-      {
-        value: aircraftNumberPrefix,
-        onChange: (e) => onAircraftPrefixChange(e.target.value),
-        ...selectContainmentProps,
-        style: { position: "absolute", top: 0, left: 0, width: "45%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
-        children: aircraftNumberSettings.prefixes.map((prefix) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: prefix, style: { background: "#1a2f4a" }, children: prefix }, prefix))
-      }
-    ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "select",
+      StableDropdown,
       {
         value: aircraftNumber,
-        onChange: (e) => onAircraftChange(e.target.value),
-        ...selectContainmentProps,
-        style: { position: "absolute", top: 0, right: 0, width: aircraftNumberSettings.usePrefix ? "55%" : "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
-        children: aircraftOptions.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value))
+        options: aircraftOptions,
+        onChange: onAircraftChange,
+        width: 150,
+        zIndex: zOverride ?? 1e4,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 22, color: aircraftNumber ? WHITE_DIM : "rgba(255,255,255,0.35)", lineHeight: 1 }, children: aircraftNumber || "SKIP" })
+      }
+    ),
+    aircraftNumberSettings.usePrefix && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      StableDropdown,
+      {
+        value: aircraftNumberPrefix,
+        options: aircraftNumberSettings.prefixes.map((prefix) => ({ value: prefix, label: prefix })),
+        onChange: onAircraftPrefixChange,
+        width: 120,
+        zIndex: zOverride ?? 1e4,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { marginLeft: 5, fontSize: 10, color: "rgba(255,255,255,0.45)", lineHeight: 1 }, children: "▼" })
       }
     )
   ] });
@@ -30589,31 +30777,17 @@ const FlightTile = ({
         }
       }
     ),
-    callsignOptions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative", display: "inline-flex", alignItems: "center" }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 8, color: "rgba(255,255,255,0.45)", pointerEvents: "none", lineHeight: 1 }, children: "▼" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "select",
-        {
-          value: callsign,
-          onChange: (e) => onCallsignChange(e.target.value),
-          ...selectContainmentProps,
-          style: {
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            opacity: 0,
-            cursor: "pointer",
-            zIndex: zOverride ?? 10
-          },
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", style: { background: "#1a2f4a" }, children: "— select —" }),
-            callsignOptions.map((cs) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: cs, style: { background: "#1a2f4a" }, children: cs }, cs))
-          ]
-        }
-      )
-    ] })
+    callsignOptions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      StableDropdown,
+      {
+        value: callsign,
+        options: [{ value: "", label: "- select -" }, ...callsignOptions.map((cs) => ({ value: cs, label: cs }))],
+        onChange: onCallsignChange,
+        width: 180,
+        zIndex: zOverride ?? 1e4,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 8, color: "rgba(255,255,255,0.45)", pointerEvents: "none", lineHeight: 1 }, children: "▼" })
+      }
+    )
   ] });
   const normalFlexLayout = /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "startTime", style: { position: "absolute", top: 4, left: 10, zIndex: 20 }, children: startTimeContent() }),
@@ -31766,61 +31940,59 @@ const AddFlightTileModal = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: fixedCrewEventFieldLabel }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "select",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      SelectLikeDropdown,
                       {
                         value: fixedCrewEventKey,
-                        onChange: (e) => handleFixedCrewEventChange(e.target.value),
-                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "", children: [
-                            "Select ",
-                            fixedCrewEventFieldLabel
-                          ] }),
-                          eventCategory === "sct" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                            fixedCrewCurrencyProfileGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "No currency events for selected unit" }),
-                            fixedCrewCurrencyProfileGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((profile) => {
+                        onChange: handleFixedCrewEventChange,
+                        accent: "emerald",
+                        width: 420,
+                        placeholder: `Select ${fixedCrewEventFieldLabel}`,
+                        options: [
+                          { value: "", label: `Select ${fixedCrewEventFieldLabel}` },
+                          ...eventCategory === "sct" ? fixedCrewCurrencyProfileGroups.length === 0 ? [{ value: "__none", label: "No currency events for selected unit", disabled: true }] : fixedCrewCurrencyProfileGroups.flatMap((group) => [
+                            { value: `__header-${group.label}`, label: group.label, isHeader: true, disabled: true },
+                            ...group.options.map((profile) => {
                               const unit = normaliseFixedCrewUnitCode2(profile.unitCode || profile.compositeUnitCode);
                               const code = stripLeadingUnitLabel(profile.code || profile.name || profile.currency, unit);
                               const name = stripLeadingUnitLabel(profile.name, unit);
                               const currency = stripLeadingUnitLabel(profile.currency, unit);
                               const label = Array.from(new Set([code, name, currency].filter(Boolean))).join(" - ");
-                              const optionKey = getFixedCrewCurrencyProfileOptionKey(profile);
-                              return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: optionKey, children: label }, optionKey);
-                            }) }, group.label))
-                          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                            fixedCrewEventOptionGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "", disabled: true, children: [
-                              "No ",
-                              fixedCrewEventFieldLabel.toLowerCase(),
-                              "s for selected unit"
-                            ] }),
-                            fixedCrewEventOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((item) => {
+                              return { value: getFixedCrewCurrencyProfileOptionKey(profile), label };
+                            })
+                          ]) : fixedCrewEventOptionGroups.length === 0 ? [{ value: "__none", label: `No ${fixedCrewEventFieldLabel.toLowerCase()}s for selected unit`, disabled: true }] : fixedCrewEventOptionGroups.flatMap((group) => [
+                            { value: `__header-${group.label}`, label: group.label, isHeader: true, disabled: true },
+                            ...group.options.map((item) => {
                               const unit = normaliseFixedCrewUnitCode2(item.unit);
                               const code = stripLeadingUnitLabel(item.code || item.id || "", unit);
                               const description = stripLeadingUnitLabel(item.title || item.eventDescription || item.description, unit);
                               const label = [code, description].filter(Boolean).join(" - ");
-                              const optionKey = getFixedCrewEventOptionKey(item);
-                              return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: optionKey, children: label }, optionKey);
-                            }) }, group.label))
-                          ] })
+                              return { value: getFixedCrewEventOptionKey(item), label };
+                            })
+                          ])
                         ]
                       }
                     )
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Crew" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "select",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      SelectLikeDropdown,
                       {
                         value: fixedCrewGroup,
-                        onChange: (e) => {
-                          setFixedCrewGroup(e.target.value);
+                        onChange: (value) => {
+                          setFixedCrewGroup(value);
                           setFixedCrewPic("");
                         },
-                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                          fixedCrewGroupOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.options.map((crewGroup) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: crewGroup, children: formatUnavailableCrewLabel(crewGroup) }, crewGroup)) }, group.unit))
+                        accent: "emerald",
+                        width: 320,
+                        placeholder: "Select crew",
+                        options: [
+                          { value: "", label: "Select crew" },
+                          ...fixedCrewGroupOptionGroups.flatMap((group) => [
+                            { value: `__header-${group.unit}`, label: group.unit, isHeader: true, disabled: true },
+                            ...group.options.map((crewGroup) => ({ value: crewGroup, label: formatUnavailableCrewLabel(crewGroup) }))
+                          ])
                         ]
                       }
                     ),
@@ -31828,16 +32000,18 @@ const AddFlightTileModal = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "PIC" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "select",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      SelectLikeDropdown,
                       {
                         value: fixedCrewPic,
-                        onChange: (e) => setFixedCrewPic(e.target.value),
+                        onChange: setFixedCrewPic,
                         disabled: !fixedCrewGroup || fixedCrewPicCandidates.length === 0,
-                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed",
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: fixedCrewGroup ? "Select PIC" : "Select crew first" }),
-                          fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatUnavailableStaffLabel(staff) }, staff.id || staff.name))
+                        accent: "emerald",
+                        width: 320,
+                        placeholder: fixedCrewGroup ? "Select PIC" : "Select crew first",
+                        options: [
+                          { value: "", label: fixedCrewGroup ? "Select PIC" : "Select crew first" },
+                          ...fixedCrewPicCandidates.map((staff) => ({ value: staff.name, label: formatUnavailableStaffLabel(staff) }))
                         ]
                       }
                     )
@@ -31858,18 +32032,19 @@ const AddFlightTileModal = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Manifest Status" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "select",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      SelectLikeDropdown,
                       {
                         value: fixedCrewManifestStatus || "pending",
-                        onChange: (e) => setFixedCrewManifestStatus(e.target.value),
-                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "pending", children: "Pending" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "complete", children: "Complete" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "partial", children: "Partial" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "swapped", children: "Swapped" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "invalid", children: "Invalid" })
+                        onChange: (value) => setFixedCrewManifestStatus(value),
+                        accent: "emerald",
+                        width: 220,
+                        options: [
+                          { value: "pending", label: "Pending" },
+                          { value: "complete", label: "Complete" },
+                          { value: "partial", label: "Partial" },
+                          { value: "swapped", label: "Swapped" },
+                          { value: "invalid", label: "Invalid" }
                         ]
                       }
                     )
@@ -31878,34 +32053,36 @@ const AddFlightTileModal = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Callsign" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_88px] gap-2", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "select",
+                        SelectLikeDropdown,
                         {
                           value: unitCallsignBase,
-                          onChange: (e) => {
-                            setUnitCallsignBase(e.target.value);
-                            setCallsign(buildUnitEventCallsign(e.target.value, unitCallsignNumber));
+                          onChange: (value) => {
+                            setUnitCallsignBase(value);
+                            setCallsign(buildUnitEventCallsign(value, unitCallsignNumber));
                           },
                           disabled: unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign,
-                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed",
-                          children: unitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No unit callsigns" }) : unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: entry.callsign, children: [
-                            activeCallsignUnitCodes.length > 1 ? `${entry.unitCode} - ` : "",
-                            entry.callsign,
-                            entry.isDefault ? " (default)" : ""
-                          ] }, entry.id))
+                          accent: "emerald",
+                          width: 260,
+                          placeholder: unitCallsignEntries.length === 0 ? "No unit callsigns" : "Select callsign",
+                          options: unitCallsignEntries.length === 0 ? [{ value: "", label: "No unit callsigns", disabled: true }] : unitCallsignEntries.map((entry) => ({
+                            value: entry.callsign,
+                            label: `${activeCallsignUnitCodes.length > 1 ? `${entry.unitCode} - ` : ""}${entry.callsign}${entry.isDefault ? " (default)" : ""}`
+                          }))
                         }
                       ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "select",
+                        SelectLikeDropdown,
                         {
-                          value: unitCallsignNumber,
-                          onChange: (e) => {
-                            const nextNumber = parseInt(e.target.value, 10) || 0;
+                          value: String(unitCallsignNumber),
+                          onChange: (value) => {
+                            const nextNumber = parseInt(value, 10) || 0;
                             setUnitCallsignNumber(nextNumber);
                             setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
                           },
                           disabled: unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign,
-                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-2 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed",
-                          children: callsignNumberOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value))
+                          accent: "emerald",
+                          width: 96,
+                          options: callsignNumberOptions.map((option) => ({ value: String(option.value), label: option.label }))
                         }
                       )
                     ] }),
@@ -31926,31 +32103,38 @@ const AddFlightTileModal = ({
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Crew" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                          "select",
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          SelectLikeDropdown,
                           {
                             value: assignment.crewGroup,
-                            onChange: (e) => updateFixedCrewFormationAssignment(index, { crewGroup: e.target.value, pic: "" }),
-                            className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
-                            children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                              fixedCrewGroupOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.options.map((crewGroup) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: crewGroup, children: formatUnavailableCrewLabel(crewGroup) }, crewGroup)) }, group.unit))
+                            onChange: (value) => updateFixedCrewFormationAssignment(index, { crewGroup: value, pic: "" }),
+                            accent: "emerald",
+                            width: 320,
+                            placeholder: "Select crew",
+                            options: [
+                              { value: "", label: "Select crew" },
+                              ...fixedCrewGroupOptionGroups.flatMap((group) => [
+                                { value: `__header-${group.unit}`, label: group.unit, isHeader: true, disabled: true },
+                                ...group.options.map((crewGroup) => ({ value: crewGroup, label: formatUnavailableCrewLabel(crewGroup) }))
+                              ])
                             ]
                           }
                         )
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "PIC" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                          "select",
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          SelectLikeDropdown,
                           {
                             value: assignment.pic,
-                            onChange: (e) => updateFixedCrewFormationAssignment(index, { pic: e.target.value }),
+                            onChange: (value) => updateFixedCrewFormationAssignment(index, { pic: value }),
                             disabled: !assignment.crewGroup || picCandidates.length === 0,
-                            className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed",
-                            children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: assignment.crewGroup ? "Select PIC" : "Select crew first" }),
-                              picCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatUnavailableStaffLabel(staff) }, staff.id || staff.name))
+                            accent: "emerald",
+                            width: 320,
+                            placeholder: assignment.crewGroup ? "Select PIC" : "Select crew first",
+                            options: [
+                              { value: "", label: assignment.crewGroup ? "Select PIC" : "Select crew first" },
+                              ...picCandidates.map((staff) => ({ value: staff.name, label: formatUnavailableStaffLabel(staff) }))
                             ]
                           }
                         )
@@ -31961,15 +32145,16 @@ const AddFlightTileModal = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Location" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "select",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      SelectLikeDropdown,
                       {
                         value: locationType,
-                        onChange: (e) => setLocationType(e.target.value),
-                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Local", children: "Local" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Land Away", children: "Land Away" })
+                        onChange: (value) => setLocationType(value),
+                        accent: "emerald",
+                        width: 220,
+                        options: [
+                          { value: "Local", label: "Local" },
+                          { value: "Land Away", label: "Land Away" }
                         ]
                       }
                     )
@@ -32193,13 +32378,12 @@ const AddFlightTileModal = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "CONFIG" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "select",
+                        SelectLikeDropdown,
                         {
                           value: aircraftConfigId,
-                          onChange: (e) => setAircraftConfigId(e.target.value),
-                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
-                          title: aircraftConfigOptions.find((definition) => definition.id === aircraftConfigId)?.definition || BASE_AIRCRAFT_CONFIG.definition,
-                          children: aircraftConfigOptions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, definition.id))
+                          onChange: setAircraftConfigId,
+                          width: 260,
+                          options: aircraftConfigOptions.map((definition) => ({ value: definition.id, label: definition.label }))
                         }
                       )
                     ] })
@@ -32208,31 +32392,31 @@ const AddFlightTileModal = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Unit Callsign" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_96px] gap-3", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "select",
+                        SelectLikeDropdown,
                         {
                           value: unitCallsignBase,
-                          onChange: (e) => {
-                            setUnitCallsignBase(e.target.value);
-                            setCallsign(buildUnitEventCallsign(e.target.value, unitCallsignNumber));
+                          onChange: (value) => {
+                            setUnitCallsignBase(value);
+                            setCallsign(buildUnitEventCallsign(value, unitCallsignNumber));
                           },
-                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
-                          children: unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: entry.callsign, children: [
-                            entry.callsign,
-                            entry.isDefault ? " (default)" : ""
-                          ] }, entry.id))
+                          width: 260,
+                          options: unitCallsignEntries.map((entry) => ({
+                            value: entry.callsign,
+                            label: `${entry.callsign}${entry.isDefault ? " (default)" : ""}`
+                          }))
                         }
                       ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "select",
+                        SelectLikeDropdown,
                         {
-                          value: unitCallsignNumber,
-                          onChange: (e) => {
-                            const nextNumber = parseInt(e.target.value, 10) || 0;
+                          value: String(unitCallsignNumber),
+                          onChange: (value) => {
+                            const nextNumber = parseInt(value, 10) || 0;
                             setUnitCallsignNumber(nextNumber);
                             setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
                           },
-                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-2 text-white text-sm focus:outline-none focus:ring-sky-500",
-                          children: callsignNumberOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value))
+                          width: 96,
+                          options: callsignNumberOptions.map((option) => ({ value: String(option.value), label: option.label }))
                         }
                       )
                     ] })
@@ -32240,15 +32424,15 @@ const AddFlightTileModal = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Location" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                        "select",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        SelectLikeDropdown,
                         {
                           value: locationType,
-                          onChange: (e) => setLocationType(e.target.value),
-                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
-                          children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Local", children: "Local" }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Land Away", children: "Land Away" })
+                          onChange: (value) => setLocationType(value),
+                          width: 220,
+                          options: [
+                            { value: "Local", label: "Local" },
+                            { value: "Land Away", label: "Land Away" }
                           ]
                         }
                       )
@@ -32293,29 +32477,25 @@ const AddFlightTileModal = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Formation Callsign" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "select",
+                          SelectLikeDropdown,
                           {
                             value: formationType,
-                            onChange: (e) => setFormationType(e.target.value),
-                            className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
-                            children: filteredFormationCallsigns.length > 0 ? filteredFormationCallsigns.map((cs) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: cs.code, children: [
-                              cs.name,
-                              " (",
-                              cs.code,
-                              ")"
-                            ] }, cs.code)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "No formation callsigns configured" })
+                            onChange: setFormationType,
+                            width: 280,
+                            placeholder: "Select callsign",
+                            options: filteredFormationCallsigns.length > 0 ? filteredFormationCallsigns.map((cs) => ({ value: cs.code, label: `${cs.name} (${cs.code})` })) : [{ value: "", label: "No formation callsigns configured", disabled: true }]
                           }
                         )
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Aircraft Count" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "select",
+                          SelectLikeDropdown,
                           {
-                            value: aircraftCount,
-                            onChange: (e) => setAircraftCount(parseInt(e.target.value, 10)),
-                            className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
-                            children: Array.from({ length: 7 }, (_, i) => i + 2).map((count) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: count, children: count }, count))
+                            value: String(aircraftCount),
+                            onChange: (value) => setAircraftCount(parseInt(value, 10)),
+                            width: 140,
+                            options: Array.from({ length: 7 }, (_, i) => i + 2).map((count) => ({ value: String(count), label: String(count) }))
                           }
                         )
                       ] })

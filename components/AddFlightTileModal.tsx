@@ -162,6 +162,238 @@ const ghostStyle = (
   textAlign,
 });
 
+type StableDropdownOption = {
+  value: string;
+  label: string;
+  disabled?: boolean;
+  isHeader?: boolean;
+};
+
+interface StableDropdownProps {
+  value: string;
+  options: StableDropdownOption[];
+  onChange: (value: string) => void;
+  children: React.ReactNode;
+  disabled?: boolean;
+  width?: number;
+  maxHeight?: number;
+  zIndex?: number;
+  align?: 'left' | 'right';
+}
+
+const StableDropdown: React.FC<StableDropdownProps> = ({
+  value,
+  options,
+  onChange,
+  children,
+  disabled = false,
+  width = 220,
+  maxHeight = 280,
+  zIndex = 10000,
+  align = 'left',
+}) => {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const portalId = useMemo(() => `stable-dropdown-${Math.random().toString(36).slice(2)}`, []);
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number }>({ top: 0, left: 0 });
+
+  useEffect(() => {
+    const handler = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      const portalEl = document.getElementById(portalId);
+      if (portalEl?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, [portalId]);
+
+  const openDropdown = () => {
+    if (disabled) return;
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+      const right = Math.max(8, window.innerWidth - rect.right);
+      setPos(align === 'right'
+        ? { top: rect.bottom + 4, right }
+        : { top: rect.bottom + 4, left });
+    }
+    setOpen(o => !o);
+  };
+
+  const panel = open && !disabled ? ReactDOM.createPortal(
+    <div
+      id={portalId}
+      onPointerDown={e => e.stopPropagation()}
+      onPointerDownCapture={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
+      onClick={e => e.stopPropagation()}
+      style={{
+        position: 'fixed',
+        top: pos.top,
+        left: pos.left,
+        right: pos.right,
+        width,
+        maxHeight,
+        overflowY: 'auto',
+        zIndex,
+        backgroundColor: '#172a42',
+        border: '1px solid rgba(255,255,255,0.18)',
+        borderRadius: 8,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.85)',
+        padding: 4,
+      }}
+    >
+      {options.length === 0 ? (
+        <div style={{ padding: '9px 10px', color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>No options</div>
+      ) : options.map((option, optionIndex) => {
+        if (option.isHeader) {
+          return (
+            <div
+              key={`header-${option.label}-${optionIndex}`}
+              style={{
+                padding: '7px 10px 5px',
+                color: 'rgba(125,211,252,0.88)',
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {option.label}
+            </div>
+          );
+        }
+        const selected = option.value === value;
+        return (
+          <button
+            key={`${option.value}-${option.label}`}
+            type="button"
+            disabled={option.disabled}
+            onClick={() => {
+              if (option.disabled) return;
+              onChange(option.value);
+              setOpen(false);
+            }}
+            style={{
+              display: 'block',
+              width: '100%',
+              border: 'none',
+              borderRadius: 5,
+              background: selected ? 'rgba(34,211,238,0.18)' : 'transparent',
+              color: option.disabled ? 'rgba(255,255,255,0.35)' : selected ? '#fff' : 'rgba(255,255,255,0.82)',
+              cursor: option.disabled ? 'not-allowed' : 'pointer',
+              fontSize: 13,
+              fontWeight: selected ? 700 : 500,
+              lineHeight: 1.2,
+              padding: '8px 10px',
+              textAlign: 'left',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => {
+              if (!option.disabled && !selected) e.currentTarget.style.background = 'rgba(255,255,255,0.10)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = selected ? 'rgba(34,211,238,0.18)' : 'transparent';
+            }}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>,
+    document.body
+  ) : null;
+
+  return (
+    <div
+      ref={triggerRef}
+      onPointerDown={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
+      onClick={e => {
+        e.stopPropagation();
+        openDropdown();
+      }}
+      style={{ display: 'inline-flex', cursor: disabled ? 'default' : 'pointer' }}
+    >
+      {children}
+      {panel}
+    </div>
+  );
+};
+
+interface SelectLikeDropdownProps {
+  value: string;
+  options: StableDropdownOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  width?: number;
+  maxHeight?: number;
+  accent?: 'sky' | 'emerald';
+}
+
+const SelectLikeDropdown: React.FC<SelectLikeDropdownProps> = ({
+  value,
+  options,
+  onChange,
+  disabled = false,
+  placeholder = 'Select',
+  width = 260,
+  maxHeight = 300,
+  accent = 'sky',
+}) => {
+  const selected = options.find(option => !option.isHeader && option.value === value);
+  const ringColour = accent === 'emerald' ? 'rgba(16,185,129,0.65)' : 'rgba(14,165,233,0.65)';
+  return (
+    <StableDropdown
+      value={value}
+      options={options}
+      onChange={onChange}
+      disabled={disabled}
+      width={width}
+      maxHeight={maxHeight}
+      zIndex={12000}
+    >
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={e => e.preventDefault()}
+        style={{
+          width: '100%',
+          minHeight: 38,
+          borderRadius: 6,
+          border: '1px solid rgba(75,85,99,1)',
+          backgroundColor: disabled ? 'rgba(55,65,81,0.5)' : 'rgba(55,65,81,1)',
+          color: disabled ? 'rgba(255,255,255,0.45)' : '#fff',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+          padding: '8px 12px',
+          fontSize: 14,
+          outline: 'none',
+          boxShadow: '0 0 0 0 transparent',
+        }}
+        onFocus={e => {
+          e.currentTarget.style.boxShadow = `0 0 0 2px ${ringColour}`;
+        }}
+        onBlur={e => {
+          e.currentTarget.style.boxShadow = '0 0 0 0 transparent';
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selected?.label || placeholder}
+        </span>
+        <span style={{ flexShrink: 0, fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>▼</span>
+      </button>
+    </StableDropdown>
+  );
+};
+
 // ─── Convert Tailwind bg class to rgba matching FlightTile.tsx rendering ────
 // Uses the same TAILWIND_COLORS palette and alpha mapping as FlightTile.tsx
 // so the Add Flight Tile preview matches the actual schedule tile appearance.
@@ -719,12 +951,6 @@ const FlightTile: React.FC<TileProps> = ({
   const tileRef   = useRef<HTMLDivElement>(null);
   const elemRefs  = useRef<Partial<Record<ElemKey, HTMLDivElement | null>>>({});
   const dragging  = useRef<{ key: ElemKey; startMouseX: number; startMouseY: number; startPosX: number; startPosY: number } | null>(null);
-  const selectContainmentProps = {
-    onMouseDown: (e: React.MouseEvent) => e.stopPropagation(),
-    onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
-    onClick: (e: React.MouseEvent) => e.stopPropagation(),
-  };
-
   // When entering edit mode, capture the real DOM positions of each element
   const enterEditMode = () => {
     // Capture current DOM positions if no layout saved yet, then delegate to parent
@@ -844,16 +1070,17 @@ const FlightTile: React.FC<TileProps> = ({
 
   // ── All element content definitions ──────────────────────────────────
   const startTimeContent = (zOverride?: number) => (
-    <div style={{ position: 'relative' }}>
+    <StableDropdown
+      value={String(startTime)}
+      options={timeOptions}
+      onChange={v => onStartTimeChange(parseFloat(v))}
+      width={150}
+      zIndex={zOverride ?? 10000}
+    >
       <span style={{ fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }}>
         {formatTime(startTime)}
       </span>
-      <select value={String(startTime)} onChange={e => onStartTimeChange(parseFloat(e.target.value))}
-        {...selectContainmentProps}
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
-        {timeOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-      </select>
-    </div>
+    </StableDropdown>
   );
 
   const picNameContent = () => (
@@ -878,14 +1105,15 @@ const FlightTile: React.FC<TileProps> = ({
   };
 
   const durationContent = (zOverride?: number) => (
-    <div style={{ position: 'relative' }}>
+    <StableDropdown
+      value={String(duration)}
+      options={durationOptions}
+      onChange={v => onDurationChange(parseFloat(v))}
+      width={150}
+      zIndex={zOverride ?? 10000}
+    >
       <span style={{ fontFamily: monoFamily, fontSize: 24, fontWeight: 700, color: WHITE_DIM, lineHeight: 1 }}>[{duration.toFixed(1)}]</span>
-      <select value={String(duration)} onChange={e => onDurationChange(parseFloat(e.target.value))}
-        {...selectContainmentProps}
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
-        {durationOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-      </select>
-    </div>
+    </StableDropdown>
   );
 
   const eventContent = () => {
@@ -912,33 +1140,41 @@ const FlightTile: React.FC<TileProps> = ({
   };
 
   const areaContent = (zOverride?: number) => (
-    <div style={{ position: 'relative' }}>
+    <StableDropdown
+      value={area}
+      options={areaOptions}
+      onChange={onAreaChange}
+      width={180}
+      zIndex={zOverride ?? 10000}
+    >
       <span style={{ fontSize: 24, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_DIM : 'rgba(255,220,60,0.95)', lineHeight: 1 }}>{area || '-'}</span>
-      <select value={area} onChange={e => onAreaChange(e.target.value)}
-        {...selectContainmentProps}
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
-        {areaOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-      </select>
-    </div>
+    </StableDropdown>
   );
 
   const aircraftContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
-      <span style={{ fontFamily: monoFamily, fontSize: 22, color: aircraftNumber ? WHITE_DIM : 'rgba(255,255,255,0.35)', lineHeight: 1 }}>
-        {aircraftNumber || 'SKIP'}
-      </span>
+      <StableDropdown
+        value={aircraftNumber}
+        options={aircraftOptions}
+        onChange={onAircraftChange}
+        width={150}
+        zIndex={zOverride ?? 10000}
+      >
+        <span style={{ fontFamily: monoFamily, fontSize: 22, color: aircraftNumber ? WHITE_DIM : 'rgba(255,255,255,0.35)', lineHeight: 1 }}>
+          {aircraftNumber || 'SKIP'}
+        </span>
+      </StableDropdown>
       {aircraftNumberSettings.usePrefix && (
-        <select value={aircraftNumberPrefix} onChange={e => onAircraftPrefixChange(e.target.value)}
-          {...selectContainmentProps}
-          style={{ position: 'absolute', top: 0, left: 0, width: '45%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
-          {aircraftNumberSettings.prefixes.map(prefix => <option key={prefix} value={prefix} style={{ background: '#1a2f4a' }}>{prefix}</option>)}
-        </select>
+        <StableDropdown
+          value={aircraftNumberPrefix}
+          options={aircraftNumberSettings.prefixes.map(prefix => ({ value: prefix, label: prefix }))}
+          onChange={onAircraftPrefixChange}
+          width={120}
+          zIndex={zOverride ?? 10000}
+        >
+          <span style={{ marginLeft: 5, fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>▼</span>
+        </StableDropdown>
       )}
-      <select value={aircraftNumber} onChange={e => onAircraftChange(e.target.value)}
-        {...selectContainmentProps}
-        style={{ position: 'absolute', top: 0, right: 0, width: aircraftNumberSettings.usePrefix ? '55%' : '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
-        {aircraftOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-      </select>
     </div>
   );
 
@@ -959,23 +1195,15 @@ const FlightTile: React.FC<TileProps> = ({
       />
       {/* Dropdown arrow + overlay select — only when options are available */}
       {callsignOptions.length > 0 && (
-        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+        <StableDropdown
+          value={callsign}
+          options={[{ value: '', label: '- select -' }, ...callsignOptions.map(cs => ({ value: cs, label: cs }))]}
+          onChange={onCallsignChange}
+          width={180}
+          zIndex={zOverride ?? 10000}
+        >
           <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.45)', pointerEvents: 'none', lineHeight: 1 }}>▼</span>
-          <select
-            value={callsign}
-            onChange={e => onCallsignChange(e.target.value)}
-            {...selectContainmentProps}
-            style={{
-              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-              opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10,
-            }}
-          >
-            <option value="" style={{ background: '#1a2f4a' }}>— select —</option>
-            {callsignOptions.map(cs => (
-              <option key={cs} value={cs} style={{ background: '#1a2f4a' }}>{cs}</option>
-            ))}
-          </select>
-        </div>
+        </StableDropdown>
       )}
     </div>
   );
@@ -2348,71 +2576,62 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-3">
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{fixedCrewEventFieldLabel}</label>
-                  <select
+                  <SelectLikeDropdown
                     value={fixedCrewEventKey}
-                    onChange={e => handleFixedCrewEventChange(e.target.value)}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
-                  >
-                    <option value="">Select {fixedCrewEventFieldLabel}</option>
-                    {eventCategory === 'sct' ? (
-                      <>
-                        {fixedCrewCurrencyProfileGroups.length === 0 && (
-                          <option value="" disabled>No currency events for selected unit</option>
-                        )}
-                        {fixedCrewCurrencyProfileGroups.map(group => (
-                          <optgroup key={group.label} label={group.label}>
-                            {group.options.map(profile => {
-                              const unit = normaliseFixedCrewUnitCode(profile.unitCode || profile.compositeUnitCode);
-                              const code = stripLeadingUnitLabel(profile.code || profile.name || profile.currency, unit);
-                              const name = stripLeadingUnitLabel(profile.name, unit);
-                              const currency = stripLeadingUnitLabel(profile.currency, unit);
-                              const label = Array.from(new Set([code, name, currency].filter(Boolean))).join(' - ');
-                              const optionKey = getFixedCrewCurrencyProfileOptionKey(profile);
-                              return <option key={optionKey} value={optionKey}>{label}</option>;
-                            })}
-                          </optgroup>
-                        ))}
-                      </>
-                    ) : (
-                      <>
-                        {fixedCrewEventOptionGroups.length === 0 && (
-                          <option value="" disabled>No {fixedCrewEventFieldLabel.toLowerCase()}s for selected unit</option>
-                        )}
-                        {fixedCrewEventOptionGroups.map(group => (
-                          <optgroup key={group.label} label={group.label}>
-                            {group.options.map(item => {
-                              const unit = normaliseFixedCrewUnitCode(item.unit);
-                              const code = stripLeadingUnitLabel(item.code || item.id || '', unit);
-                              const description = stripLeadingUnitLabel((item as any).title || item.eventDescription || (item as any).description, unit);
-                              const label = [code, description].filter(Boolean).join(' - ');
-                              const optionKey = getFixedCrewEventOptionKey(item);
-                              return <option key={optionKey} value={optionKey}>{label}</option>;
-                            })}
-                          </optgroup>
-                        ))}
-                      </>
-                    )}
-                  </select>
+                    onChange={handleFixedCrewEventChange}
+                    accent="emerald"
+                    width={420}
+                    placeholder={`Select ${fixedCrewEventFieldLabel}`}
+                    options={[
+                      { value: '', label: `Select ${fixedCrewEventFieldLabel}` },
+                      ...(eventCategory === 'sct'
+                        ? fixedCrewCurrencyProfileGroups.length === 0
+                          ? [{ value: '__none', label: 'No currency events for selected unit', disabled: true }]
+                          : fixedCrewCurrencyProfileGroups.flatMap(group => [
+                              { value: `__header-${group.label}`, label: group.label, isHeader: true, disabled: true },
+                              ...group.options.map(profile => {
+                                const unit = normaliseFixedCrewUnitCode(profile.unitCode || profile.compositeUnitCode);
+                                const code = stripLeadingUnitLabel(profile.code || profile.name || profile.currency, unit);
+                                const name = stripLeadingUnitLabel(profile.name, unit);
+                                const currency = stripLeadingUnitLabel(profile.currency, unit);
+                                const label = Array.from(new Set([code, name, currency].filter(Boolean))).join(' - ');
+                                return { value: getFixedCrewCurrencyProfileOptionKey(profile), label };
+                              }),
+                            ])
+                        : fixedCrewEventOptionGroups.length === 0
+                          ? [{ value: '__none', label: `No ${fixedCrewEventFieldLabel.toLowerCase()}s for selected unit`, disabled: true }]
+                          : fixedCrewEventOptionGroups.flatMap(group => [
+                              { value: `__header-${group.label}`, label: group.label, isHeader: true, disabled: true },
+                              ...group.options.map(item => {
+                                const unit = normaliseFixedCrewUnitCode(item.unit);
+                                const code = stripLeadingUnitLabel(item.code || item.id || '', unit);
+                                const description = stripLeadingUnitLabel((item as any).title || item.eventDescription || (item as any).description, unit);
+                                const label = [code, description].filter(Boolean).join(' - ');
+                                return { value: getFixedCrewEventOptionKey(item), label };
+                              }),
+                            ])),
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
-                  <select
+                  <SelectLikeDropdown
                     value={fixedCrewGroup}
-                    onChange={e => {
-                      setFixedCrewGroup(e.target.value);
+                    onChange={value => {
+                      setFixedCrewGroup(value);
                       setFixedCrewPic('');
                     }}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
-                  >
-                    <option value="">Select crew</option>
-                    {fixedCrewGroupOptionGroups.map(group => (
-                      <optgroup key={group.unit} label={group.unit}>
-                        {group.options.map(crewGroup => (
-                          <option key={crewGroup} value={crewGroup}>{formatUnavailableCrewLabel(crewGroup)}</option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
+                    accent="emerald"
+                    width={320}
+                    placeholder="Select crew"
+                    options={[
+                      { value: '', label: 'Select crew' },
+                      ...fixedCrewGroupOptionGroups.flatMap(group => [
+                        { value: `__header-${group.unit}`, label: group.unit, isHeader: true, disabled: true },
+                        ...group.options.map(crewGroup => ({ value: crewGroup, label: formatUnavailableCrewLabel(crewGroup) })),
+                      ]),
+                    ]}
+                  />
                   {selectedFixedCrewUnavailableSummary && (
                     <div className="mt-1 rounded border border-red-500/30 bg-red-950/25 px-2 py-1 text-[11px] font-semibold text-red-200">
                       {selectedFixedCrewUnavailableSummary}
@@ -2421,19 +2640,18 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">PIC</label>
-                  <select
+                  <SelectLikeDropdown
                     value={fixedCrewPic}
-                    onChange={e => setFixedCrewPic(e.target.value)}
+                    onChange={setFixedCrewPic}
                     disabled={!fixedCrewGroup || fixedCrewPicCandidates.length === 0}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed"
-                  >
-                    <option value="">{fixedCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
-                    {fixedCrewPicCandidates.map(staff => (
-                      <option key={staff.id || staff.name} value={staff.name}>
-                        {formatUnavailableStaffLabel(staff)}
-                      </option>
-                    ))}
-                  </select>
+                    accent="emerald"
+                    width={320}
+                    placeholder={fixedCrewGroup ? 'Select PIC' : 'Select crew first'}
+                    options={[
+                      { value: '', label: fixedCrewGroup ? 'Select PIC' : 'Select crew first' },
+                      ...fixedCrewPicCandidates.map(staff => ({ value: staff.name, label: formatUnavailableStaffLabel(staff) })),
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">No. of A/C</label>
@@ -2448,52 +2666,52 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Manifest Status</label>
-                  <select
+                  <SelectLikeDropdown
                     value={fixedCrewManifestStatus || 'pending'}
-                    onChange={e => setFixedCrewManifestStatus(e.target.value as ScheduleEvent['fixedCrewManifestStatus'])}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="complete">Complete</option>
-                    <option value="partial">Partial</option>
-                    <option value="swapped">Swapped</option>
-                    <option value="invalid">Invalid</option>
-                  </select>
+                    onChange={value => setFixedCrewManifestStatus(value as ScheduleEvent['fixedCrewManifestStatus'])}
+                    accent="emerald"
+                    width={220}
+                    options={[
+                      { value: 'pending', label: 'Pending' },
+                      { value: 'complete', label: 'Complete' },
+                      { value: 'partial', label: 'Partial' },
+                      { value: 'swapped', label: 'Swapped' },
+                      { value: 'invalid', label: 'Invalid' },
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Callsign</label>
                   <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2">
-                    <select
+                    <SelectLikeDropdown
                       value={unitCallsignBase}
-                      onChange={e => {
-                        setUnitCallsignBase(e.target.value);
-                        setCallsign(buildUnitEventCallsign(e.target.value, unitCallsignNumber));
+                      onChange={value => {
+                        setUnitCallsignBase(value);
+                        setCallsign(buildUnitEventCallsign(value, unitCallsignNumber));
                       }}
                       disabled={unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed"
-                    >
-                      {unitCallsignEntries.length === 0 ? (
-                        <option value="">No unit callsigns</option>
-                      ) : (
-                        unitCallsignEntries.map(entry => (
-                          <option key={entry.id} value={entry.callsign}>
-                            {activeCallsignUnitCodes.length > 1 ? `${entry.unitCode} - ` : ''}{entry.callsign}{entry.isDefault ? ' (default)' : ''}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    <select
-                      value={unitCallsignNumber}
-                      onChange={e => {
-                        const nextNumber = parseInt(e.target.value, 10) || 0;
+                      accent="emerald"
+                      width={260}
+                      placeholder={unitCallsignEntries.length === 0 ? 'No unit callsigns' : 'Select callsign'}
+                      options={unitCallsignEntries.length === 0
+                        ? [{ value: '', label: 'No unit callsigns', disabled: true }]
+                        : unitCallsignEntries.map(entry => ({
+                            value: entry.callsign,
+                            label: `${activeCallsignUnitCodes.length > 1 ? `${entry.unitCode} - ` : ''}${entry.callsign}${entry.isDefault ? ' (default)' : ''}`,
+                          }))}
+                    />
+                    <SelectLikeDropdown
+                      value={String(unitCallsignNumber)}
+                      onChange={value => {
+                        const nextNumber = parseInt(value, 10) || 0;
                         setUnitCallsignNumber(nextNumber);
                         setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
                       }}
                       disabled={unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-2 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed"
-                    >
-                      {callsignNumberOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-                    </select>
+                      accent="emerald"
+                      width={96}
+                      options={callsignNumberOptions.map(option => ({ value: String(option.value), label: option.label }))}
+                    />
                   </div>
                   {selectedPicHasIndividualCallsign && (
                     <div className="mt-1 text-[11px] text-gray-500">Using the PIC profile callsign.</div>
@@ -2516,36 +2734,35 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                           </div>
                           <div>
                             <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
-                            <select
+                            <SelectLikeDropdown
                               value={assignment.crewGroup}
-                              onChange={e => updateFixedCrewFormationAssignment(index, { crewGroup: e.target.value, pic: '' })}
-                              className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
-                            >
-                              <option value="">Select crew</option>
-                              {fixedCrewGroupOptionGroups.map(group => (
-                                <optgroup key={group.unit} label={group.unit}>
-                                  {group.options.map(crewGroup => (
-                                    <option key={crewGroup} value={crewGroup}>{formatUnavailableCrewLabel(crewGroup)}</option>
-                                  ))}
-                                </optgroup>
-                              ))}
-                            </select>
+                              onChange={value => updateFixedCrewFormationAssignment(index, { crewGroup: value, pic: '' })}
+                              accent="emerald"
+                              width={320}
+                              placeholder="Select crew"
+                              options={[
+                                { value: '', label: 'Select crew' },
+                                ...fixedCrewGroupOptionGroups.flatMap(group => [
+                                  { value: `__header-${group.unit}`, label: group.unit, isHeader: true, disabled: true },
+                                  ...group.options.map(crewGroup => ({ value: crewGroup, label: formatUnavailableCrewLabel(crewGroup) })),
+                                ]),
+                              ]}
+                            />
                           </div>
                           <div>
                             <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">PIC</label>
-                            <select
+                            <SelectLikeDropdown
                               value={assignment.pic}
-                              onChange={e => updateFixedCrewFormationAssignment(index, { pic: e.target.value })}
+                              onChange={value => updateFixedCrewFormationAssignment(index, { pic: value })}
                               disabled={!assignment.crewGroup || picCandidates.length === 0}
-                              className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed"
-                            >
-                              <option value="">{assignment.crewGroup ? 'Select PIC' : 'Select crew first'}</option>
-                              {picCandidates.map(staff => (
-                                <option key={staff.id || staff.name} value={staff.name}>
-                                  {formatUnavailableStaffLabel(staff)}
-                                </option>
-                              ))}
-                            </select>
+                              accent="emerald"
+                              width={320}
+                              placeholder={assignment.crewGroup ? 'Select PIC' : 'Select crew first'}
+                              options={[
+                                { value: '', label: assignment.crewGroup ? 'Select PIC' : 'Select crew first' },
+                                ...picCandidates.map(staff => ({ value: staff.name, label: formatUnavailableStaffLabel(staff) })),
+                              ]}
+                            />
                           </div>
                         </div>
                       );
@@ -2556,14 +2773,16 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Location</label>
-                  <select
+                  <SelectLikeDropdown
                     value={locationType}
-                    onChange={e => setLocationType(e.target.value as 'Local'|'Land Away')}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
-                  >
-                    <option value="Local">Local</option>
-                    <option value="Land Away">Land Away</option>
-                  </select>
+                    onChange={value => setLocationType(value as 'Local'|'Land Away')}
+                    accent="emerald"
+                    width={220}
+                    options={[
+                      { value: 'Local', label: 'Local' },
+                      { value: 'Land Away', label: 'Land Away' },
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Date</label>
@@ -2765,61 +2984,55 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">CONFIG</label>
-                    <select
+                    <SelectLikeDropdown
                       value={aircraftConfigId}
-                      onChange={e => setAircraftConfigId(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
-                      title={aircraftConfigOptions.find(definition => definition.id === aircraftConfigId)?.definition || BASE_AIRCRAFT_CONFIG.definition}
-                    >
-                      {aircraftConfigOptions.map(definition => (
-                        <option key={definition.id} value={definition.id}>
-                          {definition.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setAircraftConfigId}
+                      width={260}
+                      options={aircraftConfigOptions.map(definition => ({ value: definition.id, label: definition.label }))}
+                    />
                   </div>
                 </div>}
                 {!isFixedCrewModel && !selectedPicHasIndividualCallsign && unitCallsignEntries.length > 0 && (
                   <div className="mb-4 rounded-lg border border-sky-500/25 bg-sky-950/20 p-3">
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Unit Callsign</label>
                     <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-3">
-                      <select
+                      <SelectLikeDropdown
                         value={unitCallsignBase}
-                        onChange={e => {
-                          setUnitCallsignBase(e.target.value);
-                          setCallsign(buildUnitEventCallsign(e.target.value, unitCallsignNumber));
+                        onChange={value => {
+                          setUnitCallsignBase(value);
+                          setCallsign(buildUnitEventCallsign(value, unitCallsignNumber));
                         }}
-                        className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
-                      >
-                        {unitCallsignEntries.map(entry => (
-                          <option key={entry.id} value={entry.callsign}>{entry.callsign}{entry.isDefault ? ' (default)' : ''}</option>
-                        ))}
-                      </select>
-                      <select
-                        value={unitCallsignNumber}
-                        onChange={e => {
-                          const nextNumber = parseInt(e.target.value, 10) || 0;
+                        width={260}
+                        options={unitCallsignEntries.map(entry => ({
+                          value: entry.callsign,
+                          label: `${entry.callsign}${entry.isDefault ? ' (default)' : ''}`,
+                        }))}
+                      />
+                      <SelectLikeDropdown
+                        value={String(unitCallsignNumber)}
+                        onChange={value => {
+                          const nextNumber = parseInt(value, 10) || 0;
                           setUnitCallsignNumber(nextNumber);
                           setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
                         }}
-                        className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-2 text-white text-sm focus:outline-none focus:ring-sky-500"
-                      >
-                        {callsignNumberOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-                      </select>
+                        width={96}
+                        options={callsignNumberOptions.map(option => ({ value: String(option.value), label: option.label }))}
+                      />
                     </div>
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Location</label>
-                    <select
+                    <SelectLikeDropdown
                       value={locationType}
-                      onChange={e => setLocationType(e.target.value as 'Local'|'Land Away')}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
-                    >
-                      <option value="Local">Local</option>
-                      <option value="Land Away">Land Away</option>
-                    </select>
+                      onChange={value => setLocationType(value as 'Local'|'Land Away')}
+                      width={220}
+                      options={[
+                        { value: 'Local', label: 'Local' },
+                        { value: 'Land Away', label: 'Land Away' },
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Date</label>
@@ -2859,25 +3072,24 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Formation Callsign</label>
-                        <select
+                        <SelectLikeDropdown
                           value={formationType}
-                          onChange={e => setFormationType(e.target.value)}
-                          className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
-                        >
-                          {filteredFormationCallsigns.length > 0
-                            ? filteredFormationCallsigns.map(cs => <option key={cs.code} value={cs.code}>{cs.name} ({cs.code})</option>)
-                            : <option value="" disabled>No formation callsigns configured</option>}
-                        </select>
+                          onChange={setFormationType}
+                          width={280}
+                          placeholder="Select callsign"
+                          options={filteredFormationCallsigns.length > 0
+                            ? filteredFormationCallsigns.map(cs => ({ value: cs.code, label: `${cs.name} (${cs.code})` }))
+                            : [{ value: '', label: 'No formation callsigns configured', disabled: true }]}
+                        />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft Count</label>
-                        <select
-                          value={aircraftCount}
-                          onChange={e => setAircraftCount(parseInt(e.target.value, 10))}
-                          className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
-                        >
-                          {Array.from({ length: 7 }, (_, i) => i + 2).map(count => <option key={count} value={count}>{count}</option>)}
-                        </select>
+                        <SelectLikeDropdown
+                          value={String(aircraftCount)}
+                          onChange={value => setAircraftCount(parseInt(value, 10))}
+                          width={140}
+                          options={Array.from({ length: 7 }, (_, i) => i + 2).map(count => ({ value: String(count), label: String(count) }))}
+                        />
                       </div>
                     </div>
                     {formationCrew.length > 0 && (
