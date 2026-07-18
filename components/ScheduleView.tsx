@@ -139,7 +139,7 @@ const START_HOUR = 0;
 const END_HOUR = 24;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
 const AIRFRAME_COLUMN_WIDTH = 108; // Header cell width (date selector)
-const RESOURCE_COLUMN_WIDTH = 105; // 95 * 1.1 = 105px (further 10% wider) // 86 * 1.1 = 95px (10% wider) // 108 * 0.80 = 86px (PC-21 column, 20% narrower than header)
+const RESOURCE_COLUMN_WIDTH = 105; // Resource row header width.
 const TIME_HEADER_HEIGHT = 40;
 
 const isOverlapping = (f1: ScheduleEvent, f2: ScheduleEvent): boolean => {
@@ -221,7 +221,7 @@ const normaliseUnitTypeOptions = (platformConfig?: any): string[] => {
 
 const getResourceCategory = (res?: string) => {
     if (!res) return 'Other';
-    if (res.startsWith('PC-21') || res.startsWith('Deployed')) return 'PC-21';
+    if (res.startsWith('PC-21') || res.startsWith('Deployed')) return 'Aircraft';
     if (res.startsWith('STBY')) return 'STBY';
     if (res === 'Duty Sup') return 'Duty Sup';
     if (res === 'TWR DI') return 'TWR DI';

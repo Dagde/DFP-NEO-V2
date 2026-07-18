@@ -102,7 +102,7 @@ const getValidationEventKey = (event: ScheduleEvent): string =>
     ].join('|');
 
 const getResourceCategory = (res: string) => {
-    if (res.startsWith('PC-21')) return 'PC-21';
+    if (res.startsWith('PC-21') || res.startsWith('Deployed')) return 'Aircraft';
     if (res.startsWith('STBY')) return 'STBY';
     if (res === 'Duty Sup') return 'Duty Sup';
     if (res.startsWith('FTD')) return 'FTD';

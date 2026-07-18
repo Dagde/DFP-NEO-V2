@@ -9148,7 +9148,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
 };
 const getCategory = (res) => {
   if (!res || typeof res !== "string") return "Other";
-  if (res.startsWith("PC-21") || res.startsWith("Deployed")) return "PC-21";
+  if (res.startsWith("PC-21") || res.startsWith("Deployed")) return "Aircraft";
   if (res.startsWith("STBY") || res.startsWith("BNF-STBY")) return "STBY";
   if (res === "Duty Sup") return "Duty Sup";
   if (res === "TWR DI") return "TWR DI";
@@ -9157,6 +9157,7 @@ const getCategory = (res) => {
   if (res.startsWith("Ground")) return "Ground";
   return "Other";
 };
+const isAircraftResource = (resource) => resource.startsWith("PC-21") || resource.startsWith("Deployed");
 const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [], formatResourceLabel: formatResourceLabel2, aircraftConfigLabelsByResource = {} }) => {
   const [draggedIndex, setDraggedIndex] = reactExports.useState(null);
   const handleDragStart = (index) => {
@@ -9180,6 +9181,7 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full min-w-0 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "w-full", children: displayResources.map((resource, index) => {
     let resourceText = resource;
     const displayText = formatResourceLabel2 ? formatResourceLabel2(resourceText) : resourceText;
+    const displayBaseText = displayText.replace(/\s+\d+$/, "");
     const configLabel = aircraftConfigLabelsByResource[resource];
     const compactConfigLabel = configLabel?.replace(/^CONFIG\s*(\d+)$/i, "C $1").replace(/^Config\s+(\d+)$/i, "C $1");
     let textColorClass = "text-gray-400";
@@ -9217,7 +9219,7 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
     const borderClass = isCategoryStart ? "border-t-2 border-t-gray-500 border-b border-b-gray-700/50" : "border-b border-gray-700/50";
     const hoverClass = isDraggable ? "hover:bg-gray-700" : "";
     const dragClass = draggedIndex === index ? "opacity-50 bg-sky-900" : "";
-    const contextKind = resource === "Duty Sup" ? "duty-supervisor" : resource.startsWith("FTD") || resource.startsWith("CPT") ? "simulator-resource" : resource.startsWith("PC-21") || resource.startsWith("Deployed") || resource.startsWith("STBY") || resource.startsWith("BNF-STBY") ? "aircraft-resource" : "resource";
+    const contextKind = resource === "Duty Sup" ? "duty-supervisor" : resource.startsWith("FTD") || resource.startsWith("CPT") ? "simulator-resource" : isAircraftResource(resource) || resource.startsWith("STBY") || resource.startsWith("BNF-STBY") ? "aircraft-resource" : "resource";
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
       "li",
       {
@@ -9233,7 +9235,7 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
         style: { height: rowHeight },
         children: resource.startsWith("PC-21") ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-full w-full min-w-0 items-center text-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1 top-1/2 -translate-y-1/2 text-xs text-blue-300", children: resource.match(/\d+$/)?.[0] || "" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-7 top-1/2 -translate-y-1/2", children: formatResourceLabel2 ? formatResourceLabel2("PC-21") : "PC-21" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-7 top-1/2 -translate-y-1/2", children: displayBaseText || "Aircraft" }),
           configLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-0.5 right-0.5 max-w-[28px] truncate text-right text-[10px] font-semibold leading-none text-gray-500", children: compactConfigLabel })
         ] }) : resource.startsWith("Deployed") ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-left pl-1 pr-1 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: displayText.replace(/\s+\d+$/, "") }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: displayText.replace(/\s+\d+$/, "") }) })
       },
@@ -9864,7 +9866,7 @@ const normaliseUnitTypeOptions = (platformConfig2) => {
 };
 const getResourceCategory$1 = (res) => {
   if (!res) return "Other";
-  if (res.startsWith("PC-21") || res.startsWith("Deployed")) return "PC-21";
+  if (res.startsWith("PC-21") || res.startsWith("Deployed")) return "Aircraft";
   if (res.startsWith("STBY")) return "STBY";
   if (res === "Duty Sup") return "Duty Sup";
   if (res === "TWR DI") return "TWR DI";
@@ -35505,7 +35507,7 @@ const getValidationEventKey$2 = (event) => [
   event.crew || ""
 ].join("|");
 const getResourceCategory = (res) => {
-  if (res.startsWith("PC-21")) return "PC-21";
+  if (res.startsWith("PC-21") || res.startsWith("Deployed")) return "Aircraft";
   if (res.startsWith("STBY")) return "STBY";
   if (res === "Duty Sup") return "Duty Sup";
   if (res.startsWith("FTD")) return "FTD";

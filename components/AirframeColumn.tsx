@@ -16,7 +16,7 @@ interface AirframeColumnProps {
 // Helper to determine resource category
 const getCategory = (res: string) => {
     if (!res || typeof res !== 'string') return 'Other';
-    if (res.startsWith('PC-21') || res.startsWith('Deployed')) return 'PC-21';
+    if (res.startsWith('PC-21') || res.startsWith('Deployed')) return 'Aircraft';
     if (res.startsWith('STBY') || res.startsWith('BNF-STBY')) return 'STBY';
     if (res === 'Duty Sup') return 'Duty Sup';
     if (res === 'TWR DI') return 'TWR DI';
@@ -25,6 +25,9 @@ const getCategory = (res: string) => {
     if (res.startsWith('Ground')) return 'Ground';
     return 'Other';
 };
+
+const isAircraftResource = (resource: string): boolean =>
+    resource.startsWith('PC-21') || resource.startsWith('Deployed');
 
 const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [], formatResourceLabel, aircraftConfigLabelsByResource = {} }) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -60,9 +63,10 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
     <div className="w-full min-w-0 bg-gray-800 flex-shrink-0 h-full">
       <ul className="w-full">
         {displayResources.map((resource, index) => {
-            // Resource is already the display text (PC-21 1-24, Duty Sup, STBY, FTD, CPT, Ground)
+            // Resource is already the schedule row identifier.
             let resourceText: string = resource;
             const displayText = formatResourceLabel ? formatResourceLabel(resourceText) : resourceText;
+            const displayBaseText = displayText.replace(/\s+\d+$/, '');
             const configLabel = aircraftConfigLabelsByResource[resource];
             const compactConfigLabel = configLabel?.replace(/^CONFIG\s*(\d+)$/i, 'C $1').replace(/^Config\s+(\d+)$/i, 'C $1');
             let textColorClass = 'text-gray-400';
@@ -113,7 +117,7 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
                 ? 'duty-supervisor'
                 : resource.startsWith('FTD') || resource.startsWith('CPT')
                     ? 'simulator-resource'
-                    : resource.startsWith('PC-21') || resource.startsWith('Deployed') || resource.startsWith('STBY') || resource.startsWith('BNF-STBY')
+                    : isAircraftResource(resource) || resource.startsWith('STBY') || resource.startsWith('BNF-STBY')
                         ? 'aircraft-resource'
                         : 'resource';
           
@@ -136,7 +140,7 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
                       <span className="absolute left-1 top-1/2 -translate-y-1/2 text-xs text-blue-300">
                           {resource.match(/\d+$/)?.[0] || ''}
                       </span>
-                      <span className="absolute left-7 top-1/2 -translate-y-1/2">{formatResourceLabel ? formatResourceLabel('PC-21') : 'PC-21'}</span>
+                      <span className="absolute left-7 top-1/2 -translate-y-1/2">{displayBaseText || 'Aircraft'}</span>
                       {configLabel && (
                           <span className="absolute bottom-0.5 right-0.5 max-w-[28px] truncate text-right text-[10px] font-semibold leading-none text-gray-500">
                               {compactConfigLabel}
