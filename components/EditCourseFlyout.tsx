@@ -5,33 +5,20 @@ import {
     type PlatformConfig,
 } from '../utils/platformConfigService';
 
-const COURSE_MASTER_LMPS = [
-    'BPC+IPC',
-    'PC-21 Ground School',
-    'FIC',
-    'OFI',
-    'WSO',
-    'FIC(I)',
-    'PLT CONV',
-    'QFI CONV',
-    'PLT Refresh',
-    'Staff CAT',
-];
+const normaliseLmpCode = (value: unknown): string => String(value || '').trim();
 
-// Academic LMP types — these are 'Academics' type syllabus courses (Ground School phase)
-// Academic LMP courses are derived dynamically from syllabusDetails (DB only)
-
-const LMP_DESCRIPTIONS: Record<string, string> = {
-    'BPC+IPC': 'Basic Pilot Course & Initial Pilot Course',
-    'PC-21 Ground School': 'PC-21 Ground School (academic phase)',
-    'FIC': 'Flight Instructor Course (FIC syllabus)',
-    'OFI': 'Operational Flying Instructor',
-    'WSO': 'Weapons Systems Officer',
-    'FIC(I)': 'Flight Instructor Course (International)',
-    'PLT CONV': 'Pilot Conversion course',
-    'QFI CONV': 'Qualified Flying Instructor Conversion',
-    'PLT Refresh': 'Pilot Refresher course',
-    'Staff CAT': 'Staff Category (Instructor LMP)',
+const uniqueSortedValues = (values: string[]): string[] => {
+    const seen = new Set<string>();
+    return values
+        .map(normaliseLmpCode)
+        .filter((value) => {
+            if (!value) return false;
+            const key = value.toUpperCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        })
+        .sort((a, b) => a.localeCompare(b));
 };
 
 interface EditCourseFlyoutProps {
@@ -63,7 +50,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
     gradDate: initialGradDate,
     location: initialLocation = '',
     unit: initialUnit = '',
-    lmpType: initialLmpType = 'BPC+IPC',
+    lmpType: initialLmpType = '',
     academicLmpType: initialAcademicLmpType = '',
     locations = [],
     units = [],
@@ -76,8 +63,22 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
     const [gradDate, setGradDate] = useState(initialGradDate);
     const [location, setLocation] = useState(initialLocation);
     const [unit, setUnit] = useState(initialUnit);
-    const [lmpType, setLmpType] = useState(initialLmpType || 'BPC+IPC');
+    const [lmpType, setLmpType] = useState(initialLmpType || '');
     const [academicLmpType, setAcademicLmpType] = useState(initialAcademicLmpType || '');
+
+    const activeMasterLmpCatalogue = useMemo(() => (
+        (platformConfig?.masterLmpCatalogue || [])
+            .filter((entry: any) => String(entry?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+    ), [platformConfig]);
+
+    const lmpDescriptionByCode = useMemo(() => (
+        activeMasterLmpCatalogue.reduce((map: Record<string, string>, entry: any) => {
+            const code = normaliseLmpCode(entry?.code || entry?.name);
+            if (!code) return map;
+            map[code] = normaliseLmpCode(entry?.description || entry?.name || entry?.code);
+            return map;
+        }, {})
+    ), [activeMasterLmpCatalogue]);
 
     // Dynamic Academic LMP courses: extract unique course codes from Academics-type syllabus items (DB only)
     const academicLmpCourses = useMemo(() => {
@@ -91,11 +92,15 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
             unitCode: unit,
             operationalModel: 'flight_school',
         }, 'Assign');
-        return allowed.sort();
-    }, [platformConfig, syllabusDetails, unit]);
+        return uniqueSortedValues([academicLmpType, ...allowed]);
+    }, [academicLmpType, platformConfig, syllabusDetails, unit]);
 
     const assignableMasterLmps = useMemo(() => {
-        const courseCodes = new Set<string>(COURSE_MASTER_LMPS.filter(lmp => lmp !== 'Staff CAT'));
+        const courseCodes = new Set<string>();
+        activeMasterLmpCatalogue.forEach((entry: any) => {
+            const code = normaliseLmpCode(entry?.code || entry?.name);
+            if (code) courseCodes.add(code);
+        });
         syllabusDetails.forEach(s => {
             if (s.type === 'Academics' || s.lmpType === 'Staff CAT') return;
             (s.courses || []).forEach(c => courseCodes.add(c));
@@ -104,8 +109,8 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
             unitCode: unit,
             operationalModel: 'flight_school',
         }, 'Assign');
-        return allowed.sort();
-    }, [platformConfig, syllabusDetails, unit]);
+        return uniqueSortedValues([lmpType, initialLmpType, ...allowed]);
+    }, [activeMasterLmpCatalogue, initialLmpType, lmpType, platformConfig, syllabusDetails, unit]);
 
     // Sync if props change
     useEffect(() => {
@@ -113,7 +118,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
         setGradDate(initialGradDate);
         setLocation(initialLocation || '');
         setUnit(initialUnit || '');
-        setLmpType(initialLmpType || 'BPC+IPC');
+        setLmpType(initialLmpType || '');
         setAcademicLmpType(initialAcademicLmpType || '');
     }, [initialStartDate, initialGradDate, initialLocation, initialUnit, initialLmpType, initialAcademicLmpType]);
 
@@ -231,12 +236,13 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
                             onChange={(e) => setLmpType(e.target.value)}
                             className={fieldClass}
                         >
+                            <option value="">— Select Master LMP —</option>
                             {assignableMasterLmps.map(lmp => (
                                 <option key={lmp} value={lmp}>{lmp}</option>
                             ))}
                         </select>
-                        {lmpType && LMP_DESCRIPTIONS[lmpType] && (
-                            <p className="mt-1 text-xs text-sky-400/70 italic">{LMP_DESCRIPTIONS[lmpType]}</p>
+                        {lmpType && lmpDescriptionByCode[lmpType] && (
+                            <p className="mt-1 text-xs text-sky-400/70 italic">{lmpDescriptionByCode[lmpType]}</p>
                         )}
                     </div>
 

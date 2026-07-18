@@ -22294,7 +22294,7 @@ const setTraineeSuspendedMarker = (permissions, isSuspended) => {
   const visiblePermissions = getVisiblePermissions(permissions);
   return isSuspended ? [...visiblePermissions, TRAINEE_SUSPENDED_MARKER] : visiblePermissions;
 };
-const COURSE_MASTER_LMPS$1 = ["BPC+IPC", "FIC", "OFI", "WSO", "FIC(I)", "PLT CONV", "QFI CONV", "PLT Refresh", "Staff CAT"];
+const COURSE_MASTER_LMPS = ["BPC+IPC", "FIC", "OFI", "WSO", "FIC(I)", "PLT CONV", "QFI CONV", "PLT Refresh", "Staff CAT"];
 const InputField$1 = ({ label, value, onChange, readOnly }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -22929,7 +22929,7 @@ const TraineeProfileFlyout = ({
   const [email, setEmail] = reactExports.useState(trainee.email || "");
   const [traineeCallsign, setTraineeCallsign] = reactExports.useState(trainee.traineeCallsign || "");
   const assignableMasterLmps = reactExports.useMemo(() => {
-    const courseCodes = new Set(COURSE_MASTER_LMPS$1.filter((lmp) => lmp !== "Staff CAT"));
+    const courseCodes = new Set(COURSE_MASTER_LMPS.filter((lmp) => lmp !== "Staff CAT"));
     syllabusDetails.forEach((s) => {
       if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
       (s.courses || []).forEach((c) => courseCodes.add(c));
@@ -76394,29 +76394,16 @@ const CourseProgressView = ({
     ] }) })
   ] }) });
 };
-const COURSE_MASTER_LMPS = [
-  "BPC+IPC",
-  "PC-21 Ground School",
-  "FIC",
-  "OFI",
-  "WSO",
-  "FIC(I)",
-  "PLT CONV",
-  "QFI CONV",
-  "PLT Refresh",
-  "Staff CAT"
-];
-const LMP_DESCRIPTIONS = {
-  "BPC+IPC": "Basic Pilot Course & Initial Pilot Course",
-  "PC-21 Ground School": "PC-21 Ground School (academic phase)",
-  "FIC": "Flight Instructor Course (FIC syllabus)",
-  "OFI": "Operational Flying Instructor",
-  "WSO": "Weapons Systems Officer",
-  "FIC(I)": "Flight Instructor Course (International)",
-  "PLT CONV": "Pilot Conversion course",
-  "QFI CONV": "Qualified Flying Instructor Conversion",
-  "PLT Refresh": "Pilot Refresher course",
-  "Staff CAT": "Staff Category (Instructor LMP)"
+const normaliseLmpCode = (value) => String(value || "").trim();
+const uniqueSortedValues = (values) => {
+  const seen = /* @__PURE__ */ new Set();
+  return values.map(normaliseLmpCode).filter((value) => {
+    if (!value) return false;
+    const key = value.toUpperCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).sort((a, b) => a.localeCompare(b));
 };
 const EditCourseFlyout = ({
   courseName,
@@ -76424,7 +76411,7 @@ const EditCourseFlyout = ({
   gradDate: initialGradDate,
   location: initialLocation = "",
   unit: initialUnit = "",
-  lmpType: initialLmpType = "BPC+IPC",
+  lmpType: initialLmpType = "",
   academicLmpType: initialAcademicLmpType = "",
   locations = [],
   units = [],
@@ -76437,8 +76424,15 @@ const EditCourseFlyout = ({
   const [gradDate, setGradDate] = reactExports.useState(initialGradDate);
   const [location, setLocation] = reactExports.useState(initialLocation);
   const [unit, setUnit] = reactExports.useState(initialUnit);
-  const [lmpType, setLmpType] = reactExports.useState(initialLmpType || "BPC+IPC");
+  const [lmpType, setLmpType] = reactExports.useState(initialLmpType || "");
   const [academicLmpType, setAcademicLmpType] = reactExports.useState(initialAcademicLmpType || "");
+  const activeMasterLmpCatalogue = reactExports.useMemo(() => (platformConfig2?.masterLmpCatalogue || []).filter((entry) => String(entry?.status || "ACTIVE").toUpperCase() !== "INACTIVE"), [platformConfig2]);
+  const lmpDescriptionByCode = reactExports.useMemo(() => activeMasterLmpCatalogue.reduce((map, entry) => {
+    const code = normaliseLmpCode(entry?.code || entry?.name);
+    if (!code) return map;
+    map[code] = normaliseLmpCode(entry?.description || entry?.name || entry?.code);
+    return map;
+  }, {}), [activeMasterLmpCatalogue]);
   const academicLmpCourses = reactExports.useMemo(() => {
     const courseCodes = /* @__PURE__ */ new Set();
     syllabusDetails.forEach((s) => {
@@ -76450,10 +76444,14 @@ const EditCourseFlyout = ({
       unitCode: unit,
       operationalModel: "flight_school"
     }, "Assign");
-    return allowed.sort();
-  }, [platformConfig2, syllabusDetails, unit]);
+    return uniqueSortedValues([academicLmpType, ...allowed]);
+  }, [academicLmpType, platformConfig2, syllabusDetails, unit]);
   const assignableMasterLmps = reactExports.useMemo(() => {
-    const courseCodes = new Set(COURSE_MASTER_LMPS.filter((lmp) => lmp !== "Staff CAT"));
+    const courseCodes = /* @__PURE__ */ new Set();
+    activeMasterLmpCatalogue.forEach((entry) => {
+      const code = normaliseLmpCode(entry?.code || entry?.name);
+      if (code) courseCodes.add(code);
+    });
     syllabusDetails.forEach((s) => {
       if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
       (s.courses || []).forEach((c) => courseCodes.add(c));
@@ -76462,14 +76460,14 @@ const EditCourseFlyout = ({
       unitCode: unit,
       operationalModel: "flight_school"
     }, "Assign");
-    return allowed.sort();
-  }, [platformConfig2, syllabusDetails, unit]);
+    return uniqueSortedValues([lmpType, initialLmpType, ...allowed]);
+  }, [activeMasterLmpCatalogue, initialLmpType, lmpType, platformConfig2, syllabusDetails, unit]);
   reactExports.useEffect(() => {
     setStartDate(initialStartDate);
     setGradDate(initialGradDate);
     setLocation(initialLocation || "");
     setUnit(initialUnit || "");
-    setLmpType(initialLmpType || "BPC+IPC");
+    setLmpType(initialLmpType || "");
     setAcademicLmpType(initialAcademicLmpType || "");
   }, [initialStartDate, initialGradDate, initialLocation, initialUnit, initialLmpType, initialAcademicLmpType]);
   const handleSave = () => {
@@ -76564,17 +76562,20 @@ const EditCourseFlyout = ({
                   "Course / LMP Type",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1 text-xs text-gray-500 font-normal", children: "— determines which syllabus events populate each trainee's Individual LMP" })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "select",
                   {
                     id: "edit-lmp-type",
                     value: lmpType,
                     onChange: (e) => setLmpType(e.target.value),
                     className: fieldClass2,
-                    children: assignableMasterLmps.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select Master LMP —" }),
+                      assignableMasterLmps.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
+                    ]
                   }
                 ),
-                lmpType && LMP_DESCRIPTIONS[lmpType] && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-sky-400/70 italic", children: LMP_DESCRIPTIONS[lmpType] })
+                lmpType && lmpDescriptionByCode[lmpType] && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-sky-400/70 italic", children: lmpDescriptionByCode[lmpType] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-academic-lmp-type", className: labelClass2, children: [
