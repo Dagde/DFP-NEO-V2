@@ -29886,6 +29886,11 @@ const usePersistentDropdownOpen = (dropdownKey) => {
   return [open, setOpen];
 };
 const personDropdownColumnState = /* @__PURE__ */ new Map();
+const getPersonDropdownMemory = (dropdownKey) => personDropdownColumnState.get(dropdownKey) ?? {
+  unit: null,
+  layer2: null,
+  scroll: { units: 0, layer2: 0, names: 0 }
+};
 const StableDropdown = ({
   value,
   options,
@@ -30149,23 +30154,42 @@ const PersonDropdown = ({
 }) => {
   const dropdownKey = dropdownId;
   const [open, setOpen] = usePersistentDropdownOpen(dropdownKey);
-  const rememberedColumns = personDropdownColumnState.get(dropdownKey);
+  const rememberedColumns = getPersonDropdownMemory(dropdownKey);
   const [selectedUnit, setSelectedUnitState] = reactExports.useState(rememberedColumns?.unit ?? null);
   const [selectedL2, setSelectedL2State] = reactExports.useState(rememberedColumns?.layer2 ?? null);
   const ref = reactExports.useRef(null);
+  const unitsColumnRef = reactExports.useRef(null);
+  const layer2ColumnRef = reactExports.useRef(null);
+  const namesColumnRef = reactExports.useRef(null);
   const [dropdownPos, setDropdownPos] = reactExports.useState({ top: 0, left: 0 });
-  const rememberColumns = reactExports.useCallback((unit, layer2) => {
-    personDropdownColumnState.set(dropdownKey, { unit, layer2 });
+  const rememberScroll = reactExports.useCallback((column, scrollTop) => {
+    const existing = getPersonDropdownMemory(dropdownKey);
+    personDropdownColumnState.set(dropdownKey, {
+      ...existing,
+      scroll: { ...existing.scroll, [column]: scrollTop }
+    });
   }, [dropdownKey]);
   const setSelectedUnit = reactExports.useCallback((unit) => {
     setSelectedUnitState(unit);
     setSelectedL2State(null);
-    rememberColumns(unit, null);
-  }, [rememberColumns]);
+    const existing = getPersonDropdownMemory(dropdownKey);
+    personDropdownColumnState.set(dropdownKey, {
+      ...existing,
+      unit,
+      layer2: null,
+      scroll: { ...existing.scroll, layer2: 0, names: 0 }
+    });
+  }, [dropdownKey]);
   const setSelectedL2 = reactExports.useCallback((layer2) => {
     setSelectedL2State(layer2);
-    rememberColumns(selectedUnit, layer2);
-  }, [rememberColumns, selectedUnit]);
+    const existing = getPersonDropdownMemory(dropdownKey);
+    personDropdownColumnState.set(dropdownKey, {
+      ...existing,
+      unit: selectedUnit,
+      layer2,
+      scroll: { ...existing.scroll, names: 0 }
+    });
+  }, [dropdownKey, selectedUnit]);
   const closeDropdown = reactExports.useCallback((clearColumns = false) => {
     setOpen(false);
     if (clearColumns) {
@@ -30202,6 +30226,13 @@ const PersonDropdown = ({
     const nextUnit = allUnits[0] || null;
     setSelectedUnit(nextUnit);
   }, [allUnits, open, selectedUnit, setSelectedUnit]);
+  reactExports.useLayoutEffect(() => {
+    if (!open) return;
+    const memory = getPersonDropdownMemory(dropdownKey);
+    if (unitsColumnRef.current) unitsColumnRef.current.scrollTop = memory.scroll.units;
+    if (layer2ColumnRef.current) layer2ColumnRef.current.scrollTop = memory.scroll.layer2;
+    if (namesColumnRef.current) namesColumnRef.current.scrollTop = memory.scroll.names;
+  }, [dropdownKey, open, selectedUnit, selectedL2, allUnits]);
   const handleOpen = () => {
     updateDropdownPosition();
     setOpen((o) => !o);
@@ -30230,87 +30261,111 @@ const PersonDropdown = ({
           border: "1px solid rgba(255,255,255,0.18)"
         },
         children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: 110, borderRight: "1px solid rgba(255,255,255,0.12)", overflowY: "auto", maxHeight: 300, backgroundColor: "#1a2f4a" }, children: [
-            allowSolo && /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "div",
-              {
-                onClick: () => {
-                  onSoloSelect?.();
-                  closeDropdown(true);
-                },
-                style: { padding: "9px 12px", color: "#ffd43b", fontWeight: 700, fontSize: 13, cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.12)", backgroundColor: "transparent" },
-                onMouseEnter: (e) => e.currentTarget.style.backgroundColor = "rgba(255,212,59,0.15)",
-                onMouseLeave: (e) => e.currentTarget.style.backgroundColor = "transparent",
-                children: "SOLO"
-              }
-            ),
-            allUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "div",
-              {
-                onClick: () => {
-                  setSelectedUnit(unit);
-                },
-                style: {
-                  padding: "9px 12px",
-                  fontSize: 13,
-                  cursor: "pointer",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  color: selectedUnit === unit ? "#fff" : "rgba(255,255,255,0.8)",
-                  backgroundColor: selectedUnit === unit ? "rgba(255,255,255,0.12)" : "transparent"
-                },
-                children: [
-                  unit,
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 9, opacity: 0.5 }, children: "▶" })
-                ]
-              },
-              unit
-            ))
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: 130, borderRight: "1px solid rgba(255,255,255,0.12)", overflowY: "auto", maxHeight: 300, backgroundColor: "#16293f" }, children: selectedUnit ? getLayer2(selectedUnit).map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
-              onClick: () => setSelectedL2(opt),
-              style: {
-                padding: "9px 12px",
-                fontSize: 13,
-                cursor: "pointer",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                fontWeight: opt === "STAFF" ? 600 : 400,
-                color: selectedL2 === opt ? "#fff" : "rgba(255,255,255,0.8)",
-                backgroundColor: selectedL2 === opt ? "rgba(255,255,255,0.12)" : "transparent"
-              },
+              ref: unitsColumnRef,
+              onScroll: (e) => rememberScroll("units", e.currentTarget.scrollTop),
+              style: { width: 110, borderRight: "1px solid rgba(255,255,255,0.12)", overflowY: "auto", maxHeight: 300, backgroundColor: "#1a2f4a" },
               children: [
-                opt,
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 9, opacity: 0.5 }, children: "▶" })
+                allowSolo && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    onClick: () => {
+                      onSoloSelect?.();
+                      closeDropdown(true);
+                    },
+                    style: { padding: "9px 12px", color: "#ffd43b", fontWeight: 700, fontSize: 13, cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.12)", backgroundColor: "transparent" },
+                    onMouseEnter: (e) => e.currentTarget.style.backgroundColor = "rgba(255,212,59,0.15)",
+                    onMouseLeave: (e) => e.currentTarget.style.backgroundColor = "transparent",
+                    children: "SOLO"
+                  }
+                ),
+                allUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    onClick: () => {
+                      setSelectedUnit(unit);
+                    },
+                    style: {
+                      padding: "9px 12px",
+                      fontSize: 13,
+                      cursor: "pointer",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      color: selectedUnit === unit ? "#fff" : "rgba(255,255,255,0.8)",
+                      backgroundColor: selectedUnit === unit ? "rgba(255,255,255,0.12)" : "transparent"
+                    },
+                    children: [
+                      unit,
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 9, opacity: 0.5 }, children: "▶" })
+                    ]
+                  },
+                  unit
+                ))
               ]
-            },
-            opt
-          )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "16px 12px", color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" }, children: "Select unit" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, overflowY: "auto", maxHeight: 300, backgroundColor: "#122437" }, children: selectedUnit && selectedL2 ? getNames(selectedUnit, selectedL2).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
             {
-              onClick: () => {
-                onChange(person.name, []);
-                closeDropdown(true);
-              },
-              style: {
-                padding: "9px 12px",
-                fontSize: 13,
-                cursor: "pointer",
-                color: person.color || "#fff",
-                backgroundColor: "transparent",
-                whiteSpace: "nowrap"
-              },
-              onMouseEnter: (e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)",
-              onMouseLeave: (e) => e.currentTarget.style.backgroundColor = "transparent",
-              children: person.label
-            },
-            person.name
-          )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "16px 12px", color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" }, children: selectedUnit ? "Select category" : "Select unit" }) })
+              ref: layer2ColumnRef,
+              onScroll: (e) => rememberScroll("layer2", e.currentTarget.scrollTop),
+              style: { width: 130, borderRight: "1px solid rgba(255,255,255,0.12)", overflowY: "auto", maxHeight: 300, backgroundColor: "#16293f" },
+              children: selectedUnit ? getLayer2(selectedUnit).map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "div",
+                {
+                  onClick: () => setSelectedL2(opt),
+                  style: {
+                    padding: "9px 12px",
+                    fontSize: 13,
+                    cursor: "pointer",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    fontWeight: opt === "STAFF" ? 600 : 400,
+                    color: selectedL2 === opt ? "#fff" : "rgba(255,255,255,0.8)",
+                    backgroundColor: selectedL2 === opt ? "rgba(255,255,255,0.12)" : "transparent"
+                  },
+                  children: [
+                    opt,
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 9, opacity: 0.5 }, children: "▶" })
+                  ]
+                },
+                opt
+              )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "16px 12px", color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" }, children: "Select unit" })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              ref: namesColumnRef,
+              onScroll: (e) => rememberScroll("names", e.currentTarget.scrollTop),
+              style: { flex: 1, overflowY: "auto", maxHeight: 300, backgroundColor: "#122437" },
+              children: selectedUnit && selectedL2 ? getNames(selectedUnit, selectedL2).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  onClick: () => {
+                    onChange(person.name, []);
+                    closeDropdown(true);
+                  },
+                  style: {
+                    padding: "9px 12px",
+                    fontSize: 13,
+                    cursor: "pointer",
+                    color: person.color || "#fff",
+                    backgroundColor: "transparent",
+                    whiteSpace: "nowrap"
+                  },
+                  onMouseEnter: (e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)",
+                  onMouseLeave: (e) => e.currentTarget.style.backgroundColor = "transparent",
+                  children: person.label
+                },
+                person.name
+              )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "16px 12px", color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" }, children: selectedUnit ? "Select category" : "Select unit" })
+            }
+          )
         ]
       }
     ),

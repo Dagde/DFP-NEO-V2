@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { loadUserPreferences, saveUserPreference } from '../utils/userPreferencesService';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, Score } from '../types';
@@ -200,7 +200,25 @@ const usePersistentDropdownOpen = (dropdownKey: string) => {
   return [open, setOpen] as const;
 };
 
-const personDropdownColumnState = new Map<string, { unit: string | null; layer2: string | null }>();
+type PersonDropdownMemory = {
+  unit: string | null;
+  layer2: string | null;
+  scroll: {
+    units: number;
+    layer2: number;
+    names: number;
+  };
+};
+
+const personDropdownColumnState = new Map<string, PersonDropdownMemory>();
+
+const getPersonDropdownMemory = (dropdownKey: string): PersonDropdownMemory => (
+  personDropdownColumnState.get(dropdownKey) ?? {
+    unit: null,
+    layer2: null,
+    scroll: { units: 0, layer2: 0, names: 0 },
+  }
+);
 
 interface StableDropdownProps {
   value: string;
@@ -509,26 +527,45 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
 }) => {
   const dropdownKey = dropdownId;
   const [open, setOpen] = usePersistentDropdownOpen(dropdownKey);
-  const rememberedColumns = personDropdownColumnState.get(dropdownKey);
+  const rememberedColumns = getPersonDropdownMemory(dropdownKey);
   const [selectedUnit, setSelectedUnitState] = useState<string | null>(rememberedColumns?.unit ?? null);
   const [selectedL2, setSelectedL2State] = useState<string | null>(rememberedColumns?.layer2 ?? null);
   const ref = useRef<HTMLDivElement>(null);
+  const unitsColumnRef = useRef<HTMLDivElement>(null);
+  const layer2ColumnRef = useRef<HTMLDivElement>(null);
+  const namesColumnRef = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
-  const rememberColumns = useCallback((unit: string | null, layer2: string | null) => {
-    personDropdownColumnState.set(dropdownKey, { unit, layer2 });
+  const rememberScroll = useCallback((column: keyof PersonDropdownMemory['scroll'], scrollTop: number) => {
+    const existing = getPersonDropdownMemory(dropdownKey);
+    personDropdownColumnState.set(dropdownKey, {
+      ...existing,
+      scroll: { ...existing.scroll, [column]: scrollTop },
+    });
   }, [dropdownKey]);
 
   const setSelectedUnit = useCallback((unit: string | null) => {
     setSelectedUnitState(unit);
     setSelectedL2State(null);
-    rememberColumns(unit, null);
-  }, [rememberColumns]);
+    const existing = getPersonDropdownMemory(dropdownKey);
+    personDropdownColumnState.set(dropdownKey, {
+      ...existing,
+      unit,
+      layer2: null,
+      scroll: { ...existing.scroll, layer2: 0, names: 0 },
+    });
+  }, [dropdownKey]);
 
   const setSelectedL2 = useCallback((layer2: string | null) => {
     setSelectedL2State(layer2);
-    rememberColumns(selectedUnit, layer2);
-  }, [rememberColumns, selectedUnit]);
+    const existing = getPersonDropdownMemory(dropdownKey);
+    personDropdownColumnState.set(dropdownKey, {
+      ...existing,
+      unit: selectedUnit,
+      layer2,
+      scroll: { ...existing.scroll, names: 0 },
+    });
+  }, [dropdownKey, selectedUnit]);
 
   const closeDropdown = useCallback((clearColumns = false) => {
     setOpen(false);
@@ -572,6 +609,14 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
     setSelectedUnit(nextUnit);
   }, [allUnits, open, selectedUnit, setSelectedUnit]);
 
+  useLayoutEffect(() => {
+    if (!open) return;
+    const memory = getPersonDropdownMemory(dropdownKey);
+    if (unitsColumnRef.current) unitsColumnRef.current.scrollTop = memory.scroll.units;
+    if (layer2ColumnRef.current) layer2ColumnRef.current.scrollTop = memory.scroll.layer2;
+    if (namesColumnRef.current) namesColumnRef.current.scrollTop = memory.scroll.names;
+  }, [dropdownKey, open, selectedUnit, selectedL2, allUnits]);
+
   const handleOpen = () => {
     updateDropdownPosition();
     setOpen(o => !o);
@@ -601,7 +646,11 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
       }}
     >
       {/* Col 1: Units */}
-      <div style={{ width: 110, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300, backgroundColor: '#1a2f4a' }}>
+      <div
+        ref={unitsColumnRef}
+        onScroll={e => rememberScroll('units', e.currentTarget.scrollTop)}
+        style={{ width: 110, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300, backgroundColor: '#1a2f4a' }}
+      >
         {allowSolo && (
           <div
             onClick={() => { onSoloSelect?.(); closeDropdown(true); }}
@@ -632,7 +681,11 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
       </div>
 
       {/* Col 2: STAFF / Courses */}
-      <div style={{ width: 130, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300, backgroundColor: '#16293f' }}>
+      <div
+        ref={layer2ColumnRef}
+        onScroll={e => rememberScroll('layer2', e.currentTarget.scrollTop)}
+        style={{ width: 130, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300, backgroundColor: '#16293f' }}
+      >
         {selectedUnit ? (
           getLayer2(selectedUnit).map(opt => (
             <div
@@ -658,7 +711,11 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
       </div>
 
       {/* Col 3: Names */}
-      <div style={{ flex: 1, overflowY: 'auto', maxHeight: 300, backgroundColor: '#122437' }}>
+      <div
+        ref={namesColumnRef}
+        onScroll={e => rememberScroll('names', e.currentTarget.scrollTop)}
+        style={{ flex: 1, overflowY: 'auto', maxHeight: 300, backgroundColor: '#122437' }}
+      >
         {selectedUnit && selectedL2 ? (
           getNames(selectedUnit, selectedL2).map(person => (
             <div
