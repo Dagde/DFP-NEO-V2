@@ -54055,9 +54055,9 @@ const SyllabusView = ({
     return map;
   }, [activeTab, unitScopedSyllabusDetails]);
   const getCourseTitle = (code) => activeTab === "master" ? masterLmpTitleMap[code] || courseTitleMap[code] || code : courseTitleMap[code] || code;
-  const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
-  const activeUnitNormalised = normaliseContextCode(effectiveActiveUnitCode);
-  const activeLocationNormalised = normaliseContextCode(activeLocationCode);
+  const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
+  const activeUnitNormalised = normaliseContextCode2(effectiveActiveUnitCode);
+  const activeLocationNormalised = normaliseContextCode2(activeLocationCode);
   const pushSetupTestLmpViewDiag = (stage, details = {}) => {
     if (typeof window === "undefined") return;
     const isSetupTest = new URLSearchParams(window.location.search).has("setupTest");
@@ -54084,8 +54084,8 @@ const SyllabusView = ({
   };
   const getPackageSourceKey = (item) => {
     const packageCode = (item.courses || [])[0] || item.code;
-    const location = normaliseContextCode(item.location) || "GLOBAL";
-    const unit = normaliseContextCode(item.unit) || "GLOBAL";
+    const location = normaliseContextCode2(item.location) || "GLOBAL";
+    const unit = normaliseContextCode2(item.unit) || "GLOBAL";
     return `${location}|${unit}|${packageCode}`;
   };
   const packageCopyOptions = reactExports.useMemo(() => {
@@ -54099,8 +54099,8 @@ const SyllabusView = ({
           key,
           code: packageCode,
           title: item.module && item.module !== packageCode ? item.module : packageCode,
-          location: normaliseContextCode(item.location) || "Global",
-          unit: normaliseContextCode(item.unit) || "Global",
+          location: normaliseContextCode2(item.location) || "Global",
+          unit: normaliseContextCode2(item.unit) || "Global",
           items: []
         });
       }
@@ -54131,8 +54131,8 @@ const SyllabusView = ({
     const byKey = /* @__PURE__ */ new Map();
     sources.forEach((source2) => {
       const key = [
-        normaliseContextCode(source2.sourceLocation),
-        normaliseContextCode(source2.sourceUnit),
+        normaliseContextCode2(source2.sourceLocation),
+        normaliseContextCode2(source2.sourceUnit),
         source2.sourceCourse,
         source2.sourceLmpType
       ].join("|");
@@ -54144,7 +54144,7 @@ const SyllabusView = ({
     return source;
   }, [activeLmpType, uploadResult?.errors]);
   const canCrossLoadDuplicateCourse = Boolean(
-    duplicateUploadSource && selectedCourseType && activeUnitNormalised && normaliseContextCode(duplicateUploadSource.sourceUnit) !== activeUnitNormalised
+    duplicateUploadSource && selectedCourseType && activeUnitNormalised && normaliseContextCode2(duplicateUploadSource.sourceUnit) !== activeUnitNormalised
   );
   const [showDeleteEventModal, setShowDeleteEventModal] = reactExports.useState(false);
   const [deleteEventItem, setDeleteEventItem] = reactExports.useState(null);
@@ -54178,17 +54178,17 @@ const SyllabusView = ({
     const summariseItemForLmpView = (item) => {
       const courses = Array.isArray(item?.courses) ? item.courses.map((course) => String(course || "").trim()).filter(Boolean) : [];
       const tab = getItemLmpDetailsTab(item);
-      const matchesSelectedCourse = courses.some((course) => normaliseContextCode(course) === normaliseContextCode(selectedCourseType));
-      const matchesEffectiveUnit = !isFixedCrewModel || !normaliseContextCode(item?.unit) || normaliseContextCode(item?.unit) === normaliseContextCode(effectiveActiveUnitCode);
+      const matchesSelectedCourse = courses.some((course) => normaliseContextCode2(course) === normaliseContextCode2(selectedCourseType));
+      const matchesEffectiveUnit = !isFixedCrewModel || !normaliseContextCode2(item?.unit) || normaliseContextCode2(item?.unit) === normaliseContextCode2(effectiveActiveUnitCode);
       return {
         id: item?.id,
         code: item?.code,
         title: item?.eventDescription,
         courses,
         unit: item?.unit,
-        unitKey: normaliseContextCode(item?.unit),
+        unitKey: normaliseContextCode2(item?.unit),
         location: item?.location,
-        locationKey: normaliseContextCode(item?.location),
+        locationKey: normaliseContextCode2(item?.location),
         lmpType: item?.lmpType,
         type: item?.type,
         isActive: item?.isActive,
@@ -54201,8 +54201,8 @@ const SyllabusView = ({
       };
     };
     const tabBreakdown = syllabusDetails.slice(0, 180).map(summariseItemForLmpView);
-    const selectedCourseRawMatches = syllabusDetails.filter((item) => Array.isArray(item?.courses) && item.courses.some((course) => normaliseContextCode(course) === normaliseContextCode(selectedCourseType))).map(summariseItemForLmpView);
-    const selectedCourseUnitScopedMatches = unitScopedSyllabusDetails.filter((item) => Array.isArray(item?.courses) && item.courses.some((course) => normaliseContextCode(course) === normaliseContextCode(selectedCourseType))).map(summariseItemForLmpView);
+    const selectedCourseRawMatches = syllabusDetails.filter((item) => Array.isArray(item?.courses) && item.courses.some((course) => normaliseContextCode2(course) === normaliseContextCode2(selectedCourseType))).map(summariseItemForLmpView);
+    const selectedCourseUnitScopedMatches = unitScopedSyllabusDetails.filter((item) => Array.isArray(item?.courses) && item.courses.some((course) => normaliseContextCode2(course) === normaliseContextCode2(selectedCourseType))).map(summariseItemForLmpView);
     pushSetupTestLmpViewDiag("view:lmp-details-snapshot", {
       rawSyllabusItems: syllabusDetails.length,
       unitScopedItems: unitScopedSyllabusDetails.length,
@@ -54237,9 +54237,9 @@ const SyllabusView = ({
         }
       })(),
       selectedCourseType,
-      selectedCourseKey: normaliseContextCode(selectedCourseType),
+      selectedCourseKey: normaliseContextCode2(selectedCourseType),
       selectedCourseInCourseLMPs: courseLMPs.includes(selectedCourseType),
-      selectedCourseInCourseLMPsByKey: courseLMPs.some((course) => normaliseContextCode(course) === normaliseContextCode(selectedCourseType)),
+      selectedCourseInCourseLMPsByKey: courseLMPs.some((course) => normaliseContextCode2(course) === normaliseContextCode2(selectedCourseType)),
       tabBreakdown,
       filteredSample: filteredSyllabusDetails.slice(0, 20).map((item) => ({
         id: item?.id,
@@ -54627,15 +54627,15 @@ const SyllabusView = ({
     setIsCrossLoadingDuplicateCourse(true);
     try {
       const sourceCourse = String(duplicateUploadSource.sourceCourse || "").trim();
-      const sourceUnit = normaliseContextCode(duplicateUploadSource.sourceUnit);
-      const sourceLocation = normaliseContextCode(duplicateUploadSource.sourceLocation);
+      const sourceUnit = normaliseContextCode2(duplicateUploadSource.sourceUnit);
+      const sourceLocation = normaliseContextCode2(duplicateUploadSource.sourceLocation);
       const sourceResp = await fetch(`/api/syllabus?course=${encodeURIComponent(sourceCourse)}&includeInactive=false`, {
         credentials: "include",
         headers: { "Content-Type": "application/json" }
       });
       if (!sourceResp.ok) throw new Error(`Could not load source course ${sourceCourse}`);
       const sourceData = await sourceResp.json();
-      const sourceItems = (sourceData.syllabus || sourceData.syllabusItems || []).filter((item) => item.isActive !== false).filter((item) => (item.courses || []).includes(sourceCourse)).filter((item) => (item.lmpType || "Master LMP") === activeLmpType).filter((item) => !sourceUnit || normaliseContextCode(item.unit) === sourceUnit).filter((item) => !sourceLocation || !normaliseContextCode(item.location) || normaliseContextCode(item.location) === sourceLocation).filter((item) => !isSyllabusCourseShell(item)).sort(
+      const sourceItems = (sourceData.syllabus || sourceData.syllabusItems || []).filter((item) => item.isActive !== false).filter((item) => (item.courses || []).includes(sourceCourse)).filter((item) => (item.lmpType || "Master LMP") === activeLmpType).filter((item) => !sourceUnit || normaliseContextCode2(item.unit) === sourceUnit).filter((item) => !sourceLocation || !normaliseContextCode2(item.location) || normaliseContextCode2(item.location) === sourceLocation).filter((item) => !isSyllabusCourseShell(item)).sort(
         (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || String(left.code || "").localeCompare(String(right.code || ""), void 0, { numeric: true })
       );
       if (sourceItems.length === 0) throw new Error(`No source events were found for ${sourceUnit || "the source unit"} / ${sourceCourse}`);
@@ -61934,6 +61934,19 @@ const createEmptyResourceSharingGroup = (index) => ({
   remainderUnitIndex: -1,
   enabled: true
 });
+const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
+const getSelectedContextCodes = (activeUnitCode, activeUnitCodes) => {
+  const sourceCodes = Array.isArray(activeUnitCodes) && activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || "").split(/[+,/]/);
+  return Array.from(new Set(sourceCodes.map(normaliseContextCode).filter(Boolean)));
+};
+const getNormalisedVisibilityPolicy = (policy) => {
+  const validFilters = /* @__PURE__ */ new Set(["unit", "location", "aircraftType", "parentOrganisation"]);
+  const filters = Array.isArray(policy?.filters) ? policy.filters.filter((filter) => validFilters.has(filter)) : [];
+  return {
+    enabled: policy?.enabled === true,
+    filters
+  };
+};
 const createEmptyStaffSharingGroup = (index) => ({
   id: `staff-sharing-${Date.now()}-${index}`,
   name: `Staff Sharing Arrangement ${index}`,
@@ -62001,6 +62014,10 @@ const normaliseResourceSharingGroups = (savedSettings) => {
 };
 const OrganisationSettings = ({
   units,
+  activeUnitCode,
+  activeUnitCodes,
+  unitContexts = [],
+  settingsVisibilityPolicy,
   currentAircraftAvailable = 0,
   totalAircraft = 0,
   savedSettings,
@@ -62025,6 +62042,61 @@ const OrganisationSettings = ({
   const [desiredAllocations, setDesiredAllocations] = reactExports.useState(initialActiveResourceSharingGroup.desiredAllocations);
   const [remainderUnitIndex, setRemainderUnitIndex] = reactExports.useState(initialActiveResourceSharingGroup.remainderUnitIndex);
   const [isEditingSharingSettings, setIsEditingSharingSettings] = reactExports.useState(false);
+  const activeContextUnitCodes = reactExports.useMemo(
+    () => getSelectedContextCodes(activeUnitCode, activeUnitCodes),
+    [activeUnitCode, activeUnitCodes]
+  );
+  const unitContextMap = reactExports.useMemo(() => {
+    const nextMap = /* @__PURE__ */ new Map();
+    unitContexts.forEach((context) => {
+      const code = normaliseContextCode(context.unitCode);
+      if (!code) return;
+      nextMap.set(code, {
+        ...context,
+        unitCode: code,
+        locationCode: normaliseContextCode(context.locationCode),
+        aircraftTypeCode: normaliseContextCode(context.aircraftTypeCode),
+        parentOrganisationCode: normaliseContextCode(context.parentOrganisationCode)
+      });
+    });
+    return nextMap;
+  }, [unitContexts]);
+  const activeContextRecords = reactExports.useMemo(() => activeContextUnitCodes.map((unitCode) => unitContextMap.get(unitCode)).filter((context) => Boolean(context)), [activeContextUnitCodes, unitContextMap]);
+  const resourceSharingVisibilityPolicy = reactExports.useMemo(
+    () => getNormalisedVisibilityPolicy(settingsVisibilityPolicy),
+    [settingsVisibilityPolicy]
+  );
+  const isResourceSharingVisibilityEnabled = resourceSharingVisibilityPolicy.enabled && resourceSharingVisibilityPolicy.filters.length > 0 && activeContextRecords.length > 0 && unitContextMap.size > 0;
+  const visibleResourceSharingUnits = reactExports.useMemo(() => {
+    if (!isResourceSharingVisibilityEnabled) return units;
+    const activeUnitSet = new Set(activeContextUnitCodes);
+    const activeLocationSet = new Set(activeContextRecords.map((context) => normaliseContextCode(context.locationCode)).filter(Boolean));
+    const activeAircraftTypeSet = new Set(activeContextRecords.map((context) => normaliseContextCode(context.aircraftTypeCode)).filter(Boolean));
+    const activeParentOrganisationSet = new Set(activeContextRecords.map((context) => normaliseContextCode(context.parentOrganisationCode)).filter(Boolean));
+    return units.filter((unitCode) => {
+      const normalisedUnitCode = normaliseContextCode(unitCode);
+      const context = unitContextMap.get(normalisedUnitCode);
+      if (!context) return true;
+      return resourceSharingVisibilityPolicy.filters.every((filter) => {
+        if (filter === "unit") return activeUnitSet.size === 0 || activeUnitSet.has(normalisedUnitCode);
+        if (filter === "location") return activeLocationSet.size === 0 || activeLocationSet.has(normaliseContextCode(context.locationCode));
+        if (filter === "aircraftType") return activeAircraftTypeSet.size === 0 || activeAircraftTypeSet.has(normaliseContextCode(context.aircraftTypeCode));
+        if (filter === "parentOrganisation") return activeParentOrganisationSet.size === 0 || activeParentOrganisationSet.has(normaliseContextCode(context.parentOrganisationCode));
+        return true;
+      });
+    });
+  }, [
+    activeContextRecords,
+    activeContextUnitCodes,
+    isResourceSharingVisibilityEnabled,
+    resourceSharingVisibilityPolicy.filters,
+    unitContextMap,
+    units
+  ]);
+  const visibleResourceSharingUnitSet = reactExports.useMemo(
+    () => new Set(visibleResourceSharingUnits.map(normaliseContextCode).filter(Boolean)),
+    [visibleResourceSharingUnits]
+  );
   const hasInitializedFromDB = reactExports.useRef(false);
   reactExports.useEffect(() => {
     if (settingsLoaded && !hasInitializedFromDB.current && savedSettings) {
@@ -62082,6 +62154,14 @@ const OrganisationSettings = ({
       } : group
     );
   }, [resourceSharingGroups, activeResourceSharingGroupId, selectedUnits, allocationMode, desiredAllocations, remainderUnitIndex]);
+  const visibleResourceSharingGroups = reactExports.useMemo(() => {
+    if (!isResourceSharingVisibilityEnabled) return persistedResourceSharingGroups;
+    return persistedResourceSharingGroups.filter((group) => {
+      const groupUnits = (group.selectedUnits || []).map(normaliseContextCode).filter(Boolean);
+      if (groupUnits.length === 0) return true;
+      return groupUnits.some((unitCode) => visibleResourceSharingUnitSet.has(unitCode));
+    });
+  }, [isResourceSharingVisibilityEnabled, persistedResourceSharingGroups, visibleResourceSharingUnitSet]);
   reactExports.useEffect(() => {
     setResourceSharingGroups((previous) => previous.map(
       (group) => group.id === activeResourceSharingGroupId ? {
@@ -62233,6 +62313,11 @@ const OrganisationSettings = ({
     setRemainderUnitIndex(typeof group.remainderUnitIndex === "number" ? group.remainderUnitIndex : -1);
     setValidationMessage(null);
   };
+  reactExports.useEffect(() => {
+    if (!fleetSharingEnabled || visibleResourceSharingGroups.length === 0) return;
+    if (visibleResourceSharingGroups.some((group) => group.id === activeResourceSharingGroupId)) return;
+    loadResourceSharingGroup(visibleResourceSharingGroups[0]);
+  }, [fleetSharingEnabled, visibleResourceSharingGroups, activeResourceSharingGroupId]);
   const handleSelectResourceSharingGroup = (groupId) => {
     const group = persistedResourceSharingGroups.find((candidate) => candidate.id === groupId);
     if (!group) return;
@@ -62241,7 +62326,17 @@ const OrganisationSettings = ({
   };
   const handleAddResourceSharingGroup = () => {
     const nextIndex = resourceSharingGroups.length + 1;
-    const newGroup = createEmptyResourceSharingGroup(nextIndex);
+    const seedUnits = activeContextUnitCodes.filter((unitCode) => visibleResourceSharingUnitSet.size === 0 || visibleResourceSharingUnitSet.has(unitCode));
+    const newGroup = {
+      ...createEmptyResourceSharingGroup(nextIndex),
+      name: seedUnits.length > 0 ? `${seedUnits.join("+")} Resource Sharing` : `Sharing Arrangement ${nextIndex}`,
+      selectedUnits: seedUnits,
+      desiredAllocations: seedUnits.reduce((allocations, unitCode) => ({
+        ...allocations,
+        [unitCode]: 0
+      }), {}),
+      remainderUnitIndex: seedUnits.length > 0 ? 0 : -1
+    };
     const updatedGroups = [...persistedResourceSharingGroups, newGroup];
     setResourceSharingGroups(updatedGroups);
     loadResourceSharingGroup(newGroup);
@@ -62574,16 +62669,19 @@ const OrganisationSettings = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 lg:flex-row lg:items-end", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Aircraft Sharing Arrangement" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "select",
                       {
                         value: activeResourceSharingGroupId,
                         onChange: (event) => handleSelectResourceSharingGroup(event.target.value),
                         className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500",
-                        children: persistedResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group.id, children: [
-                          group.name || "Unnamed arrangement",
-                          group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join("+")})` : ""
-                        ] }, group.id))
+                        children: [
+                          visibleResourceSharingGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: activeResourceSharingGroupId, children: "No matching arrangement for this unit context" }),
+                          visibleResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group.id, children: [
+                            group.name || "Unnamed arrangement",
+                            group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join("+")})` : ""
+                          ] }, group.id))
+                        ]
                       }
                     )
                   ] }),
@@ -62623,7 +62721,7 @@ const OrganisationSettings = ({
                   ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-gray-300", children: "Create one arrangement for each shared resource pool in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled." }),
-                persistedResourceSharingGroups.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid grid-cols-1 gap-2 md:grid-cols-2", children: persistedResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                visibleResourceSharingGroups.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid grid-cols-1 gap-2 md:grid-cols-2", children: visibleResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "div",
                   {
                     className: `rounded border px-3 py-2 text-xs ${group.id === activeResourceSharingGroupId ? "border-sky-500/50 bg-sky-500/10 text-sky-100" : "border-gray-700 bg-gray-900/60 text-gray-400"}`,
@@ -62643,7 +62741,7 @@ const OrganisationSettings = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Select Units Sharing Aircraft / Resources" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Choose units that will schedule aircraft/resources together. Selecting units here creates a shared fleet context in the top-left Location/Unit selector, e.g. 1FTS+CFS." }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", children: visibleResourceSharingUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "div",
                     {
                       onClick: () => handleToggleUnit(unit),
@@ -62655,7 +62753,8 @@ const OrganisationSettings = ({
                     },
                     unit
                   )) }),
-                  selectedUnits.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2 italic", children: "No units selected. Click on units above to add them." })
+                  visibleResourceSharingUnits.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-200 mt-2 italic", children: "No units match the current settings visibility filters. Add or change the active context before creating this sharing arrangement." }),
+                  selectedUnits.length === 0 && visibleResourceSharingUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2 italic", children: "No units selected. Click on units above to add them." })
                 ] }),
                 selectedUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4 flex flex-col", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Allocation Mode" }),
@@ -73042,6 +73141,10 @@ const SettingsViewWithMenu = (props) => {
           OrganisationSettings,
           {
             units: props.platformUnits && props.platformUnits.length > 0 ? props.platformUnits : props.units,
+            activeUnitCode: props.activeUnitCode,
+            activeUnitCodes: props.activeUnitCodes,
+            unitContexts: props.platformUnitContexts,
+            settingsVisibilityPolicy: props.settingsVisibilityPolicy,
             currentAircraftAvailable: props.currentAircraftAvailable,
             totalAircraft: props.totalAircraft,
             savedSettings: props.organisationSettings,
@@ -101513,13 +101616,13 @@ const App = () => {
     return hasMasterLmpAccess(platformConfig2, lmpCode, getMasterLmpAccessContextForUnit(contextUnitCode), requiredAccess);
   }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig2, platformConfigLoaded]);
   const filterSyllabusForMasterLmpAccess = reactExports.useCallback((items, requiredAccess = "View", unitCode) => {
-    const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
-    const activeUnit = normaliseContextCode(unitCode || activeUnitCode);
-    const activeLocation = normaliseContextCode(school);
+    const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
+    const activeUnit = normaliseContextCode2(unitCode || activeUnitCode);
+    const activeLocation = normaliseContextCode2(school);
     const activeModel = getOperationalModelForUnitCode(activeUnit);
     const itemMatchesActiveUnitContext = (item, options = {}) => {
-      const itemUnit = normaliseContextCode(item.unit);
-      const itemLocation = normaliseContextCode(item.location);
+      const itemUnit = normaliseContextCode2(item.unit);
+      const itemLocation = normaliseContextCode2(item.location);
       if (itemUnit) {
         return itemUnit.split("+").map((part) => part.trim()).filter(Boolean).includes(activeUnit);
       }
@@ -102478,9 +102581,9 @@ const App = () => {
     }
   }, [activeUnitCode, school, setupTestProfile]);
   const visibleSyllabusDetails = reactExports.useMemo(() => {
-    const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
-    const activeUnit = normaliseContextCode(activeUnitCode);
-    const activeUnits = isFixedCrewLikeOperationalModel(activeOperationalModel) && activeContextUnitCodes.length > 1 ? new Set(activeContextUnitCodes.map(normaliseContextCode)) : /* @__PURE__ */ new Set([activeUnit]);
+    const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
+    const activeUnit = normaliseContextCode2(activeUnitCode);
+    const activeUnits = isFixedCrewLikeOperationalModel(activeOperationalModel) && activeContextUnitCodes.length > 1 ? new Set(activeContextUnitCodes.map(normaliseContextCode2)) : /* @__PURE__ */ new Set([activeUnit]);
     const baseVisibleItems = isFixedCrewLikeOperationalModel(activeOperationalModel) && activeContextUnitCodes.length > 1 ? activeContextUnitCodes.flatMap((unitCode) => filterSyllabusForMasterLmpAccess(syllabusDetails, "View", unitCode)) : filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode);
     const seen = /* @__PURE__ */ new Set();
     return baseVisibleItems.filter((item) => {
@@ -102490,7 +102593,7 @@ const App = () => {
       return true;
     }).filter((item) => {
       if (item.lmpType !== "Staff CAT") return true;
-      const packageUnit = normaliseContextCode(item.unit);
+      const packageUnit = normaliseContextCode2(item.unit);
       if (isFixedCrewLikeOperationalModel(activeOperationalModel)) return activeUnits.has(packageUnit);
       if (activeOperationalModel !== "air_combat") return false;
       return !packageUnit || packageUnit === activeUnit;
@@ -102622,12 +102725,12 @@ const App = () => {
     visibleSyllabusDetails
   ]);
   const trainingPackageTemplatesForActiveModel = reactExports.useMemo(() => {
-    const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
-    const activeUnit = normaliseContextCode(activeUnitCode);
+    const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
+    const activeUnit = normaliseContextCode2(activeUnitCode);
     const getPackageUnitModel = (unitCode) => getOperationalModelForUnitCode(unitCode);
     return syllabusDetails.filter((item) => {
       if (item.lmpType !== "Staff CAT" || item.isActive === false || isSyllabusCourseShell(item)) return false;
-      const packageUnit = normaliseContextCode(item.unit);
+      const packageUnit = normaliseContextCode2(item.unit);
       if (isFixedCrewLikeOperationalModel(activeOperationalModel)) {
         if (!packageUnit || packageUnit === activeUnit) return false;
         return isFixedCrewLikeOperationalModel(getPackageUnitModel(packageUnit));
@@ -104010,6 +104113,24 @@ const App = () => {
   const platformUnitCodes = reactExports.useMemo(() => Array.from(new Set(
     (platformConfig2?.units || []).filter((unit) => String(unit.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((unit) => String(unit.code || "").trim()).filter(Boolean)
   )).sort((left, right) => left.localeCompare(right, void 0, { numeric: true, sensitivity: "base" })), [platformConfig2]);
+  const platformUnitContexts = reactExports.useMemo(() => (platformConfig2?.units || []).filter((unit) => String(unit.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((unit) => {
+    const unitCode = String(unit?.code || "").trim().toUpperCase();
+    const locationCode = String(unit?.locationCode || "").trim().toUpperCase();
+    const parentOrganisationPath = (Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-")).map((part) => String(part || "").trim()).filter(Boolean);
+    const resourcePool = getLocationResourcePool(platformConfig2, locationCode || school, unitCode);
+    const unitAircraftType = String(unit?.settings?.aircraftTypeCode || unit?.settings?.aircraftType || "").trim().toUpperCase();
+    return {
+      unitCode,
+      locationCode,
+      aircraftTypeCode: String(resourcePool?.aircraftTypeCode || unitAircraftType || "").trim().toUpperCase(),
+      parentOrganisationCode: String(parentOrganisationPath[parentOrganisationPath.length - 1] || "").trim(),
+      operationalModel: getUnitOperationalModel(unit)
+    };
+  }).filter((context) => context.unitCode), [platformConfig2, school]);
+  const platformSettingsVisibilityPolicy = reactExports.useMemo(() => {
+    const activeOrganisation = (platformConfig2?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() !== "INACTIVE") || (platformConfig2?.organisations || [])[0];
+    return activeOrganisation?.settings?.settingsVisibilityPolicy || null;
+  }, [platformConfig2]);
   const getCourseUnitCodes = reactExports.useCallback((course) => {
     const rawUnit = String(course.unit || "").trim();
     if (!rawUnit) return [];
@@ -118289,6 +118410,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateServiceDefinitions: setServiceDefinitions,
             units,
             platformUnits: platformUnitCodes,
+            platformUnitContexts,
+            settingsVisibilityPolicy: platformSettingsVisibilityPolicy,
             onUpdateUnits: setUnits,
             unitLocations,
             onUpdateUnitLocations: setUnitLocations,

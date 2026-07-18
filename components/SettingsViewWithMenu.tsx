@@ -31,6 +31,17 @@ interface SettingsViewWithMenuProps {
     onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
     units: string[];
     platformUnits?: string[];
+    platformUnitContexts?: Array<{
+        unitCode: string;
+        locationCode?: string | null;
+        aircraftTypeCode?: string | null;
+        parentOrganisationCode?: string | null;
+        operationalModel?: string | null;
+    }>;
+    settingsVisibilityPolicy?: {
+        enabled?: boolean;
+        filters?: Array<'unit' | 'location' | 'aircraftType' | 'parentOrganisation'>;
+    } | null;
     onUpdateUnits: (units: string[]) => void;
     unitLocations: Record<string, string>;
     onUpdateUnitLocations: (locations: Record<string, string>) => void;
@@ -1240,6 +1251,10 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {activeSection === 'organisation' && (
                         <OrganisationSettings
                             units={(props.platformUnits && props.platformUnits.length > 0) ? props.platformUnits : props.units}
+                            activeUnitCode={props.activeUnitCode}
+                            activeUnitCodes={props.activeUnitCodes}
+                            unitContexts={props.platformUnitContexts}
+                            settingsVisibilityPolicy={props.settingsVisibilityPolicy}
                             currentAircraftAvailable={props.currentAircraftAvailable}
                             totalAircraft={props.totalAircraft}
                             savedSettings={props.organisationSettings}

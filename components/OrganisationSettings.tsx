@@ -15,6 +15,20 @@ interface UnitActualAllocation {
 }
 
 type AllocationMode = 'combined' | 'fixed';
+type SettingsVisibilityFilter = 'unit' | 'location' | 'aircraftType' | 'parentOrganisation';
+
+interface SettingsVisibilityPolicy {
+  enabled?: boolean;
+  filters?: SettingsVisibilityFilter[];
+}
+
+interface OrganisationUnitContext {
+  unitCode: string;
+  locationCode?: string | null;
+  aircraftTypeCode?: string | null;
+  parentOrganisationCode?: string | null;
+  operationalModel?: string | null;
+}
 
 interface ResourceSharingGroup {
   id: string;
@@ -49,6 +63,10 @@ interface OrganisationSettingsSavedState {
 
 interface OrganisationSettingsProps {
   units: string[];
+  activeUnitCode?: string;
+  activeUnitCodes?: string[];
+  unitContexts?: OrganisationUnitContext[];
+  settingsVisibilityPolicy?: SettingsVisibilityPolicy | null;
   currentAircraftAvailable?: number;
   totalAircraft?: number;
   savedSettings?: OrganisationSettingsSavedState;
@@ -65,6 +83,26 @@ const createEmptyResourceSharingGroup = (index: number): ResourceSharingGroup =>
   remainderUnitIndex: -1,
   enabled: true,
 });
+
+const normaliseContextCode = (value: unknown): string => String(value || '').trim().toUpperCase();
+
+const getSelectedContextCodes = (activeUnitCode?: string, activeUnitCodes?: string[]): string[] => {
+  const sourceCodes = Array.isArray(activeUnitCodes) && activeUnitCodes.length > 0
+    ? activeUnitCodes
+    : String(activeUnitCode || '').split(/[+,/]/);
+  return Array.from(new Set(sourceCodes.map(normaliseContextCode).filter(Boolean)));
+};
+
+const getNormalisedVisibilityPolicy = (policy?: SettingsVisibilityPolicy | null): Required<SettingsVisibilityPolicy> => {
+  const validFilters = new Set<SettingsVisibilityFilter>(['unit', 'location', 'aircraftType', 'parentOrganisation']);
+  const filters = Array.isArray(policy?.filters)
+    ? policy!.filters.filter((filter): filter is SettingsVisibilityFilter => validFilters.has(filter))
+    : [];
+  return {
+    enabled: policy?.enabled === true,
+    filters,
+  };
+};
 
 const createEmptyStaffSharingGroup = (index: number): StaffSharingGroup => ({
   id: `staff-sharing-${Date.now()}-${index}`,
@@ -146,6 +184,10 @@ const normaliseResourceSharingGroups = (savedSettings?: OrganisationSettingsSave
 
 const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({ 
   units, 
+  activeUnitCode,
+  activeUnitCodes,
+  unitContexts = [],
+  settingsVisibilityPolicy,
   currentAircraftAvailable = 0,
   totalAircraft = 0,
   savedSettings,
@@ -189,6 +231,76 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   // Which unit is the auto-calculated remainder unit (index in selectedUnits array)
   const [remainderUnitIndex, setRemainderUnitIndex] = useState<number>(initialActiveResourceSharingGroup.remainderUnitIndex);
   const [isEditingSharingSettings, setIsEditingSharingSettings] = useState(false);
+
+  const activeContextUnitCodes = useMemo(
+    () => getSelectedContextCodes(activeUnitCode, activeUnitCodes),
+    [activeUnitCode, activeUnitCodes],
+  );
+
+  const unitContextMap = useMemo(() => {
+    const nextMap = new Map<string, OrganisationUnitContext>();
+    unitContexts.forEach((context) => {
+      const code = normaliseContextCode(context.unitCode);
+      if (!code) return;
+      nextMap.set(code, {
+        ...context,
+        unitCode: code,
+        locationCode: normaliseContextCode(context.locationCode),
+        aircraftTypeCode: normaliseContextCode(context.aircraftTypeCode),
+        parentOrganisationCode: normaliseContextCode(context.parentOrganisationCode),
+      });
+    });
+    return nextMap;
+  }, [unitContexts]);
+
+  const activeContextRecords = useMemo(() => (
+    activeContextUnitCodes
+      .map((unitCode) => unitContextMap.get(unitCode))
+      .filter((context): context is OrganisationUnitContext => Boolean(context))
+  ), [activeContextUnitCodes, unitContextMap]);
+
+  const resourceSharingVisibilityPolicy = useMemo(
+    () => getNormalisedVisibilityPolicy(settingsVisibilityPolicy),
+    [settingsVisibilityPolicy],
+  );
+
+  const isResourceSharingVisibilityEnabled = resourceSharingVisibilityPolicy.enabled
+    && resourceSharingVisibilityPolicy.filters.length > 0
+    && activeContextRecords.length > 0
+    && unitContextMap.size > 0;
+
+  const visibleResourceSharingUnits = useMemo(() => {
+    if (!isResourceSharingVisibilityEnabled) return units;
+    const activeUnitSet = new Set(activeContextUnitCodes);
+    const activeLocationSet = new Set(activeContextRecords.map((context) => normaliseContextCode(context.locationCode)).filter(Boolean));
+    const activeAircraftTypeSet = new Set(activeContextRecords.map((context) => normaliseContextCode(context.aircraftTypeCode)).filter(Boolean));
+    const activeParentOrganisationSet = new Set(activeContextRecords.map((context) => normaliseContextCode(context.parentOrganisationCode)).filter(Boolean));
+
+    return units.filter((unitCode) => {
+      const normalisedUnitCode = normaliseContextCode(unitCode);
+      const context = unitContextMap.get(normalisedUnitCode);
+      if (!context) return true;
+      return resourceSharingVisibilityPolicy.filters.every((filter) => {
+        if (filter === 'unit') return activeUnitSet.size === 0 || activeUnitSet.has(normalisedUnitCode);
+        if (filter === 'location') return activeLocationSet.size === 0 || activeLocationSet.has(normaliseContextCode(context.locationCode));
+        if (filter === 'aircraftType') return activeAircraftTypeSet.size === 0 || activeAircraftTypeSet.has(normaliseContextCode(context.aircraftTypeCode));
+        if (filter === 'parentOrganisation') return activeParentOrganisationSet.size === 0 || activeParentOrganisationSet.has(normaliseContextCode(context.parentOrganisationCode));
+        return true;
+      });
+    });
+  }, [
+    activeContextRecords,
+    activeContextUnitCodes,
+    isResourceSharingVisibilityEnabled,
+    resourceSharingVisibilityPolicy.filters,
+    unitContextMap,
+    units,
+  ]);
+
+  const visibleResourceSharingUnitSet = useMemo(
+    () => new Set(visibleResourceSharingUnits.map(normaliseContextCode).filter(Boolean)),
+    [visibleResourceSharingUnits],
+  );
 
   // Ref to ensure we only sync from DB data once (prevent re-syncing on parent re-renders)
   const hasInitializedFromDB = useRef(false);
@@ -270,6 +382,15 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
         : group
     );
   }, [resourceSharingGroups, activeResourceSharingGroupId, selectedUnits, allocationMode, desiredAllocations, remainderUnitIndex]);
+
+  const visibleResourceSharingGroups = useMemo(() => {
+    if (!isResourceSharingVisibilityEnabled) return persistedResourceSharingGroups;
+    return persistedResourceSharingGroups.filter((group) => {
+      const groupUnits = (group.selectedUnits || []).map(normaliseContextCode).filter(Boolean);
+      if (groupUnits.length === 0) return true;
+      return groupUnits.some((unitCode) => visibleResourceSharingUnitSet.has(unitCode));
+    });
+  }, [isResourceSharingVisibilityEnabled, persistedResourceSharingGroups, visibleResourceSharingUnitSet]);
 
   useEffect(() => {
     setResourceSharingGroups(previous => previous.map(group =>
@@ -464,6 +585,12 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     setValidationMessage(null);
   };
 
+  useEffect(() => {
+    if (!fleetSharingEnabled || visibleResourceSharingGroups.length === 0) return;
+    if (visibleResourceSharingGroups.some(group => group.id === activeResourceSharingGroupId)) return;
+    loadResourceSharingGroup(visibleResourceSharingGroups[0]);
+  }, [fleetSharingEnabled, visibleResourceSharingGroups, activeResourceSharingGroupId]);
+
   const handleSelectResourceSharingGroup = (groupId: string) => {
     const group = persistedResourceSharingGroups.find(candidate => candidate.id === groupId);
     if (!group) return;
@@ -473,7 +600,19 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 
   const handleAddResourceSharingGroup = () => {
     const nextIndex = resourceSharingGroups.length + 1;
-    const newGroup = createEmptyResourceSharingGroup(nextIndex);
+    const seedUnits = activeContextUnitCodes.filter(unitCode => (
+      visibleResourceSharingUnitSet.size === 0 || visibleResourceSharingUnitSet.has(unitCode)
+    ));
+    const newGroup = {
+      ...createEmptyResourceSharingGroup(nextIndex),
+      name: seedUnits.length > 0 ? `${seedUnits.join('+')} Resource Sharing` : `Sharing Arrangement ${nextIndex}`,
+      selectedUnits: seedUnits,
+      desiredAllocations: seedUnits.reduce((allocations, unitCode) => ({
+        ...allocations,
+        [unitCode]: 0,
+      }), {} as Record<string, number>),
+      remainderUnitIndex: seedUnits.length > 0 ? 0 : -1,
+    };
     const updatedGroups = [...persistedResourceSharingGroups, newGroup];
     setResourceSharingGroups(updatedGroups);
     loadResourceSharingGroup(newGroup);
@@ -906,7 +1045,12 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                     onChange={(event) => handleSelectResourceSharingGroup(event.target.value)}
                     className="w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                   >
-                    {persistedResourceSharingGroups.map(group => (
+                    {visibleResourceSharingGroups.length === 0 && (
+                      <option value={activeResourceSharingGroupId}>
+                        No matching arrangement for this unit context
+                      </option>
+                    )}
+                    {visibleResourceSharingGroups.map(group => (
                       <option key={group.id} value={group.id}>
                         {group.name || 'Unnamed arrangement'}{group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join('+')})` : ''}
                       </option>
@@ -950,9 +1094,9 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
               <p className="mt-3 text-xs text-gray-300">
                 Create one arrangement for each shared resource pool in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled.
               </p>
-              {persistedResourceSharingGroups.length > 1 && (
+              {visibleResourceSharingGroups.length > 1 && (
                 <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-                  {persistedResourceSharingGroups.map(group => (
+                  {visibleResourceSharingGroups.map(group => (
                     <div
                       key={group.id}
                       className={`rounded border px-3 py-2 text-xs ${
@@ -980,7 +1124,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                 
                 {/* Narrower grid for units */}
                 <div className="grid grid-cols-3 gap-2">
-                  {units.map(unit => (
+                  {visibleResourceSharingUnits.map(unit => (
                     <div
                       key={unit}
                       onClick={() => handleToggleUnit(unit)}
@@ -1008,7 +1152,13 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                   ))}
                 </div>
 
-                {selectedUnits.length === 0 && (
+                {visibleResourceSharingUnits.length === 0 && (
+                  <p className="text-xs text-amber-200 mt-2 italic">
+                    No units match the current settings visibility filters. Add or change the active context before creating this sharing arrangement.
+                  </p>
+                )}
+
+                {selectedUnits.length === 0 && visibleResourceSharingUnits.length > 0 && (
                   <p className="text-xs text-gray-500 mt-2 italic">
                     No units selected. Click on units above to add them.
                   </p>

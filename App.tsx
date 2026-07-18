@@ -25427,6 +25427,37 @@ const App: React.FC = () => {
         )).sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' }))
     ), [platformConfig]);
 
+    const platformUnitContexts = useMemo(() => (
+        (platformConfig?.units || [])
+            .filter((unit: any) => String(unit.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+            .map((unit: any) => {
+                const unitCode = String(unit?.code || '').trim().toUpperCase();
+                const locationCode = String(unit?.locationCode || '').trim().toUpperCase();
+                const parentOrganisationPath = (
+                    Array.isArray(unit?.settings?.parentOrganisationPath)
+                        ? unit.settings.parentOrganisationPath
+                        : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || '').split('-')
+                ).map((part: unknown) => String(part || '').trim()).filter(Boolean);
+                const resourcePool = getLocationResourcePool(platformConfig, locationCode || school, unitCode);
+                const unitAircraftType = String(unit?.settings?.aircraftTypeCode || unit?.settings?.aircraftType || '').trim().toUpperCase();
+                return {
+                    unitCode,
+                    locationCode,
+                    aircraftTypeCode: String(resourcePool?.aircraftTypeCode || unitAircraftType || '').trim().toUpperCase(),
+                    parentOrganisationCode: String(parentOrganisationPath[parentOrganisationPath.length - 1] || '').trim(),
+                    operationalModel: getUnitOperationalModel(unit),
+                };
+            })
+            .filter((context: any) => context.unitCode)
+    ), [platformConfig, school]);
+
+    const platformSettingsVisibilityPolicy = useMemo(() => {
+        const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
+            String(organisation?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+        )) || (platformConfig?.organisations || [])[0];
+        return activeOrganisation?.settings?.settingsVisibilityPolicy || null;
+    }, [platformConfig]);
+
     const getCourseUnitCodes = useCallback((course: Course): string[] => {
         const rawUnit = String(course.unit || '').trim();
         if (!rawUnit) return [];
@@ -42752,6 +42783,8 @@ appliedUpdates.forEach(update => {
                     onUpdateServiceDefinitions={setServiceDefinitions}
                     units={units}
                     platformUnits={platformUnitCodes}
+                    platformUnitContexts={platformUnitContexts}
+                    settingsVisibilityPolicy={platformSettingsVisibilityPolicy}
                     onUpdateUnits={setUnits}
                     unitLocations={unitLocations}
                     onUpdateUnitLocations={setUnitLocations}
