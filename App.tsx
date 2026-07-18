@@ -5854,6 +5854,7 @@ interface DfpConfig {
   operationalModel?: string;
   activeUnitCode?: string;
   activeContextUnitCodes?: string[];
+  platformConfig?: any;
   airCombatSchedulingWeights?: any;
   fixedCrewTrainingPriorities?: FixedCrewTrainingStreamPriority[];
   fixedCrewTileColourMode?: FixedCrewTileColourMode;
@@ -19208,7 +19209,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         // Get qualified instructors
         let candidates: Instructor[] = [];
 
-        const locationFilteredInstructors = instructors.filter(i => personMatchesConfiguredLocation(platformConfig, i, config.school));
+        const locationFilteredInstructors = instructors.filter(i => personMatchesConfiguredLocation(config.platformConfig, i, config.school));
 
         if (type === 'ftd') {
             const simIps = locationFilteredInstructors.filter(i => isContractorStaffRole(i) && canContractorStaffWorkEventType('ftd'));
@@ -35736,6 +35737,7 @@ const App: React.FC = () => {
             operationalModel: activeOperationalModel,
             activeUnitCode,
             activeContextUnitCodes,
+            platformConfig,
             airCombatSchedulingWeights: organisationSettings.airCombatScheduling?.defaultWeights,
             fixedCrewTrainingPriorities,
             fixedCrewTileColourMode: activeFixedCrewTileColourMode,
