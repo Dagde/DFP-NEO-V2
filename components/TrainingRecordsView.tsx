@@ -29,6 +29,8 @@ interface TrainingRecordsViewProps {
     onSavePT051Assessment: (assessment: Pt051Assessment) => void;
     locations?: string[];
     units?: string[];
+    activeLocationCode?: string;
+    activeUnitCode?: string;
     platformConfig?: PlatformConfig | null;
     resourceDisplayNames?: ResourceDisplayNames;
     instructorLabel?: string;
@@ -58,6 +60,8 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     onSavePT051Assessment,
     locations = [],
     units = [],
+    activeLocationCode = '',
+    activeUnitCode = '',
     platformConfig = null,
     resourceDisplayNames,
     instructorLabel = 'QFI',
@@ -116,6 +120,8 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         onUpdateCourse={onUpdateCourse}
                         locations={locations}
                         units={units}
+                        activeLocationCode={activeLocationCode}
+                        activeUnitCode={activeUnitCode}
                         syllabusDetails={syllabusDetails}
                         platformConfig={platformConfig}
                     />

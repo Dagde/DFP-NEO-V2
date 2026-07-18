@@ -18,6 +18,8 @@ interface CoursesManagementViewProps {
     onUpdateCourse?: (courseName: string, data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }) => void;
     locations?: string[];
     units?: string[];
+    activeLocationCode?: string;
+    activeUnitCode?: string;
     syllabusDetails?: SyllabusItemDetail[];
     platformConfig?: PlatformConfig | null;
 }
@@ -34,6 +36,8 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     onUpdateCourse,
     locations = [],
     units = [],
+    activeLocationCode = '',
+    activeUnitCode = '',
     syllabusDetails = [],
     platformConfig = null,
 }) => {
@@ -278,6 +282,9 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                     existingCourses={courseColors}
                     locations={locations}
                     units={units}
+                    activeLocationCode={activeLocationCode}
+                    activeUnitCode={activeUnitCode}
+                    platformConfig={platformConfig}
                 />
             )}
 

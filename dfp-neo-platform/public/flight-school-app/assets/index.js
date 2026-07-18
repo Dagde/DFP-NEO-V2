@@ -7012,15 +7012,65 @@ const Dropdown$2 = ({ label, value, onChange, children, id }) => /* @__PURE__ */
     }
   )
 ] });
-const AddCourseFlyout = ({ onClose, onSave, existingCourses, locations = [], units = [] }) => {
+const normaliseContextValue = (value) => String(value || "").trim().toLowerCase();
+const resolveActiveLocationOption = (locationOptions, activeLocationCode, platformConfig2) => {
+  const active = String(activeLocationCode || "").trim();
+  if (!active) return locationOptions[0] || "";
+  const candidates = /* @__PURE__ */ new Set([active]);
+  const activeKey = normaliseContextValue(active);
+  const platformLocation = (platformConfig2?.locations || []).find((loc) => {
+    const values = [loc.code, loc.iataCode, loc.name];
+    return values.some((value) => normaliseContextValue(value) === activeKey);
+  });
+  if (platformLocation) {
+    [platformLocation.name, platformLocation.code, platformLocation.iataCode].forEach((value) => {
+      if (value) candidates.add(String(value));
+    });
+  }
+  const candidateKeys = new Set(Array.from(candidates).map(normaliseContextValue));
+  return locationOptions.find((option) => candidateKeys.has(normaliseContextValue(option))) || active || locationOptions[0] || "";
+};
+const buildUnitOptions = (unitOptions, activeUnitCode) => {
+  const active = String(activeUnitCode || "").trim();
+  const deduped = Array.from(new Set(unitOptions.filter(Boolean)));
+  if (active && !deduped.some((unit) => normaliseContextValue(unit) === normaliseContextValue(active))) {
+    return [active, ...deduped];
+  }
+  return deduped;
+};
+const resolveActiveUnitOption = (unitOptions, activeUnitCode) => {
+  const active = String(activeUnitCode || "").trim();
+  if (!active) return unitOptions[0] || "";
+  return unitOptions.find((unit) => normaliseContextValue(unit) === normaliseContextValue(active)) || active || unitOptions[0] || "";
+};
+const AddCourseFlyout = ({
+  onClose,
+  onSave,
+  existingCourses,
+  locations = [],
+  units = [],
+  activeLocationCode = "",
+  activeUnitCode = "",
+  platformConfig: platformConfig2 = null
+}) => {
+  const locationOptions = reactExports.useMemo(() => Array.from(new Set(locations.filter(Boolean))), [locations]);
+  const unitOptions = reactExports.useMemo(() => buildUnitOptions(units, activeUnitCode), [units, activeUnitCode]);
+  const defaultLocation = reactExports.useMemo(
+    () => resolveActiveLocationOption(locationOptions, activeLocationCode, platformConfig2),
+    [locationOptions, activeLocationCode, platformConfig2]
+  );
+  const defaultUnit = reactExports.useMemo(
+    () => resolveActiveUnitOption(unitOptions, activeUnitCode),
+    [unitOptions, activeUnitCode]
+  );
   const [courseName, setCourseName] = reactExports.useState("");
   const [startDate, setStartDate] = reactExports.useState("");
   const [gradDate, setGradDate] = reactExports.useState("");
   const [raafStart, setRaafStart] = reactExports.useState(0);
   const [navyStart, setNavyStart] = reactExports.useState(0);
   const [armyStart, setArmyStart] = reactExports.useState(0);
-  const [location, setLocation] = reactExports.useState(locations[0] || "");
-  const [unit, setUnit] = reactExports.useState(units[0] || "");
+  const [location, setLocation] = reactExports.useState(defaultLocation);
+  const [unit, setUnit] = reactExports.useState(defaultUnit);
   const availableColor = reactExports.useMemo(() => {
     const usedColors = new Set(Object.values(existingCourses));
     return ALL_COLORS.find((c) => !usedColors.has(c)) || "bg-gray-400/80";
@@ -7053,8 +7103,8 @@ const AddCourseFlyout = ({ onClose, onSave, existingCourses, locations = [], uni
       raafStart,
       navyStart,
       armyStart,
-      location: location || (locations[0] || ""),
-      unit: unit || (units[0] || "")
+      location: location || defaultLocation,
+      unit: unit || defaultUnit
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
@@ -7101,7 +7151,7 @@ const AddCourseFlyout = ({ onClose, onSave, existingCourses, locations = [], uni
             "Location ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "*" })
           ] }),
-          locations.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          locationOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
               id: "course-location",
@@ -7110,7 +7160,7 @@ const AddCourseFlyout = ({ onClose, onSave, existingCourses, locations = [], uni
               className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select Location —" }),
-                locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
+                locationOptions.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
               ]
             }
           ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -7130,7 +7180,7 @@ const AddCourseFlyout = ({ onClose, onSave, existingCourses, locations = [], uni
             "Unit ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "*" })
           ] }),
-          units.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          unitOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
               id: "course-unit",
@@ -7139,7 +7189,7 @@ const AddCourseFlyout = ({ onClose, onSave, existingCourses, locations = [], uni
               className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select Unit —" }),
-                units.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: u, children: u }, u))
+                unitOptions.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: u, children: u }, u))
               ]
             }
           ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -76647,6 +76697,8 @@ const CoursesManagementView = ({
   onUpdateCourse,
   locations = [],
   units = [],
+  activeLocationCode = "",
+  activeUnitCode = "",
   syllabusDetails = [],
   platformConfig: platformConfig2 = null
 }) => {
@@ -76873,7 +76925,10 @@ const CoursesManagementView = ({
         },
         existingCourses: courseColors,
         locations,
-        units
+        units,
+        activeLocationCode,
+        activeUnitCode,
+        platformConfig: platformConfig2
       }
     ),
     showEditFlyout && courseToEdit && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -78553,6 +78608,8 @@ const TrainingRecordsView = ({
   onSavePT051Assessment,
   locations = [],
   units = [],
+  activeLocationCode = "",
+  activeUnitCode = "",
   platformConfig: platformConfig2 = null,
   resourceDisplayNames,
   instructorLabel = "QFI"
@@ -78601,6 +78658,8 @@ const TrainingRecordsView = ({
           onUpdateCourse,
           locations,
           units,
+          activeLocationCode,
+          activeUnitCode,
           syllabusDetails,
           platformConfig: platformConfig2
         }
@@ -117765,6 +117824,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSavePT051Assessment,
             locations,
             units,
+            activeLocationCode: school,
+            activeUnitCode,
             platformConfig: platformConfig2,
             resourceDisplayNames,
             instructorLabel
