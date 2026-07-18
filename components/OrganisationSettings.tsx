@@ -921,7 +921,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                     type="text"
                     value={activeResourceSharingGroup.name || ''}
                     onChange={(event) => handleRenameResourceSharingGroup(event.target.value)}
-                    placeholder="e.g. YMES 1FTS/CFS shared PC-21 pool"
+                    placeholder="e.g. Base shared aircraft pool"
                     className="w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
