@@ -200,6 +200,8 @@ const usePersistentDropdownOpen = (dropdownKey: string) => {
   return [open, setOpen] as const;
 };
 
+const personDropdownColumnState = new Map<string, { unit: string | null; layer2: string | null }>();
+
 interface StableDropdownProps {
   value: string;
   options: StableDropdownOption[];
@@ -507,10 +509,35 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
 }) => {
   const dropdownKey = dropdownId;
   const [open, setOpen] = usePersistentDropdownOpen(dropdownKey);
-  const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
-  const [selectedL2, setSelectedL2] = useState<string | null>(null);
+  const rememberedColumns = personDropdownColumnState.get(dropdownKey);
+  const [selectedUnit, setSelectedUnitState] = useState<string | null>(rememberedColumns?.unit ?? null);
+  const [selectedL2, setSelectedL2State] = useState<string | null>(rememberedColumns?.layer2 ?? null);
   const ref = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  const rememberColumns = useCallback((unit: string | null, layer2: string | null) => {
+    personDropdownColumnState.set(dropdownKey, { unit, layer2 });
+  }, [dropdownKey]);
+
+  const setSelectedUnit = useCallback((unit: string | null) => {
+    setSelectedUnitState(unit);
+    setSelectedL2State(null);
+    rememberColumns(unit, null);
+  }, [rememberColumns]);
+
+  const setSelectedL2 = useCallback((layer2: string | null) => {
+    setSelectedL2State(layer2);
+    rememberColumns(selectedUnit, layer2);
+  }, [rememberColumns, selectedUnit]);
+
+  const closeDropdown = useCallback((clearColumns = false) => {
+    setOpen(false);
+    if (clearColumns) {
+      setSelectedUnitState(null);
+      setSelectedL2State(null);
+      personDropdownColumnState.delete(dropdownKey);
+    }
+  }, [dropdownKey, setOpen]);
 
   const updateDropdownPosition = useCallback(() => {
     if (!ref.current) return;
@@ -526,12 +553,12 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
         // Also check if click was inside the portal dropdown
         const portalEl = document.getElementById(dropdownId);
         if (portalEl && portalEl.contains(e.target as Node)) return;
-        setOpen(false);
+        closeDropdown();
       }
     };
     document.addEventListener('pointerdown', handler);
     return () => document.removeEventListener('pointerdown', handler);
-  }, [dropdownId]);
+  }, [closeDropdown, dropdownId]);
 
   useEffect(() => {
     if (!open) return;
@@ -543,8 +570,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
     if (selectedUnit && allUnits.includes(selectedUnit)) return;
     const nextUnit = allUnits[0] || null;
     setSelectedUnit(nextUnit);
-    setSelectedL2(null);
-  }, [allUnits, open, selectedUnit]);
+  }, [allUnits, open, selectedUnit, setSelectedUnit]);
 
   const handleOpen = () => {
     updateDropdownPosition();
@@ -578,7 +604,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
       <div style={{ width: 110, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300, backgroundColor: '#1a2f4a' }}>
         {allowSolo && (
           <div
-            onClick={() => { onSoloSelect?.(); setOpen(false); }}
+            onClick={() => { onSoloSelect?.(); closeDropdown(true); }}
             style={{ padding: '9px 12px', color: '#ffd43b', fontWeight: 700, fontSize: 13, cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.12)', backgroundColor: 'transparent' }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,212,59,0.15)')}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
@@ -591,7 +617,6 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
             key={unit}
             onClick={() => {
               setSelectedUnit(unit);
-              setSelectedL2(null);
             }}
             style={{
               padding: '9px 12px', fontSize: 13, cursor: 'pointer',
@@ -637,13 +662,11 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
         {selectedUnit && selectedL2 ? (
           getNames(selectedUnit, selectedL2).map(person => (
             <div
-              key={person.name}
-              onClick={() => {
-                onChange(person.name, []);
-                setOpen(false);
-                setSelectedUnit(null);
-                setSelectedL2(null);
-              }}
+            key={person.name}
+            onClick={() => {
+              onChange(person.name, []);
+                closeDropdown(true);
+            }}
               style={{
                 padding: '9px 12px', fontSize: 13, cursor: 'pointer',
                 color: person.color || '#fff',

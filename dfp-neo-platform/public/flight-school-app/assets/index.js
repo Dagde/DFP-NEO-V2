@@ -29885,6 +29885,7 @@ const usePersistentDropdownOpen = (dropdownKey) => {
   }, [dropdownKey]);
   return [open, setOpen];
 };
+const personDropdownColumnState = /* @__PURE__ */ new Map();
 const StableDropdown = ({
   value,
   options,
@@ -30148,10 +30149,31 @@ const PersonDropdown = ({
 }) => {
   const dropdownKey = dropdownId;
   const [open, setOpen] = usePersistentDropdownOpen(dropdownKey);
-  const [selectedUnit, setSelectedUnit] = reactExports.useState(null);
-  const [selectedL2, setSelectedL2] = reactExports.useState(null);
+  const rememberedColumns = personDropdownColumnState.get(dropdownKey);
+  const [selectedUnit, setSelectedUnitState] = reactExports.useState(rememberedColumns?.unit ?? null);
+  const [selectedL2, setSelectedL2State] = reactExports.useState(rememberedColumns?.layer2 ?? null);
   const ref = reactExports.useRef(null);
   const [dropdownPos, setDropdownPos] = reactExports.useState({ top: 0, left: 0 });
+  const rememberColumns = reactExports.useCallback((unit, layer2) => {
+    personDropdownColumnState.set(dropdownKey, { unit, layer2 });
+  }, [dropdownKey]);
+  const setSelectedUnit = reactExports.useCallback((unit) => {
+    setSelectedUnitState(unit);
+    setSelectedL2State(null);
+    rememberColumns(unit, null);
+  }, [rememberColumns]);
+  const setSelectedL2 = reactExports.useCallback((layer2) => {
+    setSelectedL2State(layer2);
+    rememberColumns(selectedUnit, layer2);
+  }, [rememberColumns, selectedUnit]);
+  const closeDropdown = reactExports.useCallback((clearColumns = false) => {
+    setOpen(false);
+    if (clearColumns) {
+      setSelectedUnitState(null);
+      setSelectedL2State(null);
+      personDropdownColumnState.delete(dropdownKey);
+    }
+  }, [dropdownKey, setOpen]);
   const updateDropdownPosition = reactExports.useCallback(() => {
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
@@ -30164,12 +30186,12 @@ const PersonDropdown = ({
       if (ref.current && !ref.current.contains(e.target)) {
         const portalEl = document.getElementById(dropdownId);
         if (portalEl && portalEl.contains(e.target)) return;
-        setOpen(false);
+        closeDropdown();
       }
     };
     document.addEventListener("pointerdown", handler);
     return () => document.removeEventListener("pointerdown", handler);
-  }, [dropdownId]);
+  }, [closeDropdown, dropdownId]);
   reactExports.useEffect(() => {
     if (!open) return;
     updateDropdownPosition();
@@ -30179,8 +30201,7 @@ const PersonDropdown = ({
     if (selectedUnit && allUnits.includes(selectedUnit)) return;
     const nextUnit = allUnits[0] || null;
     setSelectedUnit(nextUnit);
-    setSelectedL2(null);
-  }, [allUnits, open, selectedUnit]);
+  }, [allUnits, open, selectedUnit, setSelectedUnit]);
   const handleOpen = () => {
     updateDropdownPosition();
     setOpen((o) => !o);
@@ -30215,7 +30236,7 @@ const PersonDropdown = ({
               {
                 onClick: () => {
                   onSoloSelect?.();
-                  setOpen(false);
+                  closeDropdown(true);
                 },
                 style: { padding: "9px 12px", color: "#ffd43b", fontWeight: 700, fontSize: 13, cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.12)", backgroundColor: "transparent" },
                 onMouseEnter: (e) => e.currentTarget.style.backgroundColor = "rgba(255,212,59,0.15)",
@@ -30228,7 +30249,6 @@ const PersonDropdown = ({
               {
                 onClick: () => {
                   setSelectedUnit(unit);
-                  setSelectedL2(null);
                 },
                 style: {
                   padding: "9px 12px",
@@ -30275,9 +30295,7 @@ const PersonDropdown = ({
             {
               onClick: () => {
                 onChange(person.name, []);
-                setOpen(false);
-                setSelectedUnit(null);
-                setSelectedL2(null);
+                closeDropdown(true);
               },
               style: {
                 padding: "9px 12px",
