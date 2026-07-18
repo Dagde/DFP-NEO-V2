@@ -29866,6 +29866,9 @@ const setActiveAddFlightDropdownKey = (key) => {
   activeAddFlightDropdownKey = key;
   addFlightDropdownListeners.forEach((listener) => listener(key));
 };
+const isPersonDropdownKey = (key) => Boolean(
+  key && (key === "pic-dropdown-portal" || key === "copilot-dropdown-portal" || key.startsWith("formation-pic-dropdown-") || key.startsWith("formation-crew-dropdown-"))
+);
 const usePersistentDropdownOpen = (dropdownKey) => {
   const [open, setLocalOpen] = reactExports.useState(() => activeAddFlightDropdownKey === dropdownKey);
   reactExports.useEffect(() => {
@@ -30199,12 +30202,22 @@ const PersonDropdown = ({
     }
   }, [dropdownKey, setOpen]);
   const updateDropdownPosition = reactExports.useCallback(() => {
-    if (!ref.current) return;
+    if (!ref.current) {
+      closeDropdown();
+      return;
+    }
     const rect = ref.current.getBoundingClientRect();
+    if (!Number.isFinite(rect.left) || !Number.isFinite(rect.bottom) || rect.width === 0 && rect.height === 0) {
+      closeDropdown();
+      return;
+    }
     const DROPDOWN_WIDTH = 520;
     const left = Math.min(rect.left, window.innerWidth - DROPDOWN_WIDTH - 8);
     setDropdownPos({ top: rect.bottom + 4, left: Math.max(8, left) });
-  }, []);
+  }, [closeDropdown]);
+  reactExports.useEffect(() => () => {
+    if (activeAddFlightDropdownKey === dropdownKey) setActiveAddFlightDropdownKey(null);
+  }, [dropdownKey]);
   reactExports.useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -31650,6 +31663,7 @@ const AddFlightTileModal = ({
     }
   }, [flightNumber, isFixedCrewModel]);
   reactExports.useEffect(() => {
+    if (isPersonDropdownKey(activeAddFlightDropdownKey)) return;
     const name = flightType === "Solo" ? picName : studentName;
     if (!name || !flightNumber || !traineeLMPs) return;
     const lmp = traineeLMPs.get(name);

@@ -177,6 +177,15 @@ const setActiveAddFlightDropdownKey = (key: string | null) => {
   addFlightDropdownListeners.forEach(listener => listener(key));
 };
 
+const isPersonDropdownKey = (key: string | null) => Boolean(
+  key && (
+    key === 'pic-dropdown-portal'
+    || key === 'copilot-dropdown-portal'
+    || key.startsWith('formation-pic-dropdown-')
+    || key.startsWith('formation-crew-dropdown-')
+  )
+);
+
 const usePersistentDropdownOpen = (dropdownKey: string) => {
   const [open, setLocalOpen] = useState(() => activeAddFlightDropdownKey === dropdownKey);
 
@@ -577,12 +586,23 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
   }, [dropdownKey, setOpen]);
 
   const updateDropdownPosition = useCallback(() => {
-    if (!ref.current) return;
+    if (!ref.current) {
+      closeDropdown();
+      return;
+    }
     const rect = ref.current.getBoundingClientRect();
+    if (!Number.isFinite(rect.left) || !Number.isFinite(rect.bottom) || (rect.width === 0 && rect.height === 0)) {
+      closeDropdown();
+      return;
+    }
     const DROPDOWN_WIDTH = 520;
     const left = Math.min(rect.left, window.innerWidth - DROPDOWN_WIDTH - 8);
     setDropdownPos({ top: rect.bottom + 4, left: Math.max(8, left) });
-  }, []);
+  }, [closeDropdown]);
+
+  useEffect(() => () => {
+    if (activeAddFlightDropdownKey === dropdownKey) setActiveAddFlightDropdownKey(null);
+  }, [dropdownKey]);
 
   useEffect(() => {
     const handler = (e: PointerEvent) => {
@@ -2227,6 +2247,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   // ── Set sortie type from LMP item when event chosen ───────────────────────
   useEffect(() => {
+    if (isPersonDropdownKey(activeAddFlightDropdownKey)) return;
     const name = flightType === 'Solo' ? picName : studentName;
     if (!name || !flightNumber || !traineeLMPs) return;
     const lmp = traineeLMPs.get(name);
