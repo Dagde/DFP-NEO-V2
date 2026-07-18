@@ -29860,6 +29860,31 @@ const formatFixedCrewDisplayGroup$1 = (crew) => {
   const crewLabel = parts.slice(1).join("::").trim();
   return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
 };
+let activeAddFlightDropdownKey = null;
+const addFlightDropdownListeners = /* @__PURE__ */ new Set();
+const setActiveAddFlightDropdownKey = (key) => {
+  activeAddFlightDropdownKey = key;
+  addFlightDropdownListeners.forEach((listener) => listener(key));
+};
+const usePersistentDropdownOpen = (dropdownKey) => {
+  const [open, setLocalOpen] = reactExports.useState(() => activeAddFlightDropdownKey === dropdownKey);
+  reactExports.useEffect(() => {
+    const listener = (activeKey) => {
+      setLocalOpen(activeKey === dropdownKey);
+    };
+    addFlightDropdownListeners.add(listener);
+    listener(activeAddFlightDropdownKey);
+    return () => {
+      addFlightDropdownListeners.delete(listener);
+    };
+  }, [dropdownKey]);
+  const setOpen = reactExports.useCallback((next) => {
+    const current = activeAddFlightDropdownKey === dropdownKey;
+    const nextOpen = typeof next === "function" ? next(current) : next;
+    setActiveAddFlightDropdownKey(nextOpen ? dropdownKey : null);
+  }, [dropdownKey]);
+  return [open, setOpen];
+};
 const StableDropdown = ({
   value,
   options,
@@ -29869,12 +29894,22 @@ const StableDropdown = ({
   width = 220,
   maxHeight = 280,
   zIndex = 1e4,
-  align = "left"
+  align = "left",
+  dropdownKey
 }) => {
-  const [open, setOpen] = reactExports.useState(false);
+  const instanceKeyRef = reactExports.useRef(dropdownKey || `stable-dropdown-${Math.random().toString(36).slice(2)}`);
+  const instanceKey = instanceKeyRef.current;
+  const [open, setOpen] = usePersistentDropdownOpen(instanceKey);
   const triggerRef = reactExports.useRef(null);
-  const portalId = reactExports.useMemo(() => `stable-dropdown-${Math.random().toString(36).slice(2)}`, []);
+  const portalId = reactExports.useMemo(() => `stable-dropdown-${instanceKey.replace(/[^a-zA-Z0-9_-]/g, "-")}`, [instanceKey]);
   const [pos, setPos] = reactExports.useState({ top: 0, left: 0 });
+  const updatePosition = reactExports.useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+    const right = Math.max(8, window.innerWidth - rect.right);
+    setPos(align === "right" ? { top: rect.bottom + 4, right } : { top: rect.bottom + 4, left });
+  }, [align, width]);
   reactExports.useEffect(() => {
     const handler = (e) => {
       const target = e.target;
@@ -29886,14 +29921,13 @@ const StableDropdown = ({
     document.addEventListener("pointerdown", handler);
     return () => document.removeEventListener("pointerdown", handler);
   }, [portalId]);
+  reactExports.useEffect(() => {
+    if (!open) return;
+    updatePosition();
+  }, [open, updatePosition]);
   const openDropdown = () => {
     if (disabled) return;
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-      const right = Math.max(8, window.innerWidth - rect.right);
-      setPos(align === "right" ? { top: rect.bottom + 4, right } : { top: rect.bottom + 4, left });
-    }
+    updatePosition();
     setOpen((o) => !o);
   };
   const panel = open && !disabled ? ReactDOM.createPortal(
@@ -30006,7 +30040,8 @@ const SelectLikeDropdown = ({
   placeholder = "Select",
   width = 260,
   maxHeight = 300,
-  accent = "sky"
+  accent = "sky",
+  dropdownKey
 }) => {
   const selected = options.find((option) => !option.isHeader && option.value === value);
   const ringColour = accent === "emerald" ? "rgba(16,185,129,0.65)" : "rgba(14,165,233,0.65)";
@@ -30020,6 +30055,7 @@ const SelectLikeDropdown = ({
       width,
       maxHeight,
       zIndex: 12e3,
+      dropdownKey,
       children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "button",
         {
@@ -30110,11 +30146,19 @@ const PersonDropdown = ({
   dropdownZIndex = 1e4,
   dropdownId = "person-dropdown-portal"
 }) => {
-  const [open, setOpen] = reactExports.useState(false);
+  const dropdownKey = dropdownId;
+  const [open, setOpen] = usePersistentDropdownOpen(dropdownKey);
   const [selectedUnit, setSelectedUnit] = reactExports.useState(null);
   const [selectedL2, setSelectedL2] = reactExports.useState(null);
   const ref = reactExports.useRef(null);
   const [dropdownPos, setDropdownPos] = reactExports.useState({ top: 0, left: 0 });
+  const updateDropdownPosition = reactExports.useCallback(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const DROPDOWN_WIDTH = 520;
+    const left = Math.min(rect.left, window.innerWidth - DROPDOWN_WIDTH - 8);
+    setDropdownPos({ top: rect.bottom + 4, left: Math.max(8, left) });
+  }, []);
   reactExports.useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -30128,18 +30172,17 @@ const PersonDropdown = ({
   }, [dropdownId]);
   reactExports.useEffect(() => {
     if (!open) return;
+    updateDropdownPosition();
+  }, [open, updateDropdownPosition]);
+  reactExports.useEffect(() => {
+    if (!open) return;
     if (selectedUnit && allUnits.includes(selectedUnit)) return;
     const nextUnit = allUnits[0] || null;
     setSelectedUnit(nextUnit);
     setSelectedL2(null);
   }, [allUnits, open, selectedUnit]);
   const handleOpen = () => {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      const DROPDOWN_WIDTH = 520;
-      const left = Math.min(rect.left, window.innerWidth - DROPDOWN_WIDTH - 8);
-      setDropdownPos({ top: rect.bottom + 4, left: Math.max(8, left) });
-    }
+    updateDropdownPosition();
     setOpen((o) => !o);
   };
   const dropdownPanel = open ? ReactDOM.createPortal(
@@ -30292,11 +30335,17 @@ const EventDropdown = ({
   color,
   disabled
 }) => {
-  const [open, setOpen] = reactExports.useState(false);
+  const dropdownKey = "add-flight-event-dropdown";
+  const [open, setOpen] = usePersistentDropdownOpen(dropdownKey);
   const [selectedCourse, setSelectedCourse] = reactExports.useState(null);
-  const portalId = reactExports.useMemo(() => `event-dropdown-portal-${Math.random().toString(36).slice(2)}`, []);
+  const portalId = "event-dropdown-portal";
   const ref = reactExports.useRef(null);
   const [dropdownPos, setDropdownPos] = reactExports.useState({ top: 0, right: 0 });
+  const updateDropdownPosition = reactExports.useCallback(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+  }, []);
   reactExports.useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -30310,15 +30359,16 @@ const EventDropdown = ({
   }, [portalId]);
   reactExports.useEffect(() => {
     if (!open) return;
+    updateDropdownPosition();
+  }, [open, updateDropdownPosition]);
+  reactExports.useEffect(() => {
+    if (!open) return;
     if (selectedCourse && courseOptions.includes(selectedCourse)) return;
     setSelectedCourse(courseOptions[0] || null);
   }, [courseOptions, open, selectedCourse]);
   const handleOpen = () => {
     if (disabled) return;
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
-    }
+    updateDropdownPosition();
     setOpen((o) => {
       const nextOpen = !o;
       if (nextOpen && !selectedCourse) setSelectedCourse(courseOptions[0] || null);
@@ -30638,6 +30688,7 @@ const FlightTile = ({
       onChange: (v) => onStartTimeChange(parseFloat(v)),
       width: 150,
       zIndex: zOverride ?? 1e4,
+      dropdownKey: "add-flight-start-time",
       children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }, children: formatTime$3(startTime) })
     }
   );
@@ -30695,6 +30746,7 @@ const FlightTile = ({
       onChange: (v) => onDurationChange(parseFloat(v)),
       width: 150,
       zIndex: zOverride ?? 1e4,
+      dropdownKey: "add-flight-duration",
       children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { fontFamily: monoFamily, fontSize: 24, fontWeight: 700, color: WHITE_DIM, lineHeight: 1 }, children: [
         "[",
         duration.toFixed(1),
@@ -30727,6 +30779,7 @@ const FlightTile = ({
       onChange: onAreaChange,
       width: 180,
       zIndex: zOverride ?? 1e4,
+      dropdownKey: "add-flight-area",
       children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 24, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_DIM : "rgba(255,220,60,0.95)", lineHeight: 1 }, children: area || "-" })
     }
   );
@@ -30739,6 +30792,7 @@ const FlightTile = ({
         onChange: onAircraftChange,
         width: 150,
         zIndex: zOverride ?? 1e4,
+        dropdownKey: "add-flight-aircraft-number",
         children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 22, color: aircraftNumber ? WHITE_DIM : "rgba(255,255,255,0.35)", lineHeight: 1 }, children: aircraftNumber || "SKIP" })
       }
     ),
@@ -30750,6 +30804,7 @@ const FlightTile = ({
         onChange: onAircraftPrefixChange,
         width: 120,
         zIndex: zOverride ?? 1e4,
+        dropdownKey: "add-flight-aircraft-prefix",
         children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { marginLeft: 5, fontSize: 10, color: "rgba(255,255,255,0.45)", lineHeight: 1 }, children: "▼" })
       }
     )
@@ -30785,6 +30840,7 @@ const FlightTile = ({
         onChange: onCallsignChange,
         width: 180,
         zIndex: zOverride ?? 1e4,
+        dropdownKey: "add-flight-callsign",
         children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 8, color: "rgba(255,255,255,0.45)", pointerEvents: "none", lineHeight: 1 }, children: "▼" })
       }
     )
@@ -31948,6 +32004,7 @@ const AddFlightTileModal = ({
                         accent: "emerald",
                         width: 420,
                         placeholder: `Select ${fixedCrewEventFieldLabel}`,
+                        dropdownKey: "add-flight-fixed-event",
                         options: [
                           { value: "", label: `Select ${fixedCrewEventFieldLabel}` },
                           ...eventCategory === "sct" ? fixedCrewCurrencyProfileGroups.length === 0 ? [{ value: "__none", label: "No currency events for selected unit", disabled: true }] : fixedCrewCurrencyProfileGroups.flatMap((group) => [
@@ -31987,6 +32044,7 @@ const AddFlightTileModal = ({
                         accent: "emerald",
                         width: 320,
                         placeholder: "Select crew",
+                        dropdownKey: "add-flight-fixed-crew",
                         options: [
                           { value: "", label: "Select crew" },
                           ...fixedCrewGroupOptionGroups.flatMap((group) => [
@@ -32009,6 +32067,7 @@ const AddFlightTileModal = ({
                         accent: "emerald",
                         width: 320,
                         placeholder: fixedCrewGroup ? "Select PIC" : "Select crew first",
+                        dropdownKey: "add-flight-fixed-pic",
                         options: [
                           { value: "", label: fixedCrewGroup ? "Select PIC" : "Select crew first" },
                           ...fixedCrewPicCandidates.map((staff) => ({ value: staff.name, label: formatUnavailableStaffLabel(staff) }))
@@ -32039,6 +32098,7 @@ const AddFlightTileModal = ({
                         onChange: (value) => setFixedCrewManifestStatus(value),
                         accent: "emerald",
                         width: 220,
+                        dropdownKey: "add-flight-fixed-manifest",
                         options: [
                           { value: "pending", label: "Pending" },
                           { value: "complete", label: "Complete" },
@@ -32064,6 +32124,7 @@ const AddFlightTileModal = ({
                           accent: "emerald",
                           width: 260,
                           placeholder: unitCallsignEntries.length === 0 ? "No unit callsigns" : "Select callsign",
+                          dropdownKey: "add-flight-fixed-callsign-base",
                           options: unitCallsignEntries.length === 0 ? [{ value: "", label: "No unit callsigns", disabled: true }] : unitCallsignEntries.map((entry) => ({
                             value: entry.callsign,
                             label: `${activeCallsignUnitCodes.length > 1 ? `${entry.unitCode} - ` : ""}${entry.callsign}${entry.isDefault ? " (default)" : ""}`
@@ -32082,6 +32143,7 @@ const AddFlightTileModal = ({
                           disabled: unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign,
                           accent: "emerald",
                           width: 96,
+                          dropdownKey: "add-flight-fixed-callsign-number",
                           options: callsignNumberOptions.map((option) => ({ value: String(option.value), label: option.label }))
                         }
                       )
@@ -32111,6 +32173,7 @@ const AddFlightTileModal = ({
                             accent: "emerald",
                             width: 320,
                             placeholder: "Select crew",
+                            dropdownKey: `add-flight-fixed-formation-crew-${index}`,
                             options: [
                               { value: "", label: "Select crew" },
                               ...fixedCrewGroupOptionGroups.flatMap((group) => [
@@ -32132,6 +32195,7 @@ const AddFlightTileModal = ({
                             accent: "emerald",
                             width: 320,
                             placeholder: assignment.crewGroup ? "Select PIC" : "Select crew first",
+                            dropdownKey: `add-flight-fixed-formation-pic-${index}`,
                             options: [
                               { value: "", label: assignment.crewGroup ? "Select PIC" : "Select crew first" },
                               ...picCandidates.map((staff) => ({ value: staff.name, label: formatUnavailableStaffLabel(staff) }))
@@ -32152,6 +32216,7 @@ const AddFlightTileModal = ({
                         onChange: (value) => setLocationType(value),
                         accent: "emerald",
                         width: 220,
+                        dropdownKey: "add-flight-fixed-location",
                         options: [
                           { value: "Local", label: "Local" },
                           { value: "Land Away", label: "Land Away" }
@@ -32383,6 +32448,7 @@ const AddFlightTileModal = ({
                           value: aircraftConfigId,
                           onChange: setAircraftConfigId,
                           width: 260,
+                          dropdownKey: "add-flight-config",
                           options: aircraftConfigOptions.map((definition) => ({ value: definition.id, label: definition.label }))
                         }
                       )
@@ -32400,6 +32466,7 @@ const AddFlightTileModal = ({
                             setCallsign(buildUnitEventCallsign(value, unitCallsignNumber));
                           },
                           width: 260,
+                          dropdownKey: "add-flight-unit-callsign-base",
                           options: unitCallsignEntries.map((entry) => ({
                             value: entry.callsign,
                             label: `${entry.callsign}${entry.isDefault ? " (default)" : ""}`
@@ -32416,6 +32483,7 @@ const AddFlightTileModal = ({
                             setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
                           },
                           width: 96,
+                          dropdownKey: "add-flight-unit-callsign-number",
                           options: callsignNumberOptions.map((option) => ({ value: String(option.value), label: option.label }))
                         }
                       )
@@ -32430,6 +32498,7 @@ const AddFlightTileModal = ({
                           value: locationType,
                           onChange: (value) => setLocationType(value),
                           width: 220,
+                          dropdownKey: "add-flight-location",
                           options: [
                             { value: "Local", label: "Local" },
                             { value: "Land Away", label: "Land Away" }
@@ -32483,6 +32552,7 @@ const AddFlightTileModal = ({
                             onChange: setFormationType,
                             width: 280,
                             placeholder: "Select callsign",
+                            dropdownKey: "add-flight-formation-callsign",
                             options: filteredFormationCallsigns.length > 0 ? filteredFormationCallsigns.map((cs) => ({ value: cs.code, label: `${cs.name} (${cs.code})` })) : [{ value: "", label: "No formation callsigns configured", disabled: true }]
                           }
                         )
@@ -32495,6 +32565,7 @@ const AddFlightTileModal = ({
                             value: String(aircraftCount),
                             onChange: (value) => setAircraftCount(parseInt(value, 10)),
                             width: 140,
+                            dropdownKey: "add-flight-formation-aircraft-count",
                             options: Array.from({ length: 7 }, (_, i) => i + 2).map((count) => ({ value: String(count), label: String(count) }))
                           }
                         )

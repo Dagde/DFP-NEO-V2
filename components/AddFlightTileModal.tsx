@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { loadUserPreferences, saveUserPreference } from '../utils/userPreferencesService';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, Score } from '../types';
@@ -169,6 +169,37 @@ type StableDropdownOption = {
   isHeader?: boolean;
 };
 
+let activeAddFlightDropdownKey: string | null = null;
+const addFlightDropdownListeners = new Set<(key: string | null) => void>();
+
+const setActiveAddFlightDropdownKey = (key: string | null) => {
+  activeAddFlightDropdownKey = key;
+  addFlightDropdownListeners.forEach(listener => listener(key));
+};
+
+const usePersistentDropdownOpen = (dropdownKey: string) => {
+  const [open, setLocalOpen] = useState(() => activeAddFlightDropdownKey === dropdownKey);
+
+  useEffect(() => {
+    const listener = (activeKey: string | null) => {
+      setLocalOpen(activeKey === dropdownKey);
+    };
+    addFlightDropdownListeners.add(listener);
+    listener(activeAddFlightDropdownKey);
+    return () => {
+      addFlightDropdownListeners.delete(listener);
+    };
+  }, [dropdownKey]);
+
+  const setOpen = useCallback((next: boolean | ((current: boolean) => boolean)) => {
+    const current = activeAddFlightDropdownKey === dropdownKey;
+    const nextOpen = typeof next === 'function' ? next(current) : next;
+    setActiveAddFlightDropdownKey(nextOpen ? dropdownKey : null);
+  }, [dropdownKey]);
+
+  return [open, setOpen] as const;
+};
+
 interface StableDropdownProps {
   value: string;
   options: StableDropdownOption[];
@@ -179,6 +210,7 @@ interface StableDropdownProps {
   maxHeight?: number;
   zIndex?: number;
   align?: 'left' | 'right';
+  dropdownKey?: string;
 }
 
 const StableDropdown: React.FC<StableDropdownProps> = ({
@@ -191,11 +223,24 @@ const StableDropdown: React.FC<StableDropdownProps> = ({
   maxHeight = 280,
   zIndex = 10000,
   align = 'left',
+  dropdownKey,
 }) => {
-  const [open, setOpen] = useState(false);
+  const instanceKeyRef = useRef(dropdownKey || `stable-dropdown-${Math.random().toString(36).slice(2)}`);
+  const instanceKey = instanceKeyRef.current;
+  const [open, setOpen] = usePersistentDropdownOpen(instanceKey);
   const triggerRef = useRef<HTMLDivElement>(null);
-  const portalId = useMemo(() => `stable-dropdown-${Math.random().toString(36).slice(2)}`, []);
+  const portalId = useMemo(() => `stable-dropdown-${instanceKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`, [instanceKey]);
   const [pos, setPos] = useState<{ top: number; left?: number; right?: number }>({ top: 0, left: 0 });
+
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+    const right = Math.max(8, window.innerWidth - rect.right);
+    setPos(align === 'right'
+      ? { top: rect.bottom + 4, right }
+      : { top: rect.bottom + 4, left });
+  }, [align, width]);
 
   useEffect(() => {
     const handler = (e: PointerEvent) => {
@@ -209,16 +254,14 @@ const StableDropdown: React.FC<StableDropdownProps> = ({
     return () => document.removeEventListener('pointerdown', handler);
   }, [portalId]);
 
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+  }, [open, updatePosition]);
+
   const openDropdown = () => {
     if (disabled) return;
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-      const right = Math.max(8, window.innerWidth - rect.right);
-      setPos(align === 'right'
-        ? { top: rect.bottom + 4, right }
-        : { top: rect.bottom + 4, left });
-    }
+    updatePosition();
     setOpen(o => !o);
   };
 
@@ -333,6 +376,7 @@ interface SelectLikeDropdownProps {
   width?: number;
   maxHeight?: number;
   accent?: 'sky' | 'emerald';
+  dropdownKey?: string;
 }
 
 const SelectLikeDropdown: React.FC<SelectLikeDropdownProps> = ({
@@ -344,6 +388,7 @@ const SelectLikeDropdown: React.FC<SelectLikeDropdownProps> = ({
   width = 260,
   maxHeight = 300,
   accent = 'sky',
+  dropdownKey,
 }) => {
   const selected = options.find(option => !option.isHeader && option.value === value);
   const ringColour = accent === 'emerald' ? 'rgba(16,185,129,0.65)' : 'rgba(14,165,233,0.65)';
@@ -356,6 +401,7 @@ const SelectLikeDropdown: React.FC<SelectLikeDropdownProps> = ({
       width={width}
       maxHeight={maxHeight}
       zIndex={12000}
+      dropdownKey={dropdownKey}
     >
       <button
         type="button"
@@ -459,11 +505,20 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
   dropdownZIndex = 10000,
   dropdownId = 'person-dropdown-portal',
 }) => {
-  const [open, setOpen] = useState(false);
+  const dropdownKey = dropdownId;
+  const [open, setOpen] = usePersistentDropdownOpen(dropdownKey);
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
   const [selectedL2, setSelectedL2] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  const updateDropdownPosition = useCallback(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const DROPDOWN_WIDTH = 520;
+    const left = Math.min(rect.left, window.innerWidth - DROPDOWN_WIDTH - 8);
+    setDropdownPos({ top: rect.bottom + 4, left: Math.max(8, left) });
+  }, []);
 
   useEffect(() => {
     const handler = (e: PointerEvent) => {
@@ -480,6 +535,11 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
 
   useEffect(() => {
     if (!open) return;
+    updateDropdownPosition();
+  }, [open, updateDropdownPosition]);
+
+  useEffect(() => {
+    if (!open) return;
     if (selectedUnit && allUnits.includes(selectedUnit)) return;
     const nextUnit = allUnits[0] || null;
     setSelectedUnit(nextUnit);
@@ -487,13 +547,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
   }, [allUnits, open, selectedUnit]);
 
   const handleOpen = () => {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      // Store viewport-relative coords (BoundingClientRect is already viewport-relative, use directly with position:fixed)
-      const DROPDOWN_WIDTH = 520;
-      const left = Math.min(rect.left, window.innerWidth - DROPDOWN_WIDTH - 8);
-      setDropdownPos({ top: rect.bottom + 4, left: Math.max(8, left) });
-    }
+    updateDropdownPosition();
     setOpen(o => !o);
   };
 
@@ -656,11 +710,18 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
   value, onChange, courseOptions, getEventsForCourse, nextLMPEvent,
   fontSize, color, disabled,
 }) => {
-  const [open, setOpen] = useState(false);
+  const dropdownKey = 'add-flight-event-dropdown';
+  const [open, setOpen] = usePersistentDropdownOpen(dropdownKey);
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
-  const portalId = useMemo(() => `event-dropdown-portal-${Math.random().toString(36).slice(2)}`, []);
+  const portalId = 'event-dropdown-portal';
   const ref = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+
+  const updateDropdownPosition = useCallback(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+  }, []);
 
   useEffect(() => {
     const handler = (e: PointerEvent) => {
@@ -676,17 +737,18 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
 
   useEffect(() => {
     if (!open) return;
+    updateDropdownPosition();
+  }, [open, updateDropdownPosition]);
+
+  useEffect(() => {
+    if (!open) return;
     if (selectedCourse && courseOptions.includes(selectedCourse)) return;
     setSelectedCourse(courseOptions[0] || null);
   }, [courseOptions, open, selectedCourse]);
 
   const handleOpen = () => {
     if (disabled) return;
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      // right-align the dropdown to the trigger element
-      setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
-    }
+    updateDropdownPosition();
     setOpen(o => {
       const nextOpen = !o;
       if (nextOpen && !selectedCourse) setSelectedCourse(courseOptions[0] || null);
@@ -1076,6 +1138,7 @@ const FlightTile: React.FC<TileProps> = ({
       onChange={v => onStartTimeChange(parseFloat(v))}
       width={150}
       zIndex={zOverride ?? 10000}
+      dropdownKey="add-flight-start-time"
     >
       <span style={{ fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }}>
         {formatTime(startTime)}
@@ -1111,6 +1174,7 @@ const FlightTile: React.FC<TileProps> = ({
       onChange={v => onDurationChange(parseFloat(v))}
       width={150}
       zIndex={zOverride ?? 10000}
+      dropdownKey="add-flight-duration"
     >
       <span style={{ fontFamily: monoFamily, fontSize: 24, fontWeight: 700, color: WHITE_DIM, lineHeight: 1 }}>[{duration.toFixed(1)}]</span>
     </StableDropdown>
@@ -1146,6 +1210,7 @@ const FlightTile: React.FC<TileProps> = ({
       onChange={onAreaChange}
       width={180}
       zIndex={zOverride ?? 10000}
+      dropdownKey="add-flight-area"
     >
       <span style={{ fontSize: 24, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_DIM : 'rgba(255,220,60,0.95)', lineHeight: 1 }}>{area || '-'}</span>
     </StableDropdown>
@@ -1159,6 +1224,7 @@ const FlightTile: React.FC<TileProps> = ({
         onChange={onAircraftChange}
         width={150}
         zIndex={zOverride ?? 10000}
+        dropdownKey="add-flight-aircraft-number"
       >
         <span style={{ fontFamily: monoFamily, fontSize: 22, color: aircraftNumber ? WHITE_DIM : 'rgba(255,255,255,0.35)', lineHeight: 1 }}>
           {aircraftNumber || 'SKIP'}
@@ -1171,6 +1237,7 @@ const FlightTile: React.FC<TileProps> = ({
           onChange={onAircraftPrefixChange}
           width={120}
           zIndex={zOverride ?? 10000}
+          dropdownKey="add-flight-aircraft-prefix"
         >
           <span style={{ marginLeft: 5, fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>▼</span>
         </StableDropdown>
@@ -1201,6 +1268,7 @@ const FlightTile: React.FC<TileProps> = ({
           onChange={onCallsignChange}
           width={180}
           zIndex={zOverride ?? 10000}
+          dropdownKey="add-flight-callsign"
         >
           <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.45)', pointerEvents: 'none', lineHeight: 1 }}>▼</span>
         </StableDropdown>
@@ -2582,6 +2650,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     accent="emerald"
                     width={420}
                     placeholder={`Select ${fixedCrewEventFieldLabel}`}
+                    dropdownKey="add-flight-fixed-event"
                     options={[
                       { value: '', label: `Select ${fixedCrewEventFieldLabel}` },
                       ...(eventCategory === 'sct'
@@ -2624,6 +2693,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     accent="emerald"
                     width={320}
                     placeholder="Select crew"
+                    dropdownKey="add-flight-fixed-crew"
                     options={[
                       { value: '', label: 'Select crew' },
                       ...fixedCrewGroupOptionGroups.flatMap(group => [
@@ -2647,6 +2717,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     accent="emerald"
                     width={320}
                     placeholder={fixedCrewGroup ? 'Select PIC' : 'Select crew first'}
+                    dropdownKey="add-flight-fixed-pic"
                     options={[
                       { value: '', label: fixedCrewGroup ? 'Select PIC' : 'Select crew first' },
                       ...fixedCrewPicCandidates.map(staff => ({ value: staff.name, label: formatUnavailableStaffLabel(staff) })),
@@ -2671,6 +2742,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     onChange={value => setFixedCrewManifestStatus(value as ScheduleEvent['fixedCrewManifestStatus'])}
                     accent="emerald"
                     width={220}
+                    dropdownKey="add-flight-fixed-manifest"
                     options={[
                       { value: 'pending', label: 'Pending' },
                       { value: 'complete', label: 'Complete' },
@@ -2693,6 +2765,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       accent="emerald"
                       width={260}
                       placeholder={unitCallsignEntries.length === 0 ? 'No unit callsigns' : 'Select callsign'}
+                      dropdownKey="add-flight-fixed-callsign-base"
                       options={unitCallsignEntries.length === 0
                         ? [{ value: '', label: 'No unit callsigns', disabled: true }]
                         : unitCallsignEntries.map(entry => ({
@@ -2710,6 +2783,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       disabled={unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign}
                       accent="emerald"
                       width={96}
+                      dropdownKey="add-flight-fixed-callsign-number"
                       options={callsignNumberOptions.map(option => ({ value: String(option.value), label: option.label }))}
                     />
                   </div>
@@ -2740,6 +2814,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                               accent="emerald"
                               width={320}
                               placeholder="Select crew"
+                              dropdownKey={`add-flight-fixed-formation-crew-${index}`}
                               options={[
                                 { value: '', label: 'Select crew' },
                                 ...fixedCrewGroupOptionGroups.flatMap(group => [
@@ -2758,6 +2833,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                               accent="emerald"
                               width={320}
                               placeholder={assignment.crewGroup ? 'Select PIC' : 'Select crew first'}
+                              dropdownKey={`add-flight-fixed-formation-pic-${index}`}
                               options={[
                                 { value: '', label: assignment.crewGroup ? 'Select PIC' : 'Select crew first' },
                                 ...picCandidates.map(staff => ({ value: staff.name, label: formatUnavailableStaffLabel(staff) })),
@@ -2778,6 +2854,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     onChange={value => setLocationType(value as 'Local'|'Land Away')}
                     accent="emerald"
                     width={220}
+                    dropdownKey="add-flight-fixed-location"
                     options={[
                       { value: 'Local', label: 'Local' },
                       { value: 'Land Away', label: 'Land Away' },
@@ -2988,6 +3065,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       value={aircraftConfigId}
                       onChange={setAircraftConfigId}
                       width={260}
+                      dropdownKey="add-flight-config"
                       options={aircraftConfigOptions.map(definition => ({ value: definition.id, label: definition.label }))}
                     />
                   </div>
@@ -3003,6 +3081,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                           setCallsign(buildUnitEventCallsign(value, unitCallsignNumber));
                         }}
                         width={260}
+                        dropdownKey="add-flight-unit-callsign-base"
                         options={unitCallsignEntries.map(entry => ({
                           value: entry.callsign,
                           label: `${entry.callsign}${entry.isDefault ? ' (default)' : ''}`,
@@ -3016,6 +3095,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                           setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
                         }}
                         width={96}
+                        dropdownKey="add-flight-unit-callsign-number"
                         options={callsignNumberOptions.map(option => ({ value: String(option.value), label: option.label }))}
                       />
                     </div>
@@ -3028,6 +3108,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       value={locationType}
                       onChange={value => setLocationType(value as 'Local'|'Land Away')}
                       width={220}
+                      dropdownKey="add-flight-location"
                       options={[
                         { value: 'Local', label: 'Local' },
                         { value: 'Land Away', label: 'Land Away' },
@@ -3077,6 +3158,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                           onChange={setFormationType}
                           width={280}
                           placeholder="Select callsign"
+                          dropdownKey="add-flight-formation-callsign"
                           options={filteredFormationCallsigns.length > 0
                             ? filteredFormationCallsigns.map(cs => ({ value: cs.code, label: `${cs.name} (${cs.code})` }))
                             : [{ value: '', label: 'No formation callsigns configured', disabled: true }]}
@@ -3088,6 +3170,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                           value={String(aircraftCount)}
                           onChange={value => setAircraftCount(parseInt(value, 10))}
                           width={140}
+                          dropdownKey="add-flight-formation-aircraft-count"
                           options={Array.from({ length: 7 }, (_, i) => i + 2).map(count => ({ value: String(count), label: String(count) }))}
                         />
                       </div>
