@@ -88150,18 +88150,12 @@ const getFallbackMasterLmpForTrainee = (trainee, masterSyllabus) => {
   const normaliseToken = (value) => String(value || "").trim().toUpperCase();
   const traineeCourse = normaliseToken(trainee.course);
   const configuredLmpType = normaliseToken(trainee.lmpType);
-  const inferredLmpType = configuredLmpType || (traineeCourse.startsWith("FIC") ? "FIC" : "BPC+IPC");
   const masterItems = masterSyllabus.filter((item) => item?.isActive !== false && item?.lmpType !== "Staff CAT" && item?.type !== "Academics");
   const itemCourseTokens = (item) => Array.isArray(item.courses) ? item.courses.map(normaliseToken).filter(Boolean) : [];
   const matchesInferredLmp = (item) => {
     const courseTokens = itemCourseTokens(item);
-    if (inferredLmpType === "FIC") {
-      return courseTokens.includes("FIC") || courseTokens.includes(traineeCourse);
-    }
-    if (inferredLmpType === "BPC+IPC") {
-      return courseTokens.length === 0 || courseTokens.includes("BPC+IPC");
-    }
-    return courseTokens.includes(inferredLmpType) || courseTokens.includes(traineeCourse);
+    if (!configuredLmpType && !traineeCourse) return false;
+    return (configuredLmpType ? courseTokens.includes(configuredLmpType) : false) || (traineeCourse ? courseTokens.includes(traineeCourse) : false);
   };
   return masterItems.filter(matchesInferredLmp);
 };
@@ -103230,33 +103224,20 @@ const App = () => {
           setTraineeLMPs((prev) => {
             const newLMPs = new Map(prev);
             dbTrainees.forEach((trainee) => {
-              let lmpType = trainee.lmpType || "";
-              if (!lmpType || lmpType === "BPC+IPC") {
-                const courseObj = data.courses?.find((c) => c.name === trainee.course);
-                if (courseObj?.lmpType && courseObj.lmpType !== "BPC+IPC") {
-                  lmpType = courseObj.lmpType;
-                  console.log(`[LMP Init] Using course lmpType "${lmpType}" for ${trainee.fullName} (${trainee.course})`);
-                }
+              const lmpType = getConfiguredLmpTypeForTrainee(trainee, data.courses || []);
+              if (!lmpType) {
+                newLMPs.delete(trainee.fullName);
+                console.log(`[LMP Init] Skipped ${trainee.fullName}: no Master LMP assigned on trainee or course`);
+                return;
               }
-              if (!lmpType || lmpType === "BPC+IPC") {
-                if (trainee.course) {
-                  const courseUpper = trainee.course.toUpperCase();
-                  if (courseUpper.startsWith("FIC")) {
-                    lmpType = "FIC";
-                    console.log(`[LMP Init] Detected FIC course for ${trainee.fullName} (${trainee.course}) — overriding lmpType to 'FIC'`);
-                  }
-                }
-              }
-              if (!lmpType) lmpType = "BPC+IPC";
               const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, "Assign");
               if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
                 newLMPs.delete(trainee.fullName);
                 console.log(`[LMP Init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
                 return;
               }
-              const isFicTrainee = lmpType === "FIC";
               const alreadySet = newLMPs.has(trainee.fullName);
-              if (!alreadySet || isFicTrainee) {
+              if (!alreadySet) {
                 const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", traineeUnitCode).filter((item) => {
                   if (lmpType === "BPC+IPC") {
                     return (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics";
@@ -103265,23 +103246,12 @@ const App = () => {
                 });
                 if (masterLMP.length > 0) {
                   newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
-                  console.log(`[LMP Init] ${trainee.fullName} (${trainee.course}) → ${lmpType} LMP (${masterLMP.length} events)${isFicTrainee && alreadySet ? " [CORRECTED]" : ""}`);
+                  console.log(`[LMP Init] ${trainee.fullName} (${trainee.course}) → ${lmpType} LMP (${masterLMP.length} events)`);
                 }
               }
             });
             return newLMPs;
           });
-        }
-        const ficDbTrainees = data.trainees.filter(
-          (t) => t._dataSource === "database" && t.course && t.course.toUpperCase().startsWith("FIC") && (!t.lmpType || t.lmpType === "BPC+IPC")
-        );
-        if (ficDbTrainees.length > 0) {
-          console.log(`[LMP Fix] Fixing lmpType for ${ficDbTrainees.length} FIC trainees in DB...`);
-          fetch("/api/trainees/fix-lmp-type", { method: "PATCH" }).then((r) => r.json()).then((result) => {
-            if (result.success) {
-              console.log(`[LMP Fix] ✅ Updated ${result.count} FIC trainees' lmpType to 'FIC' in DB`);
-            }
-          }).catch((err) => console.warn("[LMP Fix] Could not fix lmpType:", err));
         }
         const defaultColors = [
           "bg-sky-400/80",
@@ -103302,10 +103272,11 @@ const App = () => {
           Array.from(existingCourseNamesFromLoad).map((courseName) => courseName.toUpperCase().replace(/\s+/g, "")).filter(Boolean)
         );
         const getRecoveredFlightSchoolCourse = (courseName, fallbackColor) => {
-          const compactName = courseName.toUpperCase().replace(/\s+/g, "");
           const traineesForCourse = dbTraineesFromLoad.filter((trainee) => normaliseCourseName(trainee.course) === courseName);
           const countByService = (service) => traineesForCourse.filter((trainee) => String(trainee.service || "").toUpperCase() === service).length;
-          const baseCourse = {
+          const recoveredLmpType = String(traineesForCourse.find((trainee) => trainee?.lmpType)?.lmpType || "").trim();
+          const recoveredAcademicLmpType = String(traineesForCourse.find((trainee) => trainee?.academicLmpType)?.academicLmpType || "").trim();
+          return {
             name: courseName,
             color: fallbackColor,
             startDate: "",
@@ -103315,42 +103286,10 @@ const App = () => {
             armyStart: countByService("ARA"),
             location: school,
             unit: activeUnitCode,
-            status: "ACTIVE"
+            status: "ACTIVE",
+            lmpType: recoveredLmpType || void 0,
+            academicLmpType: recoveredAcademicLmpType || void 0
           };
-          if (compactName === "FIC210") {
-            return {
-              ...baseCourse,
-              color: "bg-pink-400/50",
-              startDate: "2025-10-01",
-              gradDate: "2026-04-01",
-              raafStart: baseCourse.raafStart || 4,
-              navyStart: baseCourse.navyStart || 0,
-              armyStart: baseCourse.armyStart || 0,
-              lmpType: "FIC",
-              academicLmpType: "FIC"
-            };
-          }
-          if (compactName === "FIC211") {
-            return {
-              ...baseCourse,
-              color: "bg-teal-400/50",
-              startDate: "2025-12-01",
-              gradDate: "2026-06-01",
-              raafStart: baseCourse.raafStart || 8,
-              navyStart: baseCourse.navyStart || 2,
-              armyStart: baseCourse.armyStart || 0,
-              lmpType: "FIC",
-              academicLmpType: "FIC"
-            };
-          }
-          if (compactName.startsWith("FIC")) {
-            return {
-              ...baseCourse,
-              lmpType: "FIC",
-              academicLmpType: "FIC"
-            };
-          }
-          return baseCourse;
         };
         const missingDbCourseNamesFromLoad = activeOperationalModel === "flight_school" ? dbCourseNamesFromLoad.filter((courseName) => !existingCourseNamesFromLoad.has(courseName) && !existingCompactCourseNamesFromLoad.has(courseName.toUpperCase().replace(/\s+/g, ""))) : [];
         if (missingDbCourseNamesFromLoad.length > 0) {
@@ -103433,14 +103372,12 @@ const App = () => {
     setTraineeLMPs((prev) => {
       const newLMPs = new Map(prev);
       allTraineesData.forEach((trainee) => {
-        let lmpType = trainee.lmpType || "BPC+IPC";
-        if (lmpType === "BPC+IPC" && trainee.course) {
-          const courseUpper = trainee.course.toUpperCase();
-          if (courseUpper.startsWith("FIC")) {
-            lmpType = "FIC";
-          }
+        const lmpType = getConfiguredLmpTypeForTrainee(trainee);
+        if (!lmpType) {
+          newLMPs.delete(trainee.fullName);
+          console.log(`[LMP Re-init] Skipped ${trainee.fullName}: no Master LMP assigned on trainee or course`);
+          return;
         }
-        const isFicTrainee = lmpType === "FIC";
         const alreadySet = newLMPs.has(trainee.fullName);
         const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, "Assign");
         if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
@@ -103448,7 +103385,7 @@ const App = () => {
           console.log(`[LMP Re-init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
           return;
         }
-        if (!alreadySet || isFicTrainee) {
+        if (!alreadySet) {
           const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", traineeUnitCode).filter((item) => {
             if (lmpType === "BPC+IPC") {
               return (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics";
@@ -104212,7 +104149,9 @@ const App = () => {
     const nextCourses = [...scopedCourses];
     activeFlightSchoolTraineeCourseNames.forEach((courseName) => {
       if (seen.has(courseName)) return;
-      const compactName = courseName.toUpperCase().replace(/\s+/g, "");
+      const traineesForCourse = traineesData.filter((trainee) => normaliseCourseName(trainee?.course) === courseName);
+      const recoveredLmpType = String(traineesForCourse.find((trainee) => trainee?.lmpType)?.lmpType || "").trim();
+      const recoveredAcademicLmpType = String(traineesForCourse.find((trainee) => trainee?.academicLmpType)?.academicLmpType || "").trim();
       const baseCourse = {
         name: courseName,
         color: courseColors[courseName] || "bg-sky-400/80",
@@ -104223,33 +104162,15 @@ const App = () => {
         armyStart: 0,
         location: school,
         unit: activeUnitCode,
-        status: "ACTIVE"
+        status: "ACTIVE",
+        lmpType: recoveredLmpType || void 0,
+        academicLmpType: recoveredAcademicLmpType || void 0
       };
-      if (compactName === "FIC211") {
-        nextCourses.push({
-          ...baseCourse,
-          color: courseColors[courseName] || "bg-teal-400/50",
-          startDate: "2025-12-01",
-          gradDate: "2026-06-01",
-          lmpType: "FIC",
-          academicLmpType: "FIC"
-        });
-      } else if (compactName === "FIC210") {
-        nextCourses.push({
-          ...baseCourse,
-          color: courseColors[courseName] || "bg-pink-400/50",
-          startDate: "2025-10-01",
-          gradDate: "2026-04-01",
-          lmpType: "FIC",
-          academicLmpType: "FIC"
-        });
-      } else {
-        nextCourses.push(baseCourse);
-      }
+      nextCourses.push(baseCourse);
       seen.add(courseName);
     });
     return nextCourses;
-  }, [activeFlightSchoolTraineeCourseNames, activeOperationalModel, activeUnitCode, courseColors, normaliseCourseName, school, scopedCourses]);
+  }, [activeFlightSchoolTraineeCourseNames, activeOperationalModel, activeUnitCode, courseColors, normaliseCourseName, school, scopedCourses, traineesData]);
   const scopedCourseColors = reactExports.useMemo(() => {
     const entries = Object.entries(courseColors).filter(([courseName]) => scopedCourseNameSet.has(courseName));
     return Object.fromEntries(entries);
@@ -107671,7 +107592,14 @@ ${"=".repeat(60)}`);
         ...summariseTrainingReportLmpItems(persistedLmp)
       });
       if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return null;
-      const persistedLmpType = data?.lmp?.lmpType || trainee.lmpType || "BPC+IPC";
+      const persistedLmpType = String(data?.lmp?.lmpType || getConfiguredLmpTypeForTrainee(matchedTrainee || trainee) || "").trim();
+      if (!persistedLmpType) {
+        pushDfpDataDiag("report-lmp:load:no-lmp-type", {
+          traineeFullName: trainee.fullName,
+          traineeDbId
+        });
+        return null;
+      }
       const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode;
       if (!hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, "Assign")) {
         pushDfpDataDiag("report-lmp:load:blocked-access", {
@@ -108325,12 +108253,11 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const handleAddTrainee = reactExports.useCallback((newTrainee) => {
     setTraineesData((prev) => [...prev, newTrainee]);
-    let lmpType = newTrainee.lmpType || "";
-    if (!lmpType || lmpType === "BPC+IPC") {
-      const courseObj = courses.find((c) => c.name === newTrainee.course);
-      if (courseObj?.lmpType) lmpType = courseObj.lmpType;
+    const lmpType = getConfiguredLmpTypeForTrainee(newTrainee);
+    if (!lmpType) {
+      setErrorMessage(`Cannot initialise ${newTrainee.fullName || newTrainee.name || "new trainee"} because no Master LMP is assigned to the trainee or course.`);
+      return;
     }
-    if (!lmpType) lmpType = "BPC+IPC";
     const traineeUnitCode = newTrainee.unit || activeUnitCode;
     if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
       setErrorMessage(`Cannot initialise ${newTrainee.fullName || newTrainee.name || "new trainee"} with Master LMP "${lmpType}" for ${traineeUnitCode || "this unit"}.`);
@@ -108351,7 +108278,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
     }
     setSuccessMessage("New Trainee Added!");
-  }, [activeUnitCode, courses, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, syllabusDetails]);
+  }, [activeUnitCode, filterSyllabusForMasterLmpAccess, getConfiguredLmpTypeForTrainee, hasMasterLmpUnitAccess, syllabusDetails]);
   const handleUpdateTrainee = reactExports.useCallback(async (data) => {
     console.log("📝 [APP] handleUpdateTrainee called");
     console.log("📝 [APP] Trainee data received:", {
@@ -108554,10 +108481,16 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
     return cleanedLmp;
   };
+  function getConfiguredLmpTypeForTrainee(trainee, courseList = courses) {
+    const savedTraineeLmp = String(trainee?.lmpType || "").trim();
+    if (savedTraineeLmp) return savedTraineeLmp;
+    const traineeCourse = normaliseCourseName(trainee?.course);
+    if (!traineeCourse) return "";
+    const matchingCourse = courseList.find((course) => normaliseCourseName(course.name || course.code) === traineeCourse);
+    return String(matchingCourse?.lmpType || "").trim();
+  }
   const getLmpTypeForTrainee = (trainee) => {
-    if (trainee.lmpType) return trainee.lmpType;
-    if (trainee.course && trainee.course.toUpperCase().startsWith("FIC")) return "FIC";
-    return "BPC+IPC";
+    return getConfiguredLmpTypeForTrainee(trainee);
   };
   const persistTraineeLmp = async (trainee, lmp, excludedCompletedEvents = []) => {
     const matchedTrainee = allTraineesData.find((candidate) => candidate.fullName === trainee.fullName);
@@ -109032,7 +108965,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       armyStart: data.armyStart,
       location: data.location || "",
       unit: data.unit || "",
-      lmpType: data.lmpType || "BPC+IPC"
+      lmpType: data.lmpType || ""
     };
     setCourses((prev) => [...prev, newCourse]);
     try {
@@ -109046,7 +108979,9 @@ ${error instanceof Error ? error.message : String(error)}`,
         armyStart: data.armyStart,
         status: "ACTIVE",
         location: data.location || (school === "ESL" ? "East Sale" : "Pearce"),
-        unit: data.unit || ""
+        unit: data.unit || "",
+        lmpType: data.lmpType || "",
+        academicLmpType: data.academicLmpType || ""
       });
       if (!result.success) {
         console.error("Failed to save course to DB:", result.error);
@@ -119969,9 +119904,10 @@ Do you want to replace the existing entry?`,
                 if (!trainee || !trainee.id) return;
                 const allScoresForTrainee = updatedScores.get(traineeName) || [];
                 const completedEventIds = allScoresForTrainee.map((s) => s.event);
-                let lmpType = trainee.lmpType || "BPC+IPC";
-                if (lmpType === "BPC+IPC" && trainee.course?.toUpperCase().startsWith("FIC")) {
-                  lmpType = "FIC";
+                const lmpType = getConfiguredLmpTypeForTrainee(trainee);
+                if (!lmpType) {
+                  console.warn(`[PT-051] Skipped Individual LMP completion persistence for ${trainee.fullName}: no Master LMP assigned on trainee or course`);
+                  return;
                 }
                 const masterSyllabus = syllabusDetails.filter((item) => {
                   if (lmpType === "BPC+IPC") return (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics";
