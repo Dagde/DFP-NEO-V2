@@ -5540,8 +5540,27 @@ const getLmpResourceNumber = (item?: Partial<SyllabusItemDetail> | null): number
     return Number.isFinite(parsed) ? Math.max(1, Math.round(parsed)) : 1;
 };
 
+const getExplicitFormationResourceNumber = (item?: Partial<SyllabusItemDetail> | null): number => {
+    const physicalResourceCount = Array.isArray(item?.resourcesPhysical)
+        ? item.resourcesPhysical.filter(resource => String(resource || '').trim().length > 0).length
+        : 0;
+    if (physicalResourceCount > 1) return physicalResourceCount;
+
+    const resourceCountAlias = Number((item as any)?.resourceCount);
+    if (Number.isFinite(resourceCountAlias) && resourceCountAlias > 1) {
+        return Math.max(1, Math.round(resourceCountAlias));
+    }
+
+    const eventCode = String(item?.code || item?.id || item?.masterEventId || '').trim().toUpperCase();
+    if (item?.type === 'Flight' && /^FORM/.test(eventCode)) {
+        return Math.max(2, Math.round(Number(item?.resourceNumber) || 2));
+    }
+
+    return 1;
+};
+
 const isMultiResourceFlightItem = (item?: Partial<SyllabusItemDetail> | null): boolean =>
-    !!item && item.type === 'Flight' && getLmpResourceNumber(item) > 1;
+    !!item && item.type === 'Flight' && getExplicitFormationResourceNumber(item) > 1;
 
 const alignPhysicalResourcesToResourceNumber = (
     resourcesPhysical: string[] | undefined,
@@ -11429,28 +11448,16 @@ function generateDfpInternal(
     });
     const getFormationItemForTrainee = (trainee: Trainee, fallback: SyllabusItemDetail): SyllabusItemDetail =>
         traineeNextEventMap.get(trainee.fullName)?.next || fallback;
-    const hasExplicitLmpResourceNumber = (item?: Partial<SyllabusItemDetail> | null): boolean => {
-        const rawResourceNumber = Number(item?.resourceNumber);
-        const rawResourceCount = Number((item as any)?.resourceCount);
-        const physicalResourceCount = Array.isArray(item?.resourcesPhysical)
-            ? item.resourcesPhysical.filter(resource => String(resource || '').trim().length > 0).length
-            : 0;
-        return (
-            (Number.isFinite(rawResourceNumber) && rawResourceNumber > 0) ||
-            (Number.isFinite(rawResourceCount) && rawResourceCount > 0) ||
-            physicalResourceCount > 0
-        );
-    };
     const getFormationGroupResourceNumber = (group: { item: SyllabusItemDetail; trainees: Trainee[] }): number => {
         const groupItems = group.trainees.map(trainee => getFormationItemForTrainee(trainee, group.item));
         const explicitResourceNumbers = groupItems
-            .filter(hasExplicitLmpResourceNumber)
-            .map(getLmpResourceNumber);
+            .map(getExplicitFormationResourceNumber)
+            .filter(resourceNumber => resourceNumber > 1);
         if (explicitResourceNumbers.length > 0) {
             return Math.max(...explicitResourceNumbers);
         }
 
-        return getLmpResourceNumber(group.item);
+        return getExplicitFormationResourceNumber(group.item);
     };
     neoBuildDiag.formationResourceDiagnostics.groups = Array.from(formationGroups.entries()).map(([eventKey, group]) => {
         const resourceNumber = getFormationGroupResourceNumber(group);

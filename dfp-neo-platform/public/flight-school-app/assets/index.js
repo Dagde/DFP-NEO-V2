@@ -87874,7 +87874,20 @@ const getLmpResourceNumber = (item) => {
   if (item?.type === "Flight" && /^FORM/.test(eventCode2)) return 2;
   return Number.isFinite(parsed) ? Math.max(1, Math.round(parsed)) : 1;
 };
-const isMultiResourceFlightItem = (item) => !!item && item.type === "Flight" && getLmpResourceNumber(item) > 1;
+const getExplicitFormationResourceNumber = (item) => {
+  const physicalResourceCount = Array.isArray(item?.resourcesPhysical) ? item.resourcesPhysical.filter((resource) => String(resource || "").trim().length > 0).length : 0;
+  if (physicalResourceCount > 1) return physicalResourceCount;
+  const resourceCountAlias = Number(item?.resourceCount);
+  if (Number.isFinite(resourceCountAlias) && resourceCountAlias > 1) {
+    return Math.max(1, Math.round(resourceCountAlias));
+  }
+  const eventCode2 = String(item?.code || item?.id || item?.masterEventId || "").trim().toUpperCase();
+  if (item?.type === "Flight" && /^FORM/.test(eventCode2)) {
+    return Math.max(2, Math.round(Number(item?.resourceNumber) || 2));
+  }
+  return 1;
+};
+const isMultiResourceFlightItem = (item) => !!item && item.type === "Flight" && getExplicitFormationResourceNumber(item) > 1;
 const getFormationEventKey = (item) => String(item?.code || item?.masterEventId || item?.id || "").trim().toUpperCase().replace(/\s+/g, "");
 const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX = /^\[Linked Event:\s*([^\]]+)\]$/i;
 const getAirCombatLinkedEventCode = (item) => {
@@ -92499,19 +92512,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
   });
   const getFormationItemForTrainee = (trainee, fallback) => traineeNextEventMap.get(trainee.fullName)?.next || fallback;
-  const hasExplicitLmpResourceNumber = (item) => {
-    const rawResourceNumber = Number(item?.resourceNumber);
-    const rawResourceCount = Number(item?.resourceCount);
-    const physicalResourceCount = Array.isArray(item?.resourcesPhysical) ? item.resourcesPhysical.filter((resource) => String(resource || "").trim().length > 0).length : 0;
-    return Number.isFinite(rawResourceNumber) && rawResourceNumber > 0 || Number.isFinite(rawResourceCount) && rawResourceCount > 0 || physicalResourceCount > 0;
-  };
   const getFormationGroupResourceNumber = (group) => {
     const groupItems = group.trainees.map((trainee) => getFormationItemForTrainee(trainee, group.item));
-    const explicitResourceNumbers = groupItems.filter(hasExplicitLmpResourceNumber).map(getLmpResourceNumber);
+    const explicitResourceNumbers = groupItems.map(getExplicitFormationResourceNumber).filter((resourceNumber) => resourceNumber > 1);
     if (explicitResourceNumbers.length > 0) {
       return Math.max(...explicitResourceNumbers);
     }
-    return getLmpResourceNumber(group.item);
+    return getExplicitFormationResourceNumber(group.item);
   };
   neoBuildDiag.formationResourceDiagnostics.groups = Array.from(formationGroups.entries()).map(([eventKey, group]) => {
     const resourceNumber = getFormationGroupResourceNumber(group);
