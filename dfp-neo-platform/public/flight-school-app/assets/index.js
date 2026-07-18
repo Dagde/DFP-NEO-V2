@@ -76944,7 +76944,7 @@ const CoursesManagementView = ({
         gradDate: courseToEdit.gradDate,
         location: courseToEdit.location || "",
         unit: courseToEdit.unit || "",
-        lmpType: courseToEdit.lmpType || "BPC+IPC",
+        lmpType: courseToEdit.lmpType || "",
         academicLmpType: courseToEdit.academicLmpType || "",
         locations,
         units,
