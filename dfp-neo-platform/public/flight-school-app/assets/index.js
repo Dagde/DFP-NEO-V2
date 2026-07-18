@@ -30088,19 +30088,20 @@ const EventDropdown = ({
 }) => {
   const [open, setOpen] = reactExports.useState(false);
   const [selectedCourse, setSelectedCourse] = reactExports.useState(null);
+  const portalId = reactExports.useMemo(() => `event-dropdown-portal-${Math.random().toString(36).slice(2)}`, []);
   const ref = reactExports.useRef(null);
   const [dropdownPos, setDropdownPos] = reactExports.useState({ top: 0, right: 0 });
   reactExports.useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
-        const portalEl = document.getElementById("event-dropdown-portal");
+        const portalEl = document.getElementById(portalId);
         if (portalEl && portalEl.contains(e.target)) return;
         setOpen(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [portalId]);
   reactExports.useEffect(() => {
     if (!open) return;
     if (selectedCourse && courseOptions.includes(selectedCourse)) return;
@@ -30122,9 +30123,11 @@ const EventDropdown = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
-        id: "event-dropdown-portal",
+        id: portalId,
         onClick: (e) => e.stopPropagation(),
         onMouseDown: (e) => e.stopPropagation(),
+        onPointerDown: (e) => e.stopPropagation(),
+        onPointerDownCapture: (e) => e.stopPropagation(),
         style: {
           position: "fixed",
           top: dropdownPos.top,
@@ -30143,7 +30146,6 @@ const EventDropdown = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: 130, borderRight: "1px solid rgba(255,255,255,0.12)", overflowY: "auto", maxHeight: 320, backgroundColor: "#1a2f4a" }, children: courseOptions.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
-              onMouseEnter: () => setSelectedCourse(course),
               onClick: () => setSelectedCourse(course),
               style: {
                 padding: "9px 12px",

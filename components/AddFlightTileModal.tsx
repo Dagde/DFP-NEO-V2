@@ -414,20 +414,21 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const portalId = useMemo(() => `event-dropdown-portal-${Math.random().toString(36).slice(2)}`, []);
   const ref = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const handler = (e: PointerEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        const portalEl = document.getElementById('event-dropdown-portal');
+        const portalEl = document.getElementById(portalId);
         if (portalEl && portalEl.contains(e.target as Node)) return;
         setOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, [portalId]);
 
   useEffect(() => {
     if (!open) return;
@@ -451,9 +452,11 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
 
   const dropdownPanel = open && !disabled ? ReactDOM.createPortal(
     <div
-      id="event-dropdown-portal"
+      id={portalId}
       onClick={e => e.stopPropagation()}
       onMouseDown={e => e.stopPropagation()}
+      onPointerDown={e => e.stopPropagation()}
+      onPointerDownCapture={e => e.stopPropagation()}
       style={{
         position: 'fixed',
         top: dropdownPos.top,
@@ -474,7 +477,6 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
         {courseOptions.map(course => (
           <div
             key={course}
-            onMouseEnter={() => setSelectedCourse(course)}
             onClick={() => setSelectedCourse(course)}
             style={{
               padding: '9px 12px', fontSize: 13, cursor: 'pointer',
