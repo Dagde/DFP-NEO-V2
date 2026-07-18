@@ -10018,6 +10018,7 @@ const buildOrganisationChart = (platformConfig2) => {
     const startsAtRoot = normaliseOrgChartKey(path[0]) === rootKey;
     const parentPath = path.map((part, pathIndex) => getCanonicalOrganisationLabel(levels, repairMaps, startsAtRoot ? pathIndex : pathIndex + 1, part)).filter(Boolean);
     const displayPath = parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath;
+    if (displayPath.length === 0) return;
     addOrganisationChartPath(root2, displayPath, levelNames, unitCode);
   });
   if (root2.children.length === 0) {

@@ -432,6 +432,7 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
                 .map((part: unknown, pathIndex: number) => getCanonicalOrganisationLabel(levels, repairMaps, startsAtRoot ? pathIndex : pathIndex + 1, part))
                 .filter(Boolean);
             const displayPath = parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath;
+            if (displayPath.length === 0) return;
             addOrganisationChartPath(root, displayPath, levelNames, unitCode);
         });
     if (root.children.length === 0) {
