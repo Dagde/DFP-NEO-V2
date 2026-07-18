@@ -44288,7 +44288,7 @@ appliedUpdates.forEach(update => {
                     eventsForDate={eventsForDate}
                     instructors={instructorsData.map(i => i.name)}
                     trainees={allTraineesData.map(t => t.fullName)}
-                    syllabusDetails={isFixedCrewLikeOperationalModel(activeOperationalModel) ? visibleSyllabusDetails : syllabusDetails}
+                    syllabusDetails={visibleSyllabusDetails}
                     school={school}
                     traineesData={traineesData}
                     instructorsData={instructorsData}

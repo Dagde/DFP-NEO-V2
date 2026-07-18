@@ -413,7 +413,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
   fontSize, color, disabled,
 }) => {
   const [open, setOpen] = useState(false);
-  const [hovCourse, setHovCourse] = useState<string | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
 
@@ -429,6 +429,12 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    if (selectedCourse && courseOptions.includes(selectedCourse)) return;
+    setSelectedCourse(courseOptions[0] || null);
+  }, [courseOptions, open, selectedCourse]);
+
   const handleOpen = () => {
     if (disabled) return;
     if (ref.current) {
@@ -436,13 +442,18 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
       // right-align the dropdown to the trigger element
       setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
     }
-    setOpen(o => !o);
+    setOpen(o => {
+      const nextOpen = !o;
+      if (nextOpen && !selectedCourse) setSelectedCourse(courseOptions[0] || null);
+      return nextOpen;
+    });
   };
 
   const dropdownPanel = open && !disabled ? ReactDOM.createPortal(
     <div
       id="event-dropdown-portal"
       onClick={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
       style={{
         position: 'fixed',
         top: dropdownPos.top,
@@ -463,13 +474,13 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
         {courseOptions.map(course => (
           <div
             key={course}
-            onMouseEnter={() => setHovCourse(course)}
-            onClick={() => setHovCourse(course)}
+            onMouseEnter={() => setSelectedCourse(course)}
+            onClick={() => setSelectedCourse(course)}
             style={{
               padding: '9px 12px', fontSize: 13, cursor: 'pointer',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              color: hovCourse === course ? '#fff' : 'rgba(255,255,255,0.8)',
-              backgroundColor: hovCourse === course ? 'rgba(255,255,255,0.12)' : 'transparent',
+              color: selectedCourse === course ? '#fff' : 'rgba(255,255,255,0.8)',
+              backgroundColor: selectedCourse === course ? 'rgba(255,255,255,0.12)' : 'transparent',
               fontWeight: course === 'SCT' ? 600 : 400,
             }}
           >
@@ -481,14 +492,14 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
 
       {/* Col 2: Events */}
       <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320, backgroundColor: '#16293f' }}>
-        {hovCourse === 'SCT' ? (
+        {selectedCourse === 'SCT' ? (
           ['SCT', 'SCT FORM'].map(code => (
             <div
               key={code}
               onClick={() => {
                 onChange(code);
                 setOpen(false);
-                setHovCourse(null);
+                setSelectedCourse(null);
               }}
               style={{
                 padding: '9px 12px', fontSize: 13, cursor: 'pointer',
@@ -503,8 +514,8 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
               <span>{code}</span>
             </div>
           ))
-        ) : hovCourse ? (
-          getEventsForCourse(hovCourse).map(ev => {
+        ) : selectedCourse ? (
+          getEventsForCourse(selectedCourse).map(ev => {
             const code = ev.code || ev.id || '';
             const isNext = nextLMPEvent && (nextLMPEvent.code === code || nextLMPEvent.id === code);
             return (
@@ -513,7 +524,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
                 onClick={() => {
                   onChange(code, ev.duration || ev.flightOrSimHours || undefined);
                   setOpen(false);
-                  setHovCourse(null);
+                  setSelectedCourse(null);
                 }}
                 style={{
                   padding: '9px 12px', fontSize: 13, cursor: 'pointer',
@@ -533,7 +544,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
           })
         ) : (
           <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.35)', fontSize: 12, textAlign: 'center' }}>
-            {hovCourse === 'SCT' ? 'SCT selected' : 'Hover a course'}
+            Select a course
           </div>
         )}
       </div>

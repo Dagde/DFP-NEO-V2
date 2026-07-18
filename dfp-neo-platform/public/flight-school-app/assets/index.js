@@ -30087,7 +30087,7 @@ const EventDropdown = ({
   disabled
 }) => {
   const [open, setOpen] = reactExports.useState(false);
-  const [hovCourse, setHovCourse] = reactExports.useState(null);
+  const [selectedCourse, setSelectedCourse] = reactExports.useState(null);
   const ref = reactExports.useRef(null);
   const [dropdownPos, setDropdownPos] = reactExports.useState({ top: 0, right: 0 });
   reactExports.useEffect(() => {
@@ -30101,13 +30101,22 @@ const EventDropdown = ({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+  reactExports.useEffect(() => {
+    if (!open) return;
+    if (selectedCourse && courseOptions.includes(selectedCourse)) return;
+    setSelectedCourse(courseOptions[0] || null);
+  }, [courseOptions, open, selectedCourse]);
   const handleOpen = () => {
     if (disabled) return;
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect();
       setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
     }
-    setOpen((o) => !o);
+    setOpen((o) => {
+      const nextOpen = !o;
+      if (nextOpen && !selectedCourse) setSelectedCourse(courseOptions[0] || null);
+      return nextOpen;
+    });
   };
   const dropdownPanel = open && !disabled ? ReactDOM.createPortal(
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -30115,6 +30124,7 @@ const EventDropdown = ({
       {
         id: "event-dropdown-portal",
         onClick: (e) => e.stopPropagation(),
+        onMouseDown: (e) => e.stopPropagation(),
         style: {
           position: "fixed",
           top: dropdownPos.top,
@@ -30133,8 +30143,8 @@ const EventDropdown = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: 130, borderRight: "1px solid rgba(255,255,255,0.12)", overflowY: "auto", maxHeight: 320, backgroundColor: "#1a2f4a" }, children: courseOptions.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
-              onMouseEnter: () => setHovCourse(course),
-              onClick: () => setHovCourse(course),
+              onMouseEnter: () => setSelectedCourse(course),
+              onClick: () => setSelectedCourse(course),
               style: {
                 padding: "9px 12px",
                 fontSize: 13,
@@ -30142,8 +30152,8 @@ const EventDropdown = ({
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                color: hovCourse === course ? "#fff" : "rgba(255,255,255,0.8)",
-                backgroundColor: hovCourse === course ? "rgba(255,255,255,0.12)" : "transparent",
+                color: selectedCourse === course ? "#fff" : "rgba(255,255,255,0.8)",
+                backgroundColor: selectedCourse === course ? "rgba(255,255,255,0.12)" : "transparent",
                 fontWeight: course === "SCT" ? 600 : 400
               },
               children: [
@@ -30153,13 +30163,13 @@ const EventDropdown = ({
             },
             course
           )) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, overflowY: "auto", maxHeight: 320, backgroundColor: "#16293f" }, children: hovCourse === "SCT" ? ["SCT", "SCT FORM"].map((code) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, overflowY: "auto", maxHeight: 320, backgroundColor: "#16293f" }, children: selectedCourse === "SCT" ? ["SCT", "SCT FORM"].map((code) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
             {
               onClick: () => {
                 onChange(code);
                 setOpen(false);
-                setHovCourse(null);
+                setSelectedCourse(null);
               },
               style: {
                 padding: "9px 12px",
@@ -30177,7 +30187,7 @@ const EventDropdown = ({
               children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: code })
             },
             code
-          )) : hovCourse ? getEventsForCourse(hovCourse).map((ev) => {
+          )) : selectedCourse ? getEventsForCourse(selectedCourse).map((ev) => {
             const code = ev.code || ev.id || "";
             const isNext = nextLMPEvent && (nextLMPEvent.code === code || nextLMPEvent.id === code);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -30186,7 +30196,7 @@ const EventDropdown = ({
                 onClick: () => {
                   onChange(code, ev.duration || ev.flightOrSimHours || void 0);
                   setOpen(false);
-                  setHovCourse(null);
+                  setSelectedCourse(null);
                 },
                 style: {
                   padding: "9px 12px",
@@ -30209,7 +30219,7 @@ const EventDropdown = ({
               },
               code
             );
-          }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "20px 12px", color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" }, children: hovCourse === "SCT" ? "SCT selected" : "Hover a course" }) })
+          }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "20px 12px", color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" }, children: "Select a course" }) })
         ]
       }
     ),
@@ -119788,7 +119798,7 @@ Do you want to replace the existing entry?`,
           eventsForDate,
           instructors: instructorsData.map((i) => i.name),
           trainees: allTraineesData.map((t) => t.fullName),
-          syllabusDetails: isFixedCrewLikeOperationalModel(activeOperationalModel) ? visibleSyllabusDetails : syllabusDetails,
+          syllabusDetails: visibleSyllabusDetails,
           school,
           traineesData,
           instructorsData,
