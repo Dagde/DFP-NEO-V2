@@ -34,6 +34,7 @@ interface TrainingRecordsViewProps {
     platformConfig?: PlatformConfig | null;
     resourceDisplayNames?: ResourceDisplayNames;
     instructorLabel?: string;
+    hasTraineesEnabled?: boolean;
 }
 
 type TabType = 'courses' | 'export';
@@ -65,6 +66,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     platformConfig = null,
     resourceDisplayNames,
     instructorLabel = 'QFI',
+    hasTraineesEnabled = true,
 }) => {
     const [activeTab, setActiveTab] = useState<TabType>('courses');
 
@@ -142,6 +144,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         onSavePT051Assessment={onSavePT051Assessment}
                         resourceDisplayNames={resourceDisplayNames}
                         instructorLabel={instructorLabel}
+                        hasTraineesEnabled={hasTraineesEnabled}
                     />
                 )}
             </div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Trainee, Instructor, ScheduleEvent, Course, Score, Pt051Assessment, SyllabusItemDetail } from '../types';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -20,6 +20,7 @@ interface TrainingRecordsExportViewProps {
     onSavePT051Assessment: (assessment: Pt051Assessment) => void;
     resourceDisplayNames?: ResourceDisplayNames;
     instructorLabel?: string;
+    hasTraineesEnabled?: boolean;
 }
 
 type RecordType = 'all' | 'trainees' | 'staff' | 'events';
@@ -71,7 +72,8 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     pt051Assessments,
     onSavePT051Assessment,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-    instructorLabel = 'QFI'
+    instructorLabel = 'QFI',
+    hasTraineesEnabled = true
 }) => {
     // Core export settings
     const [recordType, setRecordType] = useState<RecordType>('all');
@@ -111,6 +113,13 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     const [isCompleting, setIsCompleting] = useState(false);
     const [completionProgress, setCompletionProgress] = useState(0);
     const [completionStatus, setCompletionStatus] = useState('');
+    const canExportTraineeRecords = hasTraineesEnabled;
+
+    useEffect(() => {
+        if (!canExportTraineeRecords && recordType === 'trainees') {
+            setRecordType('all');
+        }
+    }, [canExportTraineeRecords, recordType]);
 
     const getEventTypeLabel = (type: EventType): string => {
         if (type === 'FTD') return resourceDisplayNames.ftd;
@@ -383,7 +392,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         // For trainee/staff/all records, include ALL people (not just those with events)
         // This matches user expectation: "Trainee records" = all trainees, not just those with events
         
-        if (recordType === 'trainees') {
+        if (recordType === 'trainees' && canExportTraineeRecords) {
             console.log('📊 Returning all trainees:', allTrainees.length);
             return { events: filteredEvents, trainees: allTrainees, staff: [] };
         } else if (recordType === 'staff') {
@@ -391,19 +400,19 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             return { events: filteredEvents, trainees: [], staff: allInstructors };
         } else {
             // recordType === 'all'
-            console.log('📊 Returning all trainees and staff');
-            return { events: filteredEvents, trainees: allTrainees, staff: allInstructors };
+            console.log('📊 Returning all permitted people and events');
+            return { events: filteredEvents, trainees: canExportTraineeRecords ? allTrainees : [], staff: allInstructors };
         }
-    }, [recordType, filteredEvents, allTrainees, allInstructors]);
+    }, [recordType, filteredEvents, allTrainees, allInstructors, canExportTraineeRecords]);
 
     // Calculate record count
     const recordCount = useMemo(() => {
         let count = 0;
-        if (recordType === 'all' || recordType === 'trainees') count += filteredData.trainees.length;
+        if ((recordType === 'all' || recordType === 'trainees') && canExportTraineeRecords) count += filteredData.trainees.length;
         if (recordType === 'all' || recordType === 'staff') count += filteredData.staff.length;
         if (recordType === 'all' || recordType === 'events') count += filteredData.events.length;
         return count;
-    }, [recordType, filteredData]);
+    }, [recordType, filteredData, canExportTraineeRecords]);
 
     // Estimate file size (rough approximation)
     const estimatedSize = useMemo(() => {
@@ -429,7 +438,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
     // Get record type description
     const getRecordTypeDescription = () => {
-        if (recordType === 'all') return 'All records (Trainees, Staff, Events)';
+        if (recordType === 'all') return canExportTraineeRecords ? 'All records (Trainees, Staff, Events)' : 'All records (Staff, Events)';
         if (recordType === 'trainees') return 'Trainee records';
         if (recordType === 'staff') return 'Staff records';
         return 'Event records';
@@ -507,7 +516,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         }
         
         // Add Trainees
-        if (recordType === 'all' || recordType === 'trainees') {
+        if ((recordType === 'all' || recordType === 'trainees') && canExportTraineeRecords) {
             csvContent += 'TRAINEES\n';
             csvContent += 'Name,Rank,Course,Service,Unit,Flight\n';
             filteredData.trainees.forEach(t => {
@@ -555,7 +564,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         }
         
         // Add Trainees sheet
-        if (recordType === 'all' || recordType === 'trainees') {
+        if ((recordType === 'all' || recordType === 'trainees') && canExportTraineeRecords) {
             const traineesData = filteredData.trainees.map(t => ({
                 'Name': t.name || '',
                 'Rank': t.rank || '',
@@ -1206,17 +1215,21 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                 onChange={() => setRecordType('all')}
                                 className="w-4 h-4 text-sky-500"
                             />
-                            <span className="text-gray-200">All records (Trainees, Staff, and Events)</span>
+                            <span className="text-gray-200">
+                                {canExportTraineeRecords ? 'All records (Trainees, Staff, and Events)' : 'All records (Staff and Events)'}
+                            </span>
                         </label>
-                        <label className="flex items-center space-x-3 cursor-pointer">
-                            <input
-                                type="radio"
-                                checked={recordType === 'trainees'}
-                                onChange={() => setRecordType('trainees')}
-                                className="w-4 h-4 text-sky-500"
-                            />
-                            <span className="text-gray-200">Trainee records only</span>
-                        </label>
+                        {canExportTraineeRecords && (
+                            <label className="flex items-center space-x-3 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    checked={recordType === 'trainees'}
+                                    onChange={() => setRecordType('trainees')}
+                                    className="w-4 h-4 text-sky-500"
+                                />
+                                <span className="text-gray-200">Trainee records only</span>
+                            </label>
+                        )}
                         <label className="flex items-center space-x-3 cursor-pointer">
                             <input
                                 type="radio"
@@ -1513,7 +1526,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                             </div>
 
                             {/* Specific trainees */}
-                            {(recordType === 'all' || recordType === 'trainees') && (
+                            {canExportTraineeRecords && (recordType === 'all' || recordType === 'trainees') && (
                                 <div>
                                     <h3 className="text-sm font-medium text-gray-300 mb-3">Specific Trainees (Active & Archived)</h3>
                                     <input

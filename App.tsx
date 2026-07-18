@@ -42145,6 +42145,7 @@ appliedUpdates.forEach(update => {
                     platformConfig={platformConfig}
                     resourceDisplayNames={resourceDisplayNames}
                     instructorLabel={instructorLabel}
+                    hasTraineesEnabled={activeUnitHasTrainees}
                 />;
             case 'ArchivedCourses':
                 return <ArchivedCoursesView

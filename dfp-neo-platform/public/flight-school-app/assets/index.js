@@ -77049,7 +77049,8 @@ const TrainingRecordsExportView = ({
   pt051Assessments,
   onSavePT051Assessment,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  instructorLabel = "QFI"
+  instructorLabel = "QFI",
+  hasTraineesEnabled = true
 }) => {
   const [recordType, setRecordType] = reactExports.useState("all");
   const [timePeriod, setTimePeriod] = reactExports.useState("all-time");
@@ -77080,6 +77081,12 @@ const TrainingRecordsExportView = ({
   const [isCompleting, setIsCompleting] = reactExports.useState(false);
   const [completionProgress, setCompletionProgress] = reactExports.useState(0);
   const [completionStatus, setCompletionStatus] = reactExports.useState("");
+  const canExportTraineeRecords = hasTraineesEnabled;
+  reactExports.useEffect(() => {
+    if (!canExportTraineeRecords && recordType === "trainees") {
+      setRecordType("all");
+    }
+  }, [canExportTraineeRecords, recordType]);
   const getEventTypeLabel = (type) => {
     if (type === "FTD") return resourceDisplayNames.ftd;
     if (type === "CPT") return resourceDisplayNames.cpt;
@@ -77296,24 +77303,24 @@ const TrainingRecordsExportView = ({
     if (recordType === "events") {
       return { events: filteredEvents, trainees: [], staff: [] };
     }
-    if (recordType === "trainees") {
+    if (recordType === "trainees" && canExportTraineeRecords) {
       console.log("📊 Returning all trainees:", allTrainees.length);
       return { events: filteredEvents, trainees: allTrainees, staff: [] };
     } else if (recordType === "staff") {
       console.log("📊 Returning all staff:", allInstructors.length);
       return { events: filteredEvents, trainees: [], staff: allInstructors };
     } else {
-      console.log("📊 Returning all trainees and staff");
-      return { events: filteredEvents, trainees: allTrainees, staff: allInstructors };
+      console.log("📊 Returning all permitted people and events");
+      return { events: filteredEvents, trainees: canExportTraineeRecords ? allTrainees : [], staff: allInstructors };
     }
-  }, [recordType, filteredEvents, allTrainees, allInstructors]);
+  }, [recordType, filteredEvents, allTrainees, allInstructors, canExportTraineeRecords]);
   const recordCount = reactExports.useMemo(() => {
     let count = 0;
-    if (recordType === "all" || recordType === "trainees") count += filteredData.trainees.length;
+    if ((recordType === "all" || recordType === "trainees") && canExportTraineeRecords) count += filteredData.trainees.length;
     if (recordType === "all" || recordType === "staff") count += filteredData.staff.length;
     if (recordType === "all" || recordType === "events") count += filteredData.events.length;
     return count;
-  }, [recordType, filteredData]);
+  }, [recordType, filteredData, canExportTraineeRecords]);
   const estimatedSize = reactExports.useMemo(() => {
     const bytesPerRecord = outputFormat === "pdf" ? 5e3 : outputFormat === "excel" ? 2e3 : 500;
     const totalBytes = recordCount * bytesPerRecord;
@@ -77331,7 +77338,7 @@ const TrainingRecordsExportView = ({
     return "Not specified";
   };
   const getRecordTypeDescription = () => {
-    if (recordType === "all") return "All records (Trainees, Staff, Events)";
+    if (recordType === "all") return canExportTraineeRecords ? "All records (Trainees, Staff, Events)" : "All records (Staff, Events)";
     if (recordType === "trainees") return "Trainee records";
     if (recordType === "staff") return "Staff records";
     return "Event records";
@@ -77395,7 +77402,7 @@ const TrainingRecordsExportView = ({
       });
       csvContent += "\n";
     }
-    if (recordType === "all" || recordType === "trainees") {
+    if ((recordType === "all" || recordType === "trainees") && canExportTraineeRecords) {
       csvContent += "TRAINEES\n";
       csvContent += "Name,Rank,Course,Service,Unit,Flight\n";
       filteredData.trainees.forEach((t) => {
@@ -77434,7 +77441,7 @@ const TrainingRecordsExportView = ({
       const wsEvents = XLSX.utils.json_to_sheet(eventsData);
       XLSX.utils.book_append_sheet(wb, wsEvents, "Events");
     }
-    if (recordType === "all" || recordType === "trainees") {
+    if ((recordType === "all" || recordType === "trainees") && canExportTraineeRecords) {
       const traineesData2 = filteredData.trainees.map((t) => ({
         "Name": t.name || "",
         "Rank": t.rank || "",
@@ -77871,9 +77878,9 @@ const TrainingRecordsExportView = ({
                 className: "w-4 h-4 text-sky-500"
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: "All records (Trainees, Staff, and Events)" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: canExportTraineeRecords ? "All records (Trainees, Staff, and Events)" : "All records (Staff and Events)" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 cursor-pointer", children: [
+          canExportTraineeRecords && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 cursor-pointer", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -78224,7 +78231,7 @@ const TrainingRecordsExportView = ({
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-1", children: "Hold Ctrl/Cmd to select multiple" })
           ] }),
-          (recordType === "all" || recordType === "trainees") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          canExportTraineeRecords && (recordType === "all" || recordType === "trainees") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-medium text-gray-300 mb-3", children: "Specific Trainees (Active & Archived)" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -78612,7 +78619,8 @@ const TrainingRecordsView = ({
   activeUnitCode = "",
   platformConfig: platformConfig2 = null,
   resourceDisplayNames,
-  instructorLabel = "QFI"
+  instructorLabel = "QFI",
+  hasTraineesEnabled = true
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("courses");
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 h-full overflow-auto", children: [
@@ -78680,7 +78688,8 @@ const TrainingRecordsView = ({
           pt051Assessments,
           onSavePT051Assessment,
           resourceDisplayNames,
-          instructorLabel
+          instructorLabel,
+          hasTraineesEnabled
         }
       )
     ] })
@@ -117828,7 +117837,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             activeUnitCode,
             platformConfig: platformConfig2,
             resourceDisplayNames,
-            instructorLabel
+            instructorLabel,
+            hasTraineesEnabled: activeUnitHasTrainees
           }
         );
       case "ArchivedCourses":
