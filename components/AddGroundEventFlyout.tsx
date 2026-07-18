@@ -26,6 +26,7 @@ interface AddGroundEventFlyoutProps {
   date?: string;
   courseColors?: { [key: string]: string };
   school?: 'ESL' | 'PEA';
+  currentLocationName?: string;
   locationAbbreviations?: Record<string, string>; // long name -> short code
   courseAcademicProgress?: Map<string, Set<string>>;
   onUpdateCourseAcademicProgress?: (courseCode: string, lessonCode: string, completed: boolean) => void;
@@ -53,6 +54,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     date,
     courseColors,
     school,
+    currentLocationName,
     locationAbbreviations,
     courseAcademicProgress,
     onUpdateCourseAcademicProgress,
@@ -381,7 +383,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 courseColors={courseColors || activeCourses}
                                 school={school || 'ESL'}
                                 locationAbbreviations={locationAbbreviations}
-                                defaultLocality={(school || 'ESL') === 'ESL' ? 'East Sale' : 'Pearce'}
+                                defaultLocality={currentLocationName || ''}
                                 courseAcademicProgress={courseAcademicProgress}
                                 onUpdateCourseAcademicProgress={onUpdateCourseAcademicProgress}
                                 persistedAcademicLmp={persistedAcademicLmp}

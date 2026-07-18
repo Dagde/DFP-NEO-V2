@@ -314,7 +314,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   const localities = useMemo(() => {
     const locs = new Set<string>();
     traineesData.forEach(t => { if (t.location) locs.add(t.location); });
-    if (locs.size === 0) locs.add(school === 'ESL' ? 'East Sale' : 'Pearce');
+    if (locs.size === 0 && defaultLocality) locs.add(defaultLocality);
     // Consolidate locations that have the same long name (mapped via locationAbbreviations)
     const locsArray = Array.from(locs);
     const consolidated: string[] = [];
@@ -327,7 +327,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       }
     }
     return consolidated.length > 0 ? consolidated : locsArray;
-  }, [traineesData, school, locationAbbreviations]);
+  }, [traineesData, defaultLocality, locationAbbreviations]);
 
   const [selectedLocality, setSelectedLocality] = useState(() => {
     // Default to the locality currently selected in the header (passed as defaultLocality)

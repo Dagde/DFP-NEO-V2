@@ -22671,6 +22671,8 @@ const App: React.FC = () => {
         };
     }, [platformConfig, school]);
 
+    const activeLocationDisplayName = activeLocationSolarProfile.name || school;
+
     const getSunTimesForDate = useCallback((targetDate: string) => {
         const { latitude, longitude, timezone } = activeLocationSolarProfile;
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !timezone) {
@@ -31409,7 +31411,7 @@ const App: React.FC = () => {
                 navyStart: data.navyStart,
                 armyStart: data.armyStart,
                 status: 'ACTIVE',
-                location: data.location || (school === 'ESL' ? 'East Sale' : 'Pearce'),
+                location: data.location || activeLocationDisplayName,
                 unit: data.unit || '',
                 lmpType: (data as any).lmpType || '',
                 academicLmpType: (data as any).academicLmpType || '',
@@ -31621,7 +31623,7 @@ const App: React.FC = () => {
                 navyStart: 0,
                 armyStart: 0,
                 status: 'ACTIVE',
-                location: school === 'ESL' ? 'East Sale' : 'Pearce'
+                location: activeLocationDisplayName
             });
             if (!result.success) {
                 console.error('Failed to save unarchived course to DB:', result.error);
@@ -42322,7 +42324,7 @@ appliedUpdates.forEach(update => {
                             date={date}
                             events={eventsForDate}
                             school={school}
-                            currentLocation={school === 'ESL' ? 'East Sale' : 'Pearce'}
+                            currentLocation={activeLocationDisplayName}
                             onNavigate={handleNavigation}
                             onOpenAuth={(e) => {
                                 // Find the latest version of the event from main events state
@@ -44292,6 +44294,7 @@ appliedUpdates.forEach(update => {
                     instructorsData={instructorsData}
                     courseColors={scopedCourseColors}
                     date={selectedEvent.date || date}
+                    currentLocationName={activeLocationDisplayName}
                     traineeLMPs={traineeLMPs}
                     scores={scores}
                     locationOpAreas={locationOpAreas}
@@ -44459,7 +44462,7 @@ appliedUpdates.forEach(update => {
                     isAddingTile={isAddingTile}
                     isReadOnly={isPastDfpDate(selectedEvent.date) && !['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView)}
                        formationCallsigns={formationCallsigns}
-                       currentLocation={school === 'ESL' ? 'East Sale' : 'Pearce'}
+                       currentLocation={activeLocationDisplayName}
                     onVisualAdjustStart={handleVisualAdjustStart}
                     onVisualAdjustEnd={handleVisualAdjustEnd}
                     onSavePT051Assessment={onSavePT051Assessment}
@@ -44634,6 +44637,7 @@ appliedUpdates.forEach(update => {
                     date={buildDfpDate || new Date().toISOString().split('T')[0]}
                     courseColors={scopedCourseColors}
                     school={school}
+                    currentLocationName={activeLocationDisplayName}
                     locationAbbreviations={locationAbbreviations}
                     courseAcademicProgress={courseAcademicProgress}
                     onUpdateCourseAcademicProgress={handleUpdateCourseAcademicProgress}

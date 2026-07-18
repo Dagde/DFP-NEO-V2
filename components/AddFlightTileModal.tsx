@@ -44,6 +44,7 @@ interface AddFlightTileModalProps {
   trainees: string[];
   syllabusDetails: SyllabusItemDetail[];
   school: 'ESL' | 'PEA';
+  currentLocationName?: string;
   traineesData: Trainee[];
   instructorsData: Instructor[];
   courseColors: { [key: string]: string };
@@ -1066,6 +1067,7 @@ const FlightTile: React.FC<TileProps> = ({
 const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   onClose, onSave, initialEvent = null, eventsForDate = [], instructors, trainees, syllabusDetails, school,
   traineesData, instructorsData, courseColors, date, traineeLMPs, scores,
+  currentLocationName,
   locationOpAreas = {},
   formationCallsigns = [],
   userId,
@@ -1391,7 +1393,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   };
 
   // ── Determine the current location full name from school ──────────────────
-  const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+  const locationFullName = currentLocationName || school;
 
   const filteredFormationCallsigns = useMemo(() => {
     const matches = (formationCallsigns || []).filter(fc => fc.location === locationFullName);

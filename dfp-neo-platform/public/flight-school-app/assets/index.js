@@ -30702,6 +30702,7 @@ const AddFlightTileModal = ({
   date,
   traineeLMPs,
   scores,
+  currentLocationName,
   locationOpAreas = {},
   formationCallsigns = [],
   userId,
@@ -30960,7 +30961,7 @@ const AddFlightTileModal = ({
   const handleDragPosition = (key, pos) => {
     setTilePositions((prev) => ({ ...prev, [key]: pos }));
   };
-  const locationFullName = school === "ESL" ? "East Sale" : "Pearce";
+  const locationFullName = currentLocationName || school;
   const filteredFormationCallsigns = reactExports.useMemo(() => {
     const matches = (formationCallsigns || []).filter((fc) => fc.location === locationFullName);
     return matches.length > 0 ? matches : null;
@@ -32720,7 +32721,7 @@ const AcademicsTab = ({
     traineesData.forEach((t) => {
       if (t.location) locs.add(t.location);
     });
-    if (locs.size === 0) locs.add(school === "ESL" ? "East Sale" : "Pearce");
+    if (locs.size === 0 && defaultLocality) locs.add(defaultLocality);
     const locsArray = Array.from(locs);
     const consolidated = [];
     const seen = /* @__PURE__ */ new Set();
@@ -32732,7 +32733,7 @@ const AcademicsTab = ({
       }
     }
     return consolidated.length > 0 ? consolidated : locsArray;
-  }, [traineesData, school, locationAbbreviations]);
+  }, [traineesData, defaultLocality, locationAbbreviations]);
   const [selectedLocality, setSelectedLocality] = reactExports.useState(() => {
     if (defaultLocality && localities.includes(defaultLocality)) return defaultLocality;
     return localities[0] || "";
@@ -33566,6 +33567,7 @@ const AddGroundEventFlyout = ({
   date,
   courseColors,
   school,
+  currentLocationName,
   locationAbbreviations,
   courseAcademicProgress,
   onUpdateCourseAcademicProgress,
@@ -33843,7 +33845,7 @@ const AddGroundEventFlyout = ({
                     courseColors: courseColors || activeCourses,
                     school: school || "ESL",
                     locationAbbreviations,
-                    defaultLocality: (school || "ESL") === "ESL" ? "East Sale" : "Pearce",
+                    defaultLocality: currentLocationName || "",
                     courseAcademicProgress,
                     onUpdateCourseAcademicProgress,
                     persistedAcademicLmp,
@@ -101783,6 +101785,7 @@ const App = () => {
       timezone: timezone ? String(timezone) : null
     };
   }, [platformConfig, school]);
+  const activeLocationDisplayName = activeLocationSolarProfile.name || school;
   const getSunTimesForDate = reactExports.useCallback((targetDate) => {
     const { latitude, longitude, timezone } = activeLocationSolarProfile;
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !timezone) {
@@ -108961,7 +108964,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         navyStart: data.navyStart,
         armyStart: data.armyStart,
         status: "ACTIVE",
-        location: data.location || (school === "ESL" ? "East Sale" : "Pearce"),
+        location: data.location || activeLocationDisplayName,
         unit: data.unit || "",
         lmpType: data.lmpType || "",
         academicLmpType: data.academicLmpType || ""
@@ -109123,7 +109126,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         navyStart: 0,
         armyStart: 0,
         status: "ACTIVE",
-        location: school === "ESL" ? "East Sale" : "Pearce"
+        location: activeLocationDisplayName
       });
       if (!result.success) {
         console.error("Failed to save unarchived course to DB:", result.error);
@@ -117983,7 +117986,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             date,
             events: eventsForDate,
             school,
-            currentLocation: school === "ESL" ? "East Sale" : "Pearce",
+            currentLocation: activeLocationDisplayName,
             onNavigate: handleNavigation,
             onOpenAuth: (e) => {
               const latestEvent = events.find((ev) => ev.id === e.id) || e;
@@ -119796,6 +119799,7 @@ Do you want to replace the existing entry?`,
           instructorsData,
           courseColors: scopedCourseColors,
           date: selectedEvent.date || date,
+          currentLocationName: activeLocationDisplayName,
           traineeLMPs,
           scores,
           locationOpAreas,
@@ -119939,7 +119943,7 @@ Do you want to replace the existing entry?`,
           isAddingTile,
           isReadOnly: isPastDfpDate(selectedEvent.date) && !["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView),
           formationCallsigns,
-          currentLocation: school === "ESL" ? "East Sale" : "Pearce",
+          currentLocation: activeLocationDisplayName,
           onVisualAdjustStart: handleVisualAdjustStart,
           onVisualAdjustEnd: handleVisualAdjustEnd,
           onSavePT051Assessment,
@@ -120109,6 +120113,7 @@ Do you want to replace the existing entry?`,
           date: buildDfpDate || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
           courseColors: scopedCourseColors,
           school,
+          currentLocationName: activeLocationDisplayName,
           locationAbbreviations,
           courseAcademicProgress,
           onUpdateCourseAcademicProgress: handleUpdateCourseAcademicProgress,
