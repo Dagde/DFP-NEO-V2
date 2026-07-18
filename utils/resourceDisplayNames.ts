@@ -7,7 +7,7 @@ export interface ResourceDisplayNames {
 }
 
 export const DEFAULT_RESOURCE_DISPLAY_NAMES: ResourceDisplayNames = {
-  aircraft: 'PC-21',
+  aircraft: 'Aircraft',
   ftd: 'FTD',
   cpt: 'CPT',
 };

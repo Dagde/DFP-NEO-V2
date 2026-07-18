@@ -2881,7 +2881,7 @@ const getTaskProfileAbbreviationsForUnit = (config, unitCode) => {
   }, {});
 };
 const DEFAULT_RESOURCE_DISPLAY_NAMES = {
-  aircraft: "PC-21",
+  aircraft: "Aircraft",
   ftd: "FTD",
   cpt: "CPT"
 };
