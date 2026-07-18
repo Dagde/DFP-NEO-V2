@@ -136,7 +136,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
 
     return (
         <div
-            className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in"
+            className="fixed inset-0 bg-black/60 z-[60] flex items-start justify-center overflow-y-auto pt-[92px] pb-8 animate-fade-in"
             onClick={onClose}
         >
             <div
@@ -156,7 +156,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
                     </button>
                 </div>
 
-                <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+                <div className="p-6 space-y-5 max-h-[calc(100vh-250px)] overflow-y-auto">
 
                     {/* Course Name (read-only) */}
                     <div>

@@ -188,18 +188,16 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                             {course.name}
                         </h3>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-[1px]">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditClick(course);
                             }}
-                            className="text-sky-400 hover:text-sky-300 transition-colors p-1"
-                            title="Edit Course Dates"
+                            className="w-[52px] h-[28px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md"
+                            title="Edit Course"
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
+                            Edit
                         </button>
                         <button
                             onClick={(e) => {

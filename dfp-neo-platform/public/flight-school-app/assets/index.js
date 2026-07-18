@@ -76483,7 +76483,7 @@ const EditCourseFlyout = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "div",
     {
-      className: "fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in",
+      className: "fixed inset-0 bg-black/60 z-[60] flex items-start justify-center overflow-y-auto pt-[92px] pb-8 animate-fade-in",
       onClick: onClose,
       children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
@@ -76498,7 +76498,7 @@ const EditCourseFlyout = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-5 max-h-[75vh] overflow-y-auto", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-5 max-h-[calc(100vh-250px)] overflow-y-auto", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: labelClass2, children: "Course" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-md text-white font-semibold text-sm tracking-wide", children: courseName })
@@ -76810,7 +76810,7 @@ const CoursesManagementView = ({
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white group-hover:text-sky-400 transition-colors", children: course.name })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
@@ -76818,9 +76818,9 @@ const CoursesManagementView = ({
                     e.stopPropagation();
                     handleEditClick(course);
                   },
-                  className: "text-sky-400 hover:text-sky-300 transition-colors p-1",
-                  title: "Edit Course Dates",
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }) })
+                  className: "w-[52px] h-[28px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md",
+                  title: "Edit Course",
+                  children: "Edit"
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
