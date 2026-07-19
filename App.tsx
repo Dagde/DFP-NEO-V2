@@ -32409,6 +32409,17 @@ const App: React.FC = () => {
     };
 
     const findAvailableResourceId = (eventToPlace: ScheduleEvent, existingEvents: ScheduleEvent[]): string => {
+        const normaliseResourceLookup = (value: string): string => (
+            String(value || '')
+                .replace(/[‐‑‒–—]/g, '-')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toUpperCase()
+        );
+        const resourceStartsWithPrefix = (resourceId: string, prefix: string): boolean => (
+            normaliseResourceLookup(resourceId).startsWith(normaliseResourceLookup(prefix))
+        );
+
         // Handle deployment events - find an available Deployed resource
         if (eventToPlace.type === 'deployment') {
             // Count existing deployments to determine how many Deployed resources we need
@@ -32489,7 +32500,7 @@ const App: React.FC = () => {
             }
         }
 
-        const relevantResources = buildResources.filter(r => r.startsWith(resourcePrefix));
+        const relevantResources = buildResources.filter(r => resourceStartsWithPrefix(r, resourcePrefix));
 
         for (const resourceId of relevantResources) {
             const isOccupied = existingEvents.some(e =>
@@ -44289,6 +44300,7 @@ appliedUpdates.forEach(update => {
                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
                     unitCallsignSettings={activeUnitCallsignSettings}
                     personnelDisplaySettings={personnelDisplaySettings}
+                    sctTerminology={getSctTerminology(platformConfig)}
                 />
             )}
             {selectedEvent && !isAddingTile && (

@@ -30421,6 +30421,8 @@ const EventDropdown = ({
   courseOptions,
   getEventsForCourse,
   nextLMPEvent,
+  getCourseDisplayLabel = (course) => course,
+  getEventDisplayLabel = (code) => code,
   fontSize,
   color,
   disabled
@@ -30509,7 +30511,7 @@ const EventDropdown = ({
                 fontWeight: course === "SCT" ? 600 : 400
               },
               children: [
-                course,
+                getCourseDisplayLabel(course),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 9, opacity: 0.5 }, children: "▶" })
               ]
             },
@@ -30536,7 +30538,7 @@ const EventDropdown = ({
               },
               onMouseEnter: (e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)",
               onMouseLeave: (e) => e.currentTarget.style.backgroundColor = "transparent",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: code })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: getEventDisplayLabel(code) })
             },
             code
           )) : selectedCourse ? getEventsForCourse(selectedCourse).map((ev) => {
@@ -30600,7 +30602,7 @@ const EventDropdown = ({
         onMouseLeave: (e) => {
           e.currentTarget.style.backgroundColor = "transparent";
         },
-        children: value || "EVENT"
+        children: getEventDisplayLabel(value) || "EVENT"
       }
     ),
     dropdownPanel
@@ -30628,11 +30630,14 @@ const FlightTile = ({
   allUnits,
   getLayer2,
   getNames,
+  getPicNames,
   getDisplayLabel,
   courseOptions,
   getEventsForCourse,
   nextLMPEvent,
   eventCategory,
+  getCourseDisplayLabel,
+  getEventDisplayLabel,
   onFlightTypeChange,
   onStartTimeChange,
   onPicNameChange,
@@ -30794,7 +30799,7 @@ const FlightTile = ({
       onChange: onPicNameChange,
       allUnits,
       getLayer2,
-      getNames,
+      getNames: getPicNames || getNames,
       placeholder: "Surname, First (N)",
       fontSize: 28,
       color: picName ? WHITE_FULL : WHITE_GHOST,
@@ -30860,6 +30865,8 @@ const FlightTile = ({
         courseOptions,
         getEventsForCourse,
         nextLMPEvent,
+        getCourseDisplayLabel,
+        getEventDisplayLabel,
         fontSize: 26,
         color: flightNumber ? WHITE_FULL : WHITE_GHOST
       }
@@ -31070,8 +31077,21 @@ const AddFlightTileModal = ({
   activeUnitCodes = [],
   unitCallsignSettings,
   staffQualificationCatalogue,
-  personnelDisplaySettings
+  personnelDisplaySettings,
+  sctTerminology
 }) => {
+  const resolvedSctTerminology = reactExports.useMemo(
+    () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY),
+    [sctTerminology]
+  );
+  const sctShortLabel = resolvedSctTerminology.shortLabel;
+  const sctFormationLabel = `${sctShortLabel} FORM`;
+  const getContinuationDisplayLabel = reactExports.useCallback((code) => {
+    if (code === "SCT") return sctShortLabel;
+    if (code === "SCT FORM") return sctFormationLabel;
+    return code;
+  }, [sctFormationLabel, sctShortLabel]);
+  const isSctFormationCode = reactExports.useCallback((code) => String(code || "").trim().toUpperCase() === "SCT FORM", []);
   const resolvedAircraftCrewComposition = reactExports.useMemo(
     () => normaliseAircraftCrewComposition(aircraftCrewComposition),
     [aircraftCrewComposition]
@@ -31119,6 +31139,7 @@ const AddFlightTileModal = ({
     return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
   }, [aircraftConfigurationDefinitions]);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
+  const isAirCombatModel = normaliseOperationalModel(operationalModel) === "air_combat";
   const isEditingExistingEvent = Boolean(initialEvent?.id && initialEvent?.resourceId);
   const existingFormationEvents = reactExports.useMemo(() => {
     if (!initialEvent?.formationId) return initialEvent ? [initialEvent] : [];
@@ -31371,13 +31392,13 @@ const AddFlightTileModal = ({
     if (!formationType && formationTypes.length > 0) setFormationType(formationTypes[0]);
   }, [formationType, formationTypes]);
   reactExports.useEffect(() => {
-    const additionalCrewCount = flightNumber === "SCT FORM" ? Math.max(0, aircraftCount - 1) : 0;
+    const additionalCrewCount = isSctFormationCode(flightNumber) ? Math.max(0, aircraftCount - 1) : 0;
     setFormationCrew((prev) => Array.from({ length: additionalCrewCount }, (_, index) => ({
       ...prev[index] || { flightType: "Solo", picName: "", studentName: "", callsign: `${formationType || formationTypes[0] || ""}${index + 2}` },
       flightType: isSingleSeatAircraft ? "Solo" : prev[index]?.flightType || "Solo",
       studentName: isSingleSeatAircraft ? "" : prev[index]?.studentName || ""
     })));
-  }, [aircraftCount, flightNumber, formationType, formationTypes, isSingleSeatAircraft]);
+  }, [aircraftCount, flightNumber, formationType, formationTypes, isSctFormationCode, isSingleSeatAircraft]);
   const areaOptions = reactExports.useMemo(() => opAreas.map((a) => ({ value: a, label: a })), [opAreas]);
   const aircraftOptions = reactExports.useMemo(() => [{ value: "", label: "Skip aircraft number" }, ...Array.from({ length: 49 }, (_, i) => {
     const n = String(i + 1).padStart(3, "0");
@@ -31457,6 +31478,20 @@ const AddFlightTileModal = ({
         color: textColor
       };
     });
+  };
+  const shouldRestrictContinuationPicToPilots = isAirCombatModel && eventCategory === "sct";
+  const isPilotStaff = (staff) => {
+    const role = String(staff.role || "").trim().toLowerCase();
+    const category = String(staff.category || "").trim().toLowerCase();
+    return role === "pilot" || category === "pilot";
+  };
+  const getPicNames = (unit, selection) => {
+    if (!shouldRestrictContinuationPicToPilots || selection !== "STAFF") return getNames(unit, selection);
+    return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).filter(isPilotStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((i) => ({
+      name: i.name,
+      label: `${i.rank ? i.rank + " " : ""}${i.name}`,
+      color: "#fff"
+    }));
   };
   const getDisplayLabel = (name) => {
     if (!name) return "";
@@ -31559,6 +31594,7 @@ const AddFlightTileModal = ({
     return ["SCT", ...courses.filter((c) => c !== "SCT")];
   }, [syllabusByCourse]);
   const getEventsForCourse = (course) => course === "SCT" ? [] : syllabusByCourse.get(course) || [];
+  const getCourseDisplayLabel = reactExports.useCallback((course) => course === "SCT" ? sctShortLabel : course, [sctShortLabel]);
   const nextLMPEvent = reactExports.useMemo(() => {
     if (eventCategory !== "lmp_event") return null;
     const name = flightType === "Solo" ? picName : studentName;
@@ -31694,14 +31730,14 @@ const AddFlightTileModal = ({
     if (eventCategory === "lmp_currency") setFlightNumber("CURR");
   }, [eventCategory]);
   reactExports.useEffect(() => {
-    if (flightNumber === "SCT FORM") {
+    if (isSctFormationCode(flightNumber)) {
       setAircraftCount((prev) => Math.max(prev, 2));
       setFlightType("Solo");
     } else if (!isFixedCrewModel) {
       setAircraftCount(1);
       setFormationCrew([]);
     }
-  }, [flightNumber, isFixedCrewModel]);
+  }, [flightNumber, isFixedCrewModel, isSctFormationCode]);
   reactExports.useEffect(() => {
     if (isPersonDropdownKey(activeAddFlightDropdownKey)) return;
     const name = flightType === "Solo" ? picName : studentName;
@@ -31868,7 +31904,7 @@ const AddFlightTileModal = ({
       if (flightType === "Dual" && !studentName) errs.push("Co-Pilot / Student is required for Dual flights.");
       if (flightType === "Solo" && !picName) errs.push("Pilot is required for Solo flights.");
       if (locationType === "Land Away" && (!origin || !destination)) errs.push("Origin and destination are required for land away flights.");
-      if (flightNumber === "SCT FORM") {
+      if (isSctFormationCode(flightNumber)) {
         formationCrew.forEach((crewMember, index) => {
           if (!crewMember.picName) errs.push(`Aircraft ${index + 2} pilot is required.`);
           if (crewMember.flightType === "Dual" && !crewMember.studentName) errs.push(`Aircraft ${index + 2} crew is required.`);
@@ -31941,7 +31977,7 @@ const AddFlightTileModal = ({
         onClose();
         return;
       }
-      const isFormation = flightNumber === "SCT FORM";
+      const isFormation = isSctFormationCode(flightNumber);
       const crewDrafts = isFormation ? [
         { flightType, picName, studentName, callsign: formationType ? `${formationType}1` : callsign },
         ...formationCrew.map((crewMember, index) => ({
@@ -32028,7 +32064,7 @@ const AddFlightTileModal = ({
   } : {
     lmp_event: "LMP Event",
     lmp_currency: "LMP Currency",
-    sct: "SCT",
+    sct: sctShortLabel,
     staff_cat: "Staff CAT",
     twr_di: "TWR DI"
   };
@@ -32451,11 +32487,14 @@ const AddFlightTileModal = ({
                     allUnits,
                     getLayer2,
                     getNames,
+                    getPicNames,
                     getDisplayLabel,
                     courseOptions,
                     getEventsForCourse,
                     nextLMPEvent,
                     eventCategory,
+                    getCourseDisplayLabel,
+                    getEventDisplayLabel: getContinuationDisplayLabel,
                     onFlightTypeChange: setFlightType,
                     onStartTimeChange: (value) => {
                       setStartTime(value);
@@ -32676,7 +32715,7 @@ const AddFlightTileModal = ({
                       )
                     ] })
                   ] }),
-                  flightNumber === "SCT FORM" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-gray-600 bg-gray-800/70 p-4", children: [
+                  isSctFormationCode(flightNumber) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-gray-600 bg-gray-800/70 p-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Formation Callsign" }),
@@ -32724,7 +32763,7 @@ const AddFlightTileModal = ({
                             onChange: (name) => updateFormationCrew(index, { picName: name }),
                             allUnits,
                             getLayer2,
-                            getNames,
+                            getNames: getPicNames,
                             placeholder: "Select pilot",
                             fontSize: 14,
                             color: crewMember.picName ? "#fff" : "rgba(255,255,255,0.45)",
@@ -110244,6 +110283,8 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
   };
   const findAvailableResourceId = (eventToPlace, existingEvents) => {
+    const normaliseResourceLookup = (value) => String(value || "").replace(/[‐‑‒–—]/g, "-").replace(/\s+/g, " ").trim().toUpperCase();
+    const resourceStartsWithPrefix = (resourceId, prefix) => normaliseResourceLookup(resourceId).startsWith(normaliseResourceLookup(prefix));
     if (eventToPlace.type === "deployment") {
       const existingDeploymentCount = existingEvents.filter((e) => e.type === "deployment").length;
       const totalDeploymentCount = existingDeploymentCount + 1;
@@ -110304,7 +110345,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           resourcePrefix = "Ground ";
       }
     }
-    const relevantResources = buildResources.filter((r) => r.startsWith(resourcePrefix));
+    const relevantResources = buildResources.filter((r) => resourceStartsWithPrefix(r, resourcePrefix));
     for (const resourceId of relevantResources) {
       const isOccupied = existingEvents.some(
         (e) => e.resourceId === resourceId && isOverlapping(e, eventToPlace)
@@ -120222,7 +120263,8 @@ Do you want to replace the existing entry?`,
           activeUnitCodes: activeContextUnitCodes,
           staffQualificationCatalogue: activeStaffQualificationCatalogue,
           unitCallsignSettings: activeUnitCallsignSettings,
-          personnelDisplaySettings
+          personnelDisplaySettings,
+          sctTerminology: getSctTerminology(platformConfig)
         }
       ),
       selectedEvent && !isAddingTile && /* @__PURE__ */ jsxRuntimeExports.jsx(
