@@ -66,6 +66,7 @@ interface AddFlightTileModalProps {
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   personnelDisplaySettings?: PersonnelDisplaySettings;
   sctTerminology?: SctTerminology;
+  sctEvents?: string[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -809,6 +810,7 @@ interface EventDropdownProps {
   nextLMPEvent: SyllabusItemDetail | null;
   getCourseDisplayLabel?: (course: string) => string;
   getEventDisplayLabel?: (code: string) => string;
+  continuationEventOptions?: string[];
   fontSize: number;
   color: string;
   disabled?: boolean;
@@ -818,6 +820,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
   value, onChange, courseOptions, getEventsForCourse, nextLMPEvent,
   getCourseDisplayLabel = (course) => course,
   getEventDisplayLabel = (code) => code,
+  continuationEventOptions = [],
   fontSize, color, disabled,
 }) => {
   const dropdownKey = 'add-flight-event-dropdown';
@@ -916,7 +919,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
       {/* Col 2: Events */}
       <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320, backgroundColor: '#16293f' }}>
         {selectedCourse === 'SCT' ? (
-          ['SCT', 'SCT FORM'].map(code => (
+          continuationEventOptions.map(code => (
             <div
               key={code}
               onClick={() => {
@@ -1070,7 +1073,7 @@ const FlightTile: React.FC<TileProps> = ({
   timeOptions, durationOptions, areaOptions, aircraftOptions, callsignOptions,
   formationCallsigns,
   allUnits, getLayer2, getNames, getPicNames, getDisplayLabel,
-  courseOptions, getEventsForCourse, nextLMPEvent, eventCategory, getCourseDisplayLabel, getEventDisplayLabel,
+  courseOptions, getEventsForCourse, nextLMPEvent, eventCategory, getCourseDisplayLabel, getEventDisplayLabel, continuationEventOptions = [],
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
   onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onAircraftPrefixChange, onCallsignChange,
   editMode, layoutSaved, positions, savedPositions,
@@ -1316,6 +1319,7 @@ const FlightTile: React.FC<TileProps> = ({
           nextLMPEvent={nextLMPEvent}
           getCourseDisplayLabel={getCourseDisplayLabel}
           getEventDisplayLabel={getEventDisplayLabel}
+          continuationEventOptions={continuationEventOptions}
           fontSize={26}
           color={flightNumber ? WHITE_FULL : WHITE_GHOST}
         />
@@ -1534,18 +1538,17 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   staffQualificationCatalogue,
   personnelDisplaySettings,
   sctTerminology,
+  sctEvents = [],
 }) => {
   const resolvedSctTerminology = useMemo(
     () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY),
     [sctTerminology],
   );
   const sctShortLabel = resolvedSctTerminology.shortLabel;
-  const sctFormationLabel = `${sctShortLabel} FORM`;
   const getContinuationDisplayLabel = useCallback((code: string) => {
-    if (code === 'SCT') return sctShortLabel;
-    if (code === 'SCT FORM') return sctFormationLabel;
-    return code;
-  }, [sctFormationLabel, sctShortLabel]);
+    const rawCode = String(code || '').trim();
+    return rawCode.replace(/\bSCT\b/gi, sctShortLabel);
+  }, [sctShortLabel]);
   const isSctFormationCode = useCallback((code?: string | null) => String(code || '').trim().toUpperCase() === 'SCT FORM', []);
   const resolvedAircraftCrewComposition = useMemo(
     () => normaliseAircraftCrewComposition(aircraftCrewComposition),
@@ -2169,8 +2172,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   const courseOptions = useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
-    return ['SCT', ...courses.filter(c => c !== 'SCT')];
-  }, [syllabusByCourse]);
+    return sctEvents.length > 0 ? ['SCT', ...courses.filter(c => c !== 'SCT')] : courses.filter(c => c !== 'SCT');
+  }, [sctEvents.length, syllabusByCourse]);
 
   const getEventsForCourse = (course: string): SyllabusItemDetail[] =>
     course === 'SCT' ? [] : (syllabusByCourse.get(course) || []);
@@ -3171,6 +3174,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   eventCategory={eventCategory}
                   getCourseDisplayLabel={getCourseDisplayLabel}
                   getEventDisplayLabel={getContinuationDisplayLabel}
+                  continuationEventOptions={sctEvents}
                   onFlightTypeChange={setFlightType}
                   onStartTimeChange={(value) => {
                     setStartTime(value);

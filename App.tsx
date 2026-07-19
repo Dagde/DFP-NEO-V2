@@ -44302,6 +44302,7 @@ appliedUpdates.forEach(update => {
                     unitCallsignSettings={activeUnitCallsignSettings}
                     personnelDisplaySettings={personnelDisplaySettings}
                     sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
+                    sctEvents={sctEvents}
                 />
             )}
             {selectedEvent && !isAddingTile && (

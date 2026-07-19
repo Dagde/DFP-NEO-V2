@@ -30521,6 +30521,7 @@ const EventDropdown = ({
   nextLMPEvent,
   getCourseDisplayLabel = (course) => course,
   getEventDisplayLabel = (code) => code,
+  continuationEventOptions = [],
   fontSize,
   color,
   disabled
@@ -30615,7 +30616,7 @@ const EventDropdown = ({
             },
             course
           )) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, overflowY: "auto", maxHeight: 320, backgroundColor: "#16293f" }, children: selectedCourse === "SCT" ? ["SCT", "SCT FORM"].map((code) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, overflowY: "auto", maxHeight: 320, backgroundColor: "#16293f" }, children: selectedCourse === "SCT" ? continuationEventOptions.map((code) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
             {
               onClick: () => {
@@ -30736,6 +30737,7 @@ const FlightTile = ({
   eventCategory,
   getCourseDisplayLabel,
   getEventDisplayLabel,
+  continuationEventOptions = [],
   onFlightTypeChange,
   onStartTimeChange,
   onPicNameChange,
@@ -30965,6 +30967,7 @@ const FlightTile = ({
         nextLMPEvent,
         getCourseDisplayLabel,
         getEventDisplayLabel,
+        continuationEventOptions,
         fontSize: 26,
         color: flightNumber ? WHITE_FULL : WHITE_GHOST
       }
@@ -31176,19 +31179,18 @@ const AddFlightTileModal = ({
   unitCallsignSettings,
   staffQualificationCatalogue,
   personnelDisplaySettings,
-  sctTerminology
+  sctTerminology,
+  sctEvents = []
 }) => {
   const resolvedSctTerminology = reactExports.useMemo(
     () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY),
     [sctTerminology]
   );
   const sctShortLabel = resolvedSctTerminology.shortLabel;
-  const sctFormationLabel = `${sctShortLabel} FORM`;
   const getContinuationDisplayLabel = reactExports.useCallback((code) => {
-    if (code === "SCT") return sctShortLabel;
-    if (code === "SCT FORM") return sctFormationLabel;
-    return code;
-  }, [sctFormationLabel, sctShortLabel]);
+    const rawCode = String(code || "").trim();
+    return rawCode.replace(/\bSCT\b/gi, sctShortLabel);
+  }, [sctShortLabel]);
   const isSctFormationCode = reactExports.useCallback((code) => String(code || "").trim().toUpperCase() === "SCT FORM", []);
   const resolvedAircraftCrewComposition = reactExports.useMemo(
     () => normaliseAircraftCrewComposition(aircraftCrewComposition),
@@ -31689,8 +31691,8 @@ const AddFlightTileModal = ({
   ].join("::");
   const courseOptions = reactExports.useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
-    return ["SCT", ...courses.filter((c) => c !== "SCT")];
-  }, [syllabusByCourse]);
+    return sctEvents.length > 0 ? ["SCT", ...courses.filter((c) => c !== "SCT")] : courses.filter((c) => c !== "SCT");
+  }, [sctEvents.length, syllabusByCourse]);
   const getEventsForCourse = (course) => course === "SCT" ? [] : syllabusByCourse.get(course) || [];
   const getCourseDisplayLabel = reactExports.useCallback((course) => course === "SCT" ? sctShortLabel : course, [sctShortLabel]);
   const nextLMPEvent = reactExports.useMemo(() => {
@@ -32593,6 +32595,7 @@ const AddFlightTileModal = ({
                     eventCategory,
                     getCourseDisplayLabel,
                     getEventDisplayLabel: getContinuationDisplayLabel,
+                    continuationEventOptions: sctEvents,
                     onFlightTypeChange: setFlightType,
                     onStartTimeChange: (value) => {
                       setStartTime(value);
@@ -120363,7 +120366,8 @@ Do you want to replace the existing entry?`,
           staffQualificationCatalogue: activeStaffQualificationCatalogue,
           unitCallsignSettings: activeUnitCallsignSettings,
           personnelDisplaySettings,
-          sctTerminology: getSctTerminology(platformConfig, activeUnitCode)
+          sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
+          sctEvents
         }
       ),
       selectedEvent && !isAddingTile && /* @__PURE__ */ jsxRuntimeExports.jsx(
