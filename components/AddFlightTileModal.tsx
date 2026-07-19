@@ -821,6 +821,10 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
   const ref = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
 
+  const selectCourse = useCallback((course: string | null) => {
+    setSelectedCourse(current => current === course ? current : course);
+  }, []);
+
   const updateDropdownPosition = useCallback(() => {
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
@@ -855,7 +859,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
     updateDropdownPosition();
     setOpen(o => {
       const nextOpen = !o;
-      if (nextOpen && !selectedCourse) setSelectedCourse(courseOptions[0] || null);
+      if (nextOpen && !selectedCourse) selectCourse(courseOptions[0] || null);
       return nextOpen;
     });
   };
@@ -887,7 +891,8 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
         {courseOptions.map(course => (
           <div
             key={course}
-            onClick={() => setSelectedCourse(course)}
+            onClick={() => selectCourse(course)}
+            onMouseEnter={() => selectCourse(course)}
             style={{
               padding: '9px 12px', fontSize: 13, cursor: 'pointer',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',

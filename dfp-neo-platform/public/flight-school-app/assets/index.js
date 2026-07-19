@@ -30431,6 +30431,9 @@ const EventDropdown = ({
   const portalId = "event-dropdown-portal";
   const ref = reactExports.useRef(null);
   const [dropdownPos, setDropdownPos] = reactExports.useState({ top: 0, right: 0 });
+  const selectCourse = reactExports.useCallback((course) => {
+    setSelectedCourse((current) => current === course ? current : course);
+  }, []);
   const updateDropdownPosition = reactExports.useCallback(() => {
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
@@ -30461,7 +30464,7 @@ const EventDropdown = ({
     updateDropdownPosition();
     setOpen((o) => {
       const nextOpen = !o;
-      if (nextOpen && !selectedCourse) setSelectedCourse(courseOptions[0] || null);
+      if (nextOpen && !selectedCourse) selectCourse(courseOptions[0] || null);
       return nextOpen;
     });
   };
@@ -30492,7 +30495,8 @@ const EventDropdown = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: 130, borderRight: "1px solid rgba(255,255,255,0.12)", overflowY: "auto", maxHeight: 320, backgroundColor: "#1a2f4a" }, children: courseOptions.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
-              onClick: () => setSelectedCourse(course),
+              onClick: () => selectCourse(course),
+              onMouseEnter: () => selectCourse(course),
               style: {
                 padding: "9px 12px",
                 fontSize: 13,
