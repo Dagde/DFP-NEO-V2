@@ -305,9 +305,11 @@ model SctRequest {
   notes          String?
   dateRequested  String?
   requestedTime  String?
+  dayNight       String?  @default("Day")
   submitted      Boolean  @default(false)
   includeInBuild Boolean  @default(false)
   aircraftConfigId String? @default("CONFIG-0")
+  acceptableAircraftConfigs Json? @default("[]")
   crewMember     String?  @default("")
   crewGroup      String?  @default("")
   crewGroupKey   String?  @default("")

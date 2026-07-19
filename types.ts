@@ -651,9 +651,11 @@ export interface SctRequest {
     notes?: string;
     dateRequested?: string;
     requestedTime?: string; // Format: "HH:MM" (e.g., "15:00")
+    dayNight?: 'Day' | 'Night' | 'Day/Night';
     submitted?: boolean;
     includeInBuild?: boolean; // For MEDIUM/LOW priority - user can manually include in build
     aircraftConfigId?: string;
+    acceptableAircraftConfigs?: string[];
     crewMember?: string;
     crewGroup?: string;
     crewGroupKey?: string;

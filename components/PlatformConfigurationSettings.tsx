@@ -3273,7 +3273,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       code: `CURR${profileIndex}`.slice(0, 8).toUpperCase(),
       crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || displayCrewCompositionAircraftCode || activeCrewCompositionAircraftCode || 'Aircraft'} Crew`,
       config: 'ANY',
+      acceptableAircraftConfigs: ['ANY'],
       currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
+      dayNight: 'Day',
+      flightType: 'Dual',
       aircraftCount: 1,
       status: 'ACTIVE',
     });
@@ -7062,12 +7065,36 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   ...currencyProfileCrewOptions,
                 ].map((option) => String(option || '').trim()).filter(Boolean)));
                 const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || displayCrewCompositionAircraftCode);
-                const configOptions = profileConfigOptions.includes(profile.config) ? profileConfigOptions : [profile.config, ...profileConfigOptions].filter(Boolean);
+                const acceptableConfigs = Array.from(new Set(
+                  (Array.isArray(profile.acceptableAircraftConfigs) && profile.acceptableAircraftConfigs.length > 0
+                    ? profile.acceptableAircraftConfigs
+                    : [profile.config || 'ANY'])
+                    .map((configId) => String(configId || '').trim())
+                    .filter(Boolean),
+                ));
+                const configOptions = Array.from(new Set([
+                  ...acceptableConfigs,
+                  ...profileConfigOptions,
+                ].filter(Boolean)));
+                const toggleCurrencyProfileConfig = (configId: string) => {
+                  const selected = new Set(acceptableConfigs);
+                  if (selected.has(configId)) {
+                    selected.delete(configId);
+                  } else {
+                    selected.add(configId);
+                  }
+                  const nextConfigs = Array.from(selected);
+                  const safeConfigs = nextConfigs.length > 0 ? nextConfigs : ['ANY'];
+                  updateCurrencyProfile(profile.id, {
+                    acceptableAircraftConfigs: safeConfigs,
+                    config: safeConfigs[0] || 'ANY',
+                  });
+                };
                 const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency)
                   ? activeCurrencyDefinitionNames
                   : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
                 return (
-                <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,0.55fr)_auto]">
+                <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.55fr)_auto]">
                   <OffsetField label="Profile Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { name: value })} />
                   <OffsetField
                     label="Code"
@@ -7080,7 +7107,39 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <SelectField label="Crew" value={profile.crew} disabled={!canEditCrewComposition || crewOptions.length === 0} options={crewOptions} onChange={(value) => updateCurrencyProfile(profile.id, { crew: value })} />
                   </div>
                   <div className="[&_select]:mt-[15px]">
-                    <SelectField label="CONFIG" value={profile.config || 'ANY'} disabled={!canEditCrewComposition} options={configOptions} onChange={(value) => updateCurrencyProfile(profile.id, { config: value || 'ANY' })} />
+                    <SelectField
+                      label="Day/Night"
+                      value={profile.dayNight || 'Day'}
+                      disabled={!canEditCrewComposition}
+                      options={['Day', 'Night', 'Day/Night']}
+                      onChange={(value) => updateCurrencyProfile(profile.id, { dayNight: (value || 'Day') as CurrencyProfile['dayNight'] })}
+                    />
+                  </div>
+                  <div className="[&_select]:mt-[15px]">
+                    <SelectField
+                      label="Dual/Solo"
+                      value={profile.flightType || 'Dual'}
+                      disabled={!canEditCrewComposition}
+                      options={['Dual', 'Solo']}
+                      onChange={(value) => updateCurrencyProfile(profile.id, { flightType: (value || 'Dual') as CurrencyProfile['flightType'] })}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="mb-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">CONFIG</div>
+                    <div className="max-h-[78px] overflow-y-auto rounded border border-gray-700 bg-gray-950/60 p-2">
+                      {configOptions.map((configId) => (
+                        <label key={`${profile.id}-config-${configId}`} className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-gray-200 last:mb-0">
+                          <input
+                            type="checkbox"
+                            checked={acceptableConfigs.includes(configId)}
+                            disabled={!canEditCrewComposition}
+                            onChange={() => toggleCurrencyProfileConfig(configId)}
+                            className="h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-cyan-500 focus:ring-cyan-500"
+                          />
+                          <span className="min-w-0 truncate">{configId}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                   <div className="[&_select]:mt-[15px]">
                     <SelectField

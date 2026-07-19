@@ -3035,12 +3035,18 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         String(candidate.name || candidate.currency || '').trim() === eventValue
         || String(candidate.currency || '').trim() === eventValue
       ));
-      const requestedTimeUpdates = /\bnight\b/i.test(eventValue) && (!request.requestedTime || request.requestedTime === '15:00')
+      const profileAcceptableConfigs = Array.isArray(profile?.acceptableAircraftConfigs) && profile.acceptableAircraftConfigs.length > 0
+        ? profile.acceptableAircraftConfigs
+        : profile?.config
+          ? [profile.config]
+          : [];
+      const selectedDayNight = profile?.dayNight || (/\bnight\b/i.test(eventValue) ? 'Night' : undefined);
+      const requestedTimeUpdates = selectedDayNight === 'Night' && (!request.requestedTime || request.requestedTime === '15:00')
         ? { requestedTime: formatTime(commenceNightFlying) }
         : {};
       if (!profile) {
         if (Object.keys(requestedTimeUpdates).length > 0) {
-          onPatchSctRequest(requestId, { event: eventValue, ...requestedTimeUpdates }, type);
+          onPatchSctRequest(requestId, { event: eventValue, dayNight: selectedDayNight, ...requestedTimeUpdates }, type);
         } else {
           onUpdateSctRequest(requestId, 'event', eventValue, type);
         }
@@ -3051,10 +3057,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         event: String(profile.name || profile.currency || '').trim(),
         eventCode: String(profile.code || '').trim().toUpperCase().slice(0, 8),
         currency: profile.currency,
+        dayNight: selectedDayNight || 'Day',
+        flightType: profile.flightType || request.flightType || 'Dual',
         aircraftCount: Math.max(1, Math.floor(Number(profile.aircraftCount) || 1)),
         formationCrew: [],
         ...requestedTimeUpdates,
         ...(configId ? { aircraftConfigId: configId } : {}),
+        ...(profileAcceptableConfigs.length > 0 ? { acceptableAircraftConfigs: profileAcceptableConfigs } : {}),
         ...(isFixedCrewModel && profile.crew ? { crewMember: profile.crew } : {}),
       }, type);
     };

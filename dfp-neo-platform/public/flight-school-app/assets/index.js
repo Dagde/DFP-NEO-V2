@@ -4453,6 +4453,19 @@ const normaliseCurrencyProfileCode = (value, fallback) => {
   return String(fallback || "CURR").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CURR";
 };
 const normaliseAircraftCount = (value) => Math.max(1, Math.min(24, Math.round(Number(value) || 1)));
+const normaliseDayNight = (value) => {
+  const text = String(value || "").trim().toLowerCase();
+  if (text === "night") return "Night";
+  if (text === "day/night" || text === "daynight" || text === "day and night") return "Day/Night";
+  return "Day";
+};
+const normaliseFlightType = (value) => String(value || "").trim().toLowerCase() === "solo" ? "Solo" : "Dual";
+const normaliseAcceptableConfigs = (value, fallback) => {
+  const rows = Array.isArray(value) ? value : [];
+  const values = rows.map((item) => String(item || "").trim()).filter(Boolean);
+  const next = values.length > 0 ? values : [fallback];
+  return Array.from(new Set(next));
+};
 const normaliseCrewCompositionSettings = (value) => {
   const source = value && typeof value === "object" ? value : {};
   const rows = Array.isArray(source.alternateCompositions) ? source.alternateCompositions : [];
@@ -4487,6 +4500,7 @@ const normaliseCrewCompositionSettings = (value) => {
     const rawName = String(row?.name || row?.profileName || row?.label || "");
     const fallbackName = String(row?.currency || row?.event || `Currency Profile ${index + 1}`).trim();
     const name = rawName.length > 0 ? rawName : fallbackName;
+    const config = String(row?.config || row?.aircraftConfigId || "ANY").trim() || "ANY";
     return {
       id: String(row?.id || `currency-profile-${index + 1}`),
       unitCode: String(row?.unitCode || "").trim().toUpperCase(),
@@ -4496,8 +4510,11 @@ const normaliseCrewCompositionSettings = (value) => {
       name,
       code: normaliseCurrencyProfileCode(row?.code || row?.eventCode || row?.shortCode, name || fallbackName),
       crew: String(row?.crew || ""),
-      config: String(row?.config || row?.aircraftConfigId || "ANY").trim() || "ANY",
+      config,
+      acceptableAircraftConfigs: normaliseAcceptableConfigs(row?.acceptableAircraftConfigs, config),
       currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),
+      dayNight: normaliseDayNight(row?.dayNight),
+      flightType: normaliseFlightType(row?.flightType || row?.soloOrDual),
       aircraftCount: normaliseAircraftCount(row?.aircraftCount ?? row?.numberOfAircraft ?? row?.aircraft),
       status: String(row?.status || "ACTIVE").trim().toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
     };
@@ -31177,7 +31194,8 @@ const AddFlightTileModal = ({
   staffQualificationCatalogue,
   personnelDisplaySettings,
   sctTerminology,
-  sctEvents = []
+  sctEvents = [],
+  nightContinuationDefaultStartTime = 18.5
 }) => {
   const resolvedSctTerminology = reactExports.useMemo(
     () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY),
@@ -31686,6 +31704,11 @@ const AddFlightTileModal = ({
     String(profile.name || "").trim(),
     String(profile.currency || "").trim()
   ].join("::");
+  const findContinuationCurrencyProfile = (value) => {
+    const normalisedValue = String(value || "").trim().toUpperCase();
+    if (!normalisedValue) return void 0;
+    return fixedCrewCurrencyProfileOptions.find((profile) => getFixedCrewCurrencyProfileOptionKey(profile) === value || String(profile.id || "").trim().toUpperCase() === normalisedValue || String(profile.code || "").trim().toUpperCase() === normalisedValue || String(profile.name || "").trim().toUpperCase() === normalisedValue || String(profile.currency || "").trim().toUpperCase() === normalisedValue);
+  };
   const courseOptions = reactExports.useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
     return sctEvents.length > 0 ? ["SCT", ...courses.filter((c) => c !== "SCT")] : courses.filter((c) => c !== "SCT");
@@ -31856,16 +31879,33 @@ const AddFlightTileModal = ({
   };
   const handleFlightNumberChange = (code, durationHrs) => {
     setFlightNumber(code);
+    if (eventCategory === "sct") {
+      const selectedProfile = findContinuationCurrencyProfile(code);
+      if (selectedProfile) {
+        setFlightType(selectedProfile.flightType || "Dual");
+        if (selectedProfile.dayNight === "Night") {
+          setStartTime(nightContinuationDefaultStartTime);
+        }
+        setAircraftCount(Math.max(1, Math.floor(Number(selectedProfile.aircraftCount) || 1)));
+        if (selectedProfile.config && selectedProfile.config !== "ANY") {
+          setAircraftConfigId(selectedProfile.config);
+        }
+      }
+    }
     const lmpDuration = resolveLmpDurationForEvent(code, durationHrs);
     if (lmpDuration) setDuration(lmpDuration);
     setGuidedStep("area");
   };
   const handleFixedCrewEventChange = (eventKey) => {
     if (eventCategory === "sct") {
-      const selectedProfile = fixedCrewCurrencyProfileOptions.find((profile) => getFixedCrewCurrencyProfileOptionKey(profile) === eventKey) || fixedCrewCurrencyProfileOptions.find((profile) => profile.id === eventKey || profile.code === eventKey || profile.name === eventKey || profile.currency === eventKey);
+      const selectedProfile = findContinuationCurrencyProfile(eventKey);
       setFixedCrewEventKey(eventKey);
       setFlightNumber(selectedProfile?.code || selectedProfile?.name || selectedProfile?.currency || "");
       setDuration(2);
+      setFlightType(selectedProfile?.flightType || "Dual");
+      if (selectedProfile?.dayNight === "Night") {
+        setStartTime(nightContinuationDefaultStartTime);
+      }
       setAircraftCount(Math.max(1, Math.floor(Number(selectedProfile?.aircraftCount) || 1)));
       if (selectedProfile?.config && selectedProfile.config !== "ANY") {
         setAircraftConfigId(selectedProfile.config);
@@ -32018,6 +32058,7 @@ const AddFlightTileModal = ({
       if (isFixedCrewModel) {
         const eventType = eventCategory === "sct" ? "flight" : String(selectedFixedCrewEvent?.type || "").trim().toLowerCase() === "ftd" ? "ftd" : "flight";
         const selectedCurrencyConfig = selectedFixedCrewCurrencyProfile?.config && selectedFixedCrewCurrencyProfile.config !== "ANY" ? selectedFixedCrewCurrencyProfile.config : aircraftConfigId;
+        const selectedCurrencyAcceptableConfigs = Array.isArray(selectedFixedCrewCurrencyProfile?.acceptableAircraftConfigs) && selectedFixedCrewCurrencyProfile.acceptableAircraftConfigs.length > 0 ? selectedFixedCrewCurrencyProfile.acceptableAircraftConfigs : [selectedCurrencyConfig];
         const savedAircraftCount = Math.max(1, Math.floor(Number(aircraftCount) || 1));
         const formationId = savedAircraftCount > 1 ? `fixed-crew-formation-${v4()}` : void 0;
         Array.from({ length: savedAircraftCount }, (_, index) => index).forEach((index) => {
@@ -32030,7 +32071,7 @@ const AddFlightTileModal = ({
             date,
             type: eventType,
             eventCategory,
-            flightType: "Dual",
+            flightType: selectedFixedCrewCurrencyProfile?.flightType || "Dual",
             flightNumber,
             instructor: assignedPic,
             student: "",
@@ -32041,7 +32082,7 @@ const AddFlightTileModal = ({
             area: eventType === "flight" ? area : "-",
             aircraftNumber: eventType === "flight" ? formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings) : void 0,
             aircraftConfigId: eventType === "flight" ? selectedCurrencyConfig : void 0,
-            acceptableAircraftConfigs: eventType === "flight" ? [selectedCurrencyConfig] : void 0,
+            acceptableAircraftConfigs: eventType === "flight" ? selectedCurrencyAcceptableConfigs : void 0,
             callsign,
             locationType,
             color: "bg-emerald-500",
@@ -32053,6 +32094,7 @@ const AddFlightTileModal = ({
             ].filter(Boolean).join("\n"),
             currency: selectedFixedCrewCurrencyProfile?.currency || void 0,
             eventCode: selectedFixedCrewCurrencyProfile?.code || selectedFixedCrewEvent?.code || void 0,
+            dayNight: selectedFixedCrewCurrencyProfile?.dayNight,
             group: formatFixedCrewDisplayGroup$1(assignedCrewGroup),
             groupTraineeIds: [],
             attendees: assignedCrewMembers.map((staff) => staff.name),
@@ -32075,6 +32117,8 @@ const AddFlightTileModal = ({
         return;
       }
       const isFormation = isSctFormationCode(flightNumber);
+      const selectedContinuationProfile = eventCategory === "sct" ? findContinuationCurrencyProfile(flightNumber) : void 0;
+      const selectedContinuationAcceptableConfigs = Array.isArray(selectedContinuationProfile?.acceptableAircraftConfigs) && selectedContinuationProfile.acceptableAircraftConfigs.length > 0 ? selectedContinuationProfile.acceptableAircraftConfigs : [selectedContinuationProfile?.config || aircraftConfigId];
       const crewDrafts = isFormation ? [
         { flightType, picName, studentName, callsign: formationType ? `${formationType}1` : callsign },
         ...formationCrew.map((crewMember, index) => ({
@@ -32099,8 +32143,8 @@ const AddFlightTileModal = ({
           duration,
           area,
           aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
-          aircraftConfigId,
-          acceptableAircraftConfigs: [aircraftConfigId],
+          aircraftConfigId: selectedContinuationProfile?.config && selectedContinuationProfile.config !== "ANY" ? selectedContinuationProfile.config : aircraftConfigId,
+          acceptableAircraftConfigs: selectedContinuationAcceptableConfigs,
           callsign: savedCallsign,
           locationType,
           color: tileColor,
@@ -32113,7 +32157,10 @@ const AddFlightTileModal = ({
           destination: locationType === "Local" ? school : destination,
           formationType: isFormation ? formationType : void 0,
           formationPosition: isFormation ? index + 1 : void 0,
-          formationId: void 0
+          formationId: void 0,
+          dayNight: selectedContinuationProfile?.dayNight,
+          currency: selectedContinuationProfile?.currency,
+          eventCode: selectedContinuationProfile?.code
         });
       });
     } else {
@@ -39523,10 +39570,12 @@ const PrioritiesView = ({
     const applyCurrencyProfile = (request, eventValue) => {
       const requestId = request.id;
       const profile = currencyProfilesForContext.find((candidate) => String(candidate.name || candidate.currency || "").trim() === eventValue || String(candidate.currency || "").trim() === eventValue);
-      const requestedTimeUpdates = /\bnight\b/i.test(eventValue) && (!request.requestedTime || request.requestedTime === "15:00") ? { requestedTime: formatTime2(commenceNightFlying) } : {};
+      const profileAcceptableConfigs = Array.isArray(profile?.acceptableAircraftConfigs) && profile.acceptableAircraftConfigs.length > 0 ? profile.acceptableAircraftConfigs : profile?.config ? [profile.config] : [];
+      const selectedDayNight = profile?.dayNight || (/\bnight\b/i.test(eventValue) ? "Night" : void 0);
+      const requestedTimeUpdates = selectedDayNight === "Night" && (!request.requestedTime || request.requestedTime === "15:00") ? { requestedTime: formatTime2(commenceNightFlying) } : {};
       if (!profile) {
         if (Object.keys(requestedTimeUpdates).length > 0) {
-          onPatchSctRequest(requestId, { event: eventValue, ...requestedTimeUpdates }, type);
+          onPatchSctRequest(requestId, { event: eventValue, dayNight: selectedDayNight, ...requestedTimeUpdates }, type);
         } else {
           onUpdateSctRequest(requestId, "event", eventValue, type);
         }
@@ -39537,10 +39586,13 @@ const PrioritiesView = ({
         event: String(profile.name || profile.currency || "").trim(),
         eventCode: String(profile.code || "").trim().toUpperCase().slice(0, 8),
         currency: profile.currency,
+        dayNight: selectedDayNight || "Day",
+        flightType: profile.flightType || request.flightType || "Dual",
         aircraftCount: Math.max(1, Math.floor(Number(profile.aircraftCount) || 1)),
         formationCrew: [],
         ...requestedTimeUpdates,
         ...configId ? { aircraftConfigId: configId } : {},
+        ...profileAcceptableConfigs.length > 0 ? { acceptableAircraftConfigs: profileAcceptableConfigs } : {},
         ...isFixedCrewModel && profile.crew ? { crewMember: profile.crew } : {}
       }, type);
     };
@@ -66441,7 +66493,10 @@ This permanently removes the organisation record from platform configuration and
       code: `CURR${profileIndex}`.slice(0, 8).toUpperCase(),
       crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || displayCrewCompositionAircraftCode || activeCrewCompositionAircraftCode || "Aircraft"} Crew`,
       config: "ANY",
+      acceptableAircraftConfigs: ["ANY"],
       currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
+      dayNight: "Day",
+      flightType: "Dual",
       aircraftCount: 1,
       status: "ACTIVE"
     });
@@ -69672,9 +69727,29 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               ...currencyProfileCrewOptions
             ].map((option) => String(option || "").trim()).filter(Boolean)));
             const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || displayCrewCompositionAircraftCode);
-            const configOptions = profileConfigOptions.includes(profile.config) ? profileConfigOptions : [profile.config, ...profileConfigOptions].filter(Boolean);
+            const acceptableConfigs = Array.from(new Set(
+              (Array.isArray(profile.acceptableAircraftConfigs) && profile.acceptableAircraftConfigs.length > 0 ? profile.acceptableAircraftConfigs : [profile.config || "ANY"]).map((configId) => String(configId || "").trim()).filter(Boolean)
+            ));
+            const configOptions = Array.from(new Set([
+              ...acceptableConfigs,
+              ...profileConfigOptions
+            ].filter(Boolean)));
+            const toggleCurrencyProfileConfig = (configId) => {
+              const selected = new Set(acceptableConfigs);
+              if (selected.has(configId)) {
+                selected.delete(configId);
+              } else {
+                selected.add(configId);
+              }
+              const nextConfigs = Array.from(selected);
+              const safeConfigs = nextConfigs.length > 0 ? nextConfigs : ["ANY"];
+              updateCurrencyProfile(profile.id, {
+                acceptableAircraftConfigs: safeConfigs,
+                config: safeConfigs[0] || "ANY"
+              });
+            };
             const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency) ? activeCurrencyDefinitionNames : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,0.55fr)_auto]", children: [
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.55fr)_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Profile Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { name: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 OffsetField,
@@ -69687,7 +69762,42 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Crew", value: profile.crew, disabled: !canEditCrewComposition || crewOptions.length === 0, options: crewOptions, onChange: (value) => updateCurrencyProfile(profile.id, { crew: value }) }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "CONFIG", value: profile.config || "ANY", disabled: !canEditCrewComposition, options: configOptions, onChange: (value) => updateCurrencyProfile(profile.id, { config: value || "ANY" }) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                SelectField,
+                {
+                  label: "Day/Night",
+                  value: profile.dayNight || "Day",
+                  disabled: !canEditCrewComposition,
+                  options: ["Day", "Night", "Day/Night"],
+                  onChange: (value) => updateCurrencyProfile(profile.id, { dayNight: value || "Day" })
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                SelectField,
+                {
+                  label: "Dual/Solo",
+                  value: profile.flightType || "Dual",
+                  disabled: !canEditCrewComposition,
+                  options: ["Dual", "Solo"],
+                  onChange: (value) => updateCurrencyProfile(profile.id, { flightType: value || "Dual" })
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400", children: "CONFIG" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[78px] overflow-y-auto rounded border border-gray-700 bg-gray-950/60 p-2", children: configOptions.map((configId) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-1 flex items-center gap-2 text-[11px] font-semibold text-gray-200 last:mb-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      checked: acceptableConfigs.includes(configId),
+                      disabled: !canEditCrewComposition,
+                      onChange: () => toggleCurrencyProfileConfig(configId),
+                      className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-cyan-500 focus:ring-cyan-500"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate", children: configId })
+                ] }, `${profile.id}-config-${configId}`)) })
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 SelectField,
                 {
@@ -79841,7 +79951,9 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
       notes,
       dateRequested: (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
       requestedTime,
-      aircraftConfigId
+      dayNight: isNightContinuationEvent(event) ? "Night" : "Day",
+      aircraftConfigId,
+      acceptableAircraftConfigs: [aircraftConfigId]
     };
     onSave(newRequest);
   };
@@ -105557,6 +105669,18 @@ const App = () => {
           return;
         }
         const data = await res.json();
+        const normaliseSctAcceptableConfigs = (value) => {
+          if (Array.isArray(value)) return value.map((configId) => String(configId || "").trim()).filter(Boolean);
+          if (typeof value === "string" && value.trim()) {
+            try {
+              const parsed = JSON.parse(value);
+              if (Array.isArray(parsed)) return parsed.map((configId) => String(configId || "").trim()).filter(Boolean);
+            } catch {
+              return [value.trim()];
+            }
+          }
+          return void 0;
+        };
         console.log("[SCT] Loaded", data.length, "SCT requests from DB");
         setSctFlights(data.filter((r) => r.requestType === "flight").map((r) => ({
           id: r.id,
@@ -105570,9 +105694,11 @@ const App = () => {
           notes: r.notes,
           dateRequested: r.dateRequested,
           requestedTime: r.requestedTime,
+          dayNight: r.dayNight || void 0,
           submitted: r.submitted,
           includeInBuild: r.includeInBuild,
           aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+          acceptableAircraftConfigs: normaliseSctAcceptableConfigs(r.acceptableAircraftConfigs),
           crewMember: r.crewMember || "",
           crewGroup: r.crewGroup || "",
           crewGroupKey: r.crewGroupKey || "",
@@ -105593,9 +105719,11 @@ const App = () => {
           notes: r.notes,
           dateRequested: r.dateRequested,
           requestedTime: r.requestedTime,
+          dayNight: r.dayNight || void 0,
           submitted: r.submitted,
           includeInBuild: r.includeInBuild,
           aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+          acceptableAircraftConfigs: normaliseSctAcceptableConfigs(r.acceptableAircraftConfigs),
           crewMember: r.crewMember || "",
           crewGroup: r.crewGroup || "",
           crewGroupKey: r.crewGroupKey || "",
@@ -111501,6 +111629,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       const callsignNumber = Number.isFinite(Number(sctReq.callsignNumber)) ? Number(sctReq.callsignNumber) : 0;
       return buildUnitEventCallsign(callsignBase, callsignNumber);
     };
+    const getSctDayNight = (sctReq) => {
+      const configured = sctReq.dayNight;
+      if (configured === "Night" || configured === "Day/Night") return configured;
+      if (/\bnight\b/i.test(String(sctReq.event || sctReq.eventCode || ""))) return "Night";
+      return "Day";
+    };
+    const getSctAcceptableAircraftConfigs = (sctReq, fallbackConfigId) => {
+      const configured = Array.isArray(sctReq.acceptableAircraftConfigs) ? sctReq.acceptableAircraftConfigs.map((configId) => String(configId || "").trim()).filter(Boolean) : [];
+      return configured.length > 0 ? Array.from(new Set(configured)) : [fallbackConfigId];
+    };
     const hasSctParticipant = (sctReq) => Boolean(getSctSelectedPerson(sctReq) || getSctCrewDisplayLabel(sctReq));
     console.log("🔍 SCT Sync - buildDfpDate:", buildDfpDate);
     const highPrioritySctFlights = sctFlights.filter(
@@ -111532,6 +111670,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           startTime = hours + minutes / 60;
         }
         const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+        const acceptableAircraftConfigs = getSctAcceptableAircraftConfigs(sctReq, aircraftConfigId);
         newPriorityEvents[existingInPriorityIndex] = {
           ...newPriorityEvents[existingInPriorityIndex],
           student: sctReq.flightType === "Dual" ? sctTileCrew : "",
@@ -111547,7 +111686,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           currency: sctReq.currency,
           notes: buildSctEventNotes(sctReq),
           aircraftConfigId,
-          acceptableAircraftConfigs: [aircraftConfigId],
+          acceptableAircraftConfigs,
+          dayNight: getSctDayNight(sctReq),
           fixedCrewGroup: sctCrewGroupKey || void 0
         };
         console.log("🔄 Updated HIGH priority SCT flight:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
@@ -111559,6 +111699,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         allTraineesData.find((t) => t.fullName === sctReq.name);
         const duration = fixedCrewCurrencyEventDuration ?? syllabusItem?.duration ?? 1.5;
         const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+        const acceptableAircraftConfigs = getSctAcceptableAircraftConfigs(sctReq, aircraftConfigId);
         let startTime = 8;
         if (sctReq.requestedTime) {
           const [hours, minutes] = sctReq.requestedTime.split(":").map(Number);
@@ -111597,7 +111738,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           currency: sctReq.currency,
           notes: buildSctEventNotes(sctReq),
           aircraftConfigId,
-          acceptableAircraftConfigs: [aircraftConfigId],
+          acceptableAircraftConfigs,
+          dayNight: getSctDayNight(sctReq),
           fixedCrewGroup: sctCrewGroupKey || void 0
         };
         newPriorityEvents.push(newEvent);
@@ -111626,6 +111768,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           const [hours, minutes] = sctReq.requestedTime.split(":").map(Number);
           startTime = hours + minutes / 60;
         }
+        const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+        const acceptableAircraftConfigs = getSctAcceptableAircraftConfigs(sctReq, aircraftConfigId);
         newPriorityEvents[existingInPriorityIndex] = {
           ...newPriorityEvents[existingInPriorityIndex],
           student: sctReq.flightType === "Dual" ? sctTileCrew : "",
@@ -111640,6 +111784,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           sctRequestType: "ftd",
           currency: sctReq.currency,
           notes: buildSctEventNotes(sctReq),
+          aircraftConfigId,
+          acceptableAircraftConfigs,
+          dayNight: getSctDayNight(sctReq),
           fixedCrewGroup: sctCrewGroupKey || void 0
         };
         console.log("🔄 Updated HIGH priority SCT FTD:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
@@ -111650,6 +111797,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
         allTraineesData.find((t) => t.fullName === sctReq.name);
         const duration = fixedCrewCurrencyEventDuration ?? syllabusItem?.duration ?? 1.5;
+        const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+        const acceptableAircraftConfigs = getSctAcceptableAircraftConfigs(sctReq, aircraftConfigId);
         let startTime = 8;
         if (sctReq.requestedTime) {
           const [hours, minutes] = sctReq.requestedTime.split(":").map(Number);
@@ -111687,6 +111836,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           sctRequestType: "ftd",
           currency: sctReq.currency,
           notes: buildSctEventNotes(sctReq),
+          aircraftConfigId,
+          acceptableAircraftConfigs,
+          dayNight: getSctDayNight(sctReq),
           fixedCrewGroup: sctCrewGroupKey || void 0
         };
         console.log("✅ Added HIGH priority SCT FTD:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
@@ -118161,9 +118313,11 @@ ${error instanceof Error ? error.message : String(error)}`,
                 priority: "Medium",
                 dateRequested: "",
                 requestedTime: "15:00",
+                dayNight: "Day",
                 submitted: false,
                 includeInBuild: false,
                 aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
+                acceptableAircraftConfigs: [BASE_AIRCRAFT_CONFIG.id],
                 crewGroup: "",
                 crewGroupKey: "",
                 crewUnitCode: "",
@@ -120455,7 +120609,8 @@ Do you want to replace the existing entry?`,
           unitCallsignSettings: activeUnitCallsignSettings,
           personnelDisplaySettings,
           sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
-          sctEvents
+          sctEvents,
+          nightContinuationDefaultStartTime: commenceNightFlying
         }
       ),
       selectedEvent && !isAddingTile && /* @__PURE__ */ jsxRuntimeExports.jsx(

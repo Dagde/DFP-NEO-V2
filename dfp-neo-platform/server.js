@@ -195,9 +195,11 @@ async function ensureSctRequestTable(db) {
         "notes"          TEXT,
         "dateRequested"  TEXT,
         "requestedTime"  TEXT,
+        "dayNight"       TEXT DEFAULT 'Day',
         "submitted"      BOOLEAN NOT NULL DEFAULT false,
         "includeInBuild" BOOLEAN NOT NULL DEFAULT false,
         "aircraftConfigId" TEXT DEFAULT 'CONFIG-0',
+        "acceptableAircraftConfigs" JSONB DEFAULT '[]'::jsonb,
         "crewMember"     TEXT DEFAULT '',
         "crewGroup"      TEXT DEFAULT '',
         "crewGroupKey"   TEXT DEFAULT '',
@@ -213,6 +215,11 @@ async function ensureSctRequestTable(db) {
     await db.$executeRawUnsafe(`
       ALTER TABLE "SctRequest"
       ADD COLUMN IF NOT EXISTS "aircraftConfigId" TEXT DEFAULT 'CONFIG-0';
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "SctRequest"
+      ADD COLUMN IF NOT EXISTS "dayNight" TEXT DEFAULT 'Day',
+      ADD COLUMN IF NOT EXISTS "acceptableAircraftConfigs" JSONB DEFAULT '[]'::jsonb;
     `);
     await db.$executeRawUnsafe(`
       ALTER TABLE "SctRequest"
@@ -1115,12 +1122,13 @@ app.get('/api/sct-requests', async (req, res) => {
 app.post('/api/sct-requests', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { id, userId, requestType, name, event, eventCode, flightType, currency, currencyExpire, priority, notes, dateRequested, requestedTime, aircraftConfigId, crewMember, crewGroup, crewGroupKey, crewUnitCode, crewDisplayLabel, crewIndividual, aircraftCount } = req.body;
+    const { id, userId, requestType, name, event, eventCode, flightType, currency, currencyExpire, priority, notes, dateRequested, requestedTime, dayNight, aircraftConfigId, acceptableAircraftConfigs, crewMember, crewGroup, crewGroupKey, crewUnitCode, crewDisplayLabel, crewIndividual, aircraftCount } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId required' });
     const newId = id || generateUUID();
+    const acceptableConfigJson = JSON.stringify(Array.isArray(acceptableAircraftConfigs) ? acceptableAircraftConfigs : []);
     await db.$executeRawUnsafe(
-      `INSERT INTO "SctRequest" ("id","userId","requestType","name","event","eventCode","flightType","currency","currencyExpire","priority","notes","dateRequested","requestedTime","submitted","includeInBuild","aircraftConfigId","crewMember","crewGroup","crewGroupKey","crewUnitCode","crewDisplayLabel","crewIndividual","aircraftCount","createdAt","updatedAt")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NOW(),NOW())`,
+      `INSERT INTO "SctRequest" ("id","userId","requestType","name","event","eventCode","flightType","currency","currencyExpire","priority","notes","dateRequested","requestedTime","dayNight","submitted","includeInBuild","aircraftConfigId","acceptableAircraftConfigs","crewMember","crewGroup","crewGroupKey","crewUnitCode","crewDisplayLabel","crewIndividual","aircraftCount","createdAt","updatedAt")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::jsonb,$19,$20,$21,$22,$23,$24,$25,NOW(),NOW())`,
       newId,
       String(userId),
       requestType || 'flight',
@@ -1134,9 +1142,11 @@ app.post('/api/sct-requests', async (req, res) => {
       notes || null,
       dateRequested ?? new Date().toISOString().split('T')[0],
       requestedTime || '15:00',
+      dayNight || 'Day',
       false,
       false,
       aircraftConfigId || 'CONFIG-0',
+      acceptableConfigJson,
       crewMember || '',
       crewGroup || '',
       crewGroupKey || '',
@@ -1163,10 +1173,13 @@ app.put('/api/sct-requests/:id', async (req, res) => {
     const updates = req.body;
     delete updates.id;
     delete updates.createdAt;
+    if (Array.isArray(updates.acceptableAircraftConfigs)) {
+      updates.acceptableAircraftConfigs = JSON.stringify(updates.acceptableAircraftConfigs);
+    }
     // Build dynamic SET clause
     const fields = Object.keys(updates);
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
-    const setClauses = fields.map((f, i) => `"${f}" = $${i + 2}`).join(', ');
+    const setClauses = fields.map((f, i) => f === 'acceptableAircraftConfigs' ? `"${f}" = $${i + 2}::jsonb` : `"${f}" = $${i + 2}`).join(', ');
     const values = fields.map(f => updates[f]);
     await db.$executeRawUnsafe(
       `UPDATE "SctRequest" SET ${setClauses}, "updatedAt" = NOW() WHERE "id" = $1`,

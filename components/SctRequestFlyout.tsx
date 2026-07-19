@@ -85,7 +85,9 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
       notes,
       dateRequested: new Date().toISOString().split('T')[0],
       requestedTime,
+      dayNight: isNightContinuationEvent(event) ? 'Night' : 'Day',
       aircraftConfigId,
+      acceptableAircraftConfigs: [aircraftConfigId],
     };
     onSave(newRequest);
   };

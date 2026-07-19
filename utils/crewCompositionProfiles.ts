@@ -29,7 +29,10 @@ export interface CurrencyProfile {
   code: string;
   crew: string;
   config: string;
+  acceptableAircraftConfigs?: string[];
   currency: string;
+  dayNight?: 'Day' | 'Night' | 'Day/Night';
+  flightType?: 'Solo' | 'Dual';
   aircraftCount: number;
   status?: string;
 }
@@ -96,6 +99,24 @@ const normaliseAircraftCount = (value: unknown): number => (
   Math.max(1, Math.min(24, Math.round(Number(value) || 1)))
 );
 
+const normaliseDayNight = (value: unknown): 'Day' | 'Night' | 'Day/Night' => {
+  const text = String(value || '').trim().toLowerCase();
+  if (text === 'night') return 'Night';
+  if (text === 'day/night' || text === 'daynight' || text === 'day and night') return 'Day/Night';
+  return 'Day';
+};
+
+const normaliseFlightType = (value: unknown): 'Solo' | 'Dual' => (
+  String(value || '').trim().toLowerCase() === 'solo' ? 'Solo' : 'Dual'
+);
+
+const normaliseAcceptableConfigs = (value: unknown, fallback: string): string[] => {
+  const rows = Array.isArray(value) ? value : [];
+  const values = rows.map(item => String(item || '').trim()).filter(Boolean);
+  const next = values.length > 0 ? values : [fallback || 'ANY'];
+  return Array.from(new Set(next));
+};
+
 export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositionSettings => {
   const source = (value && typeof value === 'object') ? value as any : {};
   const rows = Array.isArray(source.alternateCompositions) ? source.alternateCompositions : [];
@@ -137,6 +158,7 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
     const rawName = String(row?.name || row?.profileName || row?.label || '');
     const fallbackName = String(row?.currency || row?.event || `Currency Profile ${index + 1}`).trim();
     const name = rawName.length > 0 ? rawName : fallbackName;
+    const config = String(row?.config || row?.aircraftConfigId || 'ANY').trim() || 'ANY';
     return {
       id: String(row?.id || `currency-profile-${index + 1}`),
       unitCode: String(row?.unitCode || '').trim().toUpperCase(),
@@ -146,8 +168,11 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
       name,
       code: normaliseCurrencyProfileCode(row?.code || row?.eventCode || row?.shortCode, name || fallbackName),
       crew: String(row?.crew || ''),
-      config: String(row?.config || row?.aircraftConfigId || 'ANY').trim() || 'ANY',
+      config,
+      acceptableAircraftConfigs: normaliseAcceptableConfigs(row?.acceptableAircraftConfigs, config),
       currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),
+      dayNight: normaliseDayNight(row?.dayNight),
+      flightType: normaliseFlightType(row?.flightType || row?.soloOrDual),
       aircraftCount: normaliseAircraftCount(row?.aircraftCount ?? row?.numberOfAircraft ?? row?.aircraft),
       status: String(row?.status || 'ACTIVE').trim().toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     };

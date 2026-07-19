@@ -26366,13 +26366,27 @@ const App: React.FC = () => {
                     return;
                 }
                 const data = await res.json();
+                const normaliseSctAcceptableConfigs = (value: unknown): string[] | undefined => {
+                    if (Array.isArray(value)) return value.map(configId => String(configId || '').trim()).filter(Boolean);
+                    if (typeof value === 'string' && value.trim()) {
+                        try {
+                            const parsed = JSON.parse(value);
+                            if (Array.isArray(parsed)) return parsed.map(configId => String(configId || '').trim()).filter(Boolean);
+                        } catch {
+                            return [value.trim()];
+                        }
+                    }
+                    return undefined;
+                };
                 console.log('[SCT] Loaded', data.length, 'SCT requests from DB');
                 setSctFlights(data.filter((r: any) => r.requestType === 'flight').map((r: any) => ({
                     id: r.id, name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
                     currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
                     notes: r.notes, dateRequested: r.dateRequested, requestedTime: r.requestedTime,
+                    dayNight: r.dayNight || undefined,
                     submitted: r.submitted, includeInBuild: r.includeInBuild,
                     aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+                    acceptableAircraftConfigs: normaliseSctAcceptableConfigs(r.acceptableAircraftConfigs),
                     crewMember: r.crewMember || '',
                     crewGroup: r.crewGroup || '',
                     crewGroupKey: r.crewGroupKey || '',
@@ -26385,8 +26399,10 @@ const App: React.FC = () => {
                     id: r.id, name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
                     currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
                     notes: r.notes, dateRequested: r.dateRequested, requestedTime: r.requestedTime,
+                    dayNight: r.dayNight || undefined,
                     submitted: r.submitted, includeInBuild: r.includeInBuild,
                     aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+                    acceptableAircraftConfigs: normaliseSctAcceptableConfigs(r.acceptableAircraftConfigs),
                     crewMember: r.crewMember || '',
                     crewGroup: r.crewGroup || '',
                     crewGroupKey: r.crewGroupKey || '',
@@ -33718,6 +33734,18 @@ const App: React.FC = () => {
             const callsignNumber = Number.isFinite(Number(sctReq.callsignNumber)) ? Number(sctReq.callsignNumber) : 0;
             return buildUnitEventCallsign(callsignBase, callsignNumber);
         };
+        const getSctDayNight = (sctReq: SctRequest): 'Day' | 'Night' | 'Day/Night' => {
+            const configured = sctReq.dayNight;
+            if (configured === 'Night' || configured === 'Day/Night') return configured;
+            if (/\bnight\b/i.test(String(sctReq.event || sctReq.eventCode || ''))) return 'Night';
+            return 'Day';
+        };
+        const getSctAcceptableAircraftConfigs = (sctReq: SctRequest, fallbackConfigId: string): string[] => {
+            const configured = Array.isArray(sctReq.acceptableAircraftConfigs)
+                ? sctReq.acceptableAircraftConfigs.map(configId => String(configId || '').trim()).filter(Boolean)
+                : [];
+            return configured.length > 0 ? Array.from(new Set(configured)) : [fallbackConfigId];
+        };
         const hasSctParticipant = (sctReq: SctRequest): boolean => Boolean(getSctSelectedPerson(sctReq) || getSctCrewDisplayLabel(sctReq));
 
         // 1. Auto-add HIGH priority SCT requests AND MEDIUM/LOW with includeInBuild=true
@@ -33762,6 +33790,7 @@ const App: React.FC = () => {
 
                 // Update the existing event with new data from SCT request
                 const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+                const acceptableAircraftConfigs = getSctAcceptableAircraftConfigs(sctReq, aircraftConfigId);
                 newPriorityEvents[existingInPriorityIndex] = {
                     ...newPriorityEvents[existingInPriorityIndex],
                     student: sctReq.flightType === 'Dual' ? sctTileCrew : '',
@@ -33777,7 +33806,8 @@ const App: React.FC = () => {
                     currency: sctReq.currency,
                     notes: buildSctEventNotes(sctReq),
                     aircraftConfigId,
-                    acceptableAircraftConfigs: [aircraftConfigId],
+                    acceptableAircraftConfigs,
+                    dayNight: getSctDayNight(sctReq),
                     fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
                 console.log('🔄 Updated HIGH priority SCT flight:', sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
@@ -33789,6 +33819,7 @@ const App: React.FC = () => {
                 const trainee = allTraineesData.find(t => t.fullName === sctReq.name);
                 const duration = fixedCrewCurrencyEventDuration ?? syllabusItem?.duration ?? 1.5;
                 const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+                const acceptableAircraftConfigs = getSctAcceptableAircraftConfigs(sctReq, aircraftConfigId);
 
                 // Convert requested time to decimal hours (e.g., "15:00" -> 15.0)
                 let startTime = 8.0; // Default
@@ -33823,7 +33854,8 @@ const App: React.FC = () => {
                     currency: sctReq.currency,
                     notes: buildSctEventNotes(sctReq),
                     aircraftConfigId,
-                    acceptableAircraftConfigs: [aircraftConfigId],
+                    acceptableAircraftConfigs,
+                    dayNight: getSctDayNight(sctReq),
                     fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
 
@@ -33862,6 +33894,8 @@ const App: React.FC = () => {
                 }
 
                 // Update the existing event with new data from SCT request
+                const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+                const acceptableAircraftConfigs = getSctAcceptableAircraftConfigs(sctReq, aircraftConfigId);
                 newPriorityEvents[existingInPriorityIndex] = {
                     ...newPriorityEvents[existingInPriorityIndex],
                     student: sctReq.flightType === 'Dual' ? sctTileCrew : '',
@@ -33876,6 +33910,9 @@ const App: React.FC = () => {
                     sctRequestType: 'ftd',
                     currency: sctReq.currency,
                     notes: buildSctEventNotes(sctReq),
+                    aircraftConfigId,
+                    acceptableAircraftConfigs,
+                    dayNight: getSctDayNight(sctReq),
                     fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
                 console.log('🔄 Updated HIGH priority SCT FTD:', sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
@@ -33886,6 +33923,8 @@ const App: React.FC = () => {
                 const syllabusItem = syllabusDetails.find(s => s.code === sctReq.event);
                 const trainee = allTraineesData.find(t => t.fullName === sctReq.name);
                 const duration = fixedCrewCurrencyEventDuration ?? syllabusItem?.duration ?? 1.5;
+                const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+                const acceptableAircraftConfigs = getSctAcceptableAircraftConfigs(sctReq, aircraftConfigId);
 
                 // Convert requested time to decimal hours (e.g., "15:00" -> 15.0)
                 let startTime = 8.0; // Default
@@ -33919,6 +33958,9 @@ const App: React.FC = () => {
                     sctRequestType: 'ftd',
                     currency: sctReq.currency,
                     notes: buildSctEventNotes(sctReq),
+                    aircraftConfigId,
+                    acceptableAircraftConfigs,
+                    dayNight: getSctDayNight(sctReq),
                     fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
                 console.log('\u2705 Added HIGH priority SCT FTD:', sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
@@ -41817,9 +41859,11 @@ appliedUpdates.forEach(update => {
                           priority: 'Medium' as 'Medium',
                           dateRequested: '',
                           requestedTime: '15:00',
+                          dayNight: 'Day',
                           submitted: false,
                           includeInBuild: false,
                           aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
+                          acceptableAircraftConfigs: [BASE_AIRCRAFT_CONFIG.id],
                           crewGroup: '',
                           crewGroupKey: '',
                           crewUnitCode: '',
@@ -44309,6 +44353,7 @@ appliedUpdates.forEach(update => {
                     personnelDisplaySettings={personnelDisplaySettings}
                     sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                     sctEvents={sctEvents}
+                    nightContinuationDefaultStartTime={commenceNightFlying}
                 />
             )}
             {selectedEvent && !isAddingTile && (

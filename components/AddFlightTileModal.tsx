@@ -67,6 +67,7 @@ interface AddFlightTileModalProps {
   personnelDisplaySettings?: PersonnelDisplaySettings;
   sctTerminology?: SctTerminology;
   sctEvents?: string[];
+  nightContinuationDefaultStartTime?: number;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -1539,6 +1540,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   personnelDisplaySettings,
   sctTerminology,
   sctEvents = [],
+  nightContinuationDefaultStartTime = 18.5,
 }) => {
   const resolvedSctTerminology = useMemo(
     () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY),
@@ -2169,6 +2171,17 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       String(profile.currency || '').trim(),
     ].join('::')
   );
+  const findContinuationCurrencyProfile = (value: string): CurrencyProfile | undefined => {
+    const normalisedValue = String(value || '').trim().toUpperCase();
+    if (!normalisedValue) return undefined;
+    return fixedCrewCurrencyProfileOptions.find(profile => (
+      getFixedCrewCurrencyProfileOptionKey(profile) === value
+      || String(profile.id || '').trim().toUpperCase() === normalisedValue
+      || String(profile.code || '').trim().toUpperCase() === normalisedValue
+      || String(profile.name || '').trim().toUpperCase() === normalisedValue
+      || String(profile.currency || '').trim().toUpperCase() === normalisedValue
+    ));
+  };
 
   const courseOptions = useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
@@ -2368,6 +2381,19 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   const handleFlightNumberChange = (code: string, durationHrs?: number) => {
     setFlightNumber(code);
+    if (eventCategory === 'sct') {
+      const selectedProfile = findContinuationCurrencyProfile(code);
+      if (selectedProfile) {
+        setFlightType(selectedProfile.flightType || 'Dual');
+        if (selectedProfile.dayNight === 'Night') {
+          setStartTime(nightContinuationDefaultStartTime);
+        }
+        setAircraftCount(Math.max(1, Math.floor(Number(selectedProfile.aircraftCount) || 1)));
+        if (selectedProfile.config && selectedProfile.config !== 'ANY') {
+          setAircraftConfigId(selectedProfile.config);
+        }
+      }
+    }
     const lmpDuration = resolveLmpDurationForEvent(code, durationHrs);
     if (lmpDuration) setDuration(lmpDuration);
     setGuidedStep('area');
@@ -2375,16 +2401,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   const handleFixedCrewEventChange = (eventKey: string) => {
     if (eventCategory === 'sct') {
-      const selectedProfile = fixedCrewCurrencyProfileOptions.find(profile => getFixedCrewCurrencyProfileOptionKey(profile) === eventKey)
-        || fixedCrewCurrencyProfileOptions.find(profile => (
-          profile.id === eventKey
-          || profile.code === eventKey
-          || profile.name === eventKey
-          || profile.currency === eventKey
-        ));
+      const selectedProfile = findContinuationCurrencyProfile(eventKey);
       setFixedCrewEventKey(eventKey);
       setFlightNumber(selectedProfile?.code || selectedProfile?.name || selectedProfile?.currency || '');
       setDuration(2);
+      setFlightType(selectedProfile?.flightType || 'Dual');
+      if (selectedProfile?.dayNight === 'Night') {
+        setStartTime(nightContinuationDefaultStartTime);
+      }
       setAircraftCount(Math.max(1, Math.floor(Number(selectedProfile?.aircraftCount) || 1)));
       if (selectedProfile?.config && selectedProfile.config !== 'ANY') {
         setAircraftConfigId(selectedProfile.config);
@@ -2591,6 +2615,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         const selectedCurrencyConfig = selectedFixedCrewCurrencyProfile?.config && selectedFixedCrewCurrencyProfile.config !== 'ANY'
           ? selectedFixedCrewCurrencyProfile.config
           : aircraftConfigId;
+        const selectedCurrencyAcceptableConfigs = Array.isArray(selectedFixedCrewCurrencyProfile?.acceptableAircraftConfigs) && selectedFixedCrewCurrencyProfile.acceptableAircraftConfigs.length > 0
+          ? selectedFixedCrewCurrencyProfile.acceptableAircraftConfigs
+          : [selectedCurrencyConfig];
         const savedAircraftCount = Math.max(1, Math.floor(Number(aircraftCount) || 1));
         const formationId = savedAircraftCount > 1 ? `fixed-crew-formation-${uuidv4()}` : undefined;
         Array.from({ length: savedAircraftCount }, (_, index) => index).forEach((index) => {
@@ -2605,7 +2632,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           date,
           type: eventType,
           eventCategory,
-          flightType: 'Dual',
+          flightType: selectedFixedCrewCurrencyProfile?.flightType || 'Dual',
           flightNumber,
           instructor: assignedPic,
           student: '',
@@ -2616,7 +2643,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           area: eventType === 'flight' ? area : '-',
           aircraftNumber: eventType === 'flight' ? formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings) : undefined,
           aircraftConfigId: eventType === 'flight' ? selectedCurrencyConfig : undefined,
-          acceptableAircraftConfigs: eventType === 'flight' ? [selectedCurrencyConfig] : undefined,
+          acceptableAircraftConfigs: eventType === 'flight' ? selectedCurrencyAcceptableConfigs : undefined,
           callsign,
           locationType,
           color: 'bg-emerald-500',
@@ -2628,6 +2655,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           ].filter(Boolean).join('\n'),
           currency: selectedFixedCrewCurrencyProfile?.currency || undefined,
           eventCode: selectedFixedCrewCurrencyProfile?.code || selectedFixedCrewEvent?.code || undefined,
+          dayNight: selectedFixedCrewCurrencyProfile?.dayNight,
           group: formatFixedCrewDisplayGroup(assignedCrewGroup),
           groupTraineeIds: [],
           attendees: assignedCrewMembers.map(staff => staff.name),
@@ -2651,6 +2679,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       }
 
       const isFormation = isSctFormationCode(flightNumber);
+      const selectedContinuationProfile = eventCategory === 'sct' ? findContinuationCurrencyProfile(flightNumber) : undefined;
+      const selectedContinuationAcceptableConfigs = Array.isArray(selectedContinuationProfile?.acceptableAircraftConfigs) && selectedContinuationProfile.acceptableAircraftConfigs.length > 0
+        ? selectedContinuationProfile.acceptableAircraftConfigs
+        : [selectedContinuationProfile?.config || aircraftConfigId];
       const crewDrafts: FormationCrewDraft[] = isFormation
         ? [
             { flightType, picName, studentName, callsign: formationType ? `${formationType}1` : callsign },
@@ -2678,8 +2710,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           duration,
           area,
           aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
-          aircraftConfigId,
-          acceptableAircraftConfigs: [aircraftConfigId],
+          aircraftConfigId: selectedContinuationProfile?.config && selectedContinuationProfile.config !== 'ANY' ? selectedContinuationProfile.config : aircraftConfigId,
+          acceptableAircraftConfigs: selectedContinuationAcceptableConfigs,
           callsign: savedCallsign,
           locationType,
           color: tileColor,
@@ -2693,6 +2725,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           formationType: isFormation ? formationType : undefined,
           formationPosition: isFormation ? index + 1 : undefined,
           formationId: undefined,
+          dayNight: selectedContinuationProfile?.dayNight,
+          currency: selectedContinuationProfile?.currency,
+          eventCode: selectedContinuationProfile?.code,
         } as any);
       });
     } else {
