@@ -30173,6 +30173,7 @@ const PersonDropdown = ({
     });
   }, [dropdownKey]);
   const setSelectedUnit = reactExports.useCallback((unit) => {
+    if (unit === selectedUnit) return;
     setSelectedUnitState(unit);
     setSelectedL2State(null);
     const existing = getPersonDropdownMemory(dropdownKey);
@@ -30182,8 +30183,9 @@ const PersonDropdown = ({
       layer2: null,
       scroll: { ...existing.scroll, layer2: 0, names: 0 }
     });
-  }, [dropdownKey]);
+  }, [dropdownKey, selectedUnit]);
   const setSelectedL2 = reactExports.useCallback((layer2) => {
+    if (layer2 === selectedL2) return;
     setSelectedL2State(layer2);
     const existing = getPersonDropdownMemory(dropdownKey);
     personDropdownColumnState.set(dropdownKey, {
@@ -30192,7 +30194,7 @@ const PersonDropdown = ({
       layer2,
       scroll: { ...existing.scroll, names: 0 }
     });
-  }, [dropdownKey, selectedUnit]);
+  }, [dropdownKey, selectedL2, selectedUnit]);
   const closeDropdown = reactExports.useCallback((clearColumns = false) => {
     setOpen(false);
     if (clearColumns) {
@@ -30300,6 +30302,7 @@ const PersonDropdown = ({
                     onClick: () => {
                       setSelectedUnit(unit);
                     },
+                    onMouseEnter: () => setSelectedUnit(unit),
                     style: {
                       padding: "9px 12px",
                       fontSize: 13,
@@ -30330,6 +30333,7 @@ const PersonDropdown = ({
                 "div",
                 {
                   onClick: () => setSelectedL2(opt),
+                  onMouseEnter: () => setSelectedL2(opt),
                   style: {
                     padding: "9px 12px",
                     fontSize: 13,

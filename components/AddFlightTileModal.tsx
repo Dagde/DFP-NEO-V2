@@ -554,6 +554,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
   }, [dropdownKey]);
 
   const setSelectedUnit = useCallback((unit: string | null) => {
+    if (unit === selectedUnit) return;
     setSelectedUnitState(unit);
     setSelectedL2State(null);
     const existing = getPersonDropdownMemory(dropdownKey);
@@ -563,9 +564,10 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
       layer2: null,
       scroll: { ...existing.scroll, layer2: 0, names: 0 },
     });
-  }, [dropdownKey]);
+  }, [dropdownKey, selectedUnit]);
 
   const setSelectedL2 = useCallback((layer2: string | null) => {
+    if (layer2 === selectedL2) return;
     setSelectedL2State(layer2);
     const existing = getPersonDropdownMemory(dropdownKey);
     personDropdownColumnState.set(dropdownKey, {
@@ -574,7 +576,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
       layer2,
       scroll: { ...existing.scroll, names: 0 },
     });
-  }, [dropdownKey, selectedUnit]);
+  }, [dropdownKey, selectedL2, selectedUnit]);
 
   const closeDropdown = useCallback((clearColumns = false) => {
     setOpen(false);
@@ -687,6 +689,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
             onClick={() => {
               setSelectedUnit(unit);
             }}
+            onMouseEnter={() => setSelectedUnit(unit)}
             style={{
               padding: '9px 12px', fontSize: 13, cursor: 'pointer',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -711,6 +714,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
             <div
               key={opt}
               onClick={() => setSelectedL2(opt)}
+              onMouseEnter={() => setSelectedL2(opt)}
               style={{
                 padding: '9px 12px', fontSize: 13, cursor: 'pointer',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
