@@ -42448,6 +42448,7 @@ appliedUpdates.forEach(update => {
                             operationalModel={activeOperationalModel}
                             crewPositionTerminology={activeCrewPositionTerminology}
                             staffQualificationCatalogue={activeStaffQualificationCatalogue}
+                            sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                             sharedUnitTabs={fixedCrewSharedResourceUnitTabs}
                             activeUnitCode={activeUnitCode}
                         />;

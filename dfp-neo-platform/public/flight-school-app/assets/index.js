@@ -53301,7 +53301,8 @@ const StaffView = (props) => {
           instructorLabel: props.instructorLabel,
           operationalModel: props.operationalModel,
           crewPositionTerminology: props.crewPositionTerminology,
-          staffQualificationCatalogue: props.staffQualificationCatalogue
+          staffQualificationCatalogue: props.staffQualificationCatalogue,
+          sctTerminology: props.sctTerminology
         }
       ),
       activeTab === "schedule" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -118710,6 +118711,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             operationalModel: activeOperationalModel,
             crewPositionTerminology: activeCrewPositionTerminology,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
+            sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             sharedUnitTabs: fixedCrewSharedResourceUnitTabs,
             activeUnitCode
           }

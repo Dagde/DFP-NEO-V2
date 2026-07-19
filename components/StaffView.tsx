@@ -7,6 +7,7 @@ import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
+import type { SctTerminology } from '../utils/sctTerminology';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 
 interface StaffViewProps {
@@ -48,6 +49,7 @@ interface StaffViewProps {
   operationalModel?: string;
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
+  sctTerminology?: SctTerminology;
   sharedUnitTabs?: string[];
   activeUnitCode?: string;
 
@@ -225,6 +227,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             operationalModel={props.operationalModel}
             crewPositionTerminology={props.crewPositionTerminology}
             staffQualificationCatalogue={props.staffQualificationCatalogue}
+            sctTerminology={props.sctTerminology}
           />
         )}
         {activeTab === 'schedule' && (
