@@ -5338,13 +5338,11 @@ const getEventDayNightClassification = (
         return 'Day';
     }
 
-    // Check for SCT events first (since they're not in Master LMP)
+    // Continuation events are configured outside the Master LMP list.
     if (sctEvents && sctEvents.includes(event.flightNumber)) {
-        // Night SCT is specifically a night event
-        if (event.flightNumber === 'Night SCT') {
+        if (/\bnight\b/i.test(event.flightNumber)) {
             return 'Night';
         }
-        // All other SCT events default to Day
         return 'Day';
     }
 

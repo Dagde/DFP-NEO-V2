@@ -88334,7 +88334,7 @@ const getEventDayNightClassification = (event, syllabusDetails, sctEvents) => {
     return "Day";
   }
   if (sctEvents && sctEvents.includes(event.flightNumber)) {
-    if (event.flightNumber === "Night SCT") {
+    if (/\bnight\b/i.test(event.flightNumber)) {
       return "Night";
     }
     return "Day";
