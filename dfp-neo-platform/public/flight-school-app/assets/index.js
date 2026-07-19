@@ -26685,6 +26685,32 @@ const TraineeScoresModal = ({ trainee, onClose }) => {
     }
   ) });
 };
+const validEventCategories = ["lmp_event", "lmp_currency", "sct", "staff_cat", "twr_di"];
+const normaliseEventCategoryValue = (raw) => {
+  const value = String(raw || "").trim();
+  return validEventCategories.includes(value) ? value : null;
+};
+const stripCrewSuffix = (value) => String(value || "").replace(/\s*\([^)]+\)\s*$/, "").trim();
+const isContinuationFlightCode = (value) => {
+  const code = String(value || "").trim().toUpperCase();
+  return code === "SCT" || code === "SCT FORM" || code.startsWith("SCT ");
+};
+const inferEventCategory = (event) => normaliseEventCategoryValue(event.eventCategory) || (event.isSct || isContinuationFlightCode(event.flightNumber) ? "sct" : "lmp_event");
+const getContinuationPilotName = (event) => stripCrewSuffix(event.pilot || event.instructor || event.student || "");
+const makeInitialCrewMember = (sourceEvent) => {
+  const inferredCategory = inferEventCategory(sourceEvent);
+  const flightType = sourceEvent.flightType || "Dual";
+  const isContinuationSolo = inferredCategory === "sct" && flightType === "Solo";
+  const continuationPilot = getContinuationPilotName(sourceEvent);
+  return {
+    flightType,
+    instructor: isContinuationSolo ? "" : sourceEvent.instructor || "",
+    student: isContinuationSolo ? "" : sourceEvent.student || "",
+    pilot: isContinuationSolo ? continuationPilot : sourceEvent.pilot || "",
+    group: sourceEvent.group || "",
+    groupTraineeIds: sourceEvent.groupTraineeIds || []
+  };
+};
 const getEventTypeFromSyllabus = (syllabusId, syllabusDetails) => {
   const detail = syllabusDetails.find((d) => d.id === syllabusId);
   if (!detail) {
@@ -26742,7 +26768,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -26762,7 +26788,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [showMassBriefComplete, setShowMassBriefComplete] = reactExports.useState(false);
   const [showMassBriefConfirmation, setShowMassBriefConfirmation] = reactExports.useState(false);
   const [completedTrainees, setCompletedTrainees] = reactExports.useState([]);
-  const [eventCategory, setEventCategory] = reactExports.useState(event.eventCategory || "lmp_event");
+  const [eventCategory, setEventCategory] = reactExports.useState(() => inferEventCategory(event));
   const [flightNumber, setFlightNumber] = reactExports.useState(event.flightNumber);
   const [duration, setDuration] = reactExports.useState(event.duration);
   const [eventType, setEventType] = reactExports.useState(event.type);
@@ -26792,14 +26818,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       setAircraftNumberPrefix(aircraftNumberSettings.defaultPrefix);
     }
   }, [aircraftNumberPrefix, aircraftNumberSettings]);
-  const [crew, setCrew] = reactExports.useState([{
-    flightType: event.flightType,
-    instructor: event.instructor || "",
-    student: event.student || "",
-    pilot: event.pilot || "",
-    group: event.group || "",
-    groupTraineeIds: event.groupTraineeIds || []
-  }]);
+  const [crew, setCrew] = reactExports.useState(() => [makeInitialCrewMember(event)]);
   console.log("Initial crew state:", crew);
   const getDualSoloFromIndividualLMP = (flightNumber2, traineeName) => {
     console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Called with flightNumber: ${flightNumber2}, traineeName: ${traineeName}`);
@@ -26883,10 +26902,28 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [activeCrewConflictName, setActiveCrewConflictName] = reactExports.useState(null);
   const isOracleContext = !!oracleContextForModal;
   const instructorList = oracleContextForModal?.availableInstructors || instructors;
+  const normalisedOperationalModel = normaliseOperationalModel(operationalModel);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
-  const isPooledCrewModel = String(operationalModel || "").trim().toLowerCase() === "pooled_crew";
+  const isPooledCrewModel = normalisedOperationalModel === "pooled_crew";
+  const isAirCombatModel = normalisedOperationalModel === "air_combat";
+  const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
+  const sctShortLabel = resolvedSctTerminology.shortLabel;
+  const sctFormationLabel = `${sctShortLabel} FORM`;
+  const formatContinuationLabel = (value) => {
+    const code = String(value || "").trim().toUpperCase();
+    if (code === "SCT") return sctShortLabel;
+    if (code === "SCT FORM") return sctFormationLabel;
+    return value;
+  };
   const normalisedEventType = String(eventType || "").trim().toLowerCase();
   const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === "flight" || normalisedEventType === "ftd");
+  const isContinuationTile = eventCategory === "sct" || event.isSct === true || isContinuationFlightCode(flightNumber);
+  const airCombatSoloCrewRequirement = reactExports.useMemo(() => ({
+    mode: "custom",
+    roles: [{ role: "Pilot", crewPositionId: "pilot", count: 1, eligibleRoles: ["Pilot"] }]
+  }), []);
+  const isAirCombatSoloContinuation = isAirCombatModel && isContinuationTile && crew[0]?.flightType === "Solo";
+  const displayedCrewRequirement = isAirCombatSoloContinuation ? airCombatSoloCrewRequirement : crewRequirement;
   const activeUnitNormalised = String(activeUnitCode || "").trim().toUpperCase();
   const activeUnitMemberCodes = reactExports.useMemo(() => activeUnitNormalised.split("+").map((unit) => normaliseFixedCrewUnitCode(unit)).filter(Boolean), [activeUnitNormalised]);
   const staffMatchesActiveFixedCrewUnit = (staff, crewKey) => {
@@ -27307,7 +27344,8 @@ ${swapNote}` : swapNote
   }, [selectedTraineeNameForLmp, traineeLMPs]);
   const getSyllabusItemForOption = (option) => selectedIndividualLmp?.find((item) => item.id === option || item.code === option) || syllabusDetails.find((item) => item.id === option || item.code === option);
   const formatSyllabusOptionLabel = (option) => {
-    if (option === "SCT FORM") return option;
+    const cleanOption = String(option || "").trim().toUpperCase();
+    if (cleanOption === "SCT" || cleanOption === "SCT FORM") return formatContinuationLabel(option);
     const item = getSyllabusItemForOption(option);
     if (!item) return option;
     const code = item.code || item.id || option;
@@ -27397,6 +27435,37 @@ ${swapNote}` : swapNote
     });
     return { grouped, sortedUnits };
   }, [instructorList, traineesData, instructorsData, personnelDisplaySettings]);
+  const activeEventUnitCodes = reactExports.useMemo(() => {
+    const rawUnit = String(activeUnitCode || event.unitCode || event.unit || "").trim().toUpperCase();
+    return rawUnit.split("+").map((unit) => unit.trim()).filter(Boolean);
+  }, [activeUnitCode, event]);
+  const isStaffPilotRole = (staff) => String(staff?.role || "").trim().toLowerCase() === "pilot";
+  const airCombatPilotsByUnit = reactExports.useMemo(() => {
+    const grouped = {};
+    if (!isAirCombatModel) return { grouped, sortedUnits: [] };
+    const selectedPilotNames = new Set(
+      crew.map((c) => c.pilot).concat(event.pilot || "", event.instructor || "", event.student || "").map(stripCrewSuffix).filter(Boolean)
+    );
+    const selectedPilots = Array.from(selectedPilotNames).map((name) => instructorsData.find(
+      (staff) => stripCrewSuffix(staff.name) === name || stripCrewSuffix(staff.fullName) === name
+    )).filter((staff) => Boolean(staff) && isStaffPilotRole(staff));
+    const candidatePilots = instructorsData.filter((staff) => !staff.isAdminStaff).filter(isStaffPilotRole).filter((staff) => activeEventUnitCodes.length === 0 || activeEventUnitCodes.includes(String(staff.unit || "").trim().toUpperCase()));
+    const ordered = [
+      ...selectedPilots,
+      ...candidatePilots.filter((staff) => !selectedPilots.some((selected) => selected.name === staff.name))
+    ];
+    ordered.forEach((staff) => {
+      const unit = staff.unit || "Unknown";
+      if (!grouped[unit]) grouped[unit] = [];
+      grouped[unit].push({ name: stripCrewSuffix(staff.name), unit, rank: staff.rank || "FLGOFF", instructor: staff });
+    });
+    Object.keys(grouped).forEach((unit) => {
+      grouped[unit].sort(
+        (a, b) => comparePeopleByConfiguredRank(a.instructor || a, b.instructor || b, personnelDisplaySettings, "staff")
+      );
+    });
+    return { grouped, sortedUnits: Object.keys(grouped).sort() };
+  }, [activeEventUnitCodes, crew, event.instructor, event.pilot, event.student, instructorsData, isAirCombatModel, personnelDisplaySettings]);
   const traineesByCourse = reactExports.useMemo(() => {
     const traineesWithCourse = traineeList.map((name) => {
       const trainee = traineesData.find((t) => t.name === name || t.fullName === name);
@@ -27696,6 +27765,7 @@ ${swapNote}` : swapNote
   }, [eventType, isUnavailabilityDetailsEvent, resourceDisplayNames.ftd]);
   reactExports.useEffect(() => {
     setFlightNumber(event.flightNumber);
+    setEventCategory(inferEventCategory(event));
     if (isEditingDefault && !event.flightNumber) {
       setDuration("");
     } else {
@@ -27710,14 +27780,7 @@ ${swapNote}` : swapNote
     setAircraftConfigId(event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
     setCrewRequirement(event.crewRequirement || { mode: "aircraft_default" });
     setAircraftCount(1);
-    setCrew([{
-      flightType: event.flightType,
-      instructor: event.instructor || "",
-      student: event.student || "",
-      pilot: event.pilot || "",
-      group: event.group || "",
-      groupTraineeIds: event.groupTraineeIds || []
-    }]);
+    setCrew([makeInitialCrewMember(event)]);
     setIsEditing(isReadOnly ? false : isEditingDefault);
     setLocalHighlight(highlightedField);
     setLocationType(event.locationType || "Local");
@@ -28072,6 +28135,9 @@ ${swapNote}` : swapNote
       }
       const fixedCrewDisplayGroup = fixedCrewGroup ? formatFixedCrewDisplayGroup$2(fixedCrewGroup) : c.group;
       const fixedCrewDisplayPic = fixedCrewPic || c.pilot || c.instructor;
+      const isAirCombatSoloSctSave = isAirCombatModel && eventCategory === "sct" && c.flightType === "Solo";
+      const primaryContinuationPilot = stripCrewSuffix(c.pilot || c.instructor || c.student);
+      const savedCrewRequirement = eventType === "flight" ? isAirCombatSoloSctSave ? airCombatSoloCrewRequirement : crewRequirement : event.crewRequirement;
       const savedEvent = {
         ...event,
         id: eventId,
@@ -28085,12 +28151,12 @@ ${swapNote}` : swapNote
         aircraftNumber: eventType === "flight" ? formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings) : void 0,
         aircraftConfigId: eventType === "flight" ? aircraftConfigId : void 0,
         acceptableAircraftConfigs: eventType === "flight" ? [aircraftConfigId] : event.acceptableAircraftConfigs,
-        crewRequirement: eventType === "flight" ? crewRequirement : event.crewRequirement,
+        crewRequirement: savedCrewRequirement,
         color: eventColor,
         flightType: c.flightType,
-        instructor: isFixedCrewCrewedEvent ? fixedCrewDisplayPic : c.instructor,
-        student: isFixedCrewCrewedEvent ? "" : c.student,
-        pilot: isFixedCrewCrewedEvent ? fixedCrewDisplayPic : c.pilot,
+        instructor: isFixedCrewCrewedEvent ? fixedCrewDisplayPic : isAirCombatSoloSctSave ? "" : c.instructor,
+        student: isFixedCrewCrewedEvent ? "" : isAirCombatSoloSctSave ? "" : c.student,
+        pilot: isFixedCrewCrewedEvent ? fixedCrewDisplayPic : isAirCombatSoloSctSave ? primaryContinuationPilot : c.pilot,
         group: isFixedCrewCrewedEvent ? fixedCrewDisplayGroup : c.group,
         groupTraineeIds: c.groupTraineeIds,
         locationType,
@@ -28301,6 +28367,7 @@ ${swapNote}` : swapNote
     const useStaffOnly = eventCategory === "lmp_currency" || eventCategory === "sct" || eventCategory === "staff_cat" || eventCategory === "twr_di";
     const showTraineeFields = eventCategory === "lmp_event" || eventCategory === "lmp_currency";
     const showCrewField = (eventCategory === "sct" || eventCategory === "staff_cat" || eventCategory === "twr_di") && crewMember.flightType === "Dual";
+    const soloStaffSource = isAirCombatModel && eventCategory === "sct" ? airCombatPilotsByUnit : staffInstructorsByUnit;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `space-y-4 ${crew.length > 1 ? "p-3 bg-gray-700/50 rounded-lg" : ""}`, children: [
       crew.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-sky-400", children: formationCallsign }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -28417,7 +28484,7 @@ ${swapNote}` : swapNote
               className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed appearance-none cursor-pointer z-10",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "Select pilot" }),
-                staffInstructorsByUnit.sortedUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: `─── ${unit} ───`, children: staffInstructorsByUnit.grouped[unit].filter((instructor) => {
+                soloStaffSource.sortedUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: `─── ${unit} ───`, children: soloStaffSource.grouped[unit].filter((instructor) => {
                   if (crew.length > 1) {
                     const alreadyAssignedPilots = crew.filter((c, i) => i !== index).map((c) => c.pilot).filter((p) => p);
                     return !alreadyAssignedPilots.includes(instructor.name);
@@ -28711,7 +28778,7 @@ ${swapNote}` : swapNote
                   type: "button",
                   onClick: () => setEventCategory("sct"),
                   className: `px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${eventCategory === "sct" ? "bg-sky-600 text-white ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
-                  children: "SCT"
+                  children: sctShortLabel
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -28771,7 +28838,7 @@ ${swapNote}` : swapNote
                         return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: optionValue, children: formatSyllabusOptionLabel(optionValue) }, item.id || item.code);
                       }) }, groupLabel))
                     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                      isAddingTile && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "SCT FORM", children: "SCT FORM" }),
+                      isAddingTile && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "SCT FORM", children: formatContinuationLabel("SCT FORM") }),
                       filteredSyllabusOptions.filter((item) => item !== "SCT FORM").map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: item, children: formatSyllabusOptionLabel(item) }, item))
                     ] })
                   ]
@@ -28866,11 +28933,13 @@ ${swapNote}` : swapNote
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               CrewRequirementEditor,
               {
-                value: crewRequirement,
+                value: displayedCrewRequirement,
                 aircraftCrewComposition,
                 crewPositionTerminology,
                 operationalModel,
-                onChange: setCrewRequirement
+                onChange: setCrewRequirement,
+                showAircraftDefaultSummary: !isAirCombatSoloContinuation,
+                aircraftDefaultOptionLabel: isAirCombatSoloContinuation ? "Solo pilot" : "Use aircraft default"
               }
             ) }),
             flightNumber !== "SCT FORM" && !isFixedCrewCrewedEvent && (selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
