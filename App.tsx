@@ -7032,6 +7032,7 @@ function generateDfpInternal(
         || config.runtimeResourceContext?.runtimeAircraftTypeName
         || 'PC-21'
     ).trim() || 'PC-21';
+    const buildAircraftResourceIdPrefix = `${buildAircraftResourcePrefix} `;
     const buildPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
         config.personnelDisplaySettings || DEFAULT_PERSONNEL_DISPLAY_SETTINGS
     );
@@ -7969,7 +7970,7 @@ function generateDfpInternal(
     };
 
     const getPriorityResourceOptions = (event: Omit<ScheduleEvent, 'date'>): string[] => {
-        const resourcePrefix = event.type === 'flight' ? 'PC-21 ' :
+        const resourcePrefix = event.type === 'flight' ? buildAircraftResourceIdPrefix :
                              event.type === 'ftd' ? 'FTD ' :
                              event.type === 'cpt' ? 'CPT ' : 'Ground ';
         const resourceCount = event.type === 'flight' ? availableAircraftCount :
@@ -11146,7 +11147,7 @@ function generateDfpInternal(
     generatedEvents.forEach((event) => {
         if (!event.resourceId || event.resourceId === '') {
             // Determine resource type based on event type
-            const resourcePrefix = event.type === 'flight' ? 'PC-21 ' :
+            const resourcePrefix = event.type === 'flight' ? buildAircraftResourceIdPrefix :
                                  event.type === 'ftd' ? 'FTD ' :
                                  event.type === 'cpt' ? 'CPT ' : 'Ground ';
             const resourceCount = event.type === 'flight' ? availableAircraftCount :
@@ -12985,7 +12986,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
 
             for (let index = 1; index <= availableAircraftCount; index++) {
-                const candidateResourceId = `PC-21 ${index}`;
+                const candidateResourceId = `${buildAircraftResourceIdPrefix}${index}`;
                 const resourceAircraftConfigId = getAircraftConfigIdForResource(candidateResourceId);
                 if (!eventAcceptsResourceConfig(syllabusItem, resourceAircraftConfigId)) {
                     aircraftConfigMismatchCount++;
@@ -13036,7 +13037,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AIRCRAFT_AVAILABLE');
                 if (dayFlightResourceAvailability.compatibleResourceCandidateCount === 0 && dayFlightResourceAvailability.aircraftConfigMismatchCount > 0) {
                     return traceScheduleReject('AIRCRAFT_CONFIG_MISMATCH', {
-                        resourcePrefix: 'PC-21 ',
+                        resourcePrefix: buildAircraftResourceIdPrefix,
                         resourceCount: availableAircraftCount,
                         preferredNightAircraft: null,
                         requiredAircraftConfig: getAircraftConfigRequirementSummary(syllabusItem),
@@ -13047,7 +13048,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     });
                 }
                 return traceScheduleReject('NO_RESOURCE_AVAILABLE', {
-                    resourcePrefix: 'PC-21 ',
+                    resourcePrefix: buildAircraftResourceIdPrefix,
                     resourceCount: availableAircraftCount,
                     preferredNightAircraft: null,
                     requiredAircraftConfig: getAircraftConfigRequirementSummary(syllabusItem),
@@ -13787,7 +13788,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return stbyResult;
         }
 
-        const resourcePrefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
+        const resourcePrefix = type === 'flight' ? buildAircraftResourceIdPrefix : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
         const resourceCount = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
         const acceptedAircraftConfigsForEvent = type === 'flight'
             ? normaliseAircraftConfigRequirement(syllabusItem)
@@ -13810,8 +13811,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         };
 
         // SOLO RESOURCE PLACEMENT FIX:
-        // Solo flights must be placed on the PC-21 row that matches their chronological
-        // position in the day, not the lowest-numbered free aircraft.
+        // Solo flights use the same aircraft-row search as dual flights so row choice
+        // stays chronological for the configured unit aircraft type.
         // Solo flights compete for resources using the same sequential search as dual flights.
         // No special row offset — solos find the first free aircraft starting from row 1.
         let resourceSearchStart = 1;
@@ -16097,7 +16098,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             });
         };
         const findResourceForTraining = (item: SyllabusItemDetail, type: 'flight' | 'ftd' | 'ground' | 'cpt', startTime: number): { resourceId: string; area?: string; aircraftConfigId?: string } | null => {
-            const prefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
+            const prefix = type === 'flight' ? buildAircraftResourceIdPrefix : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
             const count = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
             if (count <= 0) {
                 pushAirCombatDiag('resourceChecks', { event: item.code, type, startTime, reason: 'NO_RESOURCE_COUNT', count });
@@ -16543,7 +16544,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     return { resourceId, aircraftConfigId };
             };
             for (let startIndex = 1; startIndex <= availableAircraftCount - resourceNumber + 1; startIndex++) {
-                const blockResources = Array.from({ length: resourceNumber }, (_, index) => `PC-21 ${startIndex + index}`);
+                const blockResources = Array.from({ length: resourceNumber }, (_, index) => `${buildAircraftResourceIdPrefix}${startIndex + index}`);
                 const resources = members.map((member, index) => evaluateFormationResource(member, blockResources[index]));
                 if (resources.every(Boolean)) {
                     pushAirCombatDiag('resourceChecks', {
@@ -18811,7 +18812,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         }
 
         const leadAircraftReadyTime = generatedEvents
-            .filter(event => event.resourceId === 'PC-21 1')
+            .filter(event => event.resourceId === `${buildAircraftResourceIdPrefix}1`)
             .reduce((latestReady, event) => {
                 const turnaround = event.type === 'flight' ? flightTurnaround : 0;
                 return Math.max(latestReady, event.startTime + event.duration + turnaround);
@@ -18820,7 +18821,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             firstRemedialFlightStart,
             roundUpToFlightSlot(leadAircraftReadyTime)
         );
-        buildDebugLog(`[FLIGHT-WAVE] Mandatory/post-1000 wave aligned from ${_fmtT(firstRemedialFlightStart)} to ${_fmtT(alignedPostMandatoryStart)} so remedials start the clean PC-21 wave.`);
+        buildDebugLog(`[FLIGHT-WAVE] Mandatory/post-1000 wave aligned from ${_fmtT(firstRemedialFlightStart)} to ${_fmtT(alignedPostMandatoryStart)} so remedials start the clean ${buildAircraftResourcePrefix} wave.`);
 
         scheduleList(
             _mandatoryDayFlightList,
@@ -20707,17 +20708,17 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         recordAirCombatStage('air-combat-final-summary', neoBuildDiag.airCombatPriority.finalSummary);
     }
 
-    const dayPc21FlightsByStart = sortedEvents
+    const dayAircraftFlightsByStart = sortedEvents
         .filter(event =>
             event.type === 'flight' &&
-            event.resourceId?.startsWith('PC-21') &&
+            event.resourceId?.startsWith(buildAircraftResourceIdPrefix) &&
             getGeneratedEventDayNightClassification(event) !== 'Night' &&
             event.startTime < flyingEndTime
         )
         .sort((a, b) => a.startTime - b.startTime || (resourceOrderMap.get(a.resourceId) ?? 9999) - (resourceOrderMap.get(b.resourceId) ?? 9999));
-    for (let index = 1; index < dayPc21FlightsByStart.length; index++) {
-        const previous = dayPc21FlightsByStart[index - 1];
-        const current = dayPc21FlightsByStart[index];
+    for (let index = 1; index < dayAircraftFlightsByStart.length; index++) {
+        const previous = dayAircraftFlightsByStart[index - 1];
+        const current = dayAircraftFlightsByStart[index];
         const gapMinutes = Math.round((current.startTime - previous.startTime) * 60);
         if (gapMinutes > 5) {
             const expectedNextStart = previous.startTime + (5 / 60);
