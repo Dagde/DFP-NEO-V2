@@ -8576,7 +8576,7 @@ function generateDfpInternal(
             };
         };
         const getFixedCrewResourceOptions = (event: Omit<ScheduleEvent, 'date'>): string[] => {
-            const prefix = event.type === 'flight' ? 'PC-21 ' : event.type === 'ftd' ? 'FTD ' : event.type === 'cpt' ? 'CPT ' : 'Ground ';
+            const prefix = event.type === 'flight' ? `${activeAircraftResourcePrefix} ` : event.type === 'ftd' ? 'FTD ' : event.type === 'cpt' ? 'CPT ' : 'Ground ';
             const count = event.type === 'flight' ? availableAircraftCount : event.type === 'ftd' ? ftdCount : event.type === 'cpt' ? cptCount : 6;
             const options = Array.from({ length: Math.max(0, count) }, (_, index) => `${prefix}${index + 1}`);
             if (event.type !== 'flight') return options;
@@ -8646,7 +8646,7 @@ function generateDfpInternal(
                 const resourceOptions = sampleEvent
                     ? getFixedCrewResourceOptions(sampleEvent)
                     : eventType === 'flight'
-                        ? Array.from({ length: availableAircraftCount }, (_, index) => `PC-21 ${index + 1}`)
+                        ? Array.from({ length: availableAircraftCount }, (_, index) => `${activeAircraftResourcePrefix} ${index + 1}`)
                         : eventType === 'ftd'
                             ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`)
                             : eventType === 'cpt'
@@ -20172,47 +20172,17 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             }
         });
 
-        // Recombine events in resource order (matching buildResources order)
-        // Order: PC-21 aircraft → Duty Sup → STBY → FTD → CPT → Ground
+        // Recombine events in configured resource order (matching the visible DFP rows)
         const result: Omit<ScheduleEvent, 'date'>[] = [];
-
-        // Add PC-21 events (PC-21 1 through PC-21 24, plus Deployed if any)
-        for (let i = 1; i <= 24; i++) {
-            const pc21Events = shuffledByResource.get(`PC-21 ${i}`) || [];
-            result.push(...pc21Events);
-        }
-        // Add any Deployed events
-        for (let i = 1; i <= 10; i++) {
-            const deployedEvents = shuffledByResource.get(`Deployed ${i}`) || [];
-            result.push(...deployedEvents);
-        }
-
-        // Add Duty Sup events
-        result.push(...(shuffledByResource.get('Duty Sup') || []));
-
-        // Add STBY events (STBY 1 through STBY N)
-        for (let i = 1; i <= 20; i++) { // Max 20 STBY lines
-            const stbyEvents = shuffledByResource.get(`STBY ${i}`) || [];
-            result.push(...stbyEvents);
-        }
-
-        // Add FTD events
-        for (let i = 1; i <= 10; i++) { // Max 10 FTD
-            const ftdEvents = shuffledByResource.get(`FTD ${i}`) || [];
-            result.push(...ftdEvents);
-        }
-
-        // Add CPT events
-        for (let i = 1; i <= 10; i++) { // Max 10 CPT
-            const cptEvents = shuffledByResource.get(`CPT ${i}`) || [];
-            result.push(...cptEvents);
-        }
-
-        // Add Ground events
-        for (let i = 1; i <= 10; i++) { // Max 10 Ground
-            const groundEvents = shuffledByResource.get(`Ground ${i}`) || [];
-            result.push(...groundEvents);
-        }
+        const addedResourceIds = new Set<string>();
+        buildResources.forEach(resourceId => {
+            result.push(...(shuffledByResource.get(resourceId) || []));
+            addedResourceIds.add(resourceId);
+        });
+        shuffledByResource.forEach((resourceEvents, resourceId) => {
+            if (addedResourceIds.has(resourceId)) return;
+            result.push(...resourceEvents);
+        });
 
         return result;
     };
@@ -20223,19 +20193,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     // Define resource order matching buildResources
     const resourceOrder = [
-        // PC-21 aircraft
-        ...Array.from({ length: 24 }, (_, i) => `PC-21 ${i + 1}`),
+        ...buildResources,
         ...Array.from({ length: 10 }, (_, i) => `Deployed ${i + 1}`),
-        // Duty Sup
-        'Duty Sup',
-        // STBY lines
-        ...Array.from({ length: 20 }, (_, i) => `STBY ${i + 1}`),
-        // FTD
-        ...Array.from({ length: 10 }, (_, i) => `FTD ${i + 1}`),
-        // CPT
-        ...Array.from({ length: 10 }, (_, i) => `CPT ${i + 1}`),
-        // Ground
-        ...Array.from({ length: 10 }, (_, i) => `Ground ${i + 1}`)
     ];
 
     // Create a map of resourceId to order index

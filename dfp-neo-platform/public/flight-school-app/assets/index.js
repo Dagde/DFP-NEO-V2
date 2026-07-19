@@ -90401,7 +90401,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       };
     };
     const getFixedCrewResourceOptions = (event) => {
-      const prefix = event.type === "flight" ? "PC-21 " : event.type === "ftd" ? "FTD " : event.type === "cpt" ? "CPT " : "Ground ";
+      const prefix = event.type === "flight" ? `${activeAircraftResourcePrefix} ` : event.type === "ftd" ? "FTD " : event.type === "cpt" ? "CPT " : "Ground ";
       const count = event.type === "flight" ? availableAircraftCount : event.type === "ftd" ? ftdCount : event.type === "cpt" ? cptCount : 6;
       const options = Array.from({ length: Math.max(0, count) }, (_, index) => `${prefix}${index + 1}`);
       if (event.type !== "flight") return options;
@@ -90456,7 +90456,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
       const resourceAvailabilityAtMinute = (minuteTime, eventType) => {
         const sampleEvent = fixedCrewQueue2.find((item) => item.event.type === eventType)?.event;
-        const resourceOptions = sampleEvent ? getFixedCrewResourceOptions(sampleEvent) : eventType === "flight" ? Array.from({ length: availableAircraftCount }, (_, index) => `PC-21 ${index + 1}`) : eventType === "ftd" ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`) : eventType === "cpt" ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`) : eventType === "ground" ? Array.from({ length: 6 }, (_, index) => `Ground ${index + 1}`) : [];
+        const resourceOptions = sampleEvent ? getFixedCrewResourceOptions(sampleEvent) : eventType === "flight" ? Array.from({ length: availableAircraftCount }, (_, index) => `${activeAircraftResourcePrefix} ${index + 1}`) : eventType === "ftd" ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`) : eventType === "cpt" ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`) : eventType === "ground" ? Array.from({ length: 6 }, (_, index) => `Ground ${index + 1}`) : [];
         const busyResources = new Set(generatedEvents.filter((event) => event.type === eventType && eventActiveAtMinute(event, minuteTime)).map((event) => event.resourceId).filter(Boolean));
         const freeResources = resourceOptions.filter((resourceId) => !busyResources.has(resourceId));
         return {
@@ -100207,19 +100207,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   recordProgress({ message: "Shuffling events for distribution...", percentage: 95 });
   recordProgress({ message: "Sorting events by resource order...", percentage: 98 });
   const resourceOrder = [
-    // PC-21 aircraft
-    ...Array.from({ length: 24 }, (_, i) => `PC-21 ${i + 1}`),
-    ...Array.from({ length: 10 }, (_, i) => `Deployed ${i + 1}`),
-    // Duty Sup
-    "Duty Sup",
-    // STBY lines
-    ...Array.from({ length: 20 }, (_, i) => `STBY ${i + 1}`),
-    // FTD
-    ...Array.from({ length: 10 }, (_, i) => `FTD ${i + 1}`),
-    // CPT
-    ...Array.from({ length: 10 }, (_, i) => `CPT ${i + 1}`),
-    // Ground
-    ...Array.from({ length: 10 }, (_, i) => `Ground ${i + 1}`)
+    ...buildResources,
+    ...Array.from({ length: 10 }, (_, i) => `Deployed ${i + 1}`)
   ];
   const resourceOrderMap = /* @__PURE__ */ new Map();
   resourceOrder.forEach((resource, index) => {
@@ -104745,7 +104734,7 @@ const App = () => {
     () => getResourceDisplayNames(activePlatformResourcePool),
     [activePlatformResourcePool]
   );
-  const activeAircraftResourcePrefix = reactExports.useMemo(() => String(activeRuntimeAircraftTypeCode || resourceDisplayNames.aircraft || "Aircraft").trim() || "Aircraft", [activeRuntimeAircraftTypeCode, resourceDisplayNames.aircraft]);
+  const activeAircraftResourcePrefix2 = reactExports.useMemo(() => String(activeRuntimeAircraftTypeCode || resourceDisplayNames.aircraft || "Aircraft").trim() || "Aircraft", [activeRuntimeAircraftTypeCode, resourceDisplayNames.aircraft]);
   const activeNeoAircraftCapacityUnitKey = reactExports.useMemo(() => {
     const locationKey = String(school || "DEFAULT").trim().toUpperCase() || "DEFAULT";
     const unitKey = String(activeUnitCode || "DEFAULT").trim().toUpperCase() || "DEFAULT";
@@ -105033,13 +105022,13 @@ const App = () => {
       ...configuredIds
     ].slice(0, totalAvailable);
     return Array.from({ length: configuredAirframeCount }, (_, index) => {
-      const resourceId = `${activeAircraftResourcePrefix} ${index + 1}`;
+      const resourceId = `${activeAircraftResourcePrefix2} ${index + 1}`;
       return [resourceId, availableConfigIds[index] || cleanConfig.id];
     }).reduce((acc, [resourceId, label]) => {
       acc[resourceId] = label;
       return acc;
     }, {});
-  }, [activeAircraftResourcePrefix, aircraftConfigCapacityDefinitions, configuredAirframeCount, currentAircraftConfigState]);
+  }, [activeAircraftResourcePrefix2, aircraftConfigCapacityDefinitions, configuredAirframeCount, currentAircraftConfigState]);
   const buildAircraftConfigLabelsByResource = reactExports.useCallback((configState = currentAircraftConfigState) => {
     const definitions = configState.aircraftConfigurationDefinitions?.length ? configState.aircraftConfigurationDefinitions : aircraftConfigCapacityDefinitions;
     const definitionLabels = new Map(definitions.map((definition) => [definition.id, definition.label]));
@@ -106166,7 +106155,7 @@ ${"=".repeat(60)}`);
   });
   const onDiscardRef = reactExports.useRef(() => {
   });
-  const buildResources = reactExports.useMemo(() => {
+  const buildResources2 = reactExports.useMemo(() => {
     if (setupTestProfile && !activePlatformResourcePool) {
       return [];
     }
@@ -106195,7 +106184,7 @@ ${"=".repeat(60)}`);
         const deployNum = deploymentCount - deploymentIndex + 1;
         return `Deployed ${deployNum}`;
       }
-      return `${activeAircraftResourcePrefix} ${i + 1}`;
+      return `${activeAircraftResourcePrefix2} ${i + 1}`;
     });
     let stbyLineCount = configuredStandbyCount;
     if (["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "BuildAnalysis"].includes(activeView)) {
@@ -106239,7 +106228,7 @@ ${"=".repeat(60)}`);
     configuredCptCount,
     configuredStandbyCount,
     configuredGroundCount,
-    activeAircraftResourcePrefix,
+    activeAircraftResourcePrefix2,
     setupTestProfile,
     activePlatformResourcePool,
     date,
@@ -110260,7 +110249,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           resourcePrefix = "Ground ";
       }
     }
-    const relevantResources = buildResources.filter((r) => r.startsWith(resourcePrefix));
+    const relevantResources = buildResources2.filter((r) => r.startsWith(resourcePrefix));
     for (const resourceId of relevantResources) {
       const isOccupied = existingEvents.some(
         (e) => e.resourceId === resourceId && isOverlapping(e, eventToPlace)
@@ -114666,7 +114655,7 @@ ${conflictLines.join("\n")}${moreText}`,
       denyPastDfpEdit("add tiles");
       return;
     }
-    const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, date, buildResources);
+    const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, date, buildResources2);
     const droppedEventsByDate = droppedEvents.reduce((groups, event) => {
       const eventDate = event.date || date;
       groups[eventDate] = [...groups[eventDate] || [], event];
@@ -114689,16 +114678,16 @@ ${conflictLines.join("\n")}${moreText}`,
       persistScheduleForDate(eventDate, eventsForDate2);
     });
     logAudit("Program Schedule", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
-  }, [buildDroppedNeoAssistEvents, buildResources, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules]);
+  }, [buildDroppedNeoAssistEvents, buildResources2, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules]);
   const handleNextDayExternalEventDrop = reactExports.useCallback((draft, placement) => {
-    const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, buildDfpDate, buildResources);
+    const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, buildDfpDate, buildResources2);
     const nextDayEvents = droppedEvents.map((droppedEvent) => {
       const { date: _date, ...nextDayEvent } = droppedEvent;
       return nextDayEvent;
     });
     setNextDayBuildEvents((prev) => [...prev, ...nextDayEvents]);
     logAudit("Next Day Build", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
-  }, [buildDroppedNeoAssistEvents, buildDfpDate, buildResources]);
+  }, [buildDroppedNeoAssistEvents, buildDfpDate, buildResources2]);
   const syllabusForModal = reactExports.useMemo(() => {
     return syllabusDetails.map((item) => item.id);
   }, [syllabusDetails]);
@@ -116565,7 +116554,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const quickStartTime = Number.isFinite(flyingStartTime) ? flyingStartTime : 8;
     const quickDuration = 2;
     const isNormalAircraftResource = (resourceId2) => /^PC-21\s+\d+$/i.test(String(resourceId2 || "").trim());
-    const aircraftResources = buildResources.filter(isNormalAircraftResource);
+    const aircraftResources = buildResources2.filter(isNormalAircraftResource);
     const hasAnyEventOnResource = (resourceId2) => scheduleForDate.some((event) => !event.isCancelled && event.resourceId === resourceId2);
     const overlapsQuickWindow = (event, resourceId2) => !event.isCancelled && event.resourceId === resourceId2 && event.startTime < quickStartTime + quickDuration && quickStartTime < event.startTime + event.duration;
     const resourceId = aircraftResources.find((resource) => !hasAnyEventOnResource(resource)) || aircraftResources.find((resource) => !scheduleForDate.some((event) => overlapsQuickWindow(event, resource)));
@@ -116609,7 +116598,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   }, [
     activeOperationalModel,
     activeUnitCode,
-    buildResources,
+    buildResources2,
     canEditDfpTiles,
     date,
     denyPastDfpEdit,
@@ -117019,7 +117008,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       const startHour = Number(gridElement.dataset.scheduleStartHour || 0);
       const time = startHour + Math.max(0, event.clientX - rect.left) / Math.max(1, pixelsPerHour);
       const rowIndex = Math.floor(Math.max(0, event.clientY - rect.top) / 32);
-      const gridResource = buildResources[rowIndex] || "";
+      const gridResource = buildResources2[rowIndex] || "";
       title = "Empty Schedule Space";
       subtitle = [gridResource, formatContextMenuTime(time)].filter(Boolean).join(" | ");
       kind = "empty-schedule-space";
@@ -117061,7 +117050,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   }, [
     activeView,
     authUser?.role,
-    buildResources,
+    buildResources2,
     canEditDfpTiles,
     canRunValidation,
     closeDfpContextMenu,
@@ -117092,7 +117081,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onDateSelect: handleDateSelect,
             snapshotDates,
             events: eventSegmentsForDate,
-            resources: buildResources,
+            resources: buildResources2,
             instructors: instructorsData.map((i) => i.name),
             traineesData,
             timezoneOffset,
@@ -117683,7 +117672,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           NextDayBuildView,
           {
             events: nextDayEventSegments,
-            resources: buildResources,
+            resources: buildResources2,
             instructors: instructorsData.map((i) => i.name),
             traineesData,
             airframeCount: configuredAirframeCount,
@@ -119931,7 +119920,7 @@ Do you want to replace the existing entry?`,
                         onUpdateFlyingWindowExclusions: handleUpdateFlyingWindowExclusions,
                         date,
                         activeDfpEvents: publishedSchedules[date] || [],
-                        resources: buildResources,
+                        resources: buildResources2,
                         instructors: instructorsData,
                         syllabusDetails: visibleSyllabusDetails,
                         taskProfiles: activeTaskProfiles,
