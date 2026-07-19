@@ -110260,11 +110260,12 @@ ${error instanceof Error ? error.message : String(error)}`,
       return `Deployed ${totalDeploymentCount}`;
     }
     let resourcePrefix;
+    const aircraftResourcePrefix = `${activeAircraftResourcePrefix} `;
     const syllabusItem = syllabusDetails.find((s) => s.id === eventToPlace.flightNumber);
     if (syllabusItem) {
       switch (syllabusItem.type) {
         case "Flight":
-          resourcePrefix = "PC-21 ";
+          resourcePrefix = aircraftResourcePrefix;
           break;
         case "FTD":
           resourcePrefix = "FTD ";
@@ -110284,7 +110285,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     } else {
       switch (eventToPlace.type) {
         case "flight":
-          resourcePrefix = "PC-21 ";
+          resourcePrefix = aircraftResourcePrefix;
           break;
         case "ftd":
           resourcePrefix = "FTD ";
@@ -113677,7 +113678,7 @@ ${conflictLines.join("\n")}${moreText}`,
     };
     const findAircraftResource = (startTime, duration) => {
       for (let ac = 1; ac <= availableAircraftCount; ac++) {
-        const resourceId = `PC-21 ${ac}`;
+        const resourceId = `${activeAircraftResourcePrefix} ${ac}`;
         if (!isResourceOccupied(resourceId, startTime, duration, flightTurnaround)) {
           return resourceId;
         }
@@ -114609,6 +114610,8 @@ ${conflictLines.join("\n")}${moreText}`,
   };
   const buildDroppedNeoAssistEvents = reactExports.useCallback((draft, placement, eventDate, resourcePool) => {
     const firstResourceId = placement.resourceId || draft.resourceId;
+    const activeAircraftPrefix = `${activeAircraftResourcePrefix} `;
+    const isActiveAircraftResource = (resourceId) => String(resourceId || "").trim().startsWith(activeAircraftPrefix);
     const startTime = placement.startTime;
     if (draft.type === "deployment") {
       const deploymentStartTime = Number.isFinite(Number(draft.startTime)) ? Number(draft.startTime) : startTime;
@@ -114674,8 +114677,8 @@ ${conflictLines.join("\n")}${moreText}`,
     const postOffset = typeof draft.postEnd === "number" ? Math.max(0, draft.postEnd - (draft.startTime + draft.duration)) : 0;
     const requestedFormationSize = Math.max(1, Math.floor(Number(draft.formationSize) || 1));
     const firstResourceIndex = resourcePool.indexOf(firstResourceId);
-    const availableFormationResources = firstResourceIndex >= 0 ? resourcePool.slice(firstResourceIndex).filter((resourceId) => resourceId.startsWith("PC-21")) : [firstResourceId].filter((resourceId) => resourceId.startsWith("PC-21"));
-    const isFlightFormation = requestedFormationSize > 1 && firstResourceId.startsWith("PC-21");
+    const availableFormationResources = firstResourceIndex >= 0 ? resourcePool.slice(firstResourceIndex).filter(isActiveAircraftResource) : [firstResourceId].filter(isActiveAircraftResource);
+    const isFlightFormation = requestedFormationSize > 1 && isActiveAircraftResource(firstResourceId);
     const formationSize = isFlightFormation ? Math.min(requestedFormationSize, Math.max(1, availableFormationResources.length)) : 1;
     const formationId = formationSize > 1 ? v4() : void 0;
     const callsignBase = getFormationCallsignBase(draft.callsign);
@@ -114695,7 +114698,7 @@ ${conflictLines.join("\n")}${moreText}`,
         resourceId,
         preStart: preOffset > 0 ? startTime - preOffset : void 0,
         postEnd: postOffset > 0 ? startTime + draft.duration + postOffset : void 0,
-        aircraftNumber: resourceId.startsWith("PC-21") ? draft.aircraftNumber : void 0,
+        aircraftNumber: isActiveAircraftResource(resourceId) ? draft.aircraftNumber : void 0,
         callsign: formationSize > 1 ? `${callsignBase}${index + 1}` : draft.callsign,
         formationId,
         formationType: formationSize > 1 ? "NEO Assist Formation" : draft.formationType,
@@ -114703,7 +114706,7 @@ ${conflictLines.join("\n")}${moreText}`,
         formationSize: formationSize > 1 ? formationSize : draft.formationSize
       };
     });
-  }, []);
+  }, [activeAircraftResourcePrefix]);
   const handleProgramScheduleExternalEventDrop = reactExports.useCallback((draft, placement) => {
     if (isPastDfpDate(date)) {
       denyPastDfpEdit("add tiles");
@@ -116607,7 +116610,12 @@ ${error instanceof Error ? error.message : String(error)}`,
     const scheduleForDate = publishedSchedules[date] || [];
     const quickStartTime = Number.isFinite(flyingStartTime) ? flyingStartTime : 8;
     const quickDuration = 2;
-    const isNormalAircraftResource = (resourceId2) => /^PC-21\s+\d+$/i.test(String(resourceId2 || "").trim());
+    const aircraftResourcePrefix = `${activeAircraftResourcePrefix} `;
+    const isNormalAircraftResource = (resourceId2) => {
+      const cleanResourceId = String(resourceId2 || "").trim();
+      if (!cleanResourceId.startsWith(aircraftResourcePrefix)) return false;
+      return /^\d+$/.test(cleanResourceId.slice(aircraftResourcePrefix.length).trim());
+    };
     const aircraftResources = buildResources.filter(isNormalAircraftResource);
     const hasAnyEventOnResource = (resourceId2) => scheduleForDate.some((event) => !event.isCancelled && event.resourceId === resourceId2);
     const overlapsQuickWindow = (event, resourceId2) => !event.isCancelled && event.resourceId === resourceId2 && event.startTime < quickStartTime + quickDuration && quickStartTime < event.startTime + event.duration;
@@ -116651,6 +116659,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     logAudit("Program Schedule", "Create", "Added Quick Tile", `Time: ${quickStartTime}, Duration: ${quickDuration}hrs, Resource: ${resourceId}`);
   }, [
     activeOperationalModel,
+    activeAircraftResourcePrefix,
     activeUnitCode,
     buildResources,
     canEditDfpTiles,

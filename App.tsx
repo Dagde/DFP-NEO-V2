@@ -32436,6 +32436,7 @@ const App: React.FC = () => {
         }
 
         let resourcePrefix: string;
+        const aircraftResourcePrefix = `${activeAircraftResourcePrefix} `;
 
         const syllabusItem = syllabusDetails.find(s => s.id === eventToPlace.flightNumber);
 
@@ -32443,7 +32444,7 @@ const App: React.FC = () => {
             // Primary logic: Use the syllabus item as the single source of truth.
             switch (syllabusItem.type) {
                 case 'Flight':
-                    resourcePrefix = 'PC-21 ';
+                    resourcePrefix = aircraftResourcePrefix;
                     break;
                 case 'FTD':
                     resourcePrefix = 'FTD ';
@@ -32467,7 +32468,7 @@ const App: React.FC = () => {
             // Fallback logic for events not found in the syllabus (e.g., 'Duty Sup', 'SCT FORM')
             switch (eventToPlace.type) {
                 case 'flight':
-                    resourcePrefix = 'PC-21 ';
+                    resourcePrefix = aircraftResourcePrefix;
                     break;
                 case 'ftd':
                     resourcePrefix = 'FTD ';
@@ -36573,10 +36574,10 @@ const App: React.FC = () => {
         };
 
         // Helper: find an available aircraft resourceId for flights
-        // Cycles through PC-21 1..availableAircraftCount, respecting turnaround time (in hours)
+        // Cycles through configured aircraft rows, respecting turnaround time (in hours)
         const findAircraftResource = (startTime: number, duration: number): string | null => {
             for (let ac = 1; ac <= availableAircraftCount; ac++) {
-                const resourceId = `PC-21 ${ac}`;
+                const resourceId = `${activeAircraftResourcePrefix} ${ac}`;
                 if (!isResourceOccupied(resourceId, startTime, duration, flightTurnaround)) {
                     return resourceId;
                 }
@@ -37761,6 +37762,9 @@ appliedUpdates.forEach(update => {
 
     const buildDroppedNeoAssistEvents = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement, eventDate: string, resourcePool: string[]): ScheduleEvent[] => {
         const firstResourceId = placement.resourceId || draft.resourceId;
+        const activeAircraftPrefix = `${activeAircraftResourcePrefix} `;
+        const isActiveAircraftResource = (resourceId?: string): boolean =>
+            String(resourceId || '').trim().startsWith(activeAircraftPrefix);
         const startTime = placement.startTime;
         if (draft.type === 'deployment') {
             const deploymentStartTime = Number.isFinite(Number(draft.startTime)) ? Number(draft.startTime) : startTime;
@@ -37839,9 +37843,9 @@ appliedUpdates.forEach(update => {
         const requestedFormationSize = Math.max(1, Math.floor(Number(draft.formationSize) || 1));
         const firstResourceIndex = resourcePool.indexOf(firstResourceId);
         const availableFormationResources = firstResourceIndex >= 0
-            ? resourcePool.slice(firstResourceIndex).filter(resourceId => resourceId.startsWith('PC-21'))
-            : [firstResourceId].filter(resourceId => resourceId.startsWith('PC-21'));
-        const isFlightFormation = requestedFormationSize > 1 && firstResourceId.startsWith('PC-21');
+            ? resourcePool.slice(firstResourceIndex).filter(isActiveAircraftResource)
+            : [firstResourceId].filter(isActiveAircraftResource);
+        const isFlightFormation = requestedFormationSize > 1 && isActiveAircraftResource(firstResourceId);
         const formationSize = isFlightFormation
             ? Math.min(requestedFormationSize, Math.max(1, availableFormationResources.length))
             : 1;
@@ -37873,7 +37877,7 @@ appliedUpdates.forEach(update => {
                 resourceId,
                 preStart: preOffset > 0 ? startTime - preOffset : undefined,
                 postEnd: postOffset > 0 ? startTime + draft.duration + postOffset : undefined,
-                aircraftNumber: resourceId.startsWith('PC-21') ? draft.aircraftNumber : undefined,
+                aircraftNumber: isActiveAircraftResource(resourceId) ? draft.aircraftNumber : undefined,
                 callsign: formationSize > 1 ? `${callsignBase}${index + 1}` : draft.callsign,
                 formationId,
                 formationType: formationSize > 1 ? 'NEO Assist Formation' : draft.formationType,
@@ -37881,7 +37885,7 @@ appliedUpdates.forEach(update => {
                 formationSize: formationSize > 1 ? formationSize : draft.formationSize,
             };
         });
-    }, []);
+    }, [activeAircraftResourcePrefix]);
 
     const handleProgramScheduleExternalEventDrop = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement) => {
         if (isPastDfpDate(date)) {
@@ -40329,8 +40333,12 @@ appliedUpdates.forEach(update => {
         const scheduleForDate = publishedSchedules[date] || [];
         const quickStartTime = Number.isFinite(flyingStartTime) ? flyingStartTime : 8;
         const quickDuration = 2;
-        const isNormalAircraftResource = (resourceId: string): boolean =>
-            /^PC-21\s+\d+$/i.test(String(resourceId || '').trim());
+        const aircraftResourcePrefix = `${activeAircraftResourcePrefix} `;
+        const isNormalAircraftResource = (resourceId: string): boolean => {
+            const cleanResourceId = String(resourceId || '').trim();
+            if (!cleanResourceId.startsWith(aircraftResourcePrefix)) return false;
+            return /^\d+$/.test(cleanResourceId.slice(aircraftResourcePrefix.length).trim());
+        };
         const aircraftResources = buildResources.filter(isNormalAircraftResource);
         const hasAnyEventOnResource = (resourceId: string): boolean =>
             scheduleForDate.some(event => !event.isCancelled && event.resourceId === resourceId);
@@ -40383,6 +40391,7 @@ appliedUpdates.forEach(update => {
         logAudit('Program Schedule', 'Create', 'Added Quick Tile', `Time: ${quickStartTime}, Duration: ${quickDuration}hrs, Resource: ${resourceId}`);
     }, [
         activeOperationalModel,
+        activeAircraftResourcePrefix,
         activeUnitCode,
         buildResources,
         canEditDfpTiles,
