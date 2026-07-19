@@ -769,7 +769,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const normalisedEventType = String(eventType || '').trim().toLowerCase();
     const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === 'flight' || normalisedEventType === 'ftd');
     const isContinuationTile = eventCategory === 'sct' || (event as any).isSct === true || isContinuationFlightCode(flightNumber);
-    const isFlightSchoolModel = normalisedOperationalModel === 'flight_school';
     const airCombatSoloCrewRequirement = useMemo<CrewRequirement>(() => ({
         mode: 'custom',
         roles: [{ role: 'Pilot', crewPositionId: 'pilot', count: 1, eligibleRoles: ['Pilot'] }],
@@ -1358,28 +1357,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         return item.eventDescription ? `${displayCode} - ${item.eventDescription}` : displayCode;
     };
 
-    const activeUnitSyllabusContinuationOptions = useMemo(() => {
-        if (activeUnitMemberCodes.length === 0) return [] as string[];
-        return uniqueOptionValues(syllabusDetails
-            .filter(item => {
-                const itemUnit = normaliseFixedCrewUnitCode(item.unit);
-                if (!itemUnit || !activeUnitMemberCodes.includes(itemUnit)) return false;
-                const code = String(item.code || item.id || '').trim();
-                const cctOnly = String((item as any).cctOnly || '').trim().toUpperCase() === 'YES';
-                return cctOnly || /\bSCT\b/i.test(code);
-            })
-            .map(item => item.code || item.id || '')
-        );
-    }, [activeUnitMemberCodes, syllabusDetails]);
-
     // Filtered syllabus options based on event category
     const filteredSyllabusOptions = useMemo(() => {
         let options: string[] = [];
         
         if (eventCategory === 'sct') {
-            options = activeUnitSyllabusContinuationOptions.length > 0
-                ? activeUnitSyllabusContinuationOptions
-                : (isFlightSchoolModel ? sctEvents : []);
+            options = sctEvents;
         } else if (eventCategory === 'lmp_event' || eventCategory === 'lmp_currency') {
             const lmpSource = selectedIndividualLmp?.length
                 ? selectedIndividualLmp
@@ -1397,11 +1380,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             options = dynamicSyllabusOptions;
         }
         
-        // Always ensure SCT FORM is available when adding a tile
-        if (isAddingTile && !options.includes('SCT FORM')) {
-            options = [...options, 'SCT FORM'];
-        }
-
         if (flightNumber && !options.includes(flightNumber)) {
             options = [flightNumber, ...options];
         }
@@ -1409,7 +1387,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         
         
         return uniqueOptionValues(options);
-    }, [activeUnitSyllabusContinuationOptions, eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile, selectedIndividualLmp, flightNumber, isFlightSchoolModel]);
+    }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, selectedIndividualLmp, flightNumber]);
 
     const fixedCrewEventOptions = useMemo(() => {
         if (!isFixedCrewModel) return [] as SyllabusItemDetail[];

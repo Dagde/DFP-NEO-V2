@@ -26948,7 +26948,6 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const normalisedEventType = String(eventType || "").trim().toLowerCase();
   const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === "flight" || normalisedEventType === "ftd");
   const isContinuationTile = eventCategory === "sct" || event.isSct === true || isContinuationFlightCode(flightNumber);
-  const isFlightSchoolModel = normalisedOperationalModel === "flight_school";
   const airCombatSoloCrewRequirement = reactExports.useMemo(() => ({
     mode: "custom",
     roles: [{ role: "Pilot", crewPositionId: "pilot", count: 1, eligibleRoles: ["Pilot"] }]
@@ -27383,22 +27382,10 @@ ${swapNote}` : swapNote
     const displayCode = formatContinuationLabel(code);
     return item.eventDescription ? `${displayCode} - ${item.eventDescription}` : displayCode;
   };
-  const activeUnitSyllabusContinuationOptions = reactExports.useMemo(() => {
-    if (activeUnitMemberCodes.length === 0) return [];
-    return uniqueOptionValues(
-      syllabusDetails.filter((item) => {
-        const itemUnit = normaliseFixedCrewUnitCode(item.unit);
-        if (!itemUnit || !activeUnitMemberCodes.includes(itemUnit)) return false;
-        const code = String(item.code || item.id || "").trim();
-        const cctOnly = String(item.cctOnly || "").trim().toUpperCase() === "YES";
-        return cctOnly || /\bSCT\b/i.test(code);
-      }).map((item) => item.code || item.id || "")
-    );
-  }, [activeUnitMemberCodes, syllabusDetails]);
   const filteredSyllabusOptions = reactExports.useMemo(() => {
     let options = [];
     if (eventCategory === "sct") {
-      options = activeUnitSyllabusContinuationOptions.length > 0 ? activeUnitSyllabusContinuationOptions : isFlightSchoolModel ? sctEvents : [];
+      options = sctEvents;
     } else if (eventCategory === "lmp_event" || eventCategory === "lmp_currency") {
       const lmpSource = selectedIndividualLmp?.length ? selectedIndividualLmp : syllabusDetails.filter((item) => item.lmpType === "Master LMP" || !item.lmpType);
       options = lmpSource.map((item) => item.code || item.id).filter(Boolean);
@@ -27409,14 +27396,11 @@ ${swapNote}` : swapNote
     } else {
       options = dynamicSyllabusOptions;
     }
-    if (isAddingTile && !options.includes("SCT FORM")) {
-      options = [...options, "SCT FORM"];
-    }
     if (flightNumber && !options.includes(flightNumber)) {
       options = [flightNumber, ...options];
     }
     return uniqueOptionValues(options);
-  }, [activeUnitSyllabusContinuationOptions, eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile, selectedIndividualLmp, flightNumber, isFlightSchoolModel]);
+  }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, selectedIndividualLmp, flightNumber]);
   const fixedCrewEventOptions = reactExports.useMemo(() => {
     if (!isFixedCrewModel) return [];
     return syllabusDetails.filter((item) => {
