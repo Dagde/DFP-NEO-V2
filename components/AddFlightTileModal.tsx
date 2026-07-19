@@ -1610,6 +1610,13 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       crew: raw.replace(/^CREW\s*/i, '').trim().toUpperCase(),
     };
   };
+  const fixedCrewGroupMatches = (candidate: string, value?: string | null) => {
+    const candidateKey = parseFixedCrewGroupKey(candidate);
+    const valueKey = parseFixedCrewGroupKey(value);
+    if (!candidateKey.crew || !valueKey.crew) return false;
+    if (candidateKey.crew !== valueKey.crew) return false;
+    return !valueKey.unit || candidateKey.unit === valueKey.unit;
+  };
   const stripLeadingUnitLabel = (value?: string | null, unit?: string | null) => {
     const text = String(value || '').trim();
     const unitLabel = normaliseFixedCrewUnitCode(unit);
@@ -1641,6 +1648,25 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     });
     return Array.from(groups.entries()).map(([unit, options]) => ({ unit, options }));
   }, [fixedCrewGroups]);
+  const resolveFixedCrewGroupValue = (value?: string | null) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    return fixedCrewGroups.find(group => group === raw)
+      || fixedCrewGroups.find(group => fixedCrewGroupMatches(group, raw))
+      || '';
+  };
+  const fixedCrewRoleGroupLabel = (staff: Instructor) => String(staff.role || staff.category || 'Staff').trim() || 'Staff';
+  const isFixedCrewPilotRole = (staff: Instructor) => /\b(PIC|Pilot)\b/i.test(fixedCrewRoleGroupLabel(staff));
+  const compareFixedCrewMemberDisplay = (a: Instructor, b: Instructor) => {
+    const aPilot = isFixedCrewPilotRole(a);
+    const bPilot = isFixedCrewPilotRole(b);
+    if (aPilot !== bPilot) return aPilot ? -1 : 1;
+    if (!aPilot && !bPilot) {
+      const roleCompare = fixedCrewRoleGroupLabel(a).localeCompare(fixedCrewRoleGroupLabel(b), undefined, { numeric: true });
+      if (roleCompare !== 0) return roleCompare;
+    }
+    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
+  };
   const fixedCrewMembers = useMemo(() => {
     const selectedGroup = parseFixedCrewGroupKey(fixedCrewGroup);
     return selectedGroup.crew
@@ -1650,9 +1676,17 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         return staffGroup.crew === selectedGroup.crew
           && (!selectedGroup.unit || staffGroup.unit === selectedGroup.unit);
       })
-      .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'))
+      .sort(compareFixedCrewMemberDisplay)
       : [];
   }, [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings]);
+  const fixedCrewMemberDisplayGroups = useMemo(() => {
+    const groups = new Map<string, Instructor[]>();
+    fixedCrewMembers.forEach(staff => {
+      const label = isFixedCrewPilotRole(staff) ? 'Pilots' : fixedCrewRoleGroupLabel(staff);
+      groups.set(label, [...(groups.get(label) || []), staff]);
+    });
+    return Array.from(groups.entries()).map(([label, members]) => ({ label, members }));
+  }, [fixedCrewMembers]);
   const fixedCrewPicQualification = useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, 'fixed_crew')
     .find(qualification => (
       normaliseQualificationToken(qualification.id) === 'pic'
@@ -1671,7 +1705,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           return staffGroup.crew === selectedGroup.crew
             && (!selectedGroup.unit || staffGroup.unit === selectedGroup.unit);
         })
-        .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'))
+        .sort(compareFixedCrewMemberDisplay)
       : [];
   };
   const getFixedCrewPicCandidatesForGroup = (groupKey?: string | null) => fixedCrewPicQualification
@@ -2222,7 +2256,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   }, [fixedCrewPic, isFixedCrewModel]);
 
   useEffect(() => {
-    if (selectedPicHasIndividualCallsign) return;
+    if (selectedPicHasIndividualCallsign && !isFixedCrewModel) return;
     if (!defaultUnitCallsign) {
       setCallsignOptions([]);
       return;
@@ -2231,7 +2265,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const values = unitCallsignEntries.map(entry => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
     setCallsignOptions(values);
     setCallsign(buildUnitEventCallsign(base, unitCallsignNumber));
-  }, [defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
+  }, [defaultUnitCallsign, isFixedCrewModel, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
 
   useEffect(() => {
     if (!isSingleSeatAircraft) return;
@@ -2403,7 +2437,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setAircraftCount(Math.max(1, Math.floor(Number(initialEvent.aircraftCount || initialEvent.formationSize) || 1)));
     setCallsign(initialEvent.callsign || '');
     setNotes(initialEvent.notes || '');
-    setFixedCrewGroup(initialEvent.fixedCrewGroup || '');
+    setFixedCrewGroup(resolveFixedCrewGroupValue(initialEvent.fixedCrewGroup || initialEvent.crew || initialEvent.crewGroup || initialEvent.studentName || ''));
     setFixedCrewPic(initialEvent.fixedCrewPic || initialEvent.pilot || initialEvent.instructor || '');
     setFixedCrewManifestStatus(initialEvent.fixedCrewManifestStatus || 'pending');
     setFixedCrewManifestNotes(initialEvent.fixedCrewManifestNotes || '');
@@ -2441,6 +2475,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   // Initial edit hydration should run once per selected event; changing dropdown data should not reset user edits.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialEvent?.id, isFixedCrewModel]);
+
+  useEffect(() => {
+    if (!initialEvent || !isFixedCrewModel || fixedCrewGroup || fixedCrewGroups.length === 0) return;
+    const resolvedGroup = resolveFixedCrewGroupValue(initialEvent.fixedCrewGroup || initialEvent.crew || initialEvent.crewGroup || initialEvent.studentName || '');
+    if (resolvedGroup) setFixedCrewGroup(resolvedGroup);
+  // Runs only to hydrate a blank crew field after async crew options arrive.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixedCrewGroups.length, fixedCrewGroup, initialEvent?.id, isFixedCrewModel]);
 
   const updateFormationCrew = (index: number, updates: Partial<FormationCrewDraft>) => {
     setFormationCrew(prev => prev.map((crewMember, crewIndex) => (
@@ -2871,7 +2913,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                         setUnitCallsignBase(value);
                         setCallsign(buildUnitEventCallsign(value, unitCallsignNumber));
                       }}
-                      disabled={unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign}
+                      disabled={unitCallsignEntries.length === 0}
                       accent="emerald"
                       width={260}
                       placeholder={unitCallsignEntries.length === 0 ? 'No unit callsigns' : 'Select callsign'}
@@ -2890,7 +2932,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                         setUnitCallsignNumber(nextNumber);
                         setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
                       }}
-                      disabled={unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign}
+                      disabled={unitCallsignEntries.length === 0}
                       accent="emerald"
                       width={96}
                       dropdownKey="add-flight-fixed-callsign-number"
@@ -2898,7 +2940,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     />
                   </div>
                   {selectedPicHasIndividualCallsign && (
-                    <div className="mt-1 text-[11px] text-gray-500">Using the PIC profile callsign.</div>
+                    <div className="mt-1 text-[11px] text-gray-500">PIC profile callsign is available; select a unit callsign if this tile needs one.</div>
                   )}
                 </div>
               </div>
@@ -3008,11 +3050,16 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 <div className="rounded-md border border-gray-700 bg-gray-900/45 p-3">
                   <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Crew Members</div>
                   {fixedCrewMembers.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-2">
-                      {fixedCrewMembers.map(staff => (
-                        <div key={staff.id || staff.name} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm">
-                          <span className="min-w-0 truncate text-gray-100">{[staff.rank, staff.name].filter(Boolean).join(' ')}</span>
-                          <span className="flex-shrink-0 text-xs font-semibold text-emerald-300">{staff.role || 'Staff'}</span>
+                    <div className="space-y-3">
+                      {fixedCrewMemberDisplayGroups.map(group => (
+                        <div key={group.label} className="space-y-1.5">
+                          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300/80">{group.label}</div>
+                          {group.members.map(staff => (
+                            <div key={staff.id || staff.name} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm">
+                              <span className="min-w-0 truncate text-gray-100">{[staff.rank, staff.name].filter(Boolean).join(' ')}</span>
+                              <span className="flex-shrink-0 text-xs font-semibold text-emerald-300">{staff.role || 'Staff'}</span>
+                            </div>
+                          ))}
                         </div>
                       ))}
                     </div>

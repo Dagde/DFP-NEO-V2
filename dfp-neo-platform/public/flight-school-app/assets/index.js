@@ -31149,6 +31149,13 @@ const AddFlightTileModal = ({
       crew: raw.replace(/^CREW\s*/i, "").trim().toUpperCase()
     };
   };
+  const fixedCrewGroupMatches = (candidate, value) => {
+    const candidateKey = parseFixedCrewGroupKey(candidate);
+    const valueKey = parseFixedCrewGroupKey(value);
+    if (!candidateKey.crew || !valueKey.crew) return false;
+    if (candidateKey.crew !== valueKey.crew) return false;
+    return !valueKey.unit || candidateKey.unit === valueKey.unit;
+  };
   const stripLeadingUnitLabel = (value, unit) => {
     const text = String(value || "").trim();
     const unitLabel = normaliseFixedCrewUnitCode2(unit);
@@ -31175,13 +31182,38 @@ const AddFlightTileModal = ({
     });
     return Array.from(groups.entries()).map(([unit, options]) => ({ unit, options }));
   }, [fixedCrewGroups]);
+  const resolveFixedCrewGroupValue = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    return fixedCrewGroups.find((group) => group === raw) || fixedCrewGroups.find((group) => fixedCrewGroupMatches(group, raw)) || "";
+  };
+  const fixedCrewRoleGroupLabel = (staff) => String(staff.role || staff.category || "Staff").trim() || "Staff";
+  const isFixedCrewPilotRole = (staff) => /\b(PIC|Pilot)\b/i.test(fixedCrewRoleGroupLabel(staff));
+  const compareFixedCrewMemberDisplay = (a, b) => {
+    const aPilot = isFixedCrewPilotRole(a);
+    const bPilot = isFixedCrewPilotRole(b);
+    if (aPilot !== bPilot) return aPilot ? -1 : 1;
+    if (!aPilot && !bPilot) {
+      const roleCompare = fixedCrewRoleGroupLabel(a).localeCompare(fixedCrewRoleGroupLabel(b), void 0, { numeric: true });
+      if (roleCompare !== 0) return roleCompare;
+    }
+    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
+  };
   const fixedCrewMembers = reactExports.useMemo(() => {
     const selectedGroup = parseFixedCrewGroupKey(fixedCrewGroup);
     return selectedGroup.crew ? fixedCrewStaff.filter((staff) => {
       const staffGroup = parseFixedCrewGroupKey(`${normaliseFixedCrewUnitCode2(staff.unit)}::${staff.crew || ""}`);
       return staffGroup.crew === selectedGroup.crew && (!selectedGroup.unit || staffGroup.unit === selectedGroup.unit);
-    }).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")) : [];
+    }).sort(compareFixedCrewMemberDisplay) : [];
   }, [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings]);
+  const fixedCrewMemberDisplayGroups = reactExports.useMemo(() => {
+    const groups = /* @__PURE__ */ new Map();
+    fixedCrewMembers.forEach((staff) => {
+      const label = isFixedCrewPilotRole(staff) ? "Pilots" : fixedCrewRoleGroupLabel(staff);
+      groups.set(label, [...groups.get(label) || [], staff]);
+    });
+    return Array.from(groups.entries()).map(([label, members]) => ({ label, members }));
+  }, [fixedCrewMembers]);
   const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
   const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
   const getFixedCrewMembersForGroup = (groupKey) => {
@@ -31189,7 +31221,7 @@ const AddFlightTileModal = ({
     return selectedGroup.crew ? fixedCrewStaff.filter((staff) => {
       const staffGroup = parseFixedCrewGroupKey(`${normaliseFixedCrewUnitCode2(staff.unit)}::${staff.crew || ""}`);
       return staffGroup.crew === selectedGroup.crew && (!selectedGroup.unit || staffGroup.unit === selectedGroup.unit);
-    }).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")) : [];
+    }).sort(compareFixedCrewMemberDisplay) : [];
   };
   const getFixedCrewPicCandidatesForGroup = (groupKey) => fixedCrewPicQualification ? getFixedCrewMembersForGroup(groupKey).filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [];
   const activeCallsignUnitCodes = reactExports.useMemo(() => isFixedCrewModel && activeFixedCrewUnitCodes.length > 0 ? activeFixedCrewUnitCodes : [normaliseFixedCrewUnitCode2(activeUnitCode)].filter(Boolean), [activeFixedCrewUnitCodes, activeUnitCode, isFixedCrewModel]);
@@ -31642,7 +31674,7 @@ const AddFlightTileModal = ({
     setPicName(fixedCrewPic);
   }, [fixedCrewPic, isFixedCrewModel]);
   reactExports.useEffect(() => {
-    if (selectedPicHasIndividualCallsign) return;
+    if (selectedPicHasIndividualCallsign && !isFixedCrewModel) return;
     if (!defaultUnitCallsign) {
       setCallsignOptions([]);
       return;
@@ -31651,7 +31683,7 @@ const AddFlightTileModal = ({
     const values = unitCallsignEntries.map((entry) => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
     setCallsignOptions(values);
     setCallsign(buildUnitEventCallsign(base, unitCallsignNumber));
-  }, [defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
+  }, [defaultUnitCallsign, isFixedCrewModel, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
   reactExports.useEffect(() => {
     if (!isSingleSeatAircraft) return;
     setFlightType("Solo");
@@ -31780,7 +31812,7 @@ const AddFlightTileModal = ({
     setAircraftCount(Math.max(1, Math.floor(Number(initialEvent.aircraftCount || initialEvent.formationSize) || 1)));
     setCallsign(initialEvent.callsign || "");
     setNotes(initialEvent.notes || "");
-    setFixedCrewGroup(initialEvent.fixedCrewGroup || "");
+    setFixedCrewGroup(resolveFixedCrewGroupValue(initialEvent.fixedCrewGroup || initialEvent.crew || initialEvent.crewGroup || initialEvent.studentName || ""));
     setFixedCrewPic(initialEvent.fixedCrewPic || initialEvent.pilot || initialEvent.instructor || "");
     setFixedCrewManifestStatus(initialEvent.fixedCrewManifestStatus || "pending");
     setFixedCrewManifestNotes(initialEvent.fixedCrewManifestNotes || "");
@@ -31802,6 +31834,11 @@ const AddFlightTileModal = ({
     }));
     setFixedCrewFormationAssignments(formationSiblings);
   }, [initialEvent?.id, isFixedCrewModel]);
+  reactExports.useEffect(() => {
+    if (!initialEvent || !isFixedCrewModel || fixedCrewGroup || fixedCrewGroups.length === 0) return;
+    const resolvedGroup = resolveFixedCrewGroupValue(initialEvent.fixedCrewGroup || initialEvent.crew || initialEvent.crewGroup || initialEvent.studentName || "");
+    if (resolvedGroup) setFixedCrewGroup(resolvedGroup);
+  }, [fixedCrewGroups.length, fixedCrewGroup, initialEvent?.id, isFixedCrewModel]);
   const updateFormationCrew = (index, updates) => {
     setFormationCrew((prev) => prev.map((crewMember, crewIndex) => crewIndex === index ? { ...crewMember, ...updates } : crewMember));
   };
@@ -32215,7 +32252,7 @@ const AddFlightTileModal = ({
                             setUnitCallsignBase(value);
                             setCallsign(buildUnitEventCallsign(value, unitCallsignNumber));
                           },
-                          disabled: unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign,
+                          disabled: unitCallsignEntries.length === 0,
                           accent: "emerald",
                           width: 260,
                           placeholder: unitCallsignEntries.length === 0 ? "No unit callsigns" : "Select callsign",
@@ -32235,7 +32272,7 @@ const AddFlightTileModal = ({
                             setUnitCallsignNumber(nextNumber);
                             setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
                           },
-                          disabled: unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign,
+                          disabled: unitCallsignEntries.length === 0,
                           accent: "emerald",
                           width: 96,
                           dropdownKey: "add-flight-fixed-callsign-number",
@@ -32243,7 +32280,7 @@ const AddFlightTileModal = ({
                         }
                       )
                     ] }),
-                    selectedPicHasIndividualCallsign && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] text-gray-500", children: "Using the PIC profile callsign." })
+                    selectedPicHasIndividualCallsign && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] text-gray-500", children: "PIC profile callsign is available; select a unit callsign if this tile needs one." })
                   ] })
                 ] }),
                 Math.max(1, Number(aircraftCount) || 1) > 1 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-emerald-500/25 bg-slate-950/35 p-3", children: [
@@ -32357,10 +32394,13 @@ const AddFlightTileModal = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/45 p-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400", children: "Crew Members" }),
-                    fixedCrewMembers.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2", children: fixedCrewMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-gray-100", children: [staff.rank, staff.name].filter(Boolean).join(" ") }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-shrink-0 text-xs font-semibold text-emerald-300", children: staff.role || "Staff" })
-                    ] }, staff.id || staff.name)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm italic text-gray-500", children: "Select a crew to preview its members." })
+                    fixedCrewMembers.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: fixedCrewMemberDisplayGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300/80", children: group.label }),
+                      group.members.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-gray-100", children: [staff.rank, staff.name].filter(Boolean).join(" ") }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-shrink-0 text-xs font-semibold text-emerald-300", children: staff.role || "Staff" })
+                      ] }, staff.id || staff.name))
+                    ] }, group.label)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm italic text-gray-500", children: "Select a crew to preview its members." })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Swap / Manifest Notes" }),
