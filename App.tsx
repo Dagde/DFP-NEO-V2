@@ -26082,6 +26082,13 @@ const App: React.FC = () => {
     const [ceaseNightFlying, setCeaseNightFlying] = useState(23.5); // 23:30
     const [flyingWindowExclusions, setFlyingWindowExclusions] = useState<FlyingWindowExclusionPeriod[]>([]);
     const [flyingWindowExclusionsByUnit, setFlyingWindowExclusionsByUnit] = useState<Record<string, FlyingWindowExclusionPeriod[]>>({});
+    const formatDecimalTimeInput = useCallback((decimalHour: number): string => {
+        const bounded = Math.max(0, Math.min(23 + 55 / 60, Number(decimalHour) || 0));
+        const totalMinutes = Math.round(bounded * 60 / 5) * 5;
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }, []);
     const activeFlyingWindowExclusionUnitKey = useMemo(() => (
         String(activeUnitCode || school || 'DEFAULT').trim().toUpperCase() || 'DEFAULT'
     ), [activeUnitCode, school]);
@@ -44734,6 +44741,7 @@ appliedUpdates.forEach(update => {
                     currencyNames={['Instrument', 'Night', 'Multi-Engine', 'Formation']}
                     sctEvents={sctEvents}
                     sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
+                    nightContinuationDefaultTime={formatDecimalTimeInput(commenceNightFlying)}
                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                 />
             )}

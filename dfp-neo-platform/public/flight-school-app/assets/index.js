@@ -39472,6 +39472,11 @@ const PrioritiesView = ({
       return { ...event, selectedCurrencies: Array.from(nextCurrencies) };
     }));
   };
+  const formatTime2 = (time) => {
+    const hours = Math.floor(time);
+    const minutes = Math.round(time % 1 * 60);
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
   const renderSctRequestTable = (type, requests) => {
     const calculateDaysToExpire = (expireDateStr) => {
       if (!expireDateStr) return null;
@@ -39515,10 +39520,16 @@ const PrioritiesView = ({
     };
     const formatRequestCrewOptionLabel = (group, window2) => appendUnavailableLabel(group.label, summariseCrewUnavailability(group.members, window2));
     const formatRequestPicOptionLabel = (member, window2) => appendUnavailableLabel(member.name, getStaffUnavailabilityStatus(member, window2).reason);
-    const applyCurrencyProfile = (requestId, eventValue) => {
+    const applyCurrencyProfile = (request, eventValue) => {
+      const requestId = request.id;
       const profile = currencyProfilesForContext.find((candidate) => String(candidate.name || candidate.currency || "").trim() === eventValue || String(candidate.currency || "").trim() === eventValue);
+      const requestedTimeUpdates = /\bnight\b/i.test(eventValue) && (!request.requestedTime || request.requestedTime === "15:00") ? { requestedTime: formatTime2(commenceNightFlying) } : {};
       if (!profile) {
-        onUpdateSctRequest(requestId, "event", eventValue, type);
+        if (Object.keys(requestedTimeUpdates).length > 0) {
+          onPatchSctRequest(requestId, { event: eventValue, ...requestedTimeUpdates }, type);
+        } else {
+          onUpdateSctRequest(requestId, "event", eventValue, type);
+        }
         return;
       }
       const configId = getCurrencyProfileConfigId(profile);
@@ -39528,6 +39539,7 @@ const PrioritiesView = ({
         currency: profile.currency,
         aircraftCount: Math.max(1, Math.floor(Number(profile.aircraftCount) || 1)),
         formationCrew: [],
+        ...requestedTimeUpdates,
         ...configId ? { aircraftConfigId: configId } : {},
         ...isFixedCrewModel && profile.crew ? { crewMember: profile.crew } : {}
       }, type);
@@ -39757,7 +39769,7 @@ const PrioritiesView = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Event" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.event, onChange: (e) => applyCurrencyProfile(req.id, e.target.value), className: controlClass, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.event, onChange: (e) => applyCurrencyProfile(req, e.target.value), className: controlClass, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select profile" }),
               sctEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: e, children: currencyProfileNameLabels[e] || e }, e))
             ] })
@@ -79768,18 +79780,24 @@ const DutyWarningFlyout = ({ onConfirm, onCancel, instructorName, dutyHours }) =
     ] })
   ] }) });
 };
-const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, aircraftConfigurationDefinitions = [] }) => {
+const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [] }) => {
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = resolvedSctTerminology.shortLabel;
   const continuationLongLabel = resolvedSctTerminology.longLabel;
   const sctEvents = reactExports.useMemo(() => Array.isArray(sctEventsProp) ? sctEventsProp.filter(Boolean) : [], [sctEventsProp]);
+  const normaliseRequestedTime = (value, fallback) => /^\d{2}:\d{2}$/.test(value) ? value : fallback;
+  const isNightContinuationEvent = (value) => /\bnight\b/i.test(value);
+  const defaultDayRequestedTime = "15:00";
+  const defaultNightRequestedTime = normaliseRequestedTime(nightContinuationDefaultTime, "18:30");
+  const initialEvent = sctEvents[0] || "";
   const [event, setEvent] = reactExports.useState(() => sctEvents[0] || "");
   const [flightType, setFlightType] = reactExports.useState("Dual");
   const [currency, setCurrency] = reactExports.useState("");
   const [currencyExpire, setCurrencyExpire] = reactExports.useState("");
   const [priority, setPriority] = reactExports.useState("Medium");
   const [notes, setNotes] = reactExports.useState("");
-  const [requestedTime, setRequestedTime] = reactExports.useState("15:00");
+  const [requestedTime, setRequestedTime] = reactExports.useState(() => isNightContinuationEvent(initialEvent) ? defaultNightRequestedTime : defaultDayRequestedTime);
+  const requestedTimeTouchedRef = reactExports.useRef(false);
   const [aircraftConfigId, setAircraftConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   reactExports.useEffect(() => {
     if (!sctEvents.length) {
@@ -79788,6 +79806,10 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
     }
     setEvent((current) => sctEvents.includes(current) ? current : sctEvents[0]);
   }, [sctEvents]);
+  reactExports.useEffect(() => {
+    if (requestedTimeTouchedRef.current) return;
+    setRequestedTime(isNightContinuationEvent(event) ? defaultNightRequestedTime : defaultDayRequestedTime);
+  }, [defaultNightRequestedTime, event]);
   const aircraftConfigOptions = reactExports.useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
     return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
@@ -79853,7 +79875,18 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Requested Time" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: requestedTime, onChange: (e) => setRequestedTime(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white", children: timeOptions.map((time) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: time, children: time }, time)) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "select",
+            {
+              value: requestedTime,
+              onChange: (e) => {
+                requestedTimeTouchedRef.current = true;
+                setRequestedTime(e.target.value);
+              },
+              className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white",
+              children: timeOptions.map((time) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: time, children: time }, time))
+            }
+          )
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
@@ -105296,6 +105329,13 @@ const App = () => {
   const [ceaseNightFlying, setCeaseNightFlying] = reactExports.useState(23.5);
   const [flyingWindowExclusions, setFlyingWindowExclusions] = reactExports.useState([]);
   const [flyingWindowExclusionsByUnit, setFlyingWindowExclusionsByUnit] = reactExports.useState({});
+  const formatDecimalTimeInput = reactExports.useCallback((decimalHour) => {
+    const bounded = Math.max(0, Math.min(23 + 55 / 60, Number(decimalHour) || 0));
+    const totalMinutes = Math.round(bounded * 60 / 5) * 5;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  }, []);
   const activeFlyingWindowExclusionUnitKey = reactExports.useMemo(() => String(activeUnitCode || school || "DEFAULT").trim().toUpperCase() || "DEFAULT", [activeUnitCode, school]);
   const handleUpdateFlyingWindowExclusions = reactExports.useCallback((periods) => {
     const nextPeriods = Array.isArray(periods) ? periods : [];
@@ -120819,6 +120859,7 @@ Do you want to replace the existing entry?`,
           currencyNames: ["Instrument", "Night", "Multi-Engine", "Formation"],
           sctEvents,
           sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
+          nightContinuationDefaultTime: formatDecimalTimeInput(commenceNightFlying),
           aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions
         }
       ),

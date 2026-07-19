@@ -3029,13 +3029,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const formatRequestPicOptionLabel = (member: Instructor, window: FixedCrewAvailabilityWindow): string => (
       appendUnavailableLabel(member.name, getStaffUnavailabilityStatus(member, window).reason)
     );
-    const applyCurrencyProfile = (requestId: string, eventValue: string) => {
+    const applyCurrencyProfile = (request: SctRequest, eventValue: string) => {
+      const requestId = request.id;
       const profile = currencyProfilesForContext.find(candidate => (
         String(candidate.name || candidate.currency || '').trim() === eventValue
         || String(candidate.currency || '').trim() === eventValue
       ));
+      const requestedTimeUpdates = /\bnight\b/i.test(eventValue) && (!request.requestedTime || request.requestedTime === '15:00')
+        ? { requestedTime: formatTime(commenceNightFlying) }
+        : {};
       if (!profile) {
-        onUpdateSctRequest(requestId, 'event', eventValue, type);
+        if (Object.keys(requestedTimeUpdates).length > 0) {
+          onPatchSctRequest(requestId, { event: eventValue, ...requestedTimeUpdates }, type);
+        } else {
+          onUpdateSctRequest(requestId, 'event', eventValue, type);
+        }
         return;
       }
       const configId = getCurrencyProfileConfigId(profile);
@@ -3045,6 +3053,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         currency: profile.currency,
         aircraftCount: Math.max(1, Math.floor(Number(profile.aircraftCount) || 1)),
         formationCrew: [],
+        ...requestedTimeUpdates,
         ...(configId ? { aircraftConfigId: configId } : {}),
         ...(isFixedCrewModel && profile.crew ? { crewMember: profile.crew } : {}),
       }, type);
@@ -3338,7 +3347,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   </div>
                                   <div className={`${tileBaseClass} flex flex-col`}>
                                       <div className={tileLabelClass}>Event</div>
-                                      <select value={req.event} onChange={e => applyCurrencyProfile(req.id, e.target.value)} className={controlClass}>
+                                      <select value={req.event} onChange={e => applyCurrencyProfile(req, e.target.value)} className={controlClass}>
                                           <option value="">Select profile</option>
                                           {sctEvents.map(e => <option key={e} value={e}>{currencyProfileNameLabels[e] || e}</option>)}
                                       </select>

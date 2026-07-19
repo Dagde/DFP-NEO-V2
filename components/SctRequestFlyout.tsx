@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Instructor, SctRequest } from '../types';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
@@ -11,21 +11,28 @@ interface SctRequestFlyoutProps {
   currencyNames: string[];
   sctEvents?: string[];
   sctTerminology?: SctTerminology;
+  nightContinuationDefaultTime?: string;
   aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
 }
 
-const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, aircraftConfigurationDefinitions = [] }) => {
+const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = '18:30', aircraftConfigurationDefinitions = [] }) => {
   const resolvedSctTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = resolvedSctTerminology.shortLabel;
   const continuationLongLabel = resolvedSctTerminology.longLabel;
   const sctEvents = useMemo(() => (Array.isArray(sctEventsProp) ? sctEventsProp.filter(Boolean) : []), [sctEventsProp]);
+  const normaliseRequestedTime = (value: string, fallback: string) => (/^\d{2}:\d{2}$/.test(value) ? value : fallback);
+  const isNightContinuationEvent = (value: string) => /\bnight\b/i.test(value);
+  const defaultDayRequestedTime = '15:00';
+  const defaultNightRequestedTime = normaliseRequestedTime(nightContinuationDefaultTime, '18:30');
+  const initialEvent = sctEvents[0] || '';
   const [event, setEvent] = useState(() => sctEvents[0] || '');
   const [flightType, setFlightType] = useState<'Solo' | 'Dual'>('Dual');
   const [currency, setCurrency] = useState('');
   const [currencyExpire, setCurrencyExpire] = useState('');
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
   const [notes, setNotes] = useState('');
-  const [requestedTime, setRequestedTime] = useState('15:00');
+  const [requestedTime, setRequestedTime] = useState(() => isNightContinuationEvent(initialEvent) ? defaultNightRequestedTime : defaultDayRequestedTime);
+  const requestedTimeTouchedRef = useRef(false);
   const [aircraftConfigId, setAircraftConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
 
   useEffect(() => {
@@ -35,6 +42,11 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
     }
     setEvent(current => sctEvents.includes(current) ? current : sctEvents[0]);
   }, [sctEvents]);
+
+  useEffect(() => {
+    if (requestedTimeTouchedRef.current) return;
+    setRequestedTime(isNightContinuationEvent(event) ? defaultNightRequestedTime : defaultDayRequestedTime);
+  }, [defaultNightRequestedTime, event]);
   const aircraftConfigOptions = useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0
       ? aircraftConfigurationDefinitions
@@ -110,7 +122,14 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-400">Requested Time</label>
-              <select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white">
+              <select
+                value={requestedTime}
+                onChange={e => {
+                  requestedTimeTouchedRef.current = true;
+                  setRequestedTime(e.target.value);
+                }}
+                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
+              >
                 {timeOptions.map(time => <option key={time} value={time}>{time}</option>)}
               </select>
             </div>
