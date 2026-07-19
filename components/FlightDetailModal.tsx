@@ -1380,7 +1380,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             options = dynamicSyllabusOptions;
         }
         
-        if (flightNumber && !options.includes(flightNumber)) {
+        if (eventCategory !== 'sct' && flightNumber && !options.includes(flightNumber)) {
             options = [flightNumber, ...options];
         }
         
@@ -1388,6 +1388,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         
         return uniqueOptionValues(options);
     }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, selectedIndividualLmp, flightNumber]);
+    const selectedSyllabusOptionValue = eventCategory === 'sct' && !filteredSyllabusOptions.includes(flightNumber)
+        ? ''
+        : flightNumber;
 
     const fixedCrewEventOptions = useMemo(() => {
         if (!isFixedCrewModel) return [] as SyllabusItemDetail[];
@@ -3247,7 +3250,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         <div className="relative md:col-span-3">
                                             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Syllabus Item</label>
                                             <select
-                                                value={flightNumber}
+                                                value={selectedSyllabusOptionValue}
                                                 onChange={e => applyFlightNumberSelection(e.target.value)}
                                                 onFocus={handleSyllabusFocus}
                                                 disabled={isDeploy || (isOracleContext && filteredSyllabusOptions.length === 0) || (isFixedCrewCrewedEvent && fixedCrewEventOptions.length === 0)}

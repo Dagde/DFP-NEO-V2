@@ -27396,11 +27396,12 @@ ${swapNote}` : swapNote
     } else {
       options = dynamicSyllabusOptions;
     }
-    if (flightNumber && !options.includes(flightNumber)) {
+    if (eventCategory !== "sct" && flightNumber && !options.includes(flightNumber)) {
       options = [flightNumber, ...options];
     }
     return uniqueOptionValues(options);
   }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, selectedIndividualLmp, flightNumber]);
+  const selectedSyllabusOptionValue = eventCategory === "sct" && !filteredSyllabusOptions.includes(flightNumber) ? "" : flightNumber;
   const fixedCrewEventOptions = reactExports.useMemo(() => {
     if (!isFixedCrewModel) return [];
     return syllabusDetails.filter((item) => {
@@ -28852,7 +28853,7 @@ ${swapNote}` : swapNote
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "select",
                 {
-                  value: flightNumber,
+                  value: selectedSyllabusOptionValue,
                   onChange: (e) => applyFlightNumberSelection(e.target.value),
                   onFocus: handleSyllabusFocus,
                   disabled: isDeploy || isOracleContext && filteredSyllabusOptions.length === 0 || isFixedCrewCrewedEvent && fixedCrewEventOptions.length === 0,
