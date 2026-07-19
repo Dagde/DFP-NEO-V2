@@ -7033,6 +7033,16 @@ function generateDfpInternal(
         || 'PC-21'
     ).trim() || 'PC-21';
     const buildAircraftResourceIdPrefix = `${buildAircraftResourcePrefix} `;
+    const buildAircraftResourceCount = Math.max(0, Math.floor(Number(availableAircraftCount) || 0));
+    const buildResources = [
+        ...Array.from({ length: buildAircraftResourceCount }, (_, index) => `${buildAircraftResourcePrefix} ${index + 1}`),
+        'Duty Sup',
+        'TWR DI',
+        ...Array.from({ length: 20 }, (_, index) => `STBY ${index + 1}`),
+        ...Array.from({ length: Math.max(10, Math.floor(Number(ftdCount) || 0)) }, (_, index) => `FTD ${index + 1}`),
+        ...Array.from({ length: Math.max(10, Math.floor(Number(cptCount) || 0)) }, (_, index) => `CPT ${index + 1}`),
+        ...Array.from({ length: 10 }, (_, index) => `Ground ${index + 1}`),
+    ];
     const buildPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
         config.personnelDisplaySettings || DEFAULT_PERSONNEL_DISPLAY_SETTINGS
     );

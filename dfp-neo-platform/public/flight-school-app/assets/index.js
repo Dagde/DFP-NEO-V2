@@ -89183,6 +89183,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     config.runtimeResourceContext?.runtimeAircraftTypeCode || config.runtimeResourceContext?.resourcePoolAircraftTypeCode || config.runtimeResourceContext?.runtimeAircraftTypeName || "PC-21"
   ).trim() || "PC-21";
   const buildAircraftResourceIdPrefix = `${buildAircraftResourcePrefix} `;
+  const buildAircraftResourceCount = Math.max(0, Math.floor(Number(availableAircraftCount) || 0));
+  const buildResources = [
+    ...Array.from({ length: buildAircraftResourceCount }, (_, index) => `${buildAircraftResourcePrefix} ${index + 1}`),
+    "Duty Sup",
+    "TWR DI",
+    ...Array.from({ length: 20 }, (_, index) => `STBY ${index + 1}`),
+    ...Array.from({ length: Math.max(10, Math.floor(Number(ftdCount) || 0)) }, (_, index) => `FTD ${index + 1}`),
+    ...Array.from({ length: Math.max(10, Math.floor(Number(cptCount) || 0)) }, (_, index) => `CPT ${index + 1}`),
+    ...Array.from({ length: 10 }, (_, index) => `Ground ${index + 1}`)
+  ];
   const buildPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
     config.personnelDisplaySettings || DEFAULT_PERSONNEL_DISPLAY_SETTINGS
   );
@@ -106199,7 +106209,7 @@ ${"=".repeat(60)}`);
   });
   const onDiscardRef = reactExports.useRef(() => {
   });
-  const buildResources2 = reactExports.useMemo(() => {
+  const buildResources = reactExports.useMemo(() => {
     if (setupTestProfile && !activePlatformResourcePool) {
       return [];
     }
@@ -110293,7 +110303,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           resourcePrefix = "Ground ";
       }
     }
-    const relevantResources = buildResources2.filter((r) => r.startsWith(resourcePrefix));
+    const relevantResources = buildResources.filter((r) => r.startsWith(resourcePrefix));
     for (const resourceId of relevantResources) {
       const isOccupied = existingEvents.some(
         (e) => e.resourceId === resourceId && isOverlapping(e, eventToPlace)
@@ -114699,7 +114709,7 @@ ${conflictLines.join("\n")}${moreText}`,
       denyPastDfpEdit("add tiles");
       return;
     }
-    const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, date, buildResources2);
+    const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, date, buildResources);
     const droppedEventsByDate = droppedEvents.reduce((groups, event) => {
       const eventDate = event.date || date;
       groups[eventDate] = [...groups[eventDate] || [], event];
@@ -114722,16 +114732,16 @@ ${conflictLines.join("\n")}${moreText}`,
       persistScheduleForDate(eventDate, eventsForDate2);
     });
     logAudit("Program Schedule", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
-  }, [buildDroppedNeoAssistEvents, buildResources2, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules]);
+  }, [buildDroppedNeoAssistEvents, buildResources, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules]);
   const handleNextDayExternalEventDrop = reactExports.useCallback((draft, placement) => {
-    const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, buildDfpDate, buildResources2);
+    const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, buildDfpDate, buildResources);
     const nextDayEvents = droppedEvents.map((droppedEvent) => {
       const { date: _date, ...nextDayEvent } = droppedEvent;
       return nextDayEvent;
     });
     setNextDayBuildEvents((prev) => [...prev, ...nextDayEvents]);
     logAudit("Next Day Build", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
-  }, [buildDroppedNeoAssistEvents, buildDfpDate, buildResources2]);
+  }, [buildDroppedNeoAssistEvents, buildDfpDate, buildResources]);
   const syllabusForModal = reactExports.useMemo(() => {
     return syllabusDetails.map((item) => item.id);
   }, [syllabusDetails]);
@@ -116598,7 +116608,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const quickStartTime = Number.isFinite(flyingStartTime) ? flyingStartTime : 8;
     const quickDuration = 2;
     const isNormalAircraftResource = (resourceId2) => /^PC-21\s+\d+$/i.test(String(resourceId2 || "").trim());
-    const aircraftResources = buildResources2.filter(isNormalAircraftResource);
+    const aircraftResources = buildResources.filter(isNormalAircraftResource);
     const hasAnyEventOnResource = (resourceId2) => scheduleForDate.some((event) => !event.isCancelled && event.resourceId === resourceId2);
     const overlapsQuickWindow = (event, resourceId2) => !event.isCancelled && event.resourceId === resourceId2 && event.startTime < quickStartTime + quickDuration && quickStartTime < event.startTime + event.duration;
     const resourceId = aircraftResources.find((resource) => !hasAnyEventOnResource(resource)) || aircraftResources.find((resource) => !scheduleForDate.some((event) => overlapsQuickWindow(event, resource)));
@@ -116642,7 +116652,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   }, [
     activeOperationalModel,
     activeUnitCode,
-    buildResources2,
+    buildResources,
     canEditDfpTiles,
     date,
     denyPastDfpEdit,
@@ -117052,7 +117062,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       const startHour = Number(gridElement.dataset.scheduleStartHour || 0);
       const time = startHour + Math.max(0, event.clientX - rect.left) / Math.max(1, pixelsPerHour);
       const rowIndex = Math.floor(Math.max(0, event.clientY - rect.top) / 32);
-      const gridResource = buildResources2[rowIndex] || "";
+      const gridResource = buildResources[rowIndex] || "";
       title = "Empty Schedule Space";
       subtitle = [gridResource, formatContextMenuTime(time)].filter(Boolean).join(" | ");
       kind = "empty-schedule-space";
@@ -117094,7 +117104,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   }, [
     activeView,
     authUser?.role,
-    buildResources2,
+    buildResources,
     canEditDfpTiles,
     canRunValidation,
     closeDfpContextMenu,
@@ -117125,7 +117135,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onDateSelect: handleDateSelect,
             snapshotDates,
             events: eventSegmentsForDate,
-            resources: buildResources2,
+            resources: buildResources,
             instructors: instructorsData.map((i) => i.name),
             traineesData,
             timezoneOffset,
@@ -117716,7 +117726,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           NextDayBuildView,
           {
             events: nextDayEventSegments,
-            resources: buildResources2,
+            resources: buildResources,
             instructors: instructorsData.map((i) => i.name),
             traineesData,
             airframeCount: configuredAirframeCount,
@@ -119964,7 +119974,7 @@ Do you want to replace the existing entry?`,
                         onUpdateFlyingWindowExclusions: handleUpdateFlyingWindowExclusions,
                         date,
                         activeDfpEvents: publishedSchedules[date] || [],
-                        resources: buildResources2,
+                        resources: buildResources,
                         instructors: instructorsData,
                         syllabusDetails: visibleSyllabusDetails,
                         taskProfiles: activeTaskProfiles,
