@@ -106259,22 +106259,8 @@ ${"=".repeat(60)}`);
         continue;
       }
       const resourceId = event.resourceId;
-      let category = "Unknown";
-      if (resourceId.startsWith("PC-21") || resourceId.startsWith("Deployed")) {
-        category = "PC-21";
-      } else if (resourceId === "Duty Sup") {
-        category = "Duty Sup";
-      } else if (resourceId.startsWith("STBY") || resourceId.startsWith("BNF-STBY")) {
-        category = "STBY";
-      } else if (resourceId.startsWith("FTD")) {
-        category = "FTD";
-      } else if (resourceId.startsWith("CPT")) {
-        category = "CPT";
-      } else if (resourceId.startsWith("Ground")) {
-        category = "Ground";
-      } else {
-        category = resourceId;
-      }
+      const configuredCategory = getResourceCategory$2(resourceId);
+      const category = configuredCategory === "Other" ? resourceId : configuredCategory;
       resourceLabels.push(category);
     }
     console.log("Resource labels (one per event):", resourceLabels.slice(0, 30));

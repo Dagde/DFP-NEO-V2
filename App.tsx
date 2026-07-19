@@ -37,6 +37,7 @@ import { DEFAULT_TASK_PROFILE_CONFIG, getTaskProfileAbbreviationsForUnit, getTas
 import {
     DEFAULT_RESOURCE_DISPLAY_NAMES,
     formatResourceLabel as formatConfiguredResourceLabel,
+    getResourceCategory as getConfiguredResourceCategory,
     getResourceDisplayNames,
     type ResourceDisplayNames,
 } from './utils/resourceDisplayNames';
@@ -27495,22 +27496,8 @@ const App: React.FC = () => {
             const resourceId = event.resourceId;
 
             // Determine the category for this event
-            let category = 'Unknown';
-            if (resourceId.startsWith('PC-21') || resourceId.startsWith('Deployed')) {
-                category = 'PC-21';
-            } else if (resourceId === 'Duty Sup') {
-                category = 'Duty Sup';
-            } else if (resourceId.startsWith('STBY') || resourceId.startsWith('BNF-STBY')) {
-                category = 'STBY';
-            } else if (resourceId.startsWith('FTD')) {
-                category = 'FTD';
-            } else if (resourceId.startsWith('CPT')) {
-                category = 'CPT';
-            } else if (resourceId.startsWith('Ground')) {
-                category = 'Ground';
-            } else {
-                category = resourceId; // Fallback to actual resource ID
-            }
+            const configuredCategory = getConfiguredResourceCategory(resourceId);
+            const category = configuredCategory === 'Other' ? resourceId : configuredCategory;
 
             resourceLabels.push(category);
         }
