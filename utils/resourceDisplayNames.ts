@@ -18,6 +18,37 @@ const cleanLabel = (value: unknown, fallback: string): string => {
   return trimmed;
 };
 
+const isNonAircraftResourceId = (resourceId: string): boolean => (
+  /^FTD(\s+\d+)?$/i.test(resourceId) ||
+  /^CPT(\s+\d+)?$/i.test(resourceId) ||
+  /^Ground(\s+\d+)?$/i.test(resourceId) ||
+  /^STBY(\s+\d+)?$/i.test(resourceId) ||
+  /^BNF-STBY(\s+\d+)?$/i.test(resourceId) ||
+  resourceId === 'Duty Sup' ||
+  resourceId === 'TWR DI'
+);
+
+export const isAircraftResourceId = (resourceId?: string | null): boolean => {
+  const cleanId = String(resourceId || '').trim();
+  if (!cleanId || isNonAircraftResourceId(cleanId)) return false;
+  if (/^Deployed(\s+\d+)?$/i.test(cleanId)) return true;
+  if (/^PC-21(\s+\d+)?$/i.test(cleanId)) return true;
+  return /\s+\d+$/.test(cleanId);
+};
+
+export const getResourceCategory = (resourceId?: string | null): string => {
+  const cleanId = String(resourceId || '').trim();
+  if (!cleanId) return 'Other';
+  if (isAircraftResourceId(cleanId)) return 'Aircraft';
+  if (/^STBY\b/i.test(cleanId) || /^BNF-STBY\b/i.test(cleanId)) return 'STBY';
+  if (cleanId === 'Duty Sup') return 'Duty Sup';
+  if (cleanId === 'TWR DI') return 'TWR DI';
+  if (/^FTD\b/i.test(cleanId)) return 'FTD';
+  if (/^CPT\b/i.test(cleanId)) return 'CPT';
+  if (/^Ground\b/i.test(cleanId)) return 'Ground';
+  return 'Other';
+};
+
 export const getResourceDisplayNames = (resourcePool?: PlatformResourcePool | null): ResourceDisplayNames => {
   const settings = resourcePool?.settings || {};
 

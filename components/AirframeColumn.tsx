@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getResourceCategory, isAircraftResourceId } from '../utils/resourceDisplayNames';
 
 interface AirframeColumnProps {
   resources: string[];
@@ -12,22 +13,6 @@ interface AirframeColumnProps {
   formatResourceLabel?: (resourceId: string) => string;
   aircraftConfigLabelsByResource?: Record<string, string>;
 }
-
-// Helper to determine resource category
-const getCategory = (res: string) => {
-    if (!res || typeof res !== 'string') return 'Other';
-    if (res.startsWith('PC-21') || res.startsWith('Deployed')) return 'Aircraft';
-    if (res.startsWith('STBY') || res.startsWith('BNF-STBY')) return 'STBY';
-    if (res === 'Duty Sup') return 'Duty Sup';
-    if (res === 'TWR DI') return 'TWR DI';
-    if (res.startsWith('FTD')) return 'FTD';
-    if (res.startsWith('CPT')) return 'CPT';
-    if (res.startsWith('Ground')) return 'Ground';
-    return 'Other';
-};
-
-const isAircraftResource = (resource: string): boolean =>
-    resource.startsWith('PC-21') || resource.startsWith('Deployed');
 
 const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [], formatResourceLabel, aircraftConfigLabelsByResource = {} }) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -82,7 +67,7 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
             } else if (resource.startsWith('Deployed')) {
                 textColorClass = 'text-purple-300 font-semibold';
                 isDraggable = false;
-            } else if (resource.startsWith('PC-21')) {
+            } else if (isAircraftResourceId(resource)) {
                 textColorClass = 'text-gray-400';
                 isDraggable = true;
             } else if (resource.startsWith('STBY') || resource.startsWith('BNF-STBY')) {
@@ -99,8 +84,8 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
                 isDraggable = false;
             }
 
-            const currentCategory = getCategory(resource);
-            const prevCategory = index > 0 ? getCategory(displayResources[index - 1]) : currentCategory;
+            const currentCategory = getResourceCategory(resource);
+            const prevCategory = index > 0 ? getResourceCategory(displayResources[index - 1]) : currentCategory;
             const isCategoryStart = index > 0 && currentCategory !== prevCategory;
 
             const baseClasses = "flex items-center justify-center text-xs font-mono transition-all duration-150";
@@ -117,7 +102,7 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
                 ? 'duty-supervisor'
                 : resource.startsWith('FTD') || resource.startsWith('CPT')
                     ? 'simulator-resource'
-                    : isAircraftResource(resource) || resource.startsWith('STBY') || resource.startsWith('BNF-STBY')
+                    : isAircraftResourceId(resource) || resource.startsWith('STBY') || resource.startsWith('BNF-STBY')
                         ? 'aircraft-resource'
                         : 'resource';
           
@@ -135,7 +120,7 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
               className={`${baseClasses} ${textColorClass} ${cursorClass} ${borderClass} ${hoverClass} ${dragClass}`}
               style={{ height: rowHeight }}
             >
-              {resource.startsWith('PC-21') ? (
+              {isAircraftResourceId(resource) ? (
                   <div className="relative flex h-full w-full min-w-0 items-center text-center">
                       <span className="absolute left-1 top-1/2 -translate-y-1/2 text-xs text-blue-300">
                           {resource.match(/\d+$/)?.[0] || ''}

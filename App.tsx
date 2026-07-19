@@ -1026,8 +1026,9 @@ const DfpSidePanelTimeline: React.FC<{
         if (selectedResourceKind === 'deployment') return 'Deployed 1';
         if (selectedResourceKind === 'ftd') return `FTD ${number}`;
         if (selectedResourceKind === 'cpt') return `CPT ${number}`;
-        return `PC-21 ${number}`;
-    }, [selectedResourceKind, selectedResourceNumber]);
+        const aircraftCode = String(activeAircraftType?.code || activeAircraftType?.name || activeAircraftType?.displayName || '').trim();
+        return `${aircraftCode || 'Aircraft'} ${number}`;
+    }, [activeAircraftType, selectedResourceKind, selectedResourceNumber]);
 
     const assistFormationSize = selectedResourceKind === 'flight'
         ? Math.max(1, Math.floor(Number(selectedResourceNumber) || 1))

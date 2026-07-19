@@ -22,6 +22,7 @@ import {
     getUnitCallsignPolicy,
     normaliseUnitCallsignSettings,
 } from '../utils/unitCallsigns';
+import { getResourceCategory as getConfiguredResourceCategory } from '../utils/resourceDisplayNames';
 import { getEffectiveDispatchStaggerMinutes, type DispatchStaggerSettings } from '../utils/dispatchStagger';
 import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from '../utils/sunTimes';
 import {
@@ -220,15 +221,7 @@ const normaliseUnitTypeOptions = (platformConfig?: any): string[] => {
 };
 
 const getResourceCategory = (res?: string) => {
-    if (!res) return 'Other';
-    if (res.startsWith('PC-21') || res.startsWith('Deployed')) return 'Aircraft';
-    if (res.startsWith('STBY')) return 'STBY';
-    if (res === 'Duty Sup') return 'Duty Sup';
-    if (res === 'TWR DI') return 'TWR DI';
-    if (res.startsWith('FTD')) return 'FTD';
-    if (res.startsWith('CPT')) return 'CPT';
-    if (res.startsWith('Ground')) return 'Ground';
-    return 'Other';
+    return getConfiguredResourceCategory(res);
 };
 
 const formatSnapshotDate = (dateStr: string) => {

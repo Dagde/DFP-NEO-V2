@@ -2890,6 +2890,26 @@ const cleanLabel$2 = (value, fallback) => {
   const trimmed = value.trim();
   return trimmed;
 };
+const isNonAircraftResourceId = (resourceId) => /^FTD(\s+\d+)?$/i.test(resourceId) || /^CPT(\s+\d+)?$/i.test(resourceId) || /^Ground(\s+\d+)?$/i.test(resourceId) || /^STBY(\s+\d+)?$/i.test(resourceId) || /^BNF-STBY(\s+\d+)?$/i.test(resourceId) || resourceId === "Duty Sup" || resourceId === "TWR DI";
+const isAircraftResourceId = (resourceId) => {
+  const cleanId = String(resourceId || "").trim();
+  if (!cleanId || isNonAircraftResourceId(cleanId)) return false;
+  if (/^Deployed(\s+\d+)?$/i.test(cleanId)) return true;
+  if (/^PC-21(\s+\d+)?$/i.test(cleanId)) return true;
+  return /\s+\d+$/.test(cleanId);
+};
+const getResourceCategory$2 = (resourceId) => {
+  const cleanId = String(resourceId || "").trim();
+  if (!cleanId) return "Other";
+  if (isAircraftResourceId(cleanId)) return "Aircraft";
+  if (/^STBY\b/i.test(cleanId) || /^BNF-STBY\b/i.test(cleanId)) return "STBY";
+  if (cleanId === "Duty Sup") return "Duty Sup";
+  if (cleanId === "TWR DI") return "TWR DI";
+  if (/^FTD\b/i.test(cleanId)) return "FTD";
+  if (/^CPT\b/i.test(cleanId)) return "CPT";
+  if (/^Ground\b/i.test(cleanId)) return "Ground";
+  return "Other";
+};
 const getResourceDisplayNames = (resourcePool) => {
   const settings = resourcePool?.settings || {};
   return {
@@ -9161,18 +9181,6 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     }
   );
 };
-const getCategory = (res) => {
-  if (!res || typeof res !== "string") return "Other";
-  if (res.startsWith("PC-21") || res.startsWith("Deployed")) return "Aircraft";
-  if (res.startsWith("STBY") || res.startsWith("BNF-STBY")) return "STBY";
-  if (res === "Duty Sup") return "Duty Sup";
-  if (res === "TWR DI") return "TWR DI";
-  if (res.startsWith("FTD")) return "FTD";
-  if (res.startsWith("CPT")) return "CPT";
-  if (res.startsWith("Ground")) return "Ground";
-  return "Other";
-};
-const isAircraftResource = (resource) => resource.startsWith("PC-21") || resource.startsWith("Deployed");
 const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [], formatResourceLabel: formatResourceLabel2, aircraftConfigLabelsByResource = {} }) => {
   const [draggedIndex, setDraggedIndex] = reactExports.useState(null);
   const handleDragStart = (index) => {
@@ -9210,7 +9218,7 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
     } else if (resource.startsWith("Deployed")) {
       textColorClass = "text-purple-300 font-semibold";
       isDraggable = false;
-    } else if (resource.startsWith("PC-21")) {
+    } else if (isAircraftResourceId(resource)) {
       textColorClass = "text-gray-400";
       isDraggable = true;
     } else if (resource.startsWith("STBY") || resource.startsWith("BNF-STBY")) {
@@ -9226,15 +9234,15 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
       textColorClass = "text-gray-400";
       isDraggable = false;
     }
-    const currentCategory = getCategory(resource);
-    const prevCategory = index > 0 ? getCategory(displayResources[index - 1]) : currentCategory;
+    const currentCategory = getResourceCategory$2(resource);
+    const prevCategory = index > 0 ? getResourceCategory$2(displayResources[index - 1]) : currentCategory;
     const isCategoryStart = index > 0 && currentCategory !== prevCategory;
     const baseClasses = "flex items-center justify-center text-xs font-mono transition-all duration-150";
     const cursorClass = isDraggable ? "cursor-move" : "";
     const borderClass = isCategoryStart ? "border-t-2 border-t-gray-500 border-b border-b-gray-700/50" : "border-b border-gray-700/50";
     const hoverClass = isDraggable ? "hover:bg-gray-700" : "";
     const dragClass = draggedIndex === index ? "opacity-50 bg-sky-900" : "";
-    const contextKind = resource === "Duty Sup" ? "duty-supervisor" : resource.startsWith("FTD") || resource.startsWith("CPT") ? "simulator-resource" : isAircraftResource(resource) || resource.startsWith("STBY") || resource.startsWith("BNF-STBY") ? "aircraft-resource" : "resource";
+    const contextKind = resource === "Duty Sup" ? "duty-supervisor" : resource.startsWith("FTD") || resource.startsWith("CPT") ? "simulator-resource" : isAircraftResourceId(resource) || resource.startsWith("STBY") || resource.startsWith("BNF-STBY") ? "aircraft-resource" : "resource";
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
       "li",
       {
@@ -9248,7 +9256,7 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
         onDragEnd: () => setDraggedIndex(null),
         className: `${baseClasses} ${textColorClass} ${cursorClass} ${borderClass} ${hoverClass} ${dragClass}`,
         style: { height: rowHeight },
-        children: resource.startsWith("PC-21") ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-full w-full min-w-0 items-center text-center", children: [
+        children: isAircraftResourceId(resource) ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-full w-full min-w-0 items-center text-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1 top-1/2 -translate-y-1/2 text-xs text-blue-300", children: resource.match(/\d+$/)?.[0] || "" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-7 top-1/2 -translate-y-1/2", children: displayBaseText || "Aircraft" }),
           configLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-0.5 right-0.5 max-w-[28px] truncate text-right text-[10px] font-semibold leading-none text-gray-500", children: compactConfigLabel })
@@ -9880,15 +9888,7 @@ const normaliseUnitTypeOptions = (platformConfig) => {
   });
 };
 const getResourceCategory$1 = (res) => {
-  if (!res) return "Other";
-  if (res.startsWith("PC-21") || res.startsWith("Deployed")) return "Aircraft";
-  if (res.startsWith("STBY")) return "STBY";
-  if (res === "Duty Sup") return "Duty Sup";
-  if (res === "TWR DI") return "TWR DI";
-  if (res.startsWith("FTD")) return "FTD";
-  if (res.startsWith("CPT")) return "CPT";
-  if (res.startsWith("Ground")) return "Ground";
-  return "Other";
+  return getResourceCategory$2(res);
 };
 const formatSnapshotDate = (dateStr) => {
   const [year, month, day] = dateStr.split("-").map(Number);
@@ -35897,13 +35897,7 @@ const getValidationEventKey$2 = (event) => [
   event.crew || ""
 ].join("|");
 const getResourceCategory = (res) => {
-  if (res.startsWith("PC-21") || res.startsWith("Deployed")) return "Aircraft";
-  if (res.startsWith("STBY")) return "STBY";
-  if (res === "Duty Sup") return "Duty Sup";
-  if (res.startsWith("FTD")) return "FTD";
-  if (res.startsWith("CPT")) return "CPT";
-  if (res.startsWith("Ground")) return "Ground";
-  return "Other";
+  return getResourceCategory$2(res);
 };
 const NextDayBuildView = ({
   date,
@@ -84421,8 +84415,9 @@ const DfpSidePanelTimeline = ({
     if (selectedResourceKind === "deployment") return "Deployed 1";
     if (selectedResourceKind === "ftd") return `FTD ${number}`;
     if (selectedResourceKind === "cpt") return `CPT ${number}`;
-    return `PC-21 ${number}`;
-  }, [selectedResourceKind, selectedResourceNumber]);
+    const aircraftCode = String(activeAircraftType?.code || activeAircraftType?.name || activeAircraftType?.displayName || "").trim();
+    return `${aircraftCode || "Aircraft"} ${number}`;
+  }, [activeAircraftType, selectedResourceKind, selectedResourceNumber]);
   const assistFormationSize = selectedResourceKind === "flight" ? Math.max(1, Math.floor(Number(selectedResourceNumber) || 1)) : 1;
   const usesNeoAssistModeHeader = isAirCombatNeoAssist || isFixedCrewNeoAssist;
   const isNeoAssistWizardMode = usesNeoAssistModeHeader && airCombatAssistMode === "wizard";

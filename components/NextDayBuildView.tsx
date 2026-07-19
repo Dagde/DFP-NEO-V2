@@ -6,6 +6,7 @@ import FlightTile from './FlightTile';
 import AirframeColumn from './AirframeColumn';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
+import { getResourceCategory as getConfiguredResourceCategory } from '../utils/resourceDisplayNames';
 
 
 interface NextDayBuildViewProps {
@@ -102,13 +103,7 @@ const getValidationEventKey = (event: ScheduleEvent): string =>
     ].join('|');
 
 const getResourceCategory = (res: string) => {
-    if (res.startsWith('PC-21') || res.startsWith('Deployed')) return 'Aircraft';
-    if (res.startsWith('STBY')) return 'STBY';
-    if (res === 'Duty Sup') return 'Duty Sup';
-    if (res.startsWith('FTD')) return 'FTD';
-    if (res.startsWith('CPT')) return 'CPT';
-    if (res.startsWith('Ground')) return 'Ground';
-    return 'Other';
+    return getConfiguredResourceCategory(res);
 };
 
 export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
