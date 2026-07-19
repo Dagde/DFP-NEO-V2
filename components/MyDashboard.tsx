@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, Pt051Assessment, Trainee } from '../types';
 import TafWeatherWidget from './TafWeatherWidget';
 import { normaliseFixedCrewStaffRole } from '../utils/crewPositionTerminology';
+import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 
 interface MyDashboardProps {
     userName: string;
@@ -25,6 +26,7 @@ interface MyDashboardProps {
     selectedStaffName?: string;
     onSelectStaffName?: (staffName: string) => void;
     onUnreadMessageCountChange?: (count: number) => void;
+    sctTerminology?: SctTerminology;
 }
 
 type DashboardMessageContact = {
@@ -340,7 +342,10 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     selectedStaffName,
     onSelectStaffName,
     onUnreadMessageCountChange,
+    sctTerminology = DEFAULT_SCT_TERMINOLOGY,
 }) => {
+    const continuationTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
+    const continuationShortLabel = continuationTerminology.shortLabel;
     const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
     const groupedStaffOptions = useMemo(() => {
         const sortedStaff = [...staffOptions]
@@ -1033,7 +1038,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                             My Currency
                         </button>
                         <button onClick={onSelectMySct} className="w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold transition-colors">
-                            My SCT
+                            My {continuationShortLabel}
                         </button>
                     </div>
                 </div>
@@ -1043,9 +1048,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     <TafWeatherWidget />
                 </div>
                 
-                {/* My Active SCT Requests */}
+                {/* My Active Continuation Training Requests */}
                 <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-                    <h2 className="text-xl font-semibold text-sky-400 mb-4">My Active SCT Requests</h2>
+                    <h2 className="text-xl font-semibold text-sky-400 mb-4">My Active {continuationShortLabel} Requests</h2>
                     {mySctRequests.length > 0 ? (
                         <ul className="space-y-2">
                             {mySctRequests.map(req => (
@@ -1061,7 +1066,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                             ))}
                         </ul>
                     ) : (
-                        <p className="text-gray-500 text-center italic py-4">No active SCT requests.</p>
+                        <p className="text-gray-500 text-center italic py-4">No active {continuationShortLabel} requests.</p>
                     )}
                 </div>
 

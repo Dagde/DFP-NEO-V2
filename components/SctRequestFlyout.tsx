@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Instructor, SctRequest } from '../types';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 
 interface SctRequestFlyoutProps {
   instructor: Instructor;
@@ -9,11 +10,16 @@ interface SctRequestFlyoutProps {
   onSave: (request: SctRequest) => void;
   currencyNames: string[];
   sctEvents?: string[];
+  sctTerminology?: SctTerminology;
   aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
 }
 
-const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, aircraftConfigurationDefinitions = [] }) => {
-  const [event, setEvent] = useState('SCT GF');
+const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, aircraftConfigurationDefinitions = [] }) => {
+  const resolvedSctTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
+  const continuationShortLabel = resolvedSctTerminology.shortLabel;
+  const continuationLongLabel = resolvedSctTerminology.longLabel;
+  const sctEvents = useMemo(() => (Array.isArray(sctEventsProp) ? sctEventsProp.filter(Boolean) : []), [sctEventsProp]);
+  const [event, setEvent] = useState(() => sctEvents[0] || '');
   const [flightType, setFlightType] = useState<'Solo' | 'Dual'>('Dual');
   const [currency, setCurrency] = useState('');
   const [currencyExpire, setCurrencyExpire] = useState('');
@@ -22,7 +28,13 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
   const [requestedTime, setRequestedTime] = useState('15:00');
   const [aircraftConfigId, setAircraftConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
 
-  const sctEvents = useMemo(() => sctEventsProp || ['SCT GF', 'SCT IF', 'SCT NAV', 'SCT FORM', 'Night SCT'], [sctEventsProp]);
+  useEffect(() => {
+    if (!sctEvents.length) {
+      setEvent('');
+      return;
+    }
+    setEvent(current => sctEvents.includes(current) ? current : sctEvents[0]);
+  }, [sctEvents]);
   const aircraftConfigOptions = useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0
       ? aircraftConfigurationDefinitions
@@ -70,7 +82,7 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
     <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in" onClick={onClose}>
       <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700" onClick={e => e.stopPropagation()}>
         <div className="p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-sky-400">Request SCT for {instructor.name}</h2>
+          <h2 className="text-xl font-bold text-sky-400">Request {continuationShortLabel} for {instructor.name}</h2>
           <button onClick={onClose} className="text-white hover:text-gray-300">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -83,7 +95,9 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
             <div>
               <label className="block text-sm font-medium text-gray-400">Event</label>
               <select value={event} onChange={e => setEvent(e.target.value)} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white">
-                {sctEvents.map(e => <option key={e} value={e}>{e}</option>)}
+                {sctEvents.length > 0
+                  ? sctEvents.map(e => <option key={e} value={e}>{e}</option>)
+                  : <option value="">Configure {continuationLongLabel} events in Settings</option>}
               </select>
             </div>
             <div>

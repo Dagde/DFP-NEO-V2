@@ -23,6 +23,7 @@ import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigura
 import { findCrewPositionEntry, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { getStaffRoleDisplay } from '../utils/staffRoleColours';
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
+import type { SctTerminology } from '../utils/sctTerminology';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 
 // Helper to generate a unique random ID for new instructors
@@ -132,6 +133,7 @@ interface InstructorListViewProps {
   operationalModel?: string;
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
+  sctTerminology?: SctTerminology;
 }
 
 const InstructorListView: React.FC<InstructorListViewProps> = ({
@@ -174,13 +176,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     operationalModel = 'flight_school',
     crewPositionTerminology,
     staffQualificationCatalogue,
+    sctTerminology,
 }) => {
   // Track which prop changed to diagnose render loop
   const prevPropsRef = React.useRef<any>({});
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps: string[] = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology, sctTerminology };
   Object.keys(currentProps).forEach(key => {
     if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
       changedProps.push(key);
@@ -839,6 +842,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     operationalModel={operationalModel}
                     crewPositionTerminology={crewPositionTerminology}
                     staffQualificationCatalogue={staffQualificationCatalogue}
+                    sctTerminology={sctTerminology}
                 />
         )}
 

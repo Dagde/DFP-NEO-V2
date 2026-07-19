@@ -34931,8 +34931,11 @@ const MyDashboard = ({
   messageContactUnitCodes = [],
   selectedStaffName,
   onSelectStaffName,
-  onUnreadMessageCountChange
+  onUnreadMessageCountChange,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY
 }) => {
+  const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
+  const continuationShortLabel = continuationTerminology.shortLabel;
   const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
   const groupedStaffOptions = reactExports.useMemo(() => {
     const sortedStaff2 = [...staffOptions].filter((staff) => staff?.name).sort((a, b) => String(a.unit || "No Unit").localeCompare(String(b.unit || "No Unit")) || getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || String(a.name || "").localeCompare(String(b.name || "")));
@@ -35511,12 +35514,19 @@ const MyDashboard = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onSelectMyProfile, className: "w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold transition-colors", children: "My Profile" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onSelectMyCurrency, className: "w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold transition-colors", children: "My Currency" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onSelectMySct, className: "w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold transition-colors", children: "My SCT" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: onSelectMySct, className: "w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold transition-colors", children: [
+            "My ",
+            continuationShortLabel
+          ] })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TafWeatherWidget, {}) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "My Active SCT Requests" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: [
+          "My Active ",
+          continuationShortLabel,
+          " Requests"
+        ] }),
         mySctRequests.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: mySctRequests.map((req) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "p-2 bg-gray-700/50 rounded-md text-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: req.event }),
@@ -35526,7 +35536,11 @@ const MyDashboard = ({
             "Expires: ",
             req.currentExpiry
           ] })
-        ] }, req.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-4", children: "No active SCT requests." })
+        ] }, req.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-500 text-center italic py-4", children: [
+          "No active ",
+          continuationShortLabel,
+          " requests."
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-amber-400 mb-4", children: "Reports to be completed" }),
@@ -49905,8 +49919,12 @@ const InstructorProfileFlyout = ({
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   operationalModel = "flight_school",
   crewPositionTerminology,
-  staffQualificationCatalogue
+  staffQualificationCatalogue,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY
 }) => {
+  const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
+  const continuationShortLabel = continuationTerminology.shortLabel;
+  const continuationLongLabel = continuationTerminology.longLabel;
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
   const [showAddUnavailability, setShowAddUnavailability] = reactExports.useState(false);
@@ -50808,13 +50826,19 @@ const InstructorProfileFlyout = ({
           activeTab === "sct" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-4", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
-                "Request SCT — ",
+                "Request ",
+                continuationShortLabel,
+                " — ",
                 instructor.name
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs italic mb-4", children: "Submit a Standardisation and Continuation Training request for this staff member." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-xs italic mb-4", children: [
+              "Submit a ",
+              continuationLongLabel,
+              " request for this staff member."
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
               {
                 onClick: (e) => {
@@ -50824,7 +50848,11 @@ const InstructorProfileFlyout = ({
                   setActiveTab(null);
                 },
                 className: "px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded",
-                children: "Submit SCT Request"
+                children: [
+                  "Submit ",
+                  continuationShortLabel,
+                  " Request"
+                ]
               }
             )
           ] }),
@@ -51626,7 +51654,10 @@ const InstructorProfileFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("unavailable"), className: tabBtnClass("unavailable"), children: "Unavailable" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("currency"), className: tabBtnClass("currency"), children: "Currency" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("sct"), className: tabBtnClass("sct"), children: "Request SCT" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => handleTabClick("sct"), className: tabBtnClass("sct"), children: [
+              "Request ",
+              continuationShortLabel
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("trainingReports"), className: tabBtnClass("trainingReports"), children: "Training Reports" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("trainingProgress"), className: tabBtnClass("trainingProgress"), children: "Training Progress" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
@@ -52261,13 +52292,14 @@ const InstructorListView = ({
   instructorLabel = "QFI",
   operationalModel = "flight_school",
   crewPositionTerminology,
-  staffQualificationCatalogue
+  staffQualificationCatalogue,
+  sctTerminology
 }) => {
   const prevPropsRef = React.useRef({});
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology, sctTerminology };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -52792,7 +52824,8 @@ const InstructorListView = ({
         instructorLabel,
         operationalModel,
         crewPositionTerminology,
-        staffQualificationCatalogue
+        staffQualificationCatalogue,
+        sctTerminology
       }
     ),
     hoveredInstructor && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -79737,8 +79770,12 @@ const DutyWarningFlyout = ({ onConfirm, onCancel, instructorName, dutyHours }) =
     ] })
   ] }) });
 };
-const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, aircraftConfigurationDefinitions = [] }) => {
-  const [event, setEvent] = reactExports.useState("SCT GF");
+const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, aircraftConfigurationDefinitions = [] }) => {
+  const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
+  const continuationShortLabel = resolvedSctTerminology.shortLabel;
+  const continuationLongLabel = resolvedSctTerminology.longLabel;
+  const sctEvents = reactExports.useMemo(() => Array.isArray(sctEventsProp) ? sctEventsProp.filter(Boolean) : [], [sctEventsProp]);
+  const [event, setEvent] = reactExports.useState(() => sctEvents[0] || "");
   const [flightType, setFlightType] = reactExports.useState("Dual");
   const [currency, setCurrency] = reactExports.useState("");
   const [currencyExpire, setCurrencyExpire] = reactExports.useState("");
@@ -79746,7 +79783,13 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
   const [notes, setNotes] = reactExports.useState("");
   const [requestedTime, setRequestedTime] = reactExports.useState("15:00");
   const [aircraftConfigId, setAircraftConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
-  const sctEvents = reactExports.useMemo(() => sctEventsProp || ["SCT GF", "SCT IF", "SCT NAV", "SCT FORM", "Night SCT"], [sctEventsProp]);
+  reactExports.useEffect(() => {
+    if (!sctEvents.length) {
+      setEvent("");
+      return;
+    }
+    setEvent((current) => sctEvents.includes(current) ? current : sctEvents[0]);
+  }, [sctEvents]);
   const aircraftConfigOptions = reactExports.useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
     return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
@@ -79785,7 +79828,9 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-bold text-sky-400", children: [
-        "Request SCT for ",
+        "Request ",
+        continuationShortLabel,
+        " for ",
         instructor.name
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
@@ -79794,7 +79839,11 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Event" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: event, onChange: (e) => setEvent(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white", children: sctEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: e, children: e }, e)) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: event, onChange: (e) => setEvent(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white", children: sctEvents.length > 0 ? sctEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: e, children: e }, e)) : /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "", children: [
+            "Configure ",
+            continuationLongLabel,
+            " events in Settings"
+          ] }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Priority" }),
@@ -105899,7 +105948,7 @@ ${"=".repeat(60)}`);
     "Pearce": [],
     "Williamtown": []
   });
-  const [sctEvents, setSctEvents] = reactExports.useState(["SCT GF", "SCT IF", "SCT FORM", "SCT Nav", "Night SCT"]);
+  const [sctEvents, setSctEvents] = reactExports.useState([]);
   const [units, setUnits] = reactExports.useState(["1FTS", "CFS", "2FTS", "76SQN", "77SQN", "1SQN", "6SQN", "2SQN", "10SQN"]);
   const [unitLocations, setUnitLocations] = reactExports.useState({
     "1FTS": "East Sale",
@@ -118407,6 +118456,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             selectedStaffName: dashboardUserName,
             onSelectStaffName: setDashboardTestUserName,
             onUnreadMessageCountChange: setDashboardUnreadMessageCount,
+            sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             onSelectTrainingReport: (entry) => {
               const selectedStaff = allInstructorsData.find((staff) => entry.staff.id ? staff.id === entry.staff.id : staff.idNumber === entry.staff.idNumber) || entry.staff;
               const reportAssignee = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(entry.report.dashboardAssigneeName || dashboardUserName)) || dashboardStaff;
@@ -118783,7 +118833,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             instructorLabel,
             operationalModel: activeOperationalModel,
             crewPositionTerminology: activeCrewPositionTerminology,
-            staffQualificationCatalogue: activeStaffQualificationCatalogue
+            staffQualificationCatalogue: activeStaffQualificationCatalogue,
+            sctTerminology: getSctTerminology(platformConfig, activeUnitCode)
           }
         );
       case "Trainees":
@@ -120766,10 +120817,11 @@ Do you want to replace the existing entry?`,
               console.warn("[SCT] No userId available from any source - Flyout request NOT saved to DB");
             }
             setShowSctRequest(false);
-            setSuccessMessage(`SCT request submitted for ${instructorForSct.name}`);
+            setSuccessMessage(`${getSctTerminology(platformConfig, activeUnitCode).shortLabel} request submitted for ${instructorForSct.name}`);
           },
           currencyNames: ["Instrument", "Night", "Multi-Engine", "Formation"],
           sctEvents,
+          sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
           aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions
         }
       ),

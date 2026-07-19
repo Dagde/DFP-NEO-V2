@@ -38,6 +38,7 @@ import {
   type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
 import { getStaffRoleDisplay } from '../utils/staffRoleColours';
+import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 
 type LegacyQualificationField = 'isCommandingOfficer' | 'isCFI' | 'isExecutive' | 'isFlyingSupervisor' | 'isTestingOfficer' | 'isIRE' | 'isQFI' | 'isOFI' | 'isDeputyFlightCommander' | 'isContractor' | 'isAdminStaff';
 
@@ -110,6 +111,7 @@ interface InstructorProfileFlyoutProps {
   operationalModel?: string;
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
+  sctTerminology?: SctTerminology;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -319,7 +321,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   operationalModel = 'flight_school',
   crewPositionTerminology,
   staffQualificationCatalogue,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
 }) => {
+  const continuationTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
+  const continuationShortLabel = continuationTerminology.shortLabel;
+  const continuationLongLabel = continuationTerminology.longLabel;
   const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
   const [showAddUnavailability, setShowAddUnavailability] = useState(false);
@@ -1292,10 +1298,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
               {activeTab === 'sct' && (
                 <div className={card3d + " p-4"} style={card3dStyle}>
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-bold text-white">Request SCT — {instructor.name}</h4>
+                    <h4 className="text-sm font-bold text-white">Request {continuationShortLabel} — {instructor.name}</h4>
                     <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                   </div>
-                  <p className="text-gray-400 text-xs italic mb-4">Submit a Standardisation and Continuation Training request for this staff member.</p>
+                  <p className="text-gray-400 text-xs italic mb-4">Submit a {continuationLongLabel} request for this staff member.</p>
                   <button
                     onClick={(e) => {
                       e.preventDefault();
@@ -1304,7 +1310,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       setActiveTab(null);
                     }}
                     className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded"
-                  >Submit SCT Request</button>
+                  >Submit {continuationShortLabel} Request</button>
                 </div>
               )}
 
@@ -2148,7 +2154,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavailable</button>
                 <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
                 <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
-                <button onClick={() => handleTabClick('sct')} className={tabBtnClass('sct')}>Request SCT</button>
+                <button onClick={() => handleTabClick('sct')} className={tabBtnClass('sct')}>Request {continuationShortLabel}</button>
                 <button onClick={() => handleTabClick('trainingReports')} className={tabBtnClass('trainingReports')}>Training Reports</button>
                 <button onClick={() => handleTabClick('trainingProgress')} className={tabBtnClass('trainingProgress')}>Training Progress</button>
                 <button onClick={() => { setActiveTab(null); handleEdit(); }} disabled={isFrozen} className={btnClass}>Edit</button>

@@ -26867,7 +26867,7 @@ const App: React.FC = () => {
         'Pearce': [],
         'Williamtown': [],
     });
-    const [sctEvents, setSctEvents] = useState<string[]>(['SCT GF', 'SCT IF', 'SCT FORM', 'SCT Nav', 'Night SCT']);
+    const [sctEvents, setSctEvents] = useState<string[]>([]);
     const [units, setUnits] = useState<string[]>(['1FTS', 'CFS', '2FTS', '76SQN', '77SQN', '1SQN', '6SQN', '2SQN', '10SQN']);
     const [unitLocations, setUnitLocations] = useState<Record<string, string>>({
         '1FTS': 'East Sale', 'CFS': 'East Sale', '2FTS': 'Pearce', '76SQN': 'Williamtown', '77SQN': 'Williamtown',
@@ -42155,6 +42155,7 @@ appliedUpdates.forEach(update => {
                             selectedStaffName={dashboardUserName}
                             onSelectStaffName={setDashboardTestUserName}
                             onUnreadMessageCountChange={setDashboardUnreadMessageCount}
+                            sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                             onSelectTrainingReport={(entry) => {
                                 const selectedStaff = allInstructorsData.find(staff => (
                                     (entry.staff as any).id
@@ -42578,6 +42579,7 @@ appliedUpdates.forEach(update => {
                             operationalModel={activeOperationalModel}
                             crewPositionTerminology={activeCrewPositionTerminology}
                             staffQualificationCatalogue={activeStaffQualificationCatalogue}
+                            sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                         />;
                 case 'Trainees':
                     return <TraineeListView
@@ -44730,10 +44732,11 @@ appliedUpdates.forEach(update => {
                         }
                         setShowSctRequest(false);
                         // Show success message
-                        setSuccessMessage(`SCT request submitted for ${instructorForSct.name}`);
+                        setSuccessMessage(`${getSctTerminology(platformConfig, activeUnitCode).shortLabel} request submitted for ${instructorForSct.name}`);
                     }}
                     currencyNames={['Instrument', 'Night', 'Multi-Engine', 'Formation']}
                     sctEvents={sctEvents}
+                    sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                 />
             )}
