@@ -89139,6 +89139,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     staffSharingUnits,
     staffSharingGroups
   } = config;
+  const buildAircraftResourcePrefix = String(
+    config.runtimeResourceContext?.runtimeAircraftTypeCode || config.runtimeResourceContext?.resourcePoolAircraftTypeCode || config.runtimeResourceContext?.runtimeAircraftTypeName || "PC-21"
+  ).trim() || "PC-21";
   const buildPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
     config.personnelDisplaySettings || DEFAULT_PERSONNEL_DISPLAY_SETTINGS
   );
@@ -90401,7 +90404,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       };
     };
     const getFixedCrewResourceOptions = (event) => {
-      const prefix = event.type === "flight" ? `${activeAircraftResourcePrefix} ` : event.type === "ftd" ? "FTD " : event.type === "cpt" ? "CPT " : "Ground ";
+      const prefix = event.type === "flight" ? `${buildAircraftResourcePrefix} ` : event.type === "ftd" ? "FTD " : event.type === "cpt" ? "CPT " : "Ground ";
       const count = event.type === "flight" ? availableAircraftCount : event.type === "ftd" ? ftdCount : event.type === "cpt" ? cptCount : 6;
       const options = Array.from({ length: Math.max(0, count) }, (_, index) => `${prefix}${index + 1}`);
       if (event.type !== "flight") return options;
@@ -90456,7 +90459,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
       const resourceAvailabilityAtMinute = (minuteTime, eventType) => {
         const sampleEvent = fixedCrewQueue2.find((item) => item.event.type === eventType)?.event;
-        const resourceOptions = sampleEvent ? getFixedCrewResourceOptions(sampleEvent) : eventType === "flight" ? Array.from({ length: availableAircraftCount }, (_, index) => `${activeAircraftResourcePrefix} ${index + 1}`) : eventType === "ftd" ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`) : eventType === "cpt" ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`) : eventType === "ground" ? Array.from({ length: 6 }, (_, index) => `Ground ${index + 1}`) : [];
+        const resourceOptions = sampleEvent ? getFixedCrewResourceOptions(sampleEvent) : eventType === "flight" ? Array.from({ length: availableAircraftCount }, (_, index) => `${buildAircraftResourcePrefix} ${index + 1}`) : eventType === "ftd" ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`) : eventType === "cpt" ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`) : eventType === "ground" ? Array.from({ length: 6 }, (_, index) => `Ground ${index + 1}`) : [];
         const busyResources = new Set(generatedEvents.filter((event) => event.type === eventType && eventActiveAtMinute(event, minuteTime)).map((event) => event.resourceId).filter(Boolean));
         const freeResources = resourceOptions.filter((resourceId) => !busyResources.has(resourceId));
         return {
@@ -104734,7 +104737,7 @@ const App = () => {
     () => getResourceDisplayNames(activePlatformResourcePool),
     [activePlatformResourcePool]
   );
-  const activeAircraftResourcePrefix2 = reactExports.useMemo(() => String(activeRuntimeAircraftTypeCode || resourceDisplayNames.aircraft || "Aircraft").trim() || "Aircraft", [activeRuntimeAircraftTypeCode, resourceDisplayNames.aircraft]);
+  const activeAircraftResourcePrefix = reactExports.useMemo(() => String(activeRuntimeAircraftTypeCode || resourceDisplayNames.aircraft || "Aircraft").trim() || "Aircraft", [activeRuntimeAircraftTypeCode, resourceDisplayNames.aircraft]);
   const activeNeoAircraftCapacityUnitKey = reactExports.useMemo(() => {
     const locationKey = String(school || "DEFAULT").trim().toUpperCase() || "DEFAULT";
     const unitKey = String(activeUnitCode || "DEFAULT").trim().toUpperCase() || "DEFAULT";
@@ -105022,13 +105025,13 @@ const App = () => {
       ...configuredIds
     ].slice(0, totalAvailable);
     return Array.from({ length: configuredAirframeCount }, (_, index) => {
-      const resourceId = `${activeAircraftResourcePrefix2} ${index + 1}`;
+      const resourceId = `${activeAircraftResourcePrefix} ${index + 1}`;
       return [resourceId, availableConfigIds[index] || cleanConfig.id];
     }).reduce((acc, [resourceId, label]) => {
       acc[resourceId] = label;
       return acc;
     }, {});
-  }, [activeAircraftResourcePrefix2, aircraftConfigCapacityDefinitions, configuredAirframeCount, currentAircraftConfigState]);
+  }, [activeAircraftResourcePrefix, aircraftConfigCapacityDefinitions, configuredAirframeCount, currentAircraftConfigState]);
   const buildAircraftConfigLabelsByResource = reactExports.useCallback((configState = currentAircraftConfigState) => {
     const definitions = configState.aircraftConfigurationDefinitions?.length ? configState.aircraftConfigurationDefinitions : aircraftConfigCapacityDefinitions;
     const definitionLabels = new Map(definitions.map((definition) => [definition.id, definition.label]));
@@ -106184,7 +106187,7 @@ ${"=".repeat(60)}`);
         const deployNum = deploymentCount - deploymentIndex + 1;
         return `Deployed ${deployNum}`;
       }
-      return `${activeAircraftResourcePrefix2} ${i + 1}`;
+      return `${activeAircraftResourcePrefix} ${i + 1}`;
     });
     let stbyLineCount = configuredStandbyCount;
     if (["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "BuildAnalysis"].includes(activeView)) {
@@ -106228,7 +106231,7 @@ ${"=".repeat(60)}`);
     configuredCptCount,
     configuredStandbyCount,
     configuredGroundCount,
-    activeAircraftResourcePrefix2,
+    activeAircraftResourcePrefix,
     setupTestProfile,
     activePlatformResourcePool,
     date,

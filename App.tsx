@@ -7026,6 +7026,12 @@ function generateDfpInternal(
         getEventDayNightClassification,
         staffSharingEnabled, staffSharingUnits, staffSharingGroups
     } = config;
+    const buildAircraftResourcePrefix = String(
+        config.runtimeResourceContext?.runtimeAircraftTypeCode
+        || config.runtimeResourceContext?.resourcePoolAircraftTypeCode
+        || config.runtimeResourceContext?.runtimeAircraftTypeName
+        || 'PC-21'
+    ).trim() || 'PC-21';
     const buildPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
         config.personnelDisplaySettings || DEFAULT_PERSONNEL_DISPLAY_SETTINGS
     );
@@ -8576,7 +8582,7 @@ function generateDfpInternal(
             };
         };
         const getFixedCrewResourceOptions = (event: Omit<ScheduleEvent, 'date'>): string[] => {
-            const prefix = event.type === 'flight' ? `${activeAircraftResourcePrefix} ` : event.type === 'ftd' ? 'FTD ' : event.type === 'cpt' ? 'CPT ' : 'Ground ';
+            const prefix = event.type === 'flight' ? `${buildAircraftResourcePrefix} ` : event.type === 'ftd' ? 'FTD ' : event.type === 'cpt' ? 'CPT ' : 'Ground ';
             const count = event.type === 'flight' ? availableAircraftCount : event.type === 'ftd' ? ftdCount : event.type === 'cpt' ? cptCount : 6;
             const options = Array.from({ length: Math.max(0, count) }, (_, index) => `${prefix}${index + 1}`);
             if (event.type !== 'flight') return options;
@@ -8646,7 +8652,7 @@ function generateDfpInternal(
                 const resourceOptions = sampleEvent
                     ? getFixedCrewResourceOptions(sampleEvent)
                     : eventType === 'flight'
-                        ? Array.from({ length: availableAircraftCount }, (_, index) => `${activeAircraftResourcePrefix} ${index + 1}`)
+                        ? Array.from({ length: availableAircraftCount }, (_, index) => `${buildAircraftResourcePrefix} ${index + 1}`)
                         : eventType === 'ftd'
                             ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`)
                             : eventType === 'cpt'
