@@ -25763,6 +25763,9 @@ const App: React.FC = () => {
         () => getResourceDisplayNames(activePlatformResourcePool),
         [activePlatformResourcePool]
     );
+    const activeAircraftResourcePrefix = useMemo(() => (
+        String(activeRuntimeAircraftTypeCode || resourceDisplayNames.aircraft || 'Aircraft').trim() || 'Aircraft'
+    ), [activeRuntimeAircraftTypeCode, resourceDisplayNames.aircraft]);
     const activeNeoAircraftCapacityUnitKey = useMemo(() => {
         const locationKey = String(school || 'DEFAULT').trim().toUpperCase() || 'DEFAULT';
         const unitKey = String(activeUnitCode || 'DEFAULT').trim().toUpperCase() || 'DEFAULT';
@@ -26064,13 +26067,13 @@ const App: React.FC = () => {
         ].slice(0, totalAvailable);
 
         return Array.from({ length: configuredAirframeCount }, (_, index) => {
-            const resourceId = `PC-21 ${index + 1}`;
+            const resourceId = `${activeAircraftResourcePrefix} ${index + 1}`;
             return [resourceId, availableConfigIds[index] || cleanConfig.id] as const;
         }).reduce<Record<string, string>>((acc, [resourceId, label]) => {
             acc[resourceId] = label;
             return acc;
         }, {});
-    }, [aircraftConfigCapacityDefinitions, configuredAirframeCount, currentAircraftConfigState]);
+    }, [activeAircraftResourcePrefix, aircraftConfigCapacityDefinitions, configuredAirframeCount, currentAircraftConfigState]);
 
     const buildAircraftConfigLabelsByResource = useCallback((configState = currentAircraftConfigState) => {
         const definitions = configState.aircraftConfigurationDefinitions?.length
@@ -27368,7 +27371,7 @@ const App: React.FC = () => {
         // Stage 3: resource rows may come from Platform Configuration only when
         // the selected location pool explicitly opts in. Otherwise V2 behaviour
         // remains unchanged.
-        const pc21Count = configuredAirframeCount;
+        const aircraftRowCount = configuredAirframeCount;
 
         // Check for deployment events that overlap with the current date
         let deploymentCount = 0;
@@ -27398,14 +27401,15 @@ const App: React.FC = () => {
         }
 
 
-        // Build PC-21 resources, replacing the last N with "Deployed X" if needed
-        const pc21Resources = Array.from({ length: pc21Count }, (_, i) => {
-            const deploymentIndex = pc21Count - i;
+        // Build aircraft resources from the active unit/resource-pool aircraft type,
+        // replacing the last N with "Deployed X" if needed.
+        const aircraftResources = Array.from({ length: aircraftRowCount }, (_, i) => {
+            const deploymentIndex = aircraftRowCount - i;
             if (deploymentIndex <= deploymentCount) {
                 const deployNum = deploymentCount - deploymentIndex + 1;
                 return `Deployed ${deployNum}`;
             }
-            return `PC-21 ${i + 1}`;
+            return `${activeAircraftResourcePrefix} ${i + 1}`;
         });
 
         // Calculate dynamic STBY line count based on actual STBY events
@@ -27444,7 +27448,7 @@ const App: React.FC = () => {
         }
 
         const allResources = [
-            ...pc21Resources,
+            ...aircraftResources,
             'Duty Sup',
             'TWR DI',
             ...Array.from({ length: stbyLineCount }, (_, i) => `STBY ${i + 1}`),
@@ -27461,6 +27465,7 @@ const App: React.FC = () => {
         configuredCptCount,
         configuredStandbyCount,
         configuredGroundCount,
+        activeAircraftResourcePrefix,
         setupTestProfile,
         activePlatformResourcePool,
         date,

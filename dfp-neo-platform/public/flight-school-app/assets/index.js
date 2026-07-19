@@ -104745,6 +104745,7 @@ const App = () => {
     () => getResourceDisplayNames(activePlatformResourcePool),
     [activePlatformResourcePool]
   );
+  const activeAircraftResourcePrefix = reactExports.useMemo(() => String(activeRuntimeAircraftTypeCode || resourceDisplayNames.aircraft || "Aircraft").trim() || "Aircraft", [activeRuntimeAircraftTypeCode, resourceDisplayNames.aircraft]);
   const activeNeoAircraftCapacityUnitKey = reactExports.useMemo(() => {
     const locationKey = String(school || "DEFAULT").trim().toUpperCase() || "DEFAULT";
     const unitKey = String(activeUnitCode || "DEFAULT").trim().toUpperCase() || "DEFAULT";
@@ -105032,13 +105033,13 @@ const App = () => {
       ...configuredIds
     ].slice(0, totalAvailable);
     return Array.from({ length: configuredAirframeCount }, (_, index) => {
-      const resourceId = `PC-21 ${index + 1}`;
+      const resourceId = `${activeAircraftResourcePrefix} ${index + 1}`;
       return [resourceId, availableConfigIds[index] || cleanConfig.id];
     }).reduce((acc, [resourceId, label]) => {
       acc[resourceId] = label;
       return acc;
     }, {});
-  }, [aircraftConfigCapacityDefinitions, configuredAirframeCount, currentAircraftConfigState]);
+  }, [activeAircraftResourcePrefix, aircraftConfigCapacityDefinitions, configuredAirframeCount, currentAircraftConfigState]);
   const buildAircraftConfigLabelsByResource = reactExports.useCallback((configState = currentAircraftConfigState) => {
     const definitions = configState.aircraftConfigurationDefinitions?.length ? configState.aircraftConfigurationDefinitions : aircraftConfigCapacityDefinitions;
     const definitionLabels = new Map(definitions.map((definition) => [definition.id, definition.label]));
@@ -106169,7 +106170,7 @@ ${"=".repeat(60)}`);
     if (setupTestProfile && !activePlatformResourcePool) {
       return [];
     }
-    const pc21Count = configuredAirframeCount;
+    const aircraftRowCount = configuredAirframeCount;
     let deploymentCount = 0;
     console.log("buildResources - Current view:", activeView, "Current date:", date);
     if (activeView === "Program Schedule" || activeView === "DailyFlyingProgram" || activeView === "InstructorSchedule" || activeView === "TraineeSchedule") {
@@ -106188,13 +106189,13 @@ ${"=".repeat(60)}`);
       const deploymentEvents = nextDayBuildEvents.filter((event) => event.type === "deployment");
       deploymentCount = deploymentEvents.length;
     }
-    const pc21Resources = Array.from({ length: pc21Count }, (_, i) => {
-      const deploymentIndex = pc21Count - i;
+    const aircraftResources = Array.from({ length: aircraftRowCount }, (_, i) => {
+      const deploymentIndex = aircraftRowCount - i;
       if (deploymentIndex <= deploymentCount) {
         const deployNum = deploymentCount - deploymentIndex + 1;
         return `Deployed ${deployNum}`;
       }
-      return `PC-21 ${i + 1}`;
+      return `${activeAircraftResourcePrefix} ${i + 1}`;
     });
     let stbyLineCount = configuredStandbyCount;
     if (["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "BuildAnalysis"].includes(activeView)) {
@@ -106222,7 +106223,7 @@ ${"=".repeat(60)}`);
       }
     }
     const allResources = [
-      ...pc21Resources,
+      ...aircraftResources,
       "Duty Sup",
       "TWR DI",
       ...Array.from({ length: stbyLineCount }, (_, i) => `STBY ${i + 1}`),
@@ -106238,6 +106239,7 @@ ${"=".repeat(60)}`);
     configuredCptCount,
     configuredStandbyCount,
     configuredGroundCount,
+    activeAircraftResourcePrefix,
     setupTestProfile,
     activePlatformResourcePool,
     date,
