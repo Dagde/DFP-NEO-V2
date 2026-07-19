@@ -4403,10 +4403,18 @@ const normaliseSctTerminology = (input) => ({
   shortLabel: String(input?.shortLabel || "").trim().slice(0, SCT_SHORT_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY.shortLabel,
   longLabel: String(input?.longLabel || "").trim().slice(0, SCT_LONG_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY.longLabel
 });
-const getSctTerminology = (config) => {
+const normaliseUnitCode$3 = (value) => String(value || "").trim().toUpperCase();
+const getSctTerminology = (config, unitCode) => {
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
-  const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
-  return normaliseSctTerminology(activeOrganisation?.settings?.sctTerminology || null);
+  const units = Array.isArray(config?.units) ? config.units : [];
+  const activeUnitCodes = normaliseUnitCode$3(unitCode).split("+").map((code) => normaliseUnitCode$3(code)).filter(Boolean);
+  const activeUnit = activeUnitCodes.length > 0 ? units.find((unit) => activeUnitCodes.includes(normaliseUnitCode$3(unit.code))) : null;
+  const unitTerminology = activeUnit?.settings?.sctTerminology;
+  if (unitTerminology) return normaliseSctTerminology(unitTerminology);
+  const activeOrganisationCode = normaliseUnitCode$3(activeUnit?.organisationCode);
+  const activeOrganisation = activeOrganisationCode ? organisations.find((org) => normaliseUnitCode$3(org.code) === activeOrganisationCode) : null;
+  const fallbackOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
+  return normaliseSctTerminology((activeOrganisation || fallbackOrganisation)?.settings?.sctTerminology || null);
 };
 const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "pooled_crew"];
 const normaliseCode$3 = (value, fallback) => {
@@ -118951,7 +118959,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             unitCurrencyDefinitions,
             sctEvents,
             onUpdateSctEvents: setSctEvents,
-            sctTerminology: getSctTerminology(platformConfig),
+            sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             preferredDutyPeriod,
             onUpdatePreferredDutyPeriod: setPreferredDutyPeriod,
             maxCrewDutyPeriod,
@@ -120370,7 +120378,7 @@ Do you want to replace the existing entry?`,
           staffQualificationCatalogue: activeStaffQualificationCatalogue,
           unitCallsignSettings: activeUnitCallsignSettings,
           personnelDisplaySettings,
-          sctTerminology: getSctTerminology(platformConfig)
+          sctTerminology: getSctTerminology(platformConfig, activeUnitCode)
         }
       ),
       selectedEvent && !isAddingTile && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -120531,7 +120539,8 @@ Do you want to replace the existing entry?`,
           operationalModel: activeOperationalModel,
           activeUnitCode,
           staffQualificationCatalogue: activeStaffQualificationCatalogue,
-          unitCallsignSettings: activeUnitCallsignSettings
+          unitCallsignSettings: activeUnitCallsignSettings,
+          sctTerminology: getSctTerminology(platformConfig, activeUnitCode)
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),

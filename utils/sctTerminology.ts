@@ -18,8 +18,25 @@ export const normaliseSctTerminology = (input?: Partial<SctTerminology> | null):
   longLabel: String(input?.longLabel || '').trim().slice(0, SCT_LONG_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY.longLabel,
 });
 
-export const getSctTerminology = (config?: PlatformConfig | null): SctTerminology => {
+const normaliseUnitCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
+
+export const getSctTerminology = (config?: PlatformConfig | null, unitCode?: string | null): SctTerminology => {
   const organisations = Array.isArray(config?.organisations) ? config!.organisations : [];
-  const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0];
-  return normaliseSctTerminology(activeOrganisation?.settings?.sctTerminology || null);
+  const units = Array.isArray(config?.units) ? config!.units : [];
+  const activeUnitCodes = normaliseUnitCode(unitCode)
+    .split('+')
+    .map(code => normaliseUnitCode(code))
+    .filter(Boolean);
+  const activeUnit = activeUnitCodes.length > 0
+    ? units.find(unit => activeUnitCodes.includes(normaliseUnitCode(unit.code)))
+    : null;
+  const unitTerminology = activeUnit?.settings?.sctTerminology;
+  if (unitTerminology) return normaliseSctTerminology(unitTerminology);
+
+  const activeOrganisationCode = normaliseUnitCode(activeUnit?.organisationCode);
+  const activeOrganisation = activeOrganisationCode
+    ? organisations.find(org => normaliseUnitCode(org.code) === activeOrganisationCode)
+    : null;
+  const fallbackOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0];
+  return normaliseSctTerminology((activeOrganisation || fallbackOrganisation)?.settings?.sctTerminology || null);
 };

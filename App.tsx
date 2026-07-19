@@ -42733,7 +42733,7 @@ appliedUpdates.forEach(update => {
                     unitCurrencyDefinitions={unitCurrencyDefinitions}
                     sctEvents={sctEvents}
                     onUpdateSctEvents={setSctEvents}
-                    sctTerminology={getSctTerminology(platformConfig)}
+                    sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                     preferredDutyPeriod={preferredDutyPeriod}
                     onUpdatePreferredDutyPeriod={setPreferredDutyPeriod}
                     maxCrewDutyPeriod={maxCrewDutyPeriod}
@@ -44301,7 +44301,7 @@ appliedUpdates.forEach(update => {
                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
                     unitCallsignSettings={activeUnitCallsignSettings}
                     personnelDisplaySettings={personnelDisplaySettings}
-                    sctTerminology={getSctTerminology(platformConfig)}
+                    sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                 />
             )}
             {selectedEvent && !isAddingTile && (
@@ -44489,6 +44489,7 @@ appliedUpdates.forEach(update => {
                     activeUnitCode={activeUnitCode}
                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
                     unitCallsignSettings={activeUnitCallsignSettings}
+                    sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                 />
             )}
 
