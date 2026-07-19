@@ -8424,7 +8424,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.training} value="Air to Air" />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.type} value="Flight" />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.timing} value="08:00 / 1.2h" />
-                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.resource} value={`${getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode)} 5`} />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.resource} value={getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode)} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.callsign} value={trainingReportPreviewCallsign} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.unit} value={trainingReportPreviewUnitCode} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.date} value="2026-06-07" />

@@ -37,6 +37,7 @@ interface PT051ViewProps {
     trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
     trainingReportUnitCode?: string;
     trainingReportContextUnitCode?: string;
+    formatResourceLabel?: (resourceId: string) => string;
     embeddedInProfile?: boolean;
 }
 
@@ -77,6 +78,10 @@ const formatFollowUpHours = (value?: number): string => {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : '';
 };
+
+const stripResourceLineNumber = (resourceLabel: string): string => (
+    String(resourceLabel || '').replace(/\s+\d+$/, '').trim()
+);
 
 const extractPreFlightNotes = (eventLike?: Partial<ScheduleEvent> | null): string => {
     const source = eventLike as any;
@@ -301,7 +306,7 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
     );
 };
 
-const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'QFI', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = '', trainingReportContextUnitCode = '', embeddedInProfile = false }) => {
+const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'QFI', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = '', trainingReportContextUnitCode = '', formatResourceLabel, embeddedInProfile = false }) => {
     const reportTemplate = useMemo(() => {
         const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
         const terminologyName = String(trainingReportTerminology?.name || '').trim();
@@ -368,6 +373,11 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         if (grade === 'No Grade') return 'None';
         if (grade === 'DEMO' || grade === 'MIN') return String(grade);
         return String(grade);
+    };
+    const formatTrainingReportResource = (resourceId?: string): string => {
+        const rawResourceId = String(resourceId || '').trim();
+        if (!rawResourceId) return 'N/A';
+        return stripResourceLineNumber(formatResourceLabel?.(rawResourceId) || rawResourceId) || 'N/A';
     };
     const stopEditableKeyPropagation = (event: React.KeyboardEvent<HTMLElement>) => {
         const target = event.target as HTMLElement | null;
@@ -1039,7 +1049,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                 [printOverviewFields.date, reportDate || 'N/A'],
                 [printOverviewFields.timing, `${formatTime(startTime)} - ${formatTime(endTime)}`],
                 [printOverviewFields.assessor, assessment.instructorName || event.instructor || 'N/A'],
-                [printOverviewFields.resource, currentEvent.resourceId || event.resourceId || 'N/A'],
+                [printOverviewFields.resource, formatTrainingReportResource(currentEvent.resourceId || event.resourceId)],
                 [printOverviewFields.callsign, currentEvent.callsign || event.callsign || 'N/A'],
                 [printOverviewFields.unit, trainee.unit || 'N/A'],
             ]);

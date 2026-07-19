@@ -20624,6 +20624,7 @@ const formatFollowUpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : "";
 };
+const stripResourceLineNumber$1 = (resourceLabel) => String(resourceLabel || "").replace(/\s+\d+$/, "").trim();
 const extractPreFlightNotes = (eventLike) => {
   const source = eventLike;
   const explicitNotes = String(source?.preFlightNotes || "").trim();
@@ -20788,7 +20789,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
     ] })
   ] }) });
 };
-const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", embeddedInProfile = false }) => {
+const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", formatResourceLabel: formatResourceLabel2, embeddedInProfile = false }) => {
   const reportTemplate = reactExports.useMemo(() => {
     const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
     const terminologyName = String(trainingReportTerminology?.name || "").trim();
@@ -20845,6 +20846,11 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     if (grade === "No Grade") return "None";
     if (grade === "DEMO" || grade === "MIN") return String(grade);
     return String(grade);
+  };
+  const formatTrainingReportResource = (resourceId) => {
+    const rawResourceId = String(resourceId || "").trim();
+    if (!rawResourceId) return "N/A";
+    return stripResourceLineNumber$1(formatResourceLabel2?.(rawResourceId) || rawResourceId) || "N/A";
   };
   const stopEditableKeyPropagation2 = (event2) => {
     const target = event2.target;
@@ -21400,7 +21406,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
         [printOverviewFields.date, reportDate || "N/A"],
         [printOverviewFields.timing, `${formatTime$6(startTime)} - ${formatTime$6(endTime)}`],
         [printOverviewFields.assessor, assessment.instructorName || event.instructor || "N/A"],
-        [printOverviewFields.resource, currentEvent.resourceId || event.resourceId || "N/A"],
+        [printOverviewFields.resource, formatTrainingReportResource(currentEvent.resourceId || event.resourceId)],
         [printOverviewFields.callsign, currentEvent.callsign || event.callsign || "N/A"],
         [printOverviewFields.unit, trainee.unit || "N/A"]
       ]);
@@ -22495,6 +22501,10 @@ const TraineeProfileFlyout = ({
   const [reviewLogbookEntries, setReviewLogbookEntries] = reactExports.useState([]);
   const [reviewLogbookLoading, setReviewLogbookLoading] = reactExports.useState(false);
   const [reviewLogbookError, setReviewLogbookError] = reactExports.useState(null);
+  const formatResourceDisplayLabel = reactExports.useMemo(
+    () => (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames),
+    [resourceDisplayNames]
+  );
   const [localCurrencyStatus, setLocalCurrencyStatus] = reactExports.useState(void 0);
   const localCurrencyStatusRef = reactExports.useRef(void 0);
   const [showCurrencyAudit, setShowCurrencyAudit] = reactExports.useState(false);
@@ -24013,6 +24023,7 @@ ${errorText || `HTTP ${response.status}`}`);
                     trainingReportTemplate: activeTrainingReportTemplate,
                     trainingReportUnitCode: activeTrainingReportUnitCode,
                     trainingReportContextUnitCode: activeTrainingReportUnitCode,
+                    formatResourceLabel: formatResourceDisplayLabel,
                     onBack: () => setActiveTab("hatesheet"),
                     onEventUpdate: setInlinePt051Event,
                     onDeleteAssessment: deleteInlinePt051Assessment,
@@ -70959,7 +70970,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.training, value: "Air to Air" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.type, value: "Flight" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.timing, value: "08:00 / 1.2h" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.resource, value: `${getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode)} 5` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.resource, value: getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.callsign, value: trainingReportPreviewCallsign }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.unit, value: trainingReportPreviewUnitCode }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.date, value: "2026-06-07" }),
@@ -119033,6 +119044,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode),
               trainingReportUnitCode: selectedTraineeForHateSheet.unit || activeUnitCode,
               trainingReportContextUnitCode: activeUnitCode,
+              formatResourceLabel: formatResourceDisplayLabel,
               onBack: () => {
                 setEventForPt051(null);
                 openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet");

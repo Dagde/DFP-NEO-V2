@@ -42862,6 +42862,7 @@ appliedUpdates.forEach(update => {
                         trainingReportTemplate={getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode)}
                         trainingReportUnitCode={selectedTraineeForHateSheet.unit || activeUnitCode}
                         trainingReportContextUnitCode={activeUnitCode}
+                        formatResourceLabel={formatResourceDisplayLabel}
                         onBack={() => {
                             setEventForPt051(null);
                             openTraineeProfileTab(selectedTraineeForHateSheet, 'hatesheet');

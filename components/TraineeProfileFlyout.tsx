@@ -14,7 +14,7 @@ import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 import HateSheetView from './HateSheetView';
 import TraineeLmpView from './TraineeLmpView';
 import PT051View from './PT051View';
-import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, formatResourceLabel as formatConfiguredResourceLabel, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
   DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   getRankOptionGroupsForGroup,
@@ -461,6 +461,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [reviewLogbookEntries, setReviewLogbookEntries] = useState<any[]>([]);
     const [reviewLogbookLoading, setReviewLogbookLoading] = useState(false);
     const [reviewLogbookError, setReviewLogbookError] = useState<string | null>(null);
+    const formatResourceDisplayLabel = useMemo(
+      () => (resourceId: string) => formatConfiguredResourceLabel(resourceId, resourceDisplayNames),
+      [resourceDisplayNames]
+    );
     // Local currency status override — updated after successful save without triggering full onUpdateTrainee
     const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[] | undefined>(undefined);
     const localCurrencyStatusRef = useRef<PersonCurrencyStatus[] | undefined>(undefined);
@@ -2261,6 +2265,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             trainingReportTemplate={activeTrainingReportTemplate}
                             trainingReportUnitCode={activeTrainingReportUnitCode}
                             trainingReportContextUnitCode={activeTrainingReportUnitCode}
+                            formatResourceLabel={formatResourceDisplayLabel}
                             onBack={() => setActiveTab('hatesheet')}
                             onEventUpdate={setInlinePt051Event}
                             onDeleteAssessment={deleteInlinePt051Assessment}
