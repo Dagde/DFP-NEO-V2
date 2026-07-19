@@ -483,6 +483,17 @@ const isContinuationFlightCode = (value?: string | null): boolean => {
     return code === 'SCT' || code === 'SCT FORM' || code.startsWith('SCT ');
 };
 
+const uniqueOptionValues = (values: string[]): string[] => {
+    const seen = new Set<string>();
+    return values.filter(value => {
+        const cleaned = String(value || '').trim();
+        const key = cleaned.toUpperCase();
+        if (!cleaned || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+};
+
 const inferEventCategory = (event: ScheduleEvent): EventCategory => (
     normaliseEventCategoryValue((event as any).eventCategory)
     || (((event as any).isSct || isContinuationFlightCode(event.flightNumber)) ? 'sct' : 'lmp_event')
@@ -749,14 +760,16 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const sctShortLabel = resolvedSctTerminology.shortLabel;
     const sctFormationLabel = `${sctShortLabel} FORM`;
     const formatContinuationLabel = (value: string): string => {
-        const code = String(value || '').trim().toUpperCase();
+        const rawValue = String(value || '').trim();
+        const code = rawValue.toUpperCase();
         if (code === 'SCT') return sctShortLabel;
         if (code === 'SCT FORM') return sctFormationLabel;
-        return value;
+        return rawValue.replace(/\bSCT\b/gi, sctShortLabel);
     };
     const normalisedEventType = String(eventType || '').trim().toLowerCase();
     const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === 'flight' || normalisedEventType === 'ftd');
     const isContinuationTile = eventCategory === 'sct' || (event as any).isSct === true || isContinuationFlightCode(flightNumber);
+    const isFlightSchoolModel = normalisedOperationalModel === 'flight_school';
     const airCombatSoloCrewRequirement = useMemo<CrewRequirement>(() => ({
         mode: 'custom',
         roles: [{ role: 'Pilot', crewPositionId: 'pilot', count: 1, eligibleRoles: ['Pilot'] }],
@@ -1337,19 +1350,36 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
 
     const formatSyllabusOptionLabel = (option: string): string => {
         const cleanOption = String(option || '').trim().toUpperCase();
-        if (cleanOption === 'SCT' || cleanOption === 'SCT FORM') return formatContinuationLabel(option);
+        if (cleanOption === 'SCT' || cleanOption === 'SCT FORM' || /\bSCT\b/i.test(option)) return formatContinuationLabel(option);
         const item = getSyllabusItemForOption(option);
         if (!item) return option;
         const code = item.code || item.id || option;
-        return item.eventDescription ? `${code} - ${item.eventDescription}` : code;
+        const displayCode = formatContinuationLabel(code);
+        return item.eventDescription ? `${displayCode} - ${item.eventDescription}` : displayCode;
     };
+
+    const activeUnitSyllabusContinuationOptions = useMemo(() => {
+        if (activeUnitMemberCodes.length === 0) return [] as string[];
+        return uniqueOptionValues(syllabusDetails
+            .filter(item => {
+                const itemUnit = normaliseFixedCrewUnitCode(item.unit);
+                if (!itemUnit || !activeUnitMemberCodes.includes(itemUnit)) return false;
+                const code = String(item.code || item.id || '').trim();
+                const cctOnly = String((item as any).cctOnly || '').trim().toUpperCase() === 'YES';
+                return cctOnly || /\bSCT\b/i.test(code);
+            })
+            .map(item => item.code || item.id || '')
+        );
+    }, [activeUnitMemberCodes, syllabusDetails]);
 
     // Filtered syllabus options based on event category
     const filteredSyllabusOptions = useMemo(() => {
         let options: string[] = [];
         
         if (eventCategory === 'sct') {
-            options = sctEvents;
+            options = activeUnitSyllabusContinuationOptions.length > 0
+                ? activeUnitSyllabusContinuationOptions
+                : (isFlightSchoolModel ? sctEvents : []);
         } else if (eventCategory === 'lmp_event' || eventCategory === 'lmp_currency') {
             const lmpSource = selectedIndividualLmp?.length
                 ? selectedIndividualLmp
@@ -1378,8 +1408,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         
         
         
-        return options;
-    }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile, selectedIndividualLmp, flightNumber]);
+        return uniqueOptionValues(options);
+    }, [activeUnitSyllabusContinuationOptions, eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile, selectedIndividualLmp, flightNumber, isFlightSchoolModel]);
 
     const fixedCrewEventOptions = useMemo(() => {
         if (!isFixedCrewModel) return [] as SyllabusItemDetail[];
@@ -3393,7 +3423,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 ) : (
                                                     <div>
                                                         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Unit Callsign</label>
-                                                        <div className="mt-1 grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
+                                                        <div className="mt-1 grid grid-cols-[100px_6rem] gap-2">
                                                             <select
                                                                 value={unitCallsignBase || defaultUnitCallsign}
                                                                 onChange={e => {
@@ -3581,7 +3611,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Callsign</label>
-                                                    <div className="mt-1 grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
+                                                    <div className="mt-1 grid grid-cols-[100px_6rem] gap-2">
                                                         <select
                                                             value={unitCallsignBase || defaultUnitCallsign}
                                                             onChange={e => {

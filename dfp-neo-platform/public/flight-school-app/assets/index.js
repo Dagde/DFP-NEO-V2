@@ -26706,6 +26706,16 @@ const isContinuationFlightCode = (value) => {
   const code = String(value || "").trim().toUpperCase();
   return code === "SCT" || code === "SCT FORM" || code.startsWith("SCT ");
 };
+const uniqueOptionValues = (values) => {
+  const seen = /* @__PURE__ */ new Set();
+  return values.filter((value) => {
+    const cleaned = String(value || "").trim();
+    const key = cleaned.toUpperCase();
+    if (!cleaned || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
 const inferEventCategory = (event) => normaliseEventCategoryValue(event.eventCategory) || (event.isSct || isContinuationFlightCode(event.flightNumber) ? "sct" : "lmp_event");
 const getContinuationPilotName = (event) => stripCrewSuffix(event.pilot || event.instructor || event.student || "");
 const makeInitialCrewMember = (sourceEvent) => {
@@ -26921,14 +26931,16 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const sctShortLabel = resolvedSctTerminology.shortLabel;
   const sctFormationLabel = `${sctShortLabel} FORM`;
   const formatContinuationLabel = (value) => {
-    const code = String(value || "").trim().toUpperCase();
+    const rawValue = String(value || "").trim();
+    const code = rawValue.toUpperCase();
     if (code === "SCT") return sctShortLabel;
     if (code === "SCT FORM") return sctFormationLabel;
-    return value;
+    return rawValue.replace(/\bSCT\b/gi, sctShortLabel);
   };
   const normalisedEventType = String(eventType || "").trim().toLowerCase();
   const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === "flight" || normalisedEventType === "ftd");
   const isContinuationTile = eventCategory === "sct" || event.isSct === true || isContinuationFlightCode(flightNumber);
+  const isFlightSchoolModel = normalisedOperationalModel === "flight_school";
   const airCombatSoloCrewRequirement = reactExports.useMemo(() => ({
     mode: "custom",
     roles: [{ role: "Pilot", crewPositionId: "pilot", count: 1, eligibleRoles: ["Pilot"] }]
@@ -27356,16 +27368,29 @@ ${swapNote}` : swapNote
   const getSyllabusItemForOption = (option) => selectedIndividualLmp?.find((item) => item.id === option || item.code === option) || syllabusDetails.find((item) => item.id === option || item.code === option);
   const formatSyllabusOptionLabel = (option) => {
     const cleanOption = String(option || "").trim().toUpperCase();
-    if (cleanOption === "SCT" || cleanOption === "SCT FORM") return formatContinuationLabel(option);
+    if (cleanOption === "SCT" || cleanOption === "SCT FORM" || /\bSCT\b/i.test(option)) return formatContinuationLabel(option);
     const item = getSyllabusItemForOption(option);
     if (!item) return option;
     const code = item.code || item.id || option;
-    return item.eventDescription ? `${code} - ${item.eventDescription}` : code;
+    const displayCode = formatContinuationLabel(code);
+    return item.eventDescription ? `${displayCode} - ${item.eventDescription}` : displayCode;
   };
+  const activeUnitSyllabusContinuationOptions = reactExports.useMemo(() => {
+    if (activeUnitMemberCodes.length === 0) return [];
+    return uniqueOptionValues(
+      syllabusDetails.filter((item) => {
+        const itemUnit = normaliseFixedCrewUnitCode(item.unit);
+        if (!itemUnit || !activeUnitMemberCodes.includes(itemUnit)) return false;
+        const code = String(item.code || item.id || "").trim();
+        const cctOnly = String(item.cctOnly || "").trim().toUpperCase() === "YES";
+        return cctOnly || /\bSCT\b/i.test(code);
+      }).map((item) => item.code || item.id || "")
+    );
+  }, [activeUnitMemberCodes, syllabusDetails]);
   const filteredSyllabusOptions = reactExports.useMemo(() => {
     let options = [];
     if (eventCategory === "sct") {
-      options = sctEvents;
+      options = activeUnitSyllabusContinuationOptions.length > 0 ? activeUnitSyllabusContinuationOptions : isFlightSchoolModel ? sctEvents : [];
     } else if (eventCategory === "lmp_event" || eventCategory === "lmp_currency") {
       const lmpSource = selectedIndividualLmp?.length ? selectedIndividualLmp : syllabusDetails.filter((item) => item.lmpType === "Master LMP" || !item.lmpType);
       options = lmpSource.map((item) => item.code || item.id).filter(Boolean);
@@ -27382,8 +27407,8 @@ ${swapNote}` : swapNote
     if (flightNumber && !options.includes(flightNumber)) {
       options = [flightNumber, ...options];
     }
-    return options;
-  }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile, selectedIndividualLmp, flightNumber]);
+    return uniqueOptionValues(options);
+  }, [activeUnitSyllabusContinuationOptions, eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile, selectedIndividualLmp, flightNumber, isFlightSchoolModel]);
   const fixedCrewEventOptions = reactExports.useMemo(() => {
     if (!isFixedCrewModel) return [];
     return syllabusDetails.filter((item) => {
@@ -28968,7 +28993,7 @@ ${swapNote}` : swapNote
               )
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Unit Callsign" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 grid grid-cols-[minmax(0,1fr)_6rem] gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 grid grid-cols-[100px_6rem] gap-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "select",
                   {
@@ -29145,7 +29170,7 @@ ${swapNote}` : swapNote
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Callsign" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 grid grid-cols-[minmax(0,1fr)_6rem] gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 grid grid-cols-[100px_6rem] gap-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "select",
                     {
