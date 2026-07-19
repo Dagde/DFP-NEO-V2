@@ -37950,15 +37950,13 @@ appliedUpdates.forEach(update => {
             (item.type === 'Ground School' && item.code.includes('CPT'))
         );
         console.log('Filtered items:', filtered);
-        const options = filtered.map(item => item.id);
-
-        // Add SCT FORM option if not already present
-        if (!options.includes('SCT FORM')) {
-            options.push('SCT FORM');
-        }
+        const configuredContinuationOptions = sctEvents
+            .map(eventCode => String(eventCode || '').trim())
+            .filter(Boolean);
+        const options = [...filtered.map(item => item.id), ...configuredContinuationOptions];
 
         return options;
-    }, [visibleSyllabusDetails]);
+    }, [sctEvents, visibleSyllabusDetails]);
 
     const handleAuthorise = async (eventId: string, notes: string, role: 'autho' | 'captain', isVerbal: boolean, selectedPersonName: string) => {
         const authEventDate = eventForAuth?.date || Object.entries(publishedSchedules).find(([, eventsList]) => (

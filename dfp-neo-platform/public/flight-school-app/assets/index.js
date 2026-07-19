@@ -28866,10 +28866,7 @@ ${swapNote}` : swapNote
                         const optionValue = item.code || item.id || "";
                         return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: optionValue, children: formatSyllabusOptionLabel(optionValue) }, item.id || item.code);
                       }) }, groupLabel))
-                    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                      isAddingTile && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "SCT FORM", children: formatContinuationLabel("SCT FORM") }),
-                      filteredSyllabusOptions.filter((item) => item !== "SCT FORM").map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: item, children: formatSyllabusOptionLabel(item) }, item))
-                    ] })
+                    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: filteredSyllabusOptions.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: item, children: formatSyllabusOptionLabel(item) }, item)) })
                   ]
                 }
               ),
@@ -114946,12 +114943,10 @@ ${conflictLines.join("\n")}${moreText}`,
       (item) => item.type === "Flight" || item.type === "FTD" || item.type === "Ground School" && item.code.includes("CPT")
     );
     console.log("Filtered items:", filtered);
-    const options = filtered.map((item) => item.id);
-    if (!options.includes("SCT FORM")) {
-      options.push("SCT FORM");
-    }
+    const configuredContinuationOptions = sctEvents.map((eventCode2) => String(eventCode2 || "").trim()).filter(Boolean);
+    const options = [...filtered.map((item) => item.id), ...configuredContinuationOptions];
     return options;
-  }, [visibleSyllabusDetails]);
+  }, [sctEvents, visibleSyllabusDetails]);
   const handleAuthorise = async (eventId, notes, role, isVerbal, selectedPersonName) => {
     const authEventDate = eventForAuth?.date || Object.entries(publishedSchedules).find(([, eventsList]) => eventsList.some((e) => e.id === eventId))?.[0];
     if (isPastDfpDate(authEventDate)) {

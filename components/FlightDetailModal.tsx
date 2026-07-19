@@ -3279,8 +3279,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     </>
                                                 ) : (
                                                     <>
-                                                        {isAddingTile && <option value="SCT FORM">{formatContinuationLabel('SCT FORM')}</option>}
-                                                        {filteredSyllabusOptions.filter(item => item !== 'SCT FORM').map(item => (
+                                                        {filteredSyllabusOptions.map(item => (
                                                             <option key={item} value={item}>{formatSyllabusOptionLabel(item)}</option>
                                                         ))}
                                                     </>
