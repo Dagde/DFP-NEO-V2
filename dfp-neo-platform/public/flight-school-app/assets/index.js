@@ -4590,6 +4590,13 @@ const normaliseContinuationEventSettings = (events) => {
 const getContinuationEventNames = (events) => Array.from(new Set(
   normaliseContinuationEventSettings(events).filter((event) => event.status !== "INACTIVE").map((event) => event.name).filter(Boolean)
 ));
+const isContinuationScheduleEvent = (event) => {
+  if (!event || typeof event !== "object") return false;
+  const source = event;
+  if (String(source.eventCategory || "").trim().toLowerCase() === "sct") return true;
+  const flightNumber = String(source.flightNumber || "").trim().toUpperCase();
+  return flightNumber === "SCT" || flightNumber === "SCT FORM" || flightNumber.startsWith("SCT ");
+};
 const continuationEventToCurrencyProfile = (event) => ({
   id: event.id || event.name,
   unitCode: event.unitCode || "",
@@ -17143,7 +17150,7 @@ const getPersonnel$5 = (event) => {
   const personnel = /* @__PURE__ */ new Set();
   const eventRecord = event;
   const isTaskingEvent2 = eventRecord.isTaskingRequest === true || !!eventRecord.taskingRequestId || String(event.id || "").startsWith("tasking-");
-  const isSctEvent = event.flightNumber?.startsWith("SCT");
+  const isSctEvent = isContinuationScheduleEvent(event);
   if (isTaskingEvent2 || isSctEvent) {
     addPersonnelName$1(personnel, event.pilot);
     addPersonnelName$1(personnel, event.crew);
@@ -80399,7 +80406,7 @@ const getPersonnel$2 = (event) => {
   const personnel = /* @__PURE__ */ new Set();
   const eventRecord = event;
   const isTaskingEvent2 = eventRecord.isTaskingRequest === true || !!eventRecord.taskingRequestId || String(event.id || "").startsWith("tasking-");
-  const isSctEvent = event.flightNumber?.startsWith("SCT");
+  const isSctEvent = isContinuationScheduleEvent(event);
   if (isTaskingEvent2 || isSctEvent) {
     addPersonnelName(personnel, event.pilot);
     addPersonnelName(personnel, event.crew);
@@ -88585,7 +88592,7 @@ const getPersonnel = (event) => {
     if (!isPlaceholderPersonnelName(name)) personnel.add(name || "");
   };
   const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
-  const isSctEvent = event.eventCategory === "sct" || event.flightNumber?.startsWith("SCT");
+  const isSctEvent = isContinuationScheduleEvent(event);
   if (isTaskingEvent2) {
     if (event.pilot) addPersonnel(event.pilot);
     if (event.crew) addPersonnel(event.crew);
@@ -88668,7 +88675,7 @@ const getPersonnelIdentityRefs = (event) => {
     if (ref && !refsByKey.has(ref.key)) refsByKey.set(ref.key, ref);
   };
   const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
-  const isSctEvent = event.eventCategory === "sct" || event.flightNumber?.startsWith("SCT");
+  const isSctEvent = isContinuationScheduleEvent(event);
   if (isTaskingEvent2) {
     addRef(event.pilot, "staff");
     addRef(event.crew, "staff");
@@ -88697,7 +88704,7 @@ const getCommonPersonnel = (eventA, eventB) => {
 };
 const normaliseCrewFieldsForSave = (event) => {
   const normalised = { ...event };
-  const isSctEvent = normalised.eventCategory === "sct" || normalised.flightNumber?.startsWith("SCT");
+  const isSctEvent = isContinuationScheduleEvent(normalised);
   if (isSctEvent) {
     normalised.instructor = "";
     return normalised;
@@ -107392,7 +107399,7 @@ ${"=".repeat(60)}`);
   }, [activeCrewPositionTerminology]);
   const getDiagnosticEventSeatAssignments = reactExports.useCallback((event) => {
     const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
-    const isSctEvent = event.eventCategory === "sct" || String(event.flightNumber || "").startsWith("SCT");
+    const isSctEvent = isContinuationScheduleEvent(event);
     const isAirCombatCrewEvent = event._source === "air-combat-priority-formation" || event.type === "flight" && !!event.pilot && !!event.crew && !event.student && !event.instructor;
     const primaryName = isTaskingEvent2 || isAirCombatCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor || event.pilot;
     const secondaryName = isTaskingEvent2 || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student || event.crew || "" : event.student || event.crew || "";
@@ -116498,7 +116505,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   }, [getScheduleEventDayNightClassification]);
   const buildNeoCandidateEvent = reactExports.useCallback((baseEvent, replacementType, replacementName, atTime = baseEvent.startTime) => {
     const candidateEvent = { ...baseEvent, startTime: atTime };
-    const isSctEvent = candidateEvent.flightNumber?.startsWith("SCT");
+    const isSctEvent = isContinuationScheduleEvent(candidateEvent);
     if (replacementType === "instructor") {
       if (isSctEvent) {
         candidateEvent.pilot = replacementName;
@@ -116877,7 +116884,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         return;
       }
     }
-    const isSctEvent = eventForNeo.flightNumber?.startsWith("SCT");
+    const isSctEvent = isContinuationScheduleEvent(eventForNeo);
     if (isSctEvent) {
       console.log("🔧 SCT event detected, generating pilot remedies");
       const remedies = generatePilotRemediesAtTime(eventForNeo, allEvents, eventForNeo.startTime);
@@ -117087,7 +117094,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       resourceId: eventToUpdate.resourceId
     });
     const updatedEvent = { ...eventToUpdate };
-    const isSctEvent = eventToUpdate.flightNumber?.startsWith("SCT");
+    const isSctEvent = isContinuationScheduleEvent(eventToUpdate);
     if (!isSctEvent) {
       const traineeName = updatedEvent.student || updatedEvent.pilot;
       if (traineeName && updatedEvent.flightNumber) {

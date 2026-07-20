@@ -103,6 +103,14 @@ export const getContinuationEventNames = (events: unknown): string[] => (
   ))
 );
 
+export const isContinuationScheduleEvent = (event: unknown): boolean => {
+  if (!event || typeof event !== 'object') return false;
+  const source = event as Record<string, unknown>;
+  if (String(source.eventCategory || '').trim().toLowerCase() === 'sct') return true;
+  const flightNumber = String(source.flightNumber || '').trim().toUpperCase();
+  return flightNumber === 'SCT' || flightNumber === 'SCT FORM' || flightNumber.startsWith('SCT ');
+};
+
 export const continuationEventToCurrencyProfile = (event: ContinuationEventSetting): CurrencyProfile => ({
   id: event.id || event.name,
   unitCode: event.unitCode || '',

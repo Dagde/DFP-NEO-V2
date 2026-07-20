@@ -79,6 +79,7 @@ import {
 import { normaliseCrewCompositionSettings } from './utils/crewCompositionProfiles';
 import {
     getContinuationEventNames,
+    isContinuationScheduleEvent,
     normaliseContinuationEventSettings,
     type ContinuationEventInput,
 } from './utils/continuationEvents';
@@ -5022,7 +5023,7 @@ const getPersonnel = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): strin
     };
 
     const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-');
-    const isSctEvent = event.eventCategory === 'sct' || event.flightNumber?.startsWith('SCT');
+    const isSctEvent = isContinuationScheduleEvent(event);
 
     if (isTaskingEvent) {
         if (event.pilot) addPersonnel(event.pilot);
@@ -5163,7 +5164,7 @@ const getPersonnelIdentityRefs = (event: Omit<ScheduleEvent, 'date'> | ScheduleE
     };
 
     const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-');
-    const isSctEvent = event.eventCategory === 'sct' || event.flightNumber?.startsWith('SCT');
+    const isSctEvent = isContinuationScheduleEvent(event);
 
     if (isTaskingEvent) {
         addRef(event.pilot, 'staff');
@@ -5210,7 +5211,7 @@ const getCommonPersonnel = (
 
 const normaliseCrewFieldsForSave = (event: ScheduleEvent): ScheduleEvent => {
     const normalised = { ...event };
-    const isSctEvent = normalised.eventCategory === 'sct' || normalised.flightNumber?.startsWith('SCT');
+    const isSctEvent = isContinuationScheduleEvent(normalised);
 
     if (isSctEvent) {
         normalised.instructor = '';
@@ -28132,7 +28133,7 @@ const App: React.FC = () => {
 
     const getDiagnosticEventSeatAssignments = useCallback((event: ScheduleEvent | EventSegment): Array<{ name: string; roleKey: string; roleLabel: string }> => {
         const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-');
-        const isSctEvent = event.eventCategory === 'sct' || String(event.flightNumber || '').startsWith('SCT');
+        const isSctEvent = isContinuationScheduleEvent(event);
         const isAirCombatCrewEvent = (event as any)._source === 'air-combat-priority-formation'
             || (event.type === 'flight' && !!event.pilot && !!event.crew && !event.student && !event.instructor);
         const primaryName = isTaskingEvent || isAirCombatCrewEvent
@@ -39317,7 +39318,7 @@ appliedUpdates.forEach(update => {
         atTime: number = baseEvent.startTime
     ): ScheduleEvent => {
         const candidateEvent = { ...baseEvent, startTime: atTime };
-        const isSctEvent = candidateEvent.flightNumber?.startsWith('SCT');
+        const isSctEvent = isContinuationScheduleEvent(candidateEvent);
 
         if (replacementType === 'instructor') {
             if (isSctEvent) {
@@ -39814,7 +39815,7 @@ appliedUpdates.forEach(update => {
         }
 
         // Check if this is an SCT event - if so, generate pilot remedies instead of instructor remedies
-        const isSctEvent = eventForNeo.flightNumber?.startsWith('SCT');
+        const isSctEvent = isContinuationScheduleEvent(eventForNeo);
 
         if (isSctEvent) {
             console.log('🔧 SCT event detected, generating pilot remedies');
@@ -40139,7 +40140,7 @@ appliedUpdates.forEach(update => {
         const updatedEvent = { ...eventToUpdate };
 
         // Check if this is an SCT event
-        const isSctEvent = eventToUpdate.flightNumber?.startsWith('SCT');
+        const isSctEvent = isContinuationScheduleEvent(eventToUpdate);
 
         // Apply Dual/Solo logic from Individual LMP (for LMP events, not SCT)
         if (!isSctEvent) {

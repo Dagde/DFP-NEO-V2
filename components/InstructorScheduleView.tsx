@@ -6,6 +6,7 @@ import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import PersonnelColumn from './PersonnelColumn';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
+import { isContinuationScheduleEvent } from '../utils/continuationEvents';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 
@@ -57,7 +58,7 @@ const getPersonnel = (event: ScheduleEvent): string[] => {
     const personnel = new Set<string>();
     const eventRecord = event as ScheduleEvent & { isTaskingRequest?: boolean; taskingRequestId?: string };
     const isTaskingEvent = eventRecord.isTaskingRequest === true || !!eventRecord.taskingRequestId || String(event.id || '').startsWith('tasking-');
-    const isSctEvent = event.flightNumber?.startsWith('SCT');
+    const isSctEvent = isContinuationScheduleEvent(event);
 
     if (isTaskingEvent || isSctEvent) {
         addPersonnelName(personnel, event.pilot);
