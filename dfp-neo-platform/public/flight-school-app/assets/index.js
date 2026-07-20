@@ -31758,6 +31758,22 @@ const AddFlightTileModal = ({
       color: "#fff"
     }));
   };
+  const normaliseFormationPersonName = (value) => String(value || "").trim().toUpperCase();
+  const getFormationAssignedNames = (exceptName) => {
+    const allowedCurrent = normaliseFormationPersonName(exceptName);
+    const assignedNames = [
+      picName,
+      studentName,
+      ...formationCrew.flatMap((crewMember) => [crewMember.picName, crewMember.studentName])
+    ].map(normaliseFormationPersonName).filter((name) => name && name !== allowedCurrent);
+    return new Set(assignedNames);
+  };
+  const filterFormationNames = (names, exceptName) => {
+    const assignedNames = getFormationAssignedNames(exceptName);
+    return names.filter((person) => !assignedNames.has(normaliseFormationPersonName(person.name)));
+  };
+  const getFormationPicNames = (exceptName) => ((unit, selection) => filterFormationNames(getPicNames(unit, selection), exceptName));
+  const getFormationCrewNames = (exceptName) => ((unit, selection) => filterFormationNames(getNames(unit, selection), exceptName));
   const getDisplayLabel = (name) => {
     if (!name) return "";
     const trainee = traineesData.find((t) => (t.fullName || t.name) === name);
@@ -32193,6 +32209,22 @@ const AddFlightTileModal = ({
           if (!crewMember.picName) errs.push(`Aircraft ${index + 2} pilot is required.`);
           if (crewMember.flightType === "Dual" && !crewMember.studentName) errs.push(`Aircraft ${index + 2} crew is required.`);
         });
+        const assignedFormationPeople = [
+          picName,
+          flightType === "Dual" ? studentName : "",
+          ...formationCrew.flatMap((crewMember) => [
+            crewMember.picName,
+            crewMember.flightType === "Dual" ? crewMember.studentName : ""
+          ])
+        ].map((name) => String(name || "").trim()).filter(Boolean);
+        const seenFormationPeople = /* @__PURE__ */ new Set();
+        const duplicateFormationPerson = assignedFormationPeople.find((name) => {
+          const key = normaliseFormationPersonName(name);
+          if (seenFormationPeople.has(key)) return true;
+          seenFormationPeople.add(key);
+          return false;
+        });
+        if (duplicateFormationPerson) errs.push(`${duplicateFormationPerson} is already assigned in this formation.`);
       }
       if (!duration || duration <= 0) errs.push("Duration must be greater than 0.");
     }
@@ -32861,7 +32893,7 @@ const AddFlightTileModal = ({
                             onChange: setPicName,
                             allUnits,
                             getLayer2,
-                            getNames: getPicNames,
+                            getNames: getFormationPicNames(picName),
                             placeholder: "Select PIC",
                             fontSize: 14,
                             color: picName ? "#fff" : "rgba(255,255,255,0.45)",
@@ -32880,7 +32912,7 @@ const AddFlightTileModal = ({
                             onChange: setStudentName,
                             allUnits,
                             getLayer2,
-                            getNames,
+                            getNames: getFormationCrewNames(studentName),
                             placeholder: "Select crew",
                             fontSize: 14,
                             color: studentName ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.45)",
@@ -32917,7 +32949,7 @@ const AddFlightTileModal = ({
                             onChange: (name) => updateFormationCrew(index, { picName: name }),
                             allUnits,
                             getLayer2,
-                            getNames: getPicNames,
+                            getNames: getFormationPicNames(crewMember.picName),
                             placeholder: "Select PIC",
                             fontSize: 14,
                             color: crewMember.picName ? "#fff" : "rgba(255,255,255,0.45)",
@@ -32936,7 +32968,7 @@ const AddFlightTileModal = ({
                             onChange: (name) => updateFormationCrew(index, { studentName: name }),
                             allUnits,
                             getLayer2,
-                            getNames,
+                            getNames: getFormationCrewNames(crewMember.studentName),
                             placeholder: "Select crew",
                             fontSize: 14,
                             color: crewMember.studentName ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.45)",

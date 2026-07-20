@@ -2135,6 +2135,32 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       }));
   };
 
+  const normaliseFormationPersonName = (value?: string | null): string => String(value || '').trim().toUpperCase();
+  const getFormationAssignedNames = (exceptName?: string | null): Set<string> => {
+    const allowedCurrent = normaliseFormationPersonName(exceptName);
+    const assignedNames = [
+      picName,
+      studentName,
+      ...formationCrew.flatMap(crewMember => [crewMember.picName, crewMember.studentName]),
+    ]
+      .map(normaliseFormationPersonName)
+      .filter(name => name && name !== allowedCurrent);
+    return new Set(assignedNames);
+  };
+  const filterFormationNames = (
+    names: { name: string; label: string; color?: string }[],
+    exceptName?: string | null,
+  ): { name: string; label: string; color?: string }[] => {
+    const assignedNames = getFormationAssignedNames(exceptName);
+    return names.filter(person => !assignedNames.has(normaliseFormationPersonName(person.name)));
+  };
+  const getFormationPicNames = (exceptName?: string | null) => (
+    (unit: string, selection: string) => filterFormationNames(getPicNames(unit, selection), exceptName)
+  );
+  const getFormationCrewNames = (exceptName?: string | null) => (
+    (unit: string, selection: string) => filterFormationNames(getNames(unit, selection), exceptName)
+  );
+
   // ── Tile colour from trainee course ──────────────────────────────────────
   // ── Helper: get display label for a person (name + course if trainee) ────────
   const getDisplayLabel = (name: string): string => {
@@ -2670,6 +2696,22 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           if (!crewMember.picName) errs.push(`Aircraft ${index + 2} pilot is required.`);
           if (crewMember.flightType === 'Dual' && !crewMember.studentName) errs.push(`Aircraft ${index + 2} crew is required.`);
         });
+        const assignedFormationPeople = [
+          picName,
+          flightType === 'Dual' ? studentName : '',
+          ...formationCrew.flatMap(crewMember => [
+            crewMember.picName,
+            crewMember.flightType === 'Dual' ? crewMember.studentName : '',
+          ]),
+        ].map(name => String(name || '').trim()).filter(Boolean);
+        const seenFormationPeople = new Set<string>();
+        const duplicateFormationPerson = assignedFormationPeople.find(name => {
+          const key = normaliseFormationPersonName(name);
+          if (seenFormationPeople.has(key)) return true;
+          seenFormationPeople.add(key);
+          return false;
+        });
+        if (duplicateFormationPerson) errs.push(`${duplicateFormationPerson} is already assigned in this formation.`);
       }
       if (!duration || duration <= 0) errs.push('Duration must be greater than 0.');
     }
@@ -3362,7 +3404,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                             onChange={setPicName}
                             allUnits={allUnits}
                             getLayer2={getLayer2}
-                            getNames={getPicNames}
+                            getNames={getFormationPicNames(picName)}
                             placeholder="Select PIC"
                             fontSize={14}
                             color={picName ? '#fff' : 'rgba(255,255,255,0.45)'}
@@ -3382,7 +3424,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                                 onChange={setStudentName}
                                 allUnits={allUnits}
                                 getLayer2={getLayer2}
-                                getNames={getNames}
+                                getNames={getFormationCrewNames(studentName)}
                                 placeholder="Select crew"
                                 fontSize={14}
                                 color={studentName ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)'}
@@ -3423,7 +3465,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                               onChange={(name) => updateFormationCrew(index, { picName: name })}
                               allUnits={allUnits}
                               getLayer2={getLayer2}
-                              getNames={getPicNames}
+                              getNames={getFormationPicNames(crewMember.picName)}
                               placeholder="Select PIC"
                               fontSize={14}
                               color={crewMember.picName ? '#fff' : 'rgba(255,255,255,0.45)'}
@@ -3443,7 +3485,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                                   onChange={(name) => updateFormationCrew(index, { studentName: name })}
                                   allUnits={allUnits}
                                   getLayer2={getLayer2}
-                                  getNames={getNames}
+                                  getNames={getFormationCrewNames(crewMember.studentName)}
                                   placeholder="Select crew"
                                   fontSize={14}
                                   color={crewMember.studentName ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)'}
