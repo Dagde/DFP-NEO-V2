@@ -17146,6 +17146,13 @@ const addPersonnelName$1 = (personnel, value) => {
   const name = String(value || "").trim();
   if (name) personnel.add(name);
 };
+const PERSONNEL_RANK_PREFIX_RE$2 = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
+const normalisePersonnelNameForMatch$1 = (name) => String(name || "").replace(/\s+/g, " ").trim().replace(PERSONNEL_RANK_PREFIX_RE$2, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase();
+const personnelNamesMatch$2 = (a, b) => {
+  const left = normalisePersonnelNameForMatch$1(a);
+  const right = normalisePersonnelNameForMatch$1(b);
+  return !!left && left === right;
+};
 const getPersonnel$5 = (event) => {
   const personnel = /* @__PURE__ */ new Set();
   const eventRecord = event;
@@ -17166,6 +17173,7 @@ const getPersonnel$5 = (event) => {
   event.crewSelectionOrder?.forEach((person) => addPersonnelName$1(personnel, person));
   return Array.from(personnel);
 };
+const eventIncludesPerson$1 = (event, personName) => getPersonnel$5(event).some((eventPerson) => personnelNamesMatch$2(eventPerson, personName));
 const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) => {
   const unavailabilityEvents = [];
   personnelData.forEach((person) => {
@@ -17333,7 +17341,9 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
         if (e1StartWithPre < e2EndWithPost && e1EndWithPost > e2StartWithPre) {
           const personnelToCheck = getPersonnel$5(eventToCheck);
           const existingPersonnel = getPersonnel$5(existingEvent);
-          const conflictedPersonName = personnelToCheck.find((p) => existingPersonnel.includes(p));
+          const conflictedPersonName = personnelToCheck.find(
+            (person) => existingPersonnel.some((existingPerson) => personnelNamesMatch$2(person, existingPerson))
+          );
           if (conflictedPersonName) {
             return {
               conflictingEvent: existingEvent,
@@ -17755,7 +17765,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                     }
                   }
                 }
-                const instructorEvents = eventsWithUnavailability.filter((event) => getPersonnel$5(event).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
+                const instructorEvents = eventsWithUnavailability.filter((event) => eventIncludesPerson$1(event, instructor.name)).sort((a, b) => a.startTime - b.startTime);
                 const eventTiles = instructorEvents.map((event) => {
                   const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
                   const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
@@ -17766,7 +17776,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                   let personToHighlight = null;
                   if (realtimeConflict) {
                     const personnelOnThisTile = getPersonnel$5(event);
-                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.includes(realtimeConflict.conflictedPersonName)) {
+                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.some((person) => personnelNamesMatch$2(person, realtimeConflict.conflictedPersonName))) {
                       personToHighlight = realtimeConflict.conflictedPersonName;
                     }
                   }
@@ -31479,23 +31489,21 @@ const AddFlightTileModal = ({
     },
     [activeCallsignUnitCodes, unitCallsignSettings]
   );
-  const selectedPicHasIndividualCallsign = reactExports.useMemo(() => {
-    const instructor = instructorsData.find((staff) => staff.name === picName);
-    if (instructor && String(instructor.callsign || "").trim()) return true;
-    const trainee = traineesData.find((traineeRecord) => (traineeRecord.fullName || traineeRecord.name) === picName);
-    return Boolean(trainee && String(trainee.traineeCallsign || "").trim());
-  }, [instructorsData, picName, traineesData]);
+  const normalisePersonNameForAddTile = reactExports.useCallback((value) => String(value || "").replace(/\s+/g, " ").trim().replace(/^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase(), []);
   const resolveAssignedCallsign = reactExports.useCallback((name) => {
     const cleanName = String(name || "").trim();
     if (!cleanName) return "";
-    const assigned = personnelData?.get(cleanName);
+    const cleanKey = normalisePersonNameForAddTile(cleanName);
+    const assigned = personnelData?.get(cleanName) || Array.from(personnelData?.entries() || []).find(([personName]) => normalisePersonNameForAddTile(personName) === cleanKey)?.[1];
     if (assigned?.callsign) return String(assigned.callsign || "").trim();
-    const instructor = instructorsData.find((staff) => staff.name === cleanName);
+    const instructor = instructorsData.find((staff) => normalisePersonNameForAddTile(staff.name) === cleanKey);
     if (instructor) return String(instructor.callsign || instructor.preferences?.callsign || instructor.secondaryCallsign || "").trim();
-    const trainee = traineesData.find((traineeRecord) => (traineeRecord.fullName || traineeRecord.name) === cleanName || traineeRecord.name === cleanName);
-    const traineeAssigned = personnelData?.get(trainee?.fullName || trainee?.name || cleanName);
+    const trainee = traineesData.find((traineeRecord) => normalisePersonNameForAddTile(traineeRecord.fullName || traineeRecord.name) === cleanKey || normalisePersonNameForAddTile(traineeRecord.name) === cleanKey);
+    const traineeKey = normalisePersonNameForAddTile(trainee?.fullName || trainee?.name || cleanName);
+    const traineeAssigned = personnelData?.get(trainee?.fullName || trainee?.name || cleanName) || Array.from(personnelData?.entries() || []).find(([personName]) => normalisePersonNameForAddTile(personName) === traineeKey)?.[1];
     return String(trainee?.traineeCallsign || traineeAssigned?.callsign || "").trim();
-  }, [instructorsData, personnelData, traineesData]);
+  }, [instructorsData, normalisePersonNameForAddTile, personnelData, traineesData]);
+  const selectedPicHasIndividualCallsign = reactExports.useMemo(() => Boolean(resolveAssignedCallsign(picName)), [picName, resolveAssignedCallsign]);
   const LAYOUT_ELEM_KEYS = ["startTime", "picName", "coPilot", "duration", "event", "area", "aircraft", "callsign"];
   const MODAL_DEFAULT_POSITIONS = {
     startTime: { x: 14, y: 7 },
@@ -80402,6 +80410,13 @@ const addPersonnelName = (personnel, value) => {
   const name = String(value || "").trim();
   if (name) personnel.add(name);
 };
+const PERSONNEL_RANK_PREFIX_RE$1 = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
+const normalisePersonnelNameForMatch = (name) => String(name || "").replace(/\s+/g, " ").trim().replace(PERSONNEL_RANK_PREFIX_RE$1, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase();
+const personnelNamesMatch$1 = (a, b) => {
+  const left = normalisePersonnelNameForMatch(a);
+  const right = normalisePersonnelNameForMatch(b);
+  return !!left && left === right;
+};
 const getPersonnel$2 = (event) => {
   const personnel = /* @__PURE__ */ new Set();
   const eventRecord = event;
@@ -80422,6 +80437,7 @@ const getPersonnel$2 = (event) => {
   event.crewSelectionOrder?.forEach((person) => addPersonnelName(personnel, person));
   return Array.from(personnel);
 };
+const eventIncludesPerson = (event, personName) => getPersonnel$2(event).some((eventPerson) => personnelNamesMatch$1(eventPerson, personName));
 const getValidationEventKey$1 = (event) => [
   event.id,
   event.date || "",
@@ -80499,7 +80515,7 @@ const NextDayInstructorScheduleView = ({
     const uniqueEvents = events.filter((event, index, source) => source.findIndex((candidate) => candidate.id === event.id) === index);
     const tileRows = uniqueEvents.flatMap((event) => {
       const personnel = getPersonnel$2(event);
-      return instructors.filter((instructor) => personnel.includes(instructor.name)).map((instructor) => ({
+      return instructors.filter((instructor) => personnel.some((person) => personnelNamesMatch$1(person, instructor.name))).map((instructor) => ({
         tileKey: `${event.id}-${instructor.name}`,
         eventId: event.id,
         instructor: instructor.name,
@@ -80566,7 +80582,9 @@ const NextDayInstructorScheduleView = ({
         if (e1StartWithPre < e2EndWithPost && e1EndWithPost > e2StartWithPre) {
           const personnelToCheck = getPersonnel$2(eventToCheck);
           const existingPersonnel = getPersonnel$2(existingEvent);
-          const conflictedPersonName = personnelToCheck.find((p) => existingPersonnel.includes(p));
+          const conflictedPersonName = personnelToCheck.find(
+            (person) => existingPersonnel.some((existingPerson) => personnelNamesMatch$1(person, existingPerson))
+          );
           if (conflictedPersonName) {
             return { conflictingEvent: existingEvent, personName: conflictedPersonName };
           }
@@ -80901,7 +80919,7 @@ const NextDayInstructorScheduleView = ({
                     },
                     `row-highlight-${rowIndex}`
                   ) : null;
-                  const instructorEvents = uniqueEvents.filter((event) => getPersonnel$2(event).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
+                  const instructorEvents = uniqueEvents.filter((event) => eventIncludesPerson(event, instructor.name)).sort((a, b) => a.startTime - b.startTime);
                   const eventTiles = instructorEvents.map((event) => {
                     const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
                     const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
@@ -80909,7 +80927,7 @@ const NextDayInstructorScheduleView = ({
                     let personToHighlight = null;
                     if (realtimeConflict) {
                       const personnelOnThisTile = getPersonnel$2(event);
-                      if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.includes(realtimeConflict.conflictedPersonName)) {
+                      if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.some((person) => personnelNamesMatch$1(person, realtimeConflict.conflictedPersonName))) {
                         personToHighlight = realtimeConflict.conflictedPersonName;
                       }
                     }
@@ -90008,7 +90026,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return totalDutyHours;
   };
   const normalizeBuildPersonnelName = (name) => (name || "").replace(/\s+/g, " ").trim().replace(/^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i, "").toLowerCase();
-  const eventIncludesPerson = (event, personName) => {
+  const eventIncludesPerson2 = (event, personName) => {
     const personKey2 = normalizeBuildPersonnelName(personName);
     if (!personKey2) return false;
     return getPersonnel(event).some((p) => normalizeBuildPersonnelName(p) === personKey2);
@@ -90034,7 +90052,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const isPersonScheduledForDayEvents = (personName) => {
     const hasDayEvents = generatedEvents.some((e) => {
-      if (!eventIncludesPerson(e, personName)) return false;
+      if (!eventIncludesPerson2(e, personName)) return false;
       const classification = getGeneratedEventDayNightClassification(e);
       const isDay = classification === "Day";
       return isDay;
@@ -90043,7 +90061,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const isPersonScheduledForNightEvents = (personName) => {
     const hasScheduledNightEvents = generatedEvents.some((e) => {
-      if (!eventIncludesPerson(e, personName)) return false;
+      if (!eventIncludesPerson2(e, personName)) return false;
       const classification = getGeneratedEventDayNightClassification(e);
       const isNight = classification === "Night";
       return isNight;

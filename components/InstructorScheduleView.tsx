@@ -54,6 +54,22 @@ const addPersonnelName = (personnel: Set<string>, value?: string) => {
     if (name) personnel.add(name);
 };
 
+const PERSONNEL_RANK_PREFIX_RE = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
+
+const normalisePersonnelNameForMatch = (name?: string): string =>
+    String(name || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(PERSONNEL_RANK_PREFIX_RE, '')
+        .replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, '')
+        .toLowerCase();
+
+const personnelNamesMatch = (a?: string, b?: string): boolean => {
+    const left = normalisePersonnelNameForMatch(a);
+    const right = normalisePersonnelNameForMatch(b);
+    return !!left && left === right;
+};
+
 const getPersonnel = (event: ScheduleEvent): string[] => {
     const personnel = new Set<string>();
     const eventRecord = event as ScheduleEvent & { isTaskingRequest?: boolean; taskingRequestId?: string };
@@ -76,6 +92,9 @@ const getPersonnel = (event: ScheduleEvent): string[] => {
     event.crewSelectionOrder?.forEach(person => addPersonnelName(personnel, person));
     return Array.from(personnel);
 };
+
+const eventIncludesPerson = (event: ScheduleEvent, personName: string): boolean =>
+    getPersonnel(event).some(eventPerson => personnelNamesMatch(eventPerson, personName));
 
 // Create unavailability events for rendering
 const createUnavailabilityEvents = (date: string, personnelData: any[], isInstructor: boolean = true): ScheduleEvent[] => {
@@ -302,7 +321,9 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                 const personnelToCheck = getPersonnel(eventToCheck);
                 const existingPersonnel = getPersonnel(existingEvent);
                 
-                const conflictedPersonName = personnelToCheck.find(p => existingPersonnel.includes(p));
+                const conflictedPersonName = personnelToCheck.find(person =>
+                    existingPersonnel.some(existingPerson => personnelNamesMatch(person, existingPerson))
+                );
 
                 if (conflictedPersonName) {
                     return {
@@ -775,7 +796,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
               }
               
               const instructorEvents = eventsWithUnavailability
-                .filter(event => getPersonnel(event).includes(instructor.name))
+                .filter(event => eventIncludesPerson(event, instructor.name))
                 .sort((a, b) => a.startTime - b.startTime);
               
               const eventTiles = instructorEvents.map(event => {
@@ -793,7 +814,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                 let personToHighlight = null;
                 if (realtimeConflict) {
                     const personnelOnThisTile = getPersonnel(event);
-                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.includes(realtimeConflict.conflictedPersonName)) {
+                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.some(person => personnelNamesMatch(person, realtimeConflict.conflictedPersonName))) {
                         personToHighlight = realtimeConflict.conflictedPersonName;
                     }
                 }

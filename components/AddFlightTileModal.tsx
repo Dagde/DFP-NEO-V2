@@ -1796,26 +1796,33 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     },
     [activeCallsignUnitCodes, unitCallsignSettings],
   );
-  const selectedPicHasIndividualCallsign = useMemo(() => {
-    const instructor = instructorsData.find(staff => staff.name === picName);
-    if (instructor && String(instructor.callsign || '').trim()) return true;
-    const trainee = traineesData.find(traineeRecord => (traineeRecord.fullName || traineeRecord.name) === picName);
-    return Boolean(trainee && String(trainee.traineeCallsign || '').trim());
-  }, [instructorsData, picName, traineesData]);
+  const normalisePersonNameForAddTile = useCallback((value?: string | null): string => (
+    String(value || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i, '')
+      .replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, '')
+      .toLowerCase()
+  ), []);
   const resolveAssignedCallsign = useCallback((name?: string | null): string => {
     const cleanName = String(name || '').trim();
     if (!cleanName) return '';
-    const assigned = personnelData?.get(cleanName);
+    const cleanKey = normalisePersonNameForAddTile(cleanName);
+    const assigned = personnelData?.get(cleanName)
+      || Array.from(personnelData?.entries() || []).find(([personName]) => normalisePersonNameForAddTile(personName) === cleanKey)?.[1];
     if (assigned?.callsign) return String(assigned.callsign || '').trim();
-    const instructor = instructorsData.find(staff => staff.name === cleanName);
+    const instructor = instructorsData.find(staff => normalisePersonNameForAddTile(staff.name) === cleanKey);
     if (instructor) return String(instructor.callsign || instructor.preferences?.callsign || instructor.secondaryCallsign || '').trim();
     const trainee = traineesData.find(traineeRecord => (
-      (traineeRecord.fullName || traineeRecord.name) === cleanName
-      || traineeRecord.name === cleanName
+      normalisePersonNameForAddTile(traineeRecord.fullName || traineeRecord.name) === cleanKey
+      || normalisePersonNameForAddTile(traineeRecord.name) === cleanKey
     ));
-    const traineeAssigned = personnelData?.get(trainee?.fullName || trainee?.name || cleanName);
+    const traineeKey = normalisePersonNameForAddTile(trainee?.fullName || trainee?.name || cleanName);
+    const traineeAssigned = personnelData?.get(trainee?.fullName || trainee?.name || cleanName)
+      || Array.from(personnelData?.entries() || []).find(([personName]) => normalisePersonNameForAddTile(personName) === traineeKey)?.[1];
     return String(trainee?.traineeCallsign || traineeAssigned?.callsign || '').trim();
-  }, [instructorsData, personnelData, traineesData]);
+  }, [instructorsData, normalisePersonNameForAddTile, personnelData, traineesData]);
+  const selectedPicHasIndividualCallsign = useMemo(() => Boolean(resolveAssignedCallsign(picName)), [picName, resolveAssignedCallsign]);
 
   // ── Tile Layout State (lifted here so it survives modal re-renders) ─────────────
   type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft' | 'callsign';
