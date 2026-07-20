@@ -106631,6 +106631,29 @@ ${"=".repeat(60)}`);
     { name: "Voodoo", code: "VODO", unit: "2FTS", location: "Pearce", locationCode: "PEA" },
     { name: "Vulcan", code: "VULC", unit: "2FTS", location: "Pearce", locationCode: "PEA" }
   ]);
+  const configuredContinuationEvents = reactExports.useMemo(
+    () => normaliseContinuationEventSettings(sctEvents),
+    [sctEvents]
+  );
+  const getConfiguredContinuationEventByFlightNumber = reactExports.useCallback((value) => {
+    const normalisedValue = String(value || "").trim().toUpperCase();
+    const compactValue = normalisedValue.replace(/[^A-Z0-9]/g, "");
+    if (!normalisedValue) return void 0;
+    return configuredContinuationEvents.find((candidate) => {
+      const candidateValues = [candidate.name, candidate.code, candidate.currency].map((candidateValue) => String(candidateValue || "").trim().toUpperCase()).filter(Boolean);
+      return candidateValues.some((candidateValue) => candidateValue === normalisedValue || candidateValue.replace(/[^A-Z0-9]/g, "") === compactValue);
+    });
+  }, [configuredContinuationEvents]);
+  const isConfiguredContinuationFormationEvent = reactExports.useCallback((event) => {
+    if (Number(event.formationSize || 0) > 1 || Boolean(event.formationId)) return true;
+    const flightNumber = String(event.flightNumber || "").trim();
+    if (flightNumber.toUpperCase() === "SCT FORM") return true;
+    const configuredEvent = getConfiguredContinuationEventByFlightNumber(flightNumber);
+    if (!configuredEvent) return false;
+    if (Math.max(1, Math.floor(Number(configuredEvent.aircraftCount) || 1)) > 1) return true;
+    const configuredText = [configuredEvent.name, configuredEvent.code, configuredEvent.currency].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean).join(" ");
+    return configuredText.includes("FORM");
+  }, [getConfiguredContinuationEventByFlightNumber]);
   const activeTrainingAreas = reactExports.useMemo(() => {
     const normalise = (value) => String(value || "").trim().toUpperCase();
     const selectedAliases = new Set(
@@ -107248,16 +107271,17 @@ ${"=".repeat(60)}`);
         }))
       });
     }
-    const sctEvents2 = events2.filter((e) => e.flightNumber === "SCT FORM");
-    if (sctEvents2.length > 0) {
-      console.log("🟡 SCT FORM events in eventsForDate:", sctEvents2.map((e) => ({
+    const continuationFormationEvents = events2.filter(isConfiguredContinuationFormationEvent);
+    if (continuationFormationEvents.length > 0) {
+      console.log("🟡 Continuation formation events in eventsForDate:", continuationFormationEvents.map((e) => ({
         id: e.id,
+        flightNumber: e.flightNumber,
         instructor: e.instructor,
         pilot: e.pilot
       })));
     }
     return events2;
-  }, [date, publishedSchedules, snapshotDates]);
+  }, [date, isConfiguredContinuationFormationEvent, publishedSchedules, snapshotDates]);
   const decorateEventWithForwardedPreFlightNotes = reactExports.useCallback((event) => {
     const tileEligible = event.type === "flight" || event.type === "ftd" || event.type === "cpt";
     if (!tileEligible || traineeLMPs.size === 0) return event;
@@ -108062,10 +108086,10 @@ ${"=".repeat(60)}`);
       return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
     }
     const targetIsStby = isStbyResource(targetEvent.resourceId);
-    if (targetEvent.flightNumber === "SCT FORM" && targetEvent.pilot) {
+    if (isConfiguredContinuationFormationEvent(targetEvent) && targetEvent.pilot) {
       const baseId = targetEvent.id.split("-")[0];
       const formationEvents = allEvents.filter(
-        (e) => e.flightNumber === "SCT FORM" && e.id.startsWith(baseId) && e.id !== targetEvent.id
+        (e) => isConfiguredContinuationFormationEvent(e) && e.id.startsWith(baseId) && e.id !== targetEvent.id
       );
       for (const formationEvent of formationEvents) {
         if (formationEvent.pilot === targetEvent.pilot && targetEvent.pilot !== "") {
@@ -108082,8 +108106,8 @@ ${"=".repeat(60)}`);
     const validEvents = allEvents.filter(
       (e) => e.id !== targetEvent.id && e.type !== "deployment"
     );
-    if (targetEvent.flightNumber === "SCT FORM") {
-      console.log(`🔍 Checking conflicts for SCT FORM event ${targetEvent.id}`);
+    if (isConfiguredContinuationFormationEvent(targetEvent)) {
+      console.log(`🔍 Checking conflicts for continuation formation event ${targetEvent.id}`);
       console.log(`   Instructor: "${targetEvent.instructor || "EMPTY"}"`);
       console.log(`   Personnel:`, getPersonnel(targetEvent));
     }
@@ -108143,7 +108167,7 @@ ${"=".repeat(60)}`);
     const targetPersonnel = getPersonnel(targetEvent);
     const targetEventWithDate = "date" in targetEvent ? targetEvent : { ...targetEvent };
     const targetWindow = getEventBookingWindow(targetEventWithDate, syllabusDetails);
-    if (targetEvent.flightNumber === "SCT FORM") {
+    if (isConfiguredContinuationFormationEvent(targetEvent)) {
       console.log(`   Target personnel for conflict check:`, targetPersonnel);
       console.log(`   Target window: ${targetWindow.start} - ${targetWindow.end}`);
     }
@@ -108153,7 +108177,7 @@ ${"=".repeat(60)}`);
         const eventWithDate = "date" in event ? event : { ...event };
         const eventWindow = getEventBookingWindow(eventWithDate, syllabusDetails);
         if (targetWindow.start < eventWindow.end && targetWindow.end > eventWindow.start) {
-          if (targetEvent.flightNumber === "SCT FORM") {
+          if (isConfiguredContinuationFormationEvent(targetEvent)) {
             console.log(`   ❌ PERSONNEL CONFLICT FOUND!`);
             console.log(`      Conflicting with event: ${event.id} (${event.flightNumber})`);
             console.log(`      Common personnel:`, commonPersonnel);
@@ -108222,7 +108246,7 @@ ${"=".repeat(60)}`);
       }
     }
     return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
-  }, [flightTurnaround, ftdTurnaround, cptTurnaround, syllabusDetails, buildDfpDate, checkTimeOverlap, commenceNightFlying, ceaseNightFlying, getScheduleEventDayNightClassification]);
+  }, [flightTurnaround, ftdTurnaround, cptTurnaround, syllabusDetails, buildDfpDate, checkTimeOverlap, commenceNightFlying, ceaseNightFlying, getScheduleEventDayNightClassification, isConfiguredContinuationFormationEvent]);
   const enforceDayNightSeparation = (personName, proposedStartTime, proposedDuration = 1.5, eventType = "flight", checkDate, proposedFlightNumber, excludeEventId, personRole) => {
     const analysisDate = checkDate || date;
     const existingEvents = eventsForDate.filter(
@@ -108461,9 +108485,9 @@ ${"=".repeat(60)}`);
       if (event.student) return { ...event, pilot: event.student };
       return event;
     });
-    const sctFormEvents = eventsForConflictCheck.filter((e) => e.flightNumber === "SCT FORM");
-    if (sctFormEvents.length > 0) {
-      sctFormEvents.forEach((e) => {
+    const continuationFormationEvents = eventsForConflictCheck.filter(isConfiguredContinuationFormationEvent);
+    if (continuationFormationEvents.length > 0) {
+      continuationFormationEvents.forEach((e) => {
         console.log(`🔴   - ID: ${e.id}, Instructor: "${e.instructor || "EMPTY"}", Pilot: ${e.pilot}`);
       });
     }
@@ -108497,7 +108521,7 @@ ${"=".repeat(60)}`);
       }
     }
     return conflictingEventIds;
-  }, [eventsForDate, detectConflictsForEventWithDayNightSeparation, syllabusDetails]);
+  }, [eventsForDate, detectConflictsForEventWithDayNightSeparation, isConfiguredContinuationFormationEvent, syllabusDetails]);
   const nextDayPersonnelAndResourceConflictIds = reactExports.useMemo(() => {
     const conflictingEventIds = /* @__PURE__ */ new Set();
     if (!nextDayBuildEvents || nextDayBuildEvents.length === 0) {

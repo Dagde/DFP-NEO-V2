@@ -26943,6 +26943,40 @@ const App: React.FC = () => {
         { name: 'Vulcan', code: 'VULC', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' }
     ]);
 
+    const configuredContinuationEvents = useMemo(
+        () => normaliseContinuationEventSettings(sctEvents),
+        [sctEvents],
+    );
+
+    const getConfiguredContinuationEventByFlightNumber = useCallback((value?: string | null) => {
+        const normalisedValue = String(value || '').trim().toUpperCase();
+        const compactValue = normalisedValue.replace(/[^A-Z0-9]/g, '');
+        if (!normalisedValue) return undefined;
+        return configuredContinuationEvents.find(candidate => {
+            const candidateValues = [candidate.name, candidate.code, candidate.currency]
+                .map(candidateValue => String(candidateValue || '').trim().toUpperCase())
+                .filter(Boolean);
+            return candidateValues.some(candidateValue => (
+                candidateValue === normalisedValue
+                || candidateValue.replace(/[^A-Z0-9]/g, '') === compactValue
+            ));
+        });
+    }, [configuredContinuationEvents]);
+
+    const isConfiguredContinuationFormationEvent = useCallback((event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): boolean => {
+        if (Number(event.formationSize || 0) > 1 || Boolean(event.formationId)) return true;
+        const flightNumber = String(event.flightNumber || '').trim();
+        if (flightNumber.toUpperCase() === 'SCT FORM') return true;
+        const configuredEvent = getConfiguredContinuationEventByFlightNumber(flightNumber);
+        if (!configuredEvent) return false;
+        if (Math.max(1, Math.floor(Number(configuredEvent.aircraftCount) || 1)) > 1) return true;
+        const configuredText = [configuredEvent.name, configuredEvent.code, configuredEvent.currency]
+            .map(value => String(value || '').trim().toUpperCase())
+            .filter(Boolean)
+            .join(' ');
+        return configuredText.includes('FORM');
+    }, [getConfiguredContinuationEventByFlightNumber]);
+
     const activeTrainingAreas = useMemo(() => {
         const normalise = (value: unknown) => String(value || '').trim().toUpperCase();
         const selectedAliases = new Set(
@@ -27686,18 +27720,19 @@ const App: React.FC = () => {
             });
         }
 
-        // Log SCT FORM events
-        const sctEvents = events.filter(e => e.flightNumber === 'SCT FORM');
-        if (sctEvents.length > 0) {
-            console.log('🟡 SCT FORM events in eventsForDate:', sctEvents.map(e => ({
+        // Log configured continuation formation events
+        const continuationFormationEvents = events.filter(isConfiguredContinuationFormationEvent);
+        if (continuationFormationEvents.length > 0) {
+            console.log('🟡 Continuation formation events in eventsForDate:', continuationFormationEvents.map(e => ({
                 id: e.id,
+                flightNumber: e.flightNumber,
                 instructor: e.instructor,
                 pilot: e.pilot
             })));
         }
 
         return events;
-    }, [date, publishedSchedules, snapshotDates]);
+    }, [date, isConfiguredContinuationFormationEvent, publishedSchedules, snapshotDates]);
 
     const decorateEventWithForwardedPreFlightNotes = useCallback((event: ScheduleEvent): ScheduleEvent => {
         const tileEligible = event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt';
@@ -28768,11 +28803,11 @@ const App: React.FC = () => {
 
         // CRITICAL: Check for duplicate pilots within the same formation
         // This must be checked FIRST before other conflicts
-        if (targetEvent.flightNumber === 'SCT FORM' && targetEvent.pilot) {
+        if (isConfiguredContinuationFormationEvent(targetEvent) && targetEvent.pilot) {
             // Find all other events in the same formation (same base ID, different aircraft)
             const baseId = targetEvent.id.split('-')[0]; // Extract base ID before the aircraft number
             const formationEvents = allEvents.filter(e =>
-                e.flightNumber === 'SCT FORM' &&
+                isConfiguredContinuationFormationEvent(e) &&
                 e.id.startsWith(baseId) &&
                 e.id !== targetEvent.id
             );
@@ -28796,9 +28831,9 @@ const App: React.FC = () => {
             e.type !== 'deployment'
         );
 
-        // Debug logging for SCT FORM events
-        if (targetEvent.flightNumber === 'SCT FORM') {
-            console.log(`🔍 Checking conflicts for SCT FORM event ${targetEvent.id}`);
+        // Debug logging for configured continuation formation events
+        if (isConfiguredContinuationFormationEvent(targetEvent)) {
+            console.log(`🔍 Checking conflicts for continuation formation event ${targetEvent.id}`);
             console.log(`   Instructor: "${targetEvent.instructor || 'EMPTY'}"`);
             console.log(`   Personnel:`, getPersonnel(targetEvent));
         }
@@ -28875,7 +28910,7 @@ const App: React.FC = () => {
         const targetEventWithDate = 'date' in targetEvent ? targetEvent : { ...targetEvent, date: checkDate || buildDfpDate };
         const targetWindow = getEventBookingWindow(targetEventWithDate as ScheduleEvent, syllabusDetails);
 
-        if (targetEvent.flightNumber === 'SCT FORM') {
+        if (isConfiguredContinuationFormationEvent(targetEvent)) {
             console.log(`   Target personnel for conflict check:`, targetPersonnel);
             console.log(`   Target window: ${targetWindow.start} - ${targetWindow.end}`);
         }
@@ -28888,7 +28923,7 @@ const App: React.FC = () => {
                 const eventWindow = getEventBookingWindow(eventWithDate as ScheduleEvent, syllabusDetails);
 
                 if (targetWindow.start < eventWindow.end && targetWindow.end > eventWindow.start) {
-                    if (targetEvent.flightNumber === 'SCT FORM') {
+                    if (isConfiguredContinuationFormationEvent(targetEvent)) {
                         console.log(`   ❌ PERSONNEL CONFLICT FOUND!`);
                         console.log(`      Conflicting with event: ${event.id} (${event.flightNumber})`);
                         console.log(`      Common personnel:`, commonPersonnel);
@@ -28972,7 +29007,7 @@ const App: React.FC = () => {
         }
 
         return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
-    }, [flightTurnaround, ftdTurnaround, cptTurnaround, syllabusDetails, buildDfpDate, checkTimeOverlap, commenceNightFlying, ceaseNightFlying, getScheduleEventDayNightClassification]);
+    }, [flightTurnaround, ftdTurnaround, cptTurnaround, syllabusDetails, buildDfpDate, checkTimeOverlap, commenceNightFlying, ceaseNightFlying, getScheduleEventDayNightClassification, isConfiguredContinuationFormationEvent]);
 // HARD-WIRED DAY/NIGHT SEPARATION FUNCTION - Prevents day/night mixing FOR GOOD
     // NOW USES MASTER LMP DAY/NIGHT FIELD INSTEAD OF TIME-BASED CALCULATION
     const enforceDayNightSeparation = (
@@ -29318,11 +29353,11 @@ const App: React.FC = () => {
             return event;
         });
 
-        // Log all SCT FORM events with their instructors
-        const sctFormEvents = eventsForConflictCheck.filter(e => e.flightNumber === 'SCT FORM');
-        if (sctFormEvents.length > 0) {
-            // console.log('🔴 ✈️ SCT FORM events found:', sctFormEvents.length);
-            sctFormEvents.forEach(e => {
+        // Log configured continuation formation events with their instructors
+        const continuationFormationEvents = eventsForConflictCheck.filter(isConfiguredContinuationFormationEvent);
+        if (continuationFormationEvents.length > 0) {
+            // console.log('🔴 ✈️ Continuation formation events found:', continuationFormationEvents.length);
+            continuationFormationEvents.forEach(e => {
                 console.log(`🔴   - ID: ${e.id}, Instructor: "${e.instructor || 'EMPTY'}", Pilot: ${e.pilot}`);
             });
         }
@@ -29367,7 +29402,7 @@ const App: React.FC = () => {
         }
 
         return conflictingEventIds;
-    }, [eventsForDate, detectConflictsForEventWithDayNightSeparation, syllabusDetails]);
+    }, [eventsForDate, detectConflictsForEventWithDayNightSeparation, isConfiguredContinuationFormationEvent, syllabusDetails]);
 
     /**
      * Calculate all conflicts for next day build events (used when Validate is checked)
