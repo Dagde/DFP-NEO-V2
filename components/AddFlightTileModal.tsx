@@ -1800,6 +1800,17 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const trainee = traineesData.find(traineeRecord => (traineeRecord.fullName || traineeRecord.name) === picName);
     return Boolean(trainee && String(trainee.traineeCallsign || '').trim());
   }, [instructorsData, picName, traineesData]);
+  const resolveAssignedCallsign = useCallback((name?: string | null): string => {
+    const cleanName = String(name || '').trim();
+    if (!cleanName) return '';
+    const instructor = instructorsData.find(staff => staff.name === cleanName);
+    if (instructor) return String(instructor.callsign || instructor.secondaryCallsign || '').trim();
+    const trainee = traineesData.find(traineeRecord => (
+      (traineeRecord.fullName || traineeRecord.name) === cleanName
+      || traineeRecord.name === cleanName
+    ));
+    return String(trainee?.traineeCallsign || '').trim();
+  }, [instructorsData, traineesData]);
 
   // ── Tile Layout State (lifted here so it survives modal re-renders) ─────────────
   type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft' | 'callsign';
@@ -2382,18 +2393,26 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   };
 
   const handleFlightNumberChange = (code: string, durationHrs?: number) => {
-    setFlightNumber(code);
-    if (eventCategory === 'sct') {
-      const selectedProfile = findContinuationCurrencyProfile(code);
-      if (selectedProfile) {
-        setFlightType(selectedProfile.flightType || 'Dual');
-        if (selectedProfile.dayNight === 'Night') {
-          setStartTime(nightContinuationDefaultStartTime);
-        }
-        setAircraftCount(Math.max(1, Math.floor(Number(selectedProfile.aircraftCount) || 1)));
-        if (selectedProfile.config && selectedProfile.config !== 'ANY') {
-          setAircraftConfigId(selectedProfile.config);
-        }
+    const selectedProfile = findContinuationCurrencyProfile(code);
+    if (selectedProfile && eventCategory !== 'sct') {
+      suppressNextCategoryResetRef.current = true;
+      setEventCategory('sct');
+    }
+    const selectedSyllabusItem = syllabusDetails.find(item => item.id === code || item.code === code);
+    const isPackageEvent = String(selectedSyllabusItem?.lmpType || '').trim().toLowerCase() === 'staff cat';
+    if (!selectedProfile && isPackageEvent && eventCategory !== 'lmp_currency') {
+      suppressNextCategoryResetRef.current = true;
+      setEventCategory('lmp_currency');
+    }
+    setFlightNumber(selectedProfile?.code || selectedProfile?.name || code);
+    if (selectedProfile) {
+      setFlightType(selectedProfile.flightType || 'Dual');
+      if (selectedProfile.dayNight === 'Night') {
+        setStartTime(nightContinuationDefaultStartTime);
+      }
+      setAircraftCount(Math.max(1, Math.floor(Number(selectedProfile.aircraftCount) || 1)));
+      if (selectedProfile.config && selectedProfile.config !== 'ANY') {
+        setAircraftConfigId(selectedProfile.config);
       }
     }
     const lmpDuration = resolveLmpDurationForEvent(code, durationHrs);
@@ -2629,6 +2648,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           const assignedCrewGroup = assignment.crewGroup || fixedCrewGroup;
           const assignedPic = assignment.pic || fixedCrewPic;
           const assignedCrewMembers = getFixedCrewMembersForGroup(assignedCrewGroup);
+          const savedCallsign = eventCategory === 'sct'
+            ? resolveAssignedCallsign(assignedPic) || callsign
+            : callsign;
           eventsToSave.push({
           id: isEditingExistingEvent && existingFormationEvents[index]?.id ? existingFormationEvents[index].id : uuidv4(),
           date,
@@ -2646,7 +2668,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           aircraftNumber: eventType === 'flight' ? formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings) : undefined,
           aircraftConfigId: eventType === 'flight' ? selectedCurrencyConfig : undefined,
           acceptableAircraftConfigs: eventType === 'flight' ? selectedCurrencyAcceptableConfigs : undefined,
-          callsign,
+          callsign: savedCallsign,
           locationType,
           color: 'bg-emerald-500',
           resourceId: isEditingExistingEvent && existingFormationEvents[index]?.resourceId ? (existingFormationEvents[index].resourceId || '') : '',
@@ -2697,7 +2719,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
       crewDrafts.forEach((crewMember, index) => {
         const savedFlightType = isFormation ? crewMember.flightType : flightType;
-        const savedCallsign = isFormation ? (formationType ? `${formationType}${index + 1}` : crewMember.callsign) : crewMember.callsign;
+        const savedCallsign = isFormation
+          ? (formationType ? `${formationType}${index + 1}` : crewMember.callsign)
+          : eventCategory === 'sct'
+            ? resolveAssignedCallsign(crewMember.picName) || crewMember.callsign
+            : crewMember.callsign;
         eventsToSave.push({
           id: uuidv4(),
           date,
