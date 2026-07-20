@@ -30873,8 +30873,8 @@ const FlightTile = ({
     duration: { x: 410, y: 1 },
     event: { x: 486, y: 1 },
     aircraft: { x: 14, y: 57 },
-    area: { x: 476, y: 58 },
-    callsign: { x: 532, y: 59 }
+    area: { x: 401, y: 58 },
+    callsign: { x: 457, y: 59 }
   };
   const activeElemKey = reactExports.useMemo(() => {
     if (activeStep === "startTime") return "startTime";
@@ -31512,10 +31512,10 @@ const AddFlightTileModal = ({
     duration: { x: 410, y: 1 },
     event: { x: 486, y: 1 },
     aircraft: { x: 14, y: 57 },
-    area: { x: 476, y: 58 },
-    callsign: { x: 532, y: 59 }
+    area: { x: 401, y: 58 },
+    callsign: { x: 457, y: 59 }
   };
-  const LAYOUT_PREF_KEY = "flightTileLayout_v4";
+  const LAYOUT_PREF_KEY = "flightTileLayout_v5";
   const isValidPositions = (posData) => {
     return posData && typeof posData === "object" && LAYOUT_ELEM_KEYS.every((k) => posData[k] && typeof posData[k].x === "number");
   };

@@ -1105,8 +1105,8 @@ const FlightTile: React.FC<TileProps> = ({
     duration:  { x: 410, y: 1 },
     event:     { x: 486, y: 1 },
     aircraft:  { x: 14, y: 57 },
-    area:      { x: 476, y: 58 },
-    callsign:  { x: 532, y: 59 },
+    area:      { x: 401, y: 58 },
+    callsign:  { x: 457, y: 59 },
   };
 
   const activeElemKey = useMemo<ElemKey | null>(() => {
@@ -1834,10 +1834,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     duration:  { x: 410, y: 1 },
     event:     { x: 486, y: 1 },
     aircraft:  { x: 14, y: 57 },
-    area:      { x: 476, y: 58 },
-    callsign:  { x: 532, y: 59 },
+    area:      { x: 401, y: 58 },
+    callsign:  { x: 457, y: 59 },
   };
-  const LAYOUT_PREF_KEY = 'flightTileLayout_v4';
+  const LAYOUT_PREF_KEY = 'flightTileLayout_v5';
 
   // Helper: validate a positions object has all required keys
   const isValidPositions = (posData: any): posData is Record<ElemKey, { x: number; y: number }> => {
