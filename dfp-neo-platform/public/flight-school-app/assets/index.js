@@ -31303,11 +31303,15 @@ const AddFlightTileModal = ({
     [sctTerminology]
   );
   const sctShortLabel = resolvedSctTerminology.shortLabel;
+  const sctFormationLabel = `${sctShortLabel} FORM`;
   const getContinuationDisplayLabel = reactExports.useCallback((code) => {
     const rawCode = String(code || "").trim();
     return rawCode.replace(/\bSCT\b/gi, sctShortLabel);
   }, [sctShortLabel]);
-  const isSctFormationCode = reactExports.useCallback((code) => String(code || "").trim().toUpperCase() === "SCT FORM", []);
+  const isSctFormationCode = reactExports.useCallback((code) => {
+    const normalisedCode = String(code || "").trim().toUpperCase();
+    return normalisedCode === "SCT FORM" || normalisedCode === sctFormationLabel.toUpperCase();
+  }, [sctFormationLabel]);
   const resolvedAircraftCrewComposition = reactExports.useMemo(
     () => normaliseAircraftCrewComposition(aircraftCrewComposition),
     [aircraftCrewComposition]
@@ -32160,6 +32164,7 @@ const AddFlightTileModal = ({
       if (flightType === "Solo" && !picName) errs.push("Pilot is required for Solo flights.");
       if (locationType === "Land Away" && (!origin || !destination)) errs.push("Origin and destination are required for land away flights.");
       if (isSctFormationCode(flightNumber)) {
+        if (!formationType) errs.push("Formation callsign is required.");
         formationCrew.forEach((crewMember, index) => {
           if (!crewMember.picName) errs.push(`Aircraft ${index + 2} pilot is required.`);
           if (crewMember.flightType === "Dual" && !crewMember.studentName) errs.push(`Aircraft ${index + 2} crew is required.`);
@@ -32178,7 +32183,7 @@ const AddFlightTileModal = ({
         const selectedCurrencyConfig = selectedFixedCrewCurrencyProfile?.config && selectedFixedCrewCurrencyProfile.config !== "ANY" ? selectedFixedCrewCurrencyProfile.config : aircraftConfigId;
         const selectedCurrencyAcceptableConfigs = Array.isArray(selectedFixedCrewCurrencyProfile?.acceptableAircraftConfigs) && selectedFixedCrewCurrencyProfile.acceptableAircraftConfigs.length > 0 ? selectedFixedCrewCurrencyProfile.acceptableAircraftConfigs : [selectedCurrencyConfig];
         const savedAircraftCount = Math.max(1, Math.floor(Number(aircraftCount) || 1));
-        const formationId = savedAircraftCount > 1 ? `fixed-crew-formation-${v4()}` : void 0;
+        const formationId2 = savedAircraftCount > 1 ? `fixed-crew-formation-${v4()}` : void 0;
         Array.from({ length: savedAircraftCount }, (_, index) => index).forEach((index) => {
           const assignment = index === 0 ? { crewGroup: fixedCrewGroup, pic: fixedCrewPic } : fixedCrewFormationAssignments[index - 1] || { crewGroup: fixedCrewGroup, pic: fixedCrewPic };
           const assignedCrewGroup = assignment.crewGroup || fixedCrewGroup;
@@ -32224,7 +32229,7 @@ const AddFlightTileModal = ({
             fixedCrewManifestStatus,
             fixedCrewManifestNotes,
             aircraftCount: savedAircraftCount,
-            formationId: isEditingExistingEvent && index === 0 && savedAircraftCount === 1 ? initialEvent.formationId : formationId,
+            formationId: isEditingExistingEvent && index === 0 && savedAircraftCount === 1 ? initialEvent.formationId : formationId2,
             formationPosition: savedAircraftCount > 1 ? index + 1 : void 0,
             formationSize: savedAircraftCount > 1 ? savedAircraftCount : void 0,
             taskingAircraftIndex: savedAircraftCount > 1 ? index + 1 : void 0,
@@ -32236,6 +32241,7 @@ const AddFlightTileModal = ({
         return;
       }
       const isFormation = isSctFormationCode(flightNumber);
+      const formationId = isFormation ? `manual-formation-${v4()}` : void 0;
       const selectedContinuationProfile = eventCategory === "sct" ? findContinuationCurrencyProfile(flightNumber) : void 0;
       const selectedContinuationAcceptableConfigs = Array.isArray(selectedContinuationProfile?.acceptableAircraftConfigs) && selectedContinuationProfile.acceptableAircraftConfigs.length > 0 ? selectedContinuationProfile.acceptableAircraftConfigs : [selectedContinuationProfile?.config || aircraftConfigId];
       const crewDrafts = isFormation ? [
@@ -32276,7 +32282,8 @@ const AddFlightTileModal = ({
           destination: locationType === "Local" ? school : destination,
           formationType: isFormation ? formationType : void 0,
           formationPosition: isFormation ? index + 1 : void 0,
-          formationId: void 0,
+          formationId,
+          formationSize: isFormation ? crewDrafts.length : void 0,
           dayNight: selectedContinuationProfile?.dayNight,
           currency: selectedContinuationProfile?.currency,
           eventCode: selectedContinuationProfile?.code
@@ -33009,62 +33016,123 @@ const AddFlightTileModal = ({
                         )
                       ] })
                     ] }),
-                    formationCrew.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: formationCrew.map((crewMember, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3 ${isSingleSeatAircraft ? "grid-cols-[90px_1fr]" : "grid-cols-[90px_1fr_1fr]"}`, children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Aircraft" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm font-mono text-center", children: [
-                          formationType,
-                          index + 2
+                    Math.max(1, Number(aircraftCount) || 1) > 1 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3 ${isSingleSeatAircraft ? "grid-cols-[90px_1fr]" : "grid-cols-[90px_1fr_1fr]"}`, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Aircraft" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm font-mono text-center", children: [
+                            formationType,
+                            "1"
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Pilot" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            PersonDropdown,
+                            {
+                              value: picName,
+                              displayValue: picName,
+                              onChange: setPicName,
+                              allUnits,
+                              getLayer2,
+                              getNames: getPicNames,
+                              placeholder: "Select pilot",
+                              fontSize: 14,
+                              color: picName ? "#fff" : "rgba(255,255,255,0.45)",
+                              bold: true,
+                              dropdownId: "formation-pic-dropdown-primary"
+                            }
+                          ) })
+                        ] }),
+                        !isSingleSeatAircraft && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Crew" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm", children: flightType === "Dual" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            PersonDropdown,
+                            {
+                              value: studentName,
+                              displayValue: studentName,
+                              onChange: setStudentName,
+                              allUnits,
+                              getLayer2,
+                              getNames,
+                              placeholder: "Select crew",
+                              fontSize: 14,
+                              color: studentName ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.45)",
+                              allowSolo: true,
+                              onSoloSelect: () => {
+                                setFlightType("Solo");
+                                setStudentName("");
+                              },
+                              dropdownId: "formation-crew-dropdown-primary"
+                            }
+                          ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: () => setFlightType("Dual"),
+                              className: "w-full text-left text-sm font-semibold text-amber-300",
+                              children: "SOLO"
+                            }
+                          ) })
                         ] })
                       ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Pilot" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          PersonDropdown,
-                          {
-                            value: crewMember.picName,
-                            displayValue: crewMember.picName,
-                            onChange: (name) => updateFormationCrew(index, { picName: name }),
-                            allUnits,
-                            getLayer2,
-                            getNames: getPicNames,
-                            placeholder: "Select pilot",
-                            fontSize: 14,
-                            color: crewMember.picName ? "#fff" : "rgba(255,255,255,0.45)",
-                            bold: true,
-                            dropdownId: `formation-pic-dropdown-${index}`
-                          }
-                        ) })
-                      ] }),
-                      !isSingleSeatAircraft && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Crew" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm", children: crewMember.flightType === "Dual" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          PersonDropdown,
-                          {
-                            value: crewMember.studentName,
-                            displayValue: crewMember.studentName,
-                            onChange: (name) => updateFormationCrew(index, { studentName: name }),
-                            allUnits,
-                            getLayer2,
-                            getNames,
-                            placeholder: "Select crew",
-                            fontSize: 14,
-                            color: crewMember.studentName ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.45)",
-                            allowSolo: true,
-                            onSoloSelect: () => updateFormationCrew(index, { flightType: "Solo", studentName: "" }),
-                            dropdownId: `formation-crew-dropdown-${index}`
-                          }
-                        ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "button",
-                          {
-                            type: "button",
-                            onClick: () => updateFormationCrew(index, { flightType: "Dual" }),
-                            className: "w-full text-left text-sm font-semibold text-amber-300",
-                            children: "SOLO"
-                          }
-                        ) })
-                      ] })
-                    ] }, index)) })
+                      formationCrew.map((crewMember, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3 ${isSingleSeatAircraft ? "grid-cols-[90px_1fr]" : "grid-cols-[90px_1fr_1fr]"}`, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Aircraft" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm font-mono text-center", children: [
+                            formationType,
+                            index + 2
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Pilot" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            PersonDropdown,
+                            {
+                              value: crewMember.picName,
+                              displayValue: crewMember.picName,
+                              onChange: (name) => updateFormationCrew(index, { picName: name }),
+                              allUnits,
+                              getLayer2,
+                              getNames: getPicNames,
+                              placeholder: "Select pilot",
+                              fontSize: 14,
+                              color: crewMember.picName ? "#fff" : "rgba(255,255,255,0.45)",
+                              bold: true,
+                              dropdownId: `formation-pic-dropdown-${index}`
+                            }
+                          ) })
+                        ] }),
+                        !isSingleSeatAircraft && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Crew" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm", children: crewMember.flightType === "Dual" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            PersonDropdown,
+                            {
+                              value: crewMember.studentName,
+                              displayValue: crewMember.studentName,
+                              onChange: (name) => updateFormationCrew(index, { studentName: name }),
+                              allUnits,
+                              getLayer2,
+                              getNames,
+                              placeholder: "Select crew",
+                              fontSize: 14,
+                              color: crewMember.studentName ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.45)",
+                              allowSolo: true,
+                              onSoloSelect: () => updateFormationCrew(index, { flightType: "Solo", studentName: "" }),
+                              dropdownId: `formation-crew-dropdown-${index}`
+                            }
+                          ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: () => updateFormationCrew(index, { flightType: "Dual" }),
+                              className: "w-full text-left text-sm font-semibold text-amber-300",
+                              children: "SOLO"
+                            }
+                          ) })
+                        ] })
+                      ] }, index))
+                    ] })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Notes" }),

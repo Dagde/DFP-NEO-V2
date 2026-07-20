@@ -1556,11 +1556,15 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     [sctTerminology],
   );
   const sctShortLabel = resolvedSctTerminology.shortLabel;
+  const sctFormationLabel = `${sctShortLabel} FORM`;
   const getContinuationDisplayLabel = useCallback((code: string) => {
     const rawCode = String(code || '').trim();
     return rawCode.replace(/\bSCT\b/gi, sctShortLabel);
   }, [sctShortLabel]);
-  const isSctFormationCode = useCallback((code?: string | null) => String(code || '').trim().toUpperCase() === 'SCT FORM', []);
+  const isSctFormationCode = useCallback((code?: string | null) => {
+    const normalisedCode = String(code || '').trim().toUpperCase();
+    return normalisedCode === 'SCT FORM' || normalisedCode === sctFormationLabel.toUpperCase();
+  }, [sctFormationLabel]);
   const resolvedAircraftCrewComposition = useMemo(
     () => normaliseAircraftCrewComposition(aircraftCrewComposition),
     [aircraftCrewComposition],
@@ -2632,6 +2636,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       if (flightType === 'Solo' && !picName) errs.push('Pilot is required for Solo flights.');
       if (locationType === 'Land Away' && (!origin || !destination)) errs.push('Origin and destination are required for land away flights.');
       if (isSctFormationCode(flightNumber)) {
+        if (!formationType) errs.push('Formation callsign is required.');
         formationCrew.forEach((crewMember, index) => {
           if (!crewMember.picName) errs.push(`Aircraft ${index + 2} pilot is required.`);
           if (crewMember.flightType === 'Dual' && !crewMember.studentName) errs.push(`Aircraft ${index + 2} crew is required.`);
@@ -2720,6 +2725,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       }
 
       const isFormation = isSctFormationCode(flightNumber);
+      const formationId = isFormation ? `manual-formation-${uuidv4()}` : undefined;
       const selectedContinuationProfile = eventCategory === 'sct' ? findContinuationCurrencyProfile(flightNumber) : undefined;
       const selectedContinuationAcceptableConfigs = Array.isArray(selectedContinuationProfile?.acceptableAircraftConfigs) && selectedContinuationProfile.acceptableAircraftConfigs.length > 0
         ? selectedContinuationProfile.acceptableAircraftConfigs
@@ -2769,7 +2775,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           destination: locationType === 'Local' ? school : destination,
           formationType: isFormation ? formationType : undefined,
           formationPosition: isFormation ? index + 1 : undefined,
-          formationId: undefined,
+          formationId,
+          formationSize: isFormation ? crewDrafts.length : undefined,
           dayNight: selectedContinuationProfile?.dayNight,
           currency: selectedContinuationProfile?.currency,
           eventCode: selectedContinuationProfile?.code,
@@ -3466,8 +3473,68 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                         />
                       </div>
                     </div>
-                    {formationCrew.length > 0 && (
+                    {Math.max(1, Number(aircraftCount) || 1) > 1 && (
                       <div className="mt-4 space-y-3">
+                        <div className={`grid gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3 ${isSingleSeatAircraft ? 'grid-cols-[90px_1fr]' : 'grid-cols-[90px_1fr_1fr]'}`}>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft</label>
+                            <div className="bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm font-mono text-center">
+                              {formationType}1
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Pilot</label>
+                            <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
+                              <PersonDropdown
+                                value={picName}
+                                displayValue={picName}
+                                onChange={setPicName}
+                                allUnits={allUnits}
+                                getLayer2={getLayer2}
+                                getNames={getPicNames}
+                                placeholder="Select pilot"
+                                fontSize={14}
+                                color={picName ? '#fff' : 'rgba(255,255,255,0.45)'}
+                                bold
+                                dropdownId="formation-pic-dropdown-primary"
+                              />
+                            </div>
+                          </div>
+                          {!isSingleSeatAircraft && (
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
+                              <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
+                                {flightType === 'Dual' ? (
+                                  <PersonDropdown
+                                    value={studentName}
+                                    displayValue={studentName}
+                                    onChange={setStudentName}
+                                    allUnits={allUnits}
+                                    getLayer2={getLayer2}
+                                    getNames={getNames}
+                                    placeholder="Select crew"
+                                    fontSize={14}
+                                    color={studentName ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)'}
+                                    allowSolo
+                                    onSoloSelect={() => {
+                                      setFlightType('Solo');
+                                      setStudentName('');
+                                    }}
+                                    dropdownId="formation-crew-dropdown-primary"
+                                  />
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setFlightType('Dual')}
+                                    className="w-full text-left text-sm font-semibold text-amber-300"
+                                  >
+                                    SOLO
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         {formationCrew.map((crewMember, index) => (
                           <div key={index} className={`grid gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3 ${isSingleSeatAircraft ? 'grid-cols-[90px_1fr]' : 'grid-cols-[90px_1fr_1fr]'}`}>
                             <div>
