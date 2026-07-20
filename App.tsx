@@ -28927,7 +28927,7 @@ const App: React.FC = () => {
                         console.log(`   ❌ PERSONNEL CONFLICT FOUND!`);
                         console.log(`      Conflicting with event: ${event.id} (${event.flightNumber})`);
                         console.log(`      Common personnel:`, commonPersonnel);
-                        console.log(`      Event personnel:`, eventPersonnel);
+                        console.log(`      Event personnel:`, getPersonnel(event));
                         console.log(`      Event window: ${eventWindow.start} - ${eventWindow.end}`);
                     }
                     return {

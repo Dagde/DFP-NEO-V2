@@ -43590,9 +43590,9 @@ const CourseMetricsTab = ({
         const course = getCourseFromStudent(e.student || "") || getCourseFromStudent(e.pilot || "");
         if (course && eventsPerCourse.has(course)) {
           eventsPerCourse.set(course, eventsPerCourse.get(course) + 1);
-          const eventPersonnel2 = getEventPersonnel(e);
+          const eventPersonnel = getEventPersonnel(e);
           const coursePersonnelSet = personnelPerCourse.get(course);
-          eventPersonnel2.forEach((p) => coursePersonnelSet.add(p));
+          eventPersonnel.forEach((p) => coursePersonnelSet.add(p));
         }
       }
     });
@@ -108181,7 +108181,7 @@ ${"=".repeat(60)}`);
             console.log(`   ❌ PERSONNEL CONFLICT FOUND!`);
             console.log(`      Conflicting with event: ${event.id} (${event.flightNumber})`);
             console.log(`      Common personnel:`, commonPersonnel);
-            console.log(`      Event personnel:`, eventPersonnel);
+            console.log(`      Event personnel:`, getPersonnel(event));
             console.log(`      Event window: ${eventWindow.start} - ${eventWindow.end}`);
           }
           return {
