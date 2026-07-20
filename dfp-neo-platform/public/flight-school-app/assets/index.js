@@ -31165,7 +31165,7 @@ const FlightTile = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "aircraft", style: { position: "absolute", bottom: 2, left: 10, zIndex: 20 }, children: aircraftContent() }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "absolute", bottom: 2, right: 12, display: "flex", alignItems: "center", gap: 8, zIndex: 20 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "area", style: { transform: "translate(-40px, 3px)" }, children: areaContent() }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "callsign", style: { transform: "translateY(4px)" }, children: callsignContent() })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "callsign", style: { transform: "translate(-50px, 4px)" }, children: callsignContent() })
     ] })
   ] });
   const savedAbsLayout = /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [

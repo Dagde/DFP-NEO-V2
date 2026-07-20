@@ -1429,7 +1429,7 @@ const FlightTile: React.FC<TileProps> = ({
       </FlexElem>
       <div style={{ position: 'absolute', bottom: 2, right: 12, display: 'flex', alignItems: 'center', gap: 8, zIndex: 20 }}>
           <FlexElem elemKey="area" style={{ transform: 'translate(-40px, 3px)' }}>{areaContent()}</FlexElem>
-          <FlexElem elemKey="callsign" style={{ transform: 'translateY(4px)' }}>{callsignContent()}</FlexElem>
+          <FlexElem elemKey="callsign" style={{ transform: 'translate(-50px, 4px)' }}>{callsignContent()}</FlexElem>
       </div>
     </>
   );
