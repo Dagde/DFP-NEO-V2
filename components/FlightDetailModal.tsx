@@ -760,6 +760,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const resolvedSctTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
     const sctShortLabel = resolvedSctTerminology.shortLabel;
     const sctFormationLabel = `${sctShortLabel} FORM`;
+    const isContinuationFormationFlight = useCallback((value?: string | null): boolean => {
+        const code = String(value || '').trim().toUpperCase();
+        return code === 'SCT FORM' || code === sctFormationLabel.toUpperCase();
+    }, [sctFormationLabel]);
     const formatContinuationLabel = (value: string): string => {
         const rawValue = String(value || '').trim();
         const code = rawValue.toUpperCase();
@@ -1999,7 +2003,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     }, [locationType, school]);
 
     useEffect(() => {
-        const isFormation = flightNumber === 'SCT FORM';
+        const isFormation = isContinuationFormationFlight(flightNumber);
         const newSize = isFormation ? aircraftCount : 1;
         if (crew.length !== newSize) {
              const newCrew = Array.from({ length: newSize }, (_, i) => {
@@ -2009,7 +2013,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             });
             setCrew(newCrew);
         }
-    }, [aircraftCount, flightNumber, crew, eventCategory]);
+    }, [aircraftCount, flightNumber, crew, eventCategory, isContinuationFormationFlight]);
 
     useEffect(() => {
       setEventType(getEventTypeFromSyllabus(flightNumber, syllabusDetails));
@@ -2275,12 +2279,13 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         }
 
         console.log('Flight number changed to:', newFlightNumber);
-        if (newFlightNumber === 'SCT FORM' && !formationType) {
+        const isNewContinuationFormation = isContinuationFormationFlight(newFlightNumber);
+        if (isNewContinuationFormation && !formationType) {
             setFormationType(formationTypes[0]);
         }
         
            
-           if (newFlightNumber === 'SCT FORM' && eventCategory === 'sct') {
+           if (isNewContinuationFormation && eventCategory === 'sct') {
                // Set defaults for SCT FORM
                setAircraftCount(2);
                // Update crew to Solo
@@ -2288,7 +2293,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                    ...member,
                    flightType: 'Solo'
                })));
-           } else if (newFlightNumber !== 'SCT FORM') {
+           } else if (!isNewContinuationFormation) {
                setAircraftCount(1);
            }
     };
@@ -2337,7 +2342,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         const newCount = parseInt(e.target.value);
         setAircraftCount(newCount);
         // When changing aircraft count for SCT FORM, ensure all existing crew are Solo
-        if (flightNumber === 'SCT FORM' && eventCategory === 'sct') {
+        if (isContinuationFormationFlight(flightNumber) && eventCategory === 'sct') {
             setTimeout(() => {
                 setCrew(prevCrew => prevCrew.map(member => ({
                     ...member,
@@ -2423,12 +2428,13 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             }
             
             // For SCT FORM events with multiple aircraft, generate unique IDs for each event
-            const eventId = (flightNumber === 'SCT FORM' && crew.length > 1) 
+            const isContinuationFormation = isContinuationFormationFlight(flightNumber);
+            const eventId = (isContinuationFormation && crew.length > 1)
                 ? `${event.id}-${index}-${Date.now()}` 
                 : event.id;
             
             // For SCT FORM events with multiple aircraft, clear resourceId so findAvailableResourceId assigns them to different lines
-            if (flightNumber === 'SCT FORM' && crew.length > 1) {
+            if (isContinuationFormation && crew.length > 1) {
                 resourceId = '';
             }
             
@@ -2463,9 +2469,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 locationType,
                 origin: locationType === 'Local' ? school : origin,
                 destination: locationType === 'Local' ? school : destination,
-                formationType: flightNumber === 'SCT FORM' ? formationType : undefined,
-                formationPosition: flightNumber === 'SCT FORM' ? index + 1 : undefined,
-                callsign: flightNumber === 'SCT FORM' ? `${formationType}${index + 1}` : callsign,
+                formationType: isContinuationFormation ? formationType : undefined,
+                formationPosition: isContinuationFormation ? index + 1 : undefined,
+                callsign: isContinuationFormation ? `${formationType}${index + 1}` : callsign,
                 formationId: undefined,
                 notes,
                 fixedCrewGroup: isFixedCrewCrewedEvent ? fixedCrewGroup || undefined : undefined,
@@ -2706,7 +2712,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
 
 const renderCrewFields = (crewMember: CrewMember, index: number) => {
     if (isFixedCrewCrewedEvent) return null;
-    const isSctForm = flightNumber === 'SCT FORM';
+    const isSctForm = isContinuationFormationFlight(flightNumber);
     const isSctGeneric = flightNumber.startsWith('SCT');
     
     const formationCallsign = isSctForm && formationType
@@ -3388,7 +3394,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     aircraftDefaultOptionLabel={isAirCombatSoloContinuation ? 'Solo pilot' : 'Use aircraft default'}
                                                 />
                                             </div>
-                                            {flightNumber !== 'SCT FORM' && !isFixedCrewCrewedEvent && (
+                                            {!isContinuationFormationFlight(flightNumber) && !isFixedCrewCrewedEvent && (
                                                 selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 ? (
                                                     <div>
                                                         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Callsign</label>
@@ -3513,7 +3519,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         </>
                                     )}
         
-                                    {flightNumber === 'SCT FORM' && (
+                                    {isContinuationFormationFlight(flightNumber) && (
                                         <div className="p-3 bg-gray-900/50 rounded-lg space-y-4">
                                             <h3 className="font-semibold text-gray-300">Formation Details</h3>
                                             <div className="grid grid-cols-2 gap-4">

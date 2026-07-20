@@ -27047,6 +27047,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const sctShortLabel = resolvedSctTerminology.shortLabel;
   const sctFormationLabel = `${sctShortLabel} FORM`;
+  const isContinuationFormationFlight = useCallback((value) => {
+    const code = String(value || "").trim().toUpperCase();
+    return code === "SCT FORM" || code === sctFormationLabel.toUpperCase();
+  }, [sctFormationLabel]);
   const formatContinuationLabel = (value) => {
     const rawValue = String(value || "").trim();
     const code = rawValue.toUpperCase();
@@ -27951,7 +27955,7 @@ ${swapNote}` : swapNote
     }
   }, [locationType, school]);
   reactExports.useEffect(() => {
-    const isFormation = flightNumber === "SCT FORM";
+    const isFormation = isContinuationFormationFlight(flightNumber);
     const newSize = isFormation ? aircraftCount : 1;
     if (crew.length !== newSize) {
       const newCrew = Array.from({ length: newSize }, (_, i) => {
@@ -27960,7 +27964,7 @@ ${swapNote}` : swapNote
       });
       setCrew(newCrew);
     }
-  }, [aircraftCount, flightNumber, crew, eventCategory]);
+  }, [aircraftCount, flightNumber, crew, eventCategory, isContinuationFormationFlight]);
   reactExports.useEffect(() => {
     setEventType(getEventTypeFromSyllabus(flightNumber, syllabusDetails));
   }, [flightNumber, syllabusDetails]);
@@ -28154,16 +28158,17 @@ ${swapNote}` : swapNote
       }
     }
     console.log("Flight number changed to:", newFlightNumber);
-    if (newFlightNumber === "SCT FORM" && !formationType) {
+    const isNewContinuationFormation = isContinuationFormationFlight(newFlightNumber);
+    if (isNewContinuationFormation && !formationType) {
       setFormationType(formationTypes[0]);
     }
-    if (newFlightNumber === "SCT FORM" && eventCategory === "sct") {
+    if (isNewContinuationFormation && eventCategory === "sct") {
       setAircraftCount(2);
       setCrew(crew.map((member) => ({
         ...member,
         flightType: "Solo"
       })));
-    } else if (newFlightNumber !== "SCT FORM") {
+    } else if (!isNewContinuationFormation) {
       setAircraftCount(1);
     }
   };
@@ -28267,8 +28272,9 @@ ${swapNote}` : swapNote
           console.log(`Assigning event to deployment: ${selectedDeployment.id} (${resourceId})`);
         }
       }
-      const eventId = flightNumber === "SCT FORM" && crew.length > 1 ? `${event.id}-${index}-${Date.now()}` : event.id;
-      if (flightNumber === "SCT FORM" && crew.length > 1) {
+      const isContinuationFormation = isContinuationFormationFlight(flightNumber);
+      const eventId = isContinuationFormation && crew.length > 1 ? `${event.id}-${index}-${Date.now()}` : event.id;
+      if (isContinuationFormation && crew.length > 1) {
         resourceId = "";
       }
       const fixedCrewDisplayGroup = fixedCrewGroup ? formatFixedCrewDisplayGroup$2(fixedCrewGroup) : c.group;
@@ -28300,9 +28306,9 @@ ${swapNote}` : swapNote
         locationType,
         origin: locationType === "Local" ? school : origin,
         destination: locationType === "Local" ? school : destination,
-        formationType: flightNumber === "SCT FORM" ? formationType : void 0,
-        formationPosition: flightNumber === "SCT FORM" ? index + 1 : void 0,
-        callsign: flightNumber === "SCT FORM" ? `${formationType}${index + 1}` : callsign,
+        formationType: isContinuationFormation ? formationType : void 0,
+        formationPosition: isContinuationFormation ? index + 1 : void 0,
+        callsign: isContinuationFormation ? `${formationType}${index + 1}` : callsign,
         formationId: void 0,
         notes,
         fixedCrewGroup: isFixedCrewCrewedEvent ? fixedCrewGroup || void 0 : void 0,
@@ -28499,7 +28505,7 @@ ${swapNote}` : swapNote
   };
   const renderCrewFields = (crewMember, index) => {
     if (isFixedCrewCrewedEvent) return null;
-    const isSctForm = flightNumber === "SCT FORM";
+    const isSctForm = isContinuationFormationFlight(flightNumber);
     flightNumber.startsWith("SCT");
     const formationCallsign = isSctForm && formationType ? `${formationType}${index + 1}` : `Aircraft ${index + 1}`;
     const useStaffOnly = eventCategory === "lmp_currency" || eventCategory === "sct" || eventCategory === "staff_cat" || eventCategory === "twr_di";
@@ -29077,7 +29083,7 @@ ${swapNote}` : swapNote
                 aircraftDefaultOptionLabel: isAirCombatSoloContinuation ? "Solo pilot" : "Use aircraft default"
               }
             ) }),
-            flightNumber !== "SCT FORM" && !isFixedCrewCrewedEvent && (selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            !isContinuationFormationFlight(flightNumber) && !isFixedCrewCrewedEvent && (selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Callsign" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
@@ -29196,7 +29202,7 @@ ${swapNote}` : swapNote
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs text-gray-500", children: "aircraft deploying" })
             ] })
           ] }) }),
-          flightNumber === "SCT FORM" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-gray-900/50 rounded-lg space-y-4", children: [
+          isContinuationFormationFlight(flightNumber) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-gray-900/50 rounded-lg space-y-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-gray-300", children: "Formation Details" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
