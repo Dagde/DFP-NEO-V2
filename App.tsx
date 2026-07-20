@@ -5022,7 +5022,7 @@ const getPersonnel = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): strin
     };
 
     const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-');
-    const isSctEvent = event.flightNumber?.startsWith('SCT');
+    const isSctEvent = event.eventCategory === 'sct' || event.flightNumber?.startsWith('SCT');
 
     if (isTaskingEvent) {
         if (event.pilot) addPersonnel(event.pilot);
@@ -5163,7 +5163,7 @@ const getPersonnelIdentityRefs = (event: Omit<ScheduleEvent, 'date'> | ScheduleE
     };
 
     const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-');
-    const isSctEvent = event.flightNumber?.startsWith('SCT');
+    const isSctEvent = event.eventCategory === 'sct' || event.flightNumber?.startsWith('SCT');
 
     if (isTaskingEvent) {
         addRef(event.pilot, 'staff');
@@ -21618,6 +21618,34 @@ const App: React.FC = () => {
         });
     };
 
+    type DayNightConflictDecision = 'skip' | 'remove-conflicts' | 'accept-conflict';
+    type DayNightConflictEvent = {
+        proposedEvent: ScheduleEvent;
+        conflictingEvent: ScheduleEvent;
+        personName: string;
+        reason: string;
+        canRemove: boolean;
+        cannotRemoveReason?: string;
+        source: 'published' | 'next-day-build';
+    };
+
+    const [dayNightConflictDecisionModal, setDayNightConflictDecisionModal] = useState<{
+        conflicts: DayNightConflictEvent[];
+        onResolve: (decision: DayNightConflictDecision) => void;
+    } | null>(null);
+
+    const showDayNightConflictDecision = (conflicts: DayNightConflictEvent[]): Promise<DayNightConflictDecision> => (
+        new Promise((resolve) => {
+            setDayNightConflictDecisionModal({
+                conflicts,
+                onResolve: (decision) => {
+                    setDayNightConflictDecisionModal(null);
+                    resolve(decision);
+                },
+            });
+        })
+    );
+
     const [activeView, setActiveView] = useState<string>(() => {
         try {
             const restoreView = sessionStorage.getItem('dfp_restore_view_after_reload');
@@ -29072,6 +29100,117 @@ const App: React.FC = () => {
         return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
     }, [detectConflictsForEvent, getPersonnel, enforceDayNightSeparation, date]);
 
+    const getCurrentDecimalHour = (): number => {
+        const now = new Date();
+        return now.getHours() + (now.getMinutes() / 60) + (now.getSeconds() / 3600);
+    };
+
+    const isEventStartedOrFinished = (event: ScheduleEvent): { blocked: boolean; reason?: string } => {
+        const eventDate = String(event.date || '').trim();
+        const today = getLocalDateString();
+        if (eventDate && eventDate < today) {
+            return { blocked: true, reason: 'it is on a past DFP' };
+        }
+        if (eventDate && eventDate > today) {
+            return { blocked: false };
+        }
+        if ((Number(event.startTime) || 0) <= getCurrentDecimalHour()) {
+            return { blocked: true, reason: 'it has already started or finished' };
+        }
+        return { blocked: false };
+    };
+
+    const getDayNightConflictCandidates = (
+        event: ScheduleEvent,
+        saveToNextDayBuild: boolean,
+    ): Array<ScheduleEvent & { __source?: 'published' | 'next-day-build' }> => {
+        if (saveToNextDayBuild) {
+            return nextDayBuildEvents
+                .map(candidate => ({ ...candidate, date: candidate.date || buildDfpDate, __source: 'next-day-build' as const }))
+                .filter(candidate => candidate.date === event.date);
+        }
+        return (publishedSchedules[event.date] || [])
+            .map(candidate => ({ ...candidate, __source: 'published' as const }));
+    };
+
+    const collectDayNightSaveConflicts = (
+        eventsToCheck: ScheduleEvent[],
+        saveToNextDayBuild: boolean,
+    ): DayNightConflictEvent[] => {
+        const conflicts: DayNightConflictEvent[] = [];
+        const seen = new Set<string>();
+
+        eventsToCheck.forEach(proposedEvent => {
+            const proposedClassification = getScheduleEventDayNightClassification(proposedEvent);
+            if (proposedClassification === 'Day/Night') return;
+            const personnel = getPersonnel(proposedEvent);
+            if (personnel.length === 0) return;
+            const candidates = getDayNightConflictCandidates(proposedEvent, saveToNextDayBuild);
+
+            personnel.forEach(personName => {
+                candidates.forEach(candidate => {
+                    if (candidate.id === proposedEvent.id) return;
+                    if (!eventHasPerson(candidate, personName)) return;
+                    const candidateClassification = getScheduleEventDayNightClassification(candidate);
+                    if (candidateClassification === 'Day/Night' || candidateClassification === proposedClassification) return;
+                    const removalStatus = isEventStartedOrFinished(candidate);
+                    const key = `${proposedEvent.id}::${candidate.id}::${personName}`;
+                    if (seen.has(key)) return;
+                    seen.add(key);
+                    conflicts.push({
+                        proposedEvent,
+                        conflictingEvent: candidate,
+                        personName,
+                        reason: `${personName} is already programmed on a ${candidateClassification} event (${candidate.flightNumber}) and the proposed event is ${proposedClassification} (${proposedEvent.flightNumber}).`,
+                        canRemove: !removalStatus.blocked,
+                        cannotRemoveReason: removalStatus.reason,
+                        source: candidate.__source || (saveToNextDayBuild ? 'next-day-build' : 'published'),
+                    });
+                });
+            });
+        });
+
+        return conflicts;
+    };
+
+    const removeDayNightConflictingEvents = (conflicts: DayNightConflictEvent[]) => {
+        const nextDayIds = new Set(conflicts.filter(conflict => conflict.source === 'next-day-build').map(conflict => conflict.conflictingEvent.id));
+        const publishedIdsByDate = conflicts
+            .filter(conflict => conflict.source === 'published')
+            .reduce((map, conflict) => {
+                const eventDate = conflict.conflictingEvent.date;
+                const ids = map.get(eventDate) || new Set<string>();
+                ids.add(conflict.conflictingEvent.id);
+                map.set(eventDate, ids);
+                return map;
+            }, new Map<string, Set<string>>());
+
+        if (nextDayIds.size > 0) {
+            setNextDayBuildEvents(prev => prev.filter(event => !nextDayIds.has(event.id)));
+        }
+
+        if (publishedIdsByDate.size > 0) {
+            setPublishedSchedules(prev => {
+                const nextSchedules = { ...prev };
+                publishedIdsByDate.forEach((ids, eventDate) => {
+                    const previousEvents = prev[eventDate] || [];
+                    const nextEvents = previousEvents.filter(event => !ids.has(event.id));
+                    nextSchedules[eventDate] = nextEvents;
+                    persistScheduleForDate(eventDate, nextEvents, previousEvents);
+                });
+                return nextSchedules;
+            });
+        }
+
+        const allRemovedIds = new Set([
+            ...Array.from(nextDayIds),
+            ...Array.from(publishedIdsByDate.values()).flatMap(ids => Array.from(ids)),
+        ]);
+        if (allRemovedIds.size > 0) {
+            setHighestPriorityEvents(prev => prev.filter(event => !allRemovedIds.has(event.id)));
+        }
+    };
+
     const isTwrDiEvent = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): boolean => {
         return event.eventCategory === 'twr_di' ||
             event.resourceId === 'TWR DI' ||
@@ -32902,24 +33041,57 @@ const App: React.FC = () => {
         }
         eventsToSave = eventsToSave.map(normaliseCrewFieldsForSave);
 
-        // HARD-WIRED: Check day/night separation violations BEFORE saving any events
-        for (const event of eventsToSave) {
-            const personnel = getPersonnel(event);
-            for (const personName of personnel) {
-                const dayNightCheck = enforceDayNightSeparation(
-                    personName,
-                    event.startTime,
-                    event.duration,
-                    event.type as any,
-                    event.date,
-                    event.flightNumber
-                );
+        const proposedMainEvent = eventsToSave[0];
+        const isPotentialNextDayView = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
+        const saveToNextDayBuildForConflict = oracleContextForModal
+            ? oracleContext === 'nextDayBuild'
+            : proposedMainEvent.date === buildDfpDate && isPotentialNextDayView;
+        const removedPublishedConflictIdsByDate = new Map<string, Set<string>>();
+        const removedNextDayConflictIds = new Set<string>();
+        const dayNightConflicts = collectDayNightSaveConflicts(eventsToSave, saveToNextDayBuildForConflict);
 
-                if (!dayNightCheck.isAllowed) {
-                    showDarkAlert(`\u274c DAY/NIGHT SEPARATION VIOLATION DETECTED!\n\n${dayNightCheck.reason}\n\nThis is a hard rule that cannot be violated. The event will not be saved.`, "Day/Night Separation Violation", "error");
-                    console.log('SAVE BLOCKED - Day/Night separation violation:', dayNightCheck.reason);
-                    return; // Block the save
+        if (dayNightConflicts.length > 0) {
+            const decision = await showDayNightConflictDecision(dayNightConflicts);
+            if (decision === 'skip') {
+                console.log('SAVE CANCELLED - user chose not to schedule after day/night conflict:', dayNightConflicts);
+                return;
+            }
+
+            if (decision === 'remove-conflicts') {
+                const nonRemovableConflicts = dayNightConflicts.filter(conflict => !conflict.canRemove);
+                if (nonRemovableConflicts.length > 0) {
+                    await showDarkAlert(
+                        `The conflicting event cannot be removed because ${nonRemovableConflicts[0].cannotRemoveReason || 'it has already started or finished'}.\n\nThe proposed event was not scheduled. Re-open the event and choose Accept Conflict if you still want to proceed.`,
+                        'Conflict Cannot Be Removed',
+                        'warning',
+                    );
+                    return;
                 }
+                removeDayNightConflictingEvents(dayNightConflicts);
+                dayNightConflicts.forEach(conflict => {
+                    if (conflict.source === 'next-day-build') {
+                        removedNextDayConflictIds.add(conflict.conflictingEvent.id);
+                    } else {
+                        const ids = removedPublishedConflictIdsByDate.get(conflict.conflictingEvent.date) || new Set<string>();
+                        ids.add(conflict.conflictingEvent.id);
+                        removedPublishedConflictIdsByDate.set(conflict.conflictingEvent.date, ids);
+                    }
+                });
+            }
+
+            if (decision === 'accept-conflict') {
+                const conflictDetails = dayNightConflicts.map(conflict => (
+                    `${conflict.personName}: ${conflict.proposedEvent.flightNumber} conflicts with ${conflict.conflictingEvent.flightNumber} at ${formatTime(conflict.conflictingEvent.startTime)}`
+                ));
+                eventsToSave = eventsToSave.map(event => ({
+                    ...event,
+                    forcedInstructorConflict: true,
+                    forcedInstructorConflictDetails: Array.from(new Set([
+                        ...(event.forcedInstructorConflictDetails || []),
+                        ...conflictDetails,
+                    ])),
+                }));
+                logAudit('Program Schedule', 'Override', 'Accepted day/night personnel conflict', conflictDetails.join('; '));
             }
         }
 
@@ -32986,7 +33158,7 @@ const App: React.FC = () => {
                     });
                 }
                 const existingEventIds = new Set(eventsToSave.map(e => e.id));
-                const otherEvents = nextDayBuildEvents.filter(e => !existingEventIds.has(e.id));
+                const otherEvents = nextDayBuildEvents.filter(e => !existingEventIds.has(e.id) && !removedNextDayConflictIds.has(e.id));
                 const eventsForBuild = eventsToSave.map(({ date, ...rest }) => rest);
 
                 // Debug logging for SCT event updates
@@ -33053,7 +33225,8 @@ const App: React.FC = () => {
                         });
 
                         const existingEventIds = new Set(events.map(e => e.id));
-                        const otherEvents = currentScheduleForDate.filter(e => !existingEventIds.has(e.id));
+                        const removedConflictIds = removedPublishedConflictIdsByDate.get(eventDate) || new Set<string>();
+                        const otherEvents = currentScheduleForDate.filter(e => !existingEventIds.has(e.id) && !removedConflictIds.has(e.id));
 
                         console.log(`🟢 Filtered out ${currentScheduleForDate.length - otherEvents.length} existing events`);
 
@@ -33098,7 +33271,8 @@ const App: React.FC = () => {
                 _affectedDates.forEach(d => {
                     const _prevForDate = publishedSchedules[d] || [];
                     const _newEventIds = new Set(eventsToSave.filter(e => e.date === d).map(e => e.id));
-                    const _otherEvents = _prevForDate.filter((e: ScheduleEvent) => !_newEventIds.has(e.id));
+                    const _removedConflictIds = removedPublishedConflictIdsByDate.get(d) || new Set<string>();
+                    const _otherEvents = _prevForDate.filter((e: ScheduleEvent) => !_newEventIds.has(e.id) && !_removedConflictIds.has(e.id));
                     const _newEventsForDate = eventsToSave.filter(e => e.date === d);
                     persistScheduleForDate(d, [..._otherEvents, ..._newEventsForDate]);
                 });
@@ -44899,6 +45073,67 @@ appliedUpdates.forEach(update => {
                     </div>
                 </div>
             )}
+
+            {dayNightConflictDecisionModal && (() => {
+                const conflicts = dayNightConflictDecisionModal.conflicts;
+                const canRemoveAll = conflicts.every(conflict => conflict.canRemove);
+                const uniqueConflictEvents = Array.from(new Map(conflicts.map(conflict => [conflict.conflictingEvent.id, conflict])).values());
+                return (
+                    <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/70 p-4">
+                        <div className="w-full max-w-2xl overflow-hidden rounded-lg border border-amber-400/40 bg-slate-900 shadow-2xl">
+                            <div className="border-b border-amber-400/20 bg-amber-500/10 px-5 py-4">
+                                <h2 className="text-lg font-bold text-amber-100">Day/Night Personnel Conflict</h2>
+                                <p className="mt-1 text-sm text-amber-50/75">The proposed event conflicts with existing programmed flying for the same person.</p>
+                            </div>
+                            <div className="max-h-[55vh] space-y-3 overflow-y-auto px-5 py-4">
+                                {conflicts.map((conflict, index) => (
+                                    <div key={`${conflict.proposedEvent.id}-${conflict.conflictingEvent.id}-${conflict.personName}-${index}`} className="rounded border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100">
+                                        <div className="font-semibold text-white">{conflict.personName}</div>
+                                        <div className="mt-1 text-slate-300">{conflict.reason}</div>
+                                        <div className="mt-2 text-xs text-slate-400">
+                                            Conflicting event: {conflict.conflictingEvent.flightNumber} at {formatTime(conflict.conflictingEvent.startTime)}
+                                            {!conflict.canRemove && (
+                                                <span className="ml-2 rounded bg-red-500/15 px-2 py-0.5 font-semibold text-red-200">
+                                                    Cannot remove: {conflict.cannotRemoveReason || 'already started or finished'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                                {!canRemoveAll && (
+                                    <div className="rounded border border-red-500/30 bg-red-950/30 p-3 text-sm text-red-100">
+                                        One or more conflicting events has already started, finished, or belongs to a past DFP. Those events cannot be removed automatically.
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap justify-end gap-2 border-t border-slate-700 bg-slate-950/60 px-5 py-4">
+                                <button
+                                    type="button"
+                                    onClick={() => dayNightConflictDecisionModal.onResolve('skip')}
+                                    className="rounded-md border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700"
+                                >
+                                    Do Not Schedule Proposed Event
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={!canRemoveAll || uniqueConflictEvents.length === 0}
+                                    onClick={() => dayNightConflictDecisionModal.onResolve('remove-conflicts')}
+                                    className="rounded-md border border-orange-400/40 bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-700 disabled:text-slate-400"
+                                >
+                                    Remove Conflicting Event/s
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => dayNightConflictDecisionModal.onResolve('accept-conflict')}
+                                    className="rounded-md border border-red-300/50 bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+                                >
+                                    Accept Conflict
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Dark Message Modal for replacing browser alerts and confirms */}
             {darkMessageModal && (
