@@ -13,6 +13,7 @@ import {
     type TrainingReportTerminology,
     type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
+import { isContinuationScheduleEvent } from '../utils/continuationEvents';
 import { loadPlatformConfigFromDB } from '../utils/platformConfigService';
 
 interface PT051ViewProps {
@@ -559,6 +560,12 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             const detail = syllabusDetails.find(d => d.id === eventName || d.code === eventName);
             if (detail) {
                 return detail.type === 'Flight' || detail.type === 'FTD';
+            }
+            if (
+                String(eventName || '').trim().toUpperCase() === String(event.flightNumber || '').trim().toUpperCase()
+                && isContinuationScheduleEvent(event)
+            ) {
+                return true;
             }
             const name = eventName.toUpperCase();
             if (name.includes('FTD') || name.startsWith('BGF') || name.startsWith('BIF') || name.startsWith('BNF') || name.startsWith('BNAV') || name.startsWith('SCT')) {

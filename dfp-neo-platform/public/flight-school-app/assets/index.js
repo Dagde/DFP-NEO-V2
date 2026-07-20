@@ -21121,6 +21121,9 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
       if (detail) {
         return detail.type === "Flight" || detail.type === "FTD";
       }
+      if (String(eventName || "").trim().toUpperCase() === String(event.flightNumber || "").trim().toUpperCase() && isContinuationScheduleEvent(event)) {
+        return true;
+      }
       const name = eventName.toUpperCase();
       if (name.includes("FTD") || name.startsWith("BGF") || name.startsWith("BIF") || name.startsWith("BNF") || name.startsWith("BNAV") || name.startsWith("SCT")) {
         if (!name.includes("MB") && !name.includes("TUT") && !name.includes("CPT")) {
